@@ -1,5 +1,9 @@
 # CLAUDE.md
 
+## SEC01 GROUP 3 SAFE/INTERIM — STAGING OVĚŘEN (15. 06. 2026)
+
+Group 3 safe/interim na stagingu `dxmowysntemfqfnanxua` (migrace `sec01_group3_safe_interim_hardening`): E19 contest_miocoin_totals + E20 winners_with_contest (unused) → revoke anon/auth + security_invoker (cleared); E18 partner_api_activity + E17 v_influencer_referrals_paid → revoke anon (interim, SDV ERROR zůstává, redesign owner decision); E22 contest_progress ponechán (owner-accept candidate — invoker by rozbil zákaznické počty). Advisor staging 5→3. Full E2E `27526273831` 122 passed/0 fail (Games/ContestDetail/partner/affiliate OK). Produkce NEDOTČENA (5 ERROR). SEC01 zůstává P0 blocker. Pravidlo: E19/E20 nevracet anon/auth; E22 nepřepínat na security_invoker (rozbije počty); E17/E18 vyžadují RLS redesign před invoker.
+
 ## SEC01 E05/E23 — PRODUKČNÍ FIX OVĚŘEN (15. 06. 2026, schválení Pavla)
 
 Produkce `xkzhjldrojjlrkezorey` (migrace `sec01_e05_e23_tickets_admin_read_and_invoker`): aditivní policy `tickets_admin_select_all` (has_role admin/superadmin) + `security_invoker=on` na E05 `contest_activity_last_24h` a E23 `contest_revenue`. Precheck=baseline; postcheck: policy přítomná (tickets 3 policy), invoker on, output 0/127/4000 nezměněn; customer own-row beze změny. Prod advisor 7→5. P0 smoke `27525944645` success (5 passed). Bez rollbacku. SEC01 zůstává P0 blocker — 5 ERROR = Group 3 (E17/E18/E19/E20/E22) + WARN/INFO. Pravidlo: `tickets_admin_select_all` je gated rolí (nevracet); E05/E23 nesmí zpět na SECURITY DEFINER bez invoker.

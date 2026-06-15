@@ -1,5 +1,21 @@
 ﻿# OneMil – aktuální stav projektu
 
+## SEC01 GROUP 3 SAFE/INTERIM — OVĚŘEN NA STAGINGU (15. 06. 2026)
+
+SEC01 Group 3 safe/interim aplikován **POUZE na staging** `dxmowysntemfqfnanxua` (migrace `sec01_group3_safe_interim_hardening`):
+- **E19 `contest_miocoin_totals`** (unused) → revoke anon/auth + `security_invoker=on` → **vyřešeno**.
+- **E20 `winners_with_contest`** (unused) → revoke anon/auth + `security_invoker=on` → **vyřešeno**.
+- **E18 `partner_api_activity`** → revoke anon (interim). SDV ERROR zůstává; full fix = partner-own RLS na `partner_api_requests` + invoker (owner decision; invoker sám by vyprázdnil PartnerDashboard, base table deny-all). MEDIUM riziko (cross-partner).
+- **E17 `v_influencer_referrals_paid`** → revoke anon (interim). SDV ERROR zůstává; full fix = affiliate-scoped RLS na base tabulkách + granty (owner decision; invoker sám by rozbil — podkladové Group-1 views mají odebrané granty). HIGH riziko (cross-affiliate user data).
+- **E22 `contest_progress`** → NEDOTČENO. Owner-accept candidate: veřejný agregát (počty/% prodáno), žádná privátní data; `security_invoker` by ho rozbil (zákazník čte jen vlastní tikety → špatné počty); čtou ho zákaznické stránky vč. anon.
+
+- **Postcheck:** E19/E20 anon=f/auth=f/invoker=on; E17/E18 anon=f/auth=t; E22 beze změny.
+- **Advisor staging: ERROR 5 → 3** (zbývá E17, E18, E22).
+- **Full Staging E2E `27526273831` = success, 122 passed, 0 fail** → Games/ContestDetail, partner dashboard, affiliate dashboard fungují.
+- **PRODUKCE pro Group 3 NEDOTČENA** (produkce stále 5 ERROR).
+- **SEC01 ZŮSTÁVÁ P0 BLOCKER.** Cesta k 0 ERROR: E19/E20 prod apply; E18 partner-own RLS redesign; E17 affiliate-scoped RLS redesign; E22 formální owner-accept; + WARN/INFO.
+- Rollback k dispozici.
+
 ## SEC01 E05/E23 — APLIKOVÁNO A OVĚŘENO NA PRODUKCI (15. 06. 2026, schválení Pavla)
 
 Na produkci `xkzhjldrojjlrkezorey` (migrace `sec01_e05_e23_tickets_admin_read_and_invoker`): přidána aditivní RLS policy `tickets_admin_select_all` (`has_role` admin/superadmin) na `public.tickets`, poté `security_invoker = on` na E05 `contest_activity_last_24h` a E23 `contest_revenue`.
