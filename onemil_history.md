@@ -4316,3 +4316,9 @@ Se schválením Pavla odstraněn z `index.html` pouze Meta Pixel `<noscript>` tr
 ## 2026-06-15 — L03 privacy/GDPR routy technicky sjednoceny na /gdpr
 
 Owner decision Pavel: kanonická privacy/GDPR stránka je `/gdpr`, protože je CMS editovatelná přes `/admin/content` a registrace ukládá `document_slug='gdpr'`. Implementace změnila pouze routy/odkazy: `/gdpr` zůstává CMS přes `SlugContentPage slug="gdpr"`, `/privacy` a `/legal/ochrana-osobnich-udaju` jsou kompatibilní redirecty na `/gdpr`; footer ukazuje jen jeden privacy/GDPR odkaz; registrace, cookie banner a související odkazy míří na `/gdpr`. Právní text, CMS `content_pages`, SQL, cookies logika/`consent.ts` a deploy beze změny. L03 zůstává P0 pouze do owner/legal potvrzení finálního právního obsahu `/gdpr`.
+
+---
+
+## 2026-06-15 — L01 VOP routy technicky sjednoceny na /vop
+
+Owner decision Pavel: kanonická stránka obchodních podmínek je `/vop`, protože je owner-managed CMS editovatelná přes `/admin/content` a Pavel si VOP text spravuje sám. Implementace změnila pouze routy/odkazy: `/vop` zůstává CMS přes `SlugContentPage slug="vop"`, `/terms` je kompatibilní redirect na `/vop`; registrace míří na `/vop`; footer už vedl na `/vop`. Právní text, CMS `content_pages`, SQL a deploy beze změny. L01 zůstává P0 pouze do owner/legal potvrzení finálního právního obsahu `/vop`.

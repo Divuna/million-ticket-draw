@@ -1,5 +1,7 @@
 ﻿# OneMil – aktuální stav projektu
+## LAUNCH L01 — VOP ROUTY TECHNICKY SJEDNOCENY NA /vop (15. 06. 2026, schválení Pavla)
 
+Owner decision: kanonická stránka obchodních podmínek je `/vop`, protože je owner-managed CMS editovatelná přes `/admin/content` a Pavel si VOP text spravuje sám. Kódově sjednoceno pouze routami/odkazy: `/vop` zůstává CMS stránka přes `SlugContentPage slug="vop"`, `/terms` je kompatibilní redirect na `/vop`; registrace míří na `/vop`; footer už vedl na `/vop`. Právní text, CMS `content_pages`, SQL a deploy beze změny. L01 zůstává P0 jen do owner/legal potvrzení finálního právního obsahu `/vop`.
 ## LAUNCH L03 — PRIVACY/GDPR ROUTY TECHNICKY SJEDNOCENY NA /gdpr (15. 06. 2026, schválení Pavla)
 
 Owner decision: kanonická privacy/GDPR stránka je `/gdpr`, protože je CMS editovatelná přes `/admin/content` a registrace už ukládá `document_slug='gdpr'`. Kódově sjednoceno pouze routami/odkazy: `/gdpr` zůstává CMS stránka přes `SlugContentPage slug="gdpr"`, `/privacy` a `/legal/ochrana-osobnich-udaju` zůstávají kompatibilní přes redirect na `/gdpr`; footer veřejně ukazuje jen jeden privacy/GDPR odkaz na `/gdpr`; registrační checkbox, cookie banner a související odkazy míří na `/gdpr`. Právní text, CMS `content_pages`, SQL, cookies logika/`consent.ts` a deploy beze změny. L03 zůstává P0 jen do owner/legal potvrzení finálního právního obsahu `/gdpr`.

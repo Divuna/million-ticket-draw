@@ -64,7 +64,6 @@ import ShareTicket from "@/pages/ShareTicket";
 import UnsubscribeMarketing from "@/pages/UnsubscribeMarketing";
 import OnboardingDateOfBirth from "@/pages/OnboardingDateOfBirth";
 import DeleteAccount from "@/pages/DeleteAccount";
-import TermsConditions from "@/pages/TermsConditions";
 import Kontakt from "@/pages/Kontakt";
 import PartnerLogin from "@/pages/PartnerLogin";
 import PartnerRegister from "@/pages/PartnerRegister";
@@ -660,7 +659,7 @@ function AppContent() {
           <Route path="/unsubscribe/marketing" element={<UnsubscribeMarketing />} />
           <Route path="/delete-account" element={<DeleteAccount />} />
           <Route path="/privacy" element={<Navigate to="/gdpr" replace />} />
-          <Route path="/terms" element={<TermsConditions />} />
+          <Route path="/terms" element={<Navigate to="/vop" replace />} />
           <Route path="/kontakt" element={<Kontakt />} />
           <Route path="/vop" element={<SlugContentPage slug="vop" />} />
           <Route path="/gdpr" element={<SlugContentPage slug="gdpr" />} />

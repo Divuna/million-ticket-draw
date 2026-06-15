@@ -290,7 +290,7 @@ const Register: React.FC = () => {
               <label htmlFor="terms" className="text-sm leading-tight cursor-pointer">
                 Souhlasím s{' '}
                 <Link 
-                  to="/terms" 
+                  to="/vop"
                   className="text-primary hover:underline"
                   target="_blank"
                 >
