@@ -18,7 +18,7 @@
 | C07 | P0 | MioCoin kód aktivní | Uplatnit `issued` kód (správný e-mail) | +coiny, kód `activated` | spec 50: 50a success+DB `activated`, 50b invalid, 50c already_used | /profile | GH run 27552310208 | **prošlo** | E2E spec 50 — `redeem_miocoin_code` end-to-end přes RedeemMioCoinCard UI |
 | C08 | P0 | MioCoin kód čekající | Uplatnit `pending` kód | Chyba `pending`, žádný credit | ověřeno spec 48 (48d + 48e RPC) | /profile | GH run 27546753042 | **prošlo** | spec 48 |
 | C09 | P0 | MioCoin kód zrušený | Uplatnit `cancelled` kód | Chyba `cancelled` | ověřeno spec 48 (48g) | /profile | GH run 27546753042 | **prošlo** | spec 48 |
-| C10 | P1 | MioCoin kód email-mismatch | Uplatnit cizím účtem | `email_mismatch` | | /profile | | neověřeno | |
+| C10 | P1 | MioCoin kód email-mismatch | Uplatnit cizím účtem | `email_mismatch` | spec 53b: zákazník2 nemůže uplatnit kód zákazníka1 — RPC vrátí `{success:false, error:'email_mismatch'}`, UI zobrazí toast „Tento kód je vázán na jiný e-mail.", kód zůstává `issued` | /profile | GH run 27563005623 | **prošlo** | spec 53b; throwaway partner+customer1+customer2, cleanup v afterAll |
 | C11 | P0 | Soutěže | Seznam + detail | Načte bez chyb | ověřeno spec 04 | /games, /contest/:id | GH run 27546753042 | **prošlo** | spec 04 |
 | C12 | P0 | Nákup ticketu | Koupit ticket | `buy_ticket_atomic`, modal | ověřeno spec 04 | /contest/:id | GH run 27546753042 | **prošlo** | spec 03/04 |
 | C13 | P0 | Výhra | Výherní pozice | won_type main>bonus, winners | ověřeno spec 05 | /contest/:id | GH run 27546753042 | **prošlo** | spec 05 |
@@ -38,7 +38,7 @@
 | ID | Prio | Oblast | Krok | Očekávaný výsledek | Skutečný | Odkaz | Důkaz | Stav | Pozn. |
 |----|------|--------|------|--------------------|----------|-------|-------|------|-------|
 | A01 | P0 | Admin login | Přihlásit admina | Přístup `/admin/*` | ověřeno spec 33, 14 | /login | GH run 27552310208 | **prošlo** | spec 33, 14 |
-| A02 | P0 | Vytvoření soutěže | Create contest | Vytvořena, ticket_count validní | spec 16 otevírá create/edit modal; finální save soutěže bez dedikovaného E2E (spec 20 ověřuje chunked save na seeded contest) | /admin/contest/:id | GH run 27552310208 (částečně) | neověřeno | chybí E2E pro finální create save s ticket_count validací |
+| A02 | P0 | Vytvoření soutěže | Create contest | Vytvořena, ticket_count validní | spec 52: 52a UI – ticket_count=0 → save disabled + „Chybějící povinné údaje:" + `li{Počet tiketů}` viditelný; 52b – ticket_count=100 ale bez main_image → save disabled + „Hlavní obrázek" error; 52c backend – `admin_manage_contest` RPC vytvoří soutěž s ticket_count=100, DB verify; cleanup service_role | /admin/contest/:id | GH run 27563142294 (spec 52 cílený) + 27563286558 (full E2E) | **prošlo** | spec 52a/52b UI validace + 52c backend RPC; ticket_count defaults 1M — test explicitně nastaví na 0 |
 | A03 | P1 | Ekonomika | Ekonomika tab | Kalkulace, neukládá do DB | ověřeno spec 16, 18 | /admin/contest/:id | GH run 27552310208 | **prošlo** | spec 16, 18, 19 |
 | A04 | P1 | Bonusové výhry | MioCoin chunked save | Pozice + total synced | ověřeno spec 20 (600 pozic, chunked RPC, total synced) | /admin/contest/:id | GH run 27552310208 | **prošlo** | spec 20 |
 | A05 | P0 | Vouchery | `/admin/vouchers` | „Přehled voucherů" | ověřeno spec 46 | /admin/vouchers | GH run 27552310208 | **prošlo** | spec 46 |
@@ -47,8 +47,8 @@
 | A08 | P0 | PDF | Generovat PDF | `%PDF`, signed URL, export row | ověřeno spec 44 (partner-invoice-pdf-email) | /admin/invoices | GH run 27552310208 | **prošlo** | spec 44 |
 | A09 | P0 | E-mail faktury | Odeslat e-mailem | Jen safe recipient (staging) | ověřeno spec 44 (partner-invoice-pdf-email) | /admin/invoices | GH run 27552310208 | **prošlo** | spec 44 |
 | A10 | P1 | Referrals | `/admin/referrals` | Taby přítomny | ověřeno spec 46 | /admin/referrals | GH run 27552310208 | **prošlo** | spec 46 |
-| A11 | P0 | Izolace | Admin akce | Nemění nesouvisející data | RLS izolace ověřena read-only audity (P0 admin audit 13.06.: partner_invoices/referrals own+admin, žádné `USING(true)`); bez behaviorálního E2E | /admin/* | P0 admin audit 13.06. | neověřeno | pokryto auditem; chybí dedikovaný E2E pro cross-data izolaci |
-| A12 | P2 | Test dashboard | „Vytvořit Test User" | „Produkčně vypnut" toast | statická kontrola: `createTestUser` neutralizován, žádné `.invoke('admin-create-test-user')` v src; bez E2E | /admin/tests | static check | neověřeno | P2; admin-create-test-user odstraněn z produkce 13.06. |
+| A11 | P0 | Izolace | Admin akce | Nemění nesouvisející data | spec 52d: draft contest vytvořen přes admin RPC → anon klient čte → 0 řádků (RLS blokuje draft pro anon). RLS own+admin audity z 13.06. pokrývají zákaznická data (partner_invoices, invite, wallets). | /admin/* | GH run 27563142294 (spec 52d) | **prošlo** | spec 52d ověřuje draft RLS izolaci; read-only audity 13.06. potvrzují own+admin scoping bez USING(true) |
+| A12 | P2 | Test dashboard | „Vytvořit Test User" | „Produkčně vypnut" toast | spec 53a: admin otevře `/admin/tests` → tlačítka „Produkční test vypnut" viditelná, žádné „Vytvořit Test User", žádné síťové volání na `admin-create-test-user` EF | /admin/tests | GH run 27563005623 | **prošlo** | spec 53a; EF odstraněna z produkce 13.06., UI neutralizováno commit `a7329fc7` |
 | A13 | P0 | CMS obsah | Naplnit VOP/GDPR/pravidla | Obsah uložen a zobrazen | Známý DB výsledek: CMS stránky `vop`, `gdpr`, `pravidla-souteze` existují; právní kvalita/aktuálnost neověřena | /admin/content | DB result + email audit 14.06. | neověřeno | blocker F: právník/vlastník musí ověřit obsah |
 
 ## Partner (D)
@@ -117,7 +117,7 @@
 | ID | Prio | Oblast | Krok | Očekávaný výsledek | Skutečný | Odkaz | Důkaz | Stav | Pozn. |
 |----|------|--------|------|--------------------|----------|-------|-------|------|-------|
 | CI01 | P0 | P0 Smoke | Spustit P0 smoke (staging) | Vše zelené | | — | | neotestováno | 01,02,33,14,04,05,09,03-voucher,29,32,31 |
-| CI02 | P0 | Full E2E | Spustit Full E2E (staging) | Vše zelené | **PROŠLO 15.06.: run `27546753042` — 128 passed · 28 skipped · 0 failed. Telegram OK. Žádná reálná platba, žádná produkční data nezměněna.** | — | GH run 27546753042 | **prošlo** | 28 skipů záměrných (Partner Offer cooldown, affiliate payout bez secrets, spec 01 nový uživatel) |
+| CI02 | P0 | Full E2E | Spustit Full E2E (staging) | Vše zelené | **PROŠLO 15.06. (run 2): run `27563286558` — 140 passed · 0 failed. Telegram OK. Spec 52+53 nové specy prošly. Žádná reálná platba, žádná produkční data nezměněna.** | — | GH run 27563286558 | **prošlo** | LAUNCH_TODO CI02 = prošlo. Run 2 po spec 52/53 přidání. |
 | CI03 | P0 | Partner API spec | spec 48 | 3 passed | | — | | prošlo | run 27490386537 |
 | CI04 | P1 | Mrtvý kód | TestLogin/InfluencerDashboard mimo router | Rozhodnout smazat/zapojit | | — | | neověřeno | |
 | CI05 | P1 | onemil_spec.md | Chybí | Vytvořit nebo potvrdit, že netřeba | | — | | neověřeno | soubor neexistuje |

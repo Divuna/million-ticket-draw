@@ -14,6 +14,14 @@
 
 ---
 
+## 2026-06-15 — A02/A11/A12/C10 ověřeny spec 52/53; Full E2E run 27563286558 (140 passed/0 failed)
+
+Přidány dva nové staging-only E2E specy:
+- **spec 52** `52-admin-contest-create.spec.ts`: 52a/52b ověřily UI validaci create-contest modalu (ticket_count=0 → „Počet tiketů" v error listu; chybějící main_image → „Hlavní obrázek"; save button disabled; nutno přepnout na tab „Vytvořit soutěž" kde jsou save button+error container). 52c ověřil backend `admin_manage_contest` RPC přes admin JWT. 52d ověřil RLS izolaci — draft contest není viditelný anonymnímu klientu.
+- **spec 53** `53-admin-tests-page-c10-email-mismatch.spec.ts`: 53a ověřil admin test dashboard (neutralizovaná tlačítka „Produkční test vypnut", žádné volání `admin-create-test-user`). 53b ověřil C10 email-mismatch (`redeem_miocoin_code` vrací `email_mismatch`, UI toast „Tento kód je vázán na jiný e-mail.", kód zůstane `issued`).
+
+Klíčové commity: `48099c5c` (tab switch fix pro spec 52), `83a6f3cb` (ticket_count=0 clear pro validaci). LAUNCH_TODO: A02, A11, A12, C10 označeny `prošlo`. Full E2E run `27563286558`: **140 passed · 0 failed**. Telegram OK. Žádná reálná platba, žádná produkční data, žádný SQL, žádná CMS změna, žádný deploy.
+
 ## 2026-06-15 — L01/L03/L04 právní texty owner-accepted pro testovací fázi (rozhodnutí Pavla)
 
 Pavel rozhodl: aktuální texty `/vop`, `/gdpr` a `/legal/cookies` jsou dočasně přijatelné pro testovací fázi. Projekt není veřejně spuštěn pro zákazníky. Finální právní doladění proběhne s právníkem před ostrým spuštěním. L01, L03, L04 v LAUNCH_TODO označeny `owner-accepted (testovací fáze)` — ne jako finální live schválení. Zjištěné nedostatky (stručnost VOP, chybějící Supabase v GDPR, chybějící Stripe/OneSignal/GTM v cookies) zůstávají otevřené jako pre-live úkoly. Žádná změna kódu, SQL, CMS, deploye.

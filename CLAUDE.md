@@ -1,5 +1,23 @@
 # CLAUDE.md
 
+## A02/A11/A12/C10 OVĚŘENY — SPEC 52 + 53 (15. 06. 2026)
+
+Staging Full E2E run `27563286558`: **140 passed · 0 failed**. Commity `83a6f3cb`, `48099c5c`. Žádná reálná platba, žádná produkční data, žádný produkční SQL, žádná CMS změna, žádný deploy.
+
+**Nově přidané specy:**
+- `tests/e2e/52-admin-contest-create.spec.ts` — A02 + A11. 52a/52b: admin create-contest modal UI validace (ticket_count=0 → „Počet tiketů" v error listu; chybějící main_image → „Hlavní obrázek"; save button disabled). 52c: `admin_manage_contest` RPC přes admin JWT, ověření v DB (ticket_count=100). 52d: draft contest RLS — anon klient vrátí 0 řádků.
+- `tests/e2e/53-admin-tests-page-c10-email-mismatch.spec.ts` — A12 + C10. 53a: admin `/admin/tests` stránka zobrazuje „Produkční test vypnut" (žádné `admin-create-test-user` volání). 53b: `redeem_miocoin_code` s cizím JWT → `{success:false, error:'email_mismatch'}` → UI toast „Tento kód je vázán na jiný e-mail." → kód zůstane `issued`.
+
+**Pravidla spec 52 (neměnit):**
+- `AdminContestManagement.tsx` defaultuje `ticket_count: 1000000` → pro test validace je nutné vyčistit input na `0` (`ticketCountInput.fill('0')`).
+- Modal se otevírá na tabu `basic`; save button + error container jsou uvnitř `<TabsContent value="create">` (hidden) → před assertionem nutno přepnout tab: `dialog.getByRole('tab', { name: /Vytvořit soutěž/i }).click()`.
+- Save button selector: `.last()` — tab trigger (`role="tab"`) i save button (`role="button"`) mají stejný text „Vytvořit soutěž"; `.last()` vybere button.
+- Cleanup přes service_role klient (smaže `bonus_prizes`, `admin_actions`, `contests` pro test contest).
+
+**Pravidla spec 53 (neměnit):**
+- 53b setup: throwaway partner (service_role) + customer1 + customer2; `create_partner_order_reward(p_customer_email: CUSTOMER1_EMAIL)` → `update_partner_order_reward_status(p_order_status:'paid')` → kód `issued`; customer2 JWT zavolá `redeem_miocoin_code(p_code)` → `email_mismatch`.
+- `p_order_status` (NE `p_new_status`) — název parametru dle migrace `20260613200202`.
+
 ## ZÁKAZNICKÝ FLOW C01–C21 + ADMIN A01–A10 — E2E OVĚŘEN (15. 06. 2026)
 
 Staging Full E2E run `27552310208`: **134 passed · 28 skipped · 0 failed**. Žádná reálná platba, žádná produkční data nezměněna, žádný produkční SQL, žádná CMS změna, žádný deploy. C01–C21 ověřeny E2E nebo pokryty existujícím flow bez reálné Stripe platby; admin A01/A03–A10 ověřeny existujícími specy.
@@ -10,9 +28,12 @@ Staging Full E2E run `27552310208`: **134 passed · 28 skipped · 0 failed**. Ž
 - **Pravidlo (neměnit):** toast/obsah assertions v spec 50/51 musí mít `.first()` — sonner toast renderuje title+description jako 2 elementy → bez `.first()` strict mode violation. `update_partner_order_reward_status` param je `p_order_status` (NE `p_new_status`).
 
 **Zbývá neověřeno:**
-- C10 (email-mismatch), C19 (mobil layout), C23 (invite reward) — non-blocking.
-- A02 — finální create-contest save s ticket_count validací (spec 16 jen otevírá modal).
-- A11 (cross-data izolace, pokryto read-only auditem), A12 (test dashboard, P2), A13 (CMS — owner/legal blocker).
+- C10 — ✅ OVĚŘENO spec 53b (run `27563005623`). Neplatí jako neověřeno.
+- C19 (mobil layout), C23 (invite reward) — non-blocking.
+- A02 — ✅ OVĚŘENO spec 52a/52b/52c (run `27563142294`). Neplatí jako neověřeno.
+- A11 — ✅ OVĚŘENO spec 52d (RLS izolace draft, run `27563142294`). Neplatí jako neověřeno.
+- A12 — ✅ OVĚŘENO spec 53a (run `27563005623`). Neplatí jako neověřeno.
+- A13 (CMS — owner/legal blocker).
 - PAY01–PAY03 — Stripe checkout → webhook → wallet; čeká na staging Stripe secrets (viz `docs/launch-readiness/PAY01_PAYMENTS_TEST_MODE_NOTE.md`).
 
 **28 skipů záměrných:** spec 01 (nový uživatel), spec 07/08 (Partner Offer cooldown), spec 39–42 (affiliate payout bez secrets). LAUNCH_TODO CI02 = prošlo.
