@@ -1,5 +1,17 @@
 ﻿# OneMil – aktuální stav projektu
 
+## SEC01 E18 PARTNER-OWN RLS — APLIKOVÁN A OVĚŘEN NA PRODUKCI (15. 06. 2026, schválení Pavla)
+
+E18 `partner_api_activity` redesign aplikován na produkci `xkzhjldrojjlrkezorey` (migrace `sec01_e18_partner_api_activity_partner_own_rls`): RLS policy `partner_api_requests_partner_own` (partner-own přes `partners.auth_user_id = auth.uid()` + admin/superadmin) na `partner_api_requests` + `security_invoker = on` na `partner_api_activity`.
+
+- **Precheck:** partner_api_requests RLS on, 0 policy, invoker off; 5 partnerů má auth_user_id; **6 reálných řádků** partner_api_requests → policy reálně scopuje.
+- **Postcheck:** policy přítomná, invoker on, anon=false, authenticated=true.
+- **Produkční advisor: ERROR 3 → 2** (E18 zmizel). Zbývá E17 (v_influencer_referrals_paid) + E22 (contest_progress).
+- **Produkční P0 smoke `27528174542` = success, 5 passed.** Bez rollbacku. (Staging dříve E2E `27527383016` 122 passed, spec 47 green.)
+- **SEC01 ZŮSTÁVÁ P0 BLOCKER:** produkce 2 ERROR. E17 = affiliate-scoped RLS redesign (NO-GO naslepo: nutný audit čtenářů influencer_referrals + privacy review plateb); E22 = formální owner-accept (veřejný agregát).
+- **Progrese produkčních ERROR: 23 → 10 → 8 → 7 → 5 → 3 → 2.**
+- Rollback: RESET invoker + DROP POLICY partner_api_requests_partner_own.
+
 ## SEC01 E18 PARTNER-OWN RLS — OVĚŘEN NA STAGINGU (15. 06. 2026)
 
 E18 `partner_api_activity` redesign aplikován **POUZE na staging** `dxmowysntemfqfnanxua` (migrace `sec01_e18_partner_api_activity_partner_own_rls`): přidána RLS policy `partner_api_requests_partner_own` na `public.partner_api_requests` (partner-own přes `partners.auth_user_id = auth.uid()` + admin/superadmin), poté `security_invoker = on` na `partner_api_activity`.

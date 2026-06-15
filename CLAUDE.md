@@ -1,5 +1,9 @@
 # CLAUDE.md
 
+## SEC01 E18 PARTNER-OWN RLS — PRODUKČNÍ FIX OVĚŘEN (15. 06. 2026, schválení Pavla)
+
+Produkce `xkzhjldrojjlrkezorey` (migrace `sec01_e18_partner_api_activity_partner_own_rls`): policy `partner_api_requests_partner_own` (partner-own přes partners.auth_user_id + admin) na partner_api_requests + `security_invoker=on` na partner_api_activity. Precheck=baseline (RLS on, 0 policy, 6 reálných řádků); postcheck: policy on, invoker on, anon=false, auth=true; prod advisor 3→2; P0 smoke `27528174542` success. Bez rollbacku. SEC01 zůstává P0 blocker — produkce 2 ERROR: E17 (affiliate-scoped RLS redesign, NO-GO naslepo) + E22 (formální owner-accept). Progrese prod ERROR: 23→10→8→7→5→3→2. Pravidlo: partner_api_requests_partner_own je partner-scoped — nevracet deny-all/SECURITY DEFINER.
+
 ## SEC01 E18 PARTNER-OWN RLS — STAGING OVĚŘEN (15. 06. 2026)
 
 E18 `partner_api_activity` na stagingu `dxmowysntemfqfnanxua` (migrace `sec01_e18_partner_api_activity_partner_own_rls`): RLS policy `partner_api_requests_partner_own` (partner-own přes partners.auth_user_id + admin) na partner_api_requests + `security_invoker=on` na partner_api_activity. Postcheck: policy on, invoker on, anon=false, auth=true. Advisor staging 3→2 (E18 zmizel). Full E2E `27527383016` 122 passed/0 fail (spec 47 green) — partner vidí jen vlastní API aktivitu. Produkce NEDOTČENA (připraveno pro prod schválení). SEC01 zůstává P0 blocker — produkce 3 ERROR (E17 redesign, E18 čeká prod, E22 owner-accept). Pravidlo: partner_api_requests_partner_own je partner-scoped (nevracet deny-all/definer).
