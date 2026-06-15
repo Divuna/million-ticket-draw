@@ -88,27 +88,22 @@ test.describe('52 — A02/A11: Admin contest create + draft RLS izolace', () => 
     const dialog = page.getByRole('dialog');
     await expect(dialog.getByText('Vytvořit novou soutěž', { exact: true })).toBeVisible({ timeout: 15_000 });
 
+    // ticket_count defaults to 1_000_000 — vyčistit ho na 0 aby se zobrazila chyba "Počet tiketů"
+    // (handleChange sets Number("0") = 0, validation.basic.errors = [..., "Počet tiketů"])
+    const ticketCountInput = inputByLabel(dialog, 'Počet tiketů');
+    await ticketCountInput.fill('0');
+
     // Přepnout na tab "Vytvořit soutěž" kde je save button + error container
     await dialog.getByRole('tab', { name: /Vytvořit soutěž/i }).click();
 
-    // Prázdný formulář → save button disabled
+    // save button zakázán (ticket_count = 0 → isFormValid = false)
     const saveBtn = dialog.getByRole('button', { name: /Vytvořit soutěž/i }).last();
     await expect(saveBtn).toBeDisabled({ timeout: 5_000 });
 
     // Error container je viditelný — "Chybějící povinné údaje:" se zobrazí jen při !isFormValid
     await expect(dialog.getByText('Chybějící povinné údaje:')).toBeVisible({ timeout: 3_000 });
-    // Chybí "Počet tiketů" v error listu (jako <li> položka)
+    // "Počet tiketů" JE v error listu (ticket_count = 0 → validation.basic.errors obsahuje "Počet tiketů")
     await expect(dialog.locator('li', { hasText: 'Počet tiketů' })).toBeVisible({ timeout: 3_000 });
-
-    // Vyplnit název + výhru + cenu, ale ticket_count zůstane 0 → stále disabled
-    await dialog.getByRole('tab', { name: /Základní údaje/i }).click();
-    await inputByLabel(dialog, 'Název soutěže').fill(`${CONTEST_TITLE}-ui`);
-    await inputByLabel(dialog, 'Hlavní výhra').fill('E2E UI Test Prize');
-    await inputByLabel(dialog, 'Cena tiketu (MioCoins)').fill('1');
-    // ticket_count prázdný → validation.basic.isValid = false (ticket_count > 0 required)
-    // Zpět na create tab → stále disabled
-    await dialog.getByRole('tab', { name: /Vytvořit soutěž/i }).click();
-    await expect(saveBtn).toBeDisabled({ timeout: 3_000 });
 
     await page.keyboard.press('Escape');
   });
