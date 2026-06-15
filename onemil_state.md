@@ -1,4 +1,13 @@
 ﻿# OneMil – aktuální stav projektu
+
+## TESTOVACÍ REŽIM — STAV PROJEKTU (15. 06. 2026)
+
+OneMil je technicky dostupný na veřejné adrese, ale zatím nejde o veřejné spuštění pro zákazníky. Projekt je stále v testovací fázi a Pavel na něm průběžně ověřuje funkce, platby, soutěže, MioCoiny, účty a doklady.
+
+Dosavadní data nejsou reálný veřejný provoz. Platby, účty, MioCoiny, soutěže, doklady, Stripe záznamy a související transakce jsou testovací nebo smyšlená data. Web zatím není určený pro běžné uživatele ani reálné zákaznické platby.
+
+Produkční prostředí může být používáno k testování, ale Stripe běží na testovacích klíčích. Před ostrým spuštěním musí Pavel vědomě potvrdit přepnutí Stripe na live režim, live webhook a finální produkční nastavení.
+
 ## L08 18+ GATING — E2E TEST PŘIDÁN A OVĚŘEN (15. 06. 2026)
 
 `tests/e2e/49-age-gating.spec.ts` — nový Playwright spec pokrývající L08 věkový gate. Commit `70970e90`. Cílený staging run `27541581559`: **6/6 passed (18.7 s)**.
