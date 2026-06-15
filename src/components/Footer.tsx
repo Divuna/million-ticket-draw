@@ -76,7 +76,6 @@ export const Footer: React.FC = () => {
                 // Order here defines render order.
                 const legalConfig: Array<{ slug: string; href: string; title: string }> = [
                   { slug: 'autorska-prava', href: '/legal/autorska-prava', title: 'Autorská práva' },
-                  { slug: 'ochrana-osobnich-udaju', href: '/legal/ochrana-osobnich-udaju', title: 'Ochrana osobních údajů' },
                   { slug: 'pravidla-souteze', href: '/pravidla-souteze', title: 'Pravidla soutěže' },
                   { slug: 'vop', href: '/vop', title: 'Všeobecné obchodní podmínky' },
                   { slug: 'gdpr', href: '/gdpr', title: 'Zásady zpracování osobních údajů (GDPR)' },

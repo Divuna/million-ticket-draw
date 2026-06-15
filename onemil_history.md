@@ -4310,3 +4310,9 @@ L04 cookies audit byl zopakován z čistého detached checkoutu aktuálního `or
 ## 2026-06-15 — L04 technický follow-up: Meta noscript fallback odstraněn
 
 Se schválením Pavla odstraněn z `index.html` pouze Meta Pixel `<noscript>` tracking image fallback (`https://www.facebook.com/tr?id=1412172897183369&ev=PageView&noscript=1`). Důvod: při vypnutém JavaScriptu neběží React cookie banner ani `consent.ts`, ale noscript image mohl odeslat Meta PageView před souhlasem. `consent.ts` nezměněn: Meta `fbq('init')` + `PageView` zůstává jen při `marketing=true`; GTM/GA4 nezměněny. Ověření: v `index.html` nezůstává Meta noscript image, `consent.ts` gate zachována, `npm run build` prošel. Žádný SQL, deploy ani CMS content změněn. L04 technický follow-up vyřešen; L04 zůstává P0 do owner/legal potvrzení finálního cookies textu.
+
+---
+
+## 2026-06-15 — L03 privacy/GDPR routy technicky sjednoceny na /gdpr
+
+Owner decision Pavel: kanonická privacy/GDPR stránka je `/gdpr`, protože je CMS editovatelná přes `/admin/content` a registrace ukládá `document_slug='gdpr'`. Implementace změnila pouze routy/odkazy: `/gdpr` zůstává CMS přes `SlugContentPage slug="gdpr"`, `/privacy` a `/legal/ochrana-osobnich-udaju` jsou kompatibilní redirecty na `/gdpr`; footer ukazuje jen jeden privacy/GDPR odkaz; registrace, cookie banner a související odkazy míří na `/gdpr`. Právní text, CMS `content_pages`, SQL, cookies logika/`consent.ts` a deploy beze změny. L03 zůstává P0 pouze do owner/legal potvrzení finálního právního obsahu `/gdpr`.

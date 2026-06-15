@@ -1,5 +1,8 @@
 ﻿# OneMil – aktuální stav projektu
 
+## LAUNCH L03 — PRIVACY/GDPR ROUTY TECHNICKY SJEDNOCENY NA /gdpr (15. 06. 2026, schválení Pavla)
+
+Owner decision: kanonická privacy/GDPR stránka je `/gdpr`, protože je CMS editovatelná přes `/admin/content` a registrace už ukládá `document_slug='gdpr'`. Kódově sjednoceno pouze routami/odkazy: `/gdpr` zůstává CMS stránka přes `SlugContentPage slug="gdpr"`, `/privacy` a `/legal/ochrana-osobnich-udaju` zůstávají kompatibilní přes redirect na `/gdpr`; footer veřejně ukazuje jen jeden privacy/GDPR odkaz na `/gdpr`; registrační checkbox, cookie banner a související odkazy míří na `/gdpr`. Právní text, CMS `content_pages`, SQL, cookies logika/`consent.ts` a deploy beze změny. L03 zůstává P0 jen do owner/legal potvrzení finálního právního obsahu `/gdpr`.
 ## LAUNCH L04 — META NOSCRIPT FALLBACK ODSTRANĚN (15. 06. 2026, schválení Pavla)
 
 Technický follow-up k L04 proveden se schválením Pavla: z `index.html` byl odstraněn pouze Meta Pixel `<noscript>` tracking image fallback (`facebook.com/tr?...PageView&noscript=1`), protože při vypnutém JS nemůže běžet React cookie banner ani `consent.ts`, ale fallback mohl odeslat Meta PageView bez souhlasu. `consent.ts` beze změny: Meta `fbq('init')` + `PageView` se dál volá jen při `marketing=true`; GTM/GA4 beze změny. Build `npm run build` ověřen. Žádný SQL, deploy ani CMS content změněn. L04 stále zůstává P0 jen kvůli owner/legal potvrzení finálního cookies textu.

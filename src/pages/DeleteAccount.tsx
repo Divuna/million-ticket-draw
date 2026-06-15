@@ -111,7 +111,7 @@ const DeleteAccount: React.FC = () => {
               <p>
                 Vaše právo na smazání osobních údajů je zaručeno v souladu s nařízením GDPR. 
                 Pro více informací o zpracování osobních údajů navštivte naši stránku{' '}
-                <a href="/privacy" className="text-primary hover:underline">
+                <a href="/gdpr" className="text-primary hover:underline">
                   Zásady ochrany osobních údajů
                 </a>.
               </p>

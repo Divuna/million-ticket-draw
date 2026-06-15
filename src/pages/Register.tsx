@@ -309,7 +309,7 @@ const Register: React.FC = () => {
               <label htmlFor="gdpr" className="text-sm leading-tight cursor-pointer">
                 Souhlasím se{' '}
                 <Link 
-                  to="/privacy" 
+                  to="/gdpr"
                   className="text-primary hover:underline"
                   target="_blank"
                 >
