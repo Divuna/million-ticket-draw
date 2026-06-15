@@ -1,5 +1,9 @@
 ﻿# OneMil – aktuální stav projektu
 
+## LAUNCH L04 — META NOSCRIPT FALLBACK ODSTRANĚN (15. 06. 2026, schválení Pavla)
+
+Technický follow-up k L04 proveden se schválením Pavla: z `index.html` byl odstraněn pouze Meta Pixel `<noscript>` tracking image fallback (`facebook.com/tr?...PageView&noscript=1`), protože při vypnutém JS nemůže běžet React cookie banner ani `consent.ts`, ale fallback mohl odeslat Meta PageView bez souhlasu. `consent.ts` beze změny: Meta `fbq('init')` + `PageView` se dál volá jen při `marketing=true`; GTM/GA4 beze změny. Build `npm run build` ověřen. Žádný SQL, deploy ani CMS content změněn. L04 stále zůstává P0 jen kvůli owner/legal potvrzení finálního cookies textu.
+
 ## LAUNCH L04 — COOKIES POLICY CLEAN AUDIT Z ORIGIN/MAIN (15. 06. 2026, read-only)
 
 L04 cookies audit byl zopakován z čistého detached checkoutu aktuálního `origin/main` na commitu `2eb29291166bea4685d8f11184e999766403fb06`; worktree byl čistý. Tento audit **nahrazuje** předchozí L04 audit z větve `codex/affiliate-payouts-audit`. Produkční CMS `content_pages` `/legal/cookies` (`section=legal`, `slug=cookies`) je aktivní, `content_length=2328`, obsahuje `podpora@onemil.cz`; L09 e-mail mismatch je vyřešený i pro cookies (`info@onemil.cz` 0×, `support@onemil.cz` 0× v aktivním CMS, `podpora@onemil.cz` 5×). L04 ale zůstává **P0 blocker**, protože Pavel/legal musí potvrdit aktualizovaný cookies text proti reálným nástrojům: Supabase Auth `localStorage.onemil-auth`, `localStorage.cookie_consent`, `public.cookie_consents`, GA4, GTM, Meta Pixel, Meta noscript fallback, OneSignal SDK/worker/cache/IndexedDB/`user_devices`, Stripe checkout redirect a aplikační `localStorage`/`sessionStorage` klíče. Samostatný technický follow-up: prověřit Meta noscript fallback. Žádný kód, SQL, deploy ani CMS content změněn.

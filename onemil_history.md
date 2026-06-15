@@ -4304,3 +4304,9 @@ Kanonický support e-mail = `podpora@onemil.cz`. Produkční CMS `content_pages`
 ## 2026-06-15 — L04 cookies policy clean audit z aktuálního origin/main (read-only)
 
 L04 cookies audit byl zopakován z čistého detached checkoutu aktuálního `origin/main` na commitu `2eb29291166bea4685d8f11184e999766403fb06`; worktree byl čistý. Tento audit nahrazuje předchozí L04 audit z větve `codex/affiliate-payouts-audit`. Produkční CMS `content_pages` `/legal/cookies` (`section=legal`, `slug=cookies`) je aktivní, `content_length=2328`, obsahuje `podpora@onemil.cz`; L09 e-mail mismatch je vyřešený i pro cookies (`info@onemil.cz` 0×, `support@onemil.cz` 0× v aktivním CMS, `podpora@onemil.cz` 5×). L04 zůstává P0 blocker, protože Pavel/legal musí potvrdit aktualizovaný cookies text proti reálným nástrojům: Supabase Auth `localStorage.onemil-auth`, `localStorage.cookie_consent`, `public.cookie_consents`, GA4, GTM, Meta Pixel, Meta noscript fallback, OneSignal SDK/worker/cache/IndexedDB/`user_devices`, Stripe checkout redirect a aplikační `localStorage`/`sessionStorage` klíče. Samostatný technický follow-up: prověřit Meta noscript fallback. Žádný kód, SQL, deploy ani CMS content změněn.
+
+---
+
+## 2026-06-15 — L04 technický follow-up: Meta noscript fallback odstraněn
+
+Se schválením Pavla odstraněn z `index.html` pouze Meta Pixel `<noscript>` tracking image fallback (`https://www.facebook.com/tr?id=1412172897183369&ev=PageView&noscript=1`). Důvod: při vypnutém JavaScriptu neběží React cookie banner ani `consent.ts`, ale noscript image mohl odeslat Meta PageView před souhlasem. `consent.ts` nezměněn: Meta `fbq('init')` + `PageView` zůstává jen při `marketing=true`; GTM/GA4 nezměněny. Ověření: v `index.html` nezůstává Meta noscript image, `consent.ts` gate zachována, `npm run build` prošel. Žádný SQL, deploy ani CMS content změněn. L04 technický follow-up vyřešen; L04 zůstává P0 do owner/legal potvrzení finálního cookies textu.
