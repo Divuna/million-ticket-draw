@@ -92,6 +92,13 @@ async function setupApprovedPartner(): Promise<void> {
 }
 
 async function loginAsPartner(page: Page): Promise<void> {
+  // Pre-seed cookie consent so CookieConsentBanner never intercepts pointer events.
+  await page.addInitScript(() => {
+    localStorage.setItem('cookie_consent', JSON.stringify({
+      essential: true, analytics: false, marketing: false,
+      timestamp: new Date().toISOString(),
+    }));
+  });
   await page.goto('/partner/login');
   await page.getByLabel(/e-mail/i).first().fill(PARTNER_EMAIL);
   await page.getByLabel(/heslo/i).first().fill(PARTNER_PASSWORD);
@@ -141,6 +148,15 @@ test.describe('56 — Partner onboarding + dashboard nastavení (P01/P04/P05)', 
   test('56a) /partner/register: form viditelný + validace + úspěšný submit', async ({ page }) => {
     if (!isStaging) test.skip(true, 'Staging secrets not available');
     test.setTimeout(60_000);
+
+    // Pre-seed cookie consent so CookieConsentBanner (fixed bottom-0 z-[100])
+    // never appears and never intercepts pointer events.
+    await page.addInitScript(() => {
+      localStorage.setItem('cookie_consent', JSON.stringify({
+        essential: true, analytics: false, marketing: false,
+        timestamp: new Date().toISOString(),
+      }));
+    });
 
     await page.goto('/partner/register');
     await page.waitForLoadState('domcontentloaded');
