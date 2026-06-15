@@ -83,25 +83,25 @@ test.describe('55 — C23: Invite referral (bez Stripe platby)', () => {
     await loginViaUI(page, TEST_EMAIL, TEST_PASSWORD);
     await page.goto('/profile');
 
-    // Počkáme na sekci; kód se zobrazí po načtení (ensure_referral_code RPC)
+    // Počkáme na sekci
     const heading = page.getByRole('heading', { name: /Pozvi přátele/i }).first();
     await expect(heading).toBeVisible({ timeout: 15_000 });
 
-    // Input/text s referral kódem — hledáme input readonly nebo text s krátkým kódem
-    // ReferralSection renderuje kód do Input value (readonly), nebo do span s kódem
-    await page.waitForTimeout(2_000); // necháme RPC doběhnout
-    const codeInput = page.locator('input[readonly]').first();
-    const hasInput = await codeInput.isVisible().catch(() => false);
-    if (hasInput) {
-      const val = await codeInput.inputValue();
-      expect(val.length, 'Referral kód musí být neprázdný řetězec').toBeGreaterThan(0);
-    } else {
-      // fallback: hledáme libovolný viditelný text, který vypadá jako kód (6–12 znaků velká)
-      const codePattern = page.locator('text=/^[A-Z0-9]{4,16}$/').first();
-      await expect(codePattern, 'Referral kód musí být viditelný na /profile').toBeVisible({
-        timeout: 5_000,
-      });
-    }
+    // Label "Váš doporučovací kód" je viditelný
+    await expect(page.getByText('Váš doporučovací kód')).toBeVisible({ timeout: 10_000 });
+
+    // Kód se renderuje v <code> elementu (ReferralSection.tsx:368)
+    // Počkáme na naplnění (ensure_referral_code RPC)
+    const codeEl = page.locator('code').first();
+    await expect(codeEl, 'Element <code> s referral kódem musí být viditelný').toBeVisible({
+      timeout: 10_000,
+    });
+
+    // Kód nesmí být prázdný ani placeholder '—'
+    const codeText = (await codeEl.textContent())?.trim() ?? '';
+    expect(codeText, 'Referral kód nesmí být prázdný').not.toBe('');
+    expect(codeText, 'Referral kód nesmí být placeholder „—"').not.toBe('—');
+    expect(codeText.length, 'Referral kód musí mít alespoň 4 znaky').toBeGreaterThanOrEqual(4);
   });
 
   // ── 55c: RLS own-row — customer2 nevidí referraly customer1 ─────────────
