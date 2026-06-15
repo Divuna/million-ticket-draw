@@ -136,7 +136,9 @@ test.describe('56 — Partner onboarding + dashboard nastavení (P01/P04/P05)', 
 
     // Cleanup 56b/56c: smazat throwaway partner
     if (ctx.partnerId) {
-      await (svc as any).from('partners').delete().eq('id', ctx.partnerId).catch(() => undefined);
+      try {
+        await (svc as any).from('partners').delete().eq('id', ctx.partnerId);
+      } catch (_) { /* best-effort */ }
     }
     if (ctx.partnerAuthUserId) {
       await svc.auth.admin.deleteUser(ctx.partnerAuthUserId).catch(() => undefined);
@@ -198,9 +200,10 @@ test.describe('56 — Partner onboarding + dashboard nastavení (P01/P04/P05)', 
     await submitBtn.click();
 
     // Po úspěšném submitu → "Registrace odeslána"
+    // Timeout 30s: staging pod Full E2E zátěží (~55 specs) může mít pomalejší auth.signUp.
     const successHeading = page.getByText(/registrace odeslána/i).first();
     await expect(successHeading, 'Nadpis "Registrace odeslána" po úspěšném submitu').toBeVisible({
-      timeout: 15_000,
+      timeout: 30_000,
     });
   });
 
@@ -234,6 +237,9 @@ test.describe('56 — Partner onboarding + dashboard nastavení (P01/P04/P05)', 
     // Toast "Nastavení odměn bylo uloženo"
     const successToast = page.getByText(/nastavení odměn bylo uloženo/i).first();
     await expect(successToast, 'Toast "Nastavení odměn bylo uloženo"').toBeVisible({ timeout: 10_000 });
+
+    // Počkáme na dokončení DB write — toast se může zobrazit před commit na DB
+    await page.waitForTimeout(2_000);
 
     // DB verify: zkontrolovat reward_base_czk=100, reward_mc=1
     if (ctx.partnerId) {
