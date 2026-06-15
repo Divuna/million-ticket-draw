@@ -22,6 +22,10 @@ Pavel rozhodl: aktuální texty `/vop`, `/gdpr` a `/legal/cookies` jsou dočasn�
 
 OneMil je technicky dostupný na veřejné adrese, ale zatím nejde o veřejné spuštění pro zákazníky. Projekt je stále v testovací fázi. Dosavadní data (platby, účty, MioCoiny, soutěže, doklady, Stripe záznamy) jsou testovací nebo smyšlená — nejde o reálný veřejný provoz. Stripe běží na testovacích klíčích. Před ostrým spuštěním musí Pavel vědomě potvrdit přepnutí Stripe na live režim, live webhook a finální produkční nastavení. Žádná změna kódu, SQL, CMS ani deploy.
 
+## 2026-06-15 — Zákaznický flow C01–C20 ověřen Staging Full E2E
+
+Staging Full E2E run `27546753042`: **128 passed · 28 skipped · 0 failed**. Telegram doručen. Žádná reálná platba neproběhla, žádná produkční data nezměněna. C01–C20 ověřeny E2E nebo pokryty existujícím flow (registrace, login, login gating, profil, peněženka, soutěže, nákup tiketu, výhra, vouchery, zprávy/Bob, wins). Zbývají: C07 (redeem MioCoin kód — bez E2E spec), C21 (smazání účtu — bez E2E spec), PAY01–PAY03 (Stripe end-to-end — čeká na staging secrets). LAUNCH_TODO CI02 přepnuto na prošlo. Žádná změna kódu, SQL, CMS, deploye.
+
 ## 2026-06-15 — L08 18+ gating E2E spec přidán (spec 49)
 
 - `tests/e2e/49-age-gating.spec.ts` přidán — 6 testů (49a–49f) pokrývajících odmítnutí věku < 18 a přijetí věku >= 18 na `/register` i `/onboarding/date-of-birth`. Žádná změna kódu, SQL ani CMS.

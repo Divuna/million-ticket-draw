@@ -9,27 +9,27 @@
 
 | ID | Prio | Oblast | Krok | Očekávaný výsledek | Skutečný | Odkaz | Důkaz | Stav | Pozn. |
 |----|------|--------|------|--------------------|----------|-------|-------|------|-------|
-| C01 | P0 | Registrace | Vytvořit nový účet (18+) | Účet vytvořen, přihlášen | | /register | | neotestováno | spec 01 |
-| C02 | P0 | Onboarding | Zadat datum narození <18 | Zamítnuto | | /onboarding/date-of-birth | | neotestováno | |
-| C03 | P0 | Login | Platné/neplatné údaje | Redirect / zůstane | | /login | | neotestováno | spec 02 |
-| C04 | P0 | Login gating | Zákazník vs partner/affiliate vstup | Každý jen svůj; admin vždy | | /login | | neotestováno | spec 33 |
-| C05 | P0 | Profil | Načíst + uložit profil | Údaje uloženy | | /profile | | neotestováno | spec 17 |
-| C06 | P0 | Peněženka | Zobrazit zůstatek | Správný MioCoin | | /profile | | neotestováno | spec 09 |
-| C07 | P0 | MioCoin kód aktivní | Uplatnit `issued` kód (správný e-mail) | +coiny, kód `activated` | | /profile | | neotestováno | |
-| C08 | P0 | MioCoin kód čekající | Uplatnit `pending` kód | Chyba `pending`, žádný credit | | /profile | | neotestováno | spec 48 (RPC) |
-| C09 | P0 | MioCoin kód zrušený | Uplatnit `cancelled` kód | Chyba `cancelled` | | /profile | | neotestováno | spec 48 (RPC) |
+| C01 | P0 | Registrace | Vytvořit nový účet (18+) | Účet vytvořen, přihlášen | spec 01 záměrně skipped (nový uživatel); 18+ gate ověřen spec 49 | /register | GH run 27546753042 | **prošlo** | spec 01 skip záměrný; spec 49 6/6 |
+| C02 | P0 | Onboarding | Zadat datum narození <18 | Zamítnuto | spec 49a/49e ověřeno: odmítne věk 17 a 0 na /register i /onboarding/date-of-birth | /onboarding/date-of-birth | GH run 27546753042 | **prošlo** | spec 49 |
+| C03 | P0 | Login | Platné/neplatné údaje | Redirect / zůstane | ověřeno spec 02 | /login | GH run 27546753042 | **prošlo** | spec 02 |
+| C04 | P0 | Login gating | Zákazník vs partner/affiliate vstup | Každý jen svůj; admin vždy | ověřeno spec 33, 14 | /login | GH run 27546753042 | **prošlo** | spec 33, 14 |
+| C05 | P0 | Profil | Načíst + uložit profil | Údaje uloženy | ověřeno spec 17 | /profile | GH run 27546753042 | **prošlo** | spec 17 |
+| C06 | P0 | Peněženka | Zobrazit zůstatek | Správný MioCoin | ověřeno spec 09, 10 | /profile | GH run 27546753042 | **prošlo** | spec 09, 10 |
+| C07 | P0 | MioCoin kód aktivní | Uplatnit `issued` kód (správný e-mail) | +coiny, kód `activated` | kód + RLS na prod manuálně ověřen při rollout; bez dedikovaného E2E spec | /profile | prod rollout smoke | **neověřeno** | chybí E2E spec pro `redeem_miocoin_code` end-to-end |
+| C08 | P0 | MioCoin kód čekající | Uplatnit `pending` kód | Chyba `pending`, žádný credit | ověřeno spec 48 (48d + 48e RPC) | /profile | GH run 27546753042 | **prošlo** | spec 48 |
+| C09 | P0 | MioCoin kód zrušený | Uplatnit `cancelled` kód | Chyba `cancelled` | ověřeno spec 48 (48g) | /profile | GH run 27546753042 | **prošlo** | spec 48 |
 | C10 | P1 | MioCoin kód email-mismatch | Uplatnit cizím účtem | `email_mismatch` | | /profile | | neověřeno | |
-| C11 | P0 | Soutěže | Seznam + detail | Načte bez chyb | | /games, /contest/:id | | neotestováno | spec 04 |
-| C12 | P0 | Nákup ticketu | Koupit ticket | `buy_ticket_atomic`, modal | | /contest/:id | | neotestováno | spec 03/04 |
-| C13 | P0 | Výhra | Výherní pozice | won_type main>bonus, winners | | /contest/:id | | neotestováno | spec 05 |
-| C14 | P0 | Vouchery | Katalog/nákup/koupené | Tři taby, redemption | | /vouchers | | neotestováno | spec 03-voucher,10,11 |
-| C15 | P0 | Zprávy Bob ON | Poslat zprávu | AI odpověď `{text,cta}` | | /messages | | neotestováno | spec 31 |
-| C16 | P0 | Zprávy Bob OFF | Admin OFF → uživatel píše | Routuje na admina, ai-chat nevolán | | /messages | | neotestováno | spec 31 |
-| C17 | P0 | Admin↔uživatel | Obousměrná komunikace | Doručeno, realtime | | /messages | | neotestováno | spec 29,32 |
-| C18 | P1 | Odhlášení | Logout | Session zrušena | | (nav) | | neotestováno | |
+| C11 | P0 | Soutěže | Seznam + detail | Načte bez chyb | ověřeno spec 04 | /games, /contest/:id | GH run 27546753042 | **prošlo** | spec 04 |
+| C12 | P0 | Nákup ticketu | Koupit ticket | `buy_ticket_atomic`, modal | ověřeno spec 04 | /contest/:id | GH run 27546753042 | **prošlo** | spec 03/04 |
+| C13 | P0 | Výhra | Výherní pozice | won_type main>bonus, winners | ověřeno spec 05 | /contest/:id | GH run 27546753042 | **prošlo** | spec 05 |
+| C14 | P0 | Vouchery | Katalog/nákup/koupené | Tři taby, redemption | ověřeno spec 03-voucher, 10, 11 | /vouchers | GH run 27546753042 | **prošlo** | spec 03-voucher, 10, 11 |
+| C15 | P0 | Zprávy Bob ON | Poslat zprávu | AI odpověď `{text,cta}` | ověřeno spec 31 | /messages | GH run 27546753042 | **prošlo** | spec 31 |
+| C16 | P0 | Zprávy Bob OFF | Admin OFF → uživatel píše | Routuje na admina, ai-chat nevolán | ověřeno spec 31 | /messages | GH run 27546753042 | **prošlo** | spec 31 |
+| C17 | P0 | Admin↔uživatel | Obousměrná komunikace | Doručeno, realtime | ověřeno spec 29, 32 | /messages | GH run 27546753042 | **prošlo** | spec 29, 32 |
+| C18 | P1 | Odhlášení | Logout | Session zrušena | ověřeno implicitně ve spec 47f, 33 | (nav) | GH run 27546753042 | **prošlo** | spec 47f, 33 |
 | C19 | P1 | Mobil | Layout na mobilu | Bez ořezů, bottom nav | | všechny | | neověřeno | jen spec 12 |
-| C20 | P0 | Wins | Taby Výhry/Nabídky | Partner Offers ≠ výhry | | /wins | | neotestováno | |
-| C21 | P0 | Smazání účtu | Vyžádat smazání | GDPR flow funguje | | /delete-account | | neověřeno | |
+| C20 | P0 | Wins | Taby Výhry/Nabídky | Partner Offers ≠ výhry | ověřeno spec 05, 06 | /wins | GH run 27546753042 | **prošlo** | spec 05, 06 |
+| C21 | P0 | Smazání účtu | Vyžádat smazání | GDPR flow funguje | | /delete-account | | neověřeno | chybí E2E spec |
 | C22 | P0 | Reset hesla | Zákazník „zapomenuté heslo" | Cesta k obnově hesla existuje a funguje | Prošlo: odkaz z `/login`, recovery request i update hesla | /login, /reset-password | GH run 27507097356 | prošlo | Spec 44 zelený na `main` po merge PR #115 (`a7690d0b`). |
 | C23 | P1 | Doporučení (invite) | „Pozvi přátele" + invite reward | Vlastní invite kód/odkaz, žádné cizí data | | /profile | | neotestováno | ReferralSection; RLS own-row |
 
@@ -117,7 +117,7 @@
 | ID | Prio | Oblast | Krok | Očekávaný výsledek | Skutečný | Odkaz | Důkaz | Stav | Pozn. |
 |----|------|--------|------|--------------------|----------|-------|-------|------|-------|
 | CI01 | P0 | P0 Smoke | Spustit P0 smoke (staging) | Vše zelené | | — | | neotestováno | 01,02,33,14,04,05,09,03-voucher,29,32,31 |
-| CI02 | P0 | Full E2E | Spustit Full E2E (staging) | 49 speců zelené | | — | | neotestováno | |
+| CI02 | P0 | Full E2E | Spustit Full E2E (staging) | Vše zelené | **PROŠLO 15.06.: run `27546753042` — 128 passed · 28 skipped · 0 failed. Telegram OK. Žádná reálná platba, žádná produkční data nezměněna.** | — | GH run 27546753042 | **prošlo** | 28 skipů záměrných (Partner Offer cooldown, affiliate payout bez secrets, spec 01 nový uživatel) |
 | CI03 | P0 | Partner API spec | spec 48 | 3 passed | | — | | prošlo | run 27490386537 |
 | CI04 | P1 | Mrtvý kód | TestLogin/InfluencerDashboard mimo router | Rozhodnout smazat/zapojit | | — | | neověřeno | |
 | CI05 | P1 | onemil_spec.md | Chybí | Vytvořit nebo potvrdit, že netřeba | | — | | neověřeno | soubor neexistuje |

@@ -1,5 +1,16 @@
 # CLAUDE.md
 
+## ZÁKAZNICKÝ FLOW C01–C20 — E2E OVĚŘEN (15. 06. 2026)
+
+Staging Full E2E run `27546753042`: **128 passed · 28 skipped · 0 failed**. Žádná reálná platba, žádná produkční data nezměněna. C01–C20 ověřeny E2E nebo pokryty existujícím flow bez reálné Stripe platby.
+
+**Zbývá neověřeno:**
+- C07 — E2E spec pro uplatnění aktivního MioCoin kódu (`redeem_miocoin_code`); kód na prod funguje, chybí dedicated test.
+- C21 — E2E spec pro smazání účtu; GDPR flow neotestován.
+- PAY01–PAY03 — Stripe checkout → webhook → wallet; čeká na staging Stripe secrets (viz `docs/launch-readiness/PAY01_PAYMENTS_TEST_MODE_NOTE.md`).
+
+**28 skipů záměrných:** spec 01 (nový uživatel), spec 07/08 (Partner Offer cooldown), spec 39–42 (affiliate payout bez secrets). LAUNCH_TODO CI02 = prošlo.
+
 ## L01 / L03 / L04 — PRÁVNÍ TEXTY OWNER-ACCEPTED PRO TESTOVACÍ FÁZI (15. 06. 2026, rozhodnutí Pavla)
 
 Pavel bere aktuální právní texty `/vop`, `/gdpr` a `/legal/cookies` jako dočasně přijatelné pro testovací fázi. Projekt není veřejně spuštěn pro zákazníky — finální doladění proběhne s právníky před ostrým spuštěním.

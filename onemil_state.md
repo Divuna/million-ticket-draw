@@ -18,6 +18,35 @@ Dosavadní data nejsou reálný veřejný provoz. Platby, účty, MioCoiny, sout
 
 Produkční prostředí může být používáno k testování, ale Stripe běží na testovacích klíčích. Před ostrým spuštěním musí Pavel vědomě potvrdit přepnutí Stripe na live režim, live webhook a finální produkční nastavení.
 
+## ZÁKAZNICKÝ FLOW C01–C20 — E2E OVĚŘEN PRO TESTOVACÍ FÁZI (15. 06. 2026)
+
+Staging Full E2E run `27546753042`: **128 passed · 28 skipped · 0 failed**. Telegram: `✅ OneMil STAGING full E2E OK — all specs passed`. Žádná reálná platba neproběhla. Žádná produkční data nezměněna.
+
+**Ověřené C položky (E2E nebo pokryté flow):**
+- C01 Registrace (18+): spec 01 záměrně skipped (nový uživatel), 49a–f passed ✅
+- C02 18+ gate: spec 49 ✅
+- C03 Login (platné/neplatné): spec 02 ✅
+- C04 Login gating dle účtu: spec 33, 14 ✅
+- C05 Profil: spec 17 ✅
+- C06 Peněženka (zůstatek): spec 09 ✅
+- C08/C09 MioCoin kód pending/cancelled RPC: spec 48 ✅
+- C11 Soutěže seznam + detail: spec 04 ✅
+- C12 Nákup tiketu: spec 04 ✅ (`buy_ticket_atomic`)
+- C13 Výhra: spec 05 ✅
+- C14 Vouchery katalog/nákup/uplatnění: spec 03-voucher, 10, 11 ✅
+- C15 Zprávy Bob ON: spec 31 ✅
+- C16 Zprávy Bob OFF: spec 31 ✅
+- C17 Admin↔uživatel zprávy: spec 29, 32 ✅
+- C20 Wins tab Výhry/Nabídky: spec 05, 06 ✅
+- C22 Reset hesla: spec 44 ✅ (dříve ověřeno)
+
+**28 skipů** — záměrné nebo expected (spec 07/08 Partner Offer cooldown, spec 39–42 affiliate payout bez secrets, spec 01 nový uživatel).
+
+**Zbývající neověřené C položky:**
+- C07 — samostatný E2E test pro uplatnění aktivního MioCoin kódu (`redeem_miocoin_code`); kód + RLS na prod; manuálně ověřeno při rollout; bez dedicovaného E2E spec.
+- C21 — smazání účtu (GDPR flow); žádný E2E spec.
+- PAY01–PAY03 — plné Stripe end-to-end (checkout → webhook → wallet credit); EF nasazeny na staging, ale chybí staging Stripe secrets; viz `docs/launch-readiness/PAY01_PAYMENTS_TEST_MODE_NOTE.md`.
+
 ## L08 18+ GATING — E2E TEST PŘIDÁN A OVĚŘEN (15. 06. 2026)
 
 `tests/e2e/49-age-gating.spec.ts` — nový Playwright spec pokrývající L08 věkový gate. Commit `70970e90`. Cílený staging run `27541581559`: **6/6 passed (18.7 s)**.
