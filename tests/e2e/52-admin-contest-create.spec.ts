@@ -98,13 +98,12 @@ test.describe('52 — A02/A11: Admin contest create + draft RLS izolace', () => 
     // ticket_count prázdný → validation.basic.isValid = false (ticket_count > 0 required)
     await expect(saveBtn).toBeDisabled({ timeout: 3_000 });
 
-    // Ověřit, že "Počet tiketů" se zobrazí v error listu
-    await expect(dialog.getByText('Počet tiketů')).toBeVisible({ timeout: 3_000 });
+    // Error container je viditelný — "Chybějící povinné údaje:" se zobrazí jen při !isFormValid
+    await expect(dialog.getByText('Chybějící povinné údaje:')).toBeVisible({ timeout: 3_000 });
+    // Chybí "Počet tiketů" v error listu (jako <li> položka)
+    await expect(dialog.locator('li', { hasText: 'Počet tiketů' })).toBeVisible({ timeout: 3_000 });
 
-    // Zavřít modal
-    await dialog.getByRole('button').filter({ has: page.locator('svg') }).first().click({ timeout: 3_000 }).catch(() =>
-      page.keyboard.press('Escape')
-    );
+    await page.keyboard.press('Escape');
   });
 
   test('52b) A02 UI — ticket_count OK, chybí main_image → save stále zakázán', async ({ page }) => {
@@ -132,11 +131,14 @@ test.describe('52 — A02/A11: Admin contest create + draft RLS izolace', () => 
     const saveBtn = dialog.getByRole('button', { name: /Vytvořit soutěž/i });
     await expect(saveBtn).toBeDisabled({ timeout: 3_000 });
 
-    // Error list musí ukazovat "Hlavní obrázek" (grafická validace)
-    await expect(dialog.getByText('Hlavní obrázek')).toBeVisible({ timeout: 3_000 });
+    // Error container je stále viditelný (grafická validace selhává)
+    await expect(dialog.getByText('Chybějící povinné údaje:')).toBeVisible({ timeout: 3_000 });
 
-    // "Počet tiketů" již není v error listu (základní validace prošla)
-    await expect(dialog.getByText('Počet tiketů')).not.toBeVisible({ timeout: 3_000 });
+    // Základní validace prošla → "Počet tiketů" NENÍ v error listu
+    await expect(dialog.locator('li', { hasText: 'Počet tiketů' })).not.toBeVisible({ timeout: 3_000 });
+
+    // Grafická validace selhala → "Hlavní obrázek" JE v error listu
+    await expect(dialog.locator('li', { hasText: 'Hlavní obrázek' })).toBeVisible({ timeout: 3_000 });
 
     await page.keyboard.press('Escape');
   });
