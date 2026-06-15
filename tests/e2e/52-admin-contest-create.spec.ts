@@ -88,21 +88,27 @@ test.describe('52 — A02/A11: Admin contest create + draft RLS izolace', () => 
     const dialog = page.getByRole('dialog');
     await expect(dialog.getByText('Vytvořit novou soutěž', { exact: true })).toBeVisible({ timeout: 15_000 });
 
-    // Prázdný formulář → save button disabled
-    const saveBtn = dialog.getByRole('button', { name: /Vytvořit soutěž/i });
-    await expect(saveBtn).toBeDisabled({ timeout: 5_000 });
+    // Přepnout na tab "Vytvořit soutěž" kde je save button + error container
+    await dialog.getByRole('tab', { name: /Vytvořit soutěž/i }).click();
 
-    // Vyplnit název + výhru + cenu, ale ticket_count zůstane 0 → stále disabled
-    await inputByLabel(dialog, 'Název soutěže').fill(`${CONTEST_TITLE}-ui`);
-    await inputByLabel(dialog, 'Hlavní výhra').fill('E2E UI Test Prize');
-    await inputByLabel(dialog, 'Cena tiketu (MioCoins)').fill('1');
-    // ticket_count prázdný → validation.basic.isValid = false (ticket_count > 0 required)
-    await expect(saveBtn).toBeDisabled({ timeout: 3_000 });
+    // Prázdný formulář → save button disabled
+    const saveBtn = dialog.getByRole('button', { name: /Vytvořit soutěž/i }).last();
+    await expect(saveBtn).toBeDisabled({ timeout: 5_000 });
 
     // Error container je viditelný — "Chybějící povinné údaje:" se zobrazí jen při !isFormValid
     await expect(dialog.getByText('Chybějící povinné údaje:')).toBeVisible({ timeout: 3_000 });
     // Chybí "Počet tiketů" v error listu (jako <li> položka)
     await expect(dialog.locator('li', { hasText: 'Počet tiketů' })).toBeVisible({ timeout: 3_000 });
+
+    // Vyplnit název + výhru + cenu, ale ticket_count zůstane 0 → stále disabled
+    await dialog.getByRole('tab', { name: /Základní údaje/i }).click();
+    await inputByLabel(dialog, 'Název soutěže').fill(`${CONTEST_TITLE}-ui`);
+    await inputByLabel(dialog, 'Hlavní výhra').fill('E2E UI Test Prize');
+    await inputByLabel(dialog, 'Cena tiketu (MioCoins)').fill('1');
+    // ticket_count prázdný → validation.basic.isValid = false (ticket_count > 0 required)
+    // Zpět na create tab → stále disabled
+    await dialog.getByRole('tab', { name: /Vytvořit soutěž/i }).click();
+    await expect(saveBtn).toBeDisabled({ timeout: 3_000 });
 
     await page.keyboard.press('Escape');
   });
@@ -127,9 +133,12 @@ test.describe('52 — A02/A11: Admin contest create + draft RLS izolace', () => 
     await inputByLabel(dialog, 'Počet tiketů').fill('100');
     await inputByLabel(dialog, 'Cena tiketu (MioCoins)').fill('1');
 
+    // Přepnout na tab "Vytvořit soutěž" kde je save button + error container
+    await dialog.getByRole('tab', { name: /Vytvořit soutěž/i }).click();
+
     // validation.basic.isValid = true, ale graphics.isValid = false (chybí main_image)
     // → isFormValid = false → save button stále disabled
-    const saveBtn = dialog.getByRole('button', { name: /Vytvořit soutěž/i });
+    const saveBtn = dialog.getByRole('button', { name: /Vytvořit soutěž/i }).last();
     await expect(saveBtn).toBeDisabled({ timeout: 3_000 });
 
     // Error container je stále viditelný (grafická validace selhává)
