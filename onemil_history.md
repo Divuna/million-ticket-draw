@@ -4298,3 +4298,9 @@ Invariant:
 ## 2026-06-15 — L09 kontaktní e-maily v CMS sjednoceny (schválení Pavla)
 
 Kanonický support e-mail = `podpora@onemil.cz`. Produkční CMS `content_pages`: `info@onemil.cz` → `podpora@onemil.cz` (jen e-mail substring) ve 3 aktivních legal stránkách: `ochrana-osobnich-udaju`, `cookies`, `autorska-prava` (3. nalezena při precheck). Postcheck: 0× `info@`, 0× `support@`, 5 stránek s `podpora@`. App kód už čistý. Žádný deploy/kód/migrace — jen UPDATE 3 řádků. L09 → prošlo.
+
+---
+
+## 2026-06-15 — L04 cookies policy clean audit z aktuálního origin/main (read-only)
+
+L04 cookies audit byl zopakován z čistého detached checkoutu aktuálního `origin/main` na commitu `2eb29291166bea4685d8f11184e999766403fb06`; worktree byl čistý. Tento audit nahrazuje předchozí L04 audit z větve `codex/affiliate-payouts-audit`. Produkční CMS `content_pages` `/legal/cookies` (`section=legal`, `slug=cookies`) je aktivní, `content_length=2328`, obsahuje `podpora@onemil.cz`; L09 e-mail mismatch je vyřešený i pro cookies (`info@onemil.cz` 0×, `support@onemil.cz` 0× v aktivním CMS, `podpora@onemil.cz` 5×). L04 zůstává P0 blocker, protože Pavel/legal musí potvrdit aktualizovaný cookies text proti reálným nástrojům: Supabase Auth `localStorage.onemil-auth`, `localStorage.cookie_consent`, `public.cookie_consents`, GA4, GTM, Meta Pixel, Meta noscript fallback, OneSignal SDK/worker/cache/IndexedDB/`user_devices`, Stripe checkout redirect a aplikační `localStorage`/`sessionStorage` klíče. Samostatný technický follow-up: prověřit Meta noscript fallback. Žádný kód, SQL, deploy ani CMS content změněn.
