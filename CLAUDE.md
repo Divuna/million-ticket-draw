@@ -1,5 +1,7 @@
 # CLAUDE.md
-## LAUNCH L01 — VOP ROUTY TECHNICKY SJEDNOCENY NA /vop (15. 06. 2026, schválení Pavla)
+## LAUNCH L04 — COOKIE BANNER LINK OPRAVEN NA /legal/cookies (15. 06. 2026, schválení Pavla)
+
+Technický mismatch cookie banneru opraven: kanonická cookies stránka je `/legal/cookies`, owner-managed CMS obsah přes `/admin/content` (`content_pages section=legal slug=cookies`). Odkazy v `CookieConsentBanner.tsx` nyní míří na `/legal/cookies`; právní text a CMS beze změny. Meta `<noscript>` tracking image fallback zůstává pryč z `index.html`; `consent.ts` beze změny, Meta init/PageView stále jen při `marketing=true`. Žádný SQL ani deploy. L04 zůstává P0 jen do owner/legal potvrzení finálního cookies textu `/legal/cookies`.## LAUNCH L01 — VOP ROUTY TECHNICKY SJEDNOCENY NA /vop (15. 06. 2026, schválení Pavla)
 
 Owner decision: kanonická stránka obchodních podmínek je `/vop`, protože je owner-managed CMS editovatelná přes `/admin/content` a Pavel si VOP text spravuje sám. Kódově sjednoceno pouze routami/odkazy: `/vop` zůstává CMS stránka přes `SlugContentPage slug="vop"`, `/terms` je kompatibilní redirect na `/vop`; registrace míří na `/vop`; footer už vedl na `/vop`. Právní text, CMS `content_pages`, SQL a deploy beze změny. L01 zůstává P0 jen do owner/legal potvrzení finálního právního obsahu `/vop`.
 ## LAUNCH L03 — PRIVACY/GDPR ROUTY TECHNICKY SJEDNOCENY NA /gdpr (15. 06. 2026, schválení Pavla)

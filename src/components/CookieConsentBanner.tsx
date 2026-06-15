@@ -118,10 +118,10 @@ export const CookieConsentBanner: React.FC = () => {
                 <p className="text-sm text-muted-foreground leading-relaxed">
                   Používáme cookies pro fungování aplikace, analýzu návštěvnosti a personalizaci reklam (Google, Meta).{' '}
                   <Link
-                    to="/gdpr"
+                    to="/legal/cookies"
                     className="text-heading-gold hover:underline"
                   >
-                    Ochrana osobních údajů
+                    Zásady použití cookies
                   </Link>
                 </p>
               </div>
@@ -158,8 +158,8 @@ export const CookieConsentBanner: React.FC = () => {
             <DialogTitle className="text-heading-gold">Nastavení cookies</DialogTitle>
             <DialogDescription>
               Vyberte, které kategorie cookies chcete povolit.{' '}
-              <Link to="/gdpr" className="text-heading-gold hover:underline">
-                Ochrana osobních údajů
+              <Link to="/legal/cookies" className="text-heading-gold hover:underline">
+                Zásady použití cookies
               </Link>
             </DialogDescription>
           </DialogHeader>

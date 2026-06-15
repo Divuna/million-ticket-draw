@@ -4322,3 +4322,9 @@ Owner decision Pavel: kanonická privacy/GDPR stránka je `/gdpr`, protože je C
 ## 2026-06-15 — L01 VOP routy technicky sjednoceny na /vop
 
 Owner decision Pavel: kanonická stránka obchodních podmínek je `/vop`, protože je owner-managed CMS editovatelná přes `/admin/content` a Pavel si VOP text spravuje sám. Implementace změnila pouze routy/odkazy: `/vop` zůstává CMS přes `SlugContentPage slug="vop"`, `/terms` je kompatibilní redirect na `/vop`; registrace míří na `/vop`; footer už vedl na `/vop`. Právní text, CMS `content_pages`, SQL a deploy beze změny. L01 zůstává P0 pouze do owner/legal potvrzení finálního právního obsahu `/vop`.
+
+---
+
+## 2026-06-15 — L04 cookie banner link opraven na /legal/cookies
+
+Owner decision Pavel: kanonická cookies stránka je `/legal/cookies`, owner-managed CMS obsah přes `/admin/content` (`content_pages section=legal slug=cookies`). Technický mismatch v cookie banneru opraven: odkazy v `CookieConsentBanner.tsx` nyní míří na `/legal/cookies`. Právní text a CMS beze změny. Meta `<noscript>` tracking image fallback zůstává pryč z `index.html`; `consent.ts` beze změny, Meta init/PageView stále jen při `marketing=true`. Žádný SQL ani deploy. L04 zůstává P0 pouze do owner/legal potvrzení finálního cookies textu `/legal/cookies`.
