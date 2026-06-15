@@ -1,5 +1,9 @@
 # CLAUDE.md
 
+## SEC01 E05/E23 — PRODUKČNÍ FIX OVĚŘEN (15. 06. 2026, schválení Pavla)
+
+Produkce `xkzhjldrojjlrkezorey` (migrace `sec01_e05_e23_tickets_admin_read_and_invoker`): aditivní policy `tickets_admin_select_all` (has_role admin/superadmin) + `security_invoker=on` na E05 `contest_activity_last_24h` a E23 `contest_revenue`. Precheck=baseline; postcheck: policy přítomná (tickets 3 policy), invoker on, output 0/127/4000 nezměněn; customer own-row beze změny. Prod advisor 7→5. P0 smoke `27525944645` success (5 passed). Bez rollbacku. SEC01 zůstává P0 blocker — 5 ERROR = Group 3 (E17/E18/E19/E20/E22) + WARN/INFO. Pravidlo: `tickets_admin_select_all` je gated rolí (nevracet); E05/E23 nesmí zpět na SECURITY DEFINER bez invoker.
+
 ## SEC01 E05/E23 — STAGING VYŘEŠENO (14. 06. 2026)
 
 Staging `dxmowysntemfqfnanxua` (migrace `sec01_e05_e23_tickets_admin_read_and_invoker`): aditivní policy `tickets_admin_select_all` (has_role admin/superadmin) + `security_invoker=on` na E05 `contest_activity_last_24h` a E23 `contest_revenue`. Postcheck: policy on, invoker on, output 7/789/1153 nezměněn. Advisor staging 7→5 (zbytek Group 3). Full E2E `27512846743` 122 passed/0 fail (admin contest/revenue/ticket-map OK). Produkce pro E05/E23 security_invoker NEDOTČENA (jen interim anon-revoke). SEC01 zůstává P0 blocker. Pravidlo: `tickets` admin read policy je gated rolí — nezpřístupňuje cizí tikety běžným uživatelům; nevracet.
