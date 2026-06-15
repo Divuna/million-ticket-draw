@@ -18,6 +18,20 @@ Dosavadní data nejsou reálný veřejný provoz. Platby, účty, MioCoiny, sout
 
 Produkční prostředí může být používáno k testování, ale Stripe běží na testovacích klíčích. Před ostrým spuštěním musí Pavel vědomě potvrdit přepnutí Stripe na live režim, live webhook a finální produkční nastavení.
 
+## PARTNER/AFFILIATE LAUNCH READINESS — P01/P04/P05/P07-P11/P14/AF01-AF03/SEC02/CI01 OVĚŘENY (15. 06. 2026)
+
+**Spec 56 `56-partner-onboarding-settings.spec.ts` — run `27571406245`: 3/3 passed.** Commity `24d1e723` (spec), `a9db21c0` (fix: cookie consent pre-seed). Staging-only, self-contained, cleanup v `afterAll`.
+
+- **P01 ✅ OVĚŘENO** (spec 56a): `/partner/register` form viditelný (e-mail/heslo/název firmy/web), validace chybějících polí → toast „Vyplňte prosím všechna povinná pole", úspěšný submit → heading „Registrace odeslána".
+- **P04 ✅ OVĚŘENO** (spec 56b): throwaway approved partner → `/partner/dashboard` → fill `reward_base_czk=100, reward_mc=1` → Uložit → toast „Nastavení odměn bylo uloženo" → DB verify (service_role) reward_base_czk=100, reward_mc=1.
+- **P05 ✅ OVĚŘENO** (spec 56c): throwaway approved partner → `/partner/dashboard` → sekce „API klíče" viditelná → tlačítko „Regenerovat API klíč" viditelné.
+
+**Ostatní partner/affiliate položky označeny jako prošlo dle stávajících speců:**
+- P02 → spec 37 (13/13 admin company lead approval flow); P03 → spec 47; P07–P11 → spec 48 + spec 50; P14 → spec 43.
+- AF01 → spec 33+14; AF02 → spec 14+26-28; AF03 → spec 34-38.
+- SEC02 → spec 43/55/37; CI01 → subset CI02 (run 27569039738).
+- **Pravidlo (spec 56):** pre-seed `localStorage.cookie_consent` přes `addInitScript` MUSÍ být přítomen v každém testu a v `loginAsPartner` — CookieConsentBanner (fixed bottom-0 z-[100]) jinak blokuje kliknutí na form submit.
+
 ## ZÁKAZNICKÝ FLOW C01–C21 + ADMIN A01–A10 — E2E OVĚŘEN PRO TESTOVACÍ FÁZI (15. 06. 2026, aktualizováno)
 
 **Nejnovější run `27569039738`: 150 passed · 0 failed** (spec 54+55 přidány; commity `57b877a2`, `8a68c812`). Předchozí run `27563286558`: 140 passed · 0 failed (spec 52+53 přidány; commity `83a6f3cb`, `48099c5c`). Telegram OK. Žádná reálná platba, žádná produkční data, žádný produkční SQL, žádná CMS změna, žádný deploy.

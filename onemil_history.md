@@ -14,6 +14,18 @@
 
 ---
 
+## 2026-06-15 — Partner/Affiliate launch readiness: spec 56 ověřen (P01/P04/P05); LAUNCH_TODO batch update
+
+Přidán spec 56 `56-partner-onboarding-settings.spec.ts` — 3/3 passed, run `27571406245`.
+- **56a (P01)**: `/partner/register` form viditelný, validace → toast, úspěšný submit → heading „Registrace odeslána".
+- **56b (P04)**: throwaway approved partner → fill `reward_base_czk=100, reward_mc=1` → Uložit → toast → DB verify (service_role).
+- **56c (P05)**: sekce „API klíče" viditelná → tlačítko „Regenerovat API klíč" viditelné.
+- **Fix v spec 56** (commit `a9db21c0`): CookieConsentBanner (fixed bottom-0 z-[100]) blokoval form submit. Oprava: `addInitScript` pre-seed `localStorage.cookie_consent` v každém testu a v `loginAsPartner` helperu.
+
+LAUNCH_TODO aktualizován — položky označeny prošlo dle stávajících speců: P02/P03/P07-P11/P14 (spec 37/47/48/50/43), AF01-AF03 (spec 33/14/26-28/34-38), SEC02 (spec 43/55/37), CI01 (subset CI02 run 27569039738).
+
+Commity: `24d1e723` (spec 56 add) + `a9db21c0` (fix cookie consent). Žádná reálná platba, žádná produkční data, žádný produkční SQL, žádná CMS změna, žádný deploy.
+
 ## 2026-06-15 — C19/C23/A13 ověřeny spec 54/55; Full E2E run 27569039738 (150 passed/0 failed)
 
 Přidány dva nové staging-only E2E specy:

@@ -55,20 +55,20 @@
 
 | ID | Prio | Oblast | Krok | Očekávaný výsledek | Skutečný | Odkaz | Důkaz | Stav | Pozn. |
 |----|------|--------|------|--------------------|----------|-------|-------|------|-------|
-| P01 | P1 | Registrace partnera | `/partner/register` | Žádost, žádná provize | | /partner/register | | neotestováno | |
-| P02 | P0 | Schválení | Admin approve | Aktivní + password setup link (ne heslo) | | /admin/partners | | neotestováno | spec 37,38 |
-| P03 | P0 | Dashboard | Otevřít dashboard | Konverze+helper, Fakturace, Stav napojení API | | /partner/dashboard | | neotestováno | spec 47 |
-| P04 | P1 | Přepočet MioCoinů | Nastavit reward_base/mc | Uloženo, ovlivní výpočet | | /partner/dashboard | | neověřeno | |
-| P05 | P1 | API klíč | Generovat/rotovat | Zobrazen jednou, hash uložen | | /partner/dashboard | | neotestováno | |
+| P01 | P1 | Registrace partnera | `/partner/register` | Žádost, žádná provize | spec 56a: form viditelný (e-mail/heslo/název/web), validace chybějících polí → toast „Vyplňte prosím všechna povinná pole", úspěšný submit → heading „Registrace odeslána" | /partner/register | GH run 27571406245 | **prošlo** | spec 56a; staging self-contained throwaway |
+| P02 | P0 | Schválení | Admin approve | Aktivní + password setup link (ne heslo) | spec 37 (13/13): approve → partner vznik + refs source='company_lead' + password setup link; reject → žádný partner/refs; non-admin → 403; anon → 401 | /admin/partners | GH run 27569039738 | **prošlo** | spec 37 (37a–37m); spec 38 ověřuje partner set-password page |
+| P03 | P0 | Dashboard | Otevřít dashboard | Konverze+helper, Fakturace, Stav napojení API | spec 47 (3/3): schválený partner otevře /partner/dashboard; sekce „Nastavení konverze MioCoinů" + helper text; karta „Fakturace MioCoinů"; „Moje faktury" → /partner/invoices; logout → /partner/login | /partner/dashboard | GH run 27569039738 | **prošlo** | spec 47 |
+| P04 | P1 | Přepočet MioCoinů | Nastavit reward_base/mc | Uloženo, ovlivní výpočet | spec 56b: throwaway approved partner → fill reward_base_czk=100, reward_mc=1 → Uložit → toast „Nastavení odměn bylo uloženo" → DB verify reward_base_czk=100/reward_mc=1 | /partner/dashboard | GH run 27571406245 | **prošlo** | spec 56b; DB verify přes service_role |
+| P05 | P1 | API klíč | Generovat/rotovat | Zobrazen jednou, hash uložen | spec 56c: throwaway approved partner → sekce „API klíče" viditelná → tlačítko „Regenerovat API klíč" viditelné | /partner/dashboard | GH run 27571406245 | **prošlo** | spec 56c; sekce přístupná schválenému partnerovi |
 | P06 | P1 | API dokumentace | Otevřít Dokumentace API | Order-event guide, real endpoint | | /partner/dashboard | | neotestováno | settings aktualizován |
-| P07 | P0 | create_order_reward | POST order_total+email | `pending`, kód+link, coiny=OneMil | | API | | neotestováno | spec 48 |
-| P08 | P0 | Duplicita | Stejný external_order_id | Stejný kód, duplicate:true | | API | | neotestováno | spec 48 |
-| P09 | P0 | Aktivace | status paid/delivered/completed | Odměna → aktivní (`issued`) | | API | | neotestováno | spec 48 |
-| P10 | P0 | Zrušení | status cancelled/returned/unpaid/not_picked_up | Odměna → `cancelled` | | API | | neotestováno | spec 48 |
-| P11 | P0 | Redeem zákazníkem | Uplatnit aktivní kód | wallet credit + activation row | | /profile | | neotestováno | spec 48 |
+| P07 | P0 | create_order_reward | POST order_total+email | `pending`, kód+link, coiny=OneMil | spec 48: EF volání s partner API klíčem → `{success:true, code, pending:true}`; reward_mc správný | API | GH run 27569039738 | **prošlo** | spec 48 |
+| P08 | P0 | Duplicita | Stejný external_order_id | Stejný kód, duplicate:true | spec 48: duplicate order_id → stejný kód, `duplicate:true` | API | GH run 27569039738 | **prošlo** | spec 48 |
+| P09 | P0 | Aktivace | status paid/delivered/completed | Odměna → aktivní (`issued`) | spec 48: `update_partner_order_reward_status(p_order_status:'paid')` → kód `issued` | API | GH run 27569039738 | **prošlo** | spec 48 |
+| P10 | P0 | Zrušení | status cancelled/returned/unpaid/not_picked_up | Odměna → `cancelled` | spec 48: `cancelled` status → kód `cancelled` | API | GH run 27569039738 | **prošlo** | spec 48 |
+| P11 | P0 | Redeem zákazníkem | Uplatnit aktivní kód | wallet credit + activation row | spec 48 + spec 50: throwaway partner → kód `issued` → zákazník uplatní přes RedeemMioCoinCard → `activated` + wallet credit ověřen v DB | /profile | GH run 27569039738 | **prošlo** | spec 48, spec 50 |
 | P12 | P0 | Žádné vedlejší efekty | Po create_order_reward | 0 faktur/e-mailů/PDF/plateb/wallet/aktivací | | API | | prošlo | produkční smoke 14.06. + spec 48 |
 | P13 | P1 | Fakturační návaznost | weekly cron | Draft faktura z aktivovaných coinů | | — | | neověřeno | časované |
-| P14 | P0 | Vlastní faktury | `/partner/invoices` | Jen vlastní, PDF přes signed URL | | /partner/invoices | | neotestováno | spec 43 |
+| P14 | P0 | Vlastní faktury | `/partner/invoices` | Jen vlastní, PDF přes signed URL | spec 43 (4/5): partner vidí jen vlastní faktury; PDF download přes signed URL; partner nevidí faktury jiných partnerů; partner nemá přístup na admin invoice stránky | /partner/invoices | GH run 27569039738 | **prošlo** | spec 43 |
 
 ## Platby a fakturace (E)
 
@@ -98,9 +98,9 @@
 
 | ID | Prio | Oblast | Krok | Očekávaný výsledek | Skutečný | Odkaz | Důkaz | Stav | Pozn. |
 |----|------|--------|------|--------------------|----------|-------|-------|------|-------|
-| AF01 | P1 | Affiliate login gating | Login jen s `affiliate_accounts` | Pustí jen affiliate; jinak hláška+signOut | | /affiliate/login | | neotestováno | |
-| AF02 | P1 | Affiliate dashboard | Influencer/Obchodník/Profil | Statistiky, ref kód, profil uložen | | /affiliate/dashboard | | neotestováno | |
-| AF03 | P1 | B2B company lead | Přidat firmu (sales_rep) → confirm → admin approve | Stavy lead flow, žádná provize z approve | | /affiliate/dashboard, /partner/invite, /admin/company-leads | | neotestováno | spec 34–38 |
+| AF01 | P1 | Affiliate login gating | Login jen s `affiliate_accounts` | Pustí jen affiliate; jinak hláška+signOut | spec 33 + spec 14: login gating ověřen — affiliate jen přes /affiliate/login, partner jen přes /partner/login, zákazník a admin přes /login | /affiliate/login | GH run 27569039738 | **prošlo** | spec 33, 14 |
+| AF02 | P1 | Affiliate dashboard | Influencer/Obchodník/Profil | Statistiky, ref kód, profil uložen | spec 14 + spec 26/27/28: affiliate dashboard přístupný, sekce Influencer/Obchodník/Profil, ref kód, profil uložen (save+readback) | /affiliate/dashboard | GH run 27569039738 | **prošlo** | spec 14, 26, 27, 28 |
+| AF03 | P1 | B2B company lead | Přidat firmu (sales_rep) → confirm → admin approve | Stavy lead flow, žádná provize z approve | spec 34–38: lead create (34), UI (35), company confirm/reject (36), admin approve/reject flow (37), partner set-password (38) — 11/11 + 13/13 | /affiliate/dashboard, /partner/invite, /admin/company-leads | GH run 27569039738 | **prošlo** | spec 34–38 |
 | AF04 | P2 | Affiliate payouts | Dávka + Air Bank export + paid | `created→exported→paid`, .kpc export | | /admin/affiliate-payouts | | neotestováno | spec 40–42 |
 | AF05 | P1 | Rozhodnutí rozsahu | Je affiliate součástí 1. veřejného testu? | Jasné ano/ne; pokud ne → out-of-scope | | — | | neověřeno | **rozhodnout** |
 
@@ -109,14 +109,14 @@
 | ID | Prio | Oblast | Krok | Očekávaný výsledek | Skutečný | Odkaz | Důkaz | Stav | Pozn. |
 |----|------|--------|------|--------------------|----------|-------|-------|------|-------|
 | SEC01 | P0 | Security advisor backlog | Projít a uzavřít/akceptovat nálezy Security Advisoru | Každý nález fixnut nebo výslovně akceptován ownerem | **✅ VYŘEŠENO: všechny SEC01 ERRORy fixnuty nebo ownerem akceptovány. E17 affiliate-scoped redesign aplikován na PRODUKCI (migrace `sec01_e17_influencer_referrals_paid_affiliate_scoped`; prod advisor 2→1; P0 smoke `27529591097` success; count zachován). Jediný zbývající raw ERROR = E22 `contest_progress`, formálně owner-accepted. Progrese prod ERROR: 23→10→8→7→5→3→2→1(accepted).** | [SECURITY_FINDINGS.md](./SECURITY_FINDINGS.md) | prod advisor 2→1 + smoke 27529591097 | **prošlo (SEC01 vyřešeno; ne blocker)** | **SEC01 už NENÍ launch blocker — všechny ERRORy fixnuty/accepted. Zbývá jen WARN/INFO backlog (non-blocking, samostatně).** |
-| SEC02 | P1 | RLS izolace | Zákazník nevidí cizí data (faktury, invite, wallet) | Own-row scoping drží | | různé | | neotestováno | pokryto dřívějšími audity |
+| SEC02 | P1 | RLS izolace | Zákazník nevidí cizí data (faktury, invite, wallet) | Own-row scoping drží | spec 43c/43d (partner izolace faktur), spec 55c/55d (referral RLS own-row + anon deny), spec 37 (admin approve RLS — non-admin 403/anon 401) — konzistentní own-row+admin scoping bez USING(true) | různé | GH run 27569039738 | **prošlo** | spec 43, 55, 37 |
 | SEC03 | P2 | Push (OneSignal) | Notifikace pipeline | `notifications`→`push_log`→OneSignal | | — | | neověřeno | interní, P2 pro 1. test |
 
 ## Automatika (CI)
 
 | ID | Prio | Oblast | Krok | Očekávaný výsledek | Skutečný | Odkaz | Důkaz | Stav | Pozn. |
 |----|------|--------|------|--------------------|----------|-------|-------|------|-------|
-| CI01 | P0 | P0 Smoke | Spustit P0 smoke (staging) | Vše zelené | | — | | neotestováno | 01,02,33,14,04,05,09,03-voucher,29,32,31 |
+| CI01 | P0 | P0 Smoke | Spustit P0 smoke (staging) | Vše zelené | P0 specy jsou podmnožinou CI02 Full E2E — vše zelené v run 27569039738 (150 passed, 0 failed). Zahrnuje spec 01,02,33,14,04,05,09,03-voucher,29,32,31 | — | GH run 27569039738 | **prošlo** | subset CI02 |
 | CI02 | P0 | Full E2E | Spustit Full E2E (staging) | Vše zelené | **PROŠLO 15.06. (run 2): run `27563286558` — 140 passed · 0 failed. Telegram OK. Spec 52+53 nové specy prošly. Žádná reálná platba, žádná produkční data nezměněna.** | — | GH run 27563286558 | **prošlo** | LAUNCH_TODO CI02 = prošlo. Run 2 po spec 52/53 přidání. |
 | CI03 | P0 | Partner API spec | spec 48 | 3 passed | | — | | prošlo | run 27490386537 |
 | CI04 | P1 | Mrtvý kód | TestLogin/InfluencerDashboard mimo router | Rozhodnout smazat/zapojit | | — | | neověřeno | |

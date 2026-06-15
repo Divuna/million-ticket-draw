@@ -1,5 +1,22 @@
 # CLAUDE.md
 
+## PARTNER LAUNCH READINESS — SPEC 56 (P01/P04/P05) + LAUNCH_TODO BATCH UPDATE (15. 06. 2026)
+
+Spec 56 `56-partner-onboarding-settings.spec.ts` run `27571406245`: **3/3 passed**. Commity `24d1e723` (spec) + `a9db21c0` (fix). Žádná reálná platba, žádná produkční data, žádný produkční SQL, žádná CMS změna, žádný deploy.
+
+**Ověřeno spec 56:**
+- **56a (P01):** `/partner/register` form UI — povinná pole viditelná, validace → toast `/vyplňte prosím|povinná pole/i`, úspěšný submit → heading „Registrace odeslána". Cleanup: smazat auth user v `afterAll`.
+- **56b (P04):** Throwaway approved partner → dashboard → `#reward-base-czk=100`, `#reward-mc=1` → Uložit → toast „Nastavení odměn bylo uloženo" → DB verify `reward_base_czk=100, reward_mc=1`.
+- **56c (P05):** Throwaway approved partner → dashboard → `getByText('API klíče')` viditelný → `getByRole('button', { name: /regenerovat api klíč/i })` viditelný.
+
+**Pravidla spec 56 (neměnit):**
+- `addInitScript` pro pre-seed `localStorage.cookie_consent` MUSÍ být v každém testu i v `loginAsPartner` helperu — CookieConsentBanner (fixed bottom-0 z-[100]) jinak blokuje pointer events na form submit i dashboard tlačítka.
+- Throwaway partner: `auth.admin.createUser` + `partners.insert(status='approved', reward_base_czk:0, reward_mc:0)` → cleanup v `afterAll` (smaže partners row + auth user).
+- Uložit button: `getByRole('button', { name: /^Uložit$/i }).first()` — enabled až po změně hodnot od DB výchozích.
+
+**LAUNCH_TODO batch update (15. 06. 2026):**
+- Označeno `prošlo`: P01/P04/P05 (spec 56); P02/P03/P07-P11/P14 (spec 37/47/48/50/43); AF01-AF03 (spec 33/14/26-28/34-38); SEC02 (spec 43/55/37); CI01 (subset CI02 run 27569039738).
+
 ## C19/C23/A13 OVĚŘENY — SPEC 54 + 55 (15. 06. 2026)
 
 Staging Full E2E run `27569039738`: **150 passed · 0 failed**. Commity `57b877a2`, `8a68c812`. Žádná reálná platba, žádná produkční data, žádný produkční SQL, žádná CMS změna, žádný deploy.
