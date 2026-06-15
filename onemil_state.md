@@ -1,5 +1,17 @@
 ﻿# OneMil – aktuální stav projektu
 
+## SEC01 E18 PARTNER-OWN RLS — OVĚŘEN NA STAGINGU (15. 06. 2026)
+
+E18 `partner_api_activity` redesign aplikován **POUZE na staging** `dxmowysntemfqfnanxua` (migrace `sec01_e18_partner_api_activity_partner_own_rls`): přidána RLS policy `partner_api_requests_partner_own` na `public.partner_api_requests` (partner-own přes `partners.auth_user_id = auth.uid()` + admin/superadmin), poté `security_invoker = on` na `partner_api_activity`.
+
+- **Baseline:** partner_api_requests RLS on, 0 policy; 8 partnerů má auth_user_id; partner_api_requests 0 řádků na stagingu.
+- **Postcheck:** policy přítomná, invoker on, anon=false, authenticated=true.
+- **Advisor staging: ERROR 3 → 2** (E18 zmizel). Zbývá E22 (contest_progress) + E17 (v_influencer_referrals_paid).
+- **Full Staging E2E `27527383016` = success, 122 passed, 0 fail** (spec 47 partner dashboard 47e/47f green) → partner dashboard funguje; partner vidí jen vlastní API aktivitu, admin vše.
+- **PRODUKCE pro E18 NEDOTČENA** — připraveno pro samostatné produkční schválení.
+- **SEC01 ZŮSTÁVÁ P0 BLOCKER:** produkce 3 ERROR (E17, E18, E22). E17 = affiliate-scoped RLS redesign; E22 = formální owner-accept.
+- Rollback: RESET invoker + DROP POLICY partner_api_requests_partner_own.
+
 ## SEC01 GROUP 3 SAFE/INTERIM — APLIKOVÁN A OVĚŘEN NA PRODUKCI (15. 06. 2026, schválení Pavla)
 
 SEC01 Group 3 safe/interim aplikován na produkci `xkzhjldrojjlrkezorey` (migrace `sec01_group3_safe_interim_hardening`):

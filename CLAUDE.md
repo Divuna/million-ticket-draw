@@ -1,5 +1,9 @@
 # CLAUDE.md
 
+## SEC01 E18 PARTNER-OWN RLS — STAGING OVĚŘEN (15. 06. 2026)
+
+E18 `partner_api_activity` na stagingu `dxmowysntemfqfnanxua` (migrace `sec01_e18_partner_api_activity_partner_own_rls`): RLS policy `partner_api_requests_partner_own` (partner-own přes partners.auth_user_id + admin) na partner_api_requests + `security_invoker=on` na partner_api_activity. Postcheck: policy on, invoker on, anon=false, auth=true. Advisor staging 3→2 (E18 zmizel). Full E2E `27527383016` 122 passed/0 fail (spec 47 green) — partner vidí jen vlastní API aktivitu. Produkce NEDOTČENA (připraveno pro prod schválení). SEC01 zůstává P0 blocker — produkce 3 ERROR (E17 redesign, E18 čeká prod, E22 owner-accept). Pravidlo: partner_api_requests_partner_own je partner-scoped (nevracet deny-all/definer).
+
 ## SEC01 GROUP 3 SAFE/INTERIM — PRODUKČNÍ FIX OVĚŘEN (15. 06. 2026, schválení Pavla)
 
 Produkce `xkzhjldrojjlrkezorey` (migrace `sec01_group3_safe_interim_hardening`): E19 contest_miocoin_totals + E20 winners_with_contest (unused) → revoke anon/auth + security_invoker=on (cleared); E17 v_influencer_referrals_paid + E18 partner_api_activity → revoke anon no-op (anon už false), zůstávají interim (redesign pending); E22 contest_progress ponechán (owner-accept candidate). Precheck=baseline; postcheck OK; prod advisor 5→3; P0 smoke `27526912855` success (5 passed). Bez rollbacku. SEC01 zůstává P0 blocker — 3 ERROR: E17 (affiliate-scoped RLS redesign), E18 (partner-own RLS redesign), E22 (formální owner-accept). Progrese prod ERROR: 23→10→8→7→5→3. Pravidlo: E19/E20 nevracet granty/SECURITY DEFINER; E22 nepřepínat na security_invoker (rozbije zákaznické počty).
