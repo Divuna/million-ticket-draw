@@ -1,5 +1,9 @@
 # CLAUDE.md
 
+## SEC01 E17 AFFILIATE-SCOPED REDESIGN — STAGING OVĚŘEN (15. 06. 2026)
+
+E17 `v_influencer_referrals_paid` na stagingu `dxmowysntemfqfnanxua` (migrace `sec01_e17_influencer_referrals_paid_affiliate_scoped`): influencer_referrals owner+admin RLS (broad USING(true) odstraněn), 2 minimal-disclosure SECURITY DEFINER helpery (user_completed_first_topup, referral_user_is_valid; anon exec=false), view přestavěn na security_invoker nad base tabulkou. Postcheck OK, count 0=0. Advisor E17 zmizel (2→1; zbývá jen E22 accepted → effective 0). Full E2E `27528853194` 122 passed/0 fail (affiliate + admin OK). Žádné raw platby/auth.users. Produkce NEDOTČENA (připraveno pro prod schválení). Po prod E17 lze SEC01 uzavřít. Pravidlo: influencer_referrals nevracet USING(true); v_influencer_referrals_paid nevracet na SECURITY DEFINER; helpery nesmí mít anon execute.
+
 ## SEC01 E22 contest_progress — OWNER-ACCEPTED (15. 06. 2026, jen dokumentace)
 
 Pavel formálně akceptoval E22 `public.contest_progress` jako záměrný veřejný agregát (tikety prodáno/zbývá/%); bez osobních dat, ponechává se SECURITY DEFINER (security_invoker by rozbil zákaznické počty). Není blocker. Jen dokumentace (SECURITY_FINDINGS.md status accepted-risk; LAUNCH_TODO). Žádné SQL/advisor change. Produkční raw advisor 2 ERROR, ale efektivní nevyřešený SEC01 = 1 (E17 v_influencer_referrals_paid). SEC01 zůstává P0 blocker kvůli E17; po jeho vyřešení lze uzavřít (mimo WARN/INFO). Pravidlo: contest_progress NEpřepínat na security_invoker.

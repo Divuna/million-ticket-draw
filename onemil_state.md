@@ -1,5 +1,20 @@
 ﻿# OneMil – aktuální stav projektu
 
+## SEC01 E17 AFFILIATE-SCOPED REDESIGN — OVĚŘEN NA STAGINGU (15. 06. 2026)
+
+E17 `v_influencer_referrals_paid` přepracován **POUZE na staging** `dxmowysntemfqfnanxua` (migrace `sec01_e17_influencer_referrals_paid_affiliate_scoped`):
+- `influencer_referrals`: broad `influencer_referrals_read USING(true)` nahrazeno `influencer_referrals_owner_admin` (affiliate-own přes `partners.auth_user_id=auth.uid()` + admin/superadmin).
+- 2 minimal-disclosure SECURITY DEFINER helpery `user_completed_first_topup(uuid)` + `referral_user_is_valid(uuid)` (anon exec=false, authenticated=true) → žádné raw platby ani `auth.users` se neexponují.
+- `v_influencer_referrals_paid` přestavěn na `security_invoker=on` nad `influencer_referrals` (jen) + filtr přes helpery.
+
+- **Postcheck:** invoker on, anon=false, authenticated=true, count zachován (0=0); influencer_referrals policy owner+admin; helpery anon=false/auth=true.
+- **Advisor staging: E17 zmizel (ERROR 2 → 1)**; zbývá jen E22 (contest_progress, již owner-accepted) → **efektivní nevyřešený staging ERROR = 0**.
+- **Full Staging E2E `27528853194` = success, 122 passed, 0 fail** → affiliate dashboard (paying-users count scoped) + admin influencers fungují.
+- **Bezpečnost:** affiliate vidí jen své; admin vše; běžný uživatel/anon nic; žádná raw payment data ani auth.users.
+- **PRODUKCE pro E17 NEDOTČENA** — připraveno pro samostatné produkční schválení.
+- **SEC01:** po produkčním rolloutu E17 lze uzavřít (E22 už accepted), mimo WARN/INFO.
+- Rollback k dispozici.
+
 ## SEC01 E22 contest_progress — FORMÁLNĚ OWNER-ACCEPTED (15. 06. 2026, jen dokumentace)
 
 Pavel formálně akceptoval E22 `public.contest_progress` jako záměrný veřejný agregát (počet prodaných/zbývajících tiketů, % naplnění); view neobsahuje osobní ani citlivá data, ponechává se `SECURITY DEFINER` (`security_invoker=on` by rozbil veřejné zobrazení — zákazník by viděl jen své tikety). Není to launch blocker. Zaznamenáno v `docs/launch-readiness/SECURITY_FINDINGS.md` (status `accepted-risk (owner: Pavel, 15.06.2026)`) a `LAUNCH_TODO.md`.
