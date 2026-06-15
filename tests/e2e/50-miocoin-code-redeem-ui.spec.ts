@@ -123,7 +123,7 @@ async function setupData(): Promise<void> {
     {
       p_partner_id: ctx.partnerId,
       p_external_order_id: ORDER_ID,
-      p_new_status: 'paid',
+      p_order_status: 'paid',
     },
   );
   if (updateErr) throw new Error(`update_partner_order_reward_status: ${updateErr.message}`);

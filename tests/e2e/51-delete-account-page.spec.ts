@@ -52,7 +52,7 @@ test.describe('51 — C21: Delete account / smazání účtu stránka', () => {
 
     // Instrukce pro smazání v aplikaci
     await expect(
-      page.getByText('Smazání přímo v aplikaci').or(page.getByText('Profil')),
+      page.getByText('Smazání přímo v aplikaci'),
     ).toBeVisible({ timeout: 5_000 });
 
     // E-mailová cesta — must contain support email
