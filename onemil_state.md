@@ -1,5 +1,15 @@
 ﻿# OneMil – aktuální stav projektu
 
+## L01 / L03 / L04 — PRÁVNÍ TEXTY OWNER-ACCEPTED PRO TESTOVACÍ FÁZI (15. 06. 2026, rozhodnutí Pavla)
+
+Pavel bere aktuální právní texty `/vop`, `/gdpr` a `/legal/cookies` jako dočasně přijatelné pro současný testovací režim projektu OneMil. Projekt je veřejně dostupný na adrese, ale není veřejně spuštěný pro zákazníky.
+
+- **L01 `/vop`**: owner-accepted pro testovací fázi. Texty jsou stručné; před live je nutný právní review a doplnění (identifikace firmy, reklamační řád, detailnější znění).
+- **L03 `/gdpr`**: owner-accepted pro testovací fázi. Chybí Supabase v seznamu zpracovatelů; před live doplnit.
+- **L04 `/legal/cookies`**: owner-accepted pro testovací fázi. Chybí: Stripe místo „Platební brána", OneSignal, GTM; nepřesnost o cookies vs. localStorage; před live opravit.
+
+**Pravidlo: L01, L03, L04 nejsou finálně schváleny pro ostrý provoz.** Před live spuštěním musí proběhnout právní review s právníkem a texty musí být aktualizovány. Stav LAUNCH_TODO: `owner-accepted (testovací fáze)` — ne `prošlo`.
+
 ## TESTOVACÍ REŽIM — STAV PROJEKTU (15. 06. 2026)
 
 OneMil je technicky dostupný na veřejné adrese, ale zatím nejde o veřejné spuštění pro zákazníky. Projekt je stále v testovací fázi a Pavel na něm průběžně ověřuje funkce, platby, soutěže, MioCoiny, účty a doklady.

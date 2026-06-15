@@ -1,5 +1,14 @@
 # CLAUDE.md
 
+## L01 / L03 / L04 — PRÁVNÍ TEXTY OWNER-ACCEPTED PRO TESTOVACÍ FÁZI (15. 06. 2026, rozhodnutí Pavla)
+
+Pavel bere aktuální právní texty `/vop`, `/gdpr` a `/legal/cookies` jako dočasně přijatelné pro testovací fázi. Projekt není veřejně spuštěn pro zákazníky — finální doladění proběhne s právníky před ostrým spuštěním.
+
+**Pravidlo (neměnit bez nového rozhodnutí Pavla):**
+- L01 `/vop`, L03 `/gdpr`, L04 `/legal/cookies` jsou `owner-accepted pro testovací fázi` — NIKOLI finálně schváleny pro live provoz.
+- Před live: právní review + doplnění zjištěných nedostatků: VOP (identifikace firmy, reklamační řád), GDPR (Supabase jako zpracovatel), cookies (Stripe místo „Platební brána", OneSignal, GTM, oprava tvrzení o cookies vs. localStorage).
+- Neoznačovat L01/L03/L04 jako `prošlo` v LAUNCH_TODO bez výslovného potvrzení Pavla po finálním právním review.
+
 ## TESTOVACÍ REŽIM — STAV PROJEKTU (15. 06. 2026, dokumentace)
 
 OneMil je technicky dostupný na veřejné adrese, ale zatím nejde o veřejné spuštění pro zákazníky. Projekt je stále v testovací fázi a Pavel na něm průběžně ověřuje funkce, platby, soutěže, MioCoiny, účty a doklady.

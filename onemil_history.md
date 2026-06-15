@@ -14,6 +14,10 @@
 
 ---
 
+## 2026-06-15 — L01/L03/L04 právní texty owner-accepted pro testovací fázi (rozhodnutí Pavla)
+
+Pavel rozhodl: aktuální texty `/vop`, `/gdpr` a `/legal/cookies` jsou dočasně přijatelné pro testovací fázi. Projekt není veřejně spuštěn pro zákazníky. Finální právní doladění proběhne s právníkem před ostrým spuštěním. L01, L03, L04 v LAUNCH_TODO označeny `owner-accepted (testovací fáze)` — ne jako finální live schválení. Zjištěné nedostatky (stručnost VOP, chybějící Supabase v GDPR, chybějící Stripe/OneSignal/GTM v cookies) zůstávají otevřené jako pre-live úkoly. Žádná změna kódu, SQL, CMS, deploye.
+
 ## 2026-06-15 — Dokumentace testovacího režimu projektu
 
 OneMil je technicky dostupný na veřejné adrese, ale zatím nejde o veřejné spuštění pro zákazníky. Projekt je stále v testovací fázi. Dosavadní data (platby, účty, MioCoiny, soutěže, doklady, Stripe záznamy) jsou testovací nebo smyšlená — nejde o reálný veřejný provoz. Stripe běží na testovacích klíčích. Před ostrým spuštěním musí Pavel vědomě potvrdit přepnutí Stripe na live režim, live webhook a finální produkční nastavení. Žádná změna kódu, SQL, CMS ani deploy.
