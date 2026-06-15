@@ -1,4 +1,16 @@
 ﻿# OneMil – aktuální stav projektu
+## L08 18+ GATING — E2E TEST PŘIDÁN A OVĚŘEN (15. 06. 2026)
+
+`tests/e2e/49-age-gating.spec.ts` — nový Playwright spec pokrývající L08 věkový gate. Commit `70970e90`. Cílený staging run `27541581559`: **6/6 passed (18.7 s)**.
+
+**Ověřeno testem:**
+- `/register`: odmítne věk 17 let (error `Pro registraci musíte mít alespoň 18 let.`) a věk 0 let (narozeni dnes) — zůstane na `/register`.
+- `/register`: přijme věk přesně 18 let a 25 let — žádná chyba věku, formulář pokračuje na kontrolu podmínek.
+- `/onboarding/date-of-birth`: odmítne věk 17 let (error viditelný, strana beze změny URL).
+- `/onboarding/date-of-birth`: přijme věk 18 let — age error se nezobrazí; bez session vyhodí `Uživatel není přihlášen.` (potvrzuje, že age check prošel).
+
+**L08 status: prošlo** — LAUNCH_TODO.md aktualizováno. Frontendová `validateAge` logika je ověřena na obou vstupních bodech (`/register` i `/onboarding/date-of-birth`). Žádná změna business logiky, CMS, SQL ani deploy.
+
 ## LAUNCH L04 — COOKIE BANNER LINK OPRAVEN NA /legal/cookies (15. 06. 2026, schválení Pavla)
 
 Technický mismatch cookie banneru opraven: kanonická cookies stránka je `/legal/cookies`, owner-managed CMS obsah přes `/admin/content` (`content_pages section=legal slug=cookies`). Odkazy v `CookieConsentBanner.tsx` nyní míří na `/legal/cookies`; právní text a CMS beze změny. Meta `<noscript>` tracking image fallback zůstává pryč z `index.html`; `consent.ts` beze změny, Meta init/PageView stále jen při `marketing=true`. Žádný SQL ani deploy. L04 zůstává P0 jen do owner/legal potvrzení finálního cookies textu `/legal/cookies`.## LAUNCH L01 — VOP ROUTY TECHNICKY SJEDNOCENY NA /vop (15. 06. 2026, schválení Pavla)

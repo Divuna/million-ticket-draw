@@ -1,4 +1,12 @@
 # CLAUDE.md
+## L08 18+ GATING — SPEC 49 PŘIDÁN A OVĚŘEN (15. 06. 2026)
+
+`tests/e2e/49-age-gating.spec.ts` ověřuje věkový gate na obou vstupních bodech:
+- `/register`: odmítne věk 17 a 0 (zobrazí `Pro registraci musíte mít alespoň 18 let.`); přijme věk 18 a 25 (žádná age error).
+- `/onboarding/date-of-birth`: odmítne věk 17 (age error viditelný); přijme věk 18 (age error není; bez session → `Uživatel není přihlášen.`).
+Staging run `27541581559`: 6/6 passed. Commit `70970e90`. L08 = prošlo. Žádná změna kódu/SQL/CMS.
+Pravidlo: nevracet business logiku `validateAge` (age >= 18); spec 49 spustit při jakékoli změně `/register` nebo `/onboarding/date-of-birth`.
+
 ## LAUNCH L04 — COOKIE BANNER LINK OPRAVEN NA /legal/cookies (15. 06. 2026, schválení Pavla)
 
 Technický mismatch cookie banneru opraven: kanonická cookies stránka je `/legal/cookies`, owner-managed CMS obsah přes `/admin/content` (`content_pages section=legal slug=cookies`). Odkazy v `CookieConsentBanner.tsx` nyní míří na `/legal/cookies`; právní text a CMS beze změny. Meta `<noscript>` tracking image fallback zůstává pryč z `index.html`; `consent.ts` beze změny, Meta init/PageView stále jen při `marketing=true`. Žádný SQL ani deploy. L04 zůstává P0 jen do owner/legal potvrzení finálního cookies textu `/legal/cookies`.## LAUNCH L01 — VOP ROUTY TECHNICKY SJEDNOCENY NA /vop (15. 06. 2026, schválení Pavla)

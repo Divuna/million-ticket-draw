@@ -14,6 +14,12 @@
 
 ---
 
+## 2026-06-15 — L08 18+ gating E2E spec přidán (spec 49)
+
+- `tests/e2e/49-age-gating.spec.ts` přidán — 6 testů (49a–49f) pokrývajících odmítnutí věku < 18 a přijetí věku >= 18 na `/register` i `/onboarding/date-of-birth`. Žádná změna kódu, SQL ani CMS.
+- Cílený staging run `27541581559`: **6/6 passed (18.7 s)**.
+- L08 LAUNCH_TODO přepnut na `prošlo`. Commit `70970e90`.
+
 ## 2026-06-13 — Spec 47 logout assertován přes existující top-nav tlačítko
 
 - Spec 47 test 47f aktualizován: klikne na existující `Odhlásit se` v partner top-nav (PartnerHeader v `App.tsx`, `handleLogout` → `navigate('/partner/login')`) a ověří redirect na `/partner/login`; best-effort skip odstraněn. Commit `e3c2439b`.
