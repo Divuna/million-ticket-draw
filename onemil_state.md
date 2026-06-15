@@ -1,5 +1,12 @@
 ﻿# OneMil – aktuální stav projektu
 
+## SEC01 E22 contest_progress — FORMÁLNĚ OWNER-ACCEPTED (15. 06. 2026, jen dokumentace)
+
+Pavel formálně akceptoval E22 `public.contest_progress` jako záměrný veřejný agregát (počet prodaných/zbývajících tiketů, % naplnění); view neobsahuje osobní ani citlivá data, ponechává se `SECURITY DEFINER` (`security_invoker=on` by rozbil veřejné zobrazení — zákazník by viděl jen své tikety). Není to launch blocker. Zaznamenáno v `docs/launch-readiness/SECURITY_FINDINGS.md` (status `accepted-risk (owner: Pavel, 15.06.2026)`) a `LAUNCH_TODO.md`.
+
+- **Žádné SQL, žádná změna advisor countu.** Produkční raw advisor stále hlásí 2 ERROR, ale E22 je akceptován → **efektivní nevyřešený SEC01 ERROR = 1: E17** (`v_influencer_referrals_paid`, affiliate-scoped RLS redesign, NO-GO naslepo).
+- **SEC01 zůstává P0 blocker kvůli E17.** Po jeho vyřešení lze SEC01 uzavřít (mimo WARN/INFO).
+
 ## SEC01 E18 PARTNER-OWN RLS — APLIKOVÁN A OVĚŘEN NA PRODUKCI (15. 06. 2026, schválení Pavla)
 
 E18 `partner_api_activity` redesign aplikován na produkci `xkzhjldrojjlrkezorey` (migrace `sec01_e18_partner_api_activity_partner_own_rls`): RLS policy `partner_api_requests_partner_own` (partner-own přes `partners.auth_user_id = auth.uid()` + admin/superadmin) na `partner_api_requests` + `security_invoker = on` na `partner_api_activity`.

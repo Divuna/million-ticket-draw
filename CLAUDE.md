@@ -1,5 +1,9 @@
 # CLAUDE.md
 
+## SEC01 E22 contest_progress — OWNER-ACCEPTED (15. 06. 2026, jen dokumentace)
+
+Pavel formálně akceptoval E22 `public.contest_progress` jako záměrný veřejný agregát (tikety prodáno/zbývá/%); bez osobních dat, ponechává se SECURITY DEFINER (security_invoker by rozbil zákaznické počty). Není blocker. Jen dokumentace (SECURITY_FINDINGS.md status accepted-risk; LAUNCH_TODO). Žádné SQL/advisor change. Produkční raw advisor 2 ERROR, ale efektivní nevyřešený SEC01 = 1 (E17 v_influencer_referrals_paid). SEC01 zůstává P0 blocker kvůli E17; po jeho vyřešení lze uzavřít (mimo WARN/INFO). Pravidlo: contest_progress NEpřepínat na security_invoker.
+
 ## SEC01 E18 PARTNER-OWN RLS — PRODUKČNÍ FIX OVĚŘEN (15. 06. 2026, schválení Pavla)
 
 Produkce `xkzhjldrojjlrkezorey` (migrace `sec01_e18_partner_api_activity_partner_own_rls`): policy `partner_api_requests_partner_own` (partner-own přes partners.auth_user_id + admin) na partner_api_requests + `security_invoker=on` na partner_api_activity. Precheck=baseline (RLS on, 0 policy, 6 reálných řádků); postcheck: policy on, invoker on, anon=false, auth=true; prod advisor 3→2; P0 smoke `27528174542` success. Bez rollbacku. SEC01 zůstává P0 blocker — produkce 2 ERROR: E17 (affiliate-scoped RLS redesign, NO-GO naslepo) + E22 (formální owner-accept). Progrese prod ERROR: 23→10→8→7→5→3→2. Pravidlo: partner_api_requests_partner_own je partner-scoped — nevracet deny-all/SECURITY DEFINER.
