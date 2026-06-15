@@ -195,7 +195,7 @@ test.describe('50 — C07: MioCoin kód uplatnění (UI flow)', () => {
 
     // Úspěšný toast
     await expect(
-      page.getByText(/kód byl úspěšně uplatněn/i).or(page.getByText(/připsáno.*miocoin/i)),
+      page.getByText(/kód byl úspěšně uplatněn/i).or(page.getByText(/připsáno.*miocoin/i)).first(),
     ).toBeVisible({ timeout: 10_000 });
 
     // Ověřit stav v DB
@@ -229,7 +229,7 @@ test.describe('50 — C07: MioCoin kód uplatnění (UI flow)', () => {
     await submitBtn.click();
 
     await expect(
-      page.getByText(/neplatný kód/i).or(page.getByText(/nepodařilo se uplatnit/i)),
+      page.getByText(/neplatný kód/i).or(page.getByText(/nepodařilo se uplatnit/i)).first(),
     ).toBeVisible({ timeout: 10_000 });
   });
 

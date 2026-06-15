@@ -67,7 +67,7 @@ test.describe('51 — C21: Delete account / smazání účtu stránka', () => {
 
     // Upozornění o nevratnosti smazání
     await expect(
-      page.getByText(/nevratn|30\s*dn/i),
+      page.getByText(/nevratn|30\s*dn/i).first(),
     ).toBeVisible({ timeout: 5_000 });
   });
 
