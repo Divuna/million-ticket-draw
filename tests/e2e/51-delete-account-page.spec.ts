@@ -62,7 +62,7 @@ test.describe('51 — C21: Delete account / smazání účtu stránka', () => {
 
     // GDPR zmínka
     await expect(
-      page.getByText(/GDPR|osobní\s+údaj/i),
+      page.getByText(/GDPR|osobní\s+údaj/i).first(),
     ).toBeVisible({ timeout: 5_000 });
 
     // Upozornění o nevratnosti smazání

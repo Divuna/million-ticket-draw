@@ -255,7 +255,7 @@ test.describe('50 — C07: MioCoin kód uplatnění (UI flow)', () => {
     await submitBtn.click();
 
     await expect(
-      page.getByText(/již byl uplatněn/i).or(page.getByText(/already_used/i)),
+      page.getByText(/již byl uplatněn/i).or(page.getByText(/already_used/i)).first(),
     ).toBeVisible({ timeout: 10_000 });
   });
 });
