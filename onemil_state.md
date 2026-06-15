@@ -20,7 +20,12 @@ Produkční prostředí může být používáno k testování, ale Stripe běž
 
 ## ZÁKAZNICKÝ FLOW C01–C21 + ADMIN A01–A10 — E2E OVĚŘEN PRO TESTOVACÍ FÁZI (15. 06. 2026, aktualizováno)
 
-**Nejnovější run `27563286558`: 140 passed · 0 failed** (spec 52+53 přidány; commity `83a6f3cb`, `48099c5c`). Předchozí run `27552310208`: 134 passed · 28 skipped · 0 failed (commit `7e6061c1`). Telegram OK (message_id 1362). Žádná reálná platba, žádná produkční data, žádný produkční SQL, žádná CMS změna, žádný deploy.
+**Nejnovější run `27569039738`: 150 passed · 0 failed** (spec 54+55 přidány; commity `57b877a2`, `8a68c812`). Předchozí run `27563286558`: 140 passed · 0 failed (spec 52+53 přidány; commity `83a6f3cb`, `48099c5c`). Telegram OK. Žádná reálná platba, žádná produkční data, žádný produkční SQL, žádná CMS změna, žádný deploy.
+
+**Nově ověřeno v runu `27569039738` (15. 06. 2026, commity `57b877a2`, `8a68c812`):**
+- **C19 ✅ OVĚŘENO:** spec 54 `54-mobile-layout-customer-pages.spec.ts` — 6/6 passed. 6 zákaznických stránek (`/`, `/games`, `/wins`, `/vouchers`, `/profile`, `/messages`) testovány na iPhone SE viewportu 375×812px: žádné uncaught JS chyby, bottom nav (`role=navigation name="Hlavní menu"`) viditelná, žádný horizontální overflow (scrollWidth ≤ 375px). Targeted run `27567440891`.
+- **C23 ✅ ČÁSTEČNĚ OVĚŘENO (bez Stripe):** spec 55 `55-invite-referral-c23.spec.ts` — 4/4 passed. 55a ReferralSection viditelná na `/profile` (nadpis „Pozvi přátele"). 55b vlastní referral kód viditelný (v `<code>` elementu po `ensure_referral_code` RPC, ≥4 znaky, ne placeholder `—`). 55c RLS izolace — zákazník2 nevidí `referral_codes` zákazníka1 (0 cizích řádků). 55d anon klient dostane 0 řádků z `referral_codes` i `referrals`. **BLOCKED-BY-PAY01–PAY03:** wallet credit vzniká výhradně z `create_referral_reward_from_payment` (trigger na `payment_status='completed'`) — nelze testovat bez reálné Stripe platby. Targeted run `27567627210`.
+- **A13 owner-accepted (testovací fáze):** CMS stránky `vop`, `gdpr`, `pravidla-souteze`, `cookies` existují v `content_pages` a jsou dostupné přes routy. Právní obsah: owner-accepted pro testovací fázi (Pavel, 15.06.) — nelze označit jako `prošlo` pro live bez finálního právního review.
 
 **Nově přidané E2E specy (commit `7e6061c1`, předchozí `347d637e`):**
 - **C07 — `tests/e2e/50-miocoin-code-redeem-ui.spec.ts`** (staging-only, self-contained). Setup přes service role: throwaway partner+customer auth users, `public.users` řádek, approved partner; objednávka přes RPC `create_partner_order_reward` → `pending`, pak `update_partner_order_reward_status(p_order_status:'paid')` → kód `issued`. Zákazník uplatní kód přes `RedeemMioCoinCard` na `/profile`. Testy: 50a UI success toast + DB ověření `status='activated'`, 50b neplatný kód → chybový toast, 50c již uplatněný → already_used toast. Cleanup v afterAll (partner_coin_activations, partner_reward_codes, partner_invoices, partners, wallet_transactions, wallets, users, auth users).
@@ -32,7 +37,7 @@ Produkční prostředí může být používáno k testování, ale Stripe běž
 - **A02 ✅ NOVĚ OVĚŘENO:** spec 52a/52b (UI validace — ticket_count=0 → error list „Počet tiketů"; chybí main_image → error list „Hlavní obrázek"; save button disabled) + spec 52c (backend `admin_manage_contest` RPC vytvoří soutěž s ticket_count=100, ověřeno v DB). Run `27563142294` + `27563286558`.
 - **A11 ✅ NOVĚ OVĚŘENO:** spec 52d (draft soutěž není viditelná anonymnímu klientu přes RLS — PostgREST vrací prázdné pole). Run `27563142294`.
 - **A12 ✅ NOVĚ OVĚŘENO:** spec 53a (admin test dashboard zobrazuje neutralizovaná tlačítka „Produkční test vypnut", bez „Vytvořit Test User", žádné síťové volání na `admin-create-test-user`). Run `27563005623`.
-- **Neověřeno:** A13 CMS obsah (owner/legal blocker F).
+- **A13 owner-accepted (testovací fáze):** CMS technicky funkční (stránky existují). Právní obsah: blocker F před live — potřebuje owner/legal review.
 
 ---
 

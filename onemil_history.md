@@ -14,6 +14,14 @@
 
 ---
 
+## 2026-06-15 — C19/C23/A13 ověřeny spec 54/55; Full E2E run 27569039738 (150 passed/0 failed)
+
+Přidány dva nové staging-only E2E specy:
+- **spec 54** `54-mobile-layout-customer-pages.spec.ts` (C19): 6 zákaznických stránek (`/`, `/games`, `/wins`, `/vouchers`, `/profile`, `/messages`) testovány na iPhone SE viewportu 375×812px. Každá stránka ověří: žádné uncaught JS chyby, bottom nav viditelná (`role=navigation name="Hlavní menu"`), žádný horizontální overflow (`scrollWidth ≤ 375`). 6/6 passed, targeted run `27567440891`. Commit `57b877a2`.
+- **spec 55** `55-invite-referral-c23.spec.ts` (C23): 55a ReferralSection viditelná na `/profile`. 55b vlastní referral kód v `<code>` elementu (≥4 znaky, ne `—`; fix: původní selector `input[readonly]` nefungoval, opraven na `page.locator('code').first()`). 55c RLS izolace — zákazník2 nevidí cizí `referral_codes`. 55d anon nemá přístup k `referral_codes`/`referrals`. 4/4 passed, targeted run `27567627210`. Commity `57b877a2` (add) + `8a68c812` (fix selector).
+
+A13 CMS obsah: ověřeno, že CMS stránky existují a jsou technicky dostupné. Právní obsah owner-accepted pro testovací fázi (Pavel, 15.06.). LAUNCH_TODO: C19 → `prošlo`, C23 → `částečně prošlo (bez Stripe)` + BLOCKED-BY-PAY01–PAY03 dokumentováno, A13 → `owner-accepted (testovací fáze)`. Full E2E run `27569039738`: **150 passed · 0 failed**. Telegram OK. Žádná reálná platba, žádná produkční data, žádný SQL, žádná CMS změna, žádný deploy.
+
 ## 2026-06-15 — A02/A11/A12/C10 ověřeny spec 52/53; Full E2E run 27563286558 (140 passed/0 failed)
 
 Přidány dva nové staging-only E2E specy:

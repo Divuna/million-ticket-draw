@@ -1,5 +1,27 @@
 # CLAUDE.md
 
+## C19/C23/A13 OVĚŘENY — SPEC 54 + 55 (15. 06. 2026)
+
+Staging Full E2E run `27569039738`: **150 passed · 0 failed**. Commity `57b877a2`, `8a68c812`. Žádná reálná platba, žádná produkční data, žádný produkční SQL, žádná CMS změna, žádný deploy.
+
+**Nově přidané specy:**
+- `tests/e2e/54-mobile-layout-customer-pages.spec.ts` — C19. 6 zákaznických stránek (`/`, `/games`, `/wins`, `/vouchers`, `/profile`, `/messages`) na iPhone SE viewportu 375×812px. 3 podmínky na stránku: žádné uncaught JS chyby, bottom nav (`role=navigation name="Hlavní menu"`) viditelná, horizontální overflow ≤ 375px. 6/6 passed (targeted run `27567440891`).
+- `tests/e2e/55-invite-referral-c23.spec.ts` — C23. 55a ReferralSection viditelná (nadpis „Pozvi přátele"). 55b vlastní referral kód v `<code>` elementu (ensure_referral_code RPC). 55c RLS izolace (zákazník2 nevidí cizí referral_codes). 55d anon deny. 4/4 passed (targeted run `27567627210`).
+
+**Pravidla spec 54 (neměnit):**
+- Viewport 375×812 (iPhone SE) — `test.use({ viewport: MOBILE })` platí pro celý describe blok.
+- Bottom nav hledej přes `getByRole('navigation', { name: 'Hlavní menu' })` — přesný accessible name; `aria-label` je v `BottomNavBar.tsx`.
+- Horizontální overflow měříme přes `page.evaluate(() => document.documentElement.scrollWidth)` ≤ `MOBILE.width`.
+- `waitForLoadState('networkidle')` je wrapped do `.catch(() => {})` — stránky mají polling, timeout není chyba.
+
+**Pravidla spec 55 (neměnit):**
+- Referral kód se renderuje v `<code>` elementu (ReferralSection.tsx:368), NIKOLI v `input[readonly]`. Selector: `page.locator('code').first()`.
+- Label text je `'Váš doporučovací kód'` (přesný string z ReferralSection.tsx:366).
+- Wallet credit za doporučení (invite reward) je **BLOCKED-BY-PAY01–PAY03** — vzniká výhradně z `create_referral_reward_from_payment` (trigger na `payment_status='completed'`). Bez reálné Stripe platby není testovatelné.
+- Throwaway customer2 pro 55c: vytvořit přes service_role admin, smazat v `afterAll`.
+
+**A13 CMS obsah:** CMS stránky `vop`, `gdpr`, `pravidla-souteze`, `cookies` existují v `content_pages` a jsou dostupné přes routy. Právní obsah: owner-accepted pro testovací fázi (Pavel, 15.06.) — stejný status jako L01/L03/L04. **Neoznačovat A13 jako `prošlo` bez výslovného potvrzení Pavla po finálním právním review.**
+
 ## A02/A11/A12/C10 OVĚŘENY — SPEC 52 + 53 (15. 06. 2026)
 
 Staging Full E2E run `27563286558`: **140 passed · 0 failed**. Commity `83a6f3cb`, `48099c5c`. Žádná reálná platba, žádná produkční data, žádný produkční SQL, žádná CMS změna, žádný deploy.
