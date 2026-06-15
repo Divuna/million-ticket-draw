@@ -1,5 +1,9 @@
 # CLAUDE.md
 
+## LAUNCH L09 — KONTAKTNÍ E-MAILY V CMS SJEDNOCENY (15. 06. 2026, schválení Pavla)
+
+Kanonický veřejný/legal support e-mail = `podpora@onemil.cz` (potvrdil Pavel). Produkční CMS `public.content_pages`: `info@onemil.cz` → `podpora@onemil.cz` nahrazeno (jen e-mail substring, beze změny jakéhokoli právního wordingu) ve **3 aktivních legal stránkách**: `ochrana-osobnich-udaju`, `cookies`, `autorska-prava`. Třetí (`autorska-prava`) nalezena při precheck — stejný špatný e-mail, spadá pod pravidlo „other pages unless the same exact wrong email is found". Postcheck: 0× `info@onemil.cz` kdekoli v CMS, 0× `active_legal_info_remaining`, 0× `support@onemil.cz`, 5 stránek s `podpora@`. App kód byl už 100% čistý. Žádný deploy, žádná změna kódu, žádná migrace — pouze cílený DB UPDATE 3 řádků. L09 v LAUNCH_TODO → `prošlo` (už ne P0 blocker). Pravidlo: needitovat právní texty mimo e-mail; nevracet `info@`/`support@onemil.cz`.
+
 ## LAUNCH L02 — PRAVIDLA SOUTĚŽE PER-SOUTĚŽNÍ (15. 06. 2026, jen dokumentace)
 
 Re-audit: závazná pravidla soutěže jsou per-soutěžní (`public.contests.rules` + `contests.rules_pdf_url`; admin nahrává PDF ke konkrétní soutěži do bucketu `contest-rules`; ContestDetail je zobrazuje; žádná PDF šablona → žádné placeholdery v generování). `/pravidla-souteze` je jen obecná CMS stránka, NE závazný zdroj. V LAUNCH_TODO L02 rozdělen na L02a (P1, obecná CMS stránka má placeholdery — content cleanup/owner-legal, NE blocker) a L02b (P0, per-contest QA: každá aktivní soutěž musí mít zkontrolovaný rules_pdf_url). Produkce: 0 aktivních soutěží → per-contest pravidla teď nic neblokují. Pravidlo: pravidla soutěže needitovat jako jeden statický text; kontrolovat per-soutěžní rules PDF.

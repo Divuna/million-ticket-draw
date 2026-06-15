@@ -4294,3 +4294,7 @@ Invariant:
 ---
 
 **Timestamp (Europe/Prague): 2026-06-15** — Launch L02 překlasifikován (jen dokumentace). Re-audit potvrdil, že závazná pravidla soutěže jsou per-soutěžní: public.contests.rules + public.contests.rules_pdf_url; admin nahrává PDF ke konkrétní soutěži do bucketu contest-rules; ContestDetail.tsx zobrazuje pravidla z dané soutěže; žádná PDF šablona → žádné placeholdery v generování. /pravidla-souteze je jen obecná CMS stránka (content_pages slug pravidla-souteze), ne závazný právní zdroj konkrétní soutěže. V docs/launch-readiness/LAUNCH_TODO.md byl L02 rozdělen: L02a (P1, downgrade z P0 — obecná CMS stránka /pravidla-souteze stále obsahuje placeholdery → content cleanup/owner-legal, NENÍ blocker per-soutěžních pravidel) a L02b (P0 — per-contest QA: každá aktivní soutěž musí mít před spuštěním vlastní zkontrolovaný rules_pdf_url bez placeholderů). Produkční check: 127 soutěží, 34 s rules PDF, 0 rules textů s placeholdery, 0 aktivních soutěží → per-contest pravidla teď nic živého neblokují. Žádný kód, SQL, deploy ani právní text nezměněn.
+
+## 2026-06-15 — L09 kontaktní e-maily v CMS sjednoceny (schválení Pavla)
+
+Kanonický support e-mail = `podpora@onemil.cz`. Produkční CMS `content_pages`: `info@onemil.cz` → `podpora@onemil.cz` (jen e-mail substring) ve 3 aktivních legal stránkách: `ochrana-osobnich-udaju`, `cookies`, `autorska-prava` (3. nalezena při precheck). Postcheck: 0× `info@`, 0× `support@`, 5 stránek s `podpora@`. App kód už čistý. Žádný deploy/kód/migrace — jen UPDATE 3 řádků. L09 → prošlo.

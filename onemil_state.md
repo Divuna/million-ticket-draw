@@ -1,5 +1,9 @@
 ﻿# OneMil – aktuální stav projektu
 
+## LAUNCH L09 — KONTAKTNÍ E-MAILY V CMS SJEDNOCENY (15. 06. 2026, schválení Pavla)
+
+Kanonický veřejný/legal support e-mail = `podpora@onemil.cz`. Produkční CMS `content_pages`: `info@onemil.cz` → `podpora@onemil.cz` (jen e-mail, beze změny wordingu) ve 3 aktivních legal stránkách: `ochrana-osobnich-udaju`, `cookies`, `autorska-prava` (3. nalezena při precheck — stejný špatný e-mail). Postcheck: 0× `info@onemil.cz` v CMS, 0× `support@onemil.cz`, 5 stránek s `podpora@`. App kód už čistý. Žádný deploy/kód/migrace — jen cílený UPDATE 3 řádků. L09 → prošlo (ne P0 blocker).
+
 ## LAUNCH L02 PŘEKLASIFIKOVÁN — PRAVIDLA SOUTĚŽE JSOU PER-SOUTĚŽNÍ (15. 06. 2026, jen dokumentace)
 
 Re-audit potvrdil, že závazná pravidla soutěže jsou **per-soutěžní**: `public.contests.rules` + `public.contests.rules_pdf_url` (admin nahrává PDF ke konkrétní soutěži do bucketu `contest-rules`; `ContestDetail.tsx` je zobrazuje z dané soutěže; žádná PDF šablona → žádné placeholdery v generování). `/pravidla-souteze` je jen **obecná CMS stránka** (`content_pages` slug `pravidla-souteze`), NE závazný právní zdroj konkrétní soutěže.
