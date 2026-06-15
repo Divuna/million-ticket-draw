@@ -1,5 +1,9 @@
 # CLAUDE.md
 
+## SEC01 GROUP 3 SAFE/INTERIM — PRODUKČNÍ FIX OVĚŘEN (15. 06. 2026, schválení Pavla)
+
+Produkce `xkzhjldrojjlrkezorey` (migrace `sec01_group3_safe_interim_hardening`): E19 contest_miocoin_totals + E20 winners_with_contest (unused) → revoke anon/auth + security_invoker=on (cleared); E17 v_influencer_referrals_paid + E18 partner_api_activity → revoke anon no-op (anon už false), zůstávají interim (redesign pending); E22 contest_progress ponechán (owner-accept candidate). Precheck=baseline; postcheck OK; prod advisor 5→3; P0 smoke `27526912855` success (5 passed). Bez rollbacku. SEC01 zůstává P0 blocker — 3 ERROR: E17 (affiliate-scoped RLS redesign), E18 (partner-own RLS redesign), E22 (formální owner-accept). Progrese prod ERROR: 23→10→8→7→5→3. Pravidlo: E19/E20 nevracet granty/SECURITY DEFINER; E22 nepřepínat na security_invoker (rozbije zákaznické počty).
+
 ## SEC01 GROUP 3 SAFE/INTERIM — STAGING OVĚŘEN (15. 06. 2026)
 
 Group 3 safe/interim na stagingu `dxmowysntemfqfnanxua` (migrace `sec01_group3_safe_interim_hardening`): E19 contest_miocoin_totals + E20 winners_with_contest (unused) → revoke anon/auth + security_invoker (cleared); E18 partner_api_activity + E17 v_influencer_referrals_paid → revoke anon (interim, SDV ERROR zůstává, redesign owner decision); E22 contest_progress ponechán (owner-accept candidate — invoker by rozbil zákaznické počty). Advisor staging 5→3. Full E2E `27526273831` 122 passed/0 fail (Games/ContestDetail/partner/affiliate OK). Produkce NEDOTČENA (5 ERROR). SEC01 zůstává P0 blocker. Pravidlo: E19/E20 nevracet anon/auth; E22 nepřepínat na security_invoker (rozbije počty); E17/E18 vyžadují RLS redesign před invoker.

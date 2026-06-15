@@ -1,5 +1,20 @@
 ﻿# OneMil – aktuální stav projektu
 
+## SEC01 GROUP 3 SAFE/INTERIM — APLIKOVÁN A OVĚŘEN NA PRODUKCI (15. 06. 2026, schválení Pavla)
+
+SEC01 Group 3 safe/interim aplikován na produkci `xkzhjldrojjlrkezorey` (migrace `sec01_group3_safe_interim_hardening`):
+- **E19 `contest_miocoin_totals` + E20 `winners_with_contest`** (unused) → revoke anon/auth + `security_invoker=on` → **vyřešeno**.
+- **E17 `v_influencer_referrals_paid` + E18 `partner_api_activity`** → REVOKE anon byl na produkci no-op (anon už byl false); zůstávají **interim** (auth ponechán), SDV ERROR zůstává — full fix = RLS redesign (owner decision).
+- **E22 `contest_progress`** → NEDOTČENO (owner-accept candidate).
+
+- **Precheck:** E17–E20 anon=false/auth=true/invoker=off, contest_progress anon=true → shoda s baseline.
+- **Postcheck:** E19/E20 anon=f/auth=f/invoker=on; E17/E18 anon=f/auth=t; E22 beze změny.
+- **Produkční advisor: ERROR 5 → 3** (zbývá E17, E18, E22).
+- **Produkční P0 smoke `27526912855` = success, 5 passed.** Bez rollbacku. (Staging dříve E2E `27526273831` 122 passed.)
+- **SEC01 ZŮSTÁVÁ P0 BLOCKER:** produkce 3 ERROR. Cesta k 0: E18 partner-own RLS redesign, E17 affiliate-scoped RLS redesign, E22 formální owner-accept; + WARN/INFO.
+- **Progrese produkčních ERROR: 23 → 10 → 8 → 7 → 5 → 3.**
+- Rollback caveat: standardní rollback by GRANToval anon zpět E17/E18, což by je na produkci přeotevřelo — pro prod je rollback E17/E18 = bez akce.
+
 ## SEC01 GROUP 3 SAFE/INTERIM — OVĚŘEN NA STAGINGU (15. 06. 2026)
 
 SEC01 Group 3 safe/interim aplikován **POUZE na staging** `dxmowysntemfqfnanxua` (migrace `sec01_group3_safe_interim_hardening`):
