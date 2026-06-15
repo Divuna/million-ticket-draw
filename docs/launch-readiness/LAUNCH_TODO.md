@@ -15,7 +15,7 @@
 | C04 | P0 | Login gating | Zákazník vs partner/affiliate vstup | Každý jen svůj; admin vždy | ověřeno spec 33, 14 | /login | GH run 27546753042 | **prošlo** | spec 33, 14 |
 | C05 | P0 | Profil | Načíst + uložit profil | Údaje uloženy | ověřeno spec 17 | /profile | GH run 27546753042 | **prošlo** | spec 17 |
 | C06 | P0 | Peněženka | Zobrazit zůstatek | Správný MioCoin | ověřeno spec 09, 10 | /profile | GH run 27546753042 | **prošlo** | spec 09, 10 |
-| C07 | P0 | MioCoin kód aktivní | Uplatnit `issued` kód (správný e-mail) | +coiny, kód `activated` | kód + RLS na prod manuálně ověřen při rollout; bez dedikovaného E2E spec | /profile | prod rollout smoke | **neověřeno** | chybí E2E spec pro `redeem_miocoin_code` end-to-end |
+| C07 | P0 | MioCoin kód aktivní | Uplatnit `issued` kód (správný e-mail) | +coiny, kód `activated` | spec 50: 50a success+DB `activated`, 50b invalid, 50c already_used | /profile | GH run 27552310208 | **prošlo** | E2E spec 50 — `redeem_miocoin_code` end-to-end přes RedeemMioCoinCard UI |
 | C08 | P0 | MioCoin kód čekající | Uplatnit `pending` kód | Chyba `pending`, žádný credit | ověřeno spec 48 (48d + 48e RPC) | /profile | GH run 27546753042 | **prošlo** | spec 48 |
 | C09 | P0 | MioCoin kód zrušený | Uplatnit `cancelled` kód | Chyba `cancelled` | ověřeno spec 48 (48g) | /profile | GH run 27546753042 | **prošlo** | spec 48 |
 | C10 | P1 | MioCoin kód email-mismatch | Uplatnit cizím účtem | `email_mismatch` | | /profile | | neověřeno | |
@@ -29,7 +29,7 @@
 | C18 | P1 | Odhlášení | Logout | Session zrušena | ověřeno implicitně ve spec 47f, 33 | (nav) | GH run 27546753042 | **prošlo** | spec 47f, 33 |
 | C19 | P1 | Mobil | Layout na mobilu | Bez ořezů, bottom nav | | všechny | | neověřeno | jen spec 12 |
 | C20 | P0 | Wins | Taby Výhry/Nabídky | Partner Offers ≠ výhry | ověřeno spec 05, 06 | /wins | GH run 27546753042 | **prošlo** | spec 05, 06 |
-| C21 | P0 | Smazání účtu | Vyžádat smazání | GDPR flow funguje | | /delete-account | | neověřeno | chybí E2E spec |
+| C21 | P0 | Smazání účtu | Vyžádat smazání | GDPR flow funguje | spec 51: 51a načte bez chyb, 51b nadpis+instrukce+podpora@onemil.cz+GDPR+nevratnost, 51c přihlášený bez redirektu+mailto | /delete-account | GH run 27552310208 | **prošlo (informační stránka)** | spec 51 ověřuje existenci a obsah GDPR delete-account flow; `/delete-account` je informační stránka (in-app cesta Profil→Smazat účet + e-mail podpora@onemil.cz), netestuje faktické smazání dat |
 | C22 | P0 | Reset hesla | Zákazník „zapomenuté heslo" | Cesta k obnově hesla existuje a funguje | Prošlo: odkaz z `/login`, recovery request i update hesla | /login, /reset-password | GH run 27507097356 | prošlo | Spec 44 zelený na `main` po merge PR #115 (`a7690d0b`). |
 | C23 | P1 | Doporučení (invite) | „Pozvi přátele" + invite reward | Vlastní invite kód/odkaz, žádné cizí data | | /profile | | neotestováno | ReferralSection; RLS own-row |
 
@@ -37,18 +37,18 @@
 
 | ID | Prio | Oblast | Krok | Očekávaný výsledek | Skutečný | Odkaz | Důkaz | Stav | Pozn. |
 |----|------|--------|------|--------------------|----------|-------|-------|------|-------|
-| A01 | P0 | Admin login | Přihlásit admina | Přístup `/admin/*` | | /login | | neotestováno | spec 33,14 |
-| A02 | P0 | Vytvoření soutěže | Create contest | Vytvořena, ticket_count validní | | /admin/contest/:id | | neotestováno | |
-| A03 | P1 | Ekonomika | Ekonomika tab | Kalkulace, neukládá do DB | | /admin/contest/:id | | neotestováno | spec 16,18,19 |
-| A04 | P1 | Bonusové výhry | MioCoin chunked save | Pozice + total synced | | /admin/contest/:id | | neotestováno | spec 18,19,20 |
-| A05 | P0 | Vouchery | `/admin/vouchers` | „Přehled voucherů" | | /admin/vouchers | | neotestováno | spec 46 |
-| A06 | P0 | Partneři | Pending badge + approve | Počet + schválení | | /admin/partners | | neotestováno | spec 37 |
-| A07 | P0 | Faktury | draft→Odeslat, issued→Znovu | Správná tlačítka | | /admin/invoices | | neotestováno | spec 45 |
-| A08 | P0 | PDF | Generovat PDF | `%PDF`, signed URL, export row | | /admin/invoices | | neotestováno | spec 44 |
-| A09 | P0 | E-mail faktury | Odeslat e-mailem | Jen safe recipient (staging) | | /admin/invoices | | neotestováno | spec 44 |
-| A10 | P1 | Referrals | `/admin/referrals` | Taby přítomny | | /admin/referrals | | neotestováno | spec 46 |
-| A11 | P0 | Izolace | Admin akce | Nemění nesouvisející data | | /admin/* | | neotestováno | |
-| A12 | P2 | Test dashboard | „Vytvořit Test User" | „Produkčně vypnut" toast | | /admin/tests | | neotestováno | |
+| A01 | P0 | Admin login | Přihlásit admina | Přístup `/admin/*` | ověřeno spec 33, 14 | /login | GH run 27552310208 | **prošlo** | spec 33, 14 |
+| A02 | P0 | Vytvoření soutěže | Create contest | Vytvořena, ticket_count validní | spec 16 otevírá create/edit modal; finální save soutěže bez dedikovaného E2E (spec 20 ověřuje chunked save na seeded contest) | /admin/contest/:id | GH run 27552310208 (částečně) | neověřeno | chybí E2E pro finální create save s ticket_count validací |
+| A03 | P1 | Ekonomika | Ekonomika tab | Kalkulace, neukládá do DB | ověřeno spec 16, 18 | /admin/contest/:id | GH run 27552310208 | **prošlo** | spec 16, 18, 19 |
+| A04 | P1 | Bonusové výhry | MioCoin chunked save | Pozice + total synced | ověřeno spec 20 (600 pozic, chunked RPC, total synced) | /admin/contest/:id | GH run 27552310208 | **prošlo** | spec 20 |
+| A05 | P0 | Vouchery | `/admin/vouchers` | „Přehled voucherů" | ověřeno spec 46 | /admin/vouchers | GH run 27552310208 | **prošlo** | spec 46 |
+| A06 | P0 | Partneři | Pending badge + approve | Počet + schválení | ověřeno spec 37 (13/13 admin approval flow) | /admin/partners | GH run 27552310208 | **prošlo** | spec 37 |
+| A07 | P0 | Faktury | draft→Odeslat, issued→Znovu | Správná tlačítka | ověřeno spec 45 | /admin/invoices | GH run 27552310208 | **prošlo** | spec 45 |
+| A08 | P0 | PDF | Generovat PDF | `%PDF`, signed URL, export row | ověřeno spec 44 (partner-invoice-pdf-email) | /admin/invoices | GH run 27552310208 | **prošlo** | spec 44 |
+| A09 | P0 | E-mail faktury | Odeslat e-mailem | Jen safe recipient (staging) | ověřeno spec 44 (partner-invoice-pdf-email) | /admin/invoices | GH run 27552310208 | **prošlo** | spec 44 |
+| A10 | P1 | Referrals | `/admin/referrals` | Taby přítomny | ověřeno spec 46 | /admin/referrals | GH run 27552310208 | **prošlo** | spec 46 |
+| A11 | P0 | Izolace | Admin akce | Nemění nesouvisející data | RLS izolace ověřena read-only audity (P0 admin audit 13.06.: partner_invoices/referrals own+admin, žádné `USING(true)`); bez behaviorálního E2E | /admin/* | P0 admin audit 13.06. | neověřeno | pokryto auditem; chybí dedikovaný E2E pro cross-data izolaci |
+| A12 | P2 | Test dashboard | „Vytvořit Test User" | „Produkčně vypnut" toast | statická kontrola: `createTestUser` neutralizován, žádné `.invoke('admin-create-test-user')` v src; bez E2E | /admin/tests | static check | neověřeno | P2; admin-create-test-user odstraněn z produkce 13.06. |
 | A13 | P0 | CMS obsah | Naplnit VOP/GDPR/pravidla | Obsah uložen a zobrazen | Známý DB výsledek: CMS stránky `vop`, `gdpr`, `pravidla-souteze` existují; právní kvalita/aktuálnost neověřena | /admin/content | DB result + email audit 14.06. | neověřeno | blocker F: právník/vlastník musí ověřit obsah |
 
 ## Partner (D)

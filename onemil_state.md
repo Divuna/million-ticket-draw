@@ -18,7 +18,22 @@ Dosavadní data nejsou reálný veřejný provoz. Platby, účty, MioCoiny, sout
 
 Produkční prostředí může být používáno k testování, ale Stripe běží na testovacích klíčích. Před ostrým spuštěním musí Pavel vědomě potvrdit přepnutí Stripe na live režim, live webhook a finální produkční nastavení.
 
-## ZÁKAZNICKÝ FLOW C01–C20 — E2E OVĚŘEN PRO TESTOVACÍ FÁZI (15. 06. 2026)
+## ZÁKAZNICKÝ FLOW C01–C21 + ADMIN A01–A10 — E2E OVĚŘEN PRO TESTOVACÍ FÁZI (15. 06. 2026, aktualizováno)
+
+**Nejnovější run `27552310208`: 134 passed · 28 skipped · 0 failed** (commit `7e6061c1`). Telegram OK (message_id 1362). Žádná reálná platba, žádná produkční data, žádný produkční SQL, žádná CMS změna, žádný deploy.
+
+**Nově přidané E2E specy (commit `7e6061c1`, předchozí `347d637e`):**
+- **C07 — `tests/e2e/50-miocoin-code-redeem-ui.spec.ts`** (staging-only, self-contained). Setup přes service role: throwaway partner+customer auth users, `public.users` řádek, approved partner; objednávka přes RPC `create_partner_order_reward` → `pending`, pak `update_partner_order_reward_status(p_order_status:'paid')` → kód `issued`. Zákazník uplatní kód přes `RedeemMioCoinCard` na `/profile`. Testy: 50a UI success toast + DB ověření `status='activated'`, 50b neplatný kód → chybový toast, 50c již uplatněný → already_used toast. Cleanup v afterAll (partner_coin_activations, partner_reward_codes, partner_invoices, partners, wallet_transactions, wallets, users, auth users).
+- **C21 — `tests/e2e/51-delete-account-page.spec.ts`**. `/delete-account` je informační GDPR stránka (ne in-app fyzické smazání). Testy: 51a načtení bez uncaught JS errors + bez redirektu na /login, 51b nadpis „Smazání účtu" + instrukce + `podpora@onemil.cz` + GDPR/osobní údaj zmínka + nevratnost/30 dní, 51c přihlášený zákazník vidí stránku bez redirektu + mailto odkaz se `subject=`.
+- **Pravidla (neměnit):** (1) sonner toast renderuje title+description jako 2 elementy → všechny toast/obsah assertions v spec 50/51 musí mít `.first()`, jinak strict mode violation. (2) RPC param je `p_order_status` (NE `p_new_status`) — signatura `update_partner_order_reward_status(uuid, text, text)` z migrace `20260613200202`, service_role-only.
+
+**Admin flow A01–A13 (vyhodnoceno proti runu `27552310208`):**
+- A01 login: spec 33, 14 ✅ · A03 ekonomika: spec 16, 18 ✅ · A04 MioCoin chunked save: spec 20 ✅ · A05 vouchery: spec 46 ✅ · A06 partneři approve: spec 37 ✅ · A07 faktury tlačítka: spec 45 ✅ · A08 PDF: spec 44 ✅ · A09 e-mail faktury: spec 44 ✅ · A10 referrals: spec 46 ✅.
+- **Neověřeno:** A02 finální create-contest save s ticket_count validací (spec 16 jen otevírá modal); A11 cross-data izolace (pokryto read-only audity 13.06., bez behaviorálního E2E); A12 test dashboard (P2, statická kontrola); A13 CMS obsah (owner/legal blocker F).
+
+---
+
+### Předchozí záznam (run `27546753042`)
 
 Staging Full E2E run `27546753042`: **128 passed · 28 skipped · 0 failed**. Telegram: `✅ OneMil STAGING full E2E OK — all specs passed`. Žádná reálná platba neproběhla. Žádná produkční data nezměněna.
 
@@ -42,9 +57,10 @@ Staging Full E2E run `27546753042`: **128 passed · 28 skipped · 0 failed**. Te
 
 **28 skipů** — záměrné nebo expected (spec 07/08 Partner Offer cooldown, spec 39–42 affiliate payout bez secrets, spec 01 nový uživatel).
 
-**Zbývající neověřené C položky:**
-- C07 — samostatný E2E test pro uplatnění aktivního MioCoin kódu (`redeem_miocoin_code`); kód + RLS na prod; manuálně ověřeno při rollout; bez dedicovaného E2E spec.
-- C21 — smazání účtu (GDPR flow); žádný E2E spec.
+**Zbývající neověřené C položky (po runu `27552310208`):**
+- C07 — ✅ VYŘEŠENO spec 50 (viz aktualizovaná sekce nahoře).
+- C21 — ✅ VYŘEŠENO spec 51 (informační GDPR stránka; viz nahoře).
+- C10 (email-mismatch), C19 (mobil layout), C23 (invite reward) — non-blocking, bez dedicovaného E2E.
 - PAY01–PAY03 — plné Stripe end-to-end (checkout → webhook → wallet credit); EF nasazeny na staging, ale chybí staging Stripe secrets; viz `docs/launch-readiness/PAY01_PAYMENTS_TEST_MODE_NOTE.md`.
 
 ## L08 18+ GATING — E2E TEST PŘIDÁN A OVĚŘEN (15. 06. 2026)

@@ -1,12 +1,18 @@
 # CLAUDE.md
 
-## ZÁKAZNICKÝ FLOW C01–C20 — E2E OVĚŘEN (15. 06. 2026)
+## ZÁKAZNICKÝ FLOW C01–C21 + ADMIN A01–A10 — E2E OVĚŘEN (15. 06. 2026)
 
-Staging Full E2E run `27546753042`: **128 passed · 28 skipped · 0 failed**. Žádná reálná platba, žádná produkční data nezměněna. C01–C20 ověřeny E2E nebo pokryty existujícím flow bez reálné Stripe platby.
+Staging Full E2E run `27552310208`: **134 passed · 28 skipped · 0 failed**. Žádná reálná platba, žádná produkční data nezměněna, žádný produkční SQL, žádná CMS změna, žádný deploy. C01–C21 ověřeny E2E nebo pokryty existujícím flow bez reálné Stripe platby; admin A01/A03–A10 ověřeny existujícími specy.
+
+**Nově přidané specy (commit `7e6061c1`):**
+- `tests/e2e/50-miocoin-code-redeem-ui.spec.ts` (C07) — staging-only, self-contained: throwaway partner+customer, objednávka přes `create_partner_order_reward` → `update_partner_order_reward_status('paid')` → kód `issued`; zákazník uplatní přes `RedeemMioCoinCard` na `/profile`. 50a success+DB `activated`, 50b invalid, 50c already_used. Cleanup v afterAll.
+- `tests/e2e/51-delete-account-page.spec.ts` (C21) — `/delete-account` informační stránka: 51a načtení bez chyb, 51b nadpis+instrukce+`podpora@onemil.cz`+GDPR+nevratnost, 51c přihlášený bez redirektu+mailto.
+- **Pravidlo (neměnit):** toast/obsah assertions v spec 50/51 musí mít `.first()` — sonner toast renderuje title+description jako 2 elementy → bez `.first()` strict mode violation. `update_partner_order_reward_status` param je `p_order_status` (NE `p_new_status`).
 
 **Zbývá neověřeno:**
-- C07 — E2E spec pro uplatnění aktivního MioCoin kódu (`redeem_miocoin_code`); kód na prod funguje, chybí dedicated test.
-- C21 — E2E spec pro smazání účtu; GDPR flow neotestován.
+- C10 (email-mismatch), C19 (mobil layout), C23 (invite reward) — non-blocking.
+- A02 — finální create-contest save s ticket_count validací (spec 16 jen otevírá modal).
+- A11 (cross-data izolace, pokryto read-only auditem), A12 (test dashboard, P2), A13 (CMS — owner/legal blocker).
 - PAY01–PAY03 — Stripe checkout → webhook → wallet; čeká na staging Stripe secrets (viz `docs/launch-readiness/PAY01_PAYMENTS_TEST_MODE_NOTE.md`).
 
 **28 skipů záměrných:** spec 01 (nový uživatel), spec 07/08 (Partner Offer cooldown), spec 39–42 (affiliate payout bez secrets). LAUNCH_TODO CI02 = prošlo.

@@ -22,6 +22,16 @@ Pavel rozhodl: aktuální texty `/vop`, `/gdpr` a `/legal/cookies` jsou dočasn�
 
 OneMil je technicky dostupný na veřejné adrese, ale zatím nejde o veřejné spuštění pro zákazníky. Projekt je stále v testovací fázi. Dosavadní data (platby, účty, MioCoiny, soutěže, doklady, Stripe záznamy) jsou testovací nebo smyšlená — nejde o reálný veřejný provoz. Stripe běží na testovacích klíčích. Před ostrým spuštěním musí Pavel vědomě potvrdit přepnutí Stripe na live režim, live webhook a finální produkční nastavení. Žádná změna kódu, SQL, CMS ani deploy.
 
+## 2026-06-15 — C07 + C21 E2E specy přidány; admin A01–A10 vyhodnoceno (run 27552310208)
+
+Přidány dva nové staging-only E2E specy (commit `7e6061c1`, předchozí `347d637e`):
+- **spec 50** `50-miocoin-code-redeem-ui.spec.ts` (C07) — zákazník uplatní `issued` MioCoin kód přes `RedeemMioCoinCard` na `/profile`; setup přes service role (`create_partner_order_reward` → `update_partner_order_reward_status('paid')` → kód `issued`); 50a success+DB `activated`, 50b invalid, 50c already_used; cleanup v afterAll.
+- **spec 51** `51-delete-account-page.spec.ts` (C21) — `/delete-account` informační GDPR stránka; 51a načtení bez chyb, 51b obsah (nadpis, instrukce, `podpora@onemil.cz`, GDPR, nevratnost), 51c přihlášený bez redirektu+mailto.
+
+Tři ladicí iterace strict mode (sonner toast = title+description 2 elementy → `.first()`; RPC param `p_order_status` ne `p_new_status`). Finální zelený **Staging Full E2E run `27552310208`: 134 passed · 28 skipped · 0 failed**, Telegram OK (message_id 1362).
+
+Admin flow vyhodnocen proti runu: A01 (33,14), A03 (16,18), A04 (20), A05 (46), A06 (37), A07 (45), A08/A09 (44), A10 (46) = prošlo. Neověřeno: A02 (finální create save), A11 (izolace, pokryto audity), A12 (P2), A13 (CMS owner blocker). C07/C21 v LAUNCH_TODO → prošlo. Žádná reálná platba, žádná produkční data, žádný produkční SQL, žádná CMS, žádný deploy — pouze nové testovací soubory.
+
 ## 2026-06-15 — Zákaznický flow C01–C20 ověřen Staging Full E2E
 
 Staging Full E2E run `27546753042`: **128 passed · 28 skipped · 0 failed**. Telegram doručen. Žádná reálná platba neproběhla, žádná produkční data nezměněna. C01–C20 ověřeny E2E nebo pokryty existujícím flow (registrace, login, login gating, profil, peněženka, soutěže, nákup tiketu, výhra, vouchery, zprávy/Bob, wins). Zbývají: C07 (redeem MioCoin kód — bez E2E spec), C21 (smazání účtu — bez E2E spec), PAY01–PAY03 (Stripe end-to-end — čeká na staging secrets). LAUNCH_TODO CI02 přepnuto na prošlo. Žádná změna kódu, SQL, CMS, deploye.
