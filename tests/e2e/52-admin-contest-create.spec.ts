@@ -63,6 +63,7 @@ async function cleanupContest(): Promise<void> {
   if (!ctx.contestId) return;
   const admin = makeServiceClient();
   await (admin as any).from('bonus_prizes').delete().eq('contest_id', ctx.contestId);
+  await (admin as any).from('admin_actions').delete().eq('contest_id', ctx.contestId);
   await (admin as any).from('contests').delete().eq('id', ctx.contestId);
   ctx.contestId = undefined;
 }
