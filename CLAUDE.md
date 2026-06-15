@@ -1,5 +1,9 @@
 # CLAUDE.md
 
+## LAUNCH L02 — PRAVIDLA SOUTĚŽE PER-SOUTĚŽNÍ (15. 06. 2026, jen dokumentace)
+
+Re-audit: závazná pravidla soutěže jsou per-soutěžní (`public.contests.rules` + `contests.rules_pdf_url`; admin nahrává PDF ke konkrétní soutěži do bucketu `contest-rules`; ContestDetail je zobrazuje; žádná PDF šablona → žádné placeholdery v generování). `/pravidla-souteze` je jen obecná CMS stránka, NE závazný zdroj. V LAUNCH_TODO L02 rozdělen na L02a (P1, obecná CMS stránka má placeholdery — content cleanup/owner-legal, NE blocker) a L02b (P0, per-contest QA: každá aktivní soutěž musí mít zkontrolovaný rules_pdf_url). Produkce: 0 aktivních soutěží → per-contest pravidla teď nic neblokují. Pravidlo: pravidla soutěže needitovat jako jeden statický text; kontrolovat per-soutěžní rules PDF.
+
 ## SEC01 VYŘEŠENO — E17 PRODUKČNÍ FIX OVĚŘEN (15. 06. 2026, schválení Pavla)
 
 E17 `v_influencer_referrals_paid` affiliate-scoped redesign na produkci `xkzhjldrojjlrkezorey` (migrace `sec01_e17_influencer_referrals_paid_affiliate_scoped`): influencer_referrals owner+admin RLS, 2 minimal-disclosure SECURITY DEFINER helpery (anon exec=false), view security_invoker=on. Precheck=baseline; postcheck count 0=0, invoker on, anon=false, auth=true; prod advisor 2→1; P0 smoke `27529591097` success. Bez rollbacku. **SEC01 efektivně vyřešen — všechny ERRORy fixnuty/accepted; zbývá jen E22 (owner-accepted) a WARN/INFO backlog. SEC01 už NENÍ launch blocker.** Progrese prod ERROR: 23→10→8→7→5→3→2→1(accepted). Pravidla (neměnit): influencer_referrals nevracet USING(true); v_influencer_referrals_paid nevracet na SECURITY DEFINER; helpery bez anon execute; contest_progress nepřepínat na security_invoker.

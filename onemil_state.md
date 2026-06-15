@@ -1,5 +1,15 @@
 ﻿# OneMil – aktuální stav projektu
 
+## LAUNCH L02 PŘEKLASIFIKOVÁN — PRAVIDLA SOUTĚŽE JSOU PER-SOUTĚŽNÍ (15. 06. 2026, jen dokumentace)
+
+Re-audit potvrdil, že závazná pravidla soutěže jsou **per-soutěžní**: `public.contests.rules` + `public.contests.rules_pdf_url` (admin nahrává PDF ke konkrétní soutěži do bucketu `contest-rules`; `ContestDetail.tsx` je zobrazuje z dané soutěže; žádná PDF šablona → žádné placeholdery v generování). `/pravidla-souteze` je jen **obecná CMS stránka** (`content_pages` slug `pravidla-souteze`), NE závazný právní zdroj konkrétní soutěže.
+
+V `docs/launch-readiness/LAUNCH_TODO.md` byl L02 rozdělen:
+- **L02a (P1, downgrade z P0):** obecná CMS stránka `/pravidla-souteze` stále obsahuje placeholdery → content cleanup / owner-legal review; NENÍ blocker per-soutěžních pravidel.
+- **L02b (P0, per-contest QA):** každá aktivní soutěž musí mít před spuštěním vlastní zkontrolovaný `rules_pdf_url` (+ volitelně `rules` text) bez placeholderů.
+
+Produkce: 127 soutěží, 34 s rules PDF, 0 `rules` textů s placeholdery, **0 aktivních soutěží** → per-contest pravidla teď nic živého neblokují. Jen dokumentace — žádný kód, SQL, deploy, právní text.
+
 ## ✅ SEC01 VYŘEŠENO — E17 APLIKOVÁN NA PRODUKCI (15. 06. 2026, schválení Pavla)
 
 E17 `v_influencer_referrals_paid` affiliate-scoped redesign aplikován na produkci `xkzhjldrojjlrkezorey` (migrace `sec01_e17_influencer_referrals_paid_affiliate_scoped`): `influencer_referrals` owner+admin RLS (broad USING(true) odstraněn), 2 minimal-disclosure SECURITY DEFINER helpery (`user_completed_first_topup`, `referral_user_is_valid`; anon exec=false), view přestavěn na `security_invoker=on` nad base tabulkou.
