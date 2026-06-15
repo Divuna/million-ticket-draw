@@ -1,5 +1,9 @@
 # CLAUDE.md
 
+## SEC01 VYŘEŠENO — E17 PRODUKČNÍ FIX OVĚŘEN (15. 06. 2026, schválení Pavla)
+
+E17 `v_influencer_referrals_paid` affiliate-scoped redesign na produkci `xkzhjldrojjlrkezorey` (migrace `sec01_e17_influencer_referrals_paid_affiliate_scoped`): influencer_referrals owner+admin RLS, 2 minimal-disclosure SECURITY DEFINER helpery (anon exec=false), view security_invoker=on. Precheck=baseline; postcheck count 0=0, invoker on, anon=false, auth=true; prod advisor 2→1; P0 smoke `27529591097` success. Bez rollbacku. **SEC01 efektivně vyřešen — všechny ERRORy fixnuty/accepted; zbývá jen E22 (owner-accepted) a WARN/INFO backlog. SEC01 už NENÍ launch blocker.** Progrese prod ERROR: 23→10→8→7→5→3→2→1(accepted). Pravidla (neměnit): influencer_referrals nevracet USING(true); v_influencer_referrals_paid nevracet na SECURITY DEFINER; helpery bez anon execute; contest_progress nepřepínat na security_invoker.
+
 ## SEC01 E17 AFFILIATE-SCOPED REDESIGN — STAGING OVĚŘEN (15. 06. 2026)
 
 E17 `v_influencer_referrals_paid` na stagingu `dxmowysntemfqfnanxua` (migrace `sec01_e17_influencer_referrals_paid_affiliate_scoped`): influencer_referrals owner+admin RLS (broad USING(true) odstraněn), 2 minimal-disclosure SECURITY DEFINER helpery (user_completed_first_topup, referral_user_is_valid; anon exec=false), view přestavěn na security_invoker nad base tabulkou. Postcheck OK, count 0=0. Advisor E17 zmizel (2→1; zbývá jen E22 accepted → effective 0). Full E2E `27528853194` 122 passed/0 fail (affiliate + admin OK). Žádné raw platby/auth.users. Produkce NEDOTČENA (připraveno pro prod schválení). Po prod E17 lze SEC01 uzavřít. Pravidlo: influencer_referrals nevracet USING(true); v_influencer_referrals_paid nevracet na SECURITY DEFINER; helpery nesmí mít anon execute.

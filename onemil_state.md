@@ -1,5 +1,18 @@
 ﻿# OneMil – aktuální stav projektu
 
+## ✅ SEC01 VYŘEŠENO — E17 APLIKOVÁN NA PRODUKCI (15. 06. 2026, schválení Pavla)
+
+E17 `v_influencer_referrals_paid` affiliate-scoped redesign aplikován na produkci `xkzhjldrojjlrkezorey` (migrace `sec01_e17_influencer_referrals_paid_affiliate_scoped`): `influencer_referrals` owner+admin RLS (broad USING(true) odstraněn), 2 minimal-disclosure SECURITY DEFINER helpery (`user_completed_first_topup`, `referral_user_is_valid`; anon exec=false), view přestavěn na `security_invoker=on` nad base tabulkou.
+
+- **Precheck=baseline; postcheck:** count zachován (0=0), invoker on, anon=false, auth=true, policy owner+admin, helpery anon=false/auth=true.
+- **Produkční advisor: ERROR 2 → 1** (E17 zmizel). Jediný zbývající raw ERROR = E22 `contest_progress` — **formálně owner-accepted**.
+- **Produkční P0 smoke `27529591097` = success, 5 passed.** Bez rollbacku.
+- **Bezpečnost:** affiliate vidí jen své; admin vše; běžný uživatel/anon nic; žádná raw payment data ani auth.users.
+
+**➡️ SEC01 JE EFEKTIVNĚ VYŘEŠEN — všechny ERROR nálezy fixnuty nebo ownerem akceptovány. SEC01 už NENÍ launch blocker.** Progrese produkčních ERROR: **23 → 10 → 8 → 7 → 5 → 3 → 2 → 1 (accepted)**. Zbývá jen WARN/INFO backlog (non-blocking, řešit samostatně).
+
+Rollback E17 k dispozici (obnovit definer view + broad policy + DROP helperů).
+
 ## SEC01 E17 AFFILIATE-SCOPED REDESIGN — OVĚŘEN NA STAGINGU (15. 06. 2026)
 
 E17 `v_influencer_referrals_paid` přepracován **POUZE na staging** `dxmowysntemfqfnanxua` (migrace `sec01_e17_influencer_referrals_paid_affiliate_scoped`):
