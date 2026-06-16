@@ -1,5 +1,14 @@
 ﻿# OneMil – aktuální stav projektu
 
+## NON-STRIPE CLEANUP RE-VERIFY — L02a/L02b/L06/CI04/CI05 (16. 06. 2026, read-only)
+
+Read-only ověření zbývajících non-Stripe owner/cleanup položek (návrhy dispozice, finální = Pavel):
+- **L02a** `/pravidla-souteze`: CMS legal, 1025 znaků, **stále placeholdery** → navrženo owner-accepted pro testovací fázi (jako L01/L03/L04); pre-live owner upraví obsah.
+- **L02b** per-contest rules PDF: **0 aktivních z 127, 0 aktivních bez PDF** → pre-live follow-up (procesní, neblokuje); checklist před `status='active'` v decision sheet.
+- **L06** support: `/kontakt` mailto podpora@ + `/messages` support handoff (`invokeSupportHandoff`/`SUPPORT_REQUEST_MARKER`/sender `support`) → **technická cesta uzavřena**; reklamační wording = pre-live legal follow-up.
+- **CI04** mrtvý kód: `InfluencerDashboard` (import bez Route) + `TestLogin` (neimportován) → riziko ponechání i smazání minimální; smazání = **čeká výslovné schválení Pavla**.
+- **CI05** `onemil_spec.md` chybí; existují onemil_state/history + CLAUDE + SYSTEM_MAP + PROJECT_CONTEXT → navrženo potvrdit stávající zdroje, nevytvářet.
+
 ## AF05 ROZHODNUTO — AFFILIATE ODLOŽEN MIMO 1. VEŘEJNÝ TEST (16. 06. 2026, Pavel)
 
 **Pavel rozhodl: Affiliate program NENÍ součástí prvního veřejného testu (varianta B).** Affiliate NENÍ blocker 1. testu; zůstává live v kódu, ale aktivně se neonboarduje. Jádro 1. testu = zákazník → MioCoiny → soutěže/vouchery → později Stripe. Payouty + Air Bank `.kpc` export se řeší až ve fázi zapnutí affiliate. Veřejné odkazy `/influencer`, `/influencer/register`, `/affiliate/login` (patička) se NEMAŽOU — skrytí je volitelný follow-up se samostatným schválením. Detail: `docs/launch-readiness/AF05_AFFILIATE_SCOPE_DECISION.md`.

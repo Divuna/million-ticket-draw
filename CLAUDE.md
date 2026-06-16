@@ -1,5 +1,15 @@
 # CLAUDE.md
 
+## NON-STRIPE CLEANUP RE-VERIFY — L02a/L02b/L06/CI04/CI05 (16. 06. 2026, read-only, návrhy)
+
+Read-only re-verify posledních non-Stripe položek (návrhy dispozice; finální = Pavel). Detaily v `OWNER_LEGAL_DECISION_SHEET.md`.
+- **L02a** `/pravidla-souteze` (CMS legal, 1025 znaků, stále placeholdery) → navrženo owner-accepted pro testovací fázi; pre-live cleanup obsahu.
+- **L02b** per-contest rules PDF: prod 0 aktivních z 127, 0 aktivních bez PDF → pre-live procesní follow-up (checklist v decision sheet); neblokuje.
+- **L06** support: `/kontakt` mailto podpora@ + `/messages` support handoff → technická cesta UZAVŘENA; reklamační wording = pre-live legal follow-up.
+- **CI04** mrtvý kód (`InfluencerDashboard` import bez Route; `TestLogin` neimportován): riziko minimální oběma směry; **smazání čeká výslovné schválení Pavla** (mazání souborů). Neměnit bez schválení.
+- **CI05** `onemil_spec.md` chybí; stávající source-of-truth (state/history + CLAUDE + .cursor/SYSTEM_MAP + PROJECT_CONTEXT) dostatečné → navrženo nevytvářet.
+Žádný kód/SQL/CMS/Stripe/deploy.
+
 ## AF05 ROZHODNUTO — AFFILIATE ODLOŽEN MIMO 1. VEŘEJNÝ TEST (16. 06. 2026, Pavel)
 
 **Pavel rozhodl: VARIANTA B — Affiliate program NENÍ součástí prvního veřejného testu.** Affiliate NENÍ blocker; zůstává live v kódu, aktivně se neonboarduje. Jádro 1. testu = zákazník → MioCoiny → soutěže/vouchery → později Stripe. Payouty + Air Bank `.kpc` export až ve fázi zapnutí affiliate. **Veřejné odkazy `/influencer`, `/influencer/register`, `/affiliate/login` (patička) se NEMAŽOU — skrytí je volitelný follow-up se samostatným schválením (kódová změna).** Detail + audit footprintu: `docs/launch-readiness/AF05_AFFILIATE_SCOPE_DECISION.md`. Pravidlo: neměnit affiliate kód/routy kvůli tomuto rozhodnutí; affiliate zůstává funkční pro pozdější zapnutí. Žádný kód/SQL/CMS/Stripe/deploy.

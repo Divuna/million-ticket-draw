@@ -43,19 +43,22 @@
 - `[ ] schváleno` / `[ ] odložit`
 
 ### L02a — `/pravidla-souteze` (obecná CMS stránka) — uklidit placeholdery
-- **Stav teď:** Obecná CMS stránka (NE závazný právní zdroj konkrétní soutěže). Stále obsahuje placeholdery `[NÁZEV SOUTĚŽE]` / `[DATUM]` / `[POPIS HLAVNÍ VÝHRY]` / `[HODNOTA]`.
+- **Stav teď (re-verify 16.06.):** Obecná CMS stránka (`content_pages` slug `pravidla-souteze`, section `legal`, 1025 znaků), NE závazný právní zdroj konkrétní soutěže. **Stále obsahuje placeholdery** (`has_placeholder=true`).
+- **Návrh dispozice:** owner-accepted pro testovací fázi (stejně jako L01/L03/L04) — projekt není live pro zákazníky; pre-live owner upraví obsah.
 - **Proč rozhodnutí:** Veřejně viditelná stránka s placeholdery působí nedodělaně; obsah je owner/legal.
 - **Doporučené rozhodnutí:** Owner upraví obecný text bez placeholderů (CMS přes `/admin/content`), nebo potvrdí, že stránka má být obecný rozcestník. NE blocker per-soutěžních pravidel.
 - `[ ] schváleno` / `[ ] odložit`
 
 ### L02b — per-contest rules PDF — ověřit u každé soutěže před aktivací
-- **Stav teď:** Závazná pravidla jsou per-soutěžní (`contests.rules` + `contests.rules_pdf_url`; admin nahrává PDF do bucketu `contest-rules`). Produkce: 0 aktivních soutěží → teď nic živého neblokuje.
+- **Stav teď (re-verify 16.06.):** Závazná pravidla jsou per-soutěžní (`contests.rules` + `contests.rules_pdf_url`; admin nahrává PDF do bucketu `contest-rules`). Produkce: **0 aktivních soutěží z 127, 0 aktivních bez PDF** → teď nic živého neblokuje.
+- **Pre-live checklist (před `status='active'` u každé soutěže):** (1) `rules_pdf_url` vyplněn a PDF dostupné; (2) PDF bez placeholderů, správný název/datum/výhry/hodnota; (3) volitelně `rules` text konzistentní; (4) ContestDetail zobrazuje správné PDF dané soutěže.
 - **Proč rozhodnutí:** Procesní pravidlo — každá soutěž musí mít zkontrolované rules PDF těsně před spuštěním.
 - **Doporučené rozhodnutí:** Přijmout jako trvalý pre-launch krok u každé soutěže (QA `rules_pdf_url` bez placeholderů před `status='active'`).
 - `[ ] schváleno` / `[ ] odložit`
 
 ### L06 — reklamace / support wording — potvrdit text
-- **Stav teď:** Technická cesta ověřena (16.06.): `/kontakt` s `mailto:podpora@onemil.cz` + `/messages` Bob/admin support handoff. Žádné samostatné `/support/*` routy.
+- **Stav teď (re-verify 16.06.):** Technická cesta funkční — `/kontakt` s `mailto:podpora@onemil.cz`; `/messages` support handoff (`invokeSupportHandoff` + `SUPPORT_REQUEST_MARKER` + sender role `support`). Žádné samostatné `/support/*` routy. **Technickou část lze uzavřít.**
+- **Návrh dispozice:** technická support cesta = uzavřeno pro testovací fázi; reklamační řád / přesný reklamační wording = pre-live legal follow-up.
 - **Proč rozhodnutí:** Přesný reklamační řád / reklamační wording je obsah/legal, ne technika.
 - **Doporučené rozhodnutí:** Owner/právník potvrdí reklamační wording (volitelně doplnit do VOP/CMS); technická cesta je hotová.
 - `[ ] schváleno` / `[ ] odložit`
@@ -67,13 +70,14 @@
 - `[x] schváleno (B — odložit)` / `[ ] odložit`
 
 ### CI04 — mrtvý kód — smazat `InfluencerDashboard` a `TestLogin`?
-- **Stav teď:** Potvrzeno mrtvé (16.06.): `InfluencerDashboard` importován v `App.tsx:76` ale BEZ Route; `src/pages/TestLogin.tsx` nikde neimportován.
-- **Proč rozhodnutí:** Mazání souborů vyžaduje schválení (CLAUDE.md). Nízké riziko, ale chce explicitní souhlas.
-- **Doporučené rozhodnutí:** Schválit smazání obou souborů + nepoužitého importu (úklid; build ověřit po smazání).
-- `[ ] schváleno` / `[ ] odložit`
+- **Stav teď (re-verify 16.06.):** Potvrzeno mrtvé: `InfluencerDashboard` importován jen v `App.tsx:76`, BEZ Route a bez jiného použití; `src/pages/TestLogin.tsx` nikde neimportován.
+- **Riziko ponechání:** minimální — nepoužitý import (drobný bundle/lint noise); není routováno → nedosažitelné; bez funkčního/bezpečnostního dopadu.
+- **Riziko smazání:** minimální (build ověřit po smazání); = mazání souborů → vyžaduje výslovné schválení (CLAUDE.md).
+- **Doporučené rozhodnutí:** Schválit smazání obou souborů + nepoužitého importu (úklid).
+- `[ ] schváleno (smazat)` / `[ ] odložit (ponechat)`
 
 ### CI05 — dokumentace — vytvořit `onemil_spec.md`, nebo potvrdit stávající zdroje?
-- **Stav teď:** Soubor `onemil_spec.md` neexistuje. Source-of-truth už pokrývají `onemil_state.md` + `CLAUDE.md` + `.cursor/SYSTEM_MAP.md`.
+- **Stav teď (re-verify 16.06.):** `onemil_spec.md` chybí. Existují a jsou aktivně udržované: `onemil_state.md`, `onemil_history.md`, `CLAUDE.md`, `.cursor/SYSTEM_MAP.md`, `.cursor/PROJECT_CONTEXT.md` → dostatečné source-of-truth.
 - **Proč rozhodnutí:** Buď je potřeba dedikovaný spec, nebo stávající zdroje stačí — vyžaduje owner potvrzení.
 - **Doporučené rozhodnutí:** Potvrdit, že stávající source-of-truth (`onemil_state.md` + `CLAUDE.md` + SYSTEM_MAP) stačí; `onemil_spec.md` nevytvářet.
 - `[ ] schváleno` / `[ ] odložit`

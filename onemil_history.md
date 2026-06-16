@@ -14,6 +14,16 @@
 
 ---
 
+## 2026-06-16 — Non-Stripe cleanup re-verify: L02a/L02b/L06/CI04/CI05 (read-only)
+
+Read-only ověření a zařazení posledních non-Stripe owner/cleanup položek (návrhy, finální = Pavel):
+- L02a `/pravidla-souteze`: CMS legal 1025 znaků, stále placeholdery → navrženo owner-accepted pro testovací fázi (jako L01/L03/L04).
+- L02b per-contest rules PDF: prod re-verify 0 aktivních z 127, 0 aktivních bez PDF → pre-live follow-up (procesní); pre-aktivační checklist doplněn do decision sheet.
+- L06 support: `/kontakt` mailto podpora@ + `/messages` support handoff funkční → technická cesta uzavřena; reklamační wording = pre-live legal follow-up.
+- CI04 mrtvý kód: InfluencerDashboard (import bez Route) + TestLogin (neimportován) potvrzeno; riziko ponechání/smazání minimální; smazání čeká výslovné schválení.
+- CI05: onemil_spec.md chybí; stávající source-of-truth (state/history + CLAUDE + SYSTEM_MAP + PROJECT_CONTEXT) dostatečné → navrženo potvrdit, nevytvářet.
+- Aktualizováno LAUNCH_TODO, OWNER_LEGAL_DECISION_SHEET, CLAUDE.md, state. Jen dokumentace; žádný kód, SQL, CMS, Stripe ani deploy.
+
 ## 2026-06-16 — AF05 ROZHODNUTO (Pavel): affiliate odložen mimo první veřejný test (varianta B)
 
 Pavel rozhodl: Affiliate program NEBUDE součástí prvního veřejného testu OneMil (varianta B). Důvod: affiliate payouty pracují s reálnými výplatami, nejsou potřeba pro první zákaznický test; jádro = zákazník → MioCoiny → soutěže/vouchery → později Stripe.
