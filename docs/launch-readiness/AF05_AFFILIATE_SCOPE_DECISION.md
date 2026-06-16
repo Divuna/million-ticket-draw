@@ -6,6 +6,18 @@
 
 ---
 
+## ✅ ROZHODNUTO (16. 06. 2026, Pavel): VARIANTA B — AFFILIATE ODLOŽEN MIMO PRVNÍ VEŘEJNÝ TEST
+
+**Pavel rozhodl: Affiliate program NEBUDE součástí prvního veřejného testu OneMil.** Důvod: affiliate payouty pracují s reálnými výplatami a nejsou potřeba pro první zákaznický test. Jádro prvního testu = zákazník → MioCoiny → soutěže/vouchery → později Stripe.
+
+- **Affiliate NENÍ blocker prvního veřejného testu.** Zůstává live v kódu, ale aktivně se neonboarduje/nepropaguje.
+- **Veřejné odkazy `/influencer`, `/influencer/register`, `/affiliate/login` (patička) se NEMAŽOU.** Jejich případné skrytí je **volitelný follow-up** a vyžaduje **samostatné schválení** (kódová změna).
+- **Payouty + Air Bank `.kpc` export se budou řešit až ve fázi zapnutí affiliate** — ne teď.
+
+Sekce 2–4 níže zůstávají jako podklad, na jehož základě rozhodnutí padlo.
+
+---
+
 ## 1. Co Affiliate aktuálně znamená v systému (stav teď)
 
 **Affiliate v2 je technicky hotový a LIVE v produkci** (rollout 12.06.); deferral je čistě scope/provozní rozhodnutí, ne technický blocker.
@@ -67,8 +79,8 @@ Důvody:
 3. **Nulové náklady odkladu:** affiliate je už technicky hotový, staging-ověřený a live v kódu → odklad nic nestojí a kdykoli se zapne.
 4. **Jediný volitelný follow-up:** skrýt affiliate/influencer odkazy v patičce, aby během testu nevznikaly nahodilé registrace (drobná kódová změna, samostatné schválení; není blokující).
 
-> **Rozhodnutí Pavla:** `[ ] A — zahrnout` / `[ ] B — odložit (doporučeno)` / `[ ] odložit rozhodnutí`
-> Pokud B a chceš skrýt footer odkazy: `[ ] ano, připravit skrytí footer affiliate/influencer odkazů (samostatné schválení kódové změny)` / `[ ] ne, ponechat`
+> **Rozhodnutí Pavla (16.06.):** `[ ] A — zahrnout` / `[x] B — odložit` / `[ ] odložit rozhodnutí`
+> Skrytí footer odkazů: `[ ] ano, připravit skrytí footer affiliate/influencer odkazů (samostatné schválení kódové změny)` / `[x] zatím ponechat — volitelný follow-up`
 
 ---
 

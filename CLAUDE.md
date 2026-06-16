@@ -1,8 +1,8 @@
 # CLAUDE.md
 
-## AF05 AFFILIATE SCOPE DECISION DOC (16. 06. 2026, jen dokumentace)
+## AF05 ROZHODNUTO — AFFILIATE ODLOŽEN MIMO 1. VEŘEJNÝ TEST (16. 06. 2026, Pavel)
 
-`docs/launch-readiness/AF05_AFFILIATE_SCOPE_DECISION.md` — read-only audit affiliate footprintu (routes `/affiliate/*`, `/influencer/*`, `/partner/invite`; footer odkazy; admin `/admin/affiliate-*` + `/admin/company-leads` + `/admin/referrals`; EF create/confirm/approve lead + payout document + bank export; specy 13–46, 55) + varianty A (zahrnout) / B (odložit). Klíč: affiliate v2 LIVE v kódu; payouty = Air Bank `.kpc` (NE Stripe); provize jen z placených `partner_invoices`. **Doporučeno B (odložit z 1. veřejného testu)** — reálné peníze v payoutech, otevřené body (payout secrets, Botanic `[TEST DATA]`), jádro testu na affiliate nezávisí; odklad nic nestojí (affiliate zůstává live). Finální rozhodnutí = Pavel. Volitelný follow-up u B: skrýt footer affiliate/influencer odkazy (samostatné schválení). Žádný kód/SQL/CMS/Stripe/deploy.
+**Pavel rozhodl: VARIANTA B — Affiliate program NENÍ součástí prvního veřejného testu.** Affiliate NENÍ blocker; zůstává live v kódu, aktivně se neonboarduje. Jádro 1. testu = zákazník → MioCoiny → soutěže/vouchery → později Stripe. Payouty + Air Bank `.kpc` export až ve fázi zapnutí affiliate. **Veřejné odkazy `/influencer`, `/influencer/register`, `/affiliate/login` (patička) se NEMAŽOU — skrytí je volitelný follow-up se samostatným schválením (kódová změna).** Detail + audit footprintu: `docs/launch-readiness/AF05_AFFILIATE_SCOPE_DECISION.md`. Pravidlo: neměnit affiliate kód/routy kvůli tomuto rozhodnutí; affiliate zůstává funkční pro pozdější zapnutí. Žádný kód/SQL/CMS/Stripe/deploy.
 
 ## OWNER/LEGAL DECISION SHEET VYTVOŘEN (16. 06. 2026, jen dokumentace)
 

@@ -63,8 +63,8 @@
 ### AF05 — affiliate scope — patří affiliate do prvního veřejného testu?
 - **Stav teď:** Affiliate program technicky hotový (AF01/AF02/AF03 prošlo; AF04 ověřeno staging + live prod). Čistě scope rozhodnutí — žádný technický blocker.
 - **Proč rozhodnutí:** Určuje rozsah 1. veřejného testu; pokud affiliate NE → označit out-of-scope a nezdržovat launch.
-- **Doporučené rozhodnutí:** Pro 1. veřejný test affiliate **out-of-scope** (zjednodušší launch), pokud Pavel nechce affiliate aktivně testovat se zákazníky. Detailní audit + varianty A/B v [AF05_AFFILIATE_SCOPE_DECISION.md](./AF05_AFFILIATE_SCOPE_DECISION.md). Rozhodnout ano/ne.
-- `[ ] schváleno` / `[ ] odložit`
+- **✅ ROZHODNUTO (16.06., Pavel): VARIANTA B — affiliate ODLOŽEN mimo první veřejný test.** Affiliate není blocker; zůstává live v kódu, neonboarduje se. Veřejné odkazy `/influencer`/`/affiliate/login` se nemažou — skrytí = volitelný follow-up se samostatným schválením. Payouty + Air Bank export až ve fázi zapnutí affiliate. Detail v [AF05_AFFILIATE_SCOPE_DECISION.md](./AF05_AFFILIATE_SCOPE_DECISION.md).
+- `[x] schváleno (B — odložit)` / `[ ] odložit`
 
 ### CI04 — mrtvý kód — smazat `InfluencerDashboard` a `TestLogin`?
 - **Stav teď:** Potvrzeno mrtvé (16.06.): `InfluencerDashboard` importován v `App.tsx:76` ale BEZ Route; `src/pages/TestLogin.tsx` nikde neimportován.

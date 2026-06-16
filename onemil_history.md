@@ -14,6 +14,14 @@
 
 ---
 
+## 2026-06-16 — AF05 ROZHODNUTO (Pavel): affiliate odložen mimo první veřejný test (varianta B)
+
+Pavel rozhodl: Affiliate program NEBUDE součástí prvního veřejného testu OneMil (varianta B). Důvod: affiliate payouty pracují s reálnými výplatami, nejsou potřeba pro první zákaznický test; jádro = zákazník → MioCoiny → soutěže/vouchery → později Stripe.
+- Affiliate NENÍ blocker prvního veřejného testu; zůstává live v kódu, neonboarduje se.
+- Veřejné odkazy `/influencer`, `/influencer/register`, `/affiliate/login` se NEMAŽOU — skrytí = volitelný follow-up se samostatným schválením.
+- Payouty + Air Bank export až ve fázi zapnutí affiliate.
+- Zapsáno do AF05_AFFILIATE_SCOPE_DECISION.md, OWNER_LEGAL_DECISION_SHEET.md, LAUNCH_TODO (AF05 = rozhodnuto), CLAUDE.md, state. Jen dokumentace; žádný kód, SQL, CMS, Stripe ani deploy.
+
 ## 2026-06-16 — AF05 affiliate scope decision doc vytvořen (doporučeno B: odložit)
 
 Vytvořen `docs/launch-readiness/AF05_AFFILIATE_SCOPE_DECISION.md` — read-only audit affiliate footprintu (routes, footer odkazy, admin oblasti, EF, specy 13–46/55, payout/Stripe závislosti) + varianty A (zahrnout) / B (odložit) s dopady, riziky, co dotestovat, doporučením. Zjištění: affiliate v2 LIVE v kódu; payouty = Air Bank `.kpc` (NE Stripe); affiliate provize jen z placených `partner_invoices`. Doporučeno B (odložit z 1. veřejného testu) — reálné peníze v payoutech + otevřené body, jádro testu na affiliate nezávisí, odklad nic nestojí. Finální rozhodnutí = Pavel. Odkaz doplněn do LAUNCH_TODO (AF05), OWNER_LEGAL_DECISION_SHEET, CLAUDE.md, state. Jen dokumentace; žádný kód, SQL, CMS, Stripe ani deploy.

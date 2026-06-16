@@ -1,8 +1,8 @@
 ﻿# OneMil – aktuální stav projektu
 
-## AF05 AFFILIATE SCOPE DECISION (16. 06. 2026)
+## AF05 ROZHODNUTO — AFFILIATE ODLOŽEN MIMO 1. VEŘEJNÝ TEST (16. 06. 2026, Pavel)
 
-`docs/launch-readiness/AF05_AFFILIATE_SCOPE_DECISION.md` — audit affiliate footprintu + varianty A (zahrnout) / B (odložit). Affiliate v2 LIVE v kódu; payouty Air Bank `.kpc` (NE Stripe); provize jen z placených `partner_invoices`. **Doporučeno B — odložit affiliate z 1. veřejného testu** (reálné peníze v payoutech, otevřené body, jádro testu nezávisí; odklad nic nestojí). Finální rozhodnutí = Pavel. Volitelně skrýt footer affiliate/influencer odkazy.
+**Pavel rozhodl: Affiliate program NENÍ součástí prvního veřejného testu (varianta B).** Affiliate NENÍ blocker 1. testu; zůstává live v kódu, ale aktivně se neonboarduje. Jádro 1. testu = zákazník → MioCoiny → soutěže/vouchery → později Stripe. Payouty + Air Bank `.kpc` export se řeší až ve fázi zapnutí affiliate. Veřejné odkazy `/influencer`, `/influencer/register`, `/affiliate/login` (patička) se NEMAŽOU — skrytí je volitelný follow-up se samostatným schválením. Detail: `docs/launch-readiness/AF05_AFFILIATE_SCOPE_DECISION.md`.
 
 ## OWNER/LEGAL DECISION SHEET (16. 06. 2026)
 
