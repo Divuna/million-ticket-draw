@@ -6,7 +6,7 @@ Partner save konverzního nastavení MioCoinů opraven **pouze na stagingu** `dx
 
 - **Migrace** `supabase/migrations/20260616_partners_update_rls_partner_own.sql` (aplikováno jen staging): policy `partners_update_own` (authenticated, `auth_user_id = auth.uid()` USING+WITH CHECK) + `partners_update_admin` (`is_admin()`). `Public read partners` SELECT nedotčen. Postcheck: 3 policy (1 SELECT + 2 UPDATE).
 - **App** `src/pages/PartnerDashboard.tsx`: save používá `.select('id')` a ověřuje `updatedRows.length === 1`; 0 řádků → `throw` → česká `toast.error('Nepodařilo se uložit nastavení')` + rollback. **Žádný falešný success.** (Defense-in-depth; samotná RLS oprava už umožní zápis.)
-- **Spec 56b** odebrán `test.fixme` → reálně prošlo. Cílený run `27597435909`: **3 passed** (56a+56b+56c).
+- **Spec 56b** odebrán `test.fixme` → reálně prošlo. Cílený run `27597435909`: **3 passed** (56a+56b+56c). Staging Full E2E `27597509314`: **153 passed · 0 failed · 28 skipped**.
 - **Pravidlo:** `partners` UPDATE policy je partner-own (`auth_user_id`) — nevracet `USING(true)`/deny-all; PartnerDashboard save NEvracet zpět na `.update()` bez affected-rows checku.
 - **DOPORUČENÍ PRO PRODUKCI (neaplikováno):** stejnou migraci aplikovat na produkci `xkzhjldrojjlrkezorey` po výslovném schválení Pavla — partner si jinak ani v produkci neuloží konverzní nastavení.
 

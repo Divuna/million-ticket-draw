@@ -24,7 +24,7 @@ Schválený partner nyní reálně uloží konverzní nastavení MioCoinů. **Po
 
 - **Migrace** `20260616_partners_update_rls_partner_own.sql`: `partners_update_own` (`auth_user_id = auth.uid()`) + `partners_update_admin` (`is_admin()`). Postcheck OK (3 policy). `Public read partners` SELECT nedotčen.
 - **App** `PartnerDashboard.tsx`: save `.select('id')` + ověření 1 řádku; 0 řádků → česká chyba + rollback (žádný falešný success).
-- **Spec 56b** un-fixme → prošlo. Cílený run `27597435909`: 3 passed.
+- **Spec 56b** un-fixme → prošlo. Cílený run `27597435909`: 3 passed. Staging Full E2E `27597509314`: 153 passed · 0 failed · 28 skipped.
 - **Pravidlo:** partner-own UPDATE (nevracet `USING(true)`); save nevracet bez affected-rows checku.
 - **Produkce (neaplikováno):** stejnou migraci aplikovat na produkci po výslovném schválení Pavla.
 
