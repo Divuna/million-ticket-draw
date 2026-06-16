@@ -1,6 +1,28 @@
 ﻿# OneMil – aktuální stav projektu
 
-**Aktualizováno:** 10. 06. 2026 — 🌿 **Samostatná větev: dávkové výplaty affiliate/obchodních provizí (Fáze A+B+C na stagingu ověřené, Fáze D opravený reviewable návrh — importní test Air Bank ✅ SPLNĚN, formát `.kpc` plně funkční, čeká na výslovné schválení Pavla pro staging aplikaci, produkce netknutá).** Hlavní roadmapa se teď nemění.
+**Aktualizováno:** 16. 06. 2026 — Security follow-up po Supabase advisor emailu zapsany; hlavni roadmapa se nemeni.
+
+## SECURITY FOLLOW-UP - SUPABASE ADVISOR EMAIL PROVEREN (16. 06. 2026)
+
+Stary Supabase security email byl provereny proti aktualnimu stavu stagingu `dxmowysntemfqfnanxua` i produkce `xkzhjldrojjlrkezorey`.
+
+Aktualne se NEPOTVRDILO:
+- `auth_users_exposed`
+- `rls_disabled_in_public`
+
+V aktualnim DB stavu se tyto dva nalezy nereprodukuji: nebyla nalezena public tabulka bez RLS ani public view, ktere by zverejnovalo citliva data z `auth.users`.
+
+Realne potvrzeny a opraveny advisor problem:
+- `public.contest_progress` byl `security definer`
+- opravna migrace: `supabase/migrations/20260616170000_fix_contest_progress_security.sql`
+- oprava nastavuje `security_invoker = true`
+- oprava zuzuje granty na `SELECT` pro `anon` a `authenticated`
+- oprava byla aplikovana na staging `dxmowysntemfqfnanxua` i produkci `xkzhjldrojjlrkezorey`
+
+Po refreshi advisoru ma zmizet error pro `public.contest_progress`. Zbyva samostatny budouci hardening pass pro warningy:
+- `function_search_path_mutable`
+- security definer function execute grants
+- `auth_leaked_password_protection`
 
 ## PARTNER API V1 — STAGING PROTOTYP 5b5d8270 ODMÍTNUTÝ
 

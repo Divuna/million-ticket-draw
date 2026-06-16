@@ -1,5 +1,17 @@
 # Launch TODO
 
+## Security follow-up - Supabase advisor email
+
+Status: HOTOVO dokumentacne a fix aplikovan (16. 06. 2026).
+
+- Stary Supabase advisor email byl provereny.
+- Aktualne se nereprodukuji `auth_users_exposed` ani `rls_disabled_in_public`.
+- Realne opraveny advisor error byl `public.contest_progress` jako `security definer`.
+- Opravna migrace: `supabase/migrations/20260616170000_fix_contest_progress_security.sql`.
+- Oprava byla aplikovana na staging `dxmowysntemfqfnanxua` i produkci `xkzhjldrojjlrkezorey`.
+- Po refreshi advisoru ma zmizet error `contest_progress`.
+- Zbyva samostatny budouci hardening pass pro `function_search_path_mutable`, security definer function execute grants a `auth_leaked_password_protection`.
+
 ## C22 - Zakaznicky reset hesla
 
 Status: HOTOVO na vetvi `codex/affiliate-payouts-audit` (14. 06. 2026).

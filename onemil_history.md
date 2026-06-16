@@ -14,6 +14,16 @@
 
 ---
 
+## 2026-06-16 - Supabase security advisor email provereny, contest_progress fix commit-ready
+
+- Byl provereny starsi Supabase security email pro staging `dxmowysntemfqfnanxua` a produkci `xkzhjldrojjlrkezorey`.
+- Aktualni stav nereprodukoval puvodne hlasene critical findings `auth_users_exposed` ani `rls_disabled_in_public`.
+- Realne reprodukovany advisor error byl `public.contest_progress` jako `security definer`.
+- Pridana migrace `supabase/migrations/20260616170000_fix_contest_progress_security.sql`.
+- Oprava nastavuje `security_invoker = true` a zuzuje granty na `SELECT` pro role `anon` a `authenticated`.
+- Oprava byla aplikovana na staging i produkci; po refreshi advisoru ma error `contest_progress` zmizet.
+- Zbyvajici warningy zustavaji pro samostatny budouci hardening pass: `function_search_path_mutable`, security definer function execute grants a `auth_leaked_password_protection`.
+
 ## 2026-06-14 - P0 C22 zakaznicky reset hesla dokoncen
 
 - Nebyly nalezeny rozpracovane zmeny kolem Auth/App/Login/ResetPassword/reset E2E; implementace zacala ciste od aktualni vetve, mimo pre-existing `supabase/.temp` a stare untracked artefakty.

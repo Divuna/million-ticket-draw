@@ -1,5 +1,25 @@
 # CLAUDE.md
 
+## SUPABASE SECURITY FOLLOW-UP - CONTEST_PROGRESS FIX HOTOVO (16. 06. 2026)
+
+Stary Supabase security email byl provereny proti aktualnimu stavu stagingu `dxmowysntemfqfnanxua` i produkce `xkzhjldrojjlrkezorey`.
+
+Aktualne se nereprodukuji:
+- `auth_users_exposed`
+- `rls_disabled_in_public`
+
+Realne potvrzeny advisor problem byl pouze `public.contest_progress` jako `security definer`.
+
+Fix:
+- migrace `supabase/migrations/20260616170000_fix_contest_progress_security.sql`
+- `ALTER VIEW public.contest_progress SET (security_invoker = true)`
+- granty zuzene na `SELECT` pro `anon` a `authenticated`
+- aplikovano na staging i produkci
+
+Follow-up:
+- po refreshi advisoru ma zmizet error `contest_progress`
+- samostatny budouci hardening pass zustava pro `function_search_path_mutable`, security definer function execute grants a `auth_leaked_password_protection`
+- do tohoto fixu nepatri `supabase/.temp/*`, `scripts/cleanup-ticket-shares.ts` ani `tmp-gh-artifacts-27259074667/`
 ## P0 C22 - ZAKAZNICKY RESET HESLA HOTOVO (14. 06. 2026)
 
 Zakaznicky reset hesla ma samostatnou route `/reset-password`. `/login` obsahuje odkaz `Zapomenute heslo?`. Stranka `/reset-password` pouziva Supabase Auth: `resetPasswordForEmail(... redirectTo /reset-password)` pro poslani e-mailu a `updateUser({ password })` pro nastaveni noveho hesla po recovery session.
