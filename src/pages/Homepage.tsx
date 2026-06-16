@@ -179,7 +179,11 @@ const Homepage = () => {
 
   // Continuous auto-scroll for contests and vouchers (infinite loop)
   useEffect(() => {
-    const startAutoScroll = (ref: React.RefObject<HTMLDivElement>, speed: number) => {
+    const startAutoScroll = (
+      ref: React.RefObject<HTMLDivElement>,
+      speed: number,
+      options: { loopContent?: boolean } = {},
+    ) => {
       const el = ref.current;
       if (!el) return;
       // Only start if there is something to scroll
@@ -188,18 +192,33 @@ const Homepage = () => {
       let rafId = 0;
       let isPaused = false;
 
+      const getLoopDistance = () => {
+        if (!options.loopContent) {
+          return el.scrollWidth / 2;
+        }
+
+        const children = Array.from(el.children) as HTMLElement[];
+        const midpoint = children.length / 2;
+
+        if (midpoint > 0 && children.length % 2 === 0 && children[midpoint]) {
+          return children[midpoint].offsetLeft - children[0].offsetLeft;
+        }
+
+        return el.scrollWidth / 2;
+      };
+
       const step = () => {
         if (!isPaused) {
           el.scrollLeft += speed;
-          const half = el.scrollWidth / 2;
+          const loopDistance = getLoopDistance();
           
           // Handle wrapping for both directions
-          if (speed > 0 && half > 0 && el.scrollLeft >= half) {
+          if (speed > 0 && loopDistance > 0 && el.scrollLeft >= loopDistance) {
             // Scrolling right - wrap back to start
-            el.scrollLeft -= half;
+            el.scrollLeft -= loopDistance;
           } else if (speed < 0 && el.scrollLeft <= 0) {
             // Scrolling left - wrap to middle
-            el.scrollLeft += half;
+            el.scrollLeft += loopDistance;
           }
         }
         
@@ -226,7 +245,7 @@ const Homepage = () => {
       };
     };
 
-    const stopContests = startAutoScroll(contestsCarouselRef, 0.8);
+    const stopContests = startAutoScroll(contestsCarouselRef, 0.8, { loopContent: true });
     const stopVouchers = startAutoScroll(vouchersCarouselRef, -0.8);
 
     return () => {
@@ -855,7 +874,7 @@ const Homepage = () => {
 
           <div
             ref={contestsCarouselRef}
-            className="flex overflow-x-scroll no-scrollbar snap-x snap-mandatory gap-4 pb-4"
+            className="flex overflow-x-scroll no-scrollbar gap-4 pb-4"
             style={{
               scrollbarWidth: "none",
               msOverflowStyle: "none",
@@ -912,9 +931,9 @@ const Homepage = () => {
                 </Card>
               </div>
             ) : (
-              contests.map((contest) => (
+              (contests.length > 1 ? [...contests, ...contests] : contests).map((contest, index) => (
                 <ContestCard
-                  key={contest.id}
+                  key={`${contest.id}-${index}`}
                   contest={contest}
                   user={user}
                   isAdmin={isAdmin}
