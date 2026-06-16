@@ -14,6 +14,13 @@
 
 ---
 
+## 2026-06-16 — P04 produkční rollout: partners UPDATE RLS aplikováno na produkci
+
+Schválení Pavla pro produkční rollout. Migrace `20260616_partners_update_rls_partner_own.sql` aplikována na produkci `xkzhjldrojjlrkezorey`.
+- Precheck: jen `Public read partners` SELECT (bez UPDATE policy), 11 partnerů, reward checksum `d57e638f9d48f302ad5b562fc2cd90e9`.
+- Postcheck: 3 policy — `Public read partners` (SELECT) + `partners_update_own` (`auth_user_id=auth.uid()` USING+WITH CHECK) + `partners_update_admin` (`is_admin()` USING+WITH CHECK). Data nezměněna: 11 partnerů, checksum identický.
+- Žádný Stripe, žádná reálná platba, žádná CMS, žádný frontend deploy. Frontend affected-rows check (`PartnerDashboard.tsx`) čeká na samostatný Lovable Publish; RLS oprava sama už zápis umožní.
+
 ## 2026-06-16 — Non-Stripe launch audit: P06/P13/AF04/L06 ověřeny; AF05/L02a/CI04-del/CI05 = owner decision
 
 Read-only audit zbývajících non-Stripe bloků (žádný produkční zápis, žádná CMS, žádný Stripe, žádný deploy, žádný nový test).

@@ -29,9 +29,9 @@ Dosavadní data nejsou reálný veřejný provoz. Platby, účty, MioCoiny, sout
 
 Produkční prostředí může být používáno k testování, ale Stripe běží na testovacích klíčích. Před ostrým spuštěním musí Pavel vědomě potvrdit přepnutí Stripe na live režim, live webhook a finální produkční nastavení.
 
-## P04 OPRAVENO NA STAGINGU — PARTNERS UPDATE RLS + AFFECTED-ROWS CHECK (16. 06. 2026)
+## P04 OPRAVENO — PARTNERS UPDATE RLS — STAGING + PRODUKCE (16. 06. 2026)
 
-Schválený partner nyní reálně uloží konverzní nastavení MioCoinů. **Pouze staging `dxmowysntemfqfnanxua`** (schválení Pavla). Produkce `xkzhjldrojjlrkezorey` NEDOTČENA — stále bez UPDATE policy.
+Schválený partner nyní reálně uloží konverzní nastavení MioCoinů. **Staging `dxmowysntemfqfnanxua` I PRODUKCE `xkzhjldrojjlrkezorey`** (schválení Pavla pro produkční rollout 16.06.). Produkční postcheck: 3 policy (SELECT + UPDATE own + UPDATE admin), data nezměněna (11 partnerů, checksum identický `d57e638f...`). Frontend affected-rows check čeká na samostatný Lovable Publish (RLS oprava sama už zápis umožní).
 
 - **Migrace** `20260616_partners_update_rls_partner_own.sql`: `partners_update_own` (`auth_user_id = auth.uid()`) + `partners_update_admin` (`is_admin()`). Postcheck OK (3 policy). `Public read partners` SELECT nedotčen.
 - **App** `PartnerDashboard.tsx`: save `.select('id')` + ověření 1 řádku; 0 řádků → česká chyba + rollback (žádný falešný success).

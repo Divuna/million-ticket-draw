@@ -20,9 +20,13 @@ Audit zbývajících non-Stripe bloků po P04 staging fixu. Pouze read-only DB d
 
 **Blocked-by-Stripe (beze změny):** PAY01–PAY03; P13 plný běh z reálných aktivací nepřímo závisí na reálné partner paid aktivitě.
 
-## P04 FIX — PARTNERS UPDATE RLS + AFFECTED-ROWS CHECK (16. 06. 2026, STAGING ONLY, schválení Pavla)
+## P04 FIX — PARTNERS UPDATE RLS — PRODUKČNÍ ROLLOUT PROVEDEN (16. 06. 2026, schválení Pavla)
 
-Partner save konverzního nastavení MioCoinů opraven **pouze na stagingu** `dxmowysntemfqfnanxua` (schválení Pavla pro staging). Produkce `xkzhjldrojjlrkezorey` **NEDOTČENA** — stále bez UPDATE policy, čeká na samostatné výslovné schválení.
+**✅ PRODUKCE `xkzhjldrojjlrkezorey`:** migrace `20260616_partners_update_rls_partner_own.sql` aplikována 16.06. (výslovné schválení Pavla). Precheck: jen `Public read partners` SELECT (bez UPDATE). Postcheck: 3 policy (`Public read partners` SELECT + `partners_update_own` `auth_user_id=auth.uid()` + `partners_update_admin` `is_admin()`). Data NEZMĚNĚNA — 11 partnerů, reward checksum identický `d57e638f9d48f302ad5b562fc2cd90e9` před i po. Žádný Stripe, žádná reálná platba, žádná CMS, žádný frontend deploy.
+
+**⏳ Frontend `.select()` affected-rows check (`PartnerDashboard.tsx`) se na produkci projeví až po samostatném Lovable Publish** — samotná RLS oprava už ale umožní zápis (partner save funguje i se stávajícím live frontendem).
+
+Partner save konverzního nastavení MioCoinů ověřen **na stagingu** `dxmowysntemfqfnanxua` (schválení Pavla pro staging) a nyní aplikován i na produkci.
 
 - **Migrace** `supabase/migrations/20260616_partners_update_rls_partner_own.sql` (aplikováno jen staging): policy `partners_update_own` (authenticated, `auth_user_id = auth.uid()` USING+WITH CHECK) + `partners_update_admin` (`is_admin()`). `Public read partners` SELECT nedotčen. Postcheck: 3 policy (1 SELECT + 2 UPDATE).
 - **App** `src/pages/PartnerDashboard.tsx`: save používá `.select('id')` a ověřuje `updatedRows.length === 1`; 0 řádků → `throw` → česká `toast.error('Nepodařilo se uložit nastavení')` + rollback. **Žádný falešný success.** (Defense-in-depth; samotná RLS oprava už umožní zápis.)
