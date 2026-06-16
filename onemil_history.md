@@ -14,6 +14,15 @@
 
 ---
 
+## 2026-06-16 — Owner decision: L02a/L06/CI05 uzavřeny pro testovací fázi
+
+Pavel potvrdil:
+- L02a `/pravidla-souteze` → owner-accepted pro testovací fázi; cleanup placeholderů odložen před live.
+- L06 reklamace/support → technická support cesta dostatečná pro testovací fázi; finální wording/reklamační text odložen před live s právníkem.
+- CI05 → `onemil_spec.md` nevytvářet; source-of-truth = onemil_state.md, onemil_history.md, CLAUDE.md, .cursor/SYSTEM_MAP.md, PROJECT_CONTEXT.md + launch docs.
+Zbývá: L02b (pre-aktivační procesní checklist, neblokuje) + CI04 (mazání mrtvého kódu — zatím neřešit, čeká samostatné schválení).
+Aktualizováno OWNER_LEGAL_DECISION_SHEET, LAUNCH_TODO, CLAUDE.md, state. Jen dokumentace; žádný kód, SQL, CMS, Stripe ani deploy.
+
 ## 2026-06-16 — Non-Stripe cleanup re-verify: L02a/L02b/L06/CI04/CI05 (read-only)
 
 Read-only ověření a zařazení posledních non-Stripe owner/cleanup položek (návrhy, finální = Pavel):

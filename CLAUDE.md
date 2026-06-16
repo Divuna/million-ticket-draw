@@ -1,13 +1,15 @@
 # CLAUDE.md
 
-## NON-STRIPE CLEANUP RE-VERIFY — L02a/L02b/L06/CI04/CI05 (16. 06. 2026, read-only, návrhy)
+## NON-STRIPE CLEANUP — L02a/L06/CI05 ROZHODNUTO (16. 06. 2026, Pavel)
 
-Read-only re-verify posledních non-Stripe položek (návrhy dispozice; finální = Pavel). Detaily v `OWNER_LEGAL_DECISION_SHEET.md`.
-- **L02a** `/pravidla-souteze` (CMS legal, 1025 znaků, stále placeholdery) → navrženo owner-accepted pro testovací fázi; pre-live cleanup obsahu.
-- **L02b** per-contest rules PDF: prod 0 aktivních z 127, 0 aktivních bez PDF → pre-live procesní follow-up (checklist v decision sheet); neblokuje.
-- **L06** support: `/kontakt` mailto podpora@ + `/messages` support handoff → technická cesta UZAVŘENA; reklamační wording = pre-live legal follow-up.
-- **CI04** mrtvý kód (`InfluencerDashboard` import bez Route; `TestLogin` neimportován): riziko minimální oběma směry; **smazání čeká výslovné schválení Pavla** (mazání souborů). Neměnit bez schválení.
-- **CI05** `onemil_spec.md` chybí; stávající source-of-truth (state/history + CLAUDE + .cursor/SYSTEM_MAP + PROJECT_CONTEXT) dostatečné → navrženo nevytvářet.
+Rozhodnutí Pavla (detaily v `OWNER_LEGAL_DECISION_SHEET.md`):
+- **L02a** `/pravidla-souteze` → **owner-accepted pro testovací fázi** (jako L01/L03/L04); cleanup placeholderů odložen před live.
+- **L06** reklamace/support → **technická support cesta dostatečná pro testovací fázi** (owner-accepted); finální wording/reklamační text odložen před live s právníkem.
+- **CI05** → **`onemil_spec.md` NEvytvářet**; source-of-truth = onemil_state.md, onemil_history.md, CLAUDE.md, .cursor/SYSTEM_MAP.md, PROJECT_CONTEXT.md + launch docs.
+
+Zbývá (nerozhodnuto teď):
+- **L02b** per-contest rules PDF: 0 aktivních z 127 → trvalý pre-aktivační procesní checklist (neblokuje).
+- **CI04** mrtvý kód (`InfluencerDashboard` import bez Route; `TestLogin` neimportován): **mazání zatím neřešit — čeká samostatné výslovné schválení.** Neměnit bez schválení.
 Žádný kód/SQL/CMS/Stripe/deploy.
 
 ## AF05 ROZHODNUTO — AFFILIATE ODLOŽEN MIMO 1. VEŘEJNÝ TEST (16. 06. 2026, Pavel)
