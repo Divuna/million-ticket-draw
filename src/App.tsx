@@ -73,7 +73,6 @@ import PartnerMessages from "@/pages/PartnerMessages";
 import InfluencerLanding from "@/pages/InfluencerLanding";
 import InfluencerHowToEarn from "@/pages/InfluencerHowToEarn";
 import InfluencerRegister from "@/pages/InfluencerRegister";
-import InfluencerDashboard from "@/pages/InfluencerDashboard";
 import InfluencerMessages from "@/pages/InfluencerMessages";
 import AdminPartnersPortal from "@/pages/AdminPartnersPortal";
 import AdminInvoices from "@/pages/AdminInvoices";
