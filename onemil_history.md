@@ -14,6 +14,16 @@
 
 ---
 
+## 2026-06-16 — P04 = technicky ověřeno pro testovací fázi (rozhodnutí Pavla); už není aktivní non-Stripe blocker
+
+Rozhodnutí Pavla: P04 se dál neblokuje kvůli chybějícímu produkčnímu test partner loginu. Označeno jako technicky ověřené pro testovací fázi.
+- ✅ staging E2E: spec 56 run `27599115269` (56b: save konverze → DB `reward_base_czk=100, reward_mc=1`, izolace vlastního řádku).
+- ✅ produkční RLS nasazené: 3 policy (`Public read partners`, `partners_update_own`, `partners_update_admin`).
+- ✅ live bundle `index-C9tBfrJx.js` obsahuje frontend affected-rows ochranu.
+- ✅ produkční data nezměněna (11 partnerů, checksum `d57e638f9d48f302ad5b562fc2cd90e9`).
+- ⏳ Plný produkční UI smoke = volitelný follow-up, čeká na bezpečný test partner login.
+- Jen dokumentace. Žádný kód, SQL, CMS, Stripe ani deploy.
+
 ## 2026-06-16 — P04 post-publish ověření (částečné): frontend ochrana živá; UI save smoke blokován chybějícím test partnerem
 
 Pavel provedl ruční Lovable Publish.

@@ -35,7 +35,12 @@ Schválený partner nyní reálně uloží konverzní nastavení MioCoinů. **St
 
 **Poslední P04 staging recheck (16.06.):** cílený staging run `27599115269` (spec 56) prošel **3 passed · 0 failed · 0 skipped**. 56b potvrdil P04 end-to-end: partner uloží konverzní nastavení → DB obsahuje `reward_base_czk=100, reward_mc=1`, partner mění jen vlastní řádek (RLS `partners_update_own`). Stripe neřešen.
 
-**Post-publish ověření (16.06.) — ČÁSTEČNÉ:** Pavel provedl Lovable Publish. ✅ Live produkční bundle `index-C9tBfrJx.js` na `onemil.cz` obsahuje OBA stringy — nový `Nastavení se nepodařilo uložit — zkontrolujte, že máte oprávnění.` (affected-rows ochrana z `5358decd`) i `Nastavení odměn bylo uloženo` → **frontend P04 ochrana je prokazatelně živá na veřejné adrese.** ✅ Produkční RLS: 3 policy (`Public read partners`, `partners_update_own`, `partners_update_admin`). ✅ Data nezměněna (11 partnerů, checksum `d57e638f...`). ⏳ **Authenticated UI save smoke (login partnera → změna → uložení → DB verify) BLOKOVÁN — chybí bezpečný test partner login;** vytvořit/upravit partnera nelze bez produkčního write SQL. Pro dokončení dodat throwaway/test partner přihlášení (e-mail+heslo) schváleného partnera.
+**P04 = TECHNICKY OVĚŘENO PRO TESTOVACÍ FÁZI (16.06., rozhodnutí Pavla).** P04 už NENÍ aktivní non-Stripe blocker. Evidence:
+- ✅ staging E2E: spec 56 run `27599115269` (56b: partner uloží konverzi → DB `reward_base_czk=100, reward_mc=1`, mění jen vlastní řádek).
+- ✅ produkční RLS nasazené: 3 policy (`Public read partners`, `partners_update_own` `auth_user_id=auth.uid()`, `partners_update_admin` `is_admin()`).
+- ✅ live bundle `index-C9tBfrJx.js` (`onemil.cz`) obsahuje frontend affected-rows ochranu (string `Nastavení se nepodařilo uložit — zkontrolujte, že máte oprávnění.`).
+- ✅ produkční data nezměněna (11 partnerů, checksum `d57e638f...`).
+- ⏳ Plný produkční UI smoke (login partnera → změna → uložení → DB verify) = VOLITELNÝ follow-up, čeká na bezpečný test partner login. Nedělat produkční write pro vytvoření partnera bez schválení.
 
 - **Migrace** `20260616_partners_update_rls_partner_own.sql`: `partners_update_own` (`auth_user_id = auth.uid()`) + `partners_update_admin` (`is_admin()`). Postcheck OK (3 policy). `Public read partners` SELECT nedotčen.
 - **App** `PartnerDashboard.tsx`: save `.select('id')` + ověření 1 řádku; 0 řádků → česká chyba + rollback (žádný falešný success).

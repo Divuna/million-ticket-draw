@@ -28,7 +28,7 @@ Audit zbývajících non-Stripe bloků po P04 staging fixu. Pouze read-only DB d
 
 **Poslední P04 staging recheck (16.06.):** cílený staging run `27599115269` (spec 56) = **3 passed · 0 failed · 0 skipped**. 56b potvrdil P04 end-to-end (partner uloží konverzi → DB `reward_base_czk=100, reward_mc=1`, mění jen vlastní řádek). Stripe neřešen.
 
-**Post-publish ověření (16.06.) — ČÁSTEČNÉ:** Pavel provedl Lovable Publish. ✅ Live bundle `index-C9tBfrJx.js` (`onemil.cz`) obsahuje nový affected-rows error string → frontend P04 ochrana živá na produkci. ✅ Produkční RLS 3 policy + data nezměněna (checksum `d57e638f...`). ⏳ **Authenticated UI save smoke BLOKOVÁN — chybí bezpečný test partner login** (vytvořit partnera = produkční write SQL, zakázáno). Pro dokončení dodat throwaway/test partner přihlášení.
+**P04 = TECHNICKY OVĚŘENO PRO TESTOVACÍ FÁZI (16.06., rozhodnutí Pavla) — už NENÍ aktivní non-Stripe blocker.** Evidence: ✅ staging E2E spec 56 run `27599115269` (56b DB verify); ✅ produkční RLS 3 policy (`Public read partners`/`partners_update_own`/`partners_update_admin`); ✅ live bundle `index-C9tBfrJx.js` obsahuje frontend affected-rows ochranu; ✅ produkční data nezměněna (checksum `d57e638f...`). Plný produkční UI smoke (login partnera → změna → save → DB verify) = VOLITELNÝ follow-up, čeká na bezpečný test partner login (nedělat produkční write pro vytvoření partnera bez schválení).
 
 Partner save konverzního nastavení MioCoinů ověřen **na stagingu** `dxmowysntemfqfnanxua` (schválení Pavla pro staging) a nyní aplikován i na produkci.
 
