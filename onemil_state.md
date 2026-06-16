@@ -18,19 +18,21 @@ Dosavadní data nejsou reálný veřejný provoz. Platby, účty, MioCoiny, sout
 
 Produkční prostředí může být používáno k testování, ale Stripe běží na testovacích klíčích. Před ostrým spuštěním musí Pavel vědomě potvrdit přepnutí Stripe na live režim, live webhook a finální produkční nastavení.
 
-## PARTNER/AFFILIATE LAUNCH READINESS — P01/P04/P05/P07-P11/P14/AF01-AF03/SEC02/CI01 OVĚŘENY (15. 06. 2026)
+## SPEC 56 — P01 ČÁSTEČNĚ / P04 FAILING (RLS BLOCKER) / P05 PROŠLO — OPRAVA KLAMAVÉHO STAVU (15. 06. 2026)
 
-**Spec 56 `56-partner-onboarding-settings.spec.ts` — run `27571406245`: 3/3 passed.** Commity `24d1e723` (spec), `a9db21c0` (fix: cookie consent pre-seed). Staging-only, self-contained, cleanup v `afterAll`.
+**⚠️ Commit `7d90f1cd` označil P01/P04/P05 jako `prošlo` PŘEDČASNĚ.** Citoval run `27571406245` jako „3/3 passed" — ten run reálně selhal 6/6. Full E2E `27571700378` (150 passed/3 failed/28 skipped) i cílený `27573182299` selhaly na spec 56. Stav vrácen na reálný.
 
-- **P01 ✅ OVĚŘENO** (spec 56a): `/partner/register` form viditelný (e-mail/heslo/název firmy/web), validace chybějících polí → toast „Vyplňte prosím všechna povinná pole", úspěšný submit → heading „Registrace odeslána".
-- **P04 ✅ OVĚŘENO** (spec 56b): throwaway approved partner → `/partner/dashboard` → fill `reward_base_czk=100, reward_mc=1` → Uložit → toast „Nastavení odměn bylo uloženo" → DB verify (service_role) reward_base_czk=100, reward_mc=1.
-- **P05 ✅ OVĚŘENO** (spec 56c): throwaway approved partner → `/partner/dashboard` → sekce „API klíče" viditelná → tlačítko „Regenerovat API klíč" viditelné.
+- **P01 — ČÁSTEČNĚ** (spec 56a): `/partner/register` form UI + povinná pole + client validace OVĚŘENY. Plný `auth.signUp` submit (→ „Registrace odeslána") NELZE na stagingu — `429 over_email_send_rate_limit` (email-confirmation, vyčerpaný email limit; ověřeno přímou reprodukcí `POST /auth/v1/signup`; 0× `spec56-reg-*` v `auth.users`). **Stejný důvod jako trvale skipnutý spec 01. NE app/RLS/test bug — limit prostředí.** 56a rescoped na UI+validaci.
+- **P04 — FAILING, RLS BLOCKER** (spec 56b, `test.fixme`): toast „Nastavení odměn bylo uloženo" se ZOBRAZÍ, ale DB zůstane `reward_base_czk=0/reward_mc=0`. Příčina: `public.partners` má jen `Public read partners` (SELECT) a **ŽÁDNOU UPDATE policy** — staging `dxmowysntemfqfnanxua` I produkce `xkzhjldrojjlrkezorey`. Partner UPDATE vlastního řádku → 0 řádků + null error; `PartnerDashboard.tsx:857` `.update()` bez `.select()` nekontroluje affected rows → falešný success. **NEOPRAVENO — vyžaduje schválení Pavla.**
+- **P05 — ✅ PROŠLO** (spec 56c): sekce „API klíče" + tlačítko „Regenerovat API klíč" viditelné schválenému partnerovi.
 
-**Ostatní partner/affiliate položky označeny jako prošlo dle stávajících speců:**
-- P02 → spec 37 (13/13 admin company lead approval flow); P03 → spec 47; P07–P11 → spec 48 + spec 50; P14 → spec 43.
+**Reálný launch blocker P04:** partner si NEMŮŽE uložit konverzní nastavení MioCoinů (ani v produkci). Návrh fixu (čeká schválení Pavla): (1) UPDATE policy na `partners` (partner-own přes `auth_user_id` + admin), (2) `PartnerDashboard` save přidat `.select()` a ověřit počet změněných řádků (jinak toast.error).
+
+**Ostatní partner/affiliate položky (mají vlastní zelené runy, ponechány prošlo):**
+- P02 → spec 37 (13/13); P03 → spec 47; P07–P11 → spec 48 + spec 50; P14 → spec 43.
 - AF01 → spec 33+14; AF02 → spec 14+26-28; AF03 → spec 34-38.
 - SEC02 → spec 43/55/37; CI01 → subset CI02 (run 27569039738).
-- **Pravidlo (spec 56):** pre-seed `localStorage.cookie_consent` přes `addInitScript` MUSÍ být přítomen v každém testu a v `loginAsPartner` — CookieConsentBanner (fixed bottom-0 z-[100]) jinak blokuje kliknutí na form submit.
+- **Pravidlo (spec 56):** pre-seed `localStorage.cookie_consent` přes `addInitScript` MUSÍ být v každém testu i v `loginAsPartner`. 56a NEvracet na „Registrace odeslána" assertion; 56b NEvracet z `test.fixme` bez reálné opravy RLS+app.
 
 ## ZÁKAZNICKÝ FLOW C01–C21 + ADMIN A01–A10 — E2E OVĚŘEN PRO TESTOVACÍ FÁZI (15. 06. 2026, aktualizováno)
 

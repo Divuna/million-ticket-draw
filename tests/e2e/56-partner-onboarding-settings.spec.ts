@@ -5,15 +5,15 @@
  * Žádná produkční data. Cleanup v afterAll (vždy, i při selhání).
  *
  * 56a — /partner/register: form UI loads bez chyb, povinná pole viditelná
- *        (e-mail, heslo, firemní název, web), validace chybějících polí → Czech
- *        toast, úspěšný submit s testovacím e-mailem → stránka "Registrace odeslána".
- *        Cleanup: smazat auth user přes service_role v afterAll.
- *        (Pokrývá LAUNCH_TODO P01)
+ *        (e-mail, heslo, firemní název, web), validace chybějících polí → Czech toast,
+ *        po vyplnění povinných polí je submit klikatelný.
+ *        ROZSAH: jen UI + validace. Plný `auth.signUp` submit NEOVĚŘUJEME — staging
+ *        email-confirmation → `429 over_email_send_rate_limit` (jako skipnutý spec 01).
+ *        (Pokrývá LAUNCH_TODO P01 — částečně: form+validace)
  *
- * 56b — Partner konverze nastavení: throwaway approved partner → /partner/dashboard
- *        → sekce "Nastavení konverze MioCoinů" → nastavit reward_base_czk=100,
- *        reward_mc=1 → "Uložit" → toast "Nastavení odměn bylo uloženo" → verify v DB.
- *        (Pokrývá LAUNCH_TODO P04)
+ * 56b — ⛔ test.fixme: REÁLNÁ RLS CHYBA. partners nemá UPDATE policy → partner save
+ *        tiše selže (DB zůstane 0), app nekontroluje affected rows → falešný success.
+ *        Vyžaduje schválení Pavla (UPDATE policy + app fix). (LAUNCH_TODO P04 = FAILING)
  *
  * 56c — Partner API klíč sekce: throwaway approved partner → /partner/dashboard →
  *        sekce "API klíče" viditelná → tlačítko "Regenerovat API klíč" viditelné.
@@ -184,12 +184,21 @@ test.describe('56 — Partner onboarding + dashboard nastavení (P01/P04/P05)', 
     const toast = page.getByText(/vyplňte prosím|povinná pole/i).first();
     await expect(toast, 'Toast o chybějících polích musí být viditelný').toBeVisible({ timeout: 5_000 });
 
-    // Úspěšný submit s testovacím unikátním e-mailem
+    // ── ROZSAH 56a (P01) ────────────────────────────────────────────────────
+    // Ověřujeme JEN: registrační form UI + povinná pole + client-side validaci.
+    //
+    // Plný `auth.signUp` submit (→ heading „Registrace odeslána") ZÁMĚRNĚ NEOVĚŘUJEME:
+    // staging má zapnuté email-confirmation a `auth.signUp` posílá potvrzovací e-mail,
+    // takže veřejný registrační flow naráží na `429 over_email_send_rate_limit`
+    // (ověřeno přímou reprodukcí proti staging /auth/v1/signup, 15. 06. 2026).
+    // Je to stejný důvod, proč je spec 01 (registrace nového uživatele) trvale skipnutý.
+    // Není to chyba OneMil app kódu ani RLS — je to limit staging Auth e-mailů.
+    //
+    // Pozitivní path: ověříme, že po vyplnění všech povinných polí je validace
+    // splněna (mizí validační toast) a submit tlačítko je klikatelné.
     await emailInput.fill(REG_EMAIL);
-    // Heslo (prvního input[type="password"])
     const pwInputs = page.locator('input[type="password"]');
     await pwInputs.nth(0).fill(REG_PASSWORD);
-    // Potvrzení hesla (druhé password input)
     const pwCount = await pwInputs.count();
     if (pwCount >= 2) {
       await pwInputs.nth(1).fill(REG_PASSWORD);
@@ -197,19 +206,26 @@ test.describe('56 — Partner onboarding + dashboard nastavení (P01/P04/P05)', 
     await companyField.fill(`E2E Spec56 Firma ${RUN_ID}`);
     await webField.fill('https://spec56-test.example.invalid');
 
-    await submitBtn.click();
-
-    // Po úspěšném submitu → "Registrace odeslána"
-    // Timeout 30s: staging pod Full E2E zátěží (~55 specs) může mít pomalejší auth.signUp.
-    const successHeading = page.getByText(/registrace odeslána/i).first();
-    await expect(successHeading, 'Nadpis "Registrace odeslána" po úspěšném submitu').toBeVisible({
-      timeout: 30_000,
-    });
+    // Všechna povinná pole mají hodnotu → form je připraven k odeslání.
+    await expect(emailInput).toHaveValue(REG_EMAIL);
+    await expect(companyField).toHaveValue(`E2E Spec56 Firma ${RUN_ID}`);
+    await expect(webField).toHaveValue('https://spec56-test.example.invalid');
+    await expect(submitBtn, 'Submit tlačítko je klikatelné po vyplnění').toBeEnabled();
   });
 
   // ── 56b: Konverze nastavení save ─────────────────────────────────────────
 
-  test('56b) Partner konverze nastavení: save reward_base_czk+reward_mc → toast + DB', async ({ page }) => {
+  // ⛔ BLOCKED — REÁLNÁ RLS CHYBA (NE test bug), neopravovat make-it-pass.
+  // Diagnóza (15. 06. 2026): toast „Nastavení odměn bylo uloženo" se zobrazí, ale DB
+  // zůstane reward_base_czk=0/reward_mc=0. Příčina: `public.partners` nemá ŽÁDNOU UPDATE
+  // RLS policy (ověřeno na stagingu dxmowysntemfqfnanxua i produkci xkzhjldrojjlrkezorey —
+  // jediná policy je „Public read partners" SELECT). Partner UPDATE vlastního řádku tedy
+  // vrátí 0 řádků + null error; `src/pages/PartnerDashboard.tsx:857` nekontroluje počet
+  // změněných řádků (`.update()` bez `.select()`) → falešný success toast.
+  // FIX vyžaduje schválení Pavla: (1) UPDATE policy na partners (partner-own přes
+  // auth_user_id + admin), (2) app check affected rows. Viz LAUNCH_TODO P04.
+  // Do té doby `test.fixme` — neoznačovat P04 jako prošlo.
+  test.fixme('56b) Partner konverze nastavení: save reward_base_czk+reward_mc → toast + DB', async ({ page }) => {
     if (!isStaging) test.skip(true, 'Staging secrets not available');
     test.setTimeout(60_000);
 

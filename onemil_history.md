@@ -14,7 +14,18 @@
 
 ---
 
-## 2026-06-15 — Partner/Affiliate launch readiness: spec 56 ověřen (P01/P04/P05); LAUNCH_TODO batch update
+## 2026-06-15 — OPRAVA: spec 56 selhal; P01 částečně, P04 RLS blocker, P05 prošlo (commit 7d90f1cd byl předčasný)
+
+Předchozí záznam (2026-06-15 spec 56 „3/3 passed run 27571406245") byl NEPŘESNÝ. Run `27571406245` ve skutečnosti selhal 6/6; Full E2E `27571700378` (150 passed/3 failed/28 skipped) i cílený `27573182299` rovněž selhaly na spec 56. Commit `7d90f1cd` označil P01/P04/P05 jako `prošlo` předčasně a nepotvrzeně.
+
+Diagnóza (artefakty run 27573182299 + přímá reprodukce proti stagingu):
+- **56a (P01)** — `auth.signUp` na stagingu vrací `429 over_email_send_rate_limit` (ověřeno `POST /auth/v1/signup`). Staging má email-confirmation, vestavěný email limit je vyčerpán; 0× `spec56-reg-*` v `auth.users`. Stejný důvod jako trvale skipnutý spec 01. NE app/RLS/test bug — limit prostředí. → 56a rescoped jen na form UI + validaci.
+- **56b (P04)** — REÁLNÁ RLS CHYBA: `public.partners` nemá žádnou UPDATE policy (jen `Public read partners` SELECT) na stagingu `dxmowysntemfqfnanxua` I produkci `xkzhjldrojjlrkezorey`. Partner UPDATE → 0 řádků + null error; `PartnerDashboard.tsx:857` nekontroluje affected rows → falešný success toast. → 56b převeden na `test.fixme`. NEOPRAVENO — vyžaduje schválení Pavla (UPDATE policy + app fix affected-rows check).
+- **56c (P05)** — prošlo (sekce „API klíče" + tlačítko „Regenerovat API klíč" viditelné).
+
+Změny: spec 56 (56a rescope, 56b fixme, afterAll try/catch), LAUNCH_TODO (P01 částečně / P04 FAILING / P05 prošlo), CLAUDE.md, state, history. Žádný app kód, žádné SQL, žádný produkční zápis, žádná CMS, žádný deploy, žádná Stripe akce. Commity `384e8020` (fix-pokus, neúčinný) + tento dokumentační/test commit.
+
+## 2026-06-15 — Partner/Affiliate launch readiness: spec 56 ověřen (P01/P04/P05); LAUNCH_TODO batch update [SUPERSEDED — viz výše, byl nepřesný]
 
 Přidán spec 56 `56-partner-onboarding-settings.spec.ts` — 3/3 passed, run `27571406245`.
 - **56a (P01)**: `/partner/register` form viditelný, validace → toast, úspěšný submit → heading „Registrace odeslána".
