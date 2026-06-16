@@ -1,5 +1,20 @@
 ﻿# OneMil – aktuální stav projektu
 
+## PWA INSTALL CTA — IMPLEMENTOVÁNO NA VĚTVI `feature/pwa-install-ui` (16. 06. 2026)
+
+Implementační commit: `a030ad512f2b01fa81ec84de110e92dabdbf9ddd`.
+
+Vytvořeno: `src/hooks/usePwaInstallPrompt.ts`, `src/components/InstallAppButton.tsx`.
+Změněno: `src/pages/Homepage.tsx`, `docs/launch-readiness/PWA_INSTALL_IMPLEMENTATION_PLAN.md`, `onemil_state.md`, `onemil_history.md`, `CLAUDE.md`.
+
+Chování: Android/Chrome zobrazí CTA jen při dostupném `beforeinstallprompt` a klik volá native `prompt()`. iPhone/iOS zobrazí český návod pro Safari (`Sdílet` → `Přidat na plochu`) a nepředstírá Android prompt. Standalone/installed režim CTA skrývá. Desktop bez reálného install promptu CTA nezobrazuje.
+
+Build: `npm run build` prošel. Runtime ověřeno simulací: desktop hidden, Android prompt event → CTA + `prompt()`, accepted → hidden, iPhone Safari UA → instruction modal, standalone display mode → hidden.
+
+Nedotčeno: `public/manifest.webmanifest`, public ikony, `public/OneSignalSDKWorker.js`, Supabase, Stripe, payments, wallet, contests, tickets, winners, Partner Offers, affiliate, Bob, routes, legal pages a unrelated UI.
+
+Zbývající ruční phone checks: reálný Android Chrome native install dialog, Android installed launch z plochy, reálný iPhone Safari postup `Přidat na plochu`, iPhone launch z plochy se skrytým CTA.
+
 ## NON-STRIPE CLEANUP — L02a/L06/CI05 ROZHODNUTO; L02b/CI04 follow-up (16. 06. 2026, Pavel)
 
 Rozhodnutí Pavla:
