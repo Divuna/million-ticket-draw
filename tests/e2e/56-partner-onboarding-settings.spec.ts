@@ -215,17 +215,13 @@ test.describe('56 — Partner onboarding + dashboard nastavení (P01/P04/P05)', 
 
   // ── 56b: Konverze nastavení save ─────────────────────────────────────────
 
-  // ⛔ BLOCKED — REÁLNÁ RLS CHYBA (NE test bug), neopravovat make-it-pass.
-  // Diagnóza (15. 06. 2026): toast „Nastavení odměn bylo uloženo" se zobrazí, ale DB
-  // zůstane reward_base_czk=0/reward_mc=0. Příčina: `public.partners` nemá ŽÁDNOU UPDATE
-  // RLS policy (ověřeno na stagingu dxmowysntemfqfnanxua i produkci xkzhjldrojjlrkezorey —
-  // jediná policy je „Public read partners" SELECT). Partner UPDATE vlastního řádku tedy
-  // vrátí 0 řádků + null error; `src/pages/PartnerDashboard.tsx:857` nekontroluje počet
-  // změněných řádků (`.update()` bez `.select()`) → falešný success toast.
-  // FIX vyžaduje schválení Pavla: (1) UPDATE policy na partners (partner-own přes
-  // auth_user_id + admin), (2) app check affected rows. Viz LAUNCH_TODO P04.
-  // Do té doby `test.fixme` — neoznačovat P04 jako prošlo.
-  test.fixme('56b) Partner konverze nastavení: save reward_base_czk+reward_mc → toast + DB', async ({ page }) => {
+  // P04 fix OVĚŘEN (16. 06. 2026, staging): partner save reward nastavení nyní reálně
+  // zapisuje. Oprava: (1) migrace `20260616_partners_update_rls_partner_own.sql` přidala
+  // partner-own UPDATE policy (auth_user_id = auth.uid()) + admin policy na public.partners;
+  // (2) `PartnerDashboard.tsx` save používá `.select('id')` a ověřuje affected rows (jinak
+  // česká toast.error místo falešného success). Aplikováno POUZE na staging; produkce čeká
+  // na samostatné schválení Pavla.
+  test('56b) Partner konverze nastavení: save reward_base_czk+reward_mc → toast + DB', async ({ page }) => {
     if (!isStaging) test.skip(true, 'Staging secrets not available');
     test.setTimeout(60_000);
 

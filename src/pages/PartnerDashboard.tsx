@@ -854,13 +854,19 @@ const PartnerDashboard = () => {
     setPartner({ ...partner, reward_base_czk: baseCzkValue, reward_mc: mcValue });
 
     try {
-      const { error } = await supabase
+      // .select() + ověření affected rows: bez něj by RLS-blokovaný UPDATE (0 řádků)
+      // vrátil null error a zobrazil falešný success. Vyžadujeme zápis právě 1 řádku.
+      const { data: updatedRows, error } = await supabase
         .from('partners')
         .update({ reward_base_czk: baseCzkValue, reward_mc: mcValue })
-        .eq('id', partner.id);
+        .eq('id', partner.id)
+        .select('id');
 
       if (error) throw error;
-      
+      if (!updatedRows || updatedRows.length === 0) {
+        throw new Error('Nastavení se nepodařilo uložit — zkontrolujte, že máte oprávnění.');
+      }
+
       toast.success('Nastavení odměn bylo uloženo');
     } catch (error) {
       console.error('Error saving reward settings:', error);
