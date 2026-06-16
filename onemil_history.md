@@ -14,6 +14,15 @@
 
 ---
 
+## 2026-06-16 — P04 staging recheck: spec 56 cílený run 27599115269 (3 passed)
+
+Cílený staging run `27599115269` (spec 56) prošel: **3 passed · 0 failed · 0 skipped**.
+- 56b potvrdil P04: partner uloží konverzní nastavení MioCoinů → DB obsahuje `reward_base_czk=100, reward_mc=1`, partner mění jen vlastní řádek (RLS `partners_update_own`, `auth_user_id=auth.uid()`).
+- 56a (form+validace) i 56c (API klíče sekce) rovněž prošly.
+- Produkční RLS P04 fix už aplikovaný (z dřívějšího kroku); frontendová affected-rows ochrana (`PartnerDashboard.tsx`) čeká na ruční Lovable Publish.
+- Lovable Publish Code neumí provést automaticky — musí ho ručně provést Pavel v Lovable UI.
+- Žádný kód, SQL, CMS, Stripe, platba ani deploy. Jen dokumentace.
+
 ## 2026-06-16 — P04 produkční rollout: partners UPDATE RLS aplikováno na produkci
 
 Schválení Pavla pro produkční rollout. Migrace `20260616_partners_update_rls_partner_own.sql` aplikována na produkci `xkzhjldrojjlrkezorey`.

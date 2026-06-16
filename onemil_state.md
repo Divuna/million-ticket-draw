@@ -33,6 +33,8 @@ Produkční prostředí může být používáno k testování, ale Stripe běž
 
 Schválený partner nyní reálně uloží konverzní nastavení MioCoinů. **Staging `dxmowysntemfqfnanxua` I PRODUKCE `xkzhjldrojjlrkezorey`** (schválení Pavla pro produkční rollout 16.06.). Produkční postcheck: 3 policy (SELECT + UPDATE own + UPDATE admin), data nezměněna (11 partnerů, checksum identický `d57e638f...`). Frontend affected-rows check čeká na samostatný Lovable Publish (RLS oprava sama už zápis umožní).
 
+**Poslední P04 staging recheck (16.06.):** cílený staging run `27599115269` (spec 56) prošel **3 passed · 0 failed · 0 skipped**. 56b potvrdil P04 end-to-end: partner uloží konverzní nastavení → DB obsahuje `reward_base_czk=100, reward_mc=1`, partner mění jen vlastní řádek (RLS `partners_update_own`). Produkční RLS fix je živý; **frontendová affected-rows ochrana čeká na ruční Lovable Publish — Code ho neumí provést automaticky, musí ho provést Pavel v Lovable UI.** Stripe neřešen.
+
 - **Migrace** `20260616_partners_update_rls_partner_own.sql`: `partners_update_own` (`auth_user_id = auth.uid()`) + `partners_update_admin` (`is_admin()`). Postcheck OK (3 policy). `Public read partners` SELECT nedotčen.
 - **App** `PartnerDashboard.tsx`: save `.select('id')` + ověření 1 řádku; 0 řádků → česká chyba + rollback (žádný falešný success).
 - **Spec 56b** un-fixme → prošlo. Cílený run `27597435909`: 3 passed. Staging Full E2E `27597509314`: 153 passed · 0 failed · 28 skipped.
