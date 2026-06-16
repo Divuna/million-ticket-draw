@@ -26,6 +26,7 @@ import winnerBgClean from "@/assets/winner-backgrounds/winner-card-bg-clean.png"
 const WINNER_BG_ROTATION = [winnerBgTrophy, winnerBgCrown, winnerBgClean];
 import YouTubeEmbed from "@/components/YouTubeEmbed";
 import { ContestCard } from "@/components/ContestCard";
+import { InstallAppButton } from "@/components/InstallAppButton";
 import { Trophy, ChevronRight, Ticket, Star, ChevronLeft, Handshake, ExternalLink, X } from "lucide-react";
 import { OneMilMioCoinIcon, OneMilVoucherIcon, OneMilInfoIcon, OneMilTrophyIcon, OneMilGiftIcon } from "@/components/icons/OneMilIcons";
 import { Footer } from "@/components/Footer";
@@ -683,6 +684,8 @@ const Homepage = () => {
                       </>
                     )}
                   </div>
+
+                  <InstallAppButton />
                 </div>
               </div>
             </CardContent>
