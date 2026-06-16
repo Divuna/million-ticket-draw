@@ -226,7 +226,7 @@ const Homepage = () => {
       };
     };
 
-    const stopContests = startAutoScroll(contestsCarouselRef, -0.8);
+    const stopContests = startAutoScroll(contestsCarouselRef, 0.8);
     const stopVouchers = startAutoScroll(vouchersCarouselRef, -0.8);
 
     return () => {
