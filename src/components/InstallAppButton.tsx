@@ -40,18 +40,13 @@ export const InstallAppButton: React.FC = () => {
         type="button"
         onClick={handleClick}
         disabled={installing}
-        className="rounded-xl p-4 min-h-[88px] md:min-h-[96px] bg-[hsl(220_45%_6%)] border-2 border-[rgba(255,138,0,0.3)] cursor-pointer hover:border-[rgba(255,138,0,0.5)] transition-all duration-200 flex flex-col items-center justify-center text-center shadow-[inset_0_1px_12px_rgba(255,138,0,0.05)] relative overflow-hidden disabled:opacity-70 disabled:cursor-wait"
+        className="inline-flex h-9 items-center gap-2 rounded-full border border-neon-gold/40 bg-neon-gold/15 px-3 text-xs font-semibold text-neon-gold transition-colors hover:bg-neon-gold/25 disabled:cursor-wait disabled:opacity-70"
         aria-label="Nainstalovat aplikaci"
       >
-        <div className="absolute inset-0 pointer-events-none bg-gradient-to-br from-[rgba(255,138,0,0.10)] via-transparent to-transparent" />
-        <Smartphone className="w-8 h-8 mb-2 relative z-10 text-[#FF8A00]" />
-        <div className="text-sm font-semibold text-foreground relative z-10">
-          Nainstalovat aplikaci
-        </div>
-        <div className="text-xs text-muted-foreground leading-snug mt-1 relative z-10">
-          Přidejte si OneMil na plochu telefonu.
-        </div>
+        <Smartphone className="h-4 w-4" />
+        <span>{isIOS ? "iPhone" : "Android"}</span>
       </button>
+      <p className="mt-2 text-xs text-muted-foreground">Přidat aplikaci na plochu</p>
 
       <Dialog open={instructionsOpen} onOpenChange={setInstructionsOpen}>
         <DialogContent className="max-w-sm rounded-2xl border-[rgba(255,138,0,0.3)] bg-[hsl(220_45%_6%)] text-foreground shadow-[0_16px_48px_rgba(0,0,0,0.55)]">

@@ -5,6 +5,7 @@ import { useAuth } from '@/hooks/useAuth';
 import { useUserRole } from '@/hooks/useUserRole';
 import { useFooterLinks } from '@/hooks/useFooterLinks';
 import { openConsentSettings } from '@/lib/consent';
+import { InstallAppButton } from '@/components/InstallAppButton';
 
 export const Footer: React.FC = () => {
   const { user } = useAuth();
@@ -37,6 +38,7 @@ export const Footer: React.FC = () => {
                 </svg>
               </a>
             </div>
+            <InstallAppButton />
           </div>
 
           {/* Information Links - from CMS */}
