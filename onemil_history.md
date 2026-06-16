@@ -14,6 +14,17 @@
 
 ---
 
+## 2026-06-16 — Non-Stripe launch audit: P06/P13/AF04/L06 ověřeny; AF05/L02a/CI04-del/CI05 = owner decision
+
+Read-only audit zbývajících non-Stripe bloků (žádný produkční zápis, žádná CMS, žádný Stripe, žádný deploy, žádný nový test).
+- P06 prošlo: produkční `settings.partner_api_documentation` (6421 znaků) má reálný endpoint, `has_placeholder=false`. Stale `<onemil-api>` jen v interním `docs/partner-api/PARTNER_API_GUIDE.md`.
+- P13 ověřeno strukturálně: produkční cron job 17 `weekly_partner_invoices` (`0 2 * * 0`) aktivní; funkce `create_partner_invoices_for_last_week()`, `_for_period(date,date)` + oba `enqueue_partner_invoice_email` overloady přítomny.
+- AF04 ověřeno staging (spec 40/41/42 run 27372767070) + live prod; standardní Full E2E je skipuje (payout secrets).
+- L06: `/kontakt` mailto podpora@onemil.cz + `/messages` handoff; žádné `/support/*` routy.
+- CI04: `InfluencerDashboard` importován bez Route (App.tsx:76), `TestLogin.tsx` neimportován = mrtvé.
+- Owner decisions: AF05, L02a/L02b, L06 reklamační wording, CI04 mazání souborů, CI05 (onemil_spec.md).
+- Aktualizováno LAUNCH_TODO + CLAUDE.md + state. Žádná produkce/Stripe/CMS/platba.
+
 ## 2026-06-16 — P04 opraveno na stagingu: partners UPDATE RLS + PartnerDashboard affected-rows check
 
 Schválení Pavla pro staging-only opravu P04. Produkce `xkzhjldrojjlrkezorey` NEDOTČENA.

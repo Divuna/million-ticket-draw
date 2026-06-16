@@ -1,5 +1,25 @@
 # CLAUDE.md
 
+## NON-STRIPE LAUNCH AUDIT — P06/P13/L02/L06/AF04/AF05/CI04/CI05 (16. 06. 2026, read-only)
+
+Audit zbývajících non-Stripe bloků po P04 staging fixu. Pouze read-only DB dotazy + code audit; žádný produkční zápis, žádná CMS změna, žádný Stripe, žádný deploy, žádný nový test (Full E2E čerstvě zelený `27597509314`).
+
+**Ověřeno / lze uzavřít:**
+- **P06 → prošlo:** produkční `settings.partner_api_documentation` (6421 znaků) = order-event guide s REÁLNÝM endpointem (`has_real_url=true`, `has_placeholder=false`). Live doc NENÍ stale. Jediný `<onemil-api>` placeholder je v interním repo dokumentu `docs/partner-api/PARTNER_API_GUIDE.md` (handoff, ne live) — kosmetické.
+- **P13 → ověřeno strukturálně:** produkční cron job 17 `weekly_partner_invoices` aktivní `0 2 * * 0` → `create_partner_invoices_for_last_week()`; funkce `_for_period(date,date)` + OBA `enqueue_partner_invoice_email` overloady (uuid; partner+period) existují. Řetězec kompletní; plný draft z reálných aktivovaných coinů vyžaduje reálnou partner paid aktivitu.
+- **AF04 → ověřeno staging + live prod:** specy 40/41/42 zelené (run `27372767070`), backend+EF LIVE (rollout 12.06.). Standardní Full E2E je SKIPuje (payout secrets).
+- **L06 → tech cesta ověřena:** `/kontakt` `mailto:podpora@onemil.cz` + `/messages` Bob/admin handoff; žádné `/support/*` routy nepotřeba.
+- **CI04 → potvrzeno mrtvé:** `InfluencerDashboard` importován (`App.tsx:76`) bez Route; `TestLogin.tsx` nikde neimportován.
+
+**Owner decision (NEdělat bez Pavla):**
+- **AF05** — je affiliate součástí 1. veřejného testu? (scope, ne tech blocker)
+- **L02a** — úklid placeholderů obecné CMS stránky `/pravidla-souteze` (CMS obsah). **L02b** — per-contest rules PDF QA před spuštěním každé soutěže (0 aktivních = teď neblokuje).
+- **L06 wording** — reklamační řád / přesný reklamační text (obsah/legal).
+- **CI04 mazání** — smazání `InfluencerDashboard`/`TestLogin` souborů vyžaduje schválení (mazání souborů).
+- **CI05** — vytvořit `onemil_spec.md`, nebo potvrdit, že `onemil_state.md`+`CLAUDE.md`+SYSTEM_MAP stačí.
+
+**Blocked-by-Stripe (beze změny):** PAY01–PAY03; P13 plný běh z reálných aktivací nepřímo závisí na reálné partner paid aktivitě.
+
 ## P04 FIX — PARTNERS UPDATE RLS + AFFECTED-ROWS CHECK (16. 06. 2026, STAGING ONLY, schválení Pavla)
 
 Partner save konverzního nastavení MioCoinů opraven **pouze na stagingu** `dxmowysntemfqfnanxua` (schválení Pavla pro staging). Produkce `xkzhjldrojjlrkezorey` **NEDOTČENA** — stále bez UPDATE policy, čeká na samostatné výslovné schválení.

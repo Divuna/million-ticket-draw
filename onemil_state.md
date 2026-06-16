@@ -1,5 +1,16 @@
 ﻿# OneMil – aktuální stav projektu
 
+## NON-STRIPE LAUNCH AUDIT — P06/P13/L06/AF04 OVĚŘENO; AF05/L02a/L06-wording/CI04-del/CI05 = OWNER (16. 06. 2026)
+
+Read-only audit (žádný produkční zápis, žádná CMS, žádný Stripe, žádný deploy).
+- **P06 prošlo** — produkční `settings.partner_api_documentation` má reálný endpoint (no placeholder). Repo handoff doc placeholder = kosmetické.
+- **P13 ověřeno strukturálně** — cron job 17 (neděle 02:00 UTC) aktivní + všechny invoice funkce + oba enqueue overloady na produkci.
+- **AF04 ověřeno staging + live prod** — spec 40/41/42 (run 27372767070); standardní Full E2E skipuje (payout secrets).
+- **L06 tech cesta** — `/kontakt` mailto podpora@ + `/messages` handoff; reklamační wording = owner.
+- **CI04** — `InfluencerDashboard` (App.tsx:76, bez Route) + `TestLogin.tsx` (neimportován) = mrtvé; smazání čeká schválení.
+- **OWNER decisions:** AF05 (affiliate v 1. testu?), L02a (CMS placeholdery), L02b (per-contest QA, 0 aktivních = neblokuje), L06 reklamační wording, CI05 (`onemil_spec.md` ano/ne).
+- **Blocked-by-Stripe:** PAY01–PAY03.
+
 ## L01 / L03 / L04 — PRÁVNÍ TEXTY OWNER-ACCEPTED PRO TESTOVACÍ FÁZI (15. 06. 2026, rozhodnutí Pavla)
 
 Pavel bere aktuální právní texty `/vop`, `/gdpr` a `/legal/cookies` jako dočasně přijatelné pro současný testovací režim projektu OneMil. Projekt je veřejně dostupný na adrese, ale není veřejně spuštěný pro zákazníky.
