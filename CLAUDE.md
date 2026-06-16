@@ -1,5 +1,11 @@
 # CLAUDE.md
 
+## PWA FOOTER INSTALL CTA — VISUAL POLISH (16. 06. 2026)
+
+`src/components/InstallAppButton.tsx` is now the active footer install UI surface near footer social icons: compact install pill, main label `Stáhnout aplikaci`, platform label `iPhone`/`Android`, lucide Apple/Chrome icons. Keep behavior unchanged: iOS opens the existing Czech Safari instruction modal, Android/Chrome uses the saved `beforeinstallprompt`, installed/standalone hides UI, desktop stays hidden unless a real install prompt exists. Build `npm run build` passed.
+
+Do not change PWA hook behavior, `public/manifest.webmanifest`, public icons, `public/OneSignalSDKWorker.js`, Supabase, Stripe, payments, routes, or unrelated UI for this polish.
+
 ## NON-STRIPE CLEANUP — L02a/L06/CI05 ROZHODNUTO (16. 06. 2026, Pavel)
 
 Rozhodnutí Pavla (detaily v `OWNER_LEGAL_DECISION_SHEET.md`):

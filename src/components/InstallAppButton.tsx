@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { Download, Plus, Share2, Smartphone } from "lucide-react";
+import { Apple, Chrome, Download, Plus, Share2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -34,19 +34,30 @@ export const InstallAppButton: React.FC = () => {
     }
   };
 
+  const PlatformIcon = isIOS ? Apple : Chrome;
+  const platformLabel = isIOS ? "iPhone" : "Android";
+
   return (
     <>
-      <button
-        type="button"
-        onClick={handleClick}
-        disabled={installing}
-        className="inline-flex h-9 items-center gap-2 rounded-full border border-neon-gold/40 bg-neon-gold/15 px-3 text-xs font-semibold text-neon-gold transition-colors hover:bg-neon-gold/25 disabled:cursor-wait disabled:opacity-70"
-        aria-label="Nainstalovat aplikaci"
-      >
-        <Smartphone className="h-4 w-4" />
-        <span>{isIOS ? "iPhone" : "Android"}</span>
-      </button>
-      <p className="mt-2 text-xs text-muted-foreground">Přidat aplikaci na plochu</p>
+      <div className="pt-1">
+        <p className="mb-2 text-xs font-semibold text-heading-gold">Stáhnout aplikaci</p>
+        <button
+          type="button"
+          onClick={handleClick}
+          disabled={installing}
+          className="group inline-flex h-10 items-center gap-2 rounded-full border border-neon-gold/45 bg-neon-gold/15 px-2.5 pr-3 text-left shadow-[inset_0_1px_10px_rgba(255,181,71,0.08)] transition-colors hover:bg-neon-gold/25 hover:border-neon-gold/70 disabled:cursor-wait disabled:opacity-70"
+          aria-label={`Stáhnout aplikaci pro ${platformLabel}`}
+        >
+          <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-neon-gold text-[hsl(220_50%_5%)]">
+            <PlatformIcon className="h-3.5 w-3.5" />
+          </span>
+          <span className="flex min-w-0 flex-col leading-none">
+            <span className="text-[10px] font-medium text-muted-foreground">Instalovat</span>
+            <span className="text-xs font-bold text-foreground">{platformLabel}</span>
+          </span>
+          <Download className="h-3.5 w-3.5 shrink-0 text-neon-gold/80 transition-colors group-hover:text-neon-gold" />
+        </button>
+      </div>
 
       <Dialog open={instructionsOpen} onOpenChange={setInstructionsOpen}>
         <DialogContent className="max-w-sm rounded-2xl border-[rgba(255,138,0,0.3)] bg-[hsl(220_45%_6%)] text-foreground shadow-[0_16px_48px_rgba(0,0,0,0.55)]">

@@ -1,5 +1,13 @@
 ﻿# OneMil – aktuální stav projektu
 
+## PWA FOOTER INSTALL CTA — VIZUÁLNÍ POLISH NA `main` (16. 06. 2026)
+
+Footerový PWA install entry point zůstává u social ikon v patičce, ale už nepůsobí jako plain text `iPhone`/`Android`. `src/components/InstallAppButton.tsx` nyní renderuje kompaktní install pill s hlavním labellem `Stáhnout aplikaci`, platformovým labellem `iPhone` nebo `Android`, ikonou Apple pro iOS a ikonou Chrome/native install pro Android Chrome prompt. Umístění ve `Footer.tsx` a odstranění z top homepage action area zůstává z předchozího merge.
+
+Chování beze změny: iPhone/iOS otevírá existující český návod, Android/Chrome volá uložený native `beforeinstallprompt`, standalone/installed režim CTA skrývá a desktop bez reálného install promptu CTA nezobrazuje.
+
+Build: `npm run build` prošel. Nedotčeno: PWA hook logika, `public/manifest.webmanifest`, public ikony, `public/OneSignalSDKWorker.js`, Supabase, Stripe, payments, routes a unrelated UI.
+
 ## PWA INSTALL CTA — IMPLEMENTOVÁNO NA VĚTVI `feature/pwa-install-ui` (16. 06. 2026)
 
 Implementační commit: `a030ad512f2b01fa81ec84de110e92dabdbf9ddd`.

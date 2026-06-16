@@ -14,6 +14,10 @@
 
 ---
 
+## 2026-06-16 — PWA footer install CTA visual polish
+
+Doladěn footerový PWA install entry point na `main`: `src/components/InstallAppButton.tsx` změněn z plain `iPhone`/`Android` buttonu na kompaktní install pill s textem `Stáhnout aplikaci`, platformovým labellem a existujícími lucide ikonami Apple/Chrome. Chování PWA beze změny (iOS instruction modal, Android native prompt, installed/desktop hide). `npm run build` prošel. Žádný Supabase, Stripe, manifest, public icons, OneSignal worker, payments, routes ani unrelated UI.
+
 ## 2026-06-16 — CI04 cleanup: smazán mrtvý kód TestLogin + InfluencerDashboard (schválení Pavla)
 
 Schválení Pavla pro CI04 cleanup. Smazány `src/pages/TestLogin.tsx` (nikde neimportován) + `src/pages/InfluencerDashboard.tsx` (jen import v App.tsx:76 bez Route) + nepoužitý import v `App.tsx`. Commit `35b787cc` (3 soubory, 493 deletions). Build ✅ exit 0. Žádné zbývající reference (`grep TestLogin|InfluencerDashboard` = NONE). Funkční routy nedotčeny. Staging Full E2E `27601618931`: 152 passed · 0 failed · 28 skipped (spec 37k flake→retry pass). Žádný Stripe, SQL, CMS ani deploy.
