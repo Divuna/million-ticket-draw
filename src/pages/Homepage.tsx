@@ -226,7 +226,7 @@ const Homepage = () => {
       };
     };
 
-    const stopContests = startAutoScroll(contestsCarouselRef, 0.8);
+    const stopContests = startAutoScroll(contestsCarouselRef, -0.8);
     const stopVouchers = startAutoScroll(vouchersCarouselRef, -0.8);
 
     return () => {
@@ -855,11 +855,10 @@ const Homepage = () => {
 
           <div
             ref={contestsCarouselRef}
-            data-carousel-content
-            className="flex overflow-x-auto scroll-smooth gap-4 pb-4"
+            className="flex overflow-x-scroll no-scrollbar snap-x snap-mandatory gap-4 pb-4"
             style={{
-              scrollBehavior: "smooth",
-              scrollSnapType: "none",
+              scrollbarWidth: "none",
+              msOverflowStyle: "none",
               WebkitOverflowScrolling: "touch",
             }}
           >
