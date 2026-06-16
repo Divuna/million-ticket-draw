@@ -7,10 +7,11 @@ Rozhodnutí Pavla (detaily v `OWNER_LEGAL_DECISION_SHEET.md`):
 - **L06** reklamace/support → **technická support cesta dostatečná pro testovací fázi** (owner-accepted); finální wording/reklamační text odložen před live s právníkem.
 - **CI05** → **`onemil_spec.md` NEvytvářet**; source-of-truth = onemil_state.md, onemil_history.md, CLAUDE.md, .cursor/SYSTEM_MAP.md, PROJECT_CONTEXT.md + launch docs.
 
-Zbývá (nerozhodnuto teď):
+**CI04 PROVEDENO 16.06. (schválení Pavla, commit `35b787cc`):** smazány `src/pages/TestLogin.tsx` + `src/pages/InfluencerDashboard.tsx` + nepoužitý import v `App.tsx`. Build ✅, žádné zbývající reference, funkční routy nedotčeny. Pravidlo: tyto soubory neobnovovat (byly mrtvý kód bez Route/importu).
+
+Zbývá:
 - **L02b** per-contest rules PDF: 0 aktivních z 127 → trvalý pre-aktivační procesní checklist (neblokuje).
-- **CI04** mrtvý kód (`InfluencerDashboard` import bez Route; `TestLogin` neimportován): **mazání zatím neřešit — čeká samostatné výslovné schválení.** Neměnit bez schválení.
-Žádný kód/SQL/CMS/Stripe/deploy.
+Žádné SQL/CMS/Stripe/deploy (CI04 = jen smazání mrtvého kódu + build).
 
 ## AF05 ROZHODNUTO — AFFILIATE ODLOŽEN MIMO 1. VEŘEJNÝ TEST (16. 06. 2026, Pavel)
 

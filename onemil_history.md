@@ -14,6 +14,10 @@
 
 ---
 
+## 2026-06-16 — CI04 cleanup: smazán mrtvý kód TestLogin + InfluencerDashboard (schválení Pavla)
+
+Schválení Pavla pro CI04 cleanup. Smazány `src/pages/TestLogin.tsx` (nikde neimportován) + `src/pages/InfluencerDashboard.tsx` (jen import v App.tsx:76 bez Route) + nepoužitý import v `App.tsx`. Commit `35b787cc` (3 soubory, 493 deletions). Build ✅ exit 0. Žádné zbývající reference (`grep TestLogin|InfluencerDashboard` = NONE). Funkční routy nedotčeny. Staging Full E2E `27601618931`: 152 passed · 0 failed · 28 skipped (spec 37k flake→retry pass). Žádný Stripe, SQL, CMS ani deploy.
+
 ## 2026-06-16 — Owner decision: L02a/L06/CI05 uzavřeny pro testovací fázi
 
 Pavel potvrdil:
