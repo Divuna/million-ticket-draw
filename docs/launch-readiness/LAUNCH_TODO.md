@@ -4,6 +4,8 @@
 > Stav: `neotestováno` / `prošlo` / `selhalo` / `neověřeno`.
 > Sloupce: ID · Priorita · Oblast · Krok · Očekávaný výsledek · Skutečný výsledek · Odkaz · Důkaz · Stav · Poznámka.
 > Default „Skutečný výsledek/Důkaz" je prázdné; vyplnit při testu. Odkazy = route z [ROUTE_CHECKLIST.md](./ROUTE_CHECKLIST.md).
+>
+> **Zbývající non-Stripe owner/legal rozhodnutí (L01/L03/L04/A13/L02a/L02b/L06/AF05/CI04/CI05) jsou konsolidována v [OWNER_LEGAL_DECISION_SHEET.md](./OWNER_LEGAL_DECISION_SHEET.md)** (16.06.) — Pavel/právník odškrtá najednou. Stripe PAY01–PAY04 viz [PAY01_PAYMENTS_TEST_MODE_NOTE.md](./PAY01_PAYMENTS_TEST_MODE_NOTE.md).
 
 ## Zákazník (B)
 

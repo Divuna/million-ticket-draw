@@ -1,5 +1,9 @@
 ﻿# OneMil – aktuální stav projektu
 
+## OWNER/LEGAL DECISION SHEET (16. 06. 2026)
+
+Zbývající non-Stripe owner/legal rozhodnutí konsolidována v `docs/launch-readiness/OWNER_LEGAL_DECISION_SHEET.md`: L01/L03/L04 (legal review), A13 (CMS obsah), L02a (placeholdery), L02b (per-contest rules QA), L06 (reklamační wording), AF05 (affiliate scope), CI04 (mrtvý kód), CI05 (`onemil_spec.md`). Každá s doporučením + checkboxem `[ ] schváleno / [ ] odložit`. Sekce „blocked-by-Stripe" (PAY01–PAY04, C23 wallet credit, plný partner invoice flow) řešena samostatně. Čeká na Pavla/právníka.
+
 ## NON-STRIPE LAUNCH AUDIT — P06/P13/L06/AF04 OVĚŘENO; AF05/L02a/L06-wording/CI04-del/CI05 = OWNER (16. 06. 2026)
 
 Read-only audit (žádný produkční zápis, žádná CMS, žádný Stripe, žádný deploy).

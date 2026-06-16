@@ -1,5 +1,9 @@
 # CLAUDE.md
 
+## OWNER/LEGAL DECISION SHEET VYTVOŘEN (16. 06. 2026, jen dokumentace)
+
+Konsolidovaný seznam zbývajících non-Stripe owner/legal rozhodnutí: `docs/launch-readiness/OWNER_LEGAL_DECISION_SHEET.md`. Pokrývá L01/L03/L04 (legal review VOP/GDPR/cookies), A13 (CMS obsah), L02a (placeholdery obecných pravidel), L02b (per-contest rules PDF QA), L06 (reklamační wording), AF05 (affiliate scope), CI04 (mazání mrtvého kódu), CI05 (`onemil_spec.md` ano/ne). Každá položka: stav teď + proč rozhodnutí + doporučení + `[ ] schváleno / [ ] odložit`. Sekce na konci „blocked-by-Stripe" (PAY01–PAY04, C23 wallet credit, plný partner invoice flow) — NEřeší se v listu. Žádný kód/SQL/CMS/Stripe/deploy. Pravidlo: doporučení v listu needitovat jako rozhodnutí — rozhoduje Pavel/právník.
+
 ## NON-STRIPE LAUNCH AUDIT — P06/P13/L02/L06/AF04/AF05/CI04/CI05 (16. 06. 2026, read-only)
 
 Audit zbývajících non-Stripe bloků po P04 staging fixu. Pouze read-only DB dotazy + code audit; žádný produkční zápis, žádná CMS změna, žádný Stripe, žádný deploy, žádný nový test (Full E2E čerstvě zelený `27597509314`).

@@ -14,6 +14,10 @@
 
 ---
 
+## 2026-06-16 — Owner/Legal Decision Sheet vytvořen (konsolidace non-Stripe rozhodnutí)
+
+Vytvořen `docs/launch-readiness/OWNER_LEGAL_DECISION_SHEET.md` — jeden list pro Pavla/právníka se všemi zbývajícími non-Stripe rozhodnutími: L01/L03/L04 (legal review VOP/GDPR/cookies), A13 (CMS obsah), L02a (placeholdery obecných pravidel), L02b (per-contest rules PDF QA), L06 (reklamační wording), AF05 (affiliate scope), CI04 (mazání mrtvého kódu InfluencerDashboard/TestLogin), CI05 (`onemil_spec.md` ano/ne). Každá položka: stav + proč + doporučení + checkbox. Sekce „blocked-by-Stripe" (PAY01–PAY04, C23 wallet credit, plný partner invoice flow) — mimo list. Odkaz doplněn do LAUNCH_TODO + CLAUDE.md + state. Jen dokumentace; žádný kód, SQL, CMS, Stripe ani deploy.
+
 ## 2026-06-16 — P04 = technicky ověřeno pro testovací fázi (rozhodnutí Pavla); už není aktivní non-Stripe blocker
 
 Rozhodnutí Pavla: P04 se dál neblokuje kvůli chybějícímu produkčnímu test partner loginu. Označeno jako technicky ověřené pro testovací fázi.
