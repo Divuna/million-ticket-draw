@@ -1,5 +1,15 @@
 # CLAUDE.md
 
+## P04 FIX — PARTNERS UPDATE RLS + AFFECTED-ROWS CHECK (16. 06. 2026, STAGING ONLY, schválení Pavla)
+
+Partner save konverzního nastavení MioCoinů opraven **pouze na stagingu** `dxmowysntemfqfnanxua` (schválení Pavla pro staging). Produkce `xkzhjldrojjlrkezorey` **NEDOTČENA** — stále bez UPDATE policy, čeká na samostatné výslovné schválení.
+
+- **Migrace** `supabase/migrations/20260616_partners_update_rls_partner_own.sql` (aplikováno jen staging): policy `partners_update_own` (authenticated, `auth_user_id = auth.uid()` USING+WITH CHECK) + `partners_update_admin` (`is_admin()`). `Public read partners` SELECT nedotčen. Postcheck: 3 policy (1 SELECT + 2 UPDATE).
+- **App** `src/pages/PartnerDashboard.tsx`: save používá `.select('id')` a ověřuje `updatedRows.length === 1`; 0 řádků → `throw` → česká `toast.error('Nepodařilo se uložit nastavení')` + rollback. **Žádný falešný success.** (Defense-in-depth; samotná RLS oprava už umožní zápis.)
+- **Spec 56b** odebrán `test.fixme` → reálně prošlo. Cílený run `27597435909`: **3 passed** (56a+56b+56c).
+- **Pravidlo:** `partners` UPDATE policy je partner-own (`auth_user_id`) — nevracet `USING(true)`/deny-all; PartnerDashboard save NEvracet zpět na `.update()` bez affected-rows checku.
+- **DOPORUČENÍ PRO PRODUKCI (neaplikováno):** stejnou migraci aplikovat na produkci `xkzhjldrojjlrkezorey` po výslovném schválení Pavla — partner si jinak ani v produkci neuloží konverzní nastavení.
+
 ## SPEC 56 — P01 ČÁSTEČNĚ / P04 FAILING (RLS) / P05 PROŠLO — OPRAVA KLAMAVÉHO STAVU (15. 06. 2026)
 
 **⚠️ Commit `7d90f1cd` označil P01/P04/P05 jako `prošlo` PŘEDČASNĚ a NEPOTVRZENĚ.** Citoval run `27571406245` jako „3/3 passed" — ten run ve SKUTEČNOSTI selhal 6/6 (56a/56b/56c × 2 pokusy). Full E2E `27571700378` i cílený `27573182299` rovněž selhaly. Stav vrácen na reálný (commit `384e8020` fix-pokus problém NEvyřešil — šlo o hlubší příčiny). Žádná reálná platba, žádná produkční data, žádný produkční SQL, žádná CMS změna, žádný deploy.

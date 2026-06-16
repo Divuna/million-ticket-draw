@@ -14,6 +14,15 @@
 
 ---
 
+## 2026-06-16 — P04 opraveno na stagingu: partners UPDATE RLS + PartnerDashboard affected-rows check
+
+Schválení Pavla pro staging-only opravu P04. Produkce `xkzhjldrojjlrkezorey` NEDOTČENA.
+- Migrace `supabase/migrations/20260616_partners_update_rls_partner_own.sql` aplikována POUZE na staging `dxmowysntemfqfnanxua`: policy `partners_update_own` (`auth_user_id = auth.uid()` USING+WITH CHECK) + `partners_update_admin` (`is_admin()`). `Public read partners` SELECT nedotčen. Postcheck: 3 policy.
+- App `src/pages/PartnerDashboard.tsx`: save reward nastavení používá `.select('id')` + ověřuje 1 změněný řádek; 0 řádků → throw → česká `toast.error` + rollback (žádný falešný success). Build ✅.
+- Spec 56b: odebrán `test.fixme` → reálně prošlo. Cílený run `27597435909`: 3 passed (56a+56b+56c).
+- Žádná produkční změna, žádné Stripe, žádná reálná platba, žádná CMS, žádný deploy. Commit `5358decd` (fix) + dokumentační commit.
+- Doporučení pro produkci (NEAPLIKOVÁNO): aplikovat stejnou migraci na produkci po výslovném schválení Pavla.
+
 ## 2026-06-15 — OPRAVA: spec 56 selhal; P01 částečně, P04 RLS blocker, P05 prošlo (commit 7d90f1cd byl předčasný)
 
 Předchozí záznam (2026-06-15 spec 56 „3/3 passed run 27571406245") byl NEPŘESNÝ. Run `27571406245` ve skutečnosti selhal 6/6; Full E2E `27571700378` (150 passed/3 failed/28 skipped) i cílený `27573182299` rovněž selhaly na spec 56. Commit `7d90f1cd` označil P01/P04/P05 jako `prošlo` předčasně a nepotvrzeně.

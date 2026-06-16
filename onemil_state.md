@@ -18,7 +18,17 @@ Dosavadní data nejsou reálný veřejný provoz. Platby, účty, MioCoiny, sout
 
 Produkční prostředí může být používáno k testování, ale Stripe běží na testovacích klíčích. Před ostrým spuštěním musí Pavel vědomě potvrdit přepnutí Stripe na live režim, live webhook a finální produkční nastavení.
 
-## SPEC 56 — P01 ČÁSTEČNĚ / P04 FAILING (RLS BLOCKER) / P05 PROŠLO — OPRAVA KLAMAVÉHO STAVU (15. 06. 2026)
+## P04 OPRAVENO NA STAGINGU — PARTNERS UPDATE RLS + AFFECTED-ROWS CHECK (16. 06. 2026)
+
+Schválený partner nyní reálně uloží konverzní nastavení MioCoinů. **Pouze staging `dxmowysntemfqfnanxua`** (schválení Pavla). Produkce `xkzhjldrojjlrkezorey` NEDOTČENA — stále bez UPDATE policy.
+
+- **Migrace** `20260616_partners_update_rls_partner_own.sql`: `partners_update_own` (`auth_user_id = auth.uid()`) + `partners_update_admin` (`is_admin()`). Postcheck OK (3 policy). `Public read partners` SELECT nedotčen.
+- **App** `PartnerDashboard.tsx`: save `.select('id')` + ověření 1 řádku; 0 řádků → česká chyba + rollback (žádný falešný success).
+- **Spec 56b** un-fixme → prošlo. Cílený run `27597435909`: 3 passed.
+- **Pravidlo:** partner-own UPDATE (nevracet `USING(true)`); save nevracet bez affected-rows checku.
+- **Produkce (neaplikováno):** stejnou migraci aplikovat na produkci po výslovném schválení Pavla.
+
+## SPEC 56 — P01 ČÁSTEČNĚ / P04 FAILING (RLS BLOCKER) / P05 PROŠLO — OPRAVA KLAMAVÉHO STAVU (15. 06. 2026, HISTORIE)
 
 **⚠️ Commit `7d90f1cd` označil P01/P04/P05 jako `prošlo` PŘEDČASNĚ.** Citoval run `27571406245` jako „3/3 passed" — ten run reálně selhal 6/6. Full E2E `27571700378` (150 passed/3 failed/28 skipped) i cílený `27573182299` selhaly na spec 56. Stav vrácen na reálný.
 
