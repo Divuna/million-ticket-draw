@@ -195,10 +195,14 @@ export type Database = {
           amount_total_czk: number
           commission_type: string
           company_ref_id: string | null
+          confirmation_sent_at: string | null
           created_at: string
           customer_ref_id: string | null
           id: string
           paid_at: string | null
+          paid_by: string | null
+          payout_batch_id: string | null
+          payout_document_id: string | null
           period_month: string | null
           source_invoice_id: string | null
           status: string
@@ -211,10 +215,14 @@ export type Database = {
           amount_total_czk: number
           commission_type: string
           company_ref_id?: string | null
+          confirmation_sent_at?: string | null
           created_at?: string
           customer_ref_id?: string | null
           id?: string
           paid_at?: string | null
+          paid_by?: string | null
+          payout_batch_id?: string | null
+          payout_document_id?: string | null
           period_month?: string | null
           source_invoice_id?: string | null
           status?: string
@@ -227,10 +235,14 @@ export type Database = {
           amount_total_czk?: number
           commission_type?: string
           company_ref_id?: string | null
+          confirmation_sent_at?: string | null
           created_at?: string
           customer_ref_id?: string | null
           id?: string
           paid_at?: string | null
+          paid_by?: string | null
+          payout_batch_id?: string | null
+          payout_document_id?: string | null
           period_month?: string | null
           source_invoice_id?: string | null
           status?: string
@@ -264,6 +276,20 @@ export type Database = {
             columns: ["source_invoice_id"]
             isOneToOne: false
             referencedRelation: "partner_invoices"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "fk_ac_payout_batch"
+            columns: ["payout_batch_id"]
+            isOneToOne: false
+            referencedRelation: "affiliate_payout_batches"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "fk_ac_payout_document"
+            columns: ["payout_document_id"]
+            isOneToOne: false
+            referencedRelation: "affiliate_payout_documents"
             referencedColumns: ["id"]
           },
         ]
@@ -449,6 +475,252 @@ export type Database = {
             columns: ["affiliate_id"]
             isOneToOne: false
             referencedRelation: "affiliate_accounts"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      affiliate_payout_batch_items: {
+        Row: {
+          amount_czk: number
+          batch_id: string
+          commission_id: string
+          constant_symbol: string
+          created_at: string
+          id: string
+          payment_message: string | null
+          recipient_account: string
+          recipient_bank_code: string
+          recipient_name: string
+          specific_symbol: string | null
+          variable_symbol: string
+        }
+        Insert: {
+          amount_czk: number
+          batch_id: string
+          commission_id: string
+          constant_symbol?: string
+          created_at?: string
+          id?: string
+          payment_message?: string | null
+          recipient_account: string
+          recipient_bank_code: string
+          recipient_name: string
+          specific_symbol?: string | null
+          variable_symbol: string
+        }
+        Update: {
+          amount_czk?: number
+          batch_id?: string
+          commission_id?: string
+          constant_symbol?: string
+          created_at?: string
+          id?: string
+          payment_message?: string | null
+          recipient_account?: string
+          recipient_bank_code?: string
+          recipient_name?: string
+          specific_symbol?: string | null
+          variable_symbol?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "affiliate_payout_batch_items_batch_id_fkey"
+            columns: ["batch_id"]
+            isOneToOne: false
+            referencedRelation: "affiliate_payout_batches"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "affiliate_payout_batch_items_commission_id_fkey"
+            columns: ["commission_id"]
+            isOneToOne: true
+            referencedRelation: "affiliate_commissions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      affiliate_payout_batches: {
+        Row: {
+          bank: string
+          bank_export_encoding: string
+          bank_export_error: string | null
+          bank_export_format: string
+          bank_export_generated_at: string | null
+          bank_export_line_endings: string
+          bank_export_sha256: string | null
+          bank_export_size_bytes: number | null
+          bank_export_storage_path: string | null
+          bank_export_url: string | null
+          batch_number: string
+          cancelled_at: string | null
+          created_at: string
+          created_by: string
+          due_date: string | null
+          exported_at: string | null
+          id: string
+          item_count: number
+          marked_paid_at: string | null
+          marked_paid_by: string | null
+          payer_account: string | null
+          payer_bank_code: string
+          status: string
+          total_amount_czk: number
+        }
+        Insert: {
+          bank?: string
+          bank_export_encoding?: string
+          bank_export_error?: string | null
+          bank_export_format?: string
+          bank_export_generated_at?: string | null
+          bank_export_line_endings?: string
+          bank_export_sha256?: string | null
+          bank_export_size_bytes?: number | null
+          bank_export_storage_path?: string | null
+          bank_export_url?: string | null
+          batch_number: string
+          cancelled_at?: string | null
+          created_at?: string
+          created_by: string
+          due_date?: string | null
+          exported_at?: string | null
+          id?: string
+          item_count?: number
+          marked_paid_at?: string | null
+          marked_paid_by?: string | null
+          payer_account?: string | null
+          payer_bank_code?: string
+          status?: string
+          total_amount_czk?: number
+        }
+        Update: {
+          bank?: string
+          bank_export_encoding?: string
+          bank_export_error?: string | null
+          bank_export_format?: string
+          bank_export_generated_at?: string | null
+          bank_export_line_endings?: string
+          bank_export_sha256?: string | null
+          bank_export_size_bytes?: number | null
+          bank_export_storage_path?: string | null
+          bank_export_url?: string | null
+          batch_number?: string
+          cancelled_at?: string | null
+          created_at?: string
+          created_by?: string
+          due_date?: string | null
+          exported_at?: string | null
+          id?: string
+          item_count?: number
+          marked_paid_at?: string | null
+          marked_paid_by?: string | null
+          payer_account?: string | null
+          payer_bank_code?: string
+          status?: string
+          total_amount_czk?: number
+        }
+        Relationships: []
+      }
+      affiliate_payout_documents: {
+        Row: {
+          accounting_email: string | null
+          accounting_email_queue_id: string | null
+          affiliate_email: string | null
+          affiliate_id: string
+          amount_base_czk: number
+          amount_total_czk: number
+          commission_id: string
+          created_at: string
+          document_number: string
+          document_type: string
+          email_error: string | null
+          email_queue_id: string | null
+          email_status: string
+          id: string
+          pdf_generated_at: string | null
+          pdf_sha256: string | null
+          pdf_storage_path: string | null
+          pdf_url: string | null
+          recipient_billing_address: string | null
+          recipient_email: string | null
+          recipient_ico: string | null
+          recipient_is_vat_payer: boolean
+          recipient_name: string
+          recipient_subject_type: string | null
+          recipient_vat_id: string | null
+          sent_at: string | null
+          vat_rate: number
+        }
+        Insert: {
+          accounting_email?: string | null
+          accounting_email_queue_id?: string | null
+          affiliate_email?: string | null
+          affiliate_id: string
+          amount_base_czk: number
+          amount_total_czk: number
+          commission_id: string
+          created_at?: string
+          document_number: string
+          document_type?: string
+          email_error?: string | null
+          email_queue_id?: string | null
+          email_status?: string
+          id?: string
+          pdf_generated_at?: string | null
+          pdf_sha256?: string | null
+          pdf_storage_path?: string | null
+          pdf_url?: string | null
+          recipient_billing_address?: string | null
+          recipient_email?: string | null
+          recipient_ico?: string | null
+          recipient_is_vat_payer?: boolean
+          recipient_name: string
+          recipient_subject_type?: string | null
+          recipient_vat_id?: string | null
+          sent_at?: string | null
+          vat_rate?: number
+        }
+        Update: {
+          accounting_email?: string | null
+          accounting_email_queue_id?: string | null
+          affiliate_email?: string | null
+          affiliate_id?: string
+          amount_base_czk?: number
+          amount_total_czk?: number
+          commission_id?: string
+          created_at?: string
+          document_number?: string
+          document_type?: string
+          email_error?: string | null
+          email_queue_id?: string | null
+          email_status?: string
+          id?: string
+          pdf_generated_at?: string | null
+          pdf_sha256?: string | null
+          pdf_storage_path?: string | null
+          pdf_url?: string | null
+          recipient_billing_address?: string | null
+          recipient_email?: string | null
+          recipient_ico?: string | null
+          recipient_is_vat_payer?: boolean
+          recipient_name?: string
+          recipient_subject_type?: string | null
+          recipient_vat_id?: string | null
+          sent_at?: string | null
+          vat_rate?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "affiliate_payout_documents_affiliate_id_fkey"
+            columns: ["affiliate_id"]
+            isOneToOne: false
+            referencedRelation: "affiliate_accounts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "affiliate_payout_documents_commission_id_fkey"
+            columns: ["commission_id"]
+            isOneToOne: true
+            referencedRelation: "affiliate_commissions"
             referencedColumns: ["id"]
           },
         ]
@@ -1201,6 +1473,11 @@ export type Database = {
       }
       email_queue: {
         Row: {
+          attachment_content_type: string | null
+          attachment_filename: string | null
+          attachment_required: boolean
+          attachment_storage_bucket: string | null
+          attachment_storage_path: string | null
           attachment_url: string | null
           body: string
           created_at: string | null
@@ -1211,6 +1488,11 @@ export type Database = {
           subject: string
         }
         Insert: {
+          attachment_content_type?: string | null
+          attachment_filename?: string | null
+          attachment_required?: boolean
+          attachment_storage_bucket?: string | null
+          attachment_storage_path?: string | null
           attachment_url?: string | null
           body: string
           created_at?: string | null
@@ -1221,6 +1503,11 @@ export type Database = {
           subject: string
         }
         Update: {
+          attachment_content_type?: string | null
+          attachment_filename?: string | null
+          attachment_required?: boolean
+          attachment_storage_bucket?: string | null
+          attachment_storage_path?: string | null
           attachment_url?: string | null
           body?: string
           created_at?: string | null
@@ -4324,6 +4611,18 @@ export type Database = {
           influencer_partner_id: string | null
           user_id: string | null
         }
+        Insert: {
+          created_at?: string | null
+          id?: string | null
+          influencer_partner_id?: string | null
+          user_id?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          id?: string | null
+          influencer_partner_id?: string | null
+          user_id?: string | null
+        }
         Relationships: [
           {
             foreignKeyName: "influencer_referrals_influencer_partner_id_fkey"
@@ -4638,6 +4937,10 @@ export type Database = {
         Args: never
         Returns: undefined
       }
+      cancel_affiliate_payout_batch: {
+        Args: { p_batch_id: string }
+        Returns: Json
+      }
       check_guardian_notifications_batch: { Args: never; Returns: Json }
       check_partner_api_rate_limit: {
         Args: { p_limit: number; p_partner_id: string; p_window: string }
@@ -4650,6 +4953,10 @@ export type Database = {
           }
         | { Args: { p_bonus_prize_id: string }; Returns: undefined }
       close_contest: { Args: { p_contest_id: string }; Returns: undefined }
+      create_affiliate_payout_batch: {
+        Args: { p_commission_ids: string[] }
+        Returns: Json
+      }
       create_guardian_message_for_user:
         | {
             Args: {
@@ -4684,6 +4991,16 @@ export type Database = {
         Args: { p_end: string; p_start: string }
         Returns: Json
       }
+      create_partner_order_reward: {
+        Args: {
+          p_customer_email: string
+          p_external_order_id: string
+          p_metadata?: Json
+          p_order_total_czk: number
+          p_partner_id: string
+        }
+        Returns: Json
+      }
       create_referral_reward_from_wallet_credit: {
         Args: { p_amount: number; p_user_id: string }
         Returns: undefined
@@ -4702,16 +5019,40 @@ export type Database = {
         Args: { p_amount: number; p_user_id: string }
         Returns: number
       }
-      enqueue_partner_invoice_email: {
-        Args: {
-          p_partner_id: string
-          p_period_from: string
-          p_period_to: string
-        }
-        Returns: undefined
-      }
+      enqueue_partner_invoice_email:
+        | { Args: { p_invoice_id: string }; Returns: undefined }
+        | {
+            Args: {
+              p_partner_id: string
+              p_period_from: string
+              p_period_to: string
+            }
+            Returns: undefined
+          }
       ensure_referral_code: { Args: { p_user_id: string }; Returns: string }
       ensure_wallet_exists: { Args: { p_user_id: string }; Returns: undefined }
+      finalize_affiliate_bank_export: {
+        Args: {
+          p_batch_id: string
+          p_sha256: string
+          p_size_bytes: number
+          p_storage_path: string
+        }
+        Returns: Json
+      }
+      finalize_affiliate_payout_document: {
+        Args: {
+          p_accounting_email_body: string
+          p_accounting_email_subject: string
+          p_affiliate_email_body: string
+          p_affiliate_email_subject: string
+          p_commission_id: string
+          p_document_number: string
+          p_pdf_sha256: string
+          p_pdf_storage_path: string
+        }
+        Returns: Json
+      }
       fn_close_contest: { Args: { p_contest: string }; Returns: undefined }
       forward_event_to_sofinity: {
         Args: { v_payload: Json }
@@ -4736,16 +5077,6 @@ export type Database = {
           key_id: string
           key_prefix: string
         }[]
-      }
-      create_partner_order_reward: {
-        Args: {
-          p_customer_email: string
-          p_external_order_id: string
-          p_metadata?: Json
-          p_order_total_czk: number
-          p_partner_id: string
-        }
-        Returns: Json
       }
       generate_partner_invoice: {
         Args: {
@@ -4998,11 +5329,16 @@ export type Database = {
         Args: { p_endpoint: string; p_partner_id: string }
         Returns: undefined
       }
+      mark_affiliate_payout_batch_paid: {
+        Args: { p_batch_id: string }
+        Returns: Json
+      }
       mark_user_played: {
         Args: { p_played_at?: string; p_user_id: string }
         Returns: undefined
       }
       mark_wins_as_seen: { Args: never; Returns: undefined }
+      next_affiliate_payout_document_number: { Args: never; Returns: string }
       notify_sofinity_event: {
         Args: {
           p_contest_id: string
@@ -5035,7 +5371,19 @@ export type Database = {
           partner_id: string
         }[]
       }
+      partner_invoice_post_create: {
+        Args: { p_invoice_id: string }
+        Returns: undefined
+      }
       pause_contest: { Args: { contest_id: string }; Returns: undefined }
+      prepare_affiliate_bank_export: {
+        Args: { p_batch_id: string }
+        Returns: Json
+      }
+      prepare_affiliate_payout_document: {
+        Args: { p_commission_id: string }
+        Returns: Json
+      }
       process_event_queue_miocoin: { Args: never; Returns: undefined }
       process_push_retries: { Args: never; Returns: undefined }
       process_referral_inactivity: { Args: never; Returns: number }
@@ -5078,14 +5426,7 @@ export type Database = {
         }[]
       }
       redeem_miocoin_code: { Args: { p_code: string }; Returns: Json }
-      update_partner_order_reward_status: {
-        Args: {
-          p_external_order_id: string
-          p_order_status: string
-          p_partner_id: string
-        }
-        Returns: Json
-      }
+      referral_user_is_valid: { Args: { p_user_id: string }; Returns: boolean }
       register_affiliate_account:
         | {
             Args: {
@@ -5114,6 +5455,10 @@ export type Database = {
             }
             Returns: Json
           }
+      request_partner_invoice_pdf: {
+        Args: { p_invoice_id: string }
+        Returns: undefined
+      }
       resolve_partner_by_api_key: { Args: { p_key: string }; Returns: string }
       resume_contest: { Args: { contest_id: string }; Returns: undefined }
       revise_partner_offer: { Args: { p_offer_id: string }; Returns: undefined }
@@ -5222,12 +5567,29 @@ export type Database = {
         }
         Returns: Json
       }
+      update_affiliate_payout_batch_meta: {
+        Args: {
+          p_batch_id: string
+          p_due_date: string
+          p_payer_account: string
+          p_payer_bank_code: string
+        }
+        Returns: Json
+      }
       update_bonus_prize_delivery_status: {
         Args: { p_admin_notes?: string; p_prize_id: string; p_status: string }
         Returns: Json
       }
       update_onesignal_id: {
         Args: { p_player_id: string; p_user_id: string }
+        Returns: Json
+      }
+      update_partner_order_reward_status: {
+        Args: {
+          p_external_order_id: string
+          p_order_status: string
+          p_partner_id: string
+        }
         Returns: Json
       }
       upsert_partner_offer_billing_config: {
@@ -5247,6 +5609,10 @@ export type Database = {
           p_user_id: string
         }
         Returns: undefined
+      }
+      user_completed_first_topup: {
+        Args: { p_user_id: string }
+        Returns: boolean
       }
       validate_crud_test_data: {
         Args: { p_user_email?: string }
@@ -5408,7 +5774,13 @@ export const Constants = {
   public: {
     Enums: {
       app_role: ["admin", "superadmin", "user"],
-      partner_code_status: ["issued", "activated", "cancelled", "expired", "pending"],
+      partner_code_status: [
+        "issued",
+        "activated",
+        "cancelled",
+        "expired",
+        "pending",
+      ],
       partner_invoice_status: ["draft", "issued", "paid", "void"],
       partner_status: ["pending", "approved", "suspended", "rejected"],
     },
