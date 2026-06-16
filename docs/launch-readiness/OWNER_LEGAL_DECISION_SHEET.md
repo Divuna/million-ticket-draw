@@ -63,7 +63,7 @@
 ### AF05 — affiliate scope — patří affiliate do prvního veřejného testu?
 - **Stav teď:** Affiliate program technicky hotový (AF01/AF02/AF03 prošlo; AF04 ověřeno staging + live prod). Čistě scope rozhodnutí — žádný technický blocker.
 - **Proč rozhodnutí:** Určuje rozsah 1. veřejného testu; pokud affiliate NE → označit out-of-scope a nezdržovat launch.
-- **Doporučené rozhodnutí:** Pro 1. veřejný test affiliate **out-of-scope** (zjednodušší launch), pokud Pavel nechce affiliate aktivně testovat se zákazníky. Rozhodnout ano/ne.
+- **Doporučené rozhodnutí:** Pro 1. veřejný test affiliate **out-of-scope** (zjednodušší launch), pokud Pavel nechce affiliate aktivně testovat se zákazníky. Detailní audit + varianty A/B v [AF05_AFFILIATE_SCOPE_DECISION.md](./AF05_AFFILIATE_SCOPE_DECISION.md). Rozhodnout ano/ne.
 - `[ ] schváleno` / `[ ] odložit`
 
 ### CI04 — mrtvý kód — smazat `InfluencerDashboard` a `TestLogin`?

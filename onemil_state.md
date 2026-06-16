@@ -1,5 +1,9 @@
 ﻿# OneMil – aktuální stav projektu
 
+## AF05 AFFILIATE SCOPE DECISION (16. 06. 2026)
+
+`docs/launch-readiness/AF05_AFFILIATE_SCOPE_DECISION.md` — audit affiliate footprintu + varianty A (zahrnout) / B (odložit). Affiliate v2 LIVE v kódu; payouty Air Bank `.kpc` (NE Stripe); provize jen z placených `partner_invoices`. **Doporučeno B — odložit affiliate z 1. veřejného testu** (reálné peníze v payoutech, otevřené body, jádro testu nezávisí; odklad nic nestojí). Finální rozhodnutí = Pavel. Volitelně skrýt footer affiliate/influencer odkazy.
+
 ## OWNER/LEGAL DECISION SHEET (16. 06. 2026)
 
 Zbývající non-Stripe owner/legal rozhodnutí konsolidována v `docs/launch-readiness/OWNER_LEGAL_DECISION_SHEET.md`: L01/L03/L04 (legal review), A13 (CMS obsah), L02a (placeholdery), L02b (per-contest rules QA), L06 (reklamační wording), AF05 (affiliate scope), CI04 (mrtvý kód), CI05 (`onemil_spec.md`). Každá s doporučením + checkboxem `[ ] schváleno / [ ] odložit`. Sekce „blocked-by-Stripe" (PAY01–PAY04, C23 wallet credit, plný partner invoice flow) řešena samostatně. Čeká na Pavla/právníka.

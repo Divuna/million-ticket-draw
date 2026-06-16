@@ -14,6 +14,10 @@
 
 ---
 
+## 2026-06-16 — AF05 affiliate scope decision doc vytvořen (doporučeno B: odložit)
+
+Vytvořen `docs/launch-readiness/AF05_AFFILIATE_SCOPE_DECISION.md` — read-only audit affiliate footprintu (routes, footer odkazy, admin oblasti, EF, specy 13–46/55, payout/Stripe závislosti) + varianty A (zahrnout) / B (odložit) s dopady, riziky, co dotestovat, doporučením. Zjištění: affiliate v2 LIVE v kódu; payouty = Air Bank `.kpc` (NE Stripe); affiliate provize jen z placených `partner_invoices`. Doporučeno B (odložit z 1. veřejného testu) — reálné peníze v payoutech + otevřené body, jádro testu na affiliate nezávisí, odklad nic nestojí. Finální rozhodnutí = Pavel. Odkaz doplněn do LAUNCH_TODO (AF05), OWNER_LEGAL_DECISION_SHEET, CLAUDE.md, state. Jen dokumentace; žádný kód, SQL, CMS, Stripe ani deploy.
+
 ## 2026-06-16 — Owner/Legal Decision Sheet vytvořen (konsolidace non-Stripe rozhodnutí)
 
 Vytvořen `docs/launch-readiness/OWNER_LEGAL_DECISION_SHEET.md` — jeden list pro Pavla/právníka se všemi zbývajícími non-Stripe rozhodnutími: L01/L03/L04 (legal review VOP/GDPR/cookies), A13 (CMS obsah), L02a (placeholdery obecných pravidel), L02b (per-contest rules PDF QA), L06 (reklamační wording), AF05 (affiliate scope), CI04 (mazání mrtvého kódu InfluencerDashboard/TestLogin), CI05 (`onemil_spec.md` ano/ne). Každá položka: stav + proč + doporučení + checkbox. Sekce „blocked-by-Stripe" (PAY01–PAY04, C23 wallet credit, plný partner invoice flow) — mimo list. Odkaz doplněn do LAUNCH_TODO + CLAUDE.md + state. Jen dokumentace; žádný kód, SQL, CMS, Stripe ani deploy.
