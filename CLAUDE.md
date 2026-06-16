@@ -1420,3 +1420,17 @@ PR #115 merged to `main` as `a7690d0b63b9f0c46bcf96f8e2810605dd5e934a`. Targeted
 Documentation-only static audit. `/terms`, `/privacy`, `/kontakt`, cookie banner/settings, footer legal links, and CMS route wiring were reviewed. Static pages exist and are not obvious placeholders, but CMS-backed legal routes `/vop`, `/gdpr`, `/pravidla-souteze`, and `/legal/cookies` still require owner/environment confirmation of real content. Owner confirmed `podpora@onemil.cz` as the canonical public support e-mail, and documentation/source-of-truth wording has been aligned. Do not invent legal wording or edit legal text without owner approval. No code, SQL, deploy, production data, Partner API, invoice, reward, or migration change.
 
 ---
+## PWA INSTALL CTA — VĚTEV `feature/pwa-install-ui` (16. 06. 2026)
+
+PWA install UI je připravené na samostatné větvi `feature/pwa-install-ui`; NEMERGOVAT do `main` bez Pavlova potvrzení ručních phone checků.
+
+Implementační commit: `a030ad512f2b01fa81ec84de110e92dabdbf9ddd`.
+
+Vytvořeno: `src/hooks/usePwaInstallPrompt.ts`, `src/components/InstallAppButton.tsx`.
+Změněno: `src/pages/Homepage.tsx`, `docs/launch-readiness/PWA_INSTALL_IMPLEMENTATION_PLAN.md`, `onemil_state.md`, `onemil_history.md`, `CLAUDE.md`.
+
+Build: `npm run build` prošel. Runtime simulace prošla: desktop bez promptu CTA hidden; Android `beforeinstallprompt` → CTA + `prompt()`; accepted → hidden; iPhone Safari UA → instruction modal; standalone display mode → hidden.
+
+Nedotčeno: `public/manifest.webmanifest`, public ikony, `public/OneSignalSDKWorker.js`, Supabase, Stripe, payments, wallet, contests, tickets, winners, Partner Offers, affiliate, Bob, routes, legal pages a unrelated UI.
+
+Zbývá ručně ověřit na telefonu: Android Chrome native install dialog, Android launch z plochy, iPhone Safari `Přidat na plochu`, iPhone launch z plochy skrývá CTA.
