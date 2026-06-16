@@ -14,6 +14,14 @@
 
 ---
 
+## 2026-06-16 — P04 post-publish ověření (částečné): frontend ochrana živá; UI save smoke blokován chybějícím test partnerem
+
+Pavel provedl ruční Lovable Publish.
+- ✅ Live produkční bundle `index-C9tBfrJx.js` na `onemil.cz` obsahuje nový string `Nastavení se nepodařilo uložit — zkontrolujte, že máte oprávnění.` (affected-rows ochrana z commitu `5358decd`) i `Nastavení odměn bylo uloženo` → frontend P04 ochrana prokazatelně živá.
+- ✅ Produkční RLS read-only: 3 policy (`Public read partners`, `partners_update_own`, `partners_update_admin`); data nezměněna (11 partnerů, checksum `d57e638f9d48f302ad5b562fc2cd90e9`).
+- ⏳ Authenticated UI save smoke (login schváleného partnera → změna konverze → uložení → DB verify → návrat hodnot) BLOKOVÁN: chybí bezpečný test partner login; vytvořit/upravit partnera by vyžadovalo produkční write SQL (zakázáno). Potřeba dodat throwaway/test partner přihlášení.
+- Žádný Stripe, žádná platba, žádná CMS, žádný deploy (publish provedl Pavel), žádný produkční write. Jen read-only ověření + dokumentace.
+
 ## 2026-06-16 — P04 staging recheck: spec 56 cílený run 27599115269 (3 passed)
 
 Cílený staging run `27599115269` (spec 56) prošel: **3 passed · 0 failed · 0 skipped**.
