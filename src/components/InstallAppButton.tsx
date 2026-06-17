@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import { Apple, Chrome, Download, Plus, Share2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
@@ -13,10 +13,26 @@ import { usePwaInstallPrompt } from "@/hooks/usePwaInstallPrompt";
 const platformBadgeBase =
   "inline-flex h-9 items-center gap-2 rounded-full border px-2.5 pr-3 text-left transition-colors";
 
+const getIsMobileDevice = () => {
+  if (typeof window === "undefined" || typeof navigator === "undefined") return false;
+
+  const userAgent = navigator.userAgent || "";
+  const platform = navigator.platform || "";
+  const maxTouchPoints = navigator.maxTouchPoints || 0;
+  const isIPadOS = platform === "MacIntel" && maxTouchPoints > 1;
+
+  return /Android|iPhone|iPad|iPod|Mobile/i.test(userAgent) || isIPadOS;
+};
+
 export const InstallAppButton: React.FC = () => {
   const { canInstall, isInstalled, isIOS, install } = usePwaInstallPrompt();
   const [instructionsOpen, setInstructionsOpen] = useState(false);
   const [installing, setInstalling] = useState(false);
+  const [isMobileDevice, setIsMobileDevice] = useState(false);
+
+  useEffect(() => {
+    setIsMobileDevice(getIsMobileDevice());
+  }, []);
 
   const handleClick = async () => {
     if (isIOS) {
@@ -101,20 +117,22 @@ export const InstallAppButton: React.FC = () => {
     );
   };
 
-  if (isInstalled) {
-    return (
-      <div className="pt-1">
-        <p className="mb-2 text-xs text-muted-foreground">Dostupné pro iPhone a Android</p>
-        <div className="flex flex-wrap items-center gap-2">
-          {platforms.map((platform) =>
-            renderPlatformBadge(platform, { active: false, clickable: false })
-          )}
-        </div>
+  const renderTrustArea = () => (
+    <div className="pt-1">
+      <p className="mb-2 text-xs text-muted-foreground">Dostupné pro iPhone a Android</p>
+      <div className="flex flex-wrap items-center gap-2">
+        {platforms.map((platform) =>
+          renderPlatformBadge(platform, { active: false, clickable: false })
+        )}
       </div>
-    );
-  }
+    </div>
+  );
 
-  if (!canInstall) return null;
+  const canShowInstallAction = canInstall && isMobileDevice;
+
+  if (isInstalled || !canShowInstallAction) {
+    return renderTrustArea();
+  }
 
   return (
     <>
