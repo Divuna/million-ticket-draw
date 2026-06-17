@@ -1,34 +1,47 @@
-# Proč admin nevidí zprávy
+## Problém
 
-`src/pages/AdminMessages.tsx` má dva filtry, které schovávají většinu konverzací:
+Na Windows desktopu se aplikace nedá nainstalovat přes Windows badge v patičce — tlačítko sice je vidět, ale klik nic nedělá nebo není aktivní.
 
-1. **Řádky 163–166**: pokud thread nemá ani jeden `admin` řádek s přesným obsahem `SUPPORT REQUEST` (tzv. marker, který vkládá edge function `support-handoff` po kliknutí na CTA „Předat podpoře"), thread se z výpisu vyhodí (`return null`).
-2. **Řádky 214–220**: zobrazí se pouze `support_active` thready (poslední marker, po kterém ještě nepřišla žádná „nemarkerová" admin odpověď).
+## Pravděpodobné příčiny
 
-Z DB ověřeno:
-- Uživatel `c23507eb…` má 10 zpráv, 0 markerů → admin ho nevidí.
-- Uživatel `3d7a6784…` má 295 zpráv, 0 markerů → admin ho nevidí.
-- Partneři a influenceři (`PartnerMessages.tsx`, `InfluencerMessages.tsx`) nikdy `support-handoff` nevolají → jejich konverzace v admin výpisu **nikdy** nejsou, ani staré doručené.
+1. **`beforeinstallprompt` event ještě nenastal** v okamžiku kliknutí (Chrome ho vystřeluje až po splnění PWA install criteria — manifest, ikony, návštěva, HTTPS).
+2. **PWA install kritéria nejsou splněna** v aktuálním prostředí (preview iframe / dev) — Chrome v Lovable preview iframu install prompt obvykle vůbec nevystřelí. Funguje až na produkční doméně `onemil.cz` v samostatném tabu.
+3. **Aplikace už je nainstalovaná** → `isInstalled=true` → Windows badge je pasivní.
+4. **Edge/Chrome verze / profil** install nepovolí (např. už dříve odmítnuto, browser cache `beforeinstallprompt`).
+5. **Hook `usePwaInstallPrompt`** případně neukládá `deferredPrompt` správně (event listener registrován pozdě, prompt už proběhl).
 
-RLS i grants pro `messages` jsou v pořádku (`authenticated` má `arwdDxtm`, `messages_select_admin` přes `user_roles`). Insert/select funguje, je to čistě UI filtr.
+## Co navrhuji udělat (jen diagnostika + drobná oprava v `InstallAppButton.tsx` / `usePwaInstallPrompt.ts`)
 
-# Co změnit
+### Krok 1 — Diagnostika (bez změny chování)
+Přidat do `InstallAppButton.tsx` viditelný debug stav **jen v dev/preview** (skrytý na produkci), který ukáže:
+- `canInstall` (přišel `beforeinstallprompt`?)
+- `isInstalled` / standalone mode
+- `isIOS`, `isMobileDevice`
+- jestli běží v iframe (Lovable preview blokuje install)
 
-Pouze `src/pages/AdminMessages.tsx` — žádná DB, RLS, RPC, edge function ani jiný soubor.
+Tím okamžitě uvidíme, proč Windows badge není aktivní.
 
-1. Odstranit „marker required" guard (řádky 163–166) — thread se vytvoří pro každého uživatele, který má aspoň jednu zprávu.
-2. Pole `support_active` a `support_active_at` ponechat, ale počítat je defenzivně (když markery nejsou, `support_active = false`, `support_active_at = null`). Stávající červený „Support" badge a řazení podle support_active tak dál fungují u skutečných tiketů.
-3. Místo `activeSupport` (jen support_active) renderovat **všechny** thready. Řadit:
-   - nejdřív `support_active` (nejstarší marker první — beze změny),
-   - pak zbytek podle stávající `baseSorted` heuristiky (unread + role + datum).
-4. Empty-state text upravit z „Žádné otevřené požadavky na podporu." na „Žádné zprávy."
+### Krok 2 — Drobná oprava UX na desktopu
+V `InstallAppButton.tsx`:
+- Když je desktop a `canInstall=false` a NENÍ instalováno → zobrazit Windows badge s **tooltipem / hint textem** „Pro instalaci otevřete onemil.cz v Chrome nebo Edge mimo náhled".
+- Když `canInstall=true` → aktivní button (už funguje).
 
-Co se nemění: RLS, grants, `support-handoff`, `ai-chat`, marker logika v `useUnreadMessagesCount`, partner/influencer flow, realtime subscription, role badge styly, červený support badge pro `support_active`.
+### Krok 3 — Ověření hooku
+V `usePwaInstallPrompt.ts` zkontrolovat, že:
+- listener `beforeinstallprompt` se registruje co nejdřív (idealne hned při mountu),
+- `e.preventDefault()` je voláno (jinak Chrome prompt sežere),
+- `deferredPrompt` se nereseuje předčasně.
 
-# Dopady
+### Co NEMĚNIT
+- manifest, public ikony, OneSignal worker, Supabase, Stripe, payments, routes, legal pages, `AdminCompanyLeads.tsx`, jakákoli business logika.
+- Rozsah souborů: pouze `src/components/InstallAppButton.tsx` a případně `src/hooks/usePwaInstallPrompt.ts`.
 
-- Admin uvidí konverzace všech uživatelů (i čistě AI chaty), partnerů a influencerů, včetně starých.
-- Otevřené support tikety (`support_active`) zůstávají červené a nahoře.
-- Žádné změny v databázi ani v jiných stránkách.
+## Otázka před implementací
 
-Po schválení přepnu do build módu a změnu provedu.
+Kde přesně to zkoušíš? To je klíč k diagnóze:
+
+- **A)** V Lovable **preview** (iframe v editoru) → tam Chrome install prompt NIKDY nevystřelí, to je očekávané chování prohlížeče. Test musí probíhat na **publikované doméně** (`onemil.cz` nebo `million-ticket-draw.lovable.app`) v samostatném tabu Chrome/Edge.
+- **B)** Na publikované doméně `onemil.cz` v Chrome/Edge → pak je to skutečný bug a pustím se do Kroku 1+2+3.
+- **C)** Aplikace už je u tebe nainstalovaná z dřívějška → potřeba ji nejdřív odinstalovat (Chrome → ⋮ → Odinstalovat OneMil).
+
+**Potvrď prosím A/B/C** (nebo napiš, kde přesně klikáš), a podle toho buď vysvětlím (A/C), nebo nasadím opravu (B).
