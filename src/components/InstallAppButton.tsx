@@ -36,14 +36,26 @@ const getIsMobileDevice = () => {
   return /Android|iPhone|iPad|iPod|Mobile/i.test(userAgent) || isIPadOS;
 };
 
+const getIsInIframe = () => {
+  if (typeof window === "undefined") return false;
+  try {
+    return window.self !== window.top;
+  } catch {
+    return true;
+  }
+};
+
 export const InstallAppButton: React.FC = () => {
   const { canInstall, isInstalled, isIOS, install } = usePwaInstallPrompt();
   const [instructionsOpen, setInstructionsOpen] = useState(false);
+  const [desktopHelpOpen, setDesktopHelpOpen] = useState(false);
   const [installing, setInstalling] = useState(false);
   const [isMobileDevice, setIsMobileDevice] = useState(false);
+  const [inIframe, setInIframe] = useState(false);
 
   useEffect(() => {
     setIsMobileDevice(getIsMobileDevice());
+    setInIframe(getIsInIframe());
   }, []);
 
   const handleInstall = async () => {
@@ -70,6 +82,7 @@ export const InstallAppButton: React.FC = () => {
 
   const canShowMobileInstall = !isInstalled && (canInstall || isIOS) && isMobileDevice;
   const canShowDesktopInstall = !isInstalled && canInstall && !isMobileDevice && !isIOS;
+  const showDesktopHelp = !isInstalled && !canShowDesktopInstall && !isMobileDevice && !isIOS;
 
   return (
     <>
@@ -82,6 +95,9 @@ export const InstallAppButton: React.FC = () => {
             const { Icon } = platform;
             const isWindowsActive =
               platform.key === "windows" && canShowDesktopInstall;
+            const isWindowsHelp =
+              platform.key === "windows" && showDesktopHelp;
+
             if (isWindowsActive) {
               return (
                 <button
@@ -102,6 +118,28 @@ export const InstallAppButton: React.FC = () => {
                 </button>
               );
             }
+
+            if (isWindowsHelp) {
+              return (
+                <button
+                  key={platform.key}
+                  type="button"
+                  onClick={() => setDesktopHelpOpen(true)}
+                  className={`${platformBadgeBase} border-neon-gold/30 bg-white/[0.04] hover:border-neon-gold/55 hover:bg-neon-gold/10`}
+                  aria-label="Jak nainstalovat do počítače"
+                  title="Klikni pro pokyny k instalaci do počítače"
+                >
+                  <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full border border-neon-gold/40 text-neon-gold">
+                    <Icon className="h-3.5 w-3.5" />
+                  </span>
+                  <span className="flex min-w-0 flex-col leading-none">
+                    <span className="text-[10px] font-medium text-muted-foreground">Jak na to</span>
+                    <span className="text-xs font-bold text-foreground">Windows</span>
+                  </span>
+                </button>
+              );
+            }
+
             return (
               <span
                 key={platform.key}
@@ -189,6 +227,69 @@ export const InstallAppButton: React.FC = () => {
             variant="premium"
             className="w-full"
             onClick={() => setInstructionsOpen(false)}
+          >
+            Rozumím
+          </Button>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={desktopHelpOpen} onOpenChange={setDesktopHelpOpen}>
+        <DialogContent className="max-w-md rounded-2xl border-[rgba(255,138,0,0.3)] bg-[hsl(220_45%_6%)] text-foreground shadow-[0_16px_48px_rgba(0,0,0,0.55)]">
+          <DialogHeader className="space-y-2 pr-6">
+            <DialogTitle className="text-heading-gold flex items-center gap-2">
+              <WindowsIcon className="w-5 h-5 text-[#FF8A00]" />
+              Instalace do počítače
+            </DialogTitle>
+            <DialogDescription>
+              Aplikaci OneMil lze nainstalovat v prohlížeči Chrome nebo Edge na Windows.
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-3 text-sm">
+            <div className="flex items-start gap-3 rounded-lg border border-[rgba(255,138,0,0.18)] bg-black/20 p-3">
+              <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-[#FF8A00] text-xs font-bold text-black">
+                1
+              </span>
+              <span>
+                Otevři <strong>onemil.cz</strong> přímo v <strong>Chrome</strong> nebo <strong>Edge</strong>{" "}
+                (ne v náhledu / iframe).
+              </span>
+            </div>
+            <div className="flex items-start gap-3 rounded-lg border border-[rgba(255,138,0,0.18)] bg-black/20 p-3">
+              <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-[#FF8A00] text-xs font-bold text-black">
+                2
+              </span>
+              <span>
+                V adresním řádku vpravo klikni na ikonu <strong>„Instalovat aplikaci“</strong>{" "}
+                <Download className="inline h-3.5 w-3.5 text-[#FFB547]" />, nebo v menu ⋮ →{" "}
+                <em>Přenést na…</em> → <em>Nainstalovat OneMil</em>.
+              </span>
+            </div>
+            <div className="flex items-start gap-3 rounded-lg border border-[rgba(255,138,0,0.18)] bg-black/20 p-3">
+              <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-[#FF8A00] text-xs font-bold text-black">
+                3
+              </span>
+              <span>Potvrď „Nainstalovat“. OneMil se přidá na plochu a do nabídky Start.</span>
+            </div>
+          </div>
+
+          {inIframe && (
+            <p className="rounded-lg border border-[rgba(255,181,71,0.2)] bg-[rgba(255,138,0,0.08)] p-3 text-xs leading-relaxed text-muted-foreground">
+              Právě jsi v náhledu (iframe). Prohlížeč v této variantě instalaci nenabízí —
+              otevři <strong>onemil.cz</strong> v samostatném okně.
+            </p>
+          )}
+
+          <p className="rounded-lg border border-white/10 bg-black/20 p-3 text-[11px] leading-relaxed text-muted-foreground">
+            Tip: Pokud tlačítko „Instalovat“ nevidíš, zkus stránku jednou obnovit (F5).
+            Po obnově prohlížeč po pár vteřinách instalaci povolí.
+          </p>
+
+          <Button
+            type="button"
+            variant="premium"
+            className="w-full"
+            onClick={() => setDesktopHelpOpen(false)}
           >
             Rozumím
           </Button>

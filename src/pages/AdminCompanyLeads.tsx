@@ -82,7 +82,7 @@ const AdminCompanyLeads: React.FC = () => {
         .order("submitted_to_admin_at", { ascending: true });
 
       if (fetchError) throw fetchError;
-      setLeads((data ?? []) as CompanyLead[]);
+      setLeads((data ?? []) as unknown as CompanyLead[]);
     } catch (err) {
       console.error("AdminCompanyLeads: fetchLeads failed", err);
       setError("Nepodařilo se načíst žádosti. Zkuste obnovit stránku.");
