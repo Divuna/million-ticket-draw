@@ -69,8 +69,7 @@ export const InstallAppButton: React.FC = () => {
   ] as const;
 
   const canShowMobileInstall = !isInstalled && (canInstall || isIOS) && isMobileDevice;
-  const canShowDesktopInstall = !isInstalled && canInstall && !isMobileDevice;
-  const canShowInstall = canShowMobileInstall || canShowDesktopInstall;
+  const canShowDesktopInstall = !isInstalled && canInstall && !isMobileDevice && !isIOS;
 
   return (
     <>
