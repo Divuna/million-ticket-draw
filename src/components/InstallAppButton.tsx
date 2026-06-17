@@ -8,7 +8,6 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { toast } from "@/hooks/use-toast";
 import { usePwaInstallPrompt } from "@/hooks/usePwaInstallPrompt";
 
 const AppleIcon: React.FC<{ className?: string }> = ({ className }) => (
@@ -37,25 +36,14 @@ const getIsMobileDevice = () => {
   return /Android|iPhone|iPad|iPod|Mobile/i.test(userAgent) || isIPadOS;
 };
 
-const getIsInIframe = () => {
-  if (typeof window === "undefined") return false;
-  try {
-    return window.self !== window.top;
-  } catch {
-    return true;
-  }
-};
-
 export const InstallAppButton: React.FC = () => {
   const { canInstall, isInstalled, isIOS, install } = usePwaInstallPrompt();
   const [instructionsOpen, setInstructionsOpen] = useState(false);
   const [installing, setInstalling] = useState(false);
   const [isMobileDevice, setIsMobileDevice] = useState(false);
-  const [inIframe, setInIframe] = useState(false);
 
   useEffect(() => {
     setIsMobileDevice(getIsMobileDevice());
-    setInIframe(getIsInIframe());
   }, []);
 
   const canShowMobileInstall = !isInstalled && (canInstall || isIOS) && isMobileDevice;
@@ -68,23 +56,7 @@ export const InstallAppButton: React.FC = () => {
       return;
     }
 
-    if (!canInstall) {
-      // No beforeinstallprompt available — explain briefly without a big modal.
-      if (inIframe) {
-        toast({
-          title: "Otevři onemil.cz mimo náhled",
-          description:
-            "Instalaci do počítače povolí Chrome nebo Edge jen na samostatné záložce s onemil.cz.",
-        });
-      } else {
-        toast({
-          title: "Instalace zatím není dostupná",
-          description:
-            "Obnov stránku (F5). Chrome/Edge nabídne instalaci po pár vteřinách v adresním řádku vpravo.",
-        });
-      }
-      return;
-    }
+    if (!canInstall) return;
 
     setInstalling(true);
     try {
@@ -112,7 +84,7 @@ export const InstallAppButton: React.FC = () => {
           {trustBadges.map((platform) => {
             const { Icon } = platform;
             const isWindows = platform.key === "windows";
-            const isWindowsActive = isWindows && isDesktop && !isInstalled;
+            const isWindowsActive = isWindows && canShowDesktopInstall;
 
             if (isWindowsActive) {
               return (
