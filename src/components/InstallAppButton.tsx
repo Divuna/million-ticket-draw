@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from "react";
-import { Apple, Chrome, Download, Plus, Share2 } from "lucide-react";
+import { Smartphone, Chrome, Download, Plus, Share2, Monitor } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -34,14 +34,24 @@ export const InstallAppButton: React.FC = () => {
     setIsMobileDevice(getIsMobileDevice());
   }, []);
 
-  const handleClick = async () => {
+  const handleMobileClick = async () => {
     if (isIOS) {
       setInstructionsOpen(true);
       return;
     }
 
     setInstalling(true);
+    try {
+      await install();
+    } catch (error) {
+      console.error("PWA install prompt failed:", error);
+    } finally {
+      setInstalling(false);
+    }
+  };
 
+  const handleDesktopInstall = async () => {
+    setInstalling(true);
     try {
       await install();
     } catch (error) {
@@ -52,11 +62,14 @@ export const InstallAppButton: React.FC = () => {
   };
 
   const platforms = [
-    { key: "ios", label: "iPhone", Icon: Apple },
+    { key: "ios", label: "iPhone", Icon: Smartphone },
     { key: "android", label: "Android", Icon: Chrome },
   ] as const;
 
   const currentPlatformKey = isIOS ? "ios" : "android";
+  const canShowMobileInstall = !isInstalled && canInstall && isMobileDevice;
+  // Desktop install: non-mobile, not iOS, real beforeinstallprompt available (canInstall on desktop implies deferredPrompt)
+  const canShowDesktopInstall = !isInstalled && canInstall && !isMobileDevice && !isIOS;
 
   const renderPlatformBadge = (
     platform: (typeof platforms)[number],
@@ -95,7 +108,7 @@ export const InstallAppButton: React.FC = () => {
         <button
           key={platform.key}
           type="button"
-          onClick={handleClick}
+          onClick={handleMobileClick}
           disabled={installing}
           className={badgeClass}
           aria-label={`Stáhnout aplikaci pro ${platform.label}`}
@@ -110,41 +123,56 @@ export const InstallAppButton: React.FC = () => {
         key={platform.key}
         className={badgeClass}
         aria-disabled="true"
-        title={options.clickable ? "Dostupné na jiné platformě" : undefined}
       >
         {content}
       </span>
     );
   };
 
-  const renderTrustArea = () => (
-    <div className="pt-1">
-      <p className="mb-2 text-xs text-muted-foreground">Dostupné pro iPhone a Android</p>
-      <div className="flex flex-wrap items-center gap-2">
-        {platforms.map((platform) =>
-          renderPlatformBadge(platform, { active: false, clickable: false })
-        )}
+  if (isInstalled) {
+    return (
+      <div className="pt-1">
+        <p className="mb-2 text-xs text-muted-foreground">Dostupné pro iPhone a Android</p>
+        <div className="flex flex-wrap items-center gap-2">
+          {platforms.map((platform) =>
+            renderPlatformBadge(platform, { active: false, clickable: false })
+          )}
+        </div>
       </div>
-    </div>
-  );
-
-  const canShowInstallAction = canInstall && isMobileDevice;
-
-  if (isInstalled || !canShowInstallAction) {
-    return renderTrustArea();
+    );
   }
 
   return (
     <>
       <div className="pt-1">
-        <p className="mb-1 text-xs font-semibold text-heading-gold">Stáhnout aplikaci</p>
+        {canShowMobileInstall && (
+          <p className="mb-1 text-xs font-semibold text-heading-gold">Stáhnout aplikaci</p>
+        )}
         <p className="mb-2 text-xs text-muted-foreground">Dostupné pro iPhone a Android</p>
         <div className="flex flex-wrap items-center gap-2">
           {platforms.map((platform) =>
             renderPlatformBadge(platform, {
-              active: platform.key === currentPlatformKey,
-              clickable: true,
+              active: canShowMobileInstall && platform.key === currentPlatformKey,
+              clickable: canShowMobileInstall,
             })
+          )}
+          {canShowDesktopInstall && (
+            <button
+              type="button"
+              onClick={handleDesktopInstall}
+              disabled={installing}
+              className={`${platformBadgeBase} group border-neon-gold/50 bg-neon-gold/15 shadow-[inset_0_1px_10px_rgba(255,181,71,0.08)] hover:border-neon-gold/75 hover:bg-neon-gold/25 disabled:cursor-wait disabled:opacity-70`}
+              aria-label="Stáhnout aplikaci do počítače"
+            >
+              <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-neon-gold text-[hsl(220_50%_5%)]">
+                <Monitor className="h-3.5 w-3.5" />
+              </span>
+              <span className="flex min-w-0 flex-col leading-none">
+                <span className="text-[10px] font-medium text-muted-foreground">Instalovat</span>
+                <span className="text-xs font-bold text-foreground">Stáhnout do počítače</span>
+              </span>
+              <Download className="h-3.5 w-3.5 shrink-0 text-neon-gold/80 transition-colors group-hover:text-neon-gold" />
+            </button>
           )}
         </div>
       </div>
