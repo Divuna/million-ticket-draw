@@ -10,12 +10,13 @@ import {
 } from "@/components/ui/dialog";
 import { usePwaInstallPrompt } from "@/hooks/usePwaInstallPrompt";
 
+const platformBadgeBase =
+  "inline-flex h-9 items-center gap-2 rounded-full border px-2.5 pr-3 text-left transition-colors";
+
 export const InstallAppButton: React.FC = () => {
   const { canInstall, isInstalled, isIOS, install } = usePwaInstallPrompt();
   const [instructionsOpen, setInstructionsOpen] = useState(false);
   const [installing, setInstalling] = useState(false);
-
-  if (!canInstall || isInstalled) return null;
 
   const handleClick = async () => {
     if (isIOS) {
@@ -34,29 +35,100 @@ export const InstallAppButton: React.FC = () => {
     }
   };
 
-  const PlatformIcon = isIOS ? Apple : Chrome;
-  const platformLabel = isIOS ? "iPhone" : "Android";
+  const platforms = [
+    { key: "ios", label: "iPhone", Icon: Apple },
+    { key: "android", label: "Android", Icon: Chrome },
+  ] as const;
+
+  const currentPlatformKey = isIOS ? "ios" : "android";
+
+  const renderPlatformBadge = (
+    platform: (typeof platforms)[number],
+    options: { active: boolean; clickable: boolean }
+  ) => {
+    const { Icon } = platform;
+    const badgeClass = options.active
+      ? `${platformBadgeBase} group border-neon-gold/50 bg-neon-gold/15 shadow-[inset_0_1px_10px_rgba(255,181,71,0.08)] hover:border-neon-gold/75 hover:bg-neon-gold/25 disabled:cursor-wait disabled:opacity-70`
+      : `${platformBadgeBase} cursor-default border-border/45 bg-white/[0.03] opacity-75`;
+
+    const content = (
+      <>
+        <span
+          className={
+            options.active
+              ? "flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-neon-gold text-[hsl(220_50%_5%)]"
+              : "flex h-6 w-6 shrink-0 items-center justify-center rounded-full border border-neon-gold/25 text-neon-gold/70"
+          }
+        >
+          <Icon className="h-3.5 w-3.5" />
+        </span>
+        <span className="flex min-w-0 flex-col leading-none">
+          <span className="text-[10px] font-medium text-muted-foreground">
+            {options.active ? "Instalovat" : "Dostupné"}
+          </span>
+          <span className="text-xs font-bold text-foreground">{platform.label}</span>
+        </span>
+        {options.active && (
+          <Download className="h-3.5 w-3.5 shrink-0 text-neon-gold/80 transition-colors group-hover:text-neon-gold" />
+        )}
+      </>
+    );
+
+    if (options.clickable && options.active) {
+      return (
+        <button
+          key={platform.key}
+          type="button"
+          onClick={handleClick}
+          disabled={installing}
+          className={badgeClass}
+          aria-label={`Stáhnout aplikaci pro ${platform.label}`}
+        >
+          {content}
+        </button>
+      );
+    }
+
+    return (
+      <span
+        key={platform.key}
+        className={badgeClass}
+        aria-disabled="true"
+        title={options.clickable ? "Dostupné na jiné platformě" : undefined}
+      >
+        {content}
+      </span>
+    );
+  };
+
+  if (isInstalled) {
+    return (
+      <div className="pt-1">
+        <p className="mb-2 text-xs text-muted-foreground">Dostupné pro iPhone a Android</p>
+        <div className="flex flex-wrap items-center gap-2">
+          {platforms.map((platform) =>
+            renderPlatformBadge(platform, { active: false, clickable: false })
+          )}
+        </div>
+      </div>
+    );
+  }
+
+  if (!canInstall) return null;
 
   return (
     <>
       <div className="pt-1">
-        <p className="mb-2 text-xs font-semibold text-heading-gold">Stáhnout aplikaci</p>
-        <button
-          type="button"
-          onClick={handleClick}
-          disabled={installing}
-          className="group inline-flex h-10 items-center gap-2 rounded-full border border-neon-gold/45 bg-neon-gold/15 px-2.5 pr-3 text-left shadow-[inset_0_1px_10px_rgba(255,181,71,0.08)] transition-colors hover:bg-neon-gold/25 hover:border-neon-gold/70 disabled:cursor-wait disabled:opacity-70"
-          aria-label={`Stáhnout aplikaci pro ${platformLabel}`}
-        >
-          <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-neon-gold text-[hsl(220_50%_5%)]">
-            <PlatformIcon className="h-3.5 w-3.5" />
-          </span>
-          <span className="flex min-w-0 flex-col leading-none">
-            <span className="text-[10px] font-medium text-muted-foreground">Instalovat</span>
-            <span className="text-xs font-bold text-foreground">{platformLabel}</span>
-          </span>
-          <Download className="h-3.5 w-3.5 shrink-0 text-neon-gold/80 transition-colors group-hover:text-neon-gold" />
-        </button>
+        <p className="mb-1 text-xs font-semibold text-heading-gold">Stáhnout aplikaci</p>
+        <p className="mb-2 text-xs text-muted-foreground">Dostupné pro iPhone a Android</p>
+        <div className="flex flex-wrap items-center gap-2">
+          {platforms.map((platform) =>
+            renderPlatformBadge(platform, {
+              active: platform.key === currentPlatformKey,
+              clickable: true,
+            })
+          )}
+        </div>
       </div>
 
       <Dialog open={instructionsOpen} onOpenChange={setInstructionsOpen}>
