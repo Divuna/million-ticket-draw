@@ -69,8 +69,7 @@ export const InstallAppButton: React.FC = () => {
   ] as const;
 
   const canShowMobileInstall = !isInstalled && (canInstall || isIOS) && isMobileDevice;
-  const canShowDesktopInstall = !isInstalled && canInstall && !isMobileDevice;
-  const canShowInstall = canShowMobileInstall || canShowDesktopInstall;
+  const canShowDesktopInstall = !isInstalled && canInstall && !isMobileDevice && !isIOS;
 
   return (
     <>
@@ -81,6 +80,28 @@ export const InstallAppButton: React.FC = () => {
         <div className="flex flex-wrap items-center gap-2">
           {trustBadges.map((platform) => {
             const { Icon } = platform;
+            const isWindowsActive =
+              platform.key === "windows" && canShowDesktopInstall;
+            if (isWindowsActive) {
+              return (
+                <button
+                  key={platform.key}
+                  type="button"
+                  onClick={handleInstall}
+                  disabled={installing}
+                  className={`${platformBadgeBase} border-neon-gold/50 bg-neon-gold/15 shadow-[inset_0_1px_10px_rgba(255,181,71,0.08)] hover:border-neon-gold/75 hover:bg-neon-gold/25 disabled:cursor-wait disabled:opacity-70`}
+                  aria-label="Stáhnout do počítače"
+                >
+                  <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-neon-gold text-[hsl(220_50%_5%)]">
+                    <Icon className="h-3.5 w-3.5" />
+                  </span>
+                  <span className="flex min-w-0 flex-col leading-none">
+                    <span className="text-[10px] font-medium text-muted-foreground">Stáhnout</span>
+                    <span className="text-xs font-bold text-foreground">Windows</span>
+                  </span>
+                </button>
+              );
+            }
             return (
               <span
                 key={platform.key}
@@ -98,7 +119,7 @@ export const InstallAppButton: React.FC = () => {
             );
           })}
         </div>
-        {canShowInstall && (
+        {canShowMobileInstall && (
           <button
             type="button"
             onClick={handleInstall}
