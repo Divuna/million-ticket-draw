@@ -1,6 +1,6 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
-import { Facebook } from 'lucide-react';
+import { Facebook, Instagram } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
 import { useUserRole } from '@/hooks/useUserRole';
 import { useFooterLinks } from '@/hooks/useFooterLinks';
@@ -31,6 +31,15 @@ export const Footer: React.FC = () => {
                 className="w-8 h-8 bg-neon-gold/15 rounded-full flex items-center justify-center border border-neon-gold/40 hover:bg-neon-gold/25 transition-colors"
               >
                 <Facebook className="w-4 h-4 text-neon-gold" />
+              </a>
+              <a
+                href="https://www.instagram.com/onemil.cz/"
+                target="_blank"
+                rel="noopener noreferrer"
+                aria-label="OneMil Instagram"
+                className="w-8 h-8 bg-neon-gold/15 rounded-full flex items-center justify-center border border-neon-gold/40 hover:bg-neon-gold/25 transition-colors"
+              >
+                <Instagram className="w-4 h-4 text-neon-gold" />
               </a>
             </div>
             <InstallAppButton />
