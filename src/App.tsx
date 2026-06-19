@@ -36,6 +36,7 @@ import PaymentSuccess from "@/pages/PaymentSuccess";
 import PaymentCancel from "@/pages/PaymentCancel";
 import AdminDashboard from "@/pages/AdminDashboard";
 import AdminUsers from "@/pages/AdminUsers";
+import AdminAdmins from "@/pages/AdminAdmins";
 import AdminBanners from "@/pages/AdminBanners";
 import AdminVouchers from "@/pages/AdminVouchers";
 import AdminPrizeDeliveryPage from "@/pages/AdminPrizeDeliveryPage";
@@ -605,6 +606,7 @@ function AppContent() {
           <Route element={<AdminLayout />}>
             <Route path="/admin" element={<AdminDashboard />} />
             <Route path="/admin/users" element={<AdminUsers />} />
+            <Route path="/admin/admins" element={<AdminAdmins />} />
             <Route path="/admin/banners" element={<AdminBanners />} />
             <Route path="/admin/vouchers" element={<AdminVouchers />} />
             <Route path="/admin/payments" element={<AdminPayments />} />
