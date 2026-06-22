@@ -1,5 +1,16 @@
 # CLAUDE.md
 
+## PHASE 1 — AFFILIATE FINANCE LOCK KOMPLETNÍ NA STAGINGU (22. 06. 2026)
+
+Celá affiliate finance oblast je na stagingu `dxmowysntemfqfnanxua` uzamčena na **superadmin-only** ve všech třech vrstvách. **Produkce `xkzhjldrojjlrkezorey` NEDOTČENA.**
+
+- **RLS gates (`public.is_superadmin()`):** `affiliate_payout_documents`/`apd_admin_all`, `affiliate_payout_batch_items`/`apbi_admin_all`, `affiliate_payout_batches`/`apb_admin_all`, `affiliate_commissions`/`aff_commissions_admin_write`, `affiliate_commissions`/`aff_commissions_select` (**affiliate-own SELECT branch zachován** — affiliate vidí vlastní provize).
+- **RPC gates (`public.is_superadmin()`, interní gate, owner postgres, SECURITY DEFINER):** `admin_set_affiliate_commission_status`, `create_affiliate_payout_batch`, `mark_affiliate_payout_batch_paid`, `update_affiliate_payout_batch_meta`. (Tyto RPC obcházejí RLS — proto musely být gatovány zvlášť.)
+- **Edge Functions (superadmin-only, `role = 'superadmin'`, chyba `access_denied_superadmin_only`):** `create-affiliate-payout-document` **v10**, `generate-affiliate-bank-export` **v11**. `generate-affiliate-bank-export` přenasazena z přesného commitnutého zdroje (staging = GitHub).
+- **Testy ✅** (seedované řádky / throwaway superadmin + dočasný role flip v transakci s rollbackem; EF přes throwaway user JWT, smazán): superadmin povolen, admin/subadmin blokován, normální uživatel blokován, anon blokován, affiliate vidí vlastní provize, admin přímý write blokován (`42501`), EF admin→403, anon→401, superadmin→safe not_found bez mutace. Staging data/role beze změny (`admin:2`).
+- **Rollback zdroje:** `docs/rollback/phase1_baseline.sql` (RLS policy + RPC definice z živé produkce); git historie / předchozí EF verze pro Edge Functions.
+- **Produkční rollout = samostatný krok s výslovným schválením Pavla + manuální `pg_dump` PŘED zápisem (PITR off).** Pravidlo: affiliate finance gates nevracet na `is_admin()`; `aff_commissions_select` nesmí ztratit affiliate-own branch; EF nevracet na `role IN ('admin','superadmin')`.
+
 ## PHASE 1 — AFFILIATE_PAYOUT_BATCH_ITEMS SUPERADMIN-ONLY NA STAGINGU (22. 06. 2026)
 
 Druhý objekt affiliate finance oblasti uzamčen (staging only).

@@ -14,6 +14,15 @@
 
 ---
 
+## 2026-06-22 — Phase 1: affiliate finance lock KOMPLETNÍ na stagingu
+
+Celá affiliate finance oblast uzamčena superadmin-only na stagingu `dxmowysntemfqfnanxua` ve 3 vrstvách; **produkce `xkzhjldrojjlrkezorey` nedotčena.**
+- **RLS → `public.is_superadmin()`:** `affiliate_payout_documents/apd_admin_all`, `affiliate_payout_batch_items/apbi_admin_all`, `affiliate_payout_batches/apb_admin_all`, `affiliate_commissions/aff_commissions_admin_write`, `affiliate_commissions/aff_commissions_select` (affiliate-own SELECT branch zachován).
+- **RPC → `public.is_superadmin()`:** `admin_set_affiliate_commission_status`, `create_affiliate_payout_batch`, `mark_affiliate_payout_batch_paid`, `update_affiliate_payout_batch_meta` (SECURITY DEFINER, obcházejí RLS → gatovány zvlášť; swap přes pg_get_functiondef + replace, owner postgres).
+- **Edge Functions → superadmin-only** (`role='superadmin'`, chyba `access_denied_superadmin_only`): `create-affiliate-payout-document` v10, `generate-affiliate-bank-export` v11 (přenasazena z přesného commitnutého zdroje, staging=GitHub). Commit EF fix `715e5b4a`.
+- **Testy:** superadmin povolen; admin/subadmin, normální uživatel, anon blokováni; affiliate vidí vlastní provize; admin přímý write blokován `42501`; EF admin→403, anon→401, superadmin→safe not_found bez mutace. Vše přes seedované řádky / throwaway superadmin + transakční rollback, EF přes throwaway user JWT (smazán). Staging data/role beze změny (`admin:2`).
+- **Rollback:** `docs/rollback/phase1_baseline.sql` (RLS+RPC); git historie / předchozí EF verze. Produkční rollout = samostatné schválení + manuální `pg_dump` (PITR off).
+
 ## 2026-06-22 — Phase 1: affiliate_payout_batch_items superadmin-only na stagingu
 
 Druhý objekt affiliate finance. Na stagingu `dxmowysntemfqfnanxua` policy `apbi_admin_all` na `public.affiliate_payout_batch_items` změněna z `is_admin()` na `public.is_superadmin()` (ALL, USING+WITH CHECK) — jediná policy; žádná jiná tabulka/RPC/EF/frontend. **Produkce `xkzhjldrojjlrkezorey` nedotčena.** Test (využit existující reálný řádek + dočasný role flip v transakci s rollbackem): superadmin→1, admin/subadmin→0, normální uživatel→0, anon→0; admin přímý INSERT zablokován RLS WITH CHECK `42501` (s reálnými FK id). Existující řádek beze změny (`total_rows=1`), role `admin:2`; policy ponechána. Rollback SQL zachyceno (návrat na `is_admin()`). Další objekt: `affiliate_payout_batches` / `apb_admin_all`. Produkční rollout: schválení + manuální `pg_dump` (PITR off). Jen staging DDL + transakční ověření.

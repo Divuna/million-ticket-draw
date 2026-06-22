@@ -1,5 +1,16 @@
 ﻿# OneMil – aktuální stav projektu
 
+## PHASE 1 — AFFILIATE FINANCE LOCK KOMPLETNÍ NA STAGINGU (22. 06. 2026)
+
+Affiliate finance je na stagingu `dxmowysntemfqfnanxua` plně uzamčena superadmin-only (3 vrstvy). **Produkce `xkzhjldrojjlrkezorey` NEDOTČENA.**
+
+- **RLS → `public.is_superadmin()`:** `affiliate_payout_documents/apd_admin_all`, `affiliate_payout_batch_items/apbi_admin_all`, `affiliate_payout_batches/apb_admin_all`, `affiliate_commissions/aff_commissions_admin_write`, `affiliate_commissions/aff_commissions_select` (**affiliate-own SELECT branch zachován**).
+- **RPC → `public.is_superadmin()`:** `admin_set_affiliate_commission_status`, `create_affiliate_payout_batch`, `mark_affiliate_payout_batch_paid`, `update_affiliate_payout_batch_meta` (SECURITY DEFINER, obcházejí RLS → gatovány zvlášť).
+- **Edge Functions → superadmin-only:** `create-affiliate-payout-document` **v10**, `generate-affiliate-bank-export` **v11** (přenasazena z přesného commitnutého zdroje; staging = GitHub).
+- **Testy ✅:** superadmin povolen; admin/subadmin, normální uživatel, anon blokováni; affiliate vidí vlastní provize; admin přímý write blokován (`42501`); EF admin→403, anon→401, superadmin→safe not_found. Staging data/role beze změny (`admin:2`, throwaway účty smazány).
+- **Rollback:** `docs/rollback/phase1_baseline.sql` (RLS+RPC); git historie / předchozí EF verze.
+- **Produkční rollout:** samostatné výslovné schválení Pavla + manuální `pg_dump` před zápisem (PITR off).
+
 ## PHASE 1 — AFFILIATE_PAYOUT_BATCH_ITEMS SUPERADMIN-ONLY NA STAGINGU (22. 06. 2026)
 
 - **Staging `dxmowysntemfqfnanxua`:** `apbi_admin_all` na `public.affiliate_payout_batch_items` změněna z `is_admin()` na `public.is_superadmin()` (ALL, USING+WITH CHECK). Jediná policy; žádná jiná tabulka/RPC/EF/frontend. **Produkce `xkzhjldrojjlrkezorey` NEDOTČENA.**
