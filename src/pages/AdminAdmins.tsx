@@ -15,12 +15,25 @@ import { Search, ShieldCheck, ShieldOff, ShieldPlus, Crown } from 'lucide-react'
 interface ManagedUser {
   id: string;
   name: string;
+  email: string;
   first_name?: string;
   last_name?: string;
   /** '' | 'user' | 'admin' | 'superadmin' — '' means no user_roles row yet. */
   role: string;
   isPartnerAccount: boolean;
 }
+
+/**
+ * Identity fallback chain for a row:
+ * 1) full name from profiles, 2) email, 3) shortened user_id.
+ */
+const displayName = (u: ManagedUser): string => {
+  const name =
+    u.name || [u.first_name, u.last_name].filter(Boolean).join(' ').trim();
+  if (name) return name;
+  if (u.email) return u.email;
+  return `#${u.id.slice(0, 8)}`;
+};
 
 /**
  * Superadmin-only správa subadminů.
@@ -93,6 +106,7 @@ const AdminAdmins: React.FC = () => {
           name:
             p.full_name ||
             `${p.first_name || ''} ${p.last_name || ''}`.trim(),
+          email: p.email || '',
           first_name: p.first_name,
           last_name: p.last_name,
           role,
@@ -285,7 +299,7 @@ const AdminAdmins: React.FC = () => {
                 {adminLevelUsers.map((u) => (
                   <TableRow key={u.id}>
                     <TableCell className="font-medium">
-                      {u.name || <span className="text-muted-foreground">—</span>}
+                      {displayName(u)}
                     </TableCell>
                     <TableCell>{renderRoleBadge(u.role)}</TableCell>
                     <TableCell className="text-right">
@@ -352,7 +366,7 @@ const AdminAdmins: React.FC = () => {
                 {promotableUsers.map((u) => (
                   <TableRow key={u.id}>
                     <TableCell className="font-medium">
-                      {u.name || <span className="text-muted-foreground">—</span>}
+                      {displayName(u)}
                     </TableCell>
                     <TableCell>{renderRoleBadge(u.role || 'user')}</TableCell>
                     <TableCell className="text-right">
