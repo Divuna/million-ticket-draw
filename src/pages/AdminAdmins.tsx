@@ -45,6 +45,44 @@ const displayName = (
   return `#${u.id.slice(0, 8)}`;
 };
 
+/** Row returned by the get_admin_subadmins_overview() RPC. */
+interface SubadminOverview {
+  user_id: string;
+  email: string | null;
+  role: string;
+  created_at: string | null;
+  email_confirmed_at: string | null;
+  last_sign_in_at: string | null;
+  full_name: string | null;
+  profile_email: string | null;
+  last_seen_at: string | null;
+  latest_invite_status: string | null;
+  latest_invite_sent_at: string | null;
+}
+
+/** Identity for an overview row: full name → profile email → auth email → #id. */
+const overviewName = (r: SubadminOverview): string =>
+  (r.full_name && r.full_name.trim()) ||
+  r.profile_email ||
+  r.email ||
+  `#${r.user_id.slice(0, 8)}`;
+
+/** Short Czech relative time, e.g. "před 3 min", "před 2 h", "21. 6.". */
+const relativeCzech = (iso: string | null): string => {
+  if (!iso) return '—';
+  const d = new Date(iso);
+  const diffMs = Date.now() - d.getTime();
+  if (Number.isNaN(diffMs)) return '—';
+  const min = Math.floor(diffMs / 60000);
+  if (min < 1) return 'právě teď';
+  if (min < 60) return `před ${min} min`;
+  const hrs = Math.floor(min / 60);
+  if (hrs < 24) return `před ${hrs} h`;
+  const days = Math.floor(hrs / 24);
+  if (days < 7) return `před ${days} d`;
+  return d.toLocaleDateString('cs-CZ', { day: 'numeric', month: 'numeric', year: 'numeric' });
+};
+
 /**
  * Superadmin-only správa subadminů.
  *
@@ -64,13 +102,60 @@ const AdminAdmins: React.FC = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [inviteEmail, setInviteEmail] = useState('');
   const [inviting, setInviting] = useState(false);
+  const [overview, setOverview] = useState<SubadminOverview[]>([]);
+  const [onlineIds, setOnlineIds] = useState<Set<string>>(new Set());
 
   useEffect(() => {
     if (authLoading || roleLoading) return;
     if (!user || !isSuperAdmin) return;
     fetchUsers();
+    fetchOverview();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [authLoading, roleLoading, user, isSuperAdmin]);
+
+  // Poll "online now" via the existing presence RPC (5-minute window).
+  useEffect(() => {
+    if (authLoading || roleLoading || !user || !isSuperAdmin) return;
+    let cancelled = false;
+
+    const loadOnline = async () => {
+      try {
+        const { data, error } = await supabase.rpc('get_admin_online_users', {
+          p_active_window_seconds: 300,
+        });
+        if (error || cancelled) return;
+        const payload = data as { success?: boolean; users?: { userId: string }[] } | null;
+        if (payload?.success) {
+          setOnlineIds(new Set((payload.users ?? []).map((u) => u.userId)));
+        }
+      } catch {
+        // best-effort — presence is non-critical
+      }
+    };
+
+    loadOnline();
+    const interval = setInterval(loadOnline, 30_000);
+    return () => {
+      cancelled = true;
+      clearInterval(interval);
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [authLoading, roleLoading, user, isSuperAdmin]);
+
+  const fetchOverview = async () => {
+    try {
+      const { data, error } = await supabase.rpc('get_admin_subadmins_overview');
+      if (error) {
+        console.error('Error fetching subadmins overview:', error);
+        setOverview([]);
+        return;
+      }
+      setOverview((data as SubadminOverview[]) ?? []);
+    } catch (err) {
+      console.error('Unexpected error fetching overview:', err);
+      setOverview([]);
+    }
+  };
 
   const fetchUsers = async () => {
     try {
@@ -173,6 +258,7 @@ const AdminAdmins: React.FC = () => {
       });
 
       await fetchUsers();
+      await fetchOverview();
       toast({ title: 'Hotovo', description: 'Uživatel byl povýšen na subadmina.' });
     } catch (error) {
       console.error('Error promoting user:', error);
@@ -210,6 +296,7 @@ const AdminAdmins: React.FC = () => {
       });
 
       await fetchUsers();
+      await fetchOverview();
       toast({ title: 'Hotovo', description: 'Subadminovi byla odebrána admin práva.' });
     } catch (error) {
       console.error('Error demoting user:', error);
@@ -259,6 +346,7 @@ const AdminAdmins: React.FC = () => {
 
       setInviteEmail('');
       await fetchUsers();
+      await fetchOverview();
       toast({
         title: 'Pozvánka odeslána',
         description:
@@ -277,14 +365,6 @@ const AdminAdmins: React.FC = () => {
       setInviting(false);
     }
   };
-
-  const adminLevelUsers = allUsers
-    .filter((u) => u.role === 'admin' || u.role === 'superadmin')
-    .sort((a, b) => {
-      // superadmin first, then admins by name.
-      if (a.role !== b.role) return a.role === 'superadmin' ? -1 : 1;
-      return (a.name || '').localeCompare(b.name || '');
-    });
 
   const promotableUsers = (() => {
     const needle = searchTerm.trim().toLowerCase();
@@ -316,6 +396,65 @@ const AdminAdmins: React.FC = () => {
       );
     }
     return <Badge variant="outline">Uživatel</Badge>;
+  };
+
+  // Account active = has signed in at least once (password set + login completed).
+  const renderAccountBadge = (r: SubadminOverview) => {
+    if (r.last_sign_in_at) {
+      return (
+        <Badge className="gap-1 bg-emerald-600 hover:bg-emerald-600 text-white border-transparent">
+          <ShieldCheck className="h-3 w-3" /> Účet aktivní
+        </Badge>
+      );
+    }
+    return (
+      <Badge variant="outline" className="gap-1 text-amber-600 border-amber-500/50">
+        Čeká na aktivaci
+      </Badge>
+    );
+  };
+
+  // Invite status from the latest email_queue row (never from auth.invited_at).
+  const renderInviteBadge = (r: SubadminOverview) => {
+    switch (r.latest_invite_status) {
+      case 'sent':
+        return (
+          <Badge variant="outline" className="gap-1">
+            <Mail className="h-3 w-3" /> Pozvánka odeslána
+            {r.latest_invite_sent_at ? ` · ${relativeCzech(r.latest_invite_sent_at)}` : ''}
+          </Badge>
+        );
+      case 'pending':
+        return (
+          <Badge variant="outline" className="gap-1 text-muted-foreground">
+            <Mail className="h-3 w-3" /> Pozvánka čeká
+          </Badge>
+        );
+      case 'failed':
+        return (
+          <Badge variant="outline" className="gap-1 text-destructive border-destructive/40">
+            <Mail className="h-3 w-3" /> Pozvánka selhala
+          </Badge>
+        );
+      default:
+        return <span className="text-xs text-muted-foreground">—</span>;
+    }
+  };
+
+  // Online now (presence window) or last-seen relative time.
+  const renderPresence = (r: SubadminOverview) => {
+    if (onlineIds.has(r.user_id)) {
+      return (
+        <span className="inline-flex items-center gap-1.5 text-emerald-600 text-sm font-medium">
+          <span className="h-2 w-2 rounded-full bg-emerald-500" /> Online teď
+        </span>
+      );
+    }
+    return (
+      <span className="text-sm text-muted-foreground">
+        {r.last_seen_at ? `Naposledy online ${relativeCzech(r.last_seen_at)}` : '—'}
+      </span>
+    );
   };
 
   if (authLoading || roleLoading) {
@@ -360,26 +499,30 @@ const AdminAdmins: React.FC = () => {
                 <TableRow>
                   <TableHead>Jméno</TableHead>
                   <TableHead>Role</TableHead>
+                  <TableHead>Účet</TableHead>
+                  <TableHead>Pozvánka</TableHead>
+                  <TableHead>Aktivita</TableHead>
                   <TableHead className="text-right">Akce</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {adminLevelUsers.map((u) => (
-                  <TableRow key={u.id}>
-                    <TableCell className="font-medium">
-                      {displayName(u, user?.email ?? null, user?.id ?? null)}
-                    </TableCell>
-                    <TableCell>{renderRoleBadge(u.role)}</TableCell>
+                {overview.map((r) => (
+                  <TableRow key={r.user_id}>
+                    <TableCell className="font-medium">{overviewName(r)}</TableCell>
+                    <TableCell>{renderRoleBadge(r.role)}</TableCell>
+                    <TableCell>{renderAccountBadge(r)}</TableCell>
+                    <TableCell>{renderInviteBadge(r)}</TableCell>
+                    <TableCell>{renderPresence(r)}</TableCell>
                     <TableCell className="text-right">
-                      {u.role === 'superadmin' ? (
+                      {r.role === 'superadmin' ? (
                         <span className="text-xs text-muted-foreground">Vlastník — nelze měnit</span>
                       ) : (
                         <Button
                           variant="outline"
                           size="sm"
                           className="gap-1"
-                          disabled={busyId === u.id}
-                          onClick={() => demoteToUser(u)}
+                          disabled={busyId === r.user_id}
+                          onClick={() => demoteToUser({ id: r.user_id, role: r.role } as ManagedUser)}
                         >
                           <ShieldOff className="h-4 w-4" /> Odebrat admin práva
                         </Button>
@@ -387,9 +530,9 @@ const AdminAdmins: React.FC = () => {
                     </TableCell>
                   </TableRow>
                 ))}
-                {adminLevelUsers.length === 0 && (
+                {overview.length === 0 && (
                   <TableRow>
-                    <TableCell colSpan={3} className="text-center text-muted-foreground">
+                    <TableCell colSpan={6} className="text-center text-muted-foreground">
                       Žádní admini.
                     </TableCell>
                   </TableRow>
