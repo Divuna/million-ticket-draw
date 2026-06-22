@@ -270,9 +270,9 @@ export const AdminContextSubNav: React.FC = () => {
             )}
             aria-hidden={activeSection !== seg.sectionId}
           >
-            {seg.entries.map((e, i) => renderSecondRowEntry(e, seg.sectionId, i))}
-            {/* Superadmin-only: subadmin management. Rendered only for the owner
-                (isSuperAdmin); regular admins/subadmins never see this link. */}
+            {/* Superadmin-only: subadmin management. Rendered FIRST in the Uživatelé
+                row so it is always visible (never clipped by horizontal scroll) and
+                only for the owner (isSuperAdmin); regular admins/subadmins never see it. */}
             {seg.sectionId === "users" && isSuperAdmin && (
               <NavLink
                 key="users-admin-admins-superadmin"
@@ -290,6 +290,7 @@ export const AdminContextSubNav: React.FC = () => {
                 <span className="whitespace-nowrap">Správa adminů</span>
               </NavLink>
             )}
+            {seg.entries.map((e, i) => renderSecondRowEntry(e, seg.sectionId, i))}
           </div>
         ))}
       </div>
