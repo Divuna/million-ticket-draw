@@ -10,8 +10,10 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { ShieldCheck } from "lucide-react";
 import { useUnreadMessagesCount } from "@/hooks/useUnreadMessagesCount";
 import { usePendingOffersCount } from "@/hooks/usePendingOffersCount";
+import { useUserRole } from "@/hooks/useUserRole";
 import { supabase } from "@/integrations/supabase/client";
 import { cn } from "@/lib/utils";
 import {
@@ -60,6 +62,7 @@ function subNavItemTo(item: AdminSubNavItem): string | { pathname: string; searc
 
 export const AdminContextSubNav: React.FC = () => {
   const location = useLocation();
+  const { isSuperAdmin } = useUserRole();
   const { unreadCount } = useUnreadMessagesCount();
   const { pendingCount: pendingOffersCount } = usePendingOffersCount();
   const [pendingPartnerRegistrationsCount, setPendingPartnerRegistrationsCount] = useState(0);
@@ -268,6 +271,25 @@ export const AdminContextSubNav: React.FC = () => {
             aria-hidden={activeSection !== seg.sectionId}
           >
             {seg.entries.map((e, i) => renderSecondRowEntry(e, seg.sectionId, i))}
+            {/* Superadmin-only: subadmin management. Rendered only for the owner
+                (isSuperAdmin); regular admins/subadmins never see this link. */}
+            {seg.sectionId === "users" && isSuperAdmin && (
+              <NavLink
+                key="users-admin-admins-superadmin"
+                to="/admin/admins"
+                end
+                aria-current={location.pathname === "/admin/admins" ? "page" : undefined}
+                className={() => linkButtonClass(location.pathname === "/admin/admins")}
+              >
+                <ShieldCheck
+                  className={`h-4 w-4 shrink-0 ${
+                    location.pathname === "/admin/admins" ? "opacity-100 text-primary" : "opacity-80"
+                  }`}
+                  aria-hidden
+                />
+                <span className="whitespace-nowrap">Správa adminů</span>
+              </NavLink>
+            )}
           </div>
         ))}
       </div>

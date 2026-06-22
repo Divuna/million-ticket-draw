@@ -358,6 +358,7 @@ export function getAdminSectionFromPath(pathname: string, search: string = ""): 
 
   if (
     path.startsWith("/admin/users") ||
+    path.startsWith("/admin/admins") ||
     path.startsWith("/admin/onboarding-incomplete") ||
     path.startsWith("/admin/partners-portal") ||
     path.startsWith("/admin/partner-offers") ||
