@@ -100,9 +100,9 @@ async function authorizeRequest(req: Request): Promise<{ status: number; error: 
     .from('user_roles')
     .select('role')
     .eq('user_id', userData.user.id)
-    .in('role', ['admin', 'superadmin'])
+    .eq('role', 'superadmin')
     .maybeSingle();
-  if (!roleRow) return { status: 403, error: 'access_denied_admin_only' };
+  if (!roleRow) return { status: 403, error: 'access_denied_superadmin_only' };
 
   return null;
 }
