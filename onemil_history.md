@@ -14,6 +14,10 @@
 
 ---
 
+## 2026-06-22 — Phase 1: affiliate_payout_batch_items superadmin-only na stagingu
+
+Druhý objekt affiliate finance. Na stagingu `dxmowysntemfqfnanxua` policy `apbi_admin_all` na `public.affiliate_payout_batch_items` změněna z `is_admin()` na `public.is_superadmin()` (ALL, USING+WITH CHECK) — jediná policy; žádná jiná tabulka/RPC/EF/frontend. **Produkce `xkzhjldrojjlrkezorey` nedotčena.** Test (využit existující reálný řádek + dočasný role flip v transakci s rollbackem): superadmin→1, admin/subadmin→0, normální uživatel→0, anon→0; admin přímý INSERT zablokován RLS WITH CHECK `42501` (s reálnými FK id). Existující řádek beze změny (`total_rows=1`), role `admin:2`; policy ponechána. Rollback SQL zachyceno (návrat na `is_admin()`). Další objekt: `affiliate_payout_batches` / `apb_admin_all`. Produkční rollout: schválení + manuální `pg_dump` (PITR off). Jen staging DDL + transakční ověření.
+
 ## 2026-06-22 — Phase 1: affiliate_payout_documents superadmin-only na stagingu
 
 První objekt affiliate finance oblasti. Na stagingu `dxmowysntemfqfnanxua` policy `apd_admin_all` na `public.affiliate_payout_documents` změněna z `is_admin()` na `public.is_superadmin()` (ALL, USING+WITH CHECK) — jediná policy tabulky; žádná jiná tabulka/RPC/EF/frontend. **Produkce `xkzhjldrojjlrkezorey` nedotčena** (stále `is_admin()`). Test (seedovaný throwaway doc, FK přeskočeno `session_replication_role=replica` jen pro seed, + dočasný role flip v transakci s rollbackem): superadmin→1, admin/subadmin→0, normální uživatel→0, anon→0; admin přímý INSERT zablokován RLS WITH CHECK `42501` (s reálnými FK id). Staging data/role beze změny (`total_docs=0`, `admin:2`); policy ponechána. Rollback SQL zachyceno (návrat na `is_admin()`). Legitimní tvorba dokladů jde přes EF `create-affiliate-payout-document` (service-role, obchází RLS) → neovlivněno. Další objekt: `affiliate_payout_batch_items` / `apbi_admin_all`; write teeth = 4 affiliate RPC gates. Produkční rollout: výslovné schválení + manuální `pg_dump` před zápisem (PITR off). Jen staging DDL + transakční ověření.

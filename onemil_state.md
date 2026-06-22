@@ -1,5 +1,12 @@
 ﻿# OneMil – aktuální stav projektu
 
+## PHASE 1 — AFFILIATE_PAYOUT_BATCH_ITEMS SUPERADMIN-ONLY NA STAGINGU (22. 06. 2026)
+
+- **Staging `dxmowysntemfqfnanxua`:** `apbi_admin_all` na `public.affiliate_payout_batch_items` změněna z `is_admin()` na `public.is_superadmin()` (ALL, USING+WITH CHECK). Jediná policy; žádná jiná tabulka/RPC/EF/frontend. **Produkce `xkzhjldrojjlrkezorey` NEDOTČENA.**
+- **Test ✅** (existující reálný řádek + dočasný role flip v transakci, rollback): superadmin→1, admin/subadmin→0, normální uživatel→0, anon→0; admin přímý INSERT zablokován RLS WITH CHECK `42501`. Existující řádek beze změny (`total_rows=1`), role `admin:2`; policy ponechána.
+- **Rollback SQL:** `DROP POLICY IF EXISTS apbi_admin_all ON public.affiliate_payout_batch_items; CREATE POLICY apbi_admin_all ON public.affiliate_payout_batch_items AS PERMISSIVE FOR ALL TO authenticated USING (is_admin()) WITH CHECK (is_admin());`
+- **Další objekt:** `affiliate_payout_batches` / `apb_admin_all`. Produkční krok: schválení Pavla + manuální `pg_dump` (PITR off).
+
 ## PHASE 1 — AFFILIATE_PAYOUT_DOCUMENTS SUPERADMIN-ONLY NA STAGINGU (22. 06. 2026)
 
 První objekt affiliate finance oblasti uzamčen (staging only, vzor pokračuje).
