@@ -1,5 +1,17 @@
 # CLAUDE.md
 
+## SUBADMIN MANAGEMENT — `/admin/admins` LIVE (22. 06. 2026)
+
+Superadmin-only správa adminů je hotová a v provozu.
+
+- **`/admin/admins`** je živá stránka, přístupná **pouze pro `isSuperAdmin`** (jinak redirect na `/admin`). Nav odkaz „Správa adminů" je v sekci **Uživatelé** a vidí ho jen superadmin. Jediný superadmin = **divispavel2@gmail.com**.
+- **Povýšení existujícího uživatele** na admina (subadmina) přes přímý `user_roles` insert/update (RLS už zápis omezuje na superadmina). **Odebrání** admin práv vrací roli na `user`. Superadmin řádky jsou jen pro zobrazení — nelze je zde měnit. Subadmin dostane **vždy roli `admin`, nikdy `superadmin`**.
+- **Pozvání nového subadmina e-mailem:** Edge Function **`invite-subadmin`** je **nasazená na produkci** (`xkzhjldrojjlrkezorey`, v2, `verify_jwt=false`, auth interně). Guard: caller JWT → `auth.getUser` → musí být `superadmin` (401/403 jinak). `createUser` bez hesla → role `admin` → `generateLink('recovery', redirectTo=${SITE_URL}/reset-password)` → e-mail přes `email_queue`. Odkaz/heslo se nikdy nevrací ani neloguje. Odmítá měnit existujícího superadmina (409). Pravidlo: **neměnit role logiku — role je hardcoded `admin`.**
+- **Pozvaný subadmin** dostane e-mail, klikne na jednorázový recovery odkaz, nastaví si heslo na **`/reset-password`** (sdílený generický recovery flow; min. 8 znaků) a přihlásí se přes `/login`. `ResetPassword.tsx` detekuje expirovaný/použitý odkaz (URL error params) a loguje přesnou Supabase chybu.
+- **Status overview na stránce:** RPC **`get_admin_subadmins_overview()`** (SECURITY DEFINER, owner postgres, `SET search_path=public`, interní admin gate, execute jen `authenticated`) vrací bezpečnou projekci z `user_roles + auth.users + profiles + public.users + email_queue`. Stránka zobrazuje: „Pozvánka odeslána/čeká/selhala" (z `email_queue`, **NE** z `auth.invited_at` — invite jde přes `createUser`), „Účet aktivní/Čeká na aktivaci" (z `last_sign_in_at`), „Online teď" (reuse `get_admin_online_users(300)`, poll 30 s) a „Naposledy online" (`public.users.last_seen_at`).
+  - **Migrace `supabase/migrations/20260622_admin_subadmins_overview.sql` aplikována POUZE na staging** (`dxmowysntemfqfnanxua`, ověřeno: secdef, owner postgres, anon blokován, gate vrací 0 řádků bez admin kontextu). **NA PRODUKCI ZATÍM NEAPLIKOVÁNO** — vyžaduje ruční apply + Lovable Publish (status badge UI bude na produkci živé až po obojím).
+- **Žádná změna RLS/schématu/auth nastavení**; nedotčeno: payments, contests, vouchers, wallets, tickets, partners, Sofinity. Build prošel. Pravidla: `invite-subadmin` nevracet anon/admin (jen superadmin); `get_admin_subadmins_overview` nevracet citlivá pole (tokeny/hesla/metadata/recovery link/email body); `/admin/admins` nepřepínat z `isSuperAdmin` gate.
+
 ## PWA FOOTER INSTALL CTA — VISUAL POLISH (16. 06. 2026)
 
 `src/components/InstallAppButton.tsx` is now the active footer install UI surface near footer social icons: compact install pill, main label `Stáhnout aplikaci`, platform label `iPhone`/`Android`, lucide Apple/Chrome icons. Keep behavior unchanged: iOS opens the existing Czech Safari instruction modal, Android/Chrome uses the saved `beforeinstallprompt`, installed/standalone hides UI, desktop stays hidden unless a real install prompt exists. Build `npm run build` passed.

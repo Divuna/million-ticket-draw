@@ -14,6 +14,16 @@
 
 ---
 
+## 2026-06-22 — Správa subadminů: `/admin/admins` + invite e-mailem + status overview
+
+Dokončena superadmin-only správa adminů.
+- **`/admin/admins`** (`src/pages/AdminAdmins.tsx`) live, gated `isSuperAdmin`; nav „Správa adminů" v sekci Uživatelé jen pro superadmina (`AdminContextSubNav.tsx`). Jediný superadmin: divispavel2@gmail.com.
+- Superadmin **povyšuje** existující uživatele na `admin` a **odebírá** práva přímým zápisem do `user_roles` (RLS = superadmin-only). Subadmin dostane **vždy `admin`, nikdy `superadmin`**; superadmin řádky display-only.
+- **Pozvánka e-mailem:** EF `invite-subadmin` nasazena na produkci (`xkzhjldrojjlrkezorey` v2, `verify_jwt=false`): superadmin guard (401/403), `createUser` bez hesla → role `admin` → recovery `generateLink` (`redirectTo=${SITE_URL}/reset-password`) → e-mail přes `email_queue`; nikdy nevrací/neloguje odkaz ani heslo; existující superadmin → 409. Staging smoke kompletní (401/403/200, role admin, e-mail queued, type=recovery); produkce smoke 401/401/OPTIONS-200.
+- Pozvaný subadmin nastaví heslo na sdíleném `/reset-password` (min. 8 znaků) a přihlásí se přes `/login`. `ResetPassword.tsx` doplněn o detekci expirovaného/použitého odkazu + logování přesné Supabase chyby + české mapování. Reálný subadmin `bamadar@me.com` prošel celým flow.
+- **Status overview:** RPC `get_admin_subadmins_overview()` (migrace `supabase/migrations/20260622_admin_subadmins_overview.sql`, SECURITY DEFINER owner postgres, interní admin gate, execute authenticated). UI badge: pozvánka odeslána/čeká/selhala (z `email_queue`, ne `auth.invited_at`), účet aktivní/čeká na aktivaci (`last_sign_in_at`), online teď (reuse `get_admin_online_users(300)`), naposledy online (`public.users.last_seen_at`). **Migrace aplikována jen na staging `dxmowysntemfqfnanxua`; produkce čeká na ruční apply + Lovable Publish.**
+- Žádná změna RLS/schématu/auth nastavení; nedotčeno payments, contests, vouchers, wallets, tickets, partners, Sofinity. Commity: `3478c060`, `6efd7a8f` (nav), `69ef161a` (reset-password diagnostika), `c4f423af` (overview RPC + UI), invite EF/page dříve (`d9e87c94`).
+
 ## 2026-06-16 — PWA footer install CTA visual polish
 
 Doladěn footerový PWA install entry point na `main`: `src/components/InstallAppButton.tsx` změněn z plain `iPhone`/`Android` buttonu na kompaktní install pill s textem `Stáhnout aplikaci`, platformovým labellem a existujícími lucide ikonami Apple/Chrome. Chování PWA beze změny (iOS instruction modal, Android native prompt, installed/desktop hide). `npm run build` prošel. Žádný Supabase, Stripe, manifest, public icons, OneSignal worker, payments, routes ani unrelated UI.

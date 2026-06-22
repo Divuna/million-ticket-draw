@@ -1,5 +1,17 @@
 ﻿# OneMil – aktuální stav projektu
 
+## SPRÁVA SUBADMINŮ — `/admin/admins` LIVE (22. 06. 2026)
+
+Hotovo a v provozu. Superadmin spravuje subadminy z dedikované stránky.
+
+- **`/admin/admins`** žije, gated **pouze `isSuperAdmin`** (jinak redirect `/admin`). Nav „Správa adminů" v sekci **Uživatelé** je viditelná jen pro superadmina (injektováno v `AdminContextSubNav.tsx`, ne ve statickém configu). Jediný superadmin: **divispavel2@gmail.com**.
+- **Akce:** superadmin povýší existujícího uživatele na `admin` a odebere mu práva (zpět na `user`) přímým zápisem do `user_roles` (RLS zápis omezuje na superadmina). Superadmin řádky display-only. Role subadmina je **vždy `admin`, nikdy `superadmin`**.
+- **Pozvánka e-mailem:** EF **`invite-subadmin` NASAZENA NA PRODUKCI** (`xkzhjldrojjlrkezorey`, v2, `verify_jwt=false`). Superadmin-only guard (401 bez JWT, 403 ne-superadmin); `createUser` bez hesla → role `admin` → recovery `generateLink` (`redirectTo=${SITE_URL}/reset-password`, fallback `https://onemil.cz`) → e-mail přes `email_queue`. Nikdy nevrací/neloguje odkaz ani heslo; odmítá existujícího superadmina (409). Smoke na produkci: no-JWT→401, invalid JWT→401, OPTIONS→200 (200/403 cestu na produkci nezkoušeno — nevytvářet reálného admina bez schválení; plně ověřeno na stagingu).
+- **Aktivace pozvaného:** e-mail → jednorázový recovery odkaz → nastavení hesla na **`/reset-password`** (sdílený generický flow, min. 8 znaků, shoda hesel) → login přes `/login`. `ResetPassword.tsx` nově detekuje expirovaný/použitý odkaz (URL `error`/`error_code`) a loguje přesnou Supabase chybu + mapuje na české hlášky. Reálný subadmin `bamadar@me.com` prošel celým flow (confirmed + signed-in + seen).
+- **Status overview:** RPC **`get_admin_subadmins_overview()`** (SECURITY DEFINER, owner postgres, `SET search_path=public`, interní admin/superadmin gate, execute `authenticated`, revoke `PUBLIC/anon`). Bezpečná projekce: `user_id, email, role, created_at, email_confirmed_at, last_sign_in_at, full_name, profile_email, last_seen_at, latest_invite_status, latest_invite_sent_at`. UI badge: „Pozvánka odeslána/čeká/selhala" (zdroj `email_queue`, **NE** `auth.invited_at`), „Účet aktivní/Čeká na aktivaci" (`last_sign_in_at`), „Online teď" (reuse `get_admin_online_users(300)`, poll 30 s) + „Naposledy online" (`public.users.last_seen_at`).
+- **DB stav migrace:** `supabase/migrations/20260622_admin_subadmins_overview.sql` **aplikováno jen na staging** (`dxmowysntemfqfnanxua`). **Produkce čeká na ruční apply + Lovable Publish** — promote/demote/invite na produkci fungují i bez ní; pouze status-badge tabulka na produkci ožije až po prod apply RPC + publish.
+- **Bezpečnost:** žádná změna RLS, schématu ani auth nastavení; nedotčeno payments, contests, vouchers, wallets, tickets, partners, Sofinity. Invarianty: `invite-subadmin` = jen superadmin + role hardcoded `admin`; `get_admin_subadmins_overview` nevrací tokeny/hesla/metadata/recovery link/email body; `/admin/admins` zůstává `isSuperAdmin`-gated.
+
 ## PWA FOOTER INSTALL CTA — VIZUÁLNÍ POLISH NA `main` (16. 06. 2026)
 
 Footerový PWA install entry point zůstává u social ikon v patičce, ale už nepůsobí jako plain text `iPhone`/`Android`. `src/components/InstallAppButton.tsx` nyní renderuje kompaktní install pill s hlavním labellem `Stáhnout aplikaci`, platformovým labellem `iPhone` nebo `Android`, ikonou Apple pro iOS a ikonou Chrome/native install pro Android Chrome prompt. Umístění ve `Footer.tsx` a odstranění z top homepage action area zůstává z předchozího merge.
