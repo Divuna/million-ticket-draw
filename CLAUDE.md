@@ -1,5 +1,15 @@
 # CLAUDE.md
 
+## PHASE 1 — INFLUENCER_COMMISSIONS EXPOSURE FIX NA STAGINGU (22. 06. 2026)
+
+Oprava nadměrné expozice `public.influencer_commissions` (citlivá finanční data) na stagingu.
+- **Původní staging policy:** `influencer_commissions_read` `SELECT TO public USING (true)` → **anon i kdokoli přihlášený mohl číst všechny řádky provizí.**
+- **Opravená staging policy:** `SELECT TO authenticated USING (public.is_superadmin())`. Byla to jediná policy tabulky; **žádná jiná tabulka/RPC/EF/frontend nezměněna.** **Produkce `xkzhjldrojjlrkezorey` NEDOTČENA** (stále `TO public USING (true)`).
+- **Test (seedovaná provize + dočasný role flip v transakci s rollbackem):** superadmin→čte (1), admin/subadmin→0, normální uživatel→0, anon→0. Staging data/role beze změny (`total_rows=0`, `admin:2`); opravená policy **záměrně ponechána** ve stavu `is_superadmin()`.
+- **Rollback SQL (staging):** `DROP POLICY IF EXISTS influencer_commissions_read ON public.influencer_commissions; CREATE POLICY influencer_commissions_read ON public.influencer_commissions AS PERMISSIVE FOR SELECT TO public USING (true);`
+- **Risk note:** pokud mají influenceři někdy vidět **vlastní** provize, je nutné navrhnout samostatnou own-row policy (`influencer_partner_id` = volající) — teď takový konzument neexistuje, scope je superadmin-only.
+- **Produkční rollout:** výslovné schválení Pavla + manuální `pg_dump` PŘED zápisem (PITR off); per-objekt staging-first + rollback z `docs/rollback/phase1_baseline.sql`.
+
 ## PHASE 1 — PAYMENTS SUPERADMIN-ONLY GATE OVĚŘEN NA STAGINGU (22. 06. 2026)
 
 První reálný superadmin-only gate (pilot vzoru) na sensitive oblasti — `payments` read.

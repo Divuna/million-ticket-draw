@@ -14,6 +14,10 @@
 
 ---
 
+## 2026-06-22 — Phase 1: influencer_commissions exposure fix na stagingu
+
+Druhý Phase 1 gate. Na stagingu `dxmowysntemfqfnanxua` policy `influencer_commissions_read` na `public.influencer_commissions` změněna z `SELECT TO public USING (true)` (anon i kdokoli přihlášený četl všechny řádky citlivých provizí) na `SELECT TO authenticated USING (public.is_superadmin())`. Jediná policy tabulky; žádná jiná tabulka/RPC/EF/frontend. **Produkce `xkzhjldrojjlrkezorey` nedotčena** (stále `TO public USING (true)`). Test (seedovaná provize + dočasný role flip v transakci s rollbackem): superadmin→1, admin/subadmin→0, normální uživatel→0, anon→0. Staging data/role beze změny (`total_rows=0`, `admin:2`); opravená policy záměrně ponechána. Rollback SQL zachyceno (návrat na `TO public USING (true)`). Risk note: budoucí self-view influencerů na vlastní provize vyžaduje samostatnou own-row policy. Produkční rollout: výslovné schválení + manuální `pg_dump` před zápisem (PITR off). Jen staging DDL + transakční ověření.
+
 ## 2026-06-22 — Phase 1: payments superadmin-only gate ověřen na stagingu
 
 Pilot prvního reálného superadmin-only gate. Na stagingu `dxmowysntemfqfnanxua` policy `admin_payments_read_all` na `public.payments` změněna z `has_role(admin) OR has_role(superadmin)` na `public.is_superadmin()` — **jen tato jedna policy**; own-payment policy (`payments_select_own`, `payments_user_read`) beze změny. **Produkce `xkzhjldrojjlrkezorey` nedotčena.** Test (seedovaná pending platba cizího vlastníka + dočasný role flip v transakci s rollbackem): superadmin čte všechny (1), admin/subadmin necte cizí (0), normální uživatel necte cizí (0), anon necte (0). Staging data/role ponechány beze změny (`total_payments=0`, `admin:2`); policy persistuje. Rollback SQL zachyceno (návrat na admin∨superadmin). Validuje vzor pro další Phase 1 gating. Produkční krok: výslovné schválení + manuální `pg_dump` před zápisem (PITR off). Bez git migrace pro produkci. Jen staging DDL + transakční ověření.

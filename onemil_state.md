@@ -1,5 +1,14 @@
 ﻿# OneMil – aktuální stav projektu
 
+## PHASE 1 — INFLUENCER_COMMISSIONS EXPOSURE FIX NA STAGINGU (22. 06. 2026)
+
+Druhý Phase 1 gate na stagingu — oprava nadměrné expozice citlivých provizí.
+- **Staging `dxmowysntemfqfnanxua`:** policy `influencer_commissions_read` změněna z `SELECT TO public USING (true)` (anon/kdokoli četl vše) na `SELECT TO authenticated USING (public.is_superadmin())`. Jediná policy tabulky; **žádná jiná tabulka/RPC/EF/frontend.** **Produkce `xkzhjldrojjlrkezorey` NEDOTČENA.**
+- **Test ✅** (seedovaná provize + dočasný role flip v transakci, vše rollback): superadmin→1, admin/subadmin→0, normální uživatel→0, anon→0. Staging data/role beze změny (`total_rows=0`, `admin:2`); opravená policy záměrně ponechána.
+- **Rollback SQL:** `DROP POLICY IF EXISTS influencer_commissions_read ON public.influencer_commissions; CREATE POLICY influencer_commissions_read ON public.influencer_commissions AS PERMISSIVE FOR SELECT TO public USING (true);`
+- **Risk note:** budoucí self-view influencerů na vlastní provize vyžaduje samostatnou own-row policy.
+- **Produkční krok:** výslovné schválení Pavla + manuální `pg_dump` před zápisem (PITR off).
+
 ## PHASE 1 — PAYMENTS SUPERADMIN-ONLY GATE OVĚŘEN NA STAGINGU (22. 06. 2026)
 
 Pilot prvního reálného superadmin-only gate (vzor pro Phase 1).
