@@ -14,6 +14,10 @@
 
 ---
 
+## 2026-06-22 — invite-subadmin audit fix: caller superadmin id do `audit_logs`
+
+`subadmin_invited` řádky v `public.audit_logs` měly `user_id = null`. Root cause: `invite-subadmin` volal RPC `log_admin_action` (zapisuje `user_id = auth.uid()`), ale EF běží pod service-role klientem → `auth.uid()` NULL. Fix: EF (`supabase/functions/invite-subadmin/index.ts`, krok 7) nyní zapisuje **přímo do `public.audit_logs`** s `user_id = caller.id` (ověřený volající z JWT); metadata `entity_type='user'`, `entity_id`, `target_user_id`, `invited_email`, `new_data.role='admin'`. Historické null řádky nebackfillnuté (caller nerekonstruovatelný). Redeploy: produkce v3, staging v2. Beze změny role logiky/RLS/schématu/auth/plateb/soutěží/voucherů/peněženky/tiketů/partnerů/Sofinity. Commit `0808aaad`.
+
 ## 2026-06-22 — Správa subadminů: `/admin/admins` + invite e-mailem + status overview
 
 Dokončena superadmin-only správa adminů.

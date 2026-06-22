@@ -1,5 +1,13 @@
 ﻿# OneMil – aktuální stav projektu
 
+## INVITE-SUBADMIN AUDIT FIX — CALLER ID V `audit_logs` (22. 06. 2026)
+
+- **Problém:** `subadmin_invited` řádky v `public.audit_logs` měly `user_id = null` → nešlo zjistit, který superadmin pozvánku poslal. Root cause: `invite-subadmin` volal RPC `log_admin_action`, jenž zapisuje `user_id = auth.uid()`; EF běží pod service-role klientem, kde `auth.uid()` je NULL.
+- **Fix:** `invite-subadmin` (`supabase/functions/invite-subadmin/index.ts`, krok 7) zapisuje **přímo do `public.audit_logs`** s `user_id = caller.id` (ověřený volající z JWT). Metadata: `entity_type='user'`, `entity_id` (pozvaný), `target_user_id`, `invited_email`, `new_data.role='admin'`. Best-effort.
+- **Historické null řádky NEbackfillnuté** (původní caller nelze rekonstruovat).
+- **Nasazení:** produkce `invite-subadmin` **v3**, staging v2 (deploy = compile check ✓).
+- **Beze změny:** role logika (hardcoded `admin`), email/generateLink, RPC `log_admin_action`, RLS, schéma, auth, payments, contests, vouchers, wallets, tickets, partners, Sofinity. Invariant: audit zápis v `invite-subadmin` nevracet na `log_admin_action`.
+
 ## SPRÁVA SUBADMINŮ — `/admin/admins` LIVE (22. 06. 2026)
 
 Hotovo a v provozu. Superadmin spravuje subadminy z dedikované stránky.

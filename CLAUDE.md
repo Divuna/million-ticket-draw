@@ -1,5 +1,14 @@
 # CLAUDE.md
 
+## INVITE-SUBADMIN AUDIT FIX — CALLER ID V `audit_logs` (22. 06. 2026)
+
+Opraveno auditní logování pozvánek subadminů.
+- **Root cause:** `invite-subadmin` volal RPC `log_admin_action`, který zapisuje `audit_logs.user_id = auth.uid()`. EF běží pod **service-role** klientem → `auth.uid()` je NULL → `subadmin_invited` řádky měly `user_id = null` a nešlo zjistit, který superadmin pozvánku poslal.
+- **Nové chování:** `invite-subadmin` zapisuje **přímo do `public.audit_logs`** s `user_id = caller.id` (ověřený volající z JWT, krok 1 funkce). Metadata obsahují `entity_type='user'`, `entity_id` (= pozvaný), `target_user_id`, `invited_email` a `new_data.role='admin'`. Best-effort (try/catch, nikdy neblokuje pozvánku).
+- **Historické `subadmin_invited` řádky s `user_id=null` NEBYLY backfillnuté** — původního volajícího z nich nelze rekonstruovat. Nové pozvánky už superadmina zaznamenávají správně.
+- **Produkce:** `invite-subadmin` přenasazena jako **v3** (`xkzhjldrojjlrkezorey`); staging v2.
+- **Beze změny:** role logika (role hardcoded `admin`, nikdy superadmin), email sending, generateLink, samotný RPC `log_admin_action`, RLS, DB schéma, auth, payments, contests, vouchers, wallets, tickets, partners, Sofinity. Pravidlo: `invite-subadmin` audit zápis nevracet zpět na `log_admin_action` (ztratil by caller id pod service-role).
+
 ## SUBADMIN MANAGEMENT — `/admin/admins` LIVE (22. 06. 2026)
 
 Superadmin-only správa adminů je hotová a v provozu.
