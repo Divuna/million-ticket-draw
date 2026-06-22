@@ -1,5 +1,14 @@
 # CLAUDE.md
 
+## PHASE 1 — PAYMENTS SUPERADMIN-ONLY GATE OVĚŘEN NA STAGINGU (22. 06. 2026)
+
+První reálný superadmin-only gate (pilot vzoru) na sensitive oblasti — `payments` read.
+- **Staging `dxmowysntemfqfnanxua`:** policy `admin_payments_read_all` na `public.payments` změněna z `has_role(admin) OR has_role(superadmin)` na `public.is_superadmin()`. **Změněna JEN tato jedna policy**; own-payment policy (`payments_select_own`, `payments_user_read`) beze změny. **Produkce `xkzhjldrojjlrkezorey` NEDOTČENA.**
+- **Test (seedovaná pending platba cizího vlastníka + dočasný role flip v transakci s rollbackem):** superadmin čte všechny platby (1); admin/subadmin necte cizí platby (0); normální uživatel necte cizí (0); anon necte (0). Staging data i role ponechány beze změny (`total_payments=0`, `admin:2`).
+- **Rollback SQL (staging):** `DROP POLICY IF EXISTS admin_payments_read_all ON public.payments; CREATE POLICY admin_payments_read_all ON public.payments AS PERMISSIVE FOR SELECT TO authenticated USING ((has_role(auth.uid(),'admin'::app_role) OR has_role(auth.uid(),'superadmin'::app_role)));`
+- **Frontend dopad (očekávaný, ne bug):** `AdminPayments.tsx` `.from('payments')` — subadmin po gate uvidí prázdný seznam (jen vlastní řádky), ne chybu; superadmin vidí vše.
+- **Validuje vzor pro další Phase 1 gating.** Pravidlo: produkční krok vyžaduje výslovné schválení Pavla + manuální `pg_dump` PŘED zápisem (PITR je off); per-objekt staging-first + rollback SQL z `docs/rollback/phase1_baseline.sql`. (Staging `payments` policy ponechána ve stavu `is_superadmin()`.)
+
 ## PHASE 1 — `is_superadmin()` HELPER NA STAGINGU (22. 06. 2026)
 
 První reálná Phase 1 změna: gate helper `public.is_superadmin(check_user_id uuid default auth.uid())`. Vrací true jen když má uživatel `role='superadmin'` v `user_roles`. SECURITY DEFINER, owner postgres, `SET search_path=public`, execute jen `authenticated` (revoke public/anon). **Aditivní — žádná RLS/RPC/EF/frontend změna.**

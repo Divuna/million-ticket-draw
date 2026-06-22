@@ -1,5 +1,14 @@
 ﻿# OneMil – aktuální stav projektu
 
+## PHASE 1 — PAYMENTS SUPERADMIN-ONLY GATE OVĚŘEN NA STAGINGU (22. 06. 2026)
+
+Pilot prvního reálného superadmin-only gate (vzor pro Phase 1).
+- **Staging `dxmowysntemfqfnanxua`:** `payments` policy `admin_payments_read_all` změněna na `public.is_superadmin()` (z `has_role admin OR superadmin`). **Jen tato jedna policy**; own-payment policy beze změny. **Produkce `xkzhjldrojjlrkezorey` NEDOTČENA.**
+- **Test ✅** (seedovaná pending platba cizího vlastníka + dočasný role flip v transakci, vše rollback): superadmin→všechny (1), admin/subadmin→cizí 0, normální uživatel→cizí 0, anon→0. Staging data/role beze změny (`total_payments=0`, `admin:2`); policy persistuje jako `is_superadmin()`.
+- **Rollback SQL:** `DROP POLICY IF EXISTS admin_payments_read_all ON public.payments; CREATE POLICY admin_payments_read_all ON public.payments AS PERMISSIVE FOR SELECT TO authenticated USING ((has_role(auth.uid(),'admin'::app_role) OR has_role(auth.uid(),'superadmin'::app_role)));`
+- **Frontend (očekávané):** subadmin na `/admin/payments` uvidí prázdný seznam (RLS filtruje), ne chybu.
+- **Další produkční krok:** výslovné schválení Pavla + manuální `pg_dump` před zápisem (PITR off); per-objekt staging-first + rollback z `docs/rollback/phase1_baseline.sql`.
+
 ## PHASE 1 — `is_superadmin()` HELPER NA STAGINGU (22. 06. 2026)
 
 První reálná Phase 1 změna (gate helper, zatím nic neomezuje).

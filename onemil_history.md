@@ -14,6 +14,10 @@
 
 ---
 
+## 2026-06-22 — Phase 1: payments superadmin-only gate ověřen na stagingu
+
+Pilot prvního reálného superadmin-only gate. Na stagingu `dxmowysntemfqfnanxua` policy `admin_payments_read_all` na `public.payments` změněna z `has_role(admin) OR has_role(superadmin)` na `public.is_superadmin()` — **jen tato jedna policy**; own-payment policy (`payments_select_own`, `payments_user_read`) beze změny. **Produkce `xkzhjldrojjlrkezorey` nedotčena.** Test (seedovaná pending platba cizího vlastníka + dočasný role flip v transakci s rollbackem): superadmin čte všechny (1), admin/subadmin necte cizí (0), normální uživatel necte cizí (0), anon necte (0). Staging data/role ponechány beze změny (`total_payments=0`, `admin:2`); policy persistuje. Rollback SQL zachyceno (návrat na admin∨superadmin). Validuje vzor pro další Phase 1 gating. Produkční krok: výslovné schválení + manuální `pg_dump` před zápisem (PITR off). Bez git migrace pro produkci. Jen staging DDL + transakční ověření.
+
 ## 2026-06-22 — Phase 1: `is_superadmin()` helper aplikován na staging
 
 První reálná Phase 1 změna. Migrace `supabase/migrations/20260622_is_superadmin_helper.sql` (commit `059dd981`) vytváří `public.is_superadmin(check_user_id uuid default auth.uid())` → true jen pro `role='superadmin'` v `user_roles`; SECURITY DEFINER, owner postgres, `SET search_path=public`, execute jen `authenticated` (revoke public/anon). **Aplikováno POUZE na staging `dxmowysntemfqfnanxua`; produkce `xkzhjldrojjlrkezorey` nedotčena.** Staging testy: superadmin→true, admin/subadmin→false, neznámý→false, anon→false, authenticated execute ✅, anon ✗, secdef owner postgres (true case přes dočasný transaction-rollback flip, bez rezidua). Aditivní — žádná RLS/RPC/EF/frontend změna. Rollback: `DROP FUNCTION IF EXISTS public.is_superadmin(uuid);`. Další krok (samostatně): aplikovat helper na produkci před superadmin-only gatingem.
