@@ -195,16 +195,29 @@ serve(async (req: Request) => {
     }
 
     // ── 7. Best-effort audit log ───────────────────────────────────────────
+    // Insert directly into public.audit_logs instead of the log_admin_action RPC:
+    // that RPC stamps user_id = auth.uid(), which is NULL under the service-role
+    // client, so the inviting superadmin was lost. Here we write the verified
+    // caller (caller.id) as audit_logs.user_id so it's clear who sent the invite.
     try {
-      await supabaseAdmin.rpc("log_admin_action", {
-        action_name: "subadmin_invited",
-        entity_type: "user",
-        entity_id: inviteeId,
-        new_data: { role: "admin", email },
+      const { error: auditError } = await supabaseAdmin.from("audit_logs").insert({
+        event: "subadmin_invited",
+        user_id: caller.id,
+        metadata: {
+          entity_type: "user",
+          entity_id: inviteeId,
+          target_user_id: inviteeId,
+          invited_email: email,
+          new_data: { role: "admin", email },
+          admin_action: true,
+        },
       });
+      if (auditError) {
+        console.error("invite-subadmin: audit_logs insert failed", auditError.message);
+      }
     } catch (logErr) {
       console.error(
-        "invite-subadmin: log_admin_action failed",
+        "invite-subadmin: audit_logs insert threw",
         logErr instanceof Error ? logErr.message : String(logErr),
       );
     }
