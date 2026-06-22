@@ -25,13 +25,23 @@ interface ManagedUser {
 
 /**
  * Identity fallback chain for a row:
- * 1) full name from profiles, 2) email, 3) shortened user_id.
+ * 1) full name from profiles,
+ * 2) profiles.email,
+ * 3) current authenticated user's email (only for the logged-in user's own row),
+ * 4) shortened user_id as last resort.
+ *
+ * `sessionEmail` is the auth-session email of the viewer; `sessionUserId` is their id.
  */
-const displayName = (u: ManagedUser): string => {
+const displayName = (
+  u: ManagedUser,
+  sessionEmail: string | null,
+  sessionUserId: string | null,
+): string => {
   const name =
     u.name || [u.first_name, u.last_name].filter(Boolean).join(' ').trim();
   if (name) return name;
   if (u.email) return u.email;
+  if (sessionEmail && sessionUserId && u.id === sessionUserId) return sessionEmail;
   return `#${u.id.slice(0, 8)}`;
 };
 
@@ -281,6 +291,7 @@ const AdminAdmins: React.FC = () => {
           <CardDescription>
             Pouze hlavní admin (superadmin) může přidávat a odebírat subadminy.
             Superadmin účet je pouze pro zobrazení a nelze ho zde měnit.
+            U vašeho vlastního účtu se e-mail bere z přihlášení, pokud chybí v profilu.
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -299,7 +310,7 @@ const AdminAdmins: React.FC = () => {
                 {adminLevelUsers.map((u) => (
                   <TableRow key={u.id}>
                     <TableCell className="font-medium">
-                      {displayName(u)}
+                      {displayName(u, user?.email ?? null, user?.id ?? null)}
                     </TableCell>
                     <TableCell>{renderRoleBadge(u.role)}</TableCell>
                     <TableCell className="text-right">
@@ -366,7 +377,7 @@ const AdminAdmins: React.FC = () => {
                 {promotableUsers.map((u) => (
                   <TableRow key={u.id}>
                     <TableCell className="font-medium">
-                      {displayName(u)}
+                      {displayName(u, user?.email ?? null, user?.id ?? null)}
                     </TableCell>
                     <TableCell>{renderRoleBadge(u.role || 'user')}</TableCell>
                     <TableCell className="text-right">
