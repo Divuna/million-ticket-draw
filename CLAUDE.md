@@ -1,5 +1,15 @@
 # CLAUDE.md
 
+## PHASE 1 — AFFILIATE_PAYOUT_DOCUMENTS SUPERADMIN-ONLY NA STAGINGU (22. 06. 2026)
+
+První objekt affiliate finance oblasti uzamčen na superadmina (staging only).
+- **Staging `dxmowysntemfqfnanxua`:** policy `apd_admin_all` na `public.affiliate_payout_documents` změněna z `is_admin()` (ALL, USING+WITH CHECK) na `public.is_superadmin()` (ALL, USING+WITH CHECK). **Změněna JEN tato jedna policy** (tabulka má jedinou policy); žádná jiná tabulka/RPC/EF/frontend. **Produkce `xkzhjldrojjlrkezorey` NEDOTČENA** (stále `is_admin()`).
+- **Test (seedovaný throwaway doc — FK přeskočeno `session_replication_role=replica` jen pro seed — + dočasný role flip v transakci s rollbackem):** superadmin→čte (1), admin/subadmin→0, normální uživatel→0, anon→0; **admin přímý INSERT zablokován RLS WITH CHECK (`42501`)** (testováno s reálnými FK id, aby blokoval jen RLS). Staging data/role beze změny (`total_docs=0`, `admin:2`); opravená policy **záměrně ponechána**.
+- **Rollback SQL (staging):** `DROP POLICY IF EXISTS apd_admin_all ON public.affiliate_payout_documents; CREATE POLICY apd_admin_all ON public.affiliate_payout_documents AS PERMISSIVE FOR ALL TO authenticated USING (is_admin()) WITH CHECK (is_admin());`
+- **Pozn.:** legitimní vytváření dokladů jde přes EF `create-affiliate-payout-document` (service-role, obchází RLS) → neovlivněno. Přímé admin čtení (`AdminAffiliatePayoutDetail.tsx`) je nyní superadmin-only.
+- **Další affiliate finance objekt:** `affiliate_payout_batch_items` / `apbi_admin_all` (taky jediná `ALL is_admin()` policy). Pak `affiliate_payout_batches`, pak `affiliate_commissions` (2 policy, zachovat affiliate-own SELECT branch), nakonec 4 RPC gates (write teeth — SECURITY DEFINER obchází RLS).
+- **Produkční rollout:** výslovné schválení Pavla + manuální `pg_dump` PŘED zápisem (PITR off); per-objekt staging-first + rollback z `docs/rollback/phase1_baseline.sql`.
+
 ## PHASE 1 — INFLUENCER_COMMISSIONS EXPOSURE FIX NA STAGINGU (22. 06. 2026)
 
 Oprava nadměrné expozice `public.influencer_commissions` (citlivá finanční data) na stagingu.

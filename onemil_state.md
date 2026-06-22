@@ -1,5 +1,14 @@
 ﻿# OneMil – aktuální stav projektu
 
+## PHASE 1 — AFFILIATE_PAYOUT_DOCUMENTS SUPERADMIN-ONLY NA STAGINGU (22. 06. 2026)
+
+První objekt affiliate finance oblasti uzamčen (staging only, vzor pokračuje).
+- **Staging `dxmowysntemfqfnanxua`:** `apd_admin_all` na `public.affiliate_payout_documents` změněna z `is_admin()` na `public.is_superadmin()` (ALL, USING+WITH CHECK). Jediná policy tabulky; žádná jiná tabulka/RPC/EF/frontend. **Produkce `xkzhjldrojjlrkezorey` NEDOTČENA.**
+- **Test ✅** (seedovaný throwaway doc + dočasný role flip v transakci, vše rollback): superadmin→1, admin/subadmin→0, normální uživatel→0, anon→0; **admin přímý INSERT zablokován RLS WITH CHECK `42501`**. Staging data/role beze změny (`total_docs=0`, `admin:2`); policy persistuje.
+- **Rollback SQL:** `DROP POLICY IF EXISTS apd_admin_all ON public.affiliate_payout_documents; CREATE POLICY apd_admin_all ON public.affiliate_payout_documents AS PERMISSIVE FOR ALL TO authenticated USING (is_admin()) WITH CHECK (is_admin());`
+- **Další objekt:** `affiliate_payout_batch_items` / `apbi_admin_all`. Pozn.: write teeth = 4 affiliate RPC gates (SECURITY DEFINER obchází RLS) — až po RLS lockech.
+- **Produkční krok:** výslovné schválení Pavla + manuální `pg_dump` před zápisem (PITR off).
+
 ## PHASE 1 — INFLUENCER_COMMISSIONS EXPOSURE FIX NA STAGINGU (22. 06. 2026)
 
 Druhý Phase 1 gate na stagingu — oprava nadměrné expozice citlivých provizí.
