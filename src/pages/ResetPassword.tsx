@@ -25,6 +25,30 @@ export default function ResetPassword() {
   const [password, setPassword] = useState("");
   const [confirm, setConfirm] = useState("");
   const [loading, setLoading] = useState(false);
+  const [linkError, setLinkError] = useState<string | null>(null);
+
+  // Detect an expired / already-used recovery link. Supabase returns the failure
+  // in the URL hash (or query) as error / error_code / error_description — e.g. a
+  // one-time link pre-fetched by an email scanner arrives already consumed. Without
+  // this, the page could fall through to "update" mode on a stale session and then
+  // updateUser fails with an opaque error.
+  useEffect(() => {
+    const parse = (raw: string) =>
+      new URLSearchParams(raw.startsWith("#") || raw.startsWith("?") ? raw.slice(1) : raw);
+    const hp = parse(window.location.hash || "");
+    const sp = parse(window.location.search || "");
+    const err = hp.get("error") || sp.get("error");
+    const errCode = hp.get("error_code") || sp.get("error_code");
+    const errDesc = hp.get("error_description") || sp.get("error_description");
+    if (err || errCode) {
+      // Log the exact Supabase error so the cause is diagnosable.
+      console.error("ResetPassword: recovery link error", { err, errCode, errDesc });
+      setLinkError(
+        "Odkaz pro nastavení hesla vypršel nebo už byl použit. Vyžádejte si prosím nový odkaz níže.",
+      );
+      setMode("request");
+    }
+  }, []);
 
   useEffect(() => {
     if (isPasswordRecovery || session?.user) {
@@ -93,8 +117,28 @@ export default function ResetPassword() {
       await supabase.auth.signOut();
       navigate("/login", { replace: true });
     } catch (error) {
-      const message = error instanceof Error ? error.message : "Zkuste to prosím znovu.";
-      toast.error("Heslo se nepodařilo změnit", { description: message });
+      // Log the exact Supabase auth error so the failure is diagnosable.
+      console.error("ResetPassword: updateUser failed", error);
+      const raw = error instanceof Error ? error.message : "";
+      const lower = raw.toLowerCase();
+      let description = raw || "Zkuste to prosím znovu.";
+      if (
+        lower.includes("session") ||
+        lower.includes("jwt") ||
+        lower.includes("token") ||
+        lower.includes("expired") ||
+        lower.includes("invalid")
+      ) {
+        // Most common real cause: the one-time recovery link expired or was already
+        // used (e.g. pre-fetched by an email scanner), so there is no valid session.
+        description =
+          "Odkaz pro nastavení hesla vypršel nebo už byl použit. Vyžádejte si prosím nový odkaz.";
+      } else if (lower.includes("weak") || lower.includes("at least") || lower.includes("should be at least")) {
+        description = "Heslo je příliš slabé. Zvolte silnější heslo (alespoň 8 znaků).";
+      } else if (lower.includes("different from the old")) {
+        description = "Nové heslo musí být jiné než to staré.";
+      }
+      toast.error("Heslo se nepodařilo změnit", { description });
     } finally {
       setLoading(false);
     }
@@ -120,8 +164,13 @@ export default function ResetPassword() {
                 </div>
                 <CardTitle className="text-heading-gold">Obnovení hesla</CardTitle>
                 <CardDescription>
-                  Zadejte e-mail k vašemu zákaznickému účtu. Pošleme vám odkaz pro nastavení nového hesla.
+                  Zadejte e-mail k vašemu účtu. Pošleme vám odkaz pro nastavení nového hesla.
                 </CardDescription>
+                {linkError && (
+                  <p className="mt-2 text-sm rounded-md border border-destructive/40 bg-destructive/10 px-3 py-2 text-destructive">
+                    {linkError}
+                  </p>
+                )}
               </CardHeader>
               <CardContent>
                 <div className="space-y-2">
