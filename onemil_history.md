@@ -14,6 +14,10 @@
 
 ---
 
+## 2026-06-22 — Phase 1 backup stav potvrzen (subadmin permissions readiness)
+
+Ověřen produkční backup stav `xkzhjldrojjlrkezorey` (Dashboard → Database → Backups) před superadmin-only re-gatingem. Plánované denní DB zálohy existují; poslední viditelná **22. 06. 2026 02:16:36 UTC**, starší 21./20./19./18./17./16./15. 06. 2026 (~7denní okno). **PITR NENÍ zapnuté** (Pro Plan add-on). **Storage objekty nejsou v DB zálohách.** Rollback baseline = `docs/rollback/phase1_baseline.sql` (živý zachycený RLS+RPC stav, autoritativní kvůli migration-history driftu); checklist = `docs/rollback/phase1_backup_checklist.md`. Phase 1 pravidlo: jen malé staged migrace + rollback SQL z baseline + manuální `pg_dump` před zápisem. Jen dokumentace — žádné SQL/RLS/EF/frontend/produkční změny. Commit `60587fa8` (baseline) + tento záznam.
+
 ## 2026-06-22 — invite-subadmin audit fix: caller superadmin id do `audit_logs`
 
 `subadmin_invited` řádky v `public.audit_logs` měly `user_id = null`. Root cause: `invite-subadmin` volal RPC `log_admin_action` (zapisuje `user_id = auth.uid()`), ale EF běží pod service-role klientem → `auth.uid()` NULL. Fix: EF (`supabase/functions/invite-subadmin/index.ts`, krok 7) nyní zapisuje **přímo do `public.audit_logs`** s `user_id = caller.id` (ověřený volající z JWT); metadata `entity_type='user'`, `entity_id`, `target_user_id`, `invited_email`, `new_data.role='admin'`. Historické null řádky nebackfillnuté (caller nerekonstruovatelný). Redeploy: produkce v3, staging v2. Beze změny role logiky/RLS/schématu/auth/plateb/soutěží/voucherů/peněženky/tiketů/partnerů/Sofinity. Commit `0808aaad`.

@@ -1,5 +1,14 @@
 ﻿# OneMil – aktuální stav projektu
 
+## PHASE 1 (SUBADMIN PERMISSIONS) — BACKUP STAV POTVRZEN (22. 06. 2026)
+
+Backup readiness před superadmin-only re-gatingem (Phase 1) ověřen v Supabase Dashboard → Database → Backups (produkce `xkzhjldrojjlrkezorey`):
+- ✅ **Plánované denní DB zálohy existují.** Poslední viditelná: **22. 06. 2026 02:16:36 UTC**; starší: 21., 20., 19., 18., 17., 16., 15. 06. 2026 (~7denní rolling okno).
+- ⚠️ **PITR NENÍ zapnuté** (dashboard = Pro Plan add-on) → obnova jen na denní body.
+- ⚠️ **Storage objekty NEJSOU v DB zálohách** (zálohovat zvlášť).
+- **Rollback artefakty:** `docs/rollback/phase1_baseline.sql` (živý zachycený stav RLS+RPC, autoritativní reverzní zdroj kvůli migration-history driftu) + `docs/rollback/phase1_backup_checklist.md`.
+- **Pravidlo Phase 1:** jen malé staged migrace, každá s rollback SQL z `phase1_baseline.sql`; před produkčním zápisem doporučen manuální `pg_dump`. Žádné SQL/RLS/EF/frontend/produkční chování nezměněno.
+
 ## INVITE-SUBADMIN AUDIT FIX — CALLER ID V `audit_logs` (22. 06. 2026)
 
 - **Problém:** `subadmin_invited` řádky v `public.audit_logs` měly `user_id = null` → nešlo zjistit, který superadmin pozvánku poslal. Root cause: `invite-subadmin` volal RPC `log_admin_action`, jenž zapisuje `user_id = auth.uid()`; EF běží pod service-role klientem, kde `auth.uid()` je NULL.

@@ -12,9 +12,12 @@
 - **Live definitions captured** into [`phase1_baseline.sql`](./phase1_baseline.sql) for all Phase 1 RLS policies + RPCs (read-only `pg_policies` + `pg_get_functiondef`).
 - **Current gate confirmed:** every sensitive RLS policy / RPC admits a subadmin (`role='admin'`) — they use `is_admin()`, `has_role(...,'admin') OR has_role(...,'superadmin')`, or `role IN ('admin','superadmin')`. This is exactly what Phase 1 must tighten.
 
-## 2. What could NOT be confirmed by tools (Pavel must check manually)
-- **PITR (Point-In-Time Recovery) enabled? Unknown.** The Supabase MCP exposes no backup/PITR endpoint and `get_project` returns no backup metadata.
-- **Backup schedule / latest backup timestamp? Unknown** via tools.
+## 2. Backup status — CONFIRMED in Dashboard (22 Jun 2026)
+- ✅ **Scheduled daily database backups exist** (Dashboard → Database → Backups).
+- ✅ **Latest visible backup: 22 Jun 2026 02:16:36 UTC.**
+- ✅ Older daily backups visible for **21, 20, 19, 18, 17, 16, 15 Jun 2026** (rolling ~7-day window).
+- ⚠️ **Point-In-Time Recovery (PITR) is NOT enabled** — the dashboard shows it as a **Pro Plan add-on**. Recovery granularity is therefore limited to the daily backup points above, not arbitrary timestamps.
+- ⚠️ **Storage objects are NOT included** in database backups (buckets / uploaded files must be backed up separately if needed).
 - **⚠️ Migration-history drift:** several live objects (e.g. `public.get_admin_subadmins_overview`, recent SEC01/RLS tweaks) are **not** represented as tracked migration files — they were applied via the SQL editor. **The git migration files are NOT a reliable reverse source.** `phase1_baseline.sql` (live capture) is the authoritative rollback artifact.
 
 ## 3. Exact manual steps Pavel must check in Supabase Dashboard
@@ -46,9 +49,9 @@ Take an explicit snapshot regardless of PITR status (DB is only ~2.3 GB → fast
 - **Data safety:** only definitions change, not table rows; the `pg_dump` is the last-resort full restore.
 
 ## 7. Pre-change checklist (all required before Phase 1)
-- [ ] Dashboard: PITR status confirmed + retention noted.
-- [ ] Dashboard: latest backup timestamp noted.
-- [ ] Manual `pg_dump` / backup download taken and stored off-machine.
+- [x] Dashboard: PITR status confirmed — **NOT enabled** (Pro Plan add-on); daily backups present (22 Jun 2026 02:16:36 UTC latest, 7-day rolling window).
+- [x] Dashboard: latest backup timestamp noted (22 Jun 2026 02:16:36 UTC).
+- [ ] Manual `pg_dump` / backup download taken and stored off-machine (recommended immediately before Phase 1, since PITR is off → only daily restore points).
 - [ ] `phase1_baseline.sql` present in repo (✅) and re-verified against live just before changes.
 - [ ] Current versions of the 4 affected Edge Functions recorded.
 - [ ] Staging (`dxmowysntemfqfnanxua`) used first for every sub-step; full superadmin admin smoke + targeted page test green.

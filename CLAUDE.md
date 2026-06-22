@@ -1,5 +1,14 @@
 # CLAUDE.md
 
+## PHASE 1 (SUBADMIN PERMISSIONS) — BACKUP STAV POTVRZEN (22. 06. 2026, jen dokumentace)
+
+Před plánovaným superadmin-only re-gatingem (Phase 1) ověřen produkční backup stav `xkzhjldrojjlrkezorey` v Dashboard → Database → Backups.
+- **Plánované denní DB zálohy existují.** Poslední viditelná: **22. 06. 2026 02:16:36 UTC**. Starší denní zálohy: 21., 20., 19., 18., 17., 16., 15. 06. 2026 (rolling ~7 dní).
+- **PITR (point-in-time recovery) NENÍ zapnuté** — dashboard ho ukazuje jako Pro Plan add-on. Obnova jen na denní body, ne na libovolný čas.
+- **Storage objekty NEJSOU součástí DB záloh** (buckety/soubory zálohovat zvlášť).
+- **Rollback baseline:** `docs/rollback/phase1_baseline.sql` (živý zachycený stav RLS policy + RPC z produkce, 22. 06. 2026) je autoritativní reverzní zdroj — migrační soubory v gitu NEodpovídají plně živému stavu (drift). Checklist: `docs/rollback/phase1_backup_checklist.md`.
+- **Pravidlo pro Phase 1:** postupovat jen po malých staged migracích, každá s rollback SQL odvozeným z `phase1_baseline.sql`; před zápisem doporučen manuální `pg_dump` (PITR je off). Žádné SQL/RLS/EF/frontend/produkční chování nezměněno.
+
 ## INVITE-SUBADMIN AUDIT FIX — CALLER ID V `audit_logs` (22. 06. 2026)
 
 Opraveno auditní logování pozvánek subadminů.
