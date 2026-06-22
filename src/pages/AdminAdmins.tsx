@@ -10,7 +10,7 @@ import { toast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { useUserRole } from '@/hooks/useUserRole';
-import { Search, ShieldCheck, ShieldOff, ShieldPlus, Crown } from 'lucide-react';
+import { Search, ShieldCheck, ShieldOff, ShieldPlus, Crown, Mail } from 'lucide-react';
 
 interface ManagedUser {
   id: string;
@@ -62,6 +62,8 @@ const AdminAdmins: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [busyId, setBusyId] = useState<string | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
+  const [inviteEmail, setInviteEmail] = useState('');
+  const [inviting, setInviting] = useState(false);
 
   useEffect(() => {
     if (authLoading || roleLoading) return;
@@ -218,6 +220,61 @@ const AdminAdmins: React.FC = () => {
       });
     } finally {
       setBusyId(null);
+    }
+  };
+
+  /**
+   * Invite a brand-new subadmin by email — no prior OneMil registration needed.
+   * Server-side Edge Function verifies the caller is superadmin, creates/reuses
+   * the auth user, assigns role 'admin' (never superadmin) and emails a one-time
+   * password setup link. The link is never returned to the browser.
+   */
+  const inviteSubadmin = async () => {
+    if (!isSuperAdmin) return;
+    const email = inviteEmail.trim().toLowerCase();
+    if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+      toast({
+        title: 'Neplatný e-mail',
+        description: 'Zadejte platnou e-mailovou adresu.',
+        variant: 'destructive',
+      });
+      return;
+    }
+
+    try {
+      setInviting(true);
+      const { data, error } = await supabase.functions.invoke('invite-subadmin', {
+        body: { email },
+      });
+
+      if (error || !data?.success) {
+        const code = (data as any)?.message || error?.message || '';
+        const description =
+          code === 'target_is_superadmin'
+            ? 'Tento účet je superadmin a nelze ho takto měnit.'
+            : 'Nepodařilo se odeslat pozvánku. Zkuste to prosím znovu.';
+        toast({ title: 'Chyba', description, variant: 'destructive' });
+        return;
+      }
+
+      setInviteEmail('');
+      await fetchUsers();
+      toast({
+        title: 'Pozvánka odeslána',
+        description:
+          (data as any)?.invite_link_pending
+            ? 'Subadmin byl vytvořen, ale e-mail s odkazem se nepodařilo odeslat. Zkuste pozvánku zopakovat.'
+            : 'Subadminovi byl odeslán e-mail s odkazem pro nastavení hesla.',
+      });
+    } catch (err) {
+      console.error('Error inviting subadmin:', err);
+      toast({
+        title: 'Chyba',
+        description: 'Nepodařilo se odeslat pozvánku.',
+        variant: 'destructive',
+      });
+    } finally {
+      setInviting(false);
     }
   };
 
@@ -402,6 +459,43 @@ const AdminAdmins: React.FC = () => {
               </TableBody>
             </Table>
           )}
+        </CardContent>
+      </Card>
+
+      <Card className="luxury-card">
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <Mail className="h-5 w-5" /> Pozvat subadmina e-mailem
+          </CardTitle>
+          <CardDescription>
+            Zadejte e-mail nového subadmina. Systém založí účet a pošle odkaz pro
+            nastavení hesla — dotyčný se nemusí předem registrovat jako běžný uživatel.
+            Pozvaný účet vždy dostane roli subadmin, nikdy superadmin.
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <form
+            className="flex flex-col gap-3 sm:flex-row sm:items-center"
+            onSubmit={(e) => {
+              e.preventDefault();
+              inviteSubadmin();
+            }}
+          >
+            <div className="relative max-w-md flex-1">
+              <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+              <Input
+                type="email"
+                className="pl-9"
+                placeholder="email@firma.cz"
+                value={inviteEmail}
+                onChange={(e) => setInviteEmail(e.target.value)}
+                disabled={inviting}
+              />
+            </div>
+            <Button type="submit" className="gap-1" disabled={inviting}>
+              <ShieldPlus className="h-4 w-4" /> Pozvat subadmina
+            </Button>
+          </form>
         </CardContent>
       </Card>
     </div>

@@ -78,6 +78,9 @@ verify_jwt = false
 [functions.approve-affiliate-company-lead]
 verify_jwt = false
 
+[functions.invite-subadmin]
+verify_jwt = false
+
 [functions.rotate-partner-api-key]
 verify_jwt = false
 
