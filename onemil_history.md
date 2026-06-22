@@ -14,6 +14,10 @@
 
 ---
 
+## 2026-06-22 — Phase 1: `is_superadmin()` helper aplikován na staging
+
+První reálná Phase 1 změna. Migrace `supabase/migrations/20260622_is_superadmin_helper.sql` (commit `059dd981`) vytváří `public.is_superadmin(check_user_id uuid default auth.uid())` → true jen pro `role='superadmin'` v `user_roles`; SECURITY DEFINER, owner postgres, `SET search_path=public`, execute jen `authenticated` (revoke public/anon). **Aplikováno POUZE na staging `dxmowysntemfqfnanxua`; produkce `xkzhjldrojjlrkezorey` nedotčena.** Staging testy: superadmin→true, admin/subadmin→false, neznámý→false, anon→false, authenticated execute ✅, anon ✗, secdef owner postgres (true case přes dočasný transaction-rollback flip, bez rezidua). Aditivní — žádná RLS/RPC/EF/frontend změna. Rollback: `DROP FUNCTION IF EXISTS public.is_superadmin(uuid);`. Další krok (samostatně): aplikovat helper na produkci před superadmin-only gatingem.
+
 ## 2026-06-22 — Phase 1 backup stav potvrzen (subadmin permissions readiness)
 
 Ověřen produkční backup stav `xkzhjldrojjlrkezorey` (Dashboard → Database → Backups) před superadmin-only re-gatingem. Plánované denní DB zálohy existují; poslední viditelná **22. 06. 2026 02:16:36 UTC**, starší 21./20./19./18./17./16./15. 06. 2026 (~7denní okno). **PITR NENÍ zapnuté** (Pro Plan add-on). **Storage objekty nejsou v DB zálohách.** Rollback baseline = `docs/rollback/phase1_baseline.sql` (živý zachycený RLS+RPC stav, autoritativní kvůli migration-history driftu); checklist = `docs/rollback/phase1_backup_checklist.md`. Phase 1 pravidlo: jen malé staged migrace + rollback SQL z baseline + manuální `pg_dump` před zápisem. Jen dokumentace — žádné SQL/RLS/EF/frontend/produkční změny. Commit `60587fa8` (baseline) + tento záznam.

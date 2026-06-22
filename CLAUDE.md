@@ -1,5 +1,14 @@
 # CLAUDE.md
 
+## PHASE 1 — `is_superadmin()` HELPER NA STAGINGU (22. 06. 2026)
+
+První reálná Phase 1 změna: gate helper `public.is_superadmin(check_user_id uuid default auth.uid())`. Vrací true jen když má uživatel `role='superadmin'` v `user_roles`. SECURITY DEFINER, owner postgres, `SET search_path=public`, execute jen `authenticated` (revoke public/anon). **Aditivní — žádná RLS/RPC/EF/frontend změna.**
+- **Migrace:** `supabase/migrations/20260622_is_superadmin_helper.sql`. Commit `059dd981`.
+- **Aplikováno POUZE na staging** `dxmowysntemfqfnanxua`. **Produkce `xkzhjldrojjlrkezorey` NEDOTČENA.**
+- **Staging testy prošly:** superadmin→true, admin/subadmin→false, neznámý uživatel→false, anon/bez auth→false, authenticated může execute, anon nemůže, SECURITY DEFINER owner postgres potvrzeno. (Staging nemá superadmina → true case ověřen přes dočasný transaction-rollback flip, bez rezidua.)
+- **Rollback:** `DROP FUNCTION IF EXISTS public.is_superadmin(uuid);`
+- **Pravidlo / další krok (rozhodnout samostatně):** aplikaci helperu na produkci provést PŘED jakýmkoli superadmin-only gatingem; každý další re-gating staging-first + rollback SQL z `docs/rollback/phase1_baseline.sql`. Helper sám nic neomezuje, dokud se nepoužije v policy/RPC.
+
 ## PHASE 1 (SUBADMIN PERMISSIONS) — BACKUP STAV POTVRZEN (22. 06. 2026, jen dokumentace)
 
 Před plánovaným superadmin-only re-gatingem (Phase 1) ověřen produkční backup stav `xkzhjldrojjlrkezorey` v Dashboard → Database → Backups.

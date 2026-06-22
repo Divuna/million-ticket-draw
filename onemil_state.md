@@ -1,5 +1,15 @@
 ﻿# OneMil – aktuální stav projektu
 
+## PHASE 1 — `is_superadmin()` HELPER NA STAGINGU (22. 06. 2026)
+
+První reálná Phase 1 změna (gate helper, zatím nic neomezuje).
+- **Migrace:** `supabase/migrations/20260622_is_superadmin_helper.sql`, commit `059dd981`.
+- **`public.is_superadmin(check_user_id uuid default auth.uid())`** → true jen pro `role='superadmin'` v `user_roles`. SECURITY DEFINER, owner postgres, `SET search_path=public`, execute jen `authenticated` (revoke public/anon). Aditivní — žádná RLS/RPC/EF/frontend změna.
+- **Aplikováno POUZE na staging** `dxmowysntemfqfnanxua`; **produkce `xkzhjldrojjlrkezorey` NEDOTČENA.**
+- **Staging testy ✅:** superadmin→true, admin/subadmin→false, neznámý→false, anon→false, authenticated execute ✅, anon execute ✗, SECURITY DEFINER owner postgres. (True case ověřen přes dočasný transaction-rollback flip — bez rezidua, staging zpět na `admin:2`.)
+- **Rollback:** `DROP FUNCTION IF EXISTS public.is_superadmin(uuid);`
+- **Další krok (rozhodnout samostatně):** aplikovat helper na produkci PŘED jakýmkoli superadmin-only gatingem.
+
 ## PHASE 1 (SUBADMIN PERMISSIONS) — BACKUP STAV POTVRZEN (22. 06. 2026)
 
 Backup readiness před superadmin-only re-gatingem (Phase 1) ověřen v Supabase Dashboard → Database → Backups (produkce `xkzhjldrojjlrkezorey`):
