@@ -14,6 +14,20 @@
 
 ---
 
+## 2026-06-22 — Phase 1 sensitive-admin staging lock final milestone
+
+Recorded final documentation milestone for Phase 1 sensitive-admin staging lock. Full lock is complete on staging `dxmowysntemfqfnanxua`; production `xkzhjldrojjlrkezorey` was not touched. Staging now blocks scoped admin/subadmin access to sensitive admin data across RLS, RPCs, and Edge Functions.
+
+Covered areas: `payments`, `influencer_commissions`, affiliate finance RLS/RPC/Edge Functions, partner invoice Edge Functions, partner invoices and exports, `contest_economy`, tickets admin read / contest revenue dependencies, contest admin RPCs, winners write/status history, prize delivery RPCs, `referral_rewards`, `settings`, and `event_logs`.
+
+Partner invoice Edge Functions changed on staging: `generate-partner-invoice-pdf` and `send-partner-invoice-email`; JWT path now requires `role='superadmin'`, while internal token / service-role automation paths intentionally remain unchanged.
+
+Tests passed: superadmin allowed; admin/subadmin blocked; normal user blocked; anon blocked; affiliate own commission visibility preserved; staging data and roles unchanged after cleanup.
+
+Operational notes recorded: old worktree previously had Supabase CLI linked to production, so future staging deploys must explicitly use `--project-ref dxmowysntemfqfnanxua` or the clean main worktree after target verification; production-only `get_admin_top_bar_stats` still must be handled during production rollout; public-read `winners` / `bonus_prizes` behavior is a separate product/design decision. Production rollout requires explicit Pavel approval, manual `pg_dump` first because PITR is off, rollback from `docs/rollback/phase1_baseline.sql`, and staged rollout with stop points.
+
+Documentation only: no SQL run, no Edge Functions deployed, no production changes made, no app behavior changed.
+
 ## 2026-06-22 — Phase 1: affiliate finance lock KOMPLETNÍ na stagingu
 
 Celá affiliate finance oblast uzamčena superadmin-only na stagingu `dxmowysntemfqfnanxua` ve 3 vrstvách; **produkce `xkzhjldrojjlrkezorey` nedotčena.**

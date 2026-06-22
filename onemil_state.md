@@ -1,5 +1,34 @@
 ﻿# OneMil – aktuální stav projektu
 
+## PHASE 1 — SENSITIVE-ADMIN STAGING LOCK FINAL MILESTONE (22. 06. 2026)
+
+Full Phase 1 sensitive-admin lock is complete on staging project `dxmowysntemfqfnanxua`. Staging now blocks scoped admin/subadmin access to sensitive admin data across RLS, RPCs, and Edge Functions. **Production project `xkzhjldrojjlrkezorey` was not touched.**
+
+Covered areas:
+- `payments`
+- `influencer_commissions`
+- affiliate finance RLS/RPC/Edge Functions
+- partner invoice Edge Functions
+- partner invoices and exports
+- `contest_economy`
+- tickets admin read / contest revenue dependencies
+- contest admin RPCs
+- winners write/status history
+- prize delivery RPCs
+- `referral_rewards`
+- `settings`
+- `event_logs`
+
+Partner invoice Edge Functions changed on staging: `generate-partner-invoice-pdf` and `send-partner-invoice-email`. JWT path now requires `role='superadmin'`; internal token / service-role automation paths intentionally remain unchanged.
+
+Tests passed: superadmin allowed; admin/subadmin blocked; normal user blocked; anon blocked; affiliate own commission visibility preserved; staging data and roles unchanged after cleanup.
+
+Operational note: the old worktree previously had Supabase CLI linked to production, so any future staging deploy must explicitly pass `--project-ref dxmowysntemfqfnanxua` or use the clean main worktree after verifying the target. Remaining production-only item: `get_admin_top_bar_stats` exists on production and must be handled during production rollout. Public-read `winners` / `bonus_prizes` behavior is a separate product/design decision, not part of this staging lock.
+
+Production rollout requires explicit Pavel approval, manual `pg_dump` first because PITR is off, rollback from `docs/rollback/phase1_baseline.sql`, and staged rollout with stop points.
+
+This record is documentation only. No SQL was run, no Edge Functions were deployed, no production changes were made, and no app behavior was changed.
+
 ## PHASE 1 — AFFILIATE FINANCE LOCK KOMPLETNÍ NA STAGINGU (22. 06. 2026)
 
 Affiliate finance je na stagingu `dxmowysntemfqfnanxua` plně uzamčena superadmin-only (3 vrstvy). **Produkce `xkzhjldrojjlrkezorey` NEDOTČENA.**
