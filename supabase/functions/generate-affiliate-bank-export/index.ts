@@ -94,6 +94,7 @@ function statusToHttpStatus(status: string): number {
     case "kpc_file_too_large":
       return 400;
     case "access_denied_admin_only":
+    case "access_denied_superadmin_only":
     case "forbidden":
       return 403;
     case "batch_not_found":
@@ -267,10 +268,10 @@ const handler = async (req: Request): Promise<Response> => {
       .from("user_roles")
       .select("role")
       .eq("user_id", caller.id)
-      .in("role", ["admin", "superadmin"])
+      .eq("role", "superadmin")
       .maybeSingle();
     if (!roleRow) {
-      throw new HttpError(403, "access_denied_admin_only");
+      throw new HttpError(403, "access_denied_superadmin_only");
     }
 
     const { batch_id } = await req.json();

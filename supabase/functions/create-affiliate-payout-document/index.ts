@@ -95,6 +95,7 @@ function statusToHttpStatus(status: string): number {
     case "invalid_pdf_sha256":
       return 400;
     case "access_denied_admin_only":
+    case "access_denied_superadmin_only":
       return 403;
     case "commission_not_found":
       return 404;
@@ -270,10 +271,10 @@ serve(async (req: Request) => {
       .from("user_roles")
       .select("role")
       .eq("user_id", caller.id)
-      .in("role", ["admin", "superadmin"])
+      .eq("role", "superadmin")
       .maybeSingle();
     if (!roleRow) {
-      throw new HttpError(403, "access_denied_admin_only");
+      throw new HttpError(403, "access_denied_superadmin_only");
     }
 
     const { commission_id } = await req.json();
