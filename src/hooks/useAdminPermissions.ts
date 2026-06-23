@@ -92,3 +92,21 @@ export const ADMIN_ROUTE_PERMISSION: Record<string, AdminPermissionKey> = {
   '/admin/banners': 'banners.manage',
   '/admin/notifications': 'notifications.manage',
 };
+
+/**
+ * Ordered list of the safe admin entry routes a non-superadmin may land on.
+ * Order defines the redirect priority when a subadmin opens /admin directly:
+ * the first route whose permission the subadmin holds wins. Also drives the
+ * non-superadmin primary nav (one direct link per held permission). Superadmin
+ * is unaffected — it keeps the full section-based nav and the Dashboard.
+ */
+export const SUBADMIN_ENTRY_ROUTES: {
+  path: string;
+  permission: AdminPermissionKey;
+  label: string;
+}[] = [
+  { path: '/admin/vouchers', permission: 'vouchers.manage', label: ADMIN_PERMISSION_LABELS['vouchers.manage'] },
+  { path: '/admin/content', permission: 'content.manage', label: ADMIN_PERMISSION_LABELS['content.manage'] },
+  { path: '/admin/banners', permission: 'banners.manage', label: ADMIN_PERMISSION_LABELS['banners.manage'] },
+  { path: '/admin/notifications', permission: 'notifications.manage', label: ADMIN_PERMISSION_LABELS['notifications.manage'] },
+];

@@ -99,6 +99,7 @@ import ResetPassword from "@/pages/ResetPassword";
 import { BottomNavigation } from "@/components/BottomNavigation";
 import { AdminLayout } from "@/components/admin/AdminLayout";
 import { RequirePermission } from "@/components/admin/RequirePermission";
+import { RequireSuperadminOrRedirect } from "@/components/admin/RequireSuperadminOrRedirect";
 import { useUserRole } from "@/hooks/useUserRole";
 import { useApplyPendingReferral } from "@/hooks/useApplyPendingReferral";
 import { useRetentionTriggers } from "@/hooks/useRetentionTriggers";
@@ -605,13 +606,13 @@ function AppContent() {
           <Route path="/share/ticket/:ticketId" element={<ShareTicket />} />
           <Route path="/onboarding/date-of-birth" element={<OnboardingDateOfBirth />} />
           <Route element={<AdminLayout />}>
-            <Route path="/admin" element={<AdminDashboard />} />
+            <Route path="/admin" element={<RequireSuperadminOrRedirect><AdminDashboard /></RequireSuperadminOrRedirect>} />
             <Route path="/admin/users" element={<AdminUsers />} />
             <Route path="/admin/admins" element={<AdminAdmins />} />
             <Route path="/admin/banners" element={<RequirePermission permission="banners.manage"><AdminBanners /></RequirePermission>} />
             <Route path="/admin/vouchers" element={<RequirePermission permission="vouchers.manage"><AdminVouchers /></RequirePermission>} />
             <Route path="/admin/payments" element={<AdminPayments />} />
-            <Route path="/admin/statistics" element={<AdminStatistics />} />
+            <Route path="/admin/statistics" element={<RequireSuperadminOrRedirect><AdminStatistics /></RequireSuperadminOrRedirect>} />
             <Route path="/admin/notifications" element={<RequirePermission permission="notifications.manage"><AdminNotifications /></RequirePermission>} />
             <Route path="/admin/winners" element={<AdminWinners />} />
             <Route path="/admin/prize-delivery" element={<AdminPrizeDeliveryPage />} />

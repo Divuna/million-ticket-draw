@@ -1,5 +1,13 @@
 ﻿# OneMil – aktuální stav projektu
 
+## PHASE 2 — SUBADMIN DASHBOARD/STATISTIKY SKRYTÍ (23. 06. 2026, frontend-only)
+
+Subadmin po grantu safe oprávnění už nevidí Dashboard, Statistiky aplikace ani agregátní platform karty. **Frontend-only; žádná DB/RLS/EF/produkční změna.**
+- **`AdminPrimaryNav.tsx`:** non-superadmin row 1 = jen přímé odkazy na držené safe klíče (Vouchery, Obsah stránek, Bannery, Notifikace); žádný Dashboard pill. Superadmin beze změny.
+- **`RequireSuperadminOrRedirect.tsx` (nový):** wrapuje `/admin` + `/admin/statistics`. Subadmin redirect na první držený safe route (`/admin/vouchers → /admin/content → /admin/banners → /admin/notifications`); bez oprávnění → „Nemáte přiřazené žádné oprávnění administrace."; superadmin beze změny.
+- **`useAdminPermissions.ts`:** `SUBADMIN_ENTRY_ROUTES` (ordered).
+- Build ✅, `tsc --noEmit` 0 chyb. **Vyžaduje Lovable Publish.**
+
 ## PHASE 2 — `admin_permissions` APLIKOVÁN NA PRODUKCI (23. 06. 2026)
 
 Aditivní `admin_permissions` DB foundation aplikován na produkci `xkzhjldrojjlrkezorey` (schválení Pavla). **Frontend NEpublikován, žádný EF deploy, žádný `db push`, žádná jiná produkční změna.**

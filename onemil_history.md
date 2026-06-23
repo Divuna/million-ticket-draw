@@ -4622,3 +4622,13 @@ Apply: `docs/rollback/phase2_admin_permissions_apply.sql` přes psql (BEGIN…CO
 Verifikace `docs/rollback/phase2_admin_permissions_verification.sql` — všech 10 checků ✅: dependency is_superadmin t; table exists+RLS t/t; sloupce OK; UNIQUE+index OK; obě policy OK; helper SECURITY DEFINER owner postgres; helper EXECUTE = authenticated+postgres+service_role (anon/PUBLIC NEMAJÍ, `anon_can_execute=f`); 0 řádků / 0 unexpected keys; `user_roles=565` beze změny. Post-apply potvrzeno: Phase 1 funkce (is_superadmin, is_admin, has_role, get_admin_subadmins_overview) i superadmin-only policy (apd_admin_all, apbi_admin_all, apb_admin_all, aff_commissions_admin_write, aff_commissions_select, admin_payments_read_all) beze změny. **Rollback nebyl potřeba.**
 
 Connection string použit jen in-memory pro pg_dump + psql, neuložen, necommitnut. **Po dokončení rolloutu resetovat produkční DB heslo** (objevilo se v chatu). Další krok: samostatně publikovat Phase 2 frontend (DB ready), poté grantovat subadminům konkrétní klíče v `/admin/admins`.
+
+---
+
+## 2026-06-23 — Phase 2 oprava: subadmin už nevidí Dashboard / Statistiky / platform metriky (frontend-only)
+
+Po grantu safe oprávnění subadmin stále viděl Dashboard pill, Statistiky aplikace a agregátní platform karty (počty uživatelů, aktivní soutěže, bonusy, vouchery). Příčina: „Dashboard" sekční pill (→ `/admin/statistics`) se zobrazoval non-superadminovi a `/admin` (AdminDashboard) i `/admin/statistics` (AdminStatistics) nebyly permission-gated. **Frontend-only oprava; žádná DB/RLS/EF/produkční změna, žádné SQL, žádný deploy.**
+
+Změny: (1) `src/hooks/useAdminPermissions.ts` — přidán `SUBADMIN_ENTRY_ROUTES` (ordered safe entry routes: vouchers → content → banners → notifications). (2) `src/components/admin/RequireSuperadminOrRedirect.tsx` (nový) — superadmin render beze změny; non-superadmin redirect na první držený safe route, bez oprávnění text „Nemáte přiřazené žádné oprávnění administrace."; wrapuje `/admin` a `/admin/statistics` v `src/App.tsx`. (3) `src/components/admin/AdminPrimaryNav.tsx` — non-superadmin row 1 přepsán z sekčních pills na přímé safe odkazy jen na držené klíče (Vouchery/Obsah stránek/Bannery/Notifikace, ikony Gift/BookOpen/Image/Bell), aktivní stav dle path matchů; superadmin sekční nav beze změny. AdminLayout dál redirectuje ne-adminy na `/`.
+
+Subadmin po fixu: row 1 jen grantnuté safe oblasti, žádný Dashboard; přímý vstup na `/admin` nebo `/admin/statistics` → redirect na první grantnutou oblast (nebo no-permission hláška). Superadmin: Dashboard + Statistiky + plná nav beze změny. `npm run build` ✅ exit 0, `npx tsc --noEmit` ✅ 0 chyb. Vyžaduje Lovable Publish, aby se projevilo na produkci.

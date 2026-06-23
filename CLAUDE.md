@@ -1,5 +1,13 @@
 # CLAUDE.md
 
+## PHASE 2 — SUBADMIN DASHBOARD/STATISTIKY SKRYTÍ (23. 06. 2026, frontend-only)
+
+Oprava: subadmin po grantu safe oprávnění stále viděl **Dashboard** pill + **Statistiky aplikace** + agregátní platform karty (počty uživatelů, aktivní soutěže, bonusy, vouchery). Nyní non-superadmin vidí **jen** explicitně grantnuté safe oblasti. **Žádná DB/RLS/EF/produkční změna; frontend-only.**
+- **`AdminPrimaryNav.tsx`:** non-superadmin row 1 už NEzobrazuje sekční pills (vč. „Dashboard" → `/admin/statistics`). Místo toho přímé odkazy jen na držené safe klíče v pořadí `Vouchery, Obsah stránek, Bannery, Notifikace` (`SUBADMIN_ENTRY_ROUTES` + ikony Gift/BookOpen/Image/Bell). Superadmin row 1 beze změny (plné sekce).
+- **`RequireSuperadminOrRedirect.tsx` (nový):** wrapuje `/admin` (Dashboard) i `/admin/statistics` v `App.tsx`. Superadmin → render beze změny; non-superadmin → redirect na první držený safe route v pořadí `/admin/vouchers → /admin/content → /admin/banners → /admin/notifications`; bez oprávnění → text „Nemáte přiřazené žádné oprávnění administrace." AdminLayout dál blokuje ne-adminy na `/`.
+- **`useAdminPermissions.ts`:** přidán `SUBADMIN_ENTRY_ROUTES` (ordered safe entry routes — jediný zdroj pořadí redirectu i nav).
+- **Pravidlo:** non-superadmin NESMÍ vidět Dashboard, Statistiky aplikace, platform metriky, počty uživatelů/soutěží/bonusů, contest/statistics overview ani default `/admin` obsah. Safe klíče zůstávají: `vouchers.manage`→Vouchery, `content.manage`→Obsah stránek, `banners.manage`→Bannery, `notifications.manage`→Notifikace. Build ✅, `tsc --noEmit` 0 chyb. Vyžaduje Lovable Publish.
+
 ## PHASE 2 — `admin_permissions` APLIKOVÁN NA PRODUKCI (23. 06. 2026, schválení Pavla)
 
 Aditivní `admin_permissions` DB foundation **aplikován na produkci `xkzhjldrojjlrkezorey`** (Pavel: „SCHVALUJI PHASE 2 PRODUKČNÍ APPLY"). Aplikováno `docs/rollback/phase2_admin_permissions_apply.sql` (transakční, COMMIT, exit 0). **Žádný frontend publish, žádný EF deploy, žádný `db push`, žádná jiná produkční změna.**

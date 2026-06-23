@@ -1,26 +1,34 @@
 import React from "react";
 import { NavLink, useLocation } from "react-router-dom";
+import type { LucideIcon } from "lucide-react";
+import { Gift, BookOpen, Image as ImageIcon, Bell } from "lucide-react";
 import { useUnreadMessagesCount } from "@/hooks/useUnreadMessagesCount";
 import { useUnseenWinsCount } from "@/hooks/useUnseenWinsCount";
 import { usePendingOffersCount } from "@/hooks/usePendingOffersCount";
 import { useBobEnabled } from "@/hooks/useBobEnabled";
 import { useUserRole } from "@/hooks/useUserRole";
-import { useAdminPermissions } from "@/hooks/useAdminPermissions";
+import { useAdminPermissions, SUBADMIN_ENTRY_ROUTES } from "@/hooks/useAdminPermissions";
 import {
   ADMIN_BOTTOM_NAV,
   adminBottomNavLinkEnd,
   getAdminSectionFromPath,
+  type AdminBottomNavTo,
 } from "./adminNavConfig";
 
-// Phase 2: which top-level sections a non-superadmin may see, by held permission.
-// Only sections that contain a safe permitted item are listed; every other
-// section (contests, users, finance, wins, messages) is hidden from non-superadmin.
-const SECTION_VISIBLE_FOR_PERMISSION: Record<string, (can: (k: string) => boolean) => boolean> = {
-  dashboard: (can) => can("content.manage") || can("banners.manage") || can("notifications.manage"),
-  vouchers: (can) => can("vouchers.manage"),
+type PrimaryNavEntry = { id: string; label: string; icon: LucideIcon; to: AdminBottomNavTo };
+
+// Phase 2: non-superadmin primary nav = one direct link per held safe permission.
+// NO Dashboard / Statistiky / platform-metrics entry is ever shown to a
+// non-superadmin (it is omitted entirely, not just gated). Superadmin keeps the
+// full section-based nav unchanged.
+const SUBADMIN_NAV_ICON: Record<string, LucideIcon> = {
+  "vouchers.manage": Gift,
+  "content.manage": BookOpen,
+  "banners.manage": ImageIcon,
+  "notifications.manage": Bell,
 };
 
-/** Řádek 1: sekce (Dashboard, Soutěže, …). Vždy vykreslen v AdminLayout. */
+/** Řádek 1: sekce (Dashboard, Soutěže, …) pro superadmina; přímé safe odkazy pro subadmina. */
 export const AdminPrimaryNav: React.FC = () => {
   const location = useLocation();
   const { unreadCount } = useUnreadMessagesCount();
@@ -32,19 +40,29 @@ export const AdminPrimaryNav: React.FC = () => {
 
   const activeSection = getAdminSectionFromPath(location.pathname, location.search);
 
-  // Superadmin sees every section; non-superadmin only sections with a held permission.
-  const visibleNav = isSuperAdmin
+  // Superadmin sees every section unchanged; a non-superadmin sees ONLY direct
+  // links for the safe permissions they hold (vouchers/content/banners/notifications).
+  const visibleNav: PrimaryNavEntry[] = isSuperAdmin
     ? ADMIN_BOTTOM_NAV
     : permLoading
     ? []
-    : ADMIN_BOTTOM_NAV.filter((e) => SECTION_VISIBLE_FOR_PERMISSION[e.id]?.(can) ?? false);
+    : SUBADMIN_ENTRY_ROUTES.filter((r) => can(r.permission)).map((r) => ({
+        id: r.permission,
+        label: r.label,
+        icon: SUBADMIN_NAV_ICON[r.permission],
+        to: r.path,
+      }));
 
   return (
     <div className="flex items-center gap-2 py-2 border-b border-border/50 min-h-[2.75rem] overflow-x-auto -mx-1 px-1 [scrollbar-width:thin]">
       <div className="flex items-center gap-1.5 w-max sm:flex-wrap sm:w-auto pr-2">
         {visibleNav.map((entry) => {
           const Icon = entry.icon;
-          const active = entry.id === activeSection;
+          // Superadmin: highlight by section. Subadmin: highlight by direct path match.
+          const active = isSuperAdmin
+            ? entry.id === activeSection
+            : typeof entry.to === "string" &&
+              (location.pathname === entry.to || location.pathname.startsWith(`${entry.to}/`));
           const showMessagesBadge = entry.id === "messages" && unreadCount > 0;
           const bobOffOnMessages = entry.id === "messages" && !bobEnabled;
           const showWinsBadge = entry.id === "wins" && unseenWinsCount > 0;
