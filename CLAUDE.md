@@ -1,5 +1,17 @@
 # CLAUDE.md
 
+## PHASE 2 — FRONTEND GATING PRVNÍHO SAFE SLICE (23. 06. 2026)
+
+Frontend wiring granulárních subadmin oprávnění (navazuje na DB foundation `admin_permissions`). **Žádná DB/RLS/EF změna; žádná produkce.** Klíče jen safe: `vouchers.manage`, `content.manage`, `banners.manage`, `notifications.manage`.
+
+- **Hook `src/hooks/useAdminPermissions.ts`** (nový): čte `admin_permissions` aktuálního uživatele (RLS = vlastní řádky), vrací `{ can(key), permissions, loading, isSuperAdmin }`. **Superadmin ⇒ `can()` true pro vše** (zrcadlí DB `has_admin_permission`). Když tabulka neexistuje (např. produkce před migrací) → chyba → prázdná množina; superadmin nedotčen. Export `ADMIN_PERMISSION_KEYS`, `ADMIN_PERMISSION_LABELS`, `ADMIN_ROUTE_PERMISSION`.
+- **Route gating** `src/components/admin/RequirePermission.tsx` (nový) obaluje 4 routy v `App.tsx`: `/admin/vouchers` (vouchers.manage), `/admin/content` (content.manage), `/admin/banners` (banners.manage), `/admin/notifications` (notifications.manage). Při denied fallback: **„Tato část je dostupná pouze superadminovi nebo administrátorovi s oprávněním."** (AdminLayout chrome zůstává.)
+- **Nav gating (strict scoping pro non-superadmina):** `AdminContextSubNav.tsx` — `filterEntriesForSubadmin(entries, can)` ukáže non-superadminovi **jen položky s drženým oprávněním** (mapování path→klíč pro 4 safe položky); vše ostatní (citlivé i nemapované) skryto → zachovává Phase 1 sensitive-nav hiding jako podmnožinu. `AdminPrimaryNav.tsx` — non-superadmin vidí jen sekce s drženým oprávněním (Dashboard při content/banners/notifications; Vouchery při vouchers.manage). **Superadmin vidí plnou nav beze změny.**
+- **Grant/revoke UI** v `src/pages/AdminAdmins.tsx` (stránka už superadmin-only): nový sloupec „Oprávnění (Phase 2)" se 4 checkboxy na admin řádek; toggle = insert/delete `admin_permissions` (RLS dovolí jen superadminovi) + `log_admin_action` (granted/revoked). Superadmin řádky = „vše (superadmin)". UI není vystaveno non-superadminovi (stránka redirectuje).
+- **Phase 1 contest-sensitive gates beze změny.** Žádné finance/contest internals klíče. Build ✅, `tsc --noEmit` 0 chyb.
+- **⚠️ Deployment ordering:** tento frontend NEPUBLIKOVAT na produkci, dokud není migrace `admin_permissions` aplikovaná na produkci — jinak non-superadmin admini ztratí nav (tabulka chybí → prázdné perms). Superadmin nedotčen. Produkční apply = výslovné schválení + manuální `pg_dump` (PITR off).
+- **Pravidlo:** do tohoto slice nepřidávat citlivé klíče; `can()` i `has_admin_permission` musí vracet true pro superadmina; route/nav gating držet konzistentní přes `ADMIN_ROUTE_PERMISSION`/`NAV_PERMISSION_BY_PATH`.
+
 ## PHASE 2 — `admin_permissions` DB FOUNDATION NA STAGINGU (23. 06. 2026)
 
 DB základ pro granulární subadmin oprávnění (bezpečný první slice). **Aplikováno POUZE na staging `dxmowysntemfqfnanxua`; produkce `xkzhjldrojjlrkezorey` NEDOTČENA.** Aditivní — žádná existující policy/RPC/tabulka/chování nezměněno; zatím to nic nečte (frontend wiring je další fáze).

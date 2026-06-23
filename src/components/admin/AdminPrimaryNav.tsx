@@ -4,11 +4,21 @@ import { useUnreadMessagesCount } from "@/hooks/useUnreadMessagesCount";
 import { useUnseenWinsCount } from "@/hooks/useUnseenWinsCount";
 import { usePendingOffersCount } from "@/hooks/usePendingOffersCount";
 import { useBobEnabled } from "@/hooks/useBobEnabled";
+import { useUserRole } from "@/hooks/useUserRole";
+import { useAdminPermissions } from "@/hooks/useAdminPermissions";
 import {
   ADMIN_BOTTOM_NAV,
   adminBottomNavLinkEnd,
   getAdminSectionFromPath,
 } from "./adminNavConfig";
+
+// Phase 2: which top-level sections a non-superadmin may see, by held permission.
+// Only sections that contain a safe permitted item are listed; every other
+// section (contests, users, finance, wins, messages) is hidden from non-superadmin.
+const SECTION_VISIBLE_FOR_PERMISSION: Record<string, (can: (k: string) => boolean) => boolean> = {
+  dashboard: (can) => can("content.manage") || can("banners.manage") || can("notifications.manage"),
+  vouchers: (can) => can("vouchers.manage"),
+};
 
 /** Řádek 1: sekce (Dashboard, Soutěže, …). Vždy vykreslen v AdminLayout. */
 export const AdminPrimaryNav: React.FC = () => {
@@ -17,13 +27,22 @@ export const AdminPrimaryNav: React.FC = () => {
   const { unseenCount: unseenWinsCount } = useUnseenWinsCount();
   const { pendingCount: pendingOffersCount } = usePendingOffersCount();
   const { bobEnabled } = useBobEnabled();
+  const { isSuperAdmin } = useUserRole();
+  const { can, loading: permLoading } = useAdminPermissions();
 
   const activeSection = getAdminSectionFromPath(location.pathname, location.search);
+
+  // Superadmin sees every section; non-superadmin only sections with a held permission.
+  const visibleNav = isSuperAdmin
+    ? ADMIN_BOTTOM_NAV
+    : permLoading
+    ? []
+    : ADMIN_BOTTOM_NAV.filter((e) => SECTION_VISIBLE_FOR_PERMISSION[e.id]?.(can) ?? false);
 
   return (
     <div className="flex items-center gap-2 py-2 border-b border-border/50 min-h-[2.75rem] overflow-x-auto -mx-1 px-1 [scrollbar-width:thin]">
       <div className="flex items-center gap-1.5 w-max sm:flex-wrap sm:w-auto pr-2">
-        {ADMIN_BOTTOM_NAV.map((entry) => {
+        {visibleNav.map((entry) => {
           const Icon = entry.icon;
           const active = entry.id === activeSection;
           const showMessagesBadge = entry.id === "messages" && unreadCount > 0;

@@ -98,6 +98,7 @@ import ResetPassword from "@/pages/ResetPassword";
 
 import { BottomNavigation } from "@/components/BottomNavigation";
 import { AdminLayout } from "@/components/admin/AdminLayout";
+import { RequirePermission } from "@/components/admin/RequirePermission";
 import { useUserRole } from "@/hooks/useUserRole";
 import { useApplyPendingReferral } from "@/hooks/useApplyPendingReferral";
 import { useRetentionTriggers } from "@/hooks/useRetentionTriggers";
@@ -607,11 +608,11 @@ function AppContent() {
             <Route path="/admin" element={<AdminDashboard />} />
             <Route path="/admin/users" element={<AdminUsers />} />
             <Route path="/admin/admins" element={<AdminAdmins />} />
-            <Route path="/admin/banners" element={<AdminBanners />} />
-            <Route path="/admin/vouchers" element={<AdminVouchers />} />
+            <Route path="/admin/banners" element={<RequirePermission permission="banners.manage"><AdminBanners /></RequirePermission>} />
+            <Route path="/admin/vouchers" element={<RequirePermission permission="vouchers.manage"><AdminVouchers /></RequirePermission>} />
             <Route path="/admin/payments" element={<AdminPayments />} />
             <Route path="/admin/statistics" element={<AdminStatistics />} />
-            <Route path="/admin/notifications" element={<AdminNotifications />} />
+            <Route path="/admin/notifications" element={<RequirePermission permission="notifications.manage"><AdminNotifications /></RequirePermission>} />
             <Route path="/admin/winners" element={<AdminWinners />} />
             <Route path="/admin/prize-delivery" element={<AdminPrizeDeliveryPage />} />
             <Route path="/admin/tests" element={<AdminTests />} />
@@ -624,7 +625,7 @@ function AppContent() {
             <Route path="/admin/audit-repair" element={<AdminAuditRepair />} />
             <Route path="/admin/onemil-audit" element={<OneMilAudit />} />
             <Route path="/admin/contest/:contestId" element={<ContestDetailAdmin />} />
-            <Route path="/admin/content" element={<AdminContentPages />} />
+            <Route path="/admin/content" element={<RequirePermission permission="content.manage"><AdminContentPages /></RequirePermission>} />
             <Route path="/admin/legal-acceptances" element={<AdminLegalAcceptances />} />
             <Route path="/admin/onboarding-incomplete" element={<AdminOnboardingIncomplete />} />
             <Route path="/admin/partners-portal" element={<AdminPartnersPortal />} />

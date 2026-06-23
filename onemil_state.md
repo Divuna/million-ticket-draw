@@ -1,5 +1,15 @@
 ﻿# OneMil – aktuální stav projektu
 
+## PHASE 2 — FRONTEND GATING PRVNÍHO SAFE SLICE (23. 06. 2026)
+
+Frontend granulárních subadmin oprávnění (navazuje na DB foundation). **Žádná DB/RLS/EF/produkce změna.** Klíče: `vouchers.manage`, `content.manage`, `banners.manage`, `notifications.manage`.
+- **Hook** `src/hooks/useAdminPermissions.ts`: `can(key)` (superadmin ⇒ vše), čte `admin_permissions` (RLS vlastní řádky); tabulka chybí → prázdné, superadmin nedotčen.
+- **Route gating** `RequirePermission.tsx` na 4 routách (`App.tsx`); denied → fallback „Tato část je dostupná pouze superadminovi nebo administrátorovi s oprávněním."
+- **Nav** `AdminContextSubNav.tsx` + `AdminPrimaryNav.tsx`: non-superadmin vidí jen položky/sekce s drženým oprávněním; superadmin plná nav beze změny.
+- **Grant UI** v `AdminAdmins.tsx` (superadmin-only stránka): sloupec „Oprávnění (Phase 2)" se 4 checkboxy, toggle = insert/delete `admin_permissions` + `log_admin_action`.
+- **Phase 1 contest gates beze změny.** Build ✅, `tsc --noEmit` 0 chyb.
+- **⚠️ Deploy pořadí:** nepublikovat frontend na produkci před aplikací migrace `admin_permissions` na produkci (jinak non-superadmin ztratí nav). Produkční apply = schválení + `pg_dump`.
+
 ## PHASE 2 — `admin_permissions` DB FOUNDATION NA STAGINGU (23. 06. 2026)
 
 DB základ granulárních subadmin oprávnění (bezpečný první slice). **Staging `dxmowysntemfqfnanxua` only; produkce `xkzhjldrojjlrkezorey` NEDOTČENA.** Aditivní; zatím to nic nečte.
