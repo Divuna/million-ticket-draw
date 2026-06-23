@@ -1,5 +1,13 @@
 ﻿# OneMil – aktuální stav projektu
 
+## PHASE 2 — STAGING E2E PASSED, STAGING-VALIDATED (23. 06. 2026)
+
+Targeted Phase 2 staging E2E **prošel** — run `28043183824` (`playwright-staging.yml`, spec `tests/e2e/phase2-admin-permissions.spec.ts`), conclusion **success**, headSha `d92c5ca2`. Ověřeno přes `gh run view`.
+
+- **Phase 2 je staging-validated** (DB foundation + frontend gating + targeted E2E zelený na stagingu `dxmowysntemfqfnanxua`).
+- **Produkční DB apply `admin_permissions` NENÍ schválen.** Produkce `xkzhjldrojjlrkezorey` NEDOTČENA.
+- **Další krok:** připravit produkční apply migrace `admin_permissions` POUZE po výslovném schválení Pavla + kontrole zálohy (`pg_dump`, PITR off). Frontend Phase 2 nepublikovat na produkci PŘED aplikací migrace (jinak non-superadmin ztratí nav).
+
 ## PHASE 2 — TARGETED STAGING PERMISSION E2E SPEC (23. 06. 2026)
 
 Targeted staging-only Playwright coverage was added in `tests/e2e/phase2-admin-permissions.spec.ts`. **No production, no Edge Function deploy, no full E2E, no app behavior change.**

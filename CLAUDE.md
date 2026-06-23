@@ -1,5 +1,13 @@
 # CLAUDE.md
 
+## PHASE 2 — STAGING E2E PASSED / STAGING-VALIDATED (23. 06. 2026)
+
+Targeted Phase 2 staging E2E **prošel**: run `28043183824` (`playwright-staging.yml`, spec `tests/e2e/phase2-admin-permissions.spec.ts`), conclusion **success**, headSha `d92c5ca2` (ověřeno `gh run view`).
+
+- **Phase 2 (granulární subadmin oprávnění) je staging-validated** — DB foundation (`admin_permissions`, `has_admin_permission()`, klíče `vouchers.manage`/`content.manage`/`banners.manage`/`notifications.manage`) + frontend gating (`useAdminPermissions()`, `RequirePermission`, route/nav gating, grant/revoke UI v `/admin/admins`) + targeted E2E zelený na stagingu `dxmowysntemfqfnanxua`.
+- **Produkční DB apply `admin_permissions` NENÍ schválen.** Produkce `xkzhjldrojjlrkezorey` NEDOTČENA.
+- **Pravidlo / další krok:** produkční apply migrace `admin_permissions` provést POUZE po výslovném schválení Pavla + kontrole zálohy (manuální `pg_dump`, PITR off). **Frontend Phase 2 nepublikovat na produkci PŘED aplikací migrace** — jinak non-superadmin ztratí nav. Klíče zatím jen safe (žádné citlivé).
+
 ## PHASE 2 — TARGETED STAGING PERMISSION E2E SPEC (23. 06. 2026)
 
 Added a targeted staging-only Playwright spec: `tests/e2e/phase2-admin-permissions.spec.ts`. **No production, no Edge Function deploy, no app behavior change, no full E2E.**
