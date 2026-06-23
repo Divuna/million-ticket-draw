@@ -1,5 +1,15 @@
 # CLAUDE.md
 
+## PHASE 2 — `admin_permissions` APLIKOVÁN NA PRODUKCI (23. 06. 2026, schválení Pavla)
+
+Aditivní `admin_permissions` DB foundation **aplikován na produkci `xkzhjldrojjlrkezorey`** (Pavel: „SCHVALUJI PHASE 2 PRODUKČNÍ APPLY"). Aplikováno `docs/rollback/phase2_admin_permissions_apply.sql` (transakční, COMMIT, exit 0). **Žádný frontend publish, žádný EF deploy, žádný `db push`, žádná jiná produkční změna.**
+- **Backup PŘED apply:** `backups/onemil-production-pre-phase2-admin-permissions-20260623-195824.dump` (465 655 142 B, `pg_restore -l` OK, 2197 TOC). Git-ignored, necommitovat.
+- **Vytvořeno:** tabulka `public.admin_permissions` (RLS on, UNIQUE(user_id,permission_key), index `idx_admin_permissions_user_id`), helper `public.has_admin_permission(check_key text, check_user_id uuid default auth.uid())` (SECURITY DEFINER, owner postgres), policy `admin_permissions_select` (own/superadmin SELECT) + `admin_permissions_superadmin_write` (superadmin ALL).
+- **Verifikace ✅ (všech 10 checků):** dependency `is_superadmin` t; table+RLS t/t; sloupce OK; UNIQUE+index OK; obě policy OK; helper SECURITY DEFINER owner postgres; helper EXECUTE = `authenticated`+postgres+service_role (anon/PUBLIC NEMAJÍ — `anon_can_execute=f`); 0 řádků / 0 neočekávaných klíčů; `user_roles` = **565** (beze změny baseline admin:1, superadmin:1, user:563). Phase 1 funkce (4) + superadmin-only policy (6) beze změny.
+- **Rollback (pokud bude třeba):** `docs/rollback/phase2_admin_permissions_rollback.sql` (drop JEN Phase 2 objektů).
+- **⚠️ DALŠÍ KROK — frontend NENÍ publikován:** Phase 2 frontend gating (`useAdminPermissions`, `RequirePermission`, nav/route gating, grant UI) **publikovat na produkci AŽ teď, samostatně** — DB už je připravena. Po publishi udělit subadminům konkrétní klíče (`vouchers.manage`/`content.manage`/`banners.manage`/`notifications.manage`) v `/admin/admins`.
+- **⚠️ Po dokončení rolloutu: resetovat produkční DB heslo** (objevilo se v chatu).
+
 ## PHASE 2 — PRODUKČNÍ APPLY PACKAGE PŘIPRAVEN (NEAPLIKOVÁNO) (23. 06. 2026)
 
 Připraven bezpečný **produkční apply package** pro aditivní `admin_permissions` DB foundation (jen Phase 2 foundation, nic citlivého). **NIC neaplikováno na produkci `xkzhjldrojjlrkezorey`; žádný produkční SQL nespuštěn; žádný EF deploy; žádný frontend publish.**

@@ -1,5 +1,16 @@
 ﻿# OneMil – aktuální stav projektu
 
+## PHASE 2 — `admin_permissions` APLIKOVÁN NA PRODUKCI (23. 06. 2026)
+
+Aditivní `admin_permissions` DB foundation aplikován na produkci `xkzhjldrojjlrkezorey` (schválení Pavla). **Frontend NEpublikován, žádný EF deploy, žádný `db push`, žádná jiná produkční změna.**
+
+- **Backup před apply:** `backups/onemil-production-pre-phase2-admin-permissions-20260623-195824.dump` (465 655 142 B, `pg_restore -l` OK / 2197 TOC). Git-ignored.
+- **Apply:** `docs/rollback/phase2_admin_permissions_apply.sql` — BEGIN…COMMIT, psql exit 0.
+- **Vytvořené objekty:** `public.admin_permissions` (RLS on, UNIQUE(user_id,permission_key), index `idx_admin_permissions_user_id`), helper `public.has_admin_permission(text, uuid default auth.uid())` (SECURITY DEFINER, owner postgres, execute authenticated/service_role, anon/PUBLIC ne), policy `admin_permissions_select` + `admin_permissions_superadmin_write`.
+- **Verifikace ✅:** všech 10 checků prošlo; `anon_can_execute=f`; 0 řádků; `user_roles=565` (beze změny: admin:1, superadmin:1, user:563). Phase 1 funkce (4) i superadmin-only policy (6) beze změny.
+- **Rollback needed:** NE.
+- **Další krok:** publikovat Phase 2 frontend (DB je ready) → poté grantovat subadminům klíče v `/admin/admins`. Po rolloutu **resetovat produkční DB heslo** (objevilo se v chatu).
+
 ## PHASE 2 — PRODUKČNÍ APPLY PACKAGE PŘIPRAVEN (NEAPLIKOVÁNO) (23. 06. 2026)
 
 Připraven produkční apply package pro aditivní `admin_permissions` DB foundation. **Nic neaplikováno na produkci `xkzhjldrojjlrkezorey`** — žádný produkční SQL, žádný EF deploy, žádný frontend publish, žádný commit secrets, `backups/` nedotčeno.
