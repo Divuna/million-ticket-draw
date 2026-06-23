@@ -4674,3 +4674,13 @@ Phase 3b support oprávnění publikována na produkci (Lovable Publish) a ručn
 Ověřeno ručně na produkci: superadmin vidí v `/admin/admins` nové checkboxy `support.messages` + `users.view.basic`; subadmin se `support.messages` vidí jen „Zprávy", NEvidí Bob ON/OFF a může používat support zprávy; subadmin s `users.view.basic` vidí „Uživatelé", NEvidí adresu ani datum narození a NEmůže měnit role; přímé citlivé URL (`/admin/payments`, `/admin/winners`, `/admin/statistics` a další) jsou blokovány superadmin-only fallbackem („Tato část je dostupná pouze superadminovi."); superadmin chování beze změny.
 
 **Finální akce (poslední otevřený rollout follow-up): resetovat produkční DB heslo** `xkzhjldrojjlrkezorey` — objevilo se v chatu během Phase 2 produkčního apply. Reset proběhne hned po tomto dokumentačním zápisu (Supabase Dashboard → Settings → Database → Reset database password).
+
+---
+
+## 2026-06-23 — Phase 4 Slice A: Partner Offers oprávnění (frontend-only)
+
+Nejmenší safe krok delegace Partner Offers: nový klíč `partner_offers.finance.manage` pro jedinou offer-only stránku `/admin/partner-offers`. **Frontend-only; žádné DB/RLS/SQL/EF/produkční změny; faktury, partner portál, platby, payouty, provize, výherci, soutěže, tikety, audit ani admin role logika netknuty.** Grant = řádek v `admin_permissions` (volný textový klíč, bez migrace).
+
+Změny: (1) `src/hooks/useAdminPermissions.ts` — `partner_offers.finance.manage` (label „Partnerské nabídky (finance)") do `ADMIN_PERMISSION_KEYS`/`ADMIN_PERMISSION_LABELS`; `ADMIN_ROUTE_PERMISSION['/admin/partner-offers']`; položka v `SUBADMIN_ENTRY_ROUTES` (nav label „Partnerské nabídky"). (2) `src/App.tsx` — `/admin/partner-offers` přepnuto z `RequireSuperadmin` na `RequirePermission("partner_offers.finance.manage")` (jediná změněná routa). (3) `src/components/admin/AdminPrimaryNav.tsx` — ikona `Tag` pro nový klíč. Grant UI v `/admin/admins` se zobrazí automaticky (iteruje `ADMIN_PERMISSION_KEYS`). `AdminPartnerOffers` business logika beze změny.
+
+Rozsah role: jen `/admin/partner-offers` (moderace nabídek + per-offer billing `billing_mode`/`price_per_activation`/`billing_admin_override` + aktivace/kliky — čistě offer tabulky). Superadmin-only zůstává (Slice B/C, mimo tento krok): offer faktury (`partner_invoices type='offer'`, `partner_offer_invoice_lines`) ve smíšených `/admin/invoices` + `/admin/partners-portal`, globální platby, affiliate/influencer commissions+payouts, výherci, prize-delivery, contest internals, audit/system, `/admin/admins`. Superadmin chování beze změny. `npm run build` ✅ exit 0, `npx tsc --noEmit` ✅ 0 chyb. Vyžaduje Lovable Publish + grant klíče subadminovi v `/admin/admins`.

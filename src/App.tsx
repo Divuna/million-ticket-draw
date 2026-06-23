@@ -619,7 +619,7 @@ function AppContent() {
             <Route path="/admin/prize-delivery" element={<RequireSuperadmin><AdminPrizeDeliveryPage /></RequireSuperadmin>} />
             <Route path="/admin/tests" element={<RequireSuperadmin><AdminTests /></RequireSuperadmin>} />
             <Route path="/admin/partners" element={<RequireSuperadmin><AdminPartners /></RequireSuperadmin>} />
-            <Route path="/admin/partner-offers" element={<RequireSuperadmin><AdminPartnerOffers /></RequireSuperadmin>} />
+            <Route path="/admin/partner-offers" element={<RequirePermission permission="partner_offers.finance.manage"><AdminPartnerOffers /></RequirePermission>} />
             <Route path="/admin/messages" element={<RequirePermission permission="support.messages"><AdminMessages /></RequirePermission>} />
             <Route path="/admin/messages/:userId" element={<RequirePermission permission="support.messages"><AdminMessageThread /></RequirePermission>} />
             <Route path="/admin/audit-logs" element={<RequireSuperadmin><AdminAuditLogs /></RequireSuperadmin>} />

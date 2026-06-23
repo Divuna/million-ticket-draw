@@ -1,5 +1,14 @@
 ﻿# OneMil – aktuální stav projektu
 
+## PHASE 4 SLICE A — PARTNER OFFERS OPRÁVNĚNÍ (23. 06. 2026, frontend-only)
+
+Nový safe klíč `partner_offers.finance.manage` jen pro `/admin/partner-offers`. **Frontend-only; žádné DB/RLS/SQL/EF/produkční změny.** Grant = řádek v `admin_permissions` (bez migrace).
+- **Routa otevřená:** `/admin/partner-offers` přepnuta z `RequireSuperadmin` na `RequirePermission("partner_offers.finance.manage")`.
+- **Soubory:** `useAdminPermissions.ts` (klíč/label/route map/entry route), `App.tsx` (1 routa), `AdminPrimaryNav.tsx` (ikona `Tag`).
+- **Rozsah:** offer-only stránka (moderace + per-offer billing + aktivace/kliky). Business logika netknuta.
+- **Superadmin-only zůstává:** offer faktury ve smíšených `/admin/invoices` + `/admin/partners-portal`, globální platby, payouty, provize, výherci, soutěže, tikety, audit. To jsou Slice B/C.
+- Build ✅, `tsc --noEmit` 0 chyb. **Vyžaduje Lovable Publish + grant klíče v `/admin/admins`.**
+
 ## PHASE 3B — PRODUKČNÍ SMOKE ✅ PASS (23. 06. 2026)
 
 Phase 3b support oprávnění publikována na produkci a ručně ověřena — **PASS**. Support role (subadmin) je LIVE end-to-end (Phase 2 DB + Phase 3 route hardening + Phase 3b support klíče).

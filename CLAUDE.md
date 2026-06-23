@@ -1,5 +1,14 @@
 # CLAUDE.md
 
+## PHASE 4 SLICE A — PARTNER OFFERS OPRÁVNĚNÍ (23. 06. 2026, frontend-only)
+
+Nejmenší safe krok delegace Partner Offers: nový klíč `partner_offers.finance.manage` jen pro **`/admin/partner-offers`**. **Žádné DB/RLS/SQL/EF/produkční změny; frontend-only; faktury/portál/platby/payouty/provize/výherci/soutěže/tikety/audit netknuty.**
+- **`useAdminPermissions.ts`:** klíč `partner_offers.finance.manage` (label „Partnerské nabídky (finance)") přidán do `ADMIN_PERMISSION_KEYS`/`ADMIN_PERMISSION_LABELS`; `ADMIN_ROUTE_PERMISSION['/admin/partner-offers']` + `SUBADMIN_ENTRY_ROUTES` (nav label „Partnerské nabídky").
+- **`App.tsx`:** `/admin/partner-offers` přepnuto z `RequireSuperadmin` na `RequirePermission("partner_offers.finance.manage")`. Jediná změněná routa.
+- **`AdminPrimaryNav.tsx`:** ikona `Tag` pro nový klíč (non-superadmin vidí „Partnerské nabídky" jen s klíčem). Grant UI v `/admin/admins` se zobrazí automaticky (iteruje `ADMIN_PERMISSION_KEYS`).
+- **Rozsah role:** jen offer-only stránka `/admin/partner-offers` (moderace nabídek + per-offer billing `billing_mode`/`price_per_activation`/`billing_admin_override` + aktivace/kliky). Business logika `AdminPartnerOffers` netknuta.
+- **Superadmin-only zůstává (Slice B/C, mimo tento krok):** offer faktury (`partner_invoices type='offer'`, `partner_offer_invoice_lines`) ve smíšených `/admin/invoices` + `/admin/partners-portal`; globální `/admin/payments`, affiliate/influencer commissions+payouts, winners, prize-delivery, contest internals, audit/system, `/admin/admins`. Build ✅, `tsc --noEmit` 0 chyb. Vyžaduje Lovable Publish + grant klíče v `/admin/admins`.
+
 ## PHASE 3B — PRODUKČNÍ SMOKE ✅ PASS (23. 06. 2026)
 
 Phase 3b support oprávnění publikována na produkci (Lovable Publish) a ručně ověřena — **smoke PASS**. Granulární support role je nyní LIVE.

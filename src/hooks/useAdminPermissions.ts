@@ -16,6 +16,7 @@ export const ADMIN_PERMISSION_KEYS = [
   'notifications.manage',
   'support.messages',
   'users.view.basic',
+  'partner_offers.finance.manage',
 ] as const;
 export type AdminPermissionKey = (typeof ADMIN_PERMISSION_KEYS)[number];
 
@@ -26,6 +27,7 @@ export const ADMIN_PERMISSION_LABELS: Record<AdminPermissionKey, string> = {
   'notifications.manage': 'Notifikace',
   'support.messages': 'Zprávy (podpora)',
   'users.view.basic': 'Uživatelé (základní)',
+  'partner_offers.finance.manage': 'Partnerské nabídky (finance)',
 };
 
 interface UseAdminPermissions {
@@ -98,6 +100,7 @@ export const ADMIN_ROUTE_PERMISSION: Record<string, AdminPermissionKey> = {
   '/admin/notifications': 'notifications.manage',
   '/admin/messages': 'support.messages',
   '/admin/users': 'users.view.basic',
+  '/admin/partner-offers': 'partner_offers.finance.manage',
 };
 
 /**
@@ -119,4 +122,6 @@ export const SUBADMIN_ENTRY_ROUTES: {
   // Phase 3b support slice — short nav labels (not the descriptive grant-UI labels).
   { path: '/admin/messages', permission: 'support.messages', label: 'Zprávy' },
   { path: '/admin/users', permission: 'users.view.basic', label: 'Uživatelé' },
+  // Phase 4 Slice A — Partner Offers (offer-only page; no invoices/portal).
+  { path: '/admin/partner-offers', permission: 'partner_offers.finance.manage', label: 'Partnerské nabídky' },
 ];
