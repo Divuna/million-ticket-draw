@@ -1,5 +1,15 @@
 ﻿# OneMil – aktuální stav projektu
 
+## PHASE 3B — PRODUKČNÍ SMOKE ✅ PASS (23. 06. 2026)
+
+Phase 3b support oprávnění publikována na produkci a ručně ověřena — **PASS**. Support role (subadmin) je LIVE end-to-end (Phase 2 DB + Phase 3 route hardening + Phase 3b support klíče).
+- Superadmin vidí v `/admin/admins` checkboxy `support.messages` + `users.view.basic`. ✅
+- `support.messages` subadmin: jen „Zprávy", bez Bob toggle, support zprávy funkční. ✅
+- `users.view.basic` subadmin: „Uživatelé", bez adresy/data narození, bez změny rolí. ✅
+- Citlivé URL (`/admin/payments`, `/admin/winners`, `/admin/statistics`, …) blokovány superadmin-only fallbackem. ✅
+- Superadmin beze změny. ✅
+- **⏳ FINÁLNÍ AKCE:** resetovat produkční DB heslo (objevilo se v chatu při Phase 2 apply) — provést hned po tomto zápisu. Toto je poslední otevřený rollout follow-up.
+
 ## PHASE 3B — SUPPORT OPRÁVNĚNÍ (23. 06. 2026, frontend-only)
 
 Dva nové safe support klíče pro subadminy. **Frontend-only; žádné DB/RLS/SQL/EF/produkční změny.** Grant = řádek v `admin_permissions` (bez migrace).

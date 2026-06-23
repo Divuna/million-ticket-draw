@@ -1,5 +1,15 @@
 # CLAUDE.md
 
+## PHASE 3B — PRODUKČNÍ SMOKE ✅ PASS (23. 06. 2026)
+
+Phase 3b support oprávnění publikována na produkci (Lovable Publish) a ručně ověřena — **smoke PASS**. Granulární support role je nyní LIVE.
+- Superadmin vidí v `/admin/admins` nové checkboxy `support.messages` + `users.view.basic`. ✅
+- Subadmin se `support.messages`: vidí JEN „Zprávy", NEvidí Bob ON/OFF, může používat support zprávy. ✅
+- Subadmin s `users.view.basic`: vidí „Uživatelé", NEvidí adresu ani datum narození, NEmůže měnit role. ✅
+- Přímé citlivé URL (`/admin/payments`, `/admin/winners`, `/admin/statistics`) blokovány superadmin-only fallbackem. ✅
+- Superadmin beze změny. ✅
+- **⏳ FINÁLNÍ AKCE (otevřená):** resetovat produkční DB heslo — objevilo se v chatu během Phase 2 apply; reset proběhne po tomto dokumentačním zápisu.
+
 ## PHASE 3B — SUPPORT OPRÁVNĚNÍ (23. 06. 2026, frontend-only)
 
 Přidána dvě safe support oprávnění pro subadminy. **Žádné DB/RLS/SQL/EF/produkční změny; frontend-only.** Granty se dělají vložením řádků do `admin_permissions` (volné textové klíče — bez migrace).
