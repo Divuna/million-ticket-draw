@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react';
+import { useUserRole } from '@/hooks/useUserRole';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -34,6 +35,8 @@ const STATUS_LABELS: Record<string, string> = {
 };
 
 export const ContestControlPanel: React.FC = () => {
+  // Contest control (close/pause + progress) is superadmin-only.
+  const { isSuperAdmin, loading: roleLoading } = useUserRole();
   const [contests, setContests] = useState<ContestOption[]>([]);
   const [selectedId, setSelectedId] = useState<string>('');
   const [loading, setLoading] = useState(true);
@@ -190,6 +193,16 @@ export const ContestControlPanel: React.FC = () => {
     }
     return false;
   };
+
+  if (!roleLoading && !isSuperAdmin) {
+    return (
+      <Card className="w-full">
+        <CardContent className="py-10 text-center text-muted-foreground">
+          Tato část je dostupná pouze superadminovi.
+        </CardContent>
+      </Card>
+    );
+  }
 
   return (
     <div className="space-y-6">

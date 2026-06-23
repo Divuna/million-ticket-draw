@@ -1,5 +1,14 @@
 ﻿# OneMil – aktuální stav projektu
 
+## SUBADMIN CONTEST UI GATING — FRONTEND-ONLY (23. 06. 2026)
+
+Frontend-only skrytí citlivých contest interních dat před non-superadminy (po Phase 1 backend locku). **Žádná DB/RLS/RPC/EF změna.** Gate = `useUserRole().isSuperAdmin`.
+- **Skryté pro subadmina:** tikety prodány/zbývají, % hotovo, progress, 24h aktivita, výnos/MC yield, contest revenue, ekonomika/marže, výherní + bonusové pozice, mapa tiketů, raw tikety, bonus distribuce, contest detail interní. Nefetchují se `contest_progress`/`contest_revenue`/`contest_activity_last_24h` v `AdminContestManagement` pro non-superadmina.
+- **Gatované soubory:** `AdminContestManagement.tsx` (souhrn + sloupce Tikety/% hotovo/Bonusové MioCoiny + modal taby Bonusy/Ekonomika), `TicketMapAdmin.tsx`, `AdminBonusOverview.tsx`, `admin/ContestControlPanel.tsx`, `ContestDetailAdmin.tsx` (isAdmin→isSuperAdmin). Fallback text: „Tato část je dostupná pouze superadminovi."
+- **Subadmin vidí jen základní:** název soutěže, veřejná výhra, status, základní list akce.
+- **NEzměněno:** `AdminContestView.tsx` (zákaznický buy-ticket view), public flows, payments/voucher UI. Superadmin vidí plné UI beze změny. Build ✅.
+- **Volitelný follow-up:** skrýt i nav odkazy na citlivé taby (dnes klik → fallback). Backend RLS už tyto views/tabulky drží superadmin-only.
+
 ## PHASE 1 POST-PRODUCTION SMOKE FIX -- contest_progress PUBLIC AGGREGATE (23. 06. 2026)
 
 Production `/games` smoke after Phase 1 found a console warning: `permission denied for table tickets` while loading contest progress. Cause: frontend reads `public.contest_progress`; the view had `security_invoker=true`, so public callers needed raw `tickets` access. Phase 1 correctly locks raw `tickets`, and E22 `contest_progress` was already owner-accepted as intentional public aggregate behavior.

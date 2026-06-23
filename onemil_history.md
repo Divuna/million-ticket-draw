@@ -14,6 +14,10 @@
 
 ---
 
+## 2026-06-23 -- Subadmin contest UI gating (frontend-only)
+
+Po Phase 1 backend locku přidáno frontend-only skrytí citlivých contest interních dat před non-superadminy. Gate = `useUserRole().isSuperAdmin`. **Žádná DB/RLS/RPC/EF/SQL změna, žádný deploy.** Gatováno: `AdminContestManagement.tsx` (nefetchuje contest_progress/contest_revenue/contest_activity_last_24h pro non-superadmina; skryt souhrnný panel + sloupce Tikety/% hotovo/Bonusové MioCoiny; modal taby Bonusy–MioCoins/Bonusy–věcné/Ekonomika), `TicketMapAdmin.tsx` (fallback + žádný fetch), `AdminBonusOverview.tsx` (fallback + žádný fetch/realtime), `admin/ContestControlPanel.tsx` (fallback), `ContestDetailAdmin.tsx` (guard isAdmin→isSuperAdmin, subadmin dostane fallback místo login redirectu). Fallback: „Tato část je dostupná pouze superadminovi." NEzměněn `AdminContestView.tsx` (zákaznický buy-ticket view) ani public flows. Superadmin UI beze změny. `npm run build` ✅. Volitelný follow-up: skrýt nav odkazy na citlivé taby.
+
 ## 2026-06-23 -- Phase 1 post-production smoke fix: contest_progress public aggregate restored
 
 After Phase 1 production lock, `/games` smoke showed a browser console warning `permission denied for table tickets` while fetching contest progress. Investigation found no direct `/games` raw `tickets` read; frontend reads `public.contest_progress`, which aggregates `contests` + `tickets`. Production had `security_invoker=true`, so anon/authenticated callers needed raw `tickets` access, now correctly blocked by Phase 1.

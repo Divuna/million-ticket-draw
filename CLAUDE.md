@@ -1,5 +1,18 @@
 # CLAUDE.md
 
+## SUBADMIN CONTEST UI GATING — FRONTEND-ONLY (23. 06. 2026)
+
+Po Phase 1 backend locku doplněno **frontend-only** skrytí citlivých contest interních dat před non-superadminy. Žádná DB/RLS/RPC/EF změna; backend security beze změny. Gate = existující `useUserRole().isSuperAdmin`.
+
+- **`src/components/AdminContestManagement.tsx`** — list view: pro non-superadmina se **nefetchují** `contest_progress` / `contest_revenue` / `contest_activity_last_24h` (nahrazeno `Promise.resolve({data:[],error:null})`); skryt souhrnný panel (Tikety prodány/zbývají/Prodáno %/Výnos MC/Tikety za 24h) i tabulkové sloupce **Tikety / % hotovo / Bonusové MioCoiny** (header + buňky). Subadmin vidí jen Název / Hlavní výhra / Status / Akce. Modal `ContestModal`: skryté taby **Bonusy – MioCoins, Bonusy – věcné, Ekonomika** (bonusové pozice + ekonomika/marže). Základní údaje + Grafika + Vytvořit zůstávají.
+- **`src/components/TicketMapAdmin.tsx`** — non-superadmin: žádný fetch, fallback `Tato část je dostupná pouze superadminovi.` (mapa tiketů = výherní/bonusové pozice, raw tikety).
+- **`src/components/AdminBonusOverview.tsx`** — non-superadmin: žádný fetch/realtime, fallback (bonusové pozice).
+- **`src/components/admin/ContestControlPanel.tsx`** — non-superadmin: fallback.
+- **`src/components/ContestDetailAdmin.tsx`** — guard přepnut z `isAdmin` na `isSuperAdmin` (fetch i render); subadmin (validní admin) dostane fallback místo redirectu na login.
+- **NEzměněno:** `AdminContestView.tsx` (zákaznický buy-ticket view s `userWallet/onBuyTicket` — gating by rozbil public flow), žádné public user flows, žádné payments/voucher UI.
+- **Pravidlo:** sensitive contest internals (progress/revenue/24h/economy/bonus+winning positions/ticket map/raw tickets) renderovat jen pro `isSuperAdmin`. Subadmin vidí jen základní contest info (název, veřejná výhra, status, základní list akce). Backend RLS/RPC tyto views/tabulky stejně drží superadmin-only (frontend gate = defense-in-depth + UX).
+- **Zbývá (volitelný follow-up, ne security blocker):** skrýt i nav odkazy na citlivé dashboard taby (ticketmap/bonus-overview/prizes/distribution/contest-control/statistics) — dnes odkaz zůstává viditelný, ale klik vede na fallback (žádná citlivá data). Build `npm run build` ✅. Žádná DB změna nutná.
+
 ## PHASE 1 POST-PRODUCTION SMOKE FIX -- contest_progress PUBLIC AGGREGATE (23. 06. 2026)
 
 After Phase 1 production lock, `/games` loaded but browser console showed `permission denied for table tickets` while fetching contest progress. Root cause: public frontend reads `public.contest_progress`; production had `security_invoker=true`, so anon/authenticated callers needed raw `tickets` access. Phase 1 correctly locked raw `tickets`, so the public aggregate broke.

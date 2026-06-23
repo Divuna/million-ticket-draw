@@ -81,7 +81,9 @@ const ContestDetailAdmin: React.FC = () => {
   console.log('ContestDetailAdmin component is loading');
   const { contestId } = useParams<{ contestId: string }>();
   const { user, loading: authLoading } = useAuth();
-  const { isAdmin, loading: roleLoading } = useUserRole();
+  // Admin contest detail (raw tickets, bonus positions, progress, winner setup,
+  // close) is superadmin-only sensitive contest internals.
+  const { isAdmin, isSuperAdmin, loading: roleLoading } = useUserRole();
   const navigate = useNavigate();
   const [contest, setContest] = useState<ContestData | null>(null);
   const [bonusPrizes, setBonusPrizes] = useState<BonusPrize[]>([]);
@@ -143,7 +145,7 @@ const ContestDetailAdmin: React.FC = () => {
   }, [contestId]);
 
   useEffect(() => {
-    if (!contestId || authLoading || roleLoading || !user || !isAdmin) {
+    if (!contestId || authLoading || roleLoading || !user || !isSuperAdmin) {
       return;
     }
 
@@ -208,7 +210,7 @@ const ContestDetailAdmin: React.FC = () => {
       supabase.removeChannel(bonusChannel);
       supabase.removeChannel(ticketsChannel);
     };
-  }, [contestId, user, isAdmin, authLoading, roleLoading]);
+  }, [contestId, user, isSuperAdmin, authLoading, roleLoading]);
 
   const fetchContestData = async () => {
     try {
@@ -487,6 +489,15 @@ const ContestDetailAdmin: React.FC = () => {
 
   if (!user || !isAdmin) {
     return <NavigateToLogin />;
+  }
+
+  // Scoped subadmins are valid admins but must not see sensitive contest internals.
+  if (!isSuperAdmin) {
+    return (
+      <div className="max-w-3xl mx-auto p-8 text-center text-muted-foreground">
+        Tato část je dostupná pouze superadminovi.
+      </div>
+    );
   }
 
   if (loading) {

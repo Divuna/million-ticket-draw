@@ -37,6 +37,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { toast } from "@/hooks/use-toast";
+import { useUserRole } from "@/hooks/useUserRole";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { useNavigate } from "react-router-dom";
@@ -179,6 +180,9 @@ const PrizeThumb: React.FC<{ file: File | null; fallbackUrl?: string | null; alt
 };
 
 const ContestModal: React.FC<ContestModalProps> = ({ open, onClose, onSaved, editingContest }) => {
+  // Sensitive contest internals (MioCoin/physical bonus positions, economy/profit/margin)
+  // are superadmin-only. Scoped subadmins must not see these tabs.
+  const { isSuperAdmin } = useUserRole();
   const [form, setForm] = useState<ContestFormData>({
     title: "",
     description: "",
@@ -2230,9 +2234,13 @@ const ContestModal: React.FC<ContestModalProps> = ({ open, onClose, onSaved, edi
                 Základní údaje
                 <TabIndicator isValid={validation.basic.isValid} />
               </TabsTrigger>
-              <TabsTrigger value="bonus-coins">Bonusy – MioCoins</TabsTrigger>
-              <TabsTrigger value="bonus-physical">Bonusy – věcné</TabsTrigger>
-              <TabsTrigger value="economy">Ekonomika</TabsTrigger>
+              {isSuperAdmin && (
+                <>
+                  <TabsTrigger value="bonus-coins">Bonusy – MioCoins</TabsTrigger>
+                  <TabsTrigger value="bonus-physical">Bonusy – věcné</TabsTrigger>
+                  <TabsTrigger value="economy">Ekonomika</TabsTrigger>
+                </>
+              )}
               <TabsTrigger value="graphics" className="flex items-center">
                 Grafika
                 <TabIndicator isValid={validation.graphics.isValid} />
@@ -3141,6 +3149,9 @@ const ContestModal: React.FC<ContestModalProps> = ({ open, onClose, onSaved, edi
 
 export const AdminContestManagement: React.FC = () => {
   const navigate = useNavigate();
+  // Sensitive contest progress/revenue/activity is superadmin-only. Scoped
+  // subadmins see only the basic contest list (name, prize, status).
+  const { isSuperAdmin } = useUserRole();
   const [contests, setContests] = useState<ContestData[]>([]);
   const [statsMap, setStatsMap] = useState<Record<string, ContestViewStats>>({});
   const [loading, setLoading] = useState(true);
@@ -3170,9 +3181,18 @@ export const AdminContestManagement: React.FC = () => {
           .from("contests")
           .select("id, title, description, rules, rules_pdf_url, main_prize, main_image, status, ticket_count, ticket_price, total_miocoin_bonus, created_at, updated_at, fast_game")
           .order("created_at", { ascending: false }),
-        supabase.from("contest_progress").select("contest_id, tickets_sold, tickets_remaining, sold_percent"),
-        supabase.from("contest_revenue").select("contest_id, estimated_revenue"),
-        supabase.from("contest_activity_last_24h").select("contest_id, tickets_last_24h, users_last_24h"),
+        // Sensitive contest progress/revenue/24h-activity is superadmin-only.
+        // Scoped subadmins must not learn how close a contest is to ending, so
+        // these analytics views are not even fetched for them.
+        isSuperAdmin
+          ? supabase.from("contest_progress").select("contest_id, tickets_sold, tickets_remaining, sold_percent")
+          : Promise.resolve({ data: [], error: null }),
+        isSuperAdmin
+          ? supabase.from("contest_revenue").select("contest_id, estimated_revenue")
+          : Promise.resolve({ data: [], error: null }),
+        isSuperAdmin
+          ? supabase.from("contest_activity_last_24h").select("contest_id, tickets_last_24h, users_last_24h")
+          : Promise.resolve({ data: [], error: null }),
       ]);
 
       if (contestsRes.error) {
@@ -3727,8 +3747,8 @@ export const AdminContestManagement: React.FC = () => {
         })}
       </div>
 
-      {/* ── Contest statistics panel ── */}
-      {!loading && contests.length > 0 && (
+      {/* ── Contest statistics panel (superadmin-only: reveals progress/revenue/24h) ── */}
+      {isSuperAdmin && !loading && contests.length > 0 && (
         <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3">
           <div className="flex items-center gap-3 rounded-lg border border-white/10 bg-card/40 px-4 py-3">
             <Ticket className="h-5 w-5 shrink-0 text-primary" />
@@ -3835,9 +3855,13 @@ export const AdminContestManagement: React.FC = () => {
                     <TableHead className="bg-card">Název</TableHead>
                     <TableHead className="text-center bg-card">Hlavní výhra</TableHead>
                     <TableHead className="text-center bg-card">Status</TableHead>
-                    <TableHead className="text-center bg-card">Tikety</TableHead>
-                    <TableHead className="text-center bg-card">% hotovo</TableHead>
-                    <TableHead className="text-center bg-card">Bonusové MioCoiny</TableHead>
+                    {isSuperAdmin && (
+                      <>
+                        <TableHead className="text-center bg-card">Tikety</TableHead>
+                        <TableHead className="text-center bg-card">% hotovo</TableHead>
+                        <TableHead className="text-center bg-card">Bonusové MioCoiny</TableHead>
+                      </>
+                    )}
                     <TableHead className="text-right bg-card">Akce</TableHead>
                   </TableRow>
                 </TableHeader>
@@ -3905,35 +3929,39 @@ export const AdminContestManagement: React.FC = () => {
                         </div>
                       </TableCell>
 
-                      <TableCell className="text-center">
-                        <div>{contest.tickets_sold.toLocaleString("cs-CZ")} / {contest.ticket_count.toLocaleString("cs-CZ")}</div>
-                        {statsMap[contest.contest_id] && (
-                          <div className="flex items-center justify-center gap-1.5 mt-1">
-                            <span className="text-[10px] text-muted-foreground">
-                              zbývá {statsMap[contest.contest_id].tickets_remaining.toLocaleString("cs-CZ")}
-                            </span>
-                            {statsMap[contest.contest_id].tickets_last_24h > 0 && (
-                              <span className="inline-flex items-center gap-0.5 text-[10px] text-blue-400">
-                                <Activity className="h-2.5 w-2.5" />
-                                +{statsMap[contest.contest_id].tickets_last_24h.toLocaleString("cs-CZ")} 24h
-                              </span>
+                      {isSuperAdmin && (
+                        <>
+                          <TableCell className="text-center">
+                            <div>{contest.tickets_sold.toLocaleString("cs-CZ")} / {contest.ticket_count.toLocaleString("cs-CZ")}</div>
+                            {statsMap[contest.contest_id] && (
+                              <div className="flex items-center justify-center gap-1.5 mt-1">
+                                <span className="text-[10px] text-muted-foreground">
+                                  zbývá {statsMap[contest.contest_id].tickets_remaining.toLocaleString("cs-CZ")}
+                                </span>
+                                {statsMap[contest.contest_id].tickets_last_24h > 0 && (
+                                  <span className="inline-flex items-center gap-0.5 text-[10px] text-blue-400">
+                                    <Activity className="h-2.5 w-2.5" />
+                                    +{statsMap[contest.contest_id].tickets_last_24h.toLocaleString("cs-CZ")} 24h
+                                  </span>
+                                )}
+                              </div>
                             )}
-                          </div>
-                        )}
-                      </TableCell>
+                          </TableCell>
 
-                      <TableCell className="text-center">
-                        <div>{contest.progress_percentage}%</div>
-                        {statsMap[contest.contest_id] && (
-                          <div className="text-[10px] text-yellow-400 mt-1 tabular-nums">
-                            {statsMap[contest.contest_id].estimated_revenue.toLocaleString("cs-CZ")} MC
-                          </div>
-                        )}
-                      </TableCell>
+                          <TableCell className="text-center">
+                            <div>{contest.progress_percentage}%</div>
+                            {statsMap[contest.contest_id] && (
+                              <div className="text-[10px] text-yellow-400 mt-1 tabular-nums">
+                                {statsMap[contest.contest_id].estimated_revenue.toLocaleString("cs-CZ")} MC
+                              </div>
+                            )}
+                          </TableCell>
 
-                      <TableCell className="text-center">
-                        {contest.total_miocoin_bonus?.toLocaleString("cs-CZ") || 0}
-                      </TableCell>
+                          <TableCell className="text-center">
+                            {contest.total_miocoin_bonus?.toLocaleString("cs-CZ") || 0}
+                          </TableCell>
+                        </>
+                      )}
 
                       <TableCell className="text-right">
                         <div className="flex justify-end gap-2">

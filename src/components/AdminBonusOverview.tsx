@@ -4,6 +4,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Badge } from '@/components/ui/badge';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/hooks/use-toast';
+import { useUserRole } from '@/hooks/useUserRole';
 
 interface BonusOverviewData {
   contest_name: string;
@@ -14,15 +15,19 @@ interface BonusOverviewData {
 }
 
 export const AdminBonusOverview: React.FC = () => {
+  // Bonus prize positions are superadmin-only sensitive contest internals.
+  const { isSuperAdmin, loading: roleLoading } = useUserRole();
   const [bonusData, setBonusData] = useState<BonusOverviewData[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
+    if (!isSuperAdmin) return;
     fetchBonusOverview();
-  }, []);
+  }, [isSuperAdmin]);
 
   // Real-time subscription for bonus_prizes table changes
   useEffect(() => {
+    if (!isSuperAdmin) return;
     const channel = supabase
       .channel('admin-bonus-overview-realtime')
       .on('postgres_changes', {
@@ -38,7 +43,7 @@ export const AdminBonusOverview: React.FC = () => {
     return () => {
       supabase.removeChannel(channel);
     };
-  }, []);
+  }, [isSuperAdmin]);
 
   const fetchBonusOverview = async () => {
     try {
@@ -132,6 +137,16 @@ export const AdminBonusOverview: React.FC = () => {
     if (assigned === 0) return <Badge variant="destructive">Nepřiřazené</Badge>;
     return <Badge variant="outline">Částečné</Badge>;
   };
+
+  if (!roleLoading && !isSuperAdmin) {
+    return (
+      <Card>
+        <CardContent className="py-10 text-center text-muted-foreground">
+          Tato část je dostupná pouze superadminovi.
+        </CardContent>
+      </Card>
+    );
+  }
 
   if (loading) {
     return (
