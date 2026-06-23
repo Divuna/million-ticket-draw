@@ -7,7 +7,7 @@ Frontend-only skrytí citlivých contest interních dat před non-superadminy (p
 - **Gatované soubory:** `AdminContestManagement.tsx` (souhrn + sloupce Tikety/% hotovo/Bonusové MioCoiny + modal taby Bonusy/Ekonomika), `TicketMapAdmin.tsx`, `AdminBonusOverview.tsx`, `admin/ContestControlPanel.tsx`, `ContestDetailAdmin.tsx` (isAdmin→isSuperAdmin). Fallback text: „Tato část je dostupná pouze superadminovi."
 - **Subadmin vidí jen základní:** název soutěže, veřejná výhra, status, základní list akce.
 - **NEzměněno:** `AdminContestView.tsx` (zákaznický buy-ticket view), public flows, payments/voucher UI. Superadmin vidí plné UI beze změny. Build ✅.
-- **Volitelný follow-up:** skrýt i nav odkazy na citlivé taby (dnes klik → fallback). Backend RLS už tyto views/tabulky drží superadmin-only.
+- **Nav odkazy skryté (dokončeno 23. 06. 2026):** `AdminContextSubNav.tsx` filtruje pro non-superadmina citlivé sub-nav položky (`filterEntriesForSubadmin`): skryto Mapa tiketů, Přehled bonusů, Bonusové ceny, Distribuce bonusů, Contest control, Statistiky; vyprázdněné menu zahozeno. Zůstává Správa soutěží, Seznam soutěží + ostatní nescitlivé. Superadmin nav beze změny. Backend RLS tyto views/tabulky stejně drží superadmin-only. `npm run build` ✅, `tsc --noEmit` 0 chyb.
 
 ## PHASE 1 POST-PRODUCTION SMOKE FIX -- contest_progress PUBLIC AGGREGATE (23. 06. 2026)
 

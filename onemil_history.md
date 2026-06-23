@@ -14,6 +14,10 @@
 
 ---
 
+## 2026-06-23 -- Subadmin sensitive admin nav links hidden (frontend-only)
+
+Navázáno na contest UI gate (46715ee3). `src/components/admin/AdminContextSubNav.tsx`: pro non-superadmina nový `filterEntriesForSubadmin` odstraní citlivé sub-nav položky (`dashboardTab ∈ {ticketmap, bonus-overview, prizes, distribution, contest-control}`, `path = /admin/statistics`) a zahodí vyprázdněné menu. Skryto subadminovi: Mapa tiketů, Přehled bonusů, Bonusové ceny, Distribuce bonusů, Contest control, Statistiky. Zůstává: Správa soutěží, Seznam soutěží + ostatní nescitlivé. Superadmin nav beze změny (`isSuperAdmin ? seg.entries : filterEntriesForSubadmin(...)`). Žádná DB/RLS/RPC/EF/SQL změna, žádný deploy. `npm run build` ✅, `tsc --noEmit` 0 chyb.
+
 ## 2026-06-23 -- Subadmin contest UI gating (frontend-only)
 
 Po Phase 1 backend locku přidáno frontend-only skrytí citlivých contest interních dat před non-superadminy. Gate = `useUserRole().isSuperAdmin`. **Žádná DB/RLS/RPC/EF/SQL změna, žádný deploy.** Gatováno: `AdminContestManagement.tsx` (nefetchuje contest_progress/contest_revenue/contest_activity_last_24h pro non-superadmina; skryt souhrnný panel + sloupce Tikety/% hotovo/Bonusové MioCoiny; modal taby Bonusy–MioCoins/Bonusy–věcné/Ekonomika), `TicketMapAdmin.tsx` (fallback + žádný fetch), `AdminBonusOverview.tsx` (fallback + žádný fetch/realtime), `admin/ContestControlPanel.tsx` (fallback), `ContestDetailAdmin.tsx` (guard isAdmin→isSuperAdmin, subadmin dostane fallback místo login redirectu). Fallback: „Tato část je dostupná pouze superadminovi." NEzměněn `AdminContestView.tsx` (zákaznický buy-ticket view) ani public flows. Superadmin UI beze změny. `npm run build` ✅. Volitelný follow-up: skrýt nav odkazy na citlivé taby.

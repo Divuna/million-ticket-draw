@@ -29,6 +29,43 @@ import {
   type AdminSubNavItem,
 } from "./adminNavConfig";
 
+// ── Subadmin sensitive-nav hiding ───────────────────────────────────────────
+// Dashboard tabs / paths that reveal sensitive contest internals (progress,
+// ticket map, bonus/winning positions, distribution, contest control,
+// revenue/statistics). Hidden from non-superadmin admins; superadmin unchanged.
+const SENSITIVE_DASHBOARD_TABS = new Set<string>([
+  "ticketmap",
+  "bonus-overview",
+  "prizes",
+  "distribution",
+  "contest-control",
+]);
+const SENSITIVE_NAV_PATHS = new Set<string>(["/admin/statistics"]);
+
+function isSensitiveNavItem(item: AdminSubNavItem): boolean {
+  if (item.dashboardTab && SENSITIVE_DASHBOARD_TABS.has(item.dashboardTab)) return true;
+  if (!item.dashboardTab && SENSITIVE_NAV_PATHS.has(item.path)) return true;
+  return false;
+}
+
+/** Remove sensitive links / menu-items for non-superadmin; drop emptied menus. */
+function filterEntriesForSubadmin(
+  entries: AdminContextSecondRowEntry[],
+): AdminContextSecondRowEntry[] {
+  const out: AdminContextSecondRowEntry[] = [];
+  for (const entry of entries) {
+    if (entry.kind === "link") {
+      if (!isSensitiveNavItem(entry.item)) out.push(entry);
+      continue;
+    }
+    const sections: AdminContextMenuSection[] = entry.sections
+      .map((sec) => ({ ...sec, items: sec.items.filter((it) => !isSensitiveNavItem(it)) }))
+      .filter((sec) => sec.items.length > 0);
+    if (sections.length > 0) out.push({ ...entry, sections });
+  }
+  return out;
+}
+
 const linkButtonClass = (active: boolean) =>
   `
   inline-flex items-center no-underline relative h-9 shrink-0 rounded-full px-3.5 gap-2 text-[13px] font-semibold tracking-tight transition-all duration-200
@@ -290,7 +327,9 @@ export const AdminContextSubNav: React.FC = () => {
                 <span className="whitespace-nowrap">Správa adminů</span>
               </NavLink>
             )}
-            {seg.entries.map((e, i) => renderSecondRowEntry(e, seg.sectionId, i))}
+            {(isSuperAdmin ? seg.entries : filterEntriesForSubadmin(seg.entries)).map(
+              (e, i) => renderSecondRowEntry(e, seg.sectionId, i),
+            )}
           </div>
         ))}
       </div>
