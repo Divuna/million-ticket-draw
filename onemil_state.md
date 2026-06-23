@@ -1,5 +1,22 @@
 ﻿# OneMil – aktuální stav projektu
 
+## PHASE 1 POST-PRODUCTION SMOKE FIX -- contest_progress PUBLIC AGGREGATE (23. 06. 2026)
+
+Production `/games` smoke after Phase 1 found a console warning: `permission denied for table tickets` while loading contest progress. Cause: frontend reads `public.contest_progress`; the view had `security_invoker=true`, so public callers needed raw `tickets` access. Phase 1 correctly locks raw `tickets`, and E22 `contest_progress` was already owner-accepted as intentional public aggregate behavior.
+
+Production `xkzhjldrojjlrkezorey` was fixed with one SQL statement:
+
+`ALTER VIEW public.contest_progress RESET (security_invoker);`
+
+Verification passed:
+- `anon` can read aggregate `contest_id, tickets_sold, tickets_total` from `public.contest_progress`.
+- `anon` still cannot read raw `public.tickets`.
+- Authenticated normal users still cannot read other users' raw tickets; own-row ticket access is preserved.
+- Superadmin still reads admin-locked data (`tickets` / `payments`) and `public.is_superadmin()` returns true.
+- `https://onemil.cz/games` no longer logs the `contest_progress` / `tickets` permission warning.
+
+No frontend changes, no Edge Function deploy, no `db push`, and no tickets RLS weakening. Rule remains: `contest_progress` is public aggregate only; do not grant public raw ticket access.
+
 ## PHASE 1 — SENSITIVE-ADMIN PRODUCTION LOCK APPLIED (22. 06. 2026)
 
 Phase 1 sensitive-admin production DB/RLS/RPC lock was applied successfully to production project `xkzhjldrojjlrkezorey` after Pavel's explicit approval: `SCHVALUJI PRODUKČNÍ APPLY`.

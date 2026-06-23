@@ -1,5 +1,22 @@
 # CLAUDE.md
 
+## PHASE 1 POST-PRODUCTION SMOKE FIX -- contest_progress PUBLIC AGGREGATE (23. 06. 2026)
+
+After Phase 1 production lock, `/games` loaded but browser console showed `permission denied for table tickets` while fetching contest progress. Root cause: public frontend reads `public.contest_progress`; production had `security_invoker=true`, so anon/authenticated callers needed raw `tickets` access. Phase 1 correctly locked raw `tickets`, so the public aggregate broke.
+
+Production fix applied on `xkzhjldrojjlrkezorey`:
+- SQL applied exactly: `ALTER VIEW public.contest_progress RESET (security_invoker);`
+- This restores the already owner-accepted E22 behavior: `contest_progress` is a public aggregate only (`contest_id`, `tickets_sold`, `tickets_total`, remaining/percent), not raw ticket access.
+- No tickets RLS was weakened; no raw public `tickets` access was granted.
+- No frontend changes, no Edge Function deploy, no `db push`.
+
+Verification:
+- `anon` can select `contest_id, tickets_sold, tickets_total` from `public.contest_progress`.
+- `anon` still gets `permission denied for table tickets` on raw `public.tickets`.
+- Authenticated normal user with own tickets sees own rows only and `0` other-user ticket rows.
+- Superadmin still has `public.is_superadmin() = true` and can read admin-locked `tickets` / `payments`.
+- Browser check on `https://onemil.cz/games` found no `contest_progress`, `tickets`, `42501`, or `permission denied` console warning. Remaining observed console noise was unrelated auth refresh-token state in the test browser.
+
 ## PHASE 1 — SENSITIVE-ADMIN PRODUCTION LOCK APPLIED (22. 06. 2026)
 
 Phase 1 sensitive-admin production DB/RLS/RPC lock was applied successfully to production project `xkzhjldrojjlrkezorey` after Pavel's explicit approval: `SCHVALUJI PRODUKČNÍ APPLY`.
