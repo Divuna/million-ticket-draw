@@ -1,5 +1,15 @@
 # CLAUDE.md
 
+## PHASE 3B — SUPPORT OPRÁVNĚNÍ (23. 06. 2026, frontend-only)
+
+Přidána dvě safe support oprávnění pro subadminy. **Žádné DB/RLS/SQL/EF/produkční změny; frontend-only.** Granty se dělají vložením řádků do `admin_permissions` (volné textové klíče — bez migrace).
+- **Nové klíče:** `support.messages` (label „Zprávy (podpora)") → `/admin/messages` + `/admin/messages/:userId`; `users.view.basic` (label „Uživatelé (základní)") → `/admin/users`. Přidáno do `ADMIN_PERMISSION_KEYS`, `ADMIN_PERMISSION_LABELS`, `ADMIN_ROUTE_PERMISSION`, `SUBADMIN_ENTRY_ROUTES` (nav labels „Zprávy"/„Uživatelé", ikony MessageSquare/Users).
+- **Routy:** `/admin/messages`, `/admin/messages/:userId` přepnuty z `RequireSuperadmin` na `RequirePermission("support.messages")`; `/admin/users` na `RequirePermission("users.view.basic")`. Ostatní Phase 3 superadmin-only routy beze změny.
+- **Nav:** non-superadmin vidí „Zprávy" jen s `support.messages`, „Uživatelé" jen s `users.view.basic` (přes `SUBADMIN_ENTRY_ROUTES` v `AdminPrimaryNav`).
+- **Support smí:** číst support konverzace, odpovídat, označit přečtené, ukončit chat; vidět základní seznam uživatelů (jméno, role badge, vytvořeno).
+- **Support NESMÍ:** přepínat Boba (toggle skryt `isSuperAdmin`-only v `AdminMessages`), měnit role (UI superadmin-only, RLS lock Phase 1), vidět datum narození / adresu (`AdminUsers` pro non-superadmina SELECTuje jen `id, full_name, first_name, last_name, phone, updated_at` — žádné `date_of_birth/street/city/zip/country/avatar`), ani citlivé finance/contest/winners/audit (Phase 3 route guardy + Phase 1 RLS).
+- **Pravidlo:** support klíče jsou safe-only; rozšiřovat sensitive oblasti jen samostatným schváleným krokem. Build ✅, `tsc --noEmit` 0 chyb. Vyžaduje Lovable Publish + grant klíčů subadminům v `/admin/admins`.
+
 ## PHASE 3 — ROUTE-LEVEL HARDENING SENSITIVE ADMIN ROUT (23. 06. 2026, frontend-only)
 
 Uzavřena díra přímého URL přístupu: non-superadmin admin (subadmin) se nedostane na citlivé admin routy ani přes přímý odkaz. **Žádné DB/RLS/SQL/EF/produkční změny; frontend-only. Support oprávnění JEŠTĚ NEPŘIDÁNA.**

@@ -4654,3 +4654,13 @@ Změny: (1) `src/components/admin/RequireSuperadmin.tsx` (nový) — superadmin 
 Beze změny: `/admin` + `/admin/statistics` (`RequireSuperadminOrRedirect`, efektivně superadmin-only); Phase 2 safe routy `/admin/vouchers`, `/admin/content`, `/admin/banners`, `/admin/notifications` (`RequirePermission`); `/admin/*` 404. Superadmin chování beze změny.
 
 Pozn.: `/admin/messages` a `/admin/users` jsou pro teď superadmin-only; Phase 3b je přepne na `support.messages` / `users.view.basic` (swap `RequireSuperadmin` → `RequirePermission`). Ochrana dat zůstává per-table superadmin RLS (Phase 1) — toto je UI/route vrstva defense-in-depth. `npm run build` ✅ exit 0, `npx tsc --noEmit` ✅ 0 chyb. Vyžaduje Lovable Publish, aby se projevilo na produkci.
+
+---
+
+## 2026-06-23 — Phase 3b support oprávnění (frontend-only)
+
+Přidána dvě safe support oprávnění pro subadminy, aby mohli bezpečně pomáhat uživatelům. **Frontend-only; žádné DB/RLS/SQL/EF/produkční změny.** Grant = vložení řádku do `admin_permissions` (klíče jsou volný text, bez migrace).
+
+Změny: (1) `src/hooks/useAdminPermissions.ts` — přidány klíče `support.messages` (label „Zprávy (podpora)") a `users.view.basic` (label „Uživatelé (základní)") do `ADMIN_PERMISSION_KEYS`/`ADMIN_PERMISSION_LABELS`; mapy `ADMIN_ROUTE_PERMISSION` (`/admin/messages`→support.messages, `/admin/users`→users.view.basic) a `SUBADMIN_ENTRY_ROUTES` (nav labels „Zprávy"/„Uživatelé"). (2) `src/App.tsx` — `/admin/messages` + `/admin/messages/:userId` přepnuty z `RequireSuperadmin` na `RequirePermission("support.messages")`; `/admin/users` na `RequirePermission("users.view.basic")`. (3) `src/components/admin/AdminPrimaryNav.tsx` — ikony MessageSquare/Users pro nové klíče (non-superadmin tak vidí „Zprávy" jen s support.messages, „Uživatelé" jen s users.view.basic). (4) `src/pages/AdminMessages.tsx` — globální Bob ON/OFF toggle zabalen do `isSuperAdmin` (support subadmin ho nevidí; reply/ukončit/označit přečtené fungují dál přes RLS `is_admin`). (5) `src/pages/AdminUsers.tsx` — pro non-superadmina `profiles` SELECT zúžen na `id, full_name, first_name, last_name, phone, updated_at` (žádné `date_of_birth/street/city/zip/country/avatar` neopustí server); role-change UI zůstává superadmin-only.
+
+Support smí: číst support konverzace, odpovídat, označit přečtené, ukončit chat, vidět základní seznam uživatelů. Support NESMÍ: přepínat Boba, měnit role, vidět DOB/adresu/citlivá finanční data, ani contest internals/tikety/progress/platby/faktury/výherce/audit (chrání Phase 3 route guardy + Phase 1 superadmin RLS). Superadmin chování beze změny. `npm run build` ✅ exit 0, `npx tsc --noEmit` ✅ 0 chyb. Vyžaduje Lovable Publish + grant klíčů subadminům v `/admin/admins`.

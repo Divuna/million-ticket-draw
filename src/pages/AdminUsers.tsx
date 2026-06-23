@@ -45,9 +45,16 @@ const AdminUsers: React.FC = () => {
     try {
       setLoading(true);
 
+      // Phase 3b: a non-superadmin support viewer (users.view.basic) must never
+      // receive sensitive PII (date_of_birth, street/city/zip/country, avatar).
+      // Fetch only basic-safe columns for them; superadmin keeps the full row.
+      const profileColumns = isSuperAdmin
+        ? '*'
+        : 'id, full_name, first_name, last_name, phone, updated_at';
+
       const { data: profiles, error: profilesError } = await supabase
         .from('profiles')
-        .select('*');
+        .select(profileColumns);
 
       if (profilesError) {
         console.error('Error fetching users:', profilesError);

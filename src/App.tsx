@@ -608,7 +608,7 @@ function AppContent() {
           <Route path="/onboarding/date-of-birth" element={<OnboardingDateOfBirth />} />
           <Route element={<AdminLayout />}>
             <Route path="/admin" element={<RequireSuperadminOrRedirect><AdminDashboard /></RequireSuperadminOrRedirect>} />
-            <Route path="/admin/users" element={<RequireSuperadmin><AdminUsers /></RequireSuperadmin>} />
+            <Route path="/admin/users" element={<RequirePermission permission="users.view.basic"><AdminUsers /></RequirePermission>} />
             <Route path="/admin/admins" element={<RequireSuperadmin><AdminAdmins /></RequireSuperadmin>} />
             <Route path="/admin/banners" element={<RequirePermission permission="banners.manage"><AdminBanners /></RequirePermission>} />
             <Route path="/admin/vouchers" element={<RequirePermission permission="vouchers.manage"><AdminVouchers /></RequirePermission>} />
@@ -620,8 +620,8 @@ function AppContent() {
             <Route path="/admin/tests" element={<RequireSuperadmin><AdminTests /></RequireSuperadmin>} />
             <Route path="/admin/partners" element={<RequireSuperadmin><AdminPartners /></RequireSuperadmin>} />
             <Route path="/admin/partner-offers" element={<RequireSuperadmin><AdminPartnerOffers /></RequireSuperadmin>} />
-            <Route path="/admin/messages" element={<RequireSuperadmin><AdminMessages /></RequireSuperadmin>} />
-            <Route path="/admin/messages/:userId" element={<RequireSuperadmin><AdminMessageThread /></RequireSuperadmin>} />
+            <Route path="/admin/messages" element={<RequirePermission permission="support.messages"><AdminMessages /></RequirePermission>} />
+            <Route path="/admin/messages/:userId" element={<RequirePermission permission="support.messages"><AdminMessageThread /></RequirePermission>} />
             <Route path="/admin/audit-logs" element={<RequireSuperadmin><AdminAuditLogs /></RequireSuperadmin>} />
             <Route path="/admin/event-queue" element={<RequireSuperadmin><AdminEventQueue /></RequireSuperadmin>} />
             <Route path="/admin/audit-repair" element={<RequireSuperadmin><AdminAuditRepair /></RequireSuperadmin>} />

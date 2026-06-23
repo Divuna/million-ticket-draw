@@ -4,15 +4,18 @@ import { useUserRole } from '@/hooks/useUserRole';
 import { supabase } from '@/integrations/supabase/client';
 
 /**
- * Phase 2 granular subadmin permission keys (safe first slice only).
- * NO sensitive areas (contest internals, finance, winners, audit, settings,
- * admin role management) are represented here.
+ * Granular subadmin permission keys (safe slices only).
+ * Phase 2: vouchers/content/banners/notifications. Phase 3b: support.messages,
+ * users.view.basic. NO sensitive areas (contest internals, finance, winners,
+ * audit, settings, admin role management) are represented here.
  */
 export const ADMIN_PERMISSION_KEYS = [
   'vouchers.manage',
   'content.manage',
   'banners.manage',
   'notifications.manage',
+  'support.messages',
+  'users.view.basic',
 ] as const;
 export type AdminPermissionKey = (typeof ADMIN_PERMISSION_KEYS)[number];
 
@@ -21,6 +24,8 @@ export const ADMIN_PERMISSION_LABELS: Record<AdminPermissionKey, string> = {
   'content.manage': 'Obsah stránek',
   'banners.manage': 'Bannery',
   'notifications.manage': 'Notifikace',
+  'support.messages': 'Zprávy (podpora)',
+  'users.view.basic': 'Uživatelé (základní)',
 };
 
 interface UseAdminPermissions {
@@ -91,6 +96,8 @@ export const ADMIN_ROUTE_PERMISSION: Record<string, AdminPermissionKey> = {
   '/admin/content': 'content.manage',
   '/admin/banners': 'banners.manage',
   '/admin/notifications': 'notifications.manage',
+  '/admin/messages': 'support.messages',
+  '/admin/users': 'users.view.basic',
 };
 
 /**
@@ -109,4 +116,7 @@ export const SUBADMIN_ENTRY_ROUTES: {
   { path: '/admin/content', permission: 'content.manage', label: ADMIN_PERMISSION_LABELS['content.manage'] },
   { path: '/admin/banners', permission: 'banners.manage', label: ADMIN_PERMISSION_LABELS['banners.manage'] },
   { path: '/admin/notifications', permission: 'notifications.manage', label: ADMIN_PERMISSION_LABELS['notifications.manage'] },
+  // Phase 3b support slice — short nav labels (not the descriptive grant-UI labels).
+  { path: '/admin/messages', permission: 'support.messages', label: 'Zprávy' },
+  { path: '/admin/users', permission: 'users.view.basic', label: 'Uživatelé' },
 ];

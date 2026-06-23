@@ -1,5 +1,14 @@
 ﻿# OneMil – aktuální stav projektu
 
+## PHASE 3B — SUPPORT OPRÁVNĚNÍ (23. 06. 2026, frontend-only)
+
+Dva nové safe support klíče pro subadminy. **Frontend-only; žádné DB/RLS/SQL/EF/produkční změny.** Grant = řádek v `admin_permissions` (bez migrace).
+- **Klíče:** `support.messages` → `/admin/messages` (+/:userId); `users.view.basic` → `/admin/users`. Routy přepnuty z `RequireSuperadmin` na `RequirePermission`.
+- **Nav:** non-superadmin vidí „Zprávy" jen s `support.messages`, „Uživatelé" jen s `users.view.basic`.
+- **Support smí:** číst/odpovídat/označit přečtené/ukončit chat; základní seznam uživatelů.
+- **Support NESMÍ:** Bob toggle (skryt superadmin-only), změna rolí (superadmin-only + RLS), DOB/adresa (`AdminUsers` SELECTuje jen základní pole pro non-superadmina), finance/contest/winners/audit (Phase 3 guardy + Phase 1 RLS).
+- Build ✅, `tsc --noEmit` 0 chyb. **Vyžaduje Lovable Publish + grant klíčů v `/admin/admins`.**
+
 ## PHASE 3 — ROUTE-LEVEL HARDENING (23. 06. 2026, frontend-only)
 
 Uzavřena díra přímého URL přístupu před přidáním support oprávnění. Non-superadmin admin nedosáhne na citlivé routy ani přes URL. **Frontend-only; žádné DB/RLS/SQL/EF/produkční změny; support oprávnění zatím NEPŘIDÁNA.**
