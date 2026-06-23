@@ -21,8 +21,9 @@ Applied production DB/RLS/RPC result:
 - Rollback was not needed.
 
 Follow-up:
-- Pavel should reset the production DB password again because one password appeared in chat during the manual backup step.
-- After password reset, update or remove local `.cursor/mcp.json` direct DB credential if still needed.
+- Pavel reset the production DB password again because one password appeared in chat during the manual backup step.
+- Stale tracked local `.cursor/mcp.json` direct production DB credential was removed after the reset; the app/runtime is unaffected because it does not use the direct DB password.
+- `backups/` is gitignored and must remain uncommitted.
 
 ## PHASE 1 — SENSITIVE-ADMIN STAGING LOCK FINAL MILESTONE (22. 06. 2026)
 

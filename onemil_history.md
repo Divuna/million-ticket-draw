@@ -24,7 +24,7 @@ Applied production DB/RLS/RPC lock: helper `public.is_superadmin(check_user_id u
 
 Edge Functions were not deployed and remain verification-only; production sources were already superadmin-gated on JWT/user paths, with partner invoice internal token / service-role automation paths unchanged. Rollback was not needed.
 
-Follow-up: Pavel should reset the production DB password again because one password appeared in chat during backup work; after reset, update/remove local `.cursor/mcp.json` direct DB credential if needed.
+Follow-up completed: Pavel reset the production DB password again because one password appeared in chat during backup work. The stale tracked local `.cursor/mcp.json` direct production DB credential was removed after the reset; app/runtime remains unaffected because it does not use the direct DB password. `backups/` is gitignored and must remain uncommitted.
 
 ## 2026-06-22 — Phase 1 sensitive-admin staging lock final milestone
 

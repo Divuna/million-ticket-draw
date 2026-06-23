@@ -30,9 +30,9 @@
 ## 4. Manual snapshot (recommended — do immediately before Phase 1)
 Take an explicit snapshot regardless of PITR status (DB is only ~2.3 GB → fast):
 - **Option A — Dashboard:** Database → Backups → download a backup.
-- **Option B — pg_dump** (replace connection string with the production pooler/direct URL from Dashboard → Settings → Database):
+- **Option B — pg_dump** (paste the production pooler/direct URL from Dashboard → Settings → Database at runtime only; do not commit real connection strings):
   ```sh
-  pg_dump "postgresql://postgres:[PASSWORD]@db.xkzhjldrojjlrkezorey.supabase.co:5432/postgres" \
+  pg_dump "postgresql://postgres:[PASSWORD]@<production-db-host>:5432/postgres" \
     --no-owner --no-privileges -Fc -f onemil_prod_prePhase1_2026-06-22.dump
   ```
 - Store the dump file off-machine. This is the belt-and-suspenders backstop; Phase 1 changes only policy/function definitions (no table data), so a definition-level revert is normally sufficient.
