@@ -1,5 +1,15 @@
 # CLAUDE.md
 
+## PHASE 2 — PRODUKČNÍ APPLY PACKAGE PŘIPRAVEN (NEAPLIKOVÁNO) (23. 06. 2026)
+
+Připraven bezpečný **produkční apply package** pro aditivní `admin_permissions` DB foundation (jen Phase 2 foundation, nic citlivého). **NIC neaplikováno na produkci `xkzhjldrojjlrkezorey`; žádný produkční SQL nespuštěn; žádný EF deploy; žádný frontend publish.**
+- **Soubory:** `docs/rollback/phase2_admin_permissions_production_plan.md`, `phase2_admin_permissions_apply.sql`, `phase2_admin_permissions_rollback.sql`, `phase2_admin_permissions_verification.sql`.
+- **Apply rozsah (přesně):** `public.admin_permissions` (+ UNIQUE(user_id,permission_key) + index `idx_admin_permissions_user_id` + RLS) · helper `public.has_admin_permission(text, uuid default auth.uid())` (SECURITY DEFINER, execute jen `authenticated`, revoke PUBLIC/anon) · policy `admin_permissions_select` (own/superadmin) + `admin_permissions_superadmin_write` (superadmin only). Apply je transakční + idempotentní + pre-apply guard aborts pokud chybí `is_superadmin()` (Phase 1 dependency).
+- **Povolené klíče (jen safe):** `vouchers.manage`, `content.manage`, `banners.manage`, `notifications.manage`. **Mimo rozsah:** contest internals, tickets, revenue/statistics, payments, invoices, commissions, payouts, winners, prize delivery, audit/system/settings, admin role management.
+- **Rollback** dropuje JEN Phase 2 objekty (policies → helper → table); **nesmí** sáhnout na `is_superadmin()`, `user_roles` ani Phase 1.
+- **Pre-apply checklist:** výslovné schválení Pavla + manuální `pg_dump` (PITR off) + potvrdit produkci nedotčenou + **frontend Phase 2 NEPUBLIKOVAT před DB apply** (jinak non-superadmin ztratí nav).
+- **Stav:** ⛔ produkční apply NENÍ schválen; package čeká na schválení.
+
 ## PHASE 2 — STAGING E2E PASSED / STAGING-VALIDATED (23. 06. 2026)
 
 Targeted Phase 2 staging E2E **prošel**: run `28043183824` (`playwright-staging.yml`, spec `tests/e2e/phase2-admin-permissions.spec.ts`), conclusion **success**, headSha `d92c5ca2` (ověřeno `gh run view`).

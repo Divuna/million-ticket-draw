@@ -1,5 +1,17 @@
 ﻿# OneMil – aktuální stav projektu
 
+## PHASE 2 — PRODUKČNÍ APPLY PACKAGE PŘIPRAVEN (NEAPLIKOVÁNO) (23. 06. 2026)
+
+Připraven produkční apply package pro aditivní `admin_permissions` DB foundation. **Nic neaplikováno na produkci `xkzhjldrojjlrkezorey`** — žádný produkční SQL, žádný EF deploy, žádný frontend publish, žádný commit secrets, `backups/` nedotčeno.
+
+- **Soubory v `docs/rollback/`:** `phase2_admin_permissions_production_plan.md`, `phase2_admin_permissions_apply.sql`, `phase2_admin_permissions_rollback.sql`, `phase2_admin_permissions_verification.sql`.
+- **Apply (přesný rozsah):** tabulka `public.admin_permissions` (UNIQUE(user_id,permission_key), index `idx_admin_permissions_user_id`, RLS on), helper `public.has_admin_permission(check_key text, check_user_id uuid default auth.uid())` (SECURITY DEFINER, execute jen authenticated), policy `admin_permissions_select` + `admin_permissions_superadmin_write`. Transakční, idempotentní, pre-apply guard na `is_superadmin()`.
+- **Povolené klíče:** `vouchers.manage`, `content.manage`, `banners.manage`, `notifications.manage`. Žádná citlivá oblast (contest internals, tickets, revenue, payments, invoices, commissions, payouts, winners, prize delivery, audit/system/settings, admin role management).
+- **Rollback:** drop JEN Phase 2 objektů; netýká se `is_superadmin()`, `user_roles`, Phase 1.
+- **Verification:** 10 read-only checků (STRING_AGG folded) — dependency, table+RLS, sloupce, unique+index, policies, helper signature/security/owner, helper grants authenticated-only, anon nemá execute, žádné neočekávané klíče, `user_roles` nedotčeno.
+- **Pre-apply gate:** výslovné schválení Pavla + manuální `pg_dump` (PITR off) + frontend nepublikovat před DB apply.
+- **Stav:** ⛔ produkční apply NENÍ schválen.
+
 ## PHASE 2 — STAGING E2E PASSED, STAGING-VALIDATED (23. 06. 2026)
 
 Targeted Phase 2 staging E2E **prošel** — run `28043183824` (`playwright-staging.yml`, spec `tests/e2e/phase2-admin-permissions.spec.ts`), conclusion **success**, headSha `d92c5ca2`. Ověřeno přes `gh run view`.
