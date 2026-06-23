@@ -1,5 +1,14 @@
 ﻿# OneMil – aktuální stav projektu
 
+## PHASE 2 — PRODUKČNÍ FRONTEND SMOKE ✅ PASS (23. 06. 2026)
+
+Phase 2 frontend publikován na produkci a ručně ověřen — **PASS**. Granulární subadmin oprávnění jsou nyní LIVE end-to-end (DB apply + frontend).
+- Superadmin vidí Phase 2 checkboxy v `/admin/admins`. ✅
+- Subadmin se 4 safe oprávněními vidí jen Vouchery / Obsah stránek / Bannery / Notifikace. ✅
+- Subadmin nevidí Dashboard ani Statistiky aplikace; `/admin` → redirect na `/admin/vouchers`; `/admin/statistics` nepřístupné. ✅
+- Skryto: contest internals, finance, users/admin management, winners, audit/system. ✅
+- **⏳ Otevřený follow-up:** resetovat produkční DB heslo (objevilo se v chatu) — **NEresetovat zatím**, Pavel udělá až po dokončení všech zbývajících rollout prací.
+
 ## PHASE 2 — SUBADMIN DASHBOARD/STATISTIKY SKRYTÍ (23. 06. 2026, frontend-only)
 
 Subadmin po grantu safe oprávnění už nevidí Dashboard, Statistiky aplikace ani agregátní platform karty. **Frontend-only; žádná DB/RLS/EF/produkční změna.**

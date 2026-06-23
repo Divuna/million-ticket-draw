@@ -1,5 +1,16 @@
 # CLAUDE.md
 
+## PHASE 2 — PRODUKČNÍ FRONTEND SMOKE ✅ PASS (23. 06. 2026)
+
+Phase 2 frontend publikován na produkci (Lovable Publish) a ručně ověřen — **smoke PASS**. DB apply (`admin_permissions`) byl dokončen a ověřen dříve.
+- **Superadmin:** vidí Phase 2 permission checkboxy v `/admin/admins`. ✅
+- **Subadmin se všemi 4 safe oprávněními:** vidí JEN Vouchery, Obsah stránek, Bannery, Notifikace. ✅
+- **Subadmin už NEvidí Dashboard / Statistiky aplikace.** ✅
+- **Přímý `/admin`** → redirect subadmina na `/admin/vouchers`. ✅
+- **`/admin/statistics`** subadminovi nepřístupné. ✅
+- **Skryto:** contest internals, finance, users/admin management, winners, audit/system. ✅
+- **⏳ Produkční DB heslo NEresetovat zatím** — objevilo se v chatu; Pavel resetuje až po dokončení veškerých zbývajících rollout prací. (Otevřený follow-up.)
+
 ## PHASE 2 — SUBADMIN DASHBOARD/STATISTIKY SKRYTÍ (23. 06. 2026, frontend-only)
 
 Oprava: subadmin po grantu safe oprávnění stále viděl **Dashboard** pill + **Statistiky aplikace** + agregátní platform karty (počty uživatelů, aktivní soutěže, bonusy, vouchery). Nyní non-superadmin vidí **jen** explicitně grantnuté safe oblasti. **Žádná DB/RLS/EF/produkční změna; frontend-only.**

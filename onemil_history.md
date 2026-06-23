@@ -4632,3 +4632,13 @@ Po grantu safe oprávnění subadmin stále viděl Dashboard pill, Statistiky ap
 Změny: (1) `src/hooks/useAdminPermissions.ts` — přidán `SUBADMIN_ENTRY_ROUTES` (ordered safe entry routes: vouchers → content → banners → notifications). (2) `src/components/admin/RequireSuperadminOrRedirect.tsx` (nový) — superadmin render beze změny; non-superadmin redirect na první držený safe route, bez oprávnění text „Nemáte přiřazené žádné oprávnění administrace."; wrapuje `/admin` a `/admin/statistics` v `src/App.tsx`. (3) `src/components/admin/AdminPrimaryNav.tsx` — non-superadmin row 1 přepsán z sekčních pills na přímé safe odkazy jen na držené klíče (Vouchery/Obsah stránek/Bannery/Notifikace, ikony Gift/BookOpen/Image/Bell), aktivní stav dle path matchů; superadmin sekční nav beze změny. AdminLayout dál redirectuje ne-adminy na `/`.
 
 Subadmin po fixu: row 1 jen grantnuté safe oblasti, žádný Dashboard; přímý vstup na `/admin` nebo `/admin/statistics` → redirect na první grantnutou oblast (nebo no-permission hláška). Superadmin: Dashboard + Statistiky + plná nav beze změny. `npm run build` ✅ exit 0, `npx tsc --noEmit` ✅ 0 chyb. Vyžaduje Lovable Publish, aby se projevilo na produkci.
+
+---
+
+## 2026-06-23 — Phase 2 produkční frontend smoke ✅ PASS
+
+Phase 2 frontend publikován na produkci (Lovable Publish) a ručně ověřen — **smoke PASS**. DB apply `admin_permissions` byl dokončen a ověřen dříve; tím jsou granulární subadmin oprávnění LIVE end-to-end. **Dokumentace-only zápis; žádné SQL, žádný deploy, žádná změna app kódu, žádná produkční data, `backups/` necommitováno.**
+
+Ověřeno ručně na produkci: superadmin vidí Phase 2 permission checkboxy v `/admin/admins`; subadmin se všemi 4 safe oprávněními vidí JEN Vouchery / Obsah stránek / Bannery / Notifikace; subadmin už NEvidí Dashboard ani Statistiky aplikace; přímý `/admin` redirectuje subadmina na `/admin/vouchers`; `/admin/statistics` je subadminovi nepřístupné; contest internals, finance, users/admin management, winners a audit/system zůstávají skryté.
+
+Otevřený follow-up: **produkční DB heslo (objevilo se v chatu) ZATÍM NEresetovat** — Pavel ho resetuje až po dokončení veškerých zbývajících rollout prací.
