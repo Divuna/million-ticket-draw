@@ -14,6 +14,10 @@
 
 ---
 
+## 2026-06-23 -- Phase 2: admin_permissions DB foundation (staging only)
+
+DB základ granulárních subadmin oprávnění. Migrace `supabase/migrations/20260623_admin_permissions.sql` aplikována **jen na staging `dxmowysntemfqfnanxua`; produkce `xkzhjldrojjlrkezorey` nedotčena.** Tabulka `public.admin_permissions` (UNIQUE(user_id, permission_key), index, RLS on) + helper `public.has_admin_permission(check_key text, check_user_id uuid default auth.uid())` (SECURITY DEFINER, owner postgres, search_path=public, execute jen authenticated). Superadmin implicitně všechna oprávnění; jinak explicit řádek. RLS: select = vlastní/superadmin vše, write (grant/revoke) = jen superadmin. Klíče jen safe (vouchers/content/banners/notifications.manage), žádné citlivé. Testy (transakce s rollbackem): superadmin→true (i náhodný klíč), admin bez práv→false, admin s vouchers→true jen ten klíč, admin čte jen vlastní, admin grant→42501, superadmin grant→OK, anon exec=false; staging beze změny (rows=0, admin:2). Aditivní, zatím to nic nečte. Rollback: DROP FUNCTION/ DROP TABLE. Žádný frontend, žádný EF deploy, žádná produkce.
+
 ## 2026-06-23 -- Subadmin sensitive admin nav links hidden (frontend-only)
 
 Navázáno na contest UI gate (46715ee3). `src/components/admin/AdminContextSubNav.tsx`: pro non-superadmina nový `filterEntriesForSubadmin` odstraní citlivé sub-nav položky (`dashboardTab ∈ {ticketmap, bonus-overview, prizes, distribution, contest-control}`, `path = /admin/statistics`) a zahodí vyprázdněné menu. Skryto subadminovi: Mapa tiketů, Přehled bonusů, Bonusové ceny, Distribuce bonusů, Contest control, Statistiky. Zůstává: Správa soutěží, Seznam soutěží + ostatní nescitlivé. Superadmin nav beze změny (`isSuperAdmin ? seg.entries : filterEntriesForSubadmin(...)`). Žádná DB/RLS/RPC/EF/SQL změna, žádný deploy. `npm run build` ✅, `tsc --noEmit` 0 chyb.

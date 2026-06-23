@@ -1,5 +1,15 @@
 ﻿# OneMil – aktuální stav projektu
 
+## PHASE 2 — `admin_permissions` DB FOUNDATION NA STAGINGU (23. 06. 2026)
+
+DB základ granulárních subadmin oprávnění (bezpečný první slice). **Staging `dxmowysntemfqfnanxua` only; produkce `xkzhjldrojjlrkezorey` NEDOTČENA.** Aditivní; zatím to nic nečte.
+- **Migrace** `supabase/migrations/20260623_admin_permissions.sql`: tabulka `public.admin_permissions` (UNIQUE(user_id, permission_key), RLS on) + helper `public.has_admin_permission(check_key, check_user_id default auth.uid())` (SECURITY DEFINER, owner postgres, execute jen authenticated). Superadmin má implicitně všechna oprávnění; jinak nutný explicit řádek.
+- **RLS:** select = vlastní řádky / superadmin vše; write (grant/revoke) = jen superadmin. Anon bez execute i policy.
+- **Klíče (jen safe):** `vouchers.manage`, `content.manage`, `banners.manage`, `notifications.manage`. Žádné citlivé klíče.
+- **Testy ✅:** superadmin→true (i náhodný klíč), admin bez práv→false, admin s vouchers→true jen ten klíč, admin čte jen vlastní, admin grant→`42501`, superadmin grant→OK, anon exec=false. Data/role beze změny (rows=0, admin:2).
+- **Rollback:** `DROP FUNCTION IF EXISTS public.has_admin_permission(text,uuid); DROP TABLE IF EXISTS public.admin_permissions;`
+- **Další:** frontend `useAdminPermissions()` + route/nav gating + grant UI; produkce až po schválení + `pg_dump`.
+
 ## SUBADMIN CONTEST UI GATING — FRONTEND-ONLY (23. 06. 2026)
 
 Frontend-only skrytí citlivých contest interních dat před non-superadminy (po Phase 1 backend locku). **Žádná DB/RLS/RPC/EF změna.** Gate = `useUserRole().isSuperAdmin`.

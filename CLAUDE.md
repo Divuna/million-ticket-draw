@@ -1,5 +1,18 @@
 # CLAUDE.md
 
+## PHASE 2 — `admin_permissions` DB FOUNDATION NA STAGINGU (23. 06. 2026)
+
+DB základ pro granulární subadmin oprávnění (bezpečný první slice). **Aplikováno POUZE na staging `dxmowysntemfqfnanxua`; produkce `xkzhjldrojjlrkezorey` NEDOTČENA.** Aditivní — žádná existující policy/RPC/tabulka/chování nezměněno; zatím to nic nečte (frontend wiring je další fáze).
+
+- **Migrace:** `supabase/migrations/20260623_admin_permissions.sql`.
+- **Tabulka `public.admin_permissions`** (`id, user_id → auth.users ON DELETE CASCADE, permission_key text, granted_by, created_at`, UNIQUE(user_id, permission_key), index na user_id, RLS on).
+- **Helper `public.has_admin_permission(check_key text, check_user_id uuid default auth.uid())`** — SECURITY DEFINER, owner postgres, `SET search_path=public`, execute jen `authenticated` (revoke public/anon). Vrací true když `is_superadmin(check_user_id)` **NEBO** existuje řádek pro `(user_id, key)`. **Superadmin má implicitně VŠECHNA oprávnění** (žádný řádek netřeba).
+- **RLS:** `admin_permissions_select` (SELECT: vlastní řádky NEBO superadmin čte vše); `admin_permissions_superadmin_write` (ALL: grant/revoke jen superadmin, USING+WITH CHECK `is_superadmin()`). Anon nemá policy ani execute.
+- **Scope klíčů (zatím jen bezpečné):** `vouchers.manage`, `content.manage`, `banners.manage`, `notifications.manage`. **ŽÁDNÉ citlivé oblasti** (contest internals/tickets/revenue/payments/invoices/commissions/payouts/winners/prize delivery/audit/system/settings/admin role mgmt).
+- **Staging testy ✅** (seedované řádky + dočasný role flip v transakci s rollbackem): superadmin→true pro každý klíč (i náhodný), admin bez oprávnění→false, admin s `vouchers.manage`→true jen pro ten klíč (content.manage→false), admin čte jen vlastní řádky (1, ne cizí), admin INSERT zablokován RLS (`42501`), superadmin INSERT OK, anon execute=false. Staging data/role beze změny (`rows=0`, `admin:2`).
+- **Rollback:** `DROP FUNCTION IF EXISTS public.has_admin_permission(text, uuid); DROP TABLE IF EXISTS public.admin_permissions;`
+- **Další fáze (frontend, samostatně):** `useAdminPermissions()` hook (`can(key)`, superadmin⇒all), route guardy + nav gating pro `/admin/vouchers|content|banners|notifications`, grant UI v `/admin/admins`. Produkční apply až po výslovném schválení + manuální `pg_dump` (PITR off). Pravidlo: `has_admin_permission` i `can()` musí vracet true pro superadmina; do tohoto slice nepřidávat citlivé klíče.
+
 ## SUBADMIN CONTEST UI GATING — FRONTEND-ONLY (23. 06. 2026)
 
 Po Phase 1 backend locku doplněno **frontend-only** skrytí citlivých contest interních dat před non-superadminy. Žádná DB/RLS/RPC/EF změna; backend security beze změny. Gate = existující `useUserRole().isSuperAdmin`.
