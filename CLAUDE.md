@@ -1,5 +1,16 @@
 # CLAUDE.md
 
+## PHASE 2 — TARGETED STAGING PERMISSION E2E SPEC (23. 06. 2026)
+
+Added a targeted staging-only Playwright spec: `tests/e2e/phase2-admin-permissions.spec.ts`. **No production, no Edge Function deploy, no app behavior change, no full E2E.**
+
+- Uses existing staging CI secrets (`VITE_SUPABASE_URL`, `VITE_SUPABASE_ANON_KEY`, `E2E_SUPABASE_SERVICE_ROLE_KEY`, `E2E_ADMIN_EMAIL`, `E2E_ADMIN_PASSWORD`) and requires the URL to contain staging ref `dxmowysntemfqfnanxua`.
+- Temporarily scopes `admin-e2e@onemil.cz` to exactly `vouchers.manage`, after first saving existing `admin_permissions` rows; `afterAll` restores the original rows (normally empty) so the grant is revoked/cleaned.
+- DB helper assertions: `admin-e2e@onemil.cz` has `vouchers.manage=true` and `content.manage=false`, `banners.manage=false`, `notifications.manage=false`; `divispavel2@gmail.com` is verified as superadmin and implicit-all through `has_admin_permission()`.
+- Browser assertions for scoped admin: `/admin/vouchers` renders; `/admin/content`, `/admin/banners`, `/admin/notifications` show the Czech permission fallback; sensitive/unscoped admin links such as statistics, users/admin role management, finance, winners/prize delivery, audit, invoices, affiliate finance are hidden.
+- Superadmin browser smoke runs only if dedicated `E2E_SUPERADMIN_EMAIL`/`E2E_SUPERADMIN_PASSWORD` (or staging-prefixed equivalents) exist; otherwise it is skipped honestly while DB helper superadmin coverage remains.
+- Existing staging workflow already supports targeted runs via `only_spec`; use `gh workflow run playwright-staging.yml -f only_spec=tests/e2e/phase2-admin-permissions.spec.ts`.
+
 ## PHASE 2 — FRONTEND GATING PRVNÍHO SAFE SLICE (23. 06. 2026)
 
 Frontend wiring granulárních subadmin oprávnění (navazuje na DB foundation `admin_permissions`). **Žádná DB/RLS/EF změna; žádná produkce.** Klíče jen safe: `vouchers.manage`, `content.manage`, `banners.manage`, `notifications.manage`.

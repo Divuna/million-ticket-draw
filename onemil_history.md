@@ -14,6 +14,10 @@
 
 ---
 
+## 2026-06-23 -- Phase 2: targeted staging permissions E2E spec
+
+Added `tests/e2e/phase2-admin-permissions.spec.ts`, a targeted staging-only Playwright spec for the Phase 2 safe permission slice. The spec uses staging CI secrets and enforces staging ref `dxmowysntemfqfnanxua`; it temporarily sets `admin-e2e@onemil.cz` to `vouchers.manage` only, verifies the DB helper matrix, checks `/admin/vouchers` access and Czech fallback on denied safe routes, verifies sensitive/unscoped admin nav is hidden, and restores the original permission rows in cleanup. `divispavel2@gmail.com` superadmin is DB-verified as implicit-all; browser superadmin smoke runs only when a dedicated superadmin password secret exists. No production, no Edge Function deploy, no full E2E, no app behavior change.
+
 ## 2026-06-23 -- Phase 2: frontend gating prvního safe slice
 
 Frontend wiring granulárních subadmin oprávnění (navazuje na DB foundation `admin_permissions`). Klíče jen safe: vouchers/content/banners/notifications.manage. Nový hook `src/hooks/useAdminPermissions.ts` (`can(key)`, superadmin⇒vše, čte admin_permissions přes RLS; tabulka chybí→prázdné). Nový `src/components/admin/RequirePermission.tsx` obaluje 4 routy v `App.tsx` (vouchers/content/banners/notifications) → fallback „Tato část je dostupná pouze superadminovi nebo administrátorovi s oprávněním." `AdminContextSubNav.tsx` + `AdminPrimaryNav.tsx`: non-superadmin vidí jen položky/sekce s drženým oprávněním (strict scoping; zachovává Phase 1 sensitive hiding jako podmnožinu); superadmin plná nav beze změny. Grant/revoke UI v `AdminAdmins.tsx` (superadmin-only): sloupec se 4 checkboxy, toggle = insert/delete admin_permissions (RLS jen superadmin) + log_admin_action. Phase 1 contest gates beze změny. Žádná DB/RLS/EF/SQL změna, žádná produkce, žádný deploy. `npm run build` ✅, `tsc --noEmit` 0 chyb. ⚠️ Frontend nepublikovat na produkci před aplikací migrace admin_permissions na produkci.

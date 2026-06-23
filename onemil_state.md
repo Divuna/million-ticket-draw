@@ -1,5 +1,16 @@
 ﻿# OneMil – aktuální stav projektu
 
+## PHASE 2 — TARGETED STAGING PERMISSION E2E SPEC (23. 06. 2026)
+
+Targeted staging-only Playwright coverage was added in `tests/e2e/phase2-admin-permissions.spec.ts`. **No production, no Edge Function deploy, no full E2E, no app behavior change.**
+
+- Requires staging env/secrets and enforces staging ref `dxmowysntemfqfnanxua`.
+- Temporarily grants/restores `admin-e2e@onemil.cz` permissions so the test state is exactly `vouchers.manage` only; cleanup restores original rows.
+- Verifies helper matrix: vouchers true, content/banners/notifications false for scoped admin; `divispavel2@gmail.com` superadmin remains implicit-all.
+- Browser verifies scoped admin can access `/admin/vouchers`, denied safe routes show Czech fallback, and sensitive/unscoped admin nav is hidden.
+- Superadmin browser check is optional and skipped unless a dedicated superadmin password secret exists; DB helper superadmin check always runs when staging secrets are present.
+- Targeted CI command: `gh workflow run playwright-staging.yml -f only_spec=tests/e2e/phase2-admin-permissions.spec.ts`.
+
 ## PHASE 2 — FRONTEND GATING PRVNÍHO SAFE SLICE (23. 06. 2026)
 
 Frontend granulárních subadmin oprávnění (navazuje na DB foundation). **Žádná DB/RLS/EF/produkce změna.** Klíče: `vouchers.manage`, `content.manage`, `banners.manage`, `notifications.manage`.
