@@ -62,6 +62,58 @@ interface ApiActivity {
   created_at: string | null;
 }
 
+const PARTNER_ROTATE_ERROR_MESSAGES: Record<string, string> = {
+  invalid_password: 'Neplatné heslo.',
+  password_required: 'Heslo je povinné.',
+  internal_token_invalid: 'Nepodařilo se ověřit interní přístup. Zkontrolujte konfiguraci.',
+  missing_session: 'Nejste přihlášený. Přihlaste se znovu.',
+  partner_link_missing: 'Partnerský účet není správně propojený.',
+  partner_not_found: 'Partnerský účet není správně propojený.',
+  partner_not_approved: 'Partnerský účet zatím není schválený.',
+  key_generation_failed: 'API klíč se nepodařilo obnovit.',
+  key_rotation_failed: 'API klíč se nepodařilo obnovit.',
+  invalid_request: 'API klíč se nepodařilo obnovit.',
+};
+
+const DEFAULT_PARTNER_ROTATE_ERROR = 'API klíč se nepodařilo obnovit.';
+
+async function extractFunctionErrorCode(response?: Response): Promise<string | null> {
+  if (!response) return null;
+
+  const text = await response.clone().text().catch(() => '');
+  if (!text) return null;
+
+  try {
+    const parsed = JSON.parse(text) as { error?: unknown };
+    return typeof parsed.error === 'string' ? parsed.error : null;
+  } catch {
+    return text.trim() === 'Unauthorized' ? 'internal_token_invalid' : null;
+  }
+}
+
+async function getPartnerRotateErrorMessage(result: {
+  data: unknown;
+  error: unknown;
+  response?: Response;
+}): Promise<string> {
+  const dataError =
+    result.data &&
+    typeof result.data === 'object' &&
+    'error' in result.data &&
+    typeof (result.data as { error?: unknown }).error === 'string'
+      ? (result.data as { error: string }).error
+      : null;
+
+  const responseError = await extractFunctionErrorCode(result.response);
+  const errorCode = dataError ?? responseError;
+
+  if (errorCode && PARTNER_ROTATE_ERROR_MESSAGES[errorCode]) {
+    return PARTNER_ROTATE_ERROR_MESSAGES[errorCode];
+  }
+
+  return DEFAULT_PARTNER_ROTATE_ERROR;
+}
+
 interface OfferBillingConfig {
   billing_mode: string;
   price_per_activation: number;
@@ -227,7 +279,7 @@ const PartnerDashboard = () => {
     }
 
     if (!rotatePassword.trim()) {
-      toast.error('Heslo je povinné');
+      toast.error('Heslo je povinné.');
       return;
     }
 
@@ -242,7 +294,7 @@ const PartnerDashboard = () => {
       const { data: sessionData } = await supabase.auth.getSession();
 
       if (!sessionData.session?.access_token) {
-        toast.error('Chybí platná session. Přihlaste se znovu.');
+        toast.error('Nejste přihlášený. Přihlaste se znovu.');
         return;
       }
 
@@ -256,8 +308,7 @@ const PartnerDashboard = () => {
       });
 
       if (res.error || !res.data?.success) {
-        const errorMsg = res.data?.error || res.error?.message || 'Nepodařilo se rotovat API klíč';
-        toast.error(errorMsg);
+        toast.error(await getPartnerRotateErrorMessage(res));
         return;
       }
 
@@ -271,13 +322,12 @@ const PartnerDashboard = () => {
       // Reload API keys list
       await loadPartnerData();
     } catch (err) {
-      console.error('Chyba při rotaci API klíče:', err);
-      toast.error('Nastala neočekávaná chyba');
+      console.error('Unexpected partner API key rotation error:', err instanceof Error ? err.message : err);
+      toast.error(DEFAULT_PARTNER_ROTATE_ERROR);
     } finally {
       setRotatingKey(false);
     }
   };
-
   const openRotatePasswordModal = () => {
     setRotatePassword('');
     setRotatePasswordVisible(false);
