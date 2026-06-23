@@ -100,6 +100,7 @@ import { BottomNavigation } from "@/components/BottomNavigation";
 import { AdminLayout } from "@/components/admin/AdminLayout";
 import { RequirePermission } from "@/components/admin/RequirePermission";
 import { RequireSuperadminOrRedirect } from "@/components/admin/RequireSuperadminOrRedirect";
+import { RequireSuperadmin } from "@/components/admin/RequireSuperadmin";
 import { useUserRole } from "@/hooks/useUserRole";
 import { useApplyPendingReferral } from "@/hooks/useApplyPendingReferral";
 import { useRetentionTriggers } from "@/hooks/useRetentionTriggers";
@@ -607,40 +608,40 @@ function AppContent() {
           <Route path="/onboarding/date-of-birth" element={<OnboardingDateOfBirth />} />
           <Route element={<AdminLayout />}>
             <Route path="/admin" element={<RequireSuperadminOrRedirect><AdminDashboard /></RequireSuperadminOrRedirect>} />
-            <Route path="/admin/users" element={<AdminUsers />} />
-            <Route path="/admin/admins" element={<AdminAdmins />} />
+            <Route path="/admin/users" element={<RequireSuperadmin><AdminUsers /></RequireSuperadmin>} />
+            <Route path="/admin/admins" element={<RequireSuperadmin><AdminAdmins /></RequireSuperadmin>} />
             <Route path="/admin/banners" element={<RequirePermission permission="banners.manage"><AdminBanners /></RequirePermission>} />
             <Route path="/admin/vouchers" element={<RequirePermission permission="vouchers.manage"><AdminVouchers /></RequirePermission>} />
-            <Route path="/admin/payments" element={<AdminPayments />} />
+            <Route path="/admin/payments" element={<RequireSuperadmin><AdminPayments /></RequireSuperadmin>} />
             <Route path="/admin/statistics" element={<RequireSuperadminOrRedirect><AdminStatistics /></RequireSuperadminOrRedirect>} />
             <Route path="/admin/notifications" element={<RequirePermission permission="notifications.manage"><AdminNotifications /></RequirePermission>} />
-            <Route path="/admin/winners" element={<AdminWinners />} />
-            <Route path="/admin/prize-delivery" element={<AdminPrizeDeliveryPage />} />
-            <Route path="/admin/tests" element={<AdminTests />} />
-            <Route path="/admin/partners" element={<AdminPartners />} />
-            <Route path="/admin/partner-offers" element={<AdminPartnerOffers />} />
-            <Route path="/admin/messages" element={<AdminMessages />} />
-            <Route path="/admin/messages/:userId" element={<AdminMessageThread />} />
-            <Route path="/admin/audit-logs" element={<AdminAuditLogs />} />
-            <Route path="/admin/event-queue" element={<AdminEventQueue />} />
-            <Route path="/admin/audit-repair" element={<AdminAuditRepair />} />
-            <Route path="/admin/onemil-audit" element={<OneMilAudit />} />
-            <Route path="/admin/contest/:contestId" element={<ContestDetailAdmin />} />
+            <Route path="/admin/winners" element={<RequireSuperadmin><AdminWinners /></RequireSuperadmin>} />
+            <Route path="/admin/prize-delivery" element={<RequireSuperadmin><AdminPrizeDeliveryPage /></RequireSuperadmin>} />
+            <Route path="/admin/tests" element={<RequireSuperadmin><AdminTests /></RequireSuperadmin>} />
+            <Route path="/admin/partners" element={<RequireSuperadmin><AdminPartners /></RequireSuperadmin>} />
+            <Route path="/admin/partner-offers" element={<RequireSuperadmin><AdminPartnerOffers /></RequireSuperadmin>} />
+            <Route path="/admin/messages" element={<RequireSuperadmin><AdminMessages /></RequireSuperadmin>} />
+            <Route path="/admin/messages/:userId" element={<RequireSuperadmin><AdminMessageThread /></RequireSuperadmin>} />
+            <Route path="/admin/audit-logs" element={<RequireSuperadmin><AdminAuditLogs /></RequireSuperadmin>} />
+            <Route path="/admin/event-queue" element={<RequireSuperadmin><AdminEventQueue /></RequireSuperadmin>} />
+            <Route path="/admin/audit-repair" element={<RequireSuperadmin><AdminAuditRepair /></RequireSuperadmin>} />
+            <Route path="/admin/onemil-audit" element={<RequireSuperadmin><OneMilAudit /></RequireSuperadmin>} />
+            <Route path="/admin/contest/:contestId" element={<RequireSuperadmin><ContestDetailAdmin /></RequireSuperadmin>} />
             <Route path="/admin/content" element={<RequirePermission permission="content.manage"><AdminContentPages /></RequirePermission>} />
-            <Route path="/admin/legal-acceptances" element={<AdminLegalAcceptances />} />
-            <Route path="/admin/onboarding-incomplete" element={<AdminOnboardingIncomplete />} />
-            <Route path="/admin/partners-portal" element={<AdminPartnersPortal />} />
-            <Route path="/admin/invoices" element={<AdminInvoices />} />
-            <Route path="/admin/referrals" element={<AdminReferrals />} />
-            <Route path="/admin/referral-dashboard" element={<AdminReferralDashboard />} />
-            <Route path="/admin/influencers" element={<AdminInfluencers />} />
-            <Route path="/admin/affiliate-accounts" element={<AdminAffiliateAccounts />} />
-            <Route path="/admin/influencer-commissions" element={<AdminInfluencerCommissions />} />
-            <Route path="/admin/influencer-campaigns" element={<AdminInfluencerCampaigns />} />
-            <Route path="/admin/company-leads" element={<AdminCompanyLeads />} />
-            <Route path="/admin/affiliate-commissions" element={<AdminAffiliateCommissions />} />
-            <Route path="/admin/affiliate-payouts" element={<AdminAffiliatePayouts />} />
-            <Route path="/admin/affiliate-payouts/:batchId" element={<AdminAffiliatePayoutDetail />} />
+            <Route path="/admin/legal-acceptances" element={<RequireSuperadmin><AdminLegalAcceptances /></RequireSuperadmin>} />
+            <Route path="/admin/onboarding-incomplete" element={<RequireSuperadmin><AdminOnboardingIncomplete /></RequireSuperadmin>} />
+            <Route path="/admin/partners-portal" element={<RequireSuperadmin><AdminPartnersPortal /></RequireSuperadmin>} />
+            <Route path="/admin/invoices" element={<RequireSuperadmin><AdminInvoices /></RequireSuperadmin>} />
+            <Route path="/admin/referrals" element={<RequireSuperadmin><AdminReferrals /></RequireSuperadmin>} />
+            <Route path="/admin/referral-dashboard" element={<RequireSuperadmin><AdminReferralDashboard /></RequireSuperadmin>} />
+            <Route path="/admin/influencers" element={<RequireSuperadmin><AdminInfluencers /></RequireSuperadmin>} />
+            <Route path="/admin/affiliate-accounts" element={<RequireSuperadmin><AdminAffiliateAccounts /></RequireSuperadmin>} />
+            <Route path="/admin/influencer-commissions" element={<RequireSuperadmin><AdminInfluencerCommissions /></RequireSuperadmin>} />
+            <Route path="/admin/influencer-campaigns" element={<RequireSuperadmin><AdminInfluencerCampaigns /></RequireSuperadmin>} />
+            <Route path="/admin/company-leads" element={<RequireSuperadmin><AdminCompanyLeads /></RequireSuperadmin>} />
+            <Route path="/admin/affiliate-commissions" element={<RequireSuperadmin><AdminAffiliateCommissions /></RequireSuperadmin>} />
+            <Route path="/admin/affiliate-payouts" element={<RequireSuperadmin><AdminAffiliatePayouts /></RequireSuperadmin>} />
+            <Route path="/admin/affiliate-payouts/:batchId" element={<RequireSuperadmin><AdminAffiliatePayoutDetail /></RequireSuperadmin>} />
             <Route path="/admin/*" element={<AdminNotFound />} />
           </Route>
           <Route path="/partner/login" element={<PartnerLogin />} />

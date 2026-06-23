@@ -4642,3 +4642,15 @@ Phase 2 frontend publikován na produkci (Lovable Publish) a ručně ověřen �
 Ověřeno ručně na produkci: superadmin vidí Phase 2 permission checkboxy v `/admin/admins`; subadmin se všemi 4 safe oprávněními vidí JEN Vouchery / Obsah stránek / Bannery / Notifikace; subadmin už NEvidí Dashboard ani Statistiky aplikace; přímý `/admin` redirectuje subadmina na `/admin/vouchers`; `/admin/statistics` je subadminovi nepřístupné; contest internals, finance, users/admin management, winners a audit/system zůstávají skryté.
 
 Otevřený follow-up: **produkční DB heslo (objevilo se v chatu) ZATÍM NEresetovat** — Pavel ho resetuje až po dokončení veškerých zbývajících rollout prací.
+
+---
+
+## 2026-06-23 — Phase 3 route-level hardening citlivých admin rout (frontend-only)
+
+Před přidáním support oprávnění uzavřena díra přímého URL přístupu: non-superadmin admin (subadmin) se nedostane na citlivé admin routy ani přes přímý odkaz (dříve Phase 2 jen skrývala nav, ale routy chránil pouze `AdminLayout` is_admin). **Frontend-only; žádné DB/RLS/SQL/EF/produkční změny; support oprávnění zatím NEPŘIDÁNA.**
+
+Změny: (1) `src/components/admin/RequireSuperadmin.tsx` (nový) — superadmin render beze změny; non-superadmin → „Tato část je dostupná pouze superadminovi." (page body se nenamountuje); čeká na role resolution. (2) `src/App.tsx` — wrapnuto `RequireSuperadmin` na: `/admin/users`, `/admin/admins`, `/admin/payments`, `/admin/winners`, `/admin/prize-delivery`, `/admin/tests`, `/admin/partners`, `/admin/partner-offers`, `/admin/messages`, `/admin/messages/:userId`, `/admin/audit-logs`, `/admin/event-queue`, `/admin/audit-repair`, `/admin/onemil-audit`, `/admin/contest/:contestId`, `/admin/legal-acceptances`, `/admin/onboarding-incomplete`, `/admin/partners-portal`, `/admin/invoices`, `/admin/referrals`, `/admin/referral-dashboard`, `/admin/influencers`, `/admin/affiliate-accounts`, `/admin/influencer-commissions`, `/admin/influencer-campaigns`, `/admin/company-leads`, `/admin/affiliate-commissions`, `/admin/affiliate-payouts`, `/admin/affiliate-payouts/:batchId`.
+
+Beze změny: `/admin` + `/admin/statistics` (`RequireSuperadminOrRedirect`, efektivně superadmin-only); Phase 2 safe routy `/admin/vouchers`, `/admin/content`, `/admin/banners`, `/admin/notifications` (`RequirePermission`); `/admin/*` 404. Superadmin chování beze změny.
+
+Pozn.: `/admin/messages` a `/admin/users` jsou pro teď superadmin-only; Phase 3b je přepne na `support.messages` / `users.view.basic` (swap `RequireSuperadmin` → `RequirePermission`). Ochrana dat zůstává per-table superadmin RLS (Phase 1) — toto je UI/route vrstva defense-in-depth. `npm run build` ✅ exit 0, `npx tsc --noEmit` ✅ 0 chyb. Vyžaduje Lovable Publish, aby se projevilo na produkci.

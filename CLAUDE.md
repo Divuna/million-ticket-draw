@@ -1,5 +1,13 @@
 # CLAUDE.md
 
+## PHASE 3 — ROUTE-LEVEL HARDENING SENSITIVE ADMIN ROUT (23. 06. 2026, frontend-only)
+
+Uzavřena díra přímého URL přístupu: non-superadmin admin (subadmin) se nedostane na citlivé admin routy ani přes přímý odkaz. **Žádné DB/RLS/SQL/EF/produkční změny; frontend-only. Support oprávnění JEŠTĚ NEPŘIDÁNA.**
+- **`RequireSuperadmin.tsx` (nový):** superadmin → render beze změny; non-superadmin → „Tato část je dostupná pouze superadminovi." (page body se nenamountuje). AdminLayout dál blokuje ne-adminy na `/`. DB ochrana dat zůstává per-table superadmin RLS (Phase 1) — toto je UI/route vrstva defense-in-depth.
+- **Superadmin-only routy (wrapnuté `RequireSuperadmin`):** `/admin/users`, `/admin/admins`, `/admin/payments`, `/admin/winners`, `/admin/prize-delivery`, `/admin/tests`, `/admin/partners`, `/admin/partner-offers`, `/admin/messages`, `/admin/messages/:userId`, `/admin/audit-logs`, `/admin/event-queue`, `/admin/audit-repair`, `/admin/onemil-audit`, `/admin/contest/:contestId`, `/admin/legal-acceptances`, `/admin/onboarding-incomplete`, `/admin/partners-portal`, `/admin/invoices`, `/admin/referrals`, `/admin/referral-dashboard`, `/admin/influencers`, `/admin/affiliate-accounts`, `/admin/influencer-commissions`, `/admin/influencer-campaigns`, `/admin/company-leads`, `/admin/affiliate-commissions`, `/admin/affiliate-payouts`, `/admin/affiliate-payouts/:batchId`.
+- **Beze změny:** `/admin` + `/admin/statistics` (`RequireSuperadminOrRedirect` — efektivně superadmin-only); Phase 2 safe routy `/admin/vouchers`, `/admin/content`, `/admin/banners`, `/admin/notifications` (`RequirePermission`); `/admin/*` 404.
+- **Pozn.:** `/admin/messages` + `/admin/users` jsou pro teď superadmin-only; Phase 3b je přepne na `support.messages` / `users.view.basic` (swap `RequireSuperadmin` → `RequirePermission`). Build ✅, `tsc --noEmit` 0 chyb. Vyžaduje Lovable Publish.
+
 ## PHASE 2 — PRODUKČNÍ FRONTEND SMOKE ✅ PASS (23. 06. 2026)
 
 Phase 2 frontend publikován na produkci (Lovable Publish) a ručně ověřen — **smoke PASS**. DB apply (`admin_permissions`) byl dokončen a ověřen dříve.

@@ -1,5 +1,13 @@
 ﻿# OneMil – aktuální stav projektu
 
+## PHASE 3 — ROUTE-LEVEL HARDENING (23. 06. 2026, frontend-only)
+
+Uzavřena díra přímého URL přístupu před přidáním support oprávnění. Non-superadmin admin nedosáhne na citlivé routy ani přes URL. **Frontend-only; žádné DB/RLS/SQL/EF/produkční změny; support oprávnění zatím NEPŘIDÁNA.**
+- **`RequireSuperadmin.tsx` (nový):** non-superadmin → „Tato část je dostupná pouze superadminovi."; superadmin beze změny.
+- **Wrapnuto superadmin-only:** users, admins, payments, winners, prize-delivery, tests, partners, partner-offers, messages (+/:userId), audit-logs, event-queue, audit-repair, onemil-audit, contest/:id, legal-acceptances, onboarding-incomplete, partners-portal, invoices, referrals, referral-dashboard, influencers, affiliate-accounts, influencer-commissions, influencer-campaigns, company-leads, affiliate-commissions, affiliate-payouts (+/:batchId).
+- **Beze změny:** `/admin` + `/admin/statistics` (RequireSuperadminOrRedirect); 4 safe routy (RequirePermission); 404.
+- **Pozn.:** messages + users dočasně superadmin-only; Phase 3b je přepne na `support.messages` / `users.view.basic`. Build ✅, `tsc --noEmit` 0 chyb. Vyžaduje Lovable Publish.
+
 ## PHASE 2 — PRODUKČNÍ FRONTEND SMOKE ✅ PASS (23. 06. 2026)
 
 Phase 2 frontend publikován na produkci a ručně ověřen — **PASS**. Granulární subadmin oprávnění jsou nyní LIVE end-to-end (DB apply + frontend).
