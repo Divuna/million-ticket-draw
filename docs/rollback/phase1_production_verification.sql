@@ -69,11 +69,11 @@ WITH target AS (
 SELECT
   expected,
   string_agg(
-    tablename || '.' || policyname || ' => cmd=' || coalesce(p.cmd, '<missing>')
+    t.tablename || '.' || t.policyname || ' => cmd=' || coalesce(p.cmd, '<missing>')
     || ', roles=' || coalesce(array_to_string(p.roles, ','), '<missing>')
     || ', using=' || coalesce(p.qual, '<null>')
     || ', check=' || coalesce(p.with_check, '<null>'),
-    E'\n' ORDER BY tablename, policyname
+    E'\n' ORDER BY t.tablename, t.policyname
   ) AS policy_details
 FROM target t
 LEFT JOIN pg_policies p
@@ -111,13 +111,13 @@ WITH target AS (
 )
 SELECT
   string_agg(
-    tablename || '.' || policyname || '=' ||
+    t.tablename || '.' || t.policyname || '=' ||
     CASE
       WHEN p.policyname IS NULL THEN 'MISSING'
       WHEN coalesce(p.qual,'') || ' ' || coalesce(p.with_check,'') ILIKE '%is_superadmin%' THEN 'OK'
       ELSE 'FAIL'
     END,
-    ', ' ORDER BY tablename, policyname
+    ', ' ORDER BY t.tablename, t.policyname
   ) AS sensitive_policy_status
 FROM target t
 LEFT JOIN pg_policies p
@@ -164,18 +164,18 @@ WHERE n.nspname = 'public';
 SELECT
   'preserved_access' AS check_group,
   string_agg(
-    tablename || '.' || policyname || ' => ' || coalesce(qual, '<null>'),
-    E'\n' ORDER BY tablename, policyname
+    p.tablename || '.' || p.policyname || ' => ' || coalesce(p.qual, '<null>'),
+    E'\n' ORDER BY p.tablename, p.policyname
   ) AS preserved_policy_details
-FROM pg_policies
-WHERE schemaname = 'public'
+FROM pg_policies p
+WHERE p.schemaname = 'public'
   AND (
-    (tablename = 'affiliate_commissions' AND policyname = 'aff_commissions_select')
-    OR (tablename = 'payments' AND policyname IN ('payments_select_own','payments_user_read'))
-    OR (tablename = 'tickets' AND policyname IN ('tickets_select_own','tickets_user_read'))
-    OR (tablename IN ('partner_invoices','partner_invoice_lines','partner_invoice_exports') AND policyname LIKE '%partner_select')
-    OR (tablename = 'referral_rewards' AND policyname = 'referral_rewards_select_own')
-    OR (tablename = 'winners' AND policyname IN ('Allow read winners','winners_public_read','winners_select_authenticated','user_can_view_own_wins','winners_select_own'))
+    (p.tablename = 'affiliate_commissions' AND p.policyname = 'aff_commissions_select')
+    OR (p.tablename = 'payments' AND p.policyname IN ('payments_select_own','payments_user_read'))
+    OR (p.tablename = 'tickets' AND p.policyname IN ('tickets_select_own','tickets_user_read'))
+    OR (p.tablename IN ('partner_invoices','partner_invoice_lines','partner_invoice_exports') AND p.policyname LIKE '%partner_select')
+    OR (p.tablename = 'referral_rewards' AND p.policyname = 'referral_rewards_select_own')
+    OR (p.tablename = 'winners' AND p.policyname IN ('Allow read winners','winners_public_read','winners_select_authenticated','user_can_view_own_wins','winners_select_own'))
   );
 
 -- 6. Role boundary data check. Expected:

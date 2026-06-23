@@ -1,5 +1,29 @@
 # CLAUDE.md
 
+## PHASE 1 — SENSITIVE-ADMIN PRODUCTION LOCK APPLIED (22. 06. 2026)
+
+Phase 1 sensitive-admin production DB/RLS/RPC lock was applied successfully to production project `xkzhjldrojjlrkezorey` after Pavel's explicit approval: `SCHVALUJI PRODUKČNÍ APPLY`.
+
+Pre-apply safety:
+- Manual production backup exists at `backups/onemil-production-pre-phase1-20260622-220723.dump` (`465,594,754` bytes / `444.03 MB`); `pg_restore -l` passed with `2195` TOC entries. **Do not commit `backups/`.**
+- Rollback remained ready in `docs/rollback/phase1_production_rollback.sql`; baseline remains `docs/rollback/phase1_baseline.sql`.
+
+Applied production DB/RLS/RPC result:
+- `public.is_superadmin(check_user_id uuid default auth.uid())` exists, `SECURITY DEFINER`, owner `postgres`; `anon` execute revoked, `authenticated` execute granted.
+- `divispavel2@gmail.com` returns `true` from `public.is_superadmin(...)`.
+- Sensitive RLS policy fail count: `0`.
+- Target RPC fail count: `0`.
+- Affiliate own commission SELECT preserved.
+- Payments/tickets own-row policies preserved.
+- Partner own invoice policies preserved.
+- `winners` / `bonus_prizes` public-read behavior preserved.
+- Edge Functions were **not deployed**; they remain verification-only and were already superadmin-gated in production on JWT/user paths.
+- Rollback was not needed.
+
+Follow-up:
+- Pavel should reset the production DB password again because one password appeared in chat during the manual backup step.
+- After password reset, update or remove local `.cursor/mcp.json` direct DB credential if still needed.
+
 ## PHASE 1 — SENSITIVE-ADMIN STAGING LOCK FINAL MILESTONE (22. 06. 2026)
 
 Full Phase 1 sensitive-admin lock is complete on staging project `dxmowysntemfqfnanxua`. Staging now blocks scoped admin/subadmin access to sensitive admin data across RLS, RPCs, and Edge Functions. **Production project `xkzhjldrojjlrkezorey` was not touched.**
