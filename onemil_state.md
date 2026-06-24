@@ -1,5 +1,16 @@
 ﻿# OneMil – aktuální stav projektu
 
+## PARTNER API KEY ROTATION — PRODUKČNÍ FIX HOTOVÝ (24. 06. 2026)
+
+Production partner API key rotation fix je dokončený. PR #117 (`fix: improve partner API key rotation errors`) byl mergnut do `main`; produkční Edge Functions `partner-rotate-api-key` a `rotate-partner-api-key` byly nasazeny na projekt `xkzhjldrojjlrkezorey`.
+
+- Token mismatch byl dočasně opraven sjednocením `INTERNAL_FUNCTION_TOKEN` a `VITE_INTERNAL_FUNCTION_TOKEN` pro testování. Safe probe `partner-rotate-api-key` bez partner session vrátil `missing_session`, tedy internal-token validace prochází.
+- BOHEMIA manual API key regeneration uspěla. BOHEMIA má přesně 1 aktivní API key podle `revoked_at IS NULL` a 15 starších key rows s vyplněným `revoked_at`.
+- Latest active key prefix: `01efbfaf`.
+- `partner_api_keys` neobsahuje plaintext API key sloupec; existují jen prefix/hash sloupce (`key_prefix`, `key_hash`, `api_key_hash`).
+- **Security reminder:** dočasné/exponované test tokeny musí být před reálným launchem rotované.
+- **Security reminder:** pre-existing `partners_table_public_exposure` musí být stále opravené před production launch.
+
 ## PHASE 4 SLICE A — PARTNER OFFERS OPRÁVNĚNÍ (23. 06. 2026, frontend-only)
 
 Nový safe klíč `partner_offers.finance.manage` jen pro `/admin/partner-offers`. **Frontend-only; žádné DB/RLS/SQL/EF/produkční změny.** Grant = řádek v `admin_permissions` (bez migrace).

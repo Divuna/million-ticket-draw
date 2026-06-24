@@ -14,6 +14,10 @@
 
 ---
 
+## 2026-06-24 -- Production partner API key rotation fix completed
+
+PR #117 (`fix: improve partner API key rotation errors`) was merged to `main`. Production Edge Functions `partner-rotate-api-key` and `rotate-partner-api-key` were deployed to `xkzhjldrojjlrkezorey`. A token mismatch was fixed by aligning `INTERNAL_FUNCTION_TOKEN` and `VITE_INTERNAL_FUNCTION_TOKEN` for temporary testing; safe probe without partner session returned `missing_session`, confirming internal token validation passes. BOHEMIA manual API key regeneration succeeded: exactly 1 active API key by `revoked_at IS NULL`, 15 older keys revoked, latest active prefix `01efbfaf`. `partner_api_keys` stores prefix/hash columns only (`key_prefix`, `key_hash`, `api_key_hash`), with no plaintext API key column. Security reminders: temporary/exposed test tokens must be rotated before real launch; pre-existing `partners_table_public_exposure` still must be fixed before production launch. No full API keys, hashes, or secrets recorded.
+
 ## 2026-06-23 -- Phase 2: targeted staging permissions E2E spec
 
 Added `tests/e2e/phase2-admin-permissions.spec.ts`, a targeted staging-only Playwright spec for the Phase 2 safe permission slice. The spec uses staging CI secrets and enforces staging ref `dxmowysntemfqfnanxua`; it temporarily sets `admin-e2e@onemil.cz` to `vouchers.manage` only, verifies the DB helper matrix, checks `/admin/vouchers` access and Czech fallback on denied safe routes, verifies sensitive/unscoped admin nav is hidden, and restores the original permission rows in cleanup. `divispavel2@gmail.com` superadmin is DB-verified as implicit-all; browser superadmin smoke runs only when a dedicated superadmin password secret exists. No production, no Edge Function deploy, no full E2E, no app behavior change.
