@@ -1,5 +1,15 @@
 ﻿# OneMil – aktuální stav projektu
 
+## PARTNERS_TABLE_PUBLIC_EXPOSURE — PRODUKČNÍ FIX HOTOVÝ (24. 06. 2026)
+
+Pre-existing nález `partners_table_public_exposure` opraven na produkci `xkzhjldrojjlrkezorey`. PR #118 mergnut.
+- **Migrace:** `20260624122921_partners_public_view_rls_lock.sql` (atomicky). View `public.public_partners` (safe approved/logo pole, grant anon+authenticated); base `partners`: odebrán `Public read partners`, revoke select public/anon, přidána `partners_select_own_admin` (own/admin/superadmin).
+- **Frontend:** `usePartners.ts` čte `public_partners`. Live bundle **`index-B-nGIJdT.js`**.
+- **Ověřeno:** view existuje; anon čte public_partners (1 řádek, approved+logo_approved); anon přímý partners read blokován (`42501`); non-admin authenticated → 0; partner own-row → 1; admin/superadmin → 11/11; homepage loga renderují; BOHEMIA API key flow beze změny (1 aktivní klíč); Shoptet importer beze změny.
+- **Backup před migrací:** `backups/onemil-production-pre-partners-exposure-fix-20260624-151442.dump` (~466 MB, validní).
+- **Zámek migrace:** osiřelý backend PID `1131426` (z přerušeného pg_dump) ukončen `pg_terminate_backend` se schválením Pavla; poté migrace prošla.
+- **⏳ Otevřený reminder:** rotovat exponované/test tokeny + produkční DB heslo před launchem.
+
 ## PHASE 4 SLICE A — PRODUKČNÍ SMOKE ✅ PASS (24. 06. 2026)
 
 Phase 4 Slice A publikováno na produkci a ručně ověřeno — **PASS**. Delegace Partner Offers (offer-only stránka `/admin/partner-offers`) je LIVE.

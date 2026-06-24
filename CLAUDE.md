@@ -1,5 +1,16 @@
 # CLAUDE.md
 
+## PARTNERS_TABLE_PUBLIC_EXPOSURE — PRODUKČNÍ FIX HOTOVÝ (24. 06. 2026)
+
+Pre-existing nález `partners_table_public_exposure` je na produkci `xkzhjldrojjlrkezorey` opraven. PR #118 mergnut do `main`.
+- **Migrace aplikována:** `supabase/migrations/20260624122921_partners_public_view_rls_lock.sql` (atomicky, COMMIT). Vytvořen view `public.public_partners` (jen safe approved/logo pole), `grant select` anon+authenticated; na base `public.partners` odebrán broad `Public read partners`, revokenut select pro public/anon, přidána policy `partners_select_own_admin` (own-row přes `auth_user_id` OR `is_admin()` OR `is_superadmin()`).
+- **Frontend:** veřejné zobrazení partnerských log čte z `public_partners` (`src/hooks/usePartners.ts`). Produkční live bundle **`index-B-nGIJdT.js`** obsahuje `public_partners`.
+- **Ověřeno na produkci:** `public_partners` existuje; anon ho čte (1 approved logo řádek); přímý anon read `partners` blokován (`42501 permission denied`); authenticated non-admin → 0 řádků; partner vidí vlastní řádek (1); admin i superadmin vidí vše (11/11); homepage loga se opět renderují; **BOHEMIA API key flow beze změny** (1 aktivní klíč, `partner_api_keys` nedotčena); Shoptet importer beze změny.
+- **Backup před migrací (validní):** `backups/onemil-production-pre-partners-exposure-fix-20260624-151442.dump` (~466 MB, `pg_restore -l` OK). (První pokus o dump se přerušil → smazán; platný je až retry.)
+- **Pozn. k zámku:** migraci blokoval osiřelý `idle in transaction` backend PID `1131426` (z přerušeného prvního pg_dump, `COPY public.admin_actions`). Ukončen `pg_terminate_backend` **s výslovným schválením Pavla** (jen tento jeden PID), poté migrace prošla.
+- **⏳ Otevřený reminder:** před ostrým launchem rotovat exponované/test tokeny i produkční DB heslo (objevilo se v chatu).
+- **Pravidlo (neměnit):** veřejné partnerské zobrazení číst přes `public_partners`, ne přes `partners.select('*')`; base `partners` nevracet broad public/anon SELECT.
+
 ## PHASE 4 SLICE A — PRODUKČNÍ SMOKE ✅ PASS (24. 06. 2026)
 
 Phase 4 Slice A publikováno na produkci (Lovable Publish) a ručně ověřeno — **smoke PASS**. Delegace Partner Offers (offer-only stránka) je LIVE.
