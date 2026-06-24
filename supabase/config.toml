@@ -113,3 +113,9 @@ verify_jwt = false
 
 [functions.ai-chat]
 verify_jwt = false
+
+[functions.set-shoptet-export-secret]
+verify_jwt = false
+
+[functions.import-shoptet-orders]
+verify_jwt = false
