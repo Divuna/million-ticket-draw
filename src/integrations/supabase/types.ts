@@ -86,6 +86,30 @@ export type Database = {
         }
         Relationships: []
       }
+      admin_permissions: {
+        Row: {
+          created_at: string
+          granted_by: string | null
+          id: string
+          permission_key: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          granted_by?: string | null
+          id?: string
+          permission_key: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          granted_by?: string | null
+          id?: string
+          permission_key?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       affiliate_accounts: {
         Row: {
           approved_at: string | null
@@ -5134,6 +5158,22 @@ export type Database = {
         Args: { p_active_window_seconds?: number }
         Returns: Json
       }
+      get_admin_subadmins_overview: {
+        Args: never
+        Returns: {
+          created_at: string
+          email: string
+          email_confirmed_at: string
+          full_name: string
+          last_seen_at: string
+          last_sign_in_at: string
+          latest_invite_sent_at: string
+          latest_invite_status: string
+          profile_email: string
+          role: string
+          user_id: string
+        }[]
+      }
       get_admin_summary_dashboard: {
         Args: never
         Returns: {
@@ -5285,6 +5325,10 @@ export type Database = {
         Args: { p_influencer_partner_id: string; p_user_id: string }
         Returns: undefined
       }
+      has_admin_permission: {
+        Args: { check_key: string; check_user_id?: string }
+        Returns: boolean
+      }
       has_role: {
         Args: {
           _role: Database["public"]["Enums"]["app_role"]
@@ -5301,6 +5345,7 @@ export type Database = {
         Args: { p_referred_user_id: string; p_referrer_user_id: string }
         Returns: boolean
       }
+      is_superadmin: { Args: { check_user_id?: string }; Returns: boolean }
       log_admin_action: {
         Args: {
           action_name: string
