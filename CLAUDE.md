@@ -1,5 +1,15 @@
 # CLAUDE.md
 
+## PHASE 4 SLICE A — PRODUKČNÍ SMOKE ✅ PASS (24. 06. 2026)
+
+Phase 4 Slice A publikováno na produkci (Lovable Publish) a ručně ověřeno — **smoke PASS**. Delegace Partner Offers (offer-only stránka) je LIVE.
+- Nový klíč `partner_offers.finance.manage` existuje (checkbox v `/admin/admins`). ✅
+- Subadmin s klíčem vidí v nav „Partnerské nabídky" a úspěšně otevře `/admin/partner-offers`. ✅
+- Citlivé routy zůstávají blokované superadmin-only fallbackem: `/admin/invoices`, `/admin/partners-portal`, `/admin/payments`, `/admin/winners`, `/admin/statistics`. ✅
+- Nebyly otevřeny: faktury, platby, payouty, provize, výherci, soutěže, audit/system, admin role management. ✅
+- **Další možný krok (Phase 4 Slice B):** samostatná Partner Offers finance stránka jen pro offer faktury (`partner_invoices type='offer'` + `partner_offer_invoice_lines`) — NEpoužívat smíšené `/admin/invoices` ani `/admin/partners-portal`; pro skutečnou izolaci zvážit DB/RLS scoping (Slice C). Vyžaduje samostatné schválení Pavla.
+- **⏳ Stále otevřeno:** reset produkčního DB hesla (objevilo se v chatu při Phase 2 apply).
+
 ## PARTNER API KEY ROTATION — PRODUKČNÍ FIX HOTOVÝ (24. 06. 2026)
 
 Production partner API key rotation fix je dokončený. PR #117 (`fix: improve partner API key rotation errors`) byl mergnut do `main`; produkční Edge Functions `partner-rotate-api-key` a `rotate-partner-api-key` byly nasazeny na projekt `xkzhjldrojjlrkezorey`.
