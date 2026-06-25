@@ -54,7 +54,7 @@ test.describe('Admin — MioCoin Chunked Save (issue #71)', () => {
   test('generates 600 MioCoin bonuses and persists via chunked RPC flow', async ({ page }) => {
     // Heavy test: generates 600 positions client-side, then a chunked save
     // (begin + N appends + finalize). Staging can be slow, so allow 5 min.
-    test.setTimeout(360_000);
+    test.setTimeout(240_000);
 
     if (
       !ADMIN_EMAIL ||
@@ -143,22 +143,19 @@ test.describe('Admin — MioCoin Chunked Save (issue #71)', () => {
 
     let bonusCount = 0;
     let totalMc = 0;
+    // Gate on the denormalised total (synced from the real bonus_prizes sum at
+    // finalize) + audit rows. Avoid a head:'exact' count inside the poll — that
+    // PostgREST request was unreliable on staging. The exact row count is then
+    // asserted once below via a normal select.
     let actions: Array<{ action_type: string; metadata: unknown; timestamp: string }> = [];
     await expect
       .poll(
         async () => {
-          const { count } = await supabase
-            .from('bonus_prizes')
-            .select('id', { count: 'exact', head: true })
-            .eq('contest_id', SPEC20_CONTEST_ID)
-            .gt('amount', 0);
-          bonusCount = count ?? 0;
-
           const { data: c } = await supabase
             .from('contests')
             .select('total_miocoin_bonus')
             .eq('id', SPEC20_CONTEST_ID)
-            .single();
+            .maybeSingle();
           totalMc = Number(c?.total_miocoin_bonus ?? 0);
 
           const { data: a } = await supabase
@@ -171,18 +168,26 @@ test.describe('Admin — MioCoin Chunked Save (issue #71)', () => {
           const t = actions.map((x) => x.action_type);
 
           return (
-            bonusCount === EXPECTED_POS &&
             totalMc === TOTAL_MIOCOINS &&
             t.includes('miocoin_save_begin') &&
             t.includes('miocoin_bulk_create')
           );
         },
-        { timeout: 240_000, intervals: [2_000, 3_000, 5_000, 5_000] },
+        { timeout: 120_000, intervals: [2_000, 3_000, 5_000, 5_000] },
       )
       .toBe(true);
 
-    // 6a/6b. Persisted counts + denormalised total.
+    // 6a. Exact persisted row count via a normal select (reliable GET).
+    const { data: bonusRows, error: bonusErr } = await supabase
+      .from('bonus_prizes')
+      .select('id')
+      .eq('contest_id', SPEC20_CONTEST_ID)
+      .gt('amount', 0);
+    expect(bonusErr, 'bonus_prizes read').toBeNull();
+    bonusCount = (bonusRows ?? []).length;
     expect(bonusCount, 'bonus_prizes count').toBe(EXPECTED_POS);
+
+    // 6b. Denormalised total on contests row.
     expect(totalMc, 'contests.total_miocoin_bonus').toBe(TOTAL_MIOCOINS);
 
     // 6c. Audit rows for the chunked flow.
