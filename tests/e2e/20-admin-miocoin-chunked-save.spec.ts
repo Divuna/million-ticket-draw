@@ -52,7 +52,9 @@ const EXPECTED_POS   = TOTAL_MIOCOINS / STEP_VALUE; // 600
 
 test.describe('Admin — MioCoin Chunked Save (issue #71)', () => {
   test('generates 600 MioCoin bonuses and persists via chunked RPC flow', async ({ page }) => {
-    test.setTimeout(180_000);
+    // Heavy test: generates 600 positions client-side, then a chunked save
+    // (begin + N appends + finalize). Staging can be slow, so allow 5 min.
+    test.setTimeout(300_000);
 
     if (
       !ADMIN_EMAIL ||
@@ -159,14 +161,25 @@ test.describe('Admin — MioCoin Chunked Save (issue #71)', () => {
     expect(contestErr, 'contests read').toBeNull();
     expect(Number(contestRow2?.total_miocoin_bonus)).toBe(TOTAL_MIOCOINS);
 
-    // 6c. Audit rows for this contest
-    const { data: actions, error: actionsErr } = await supabase
-      .from('admin_actions')
-      .select('action_type, metadata, timestamp')
-      .eq('target_id', SPEC20_CONTEST_ID)
-      .in('action_type', ['miocoin_save_begin', 'miocoin_bulk_create'])
-      .order('timestamp', { ascending: true });
-    expect(actionsErr, 'admin_actions read').toBeNull();
+    // 6c. Audit rows for this contest — poll for eventual consistency (the
+    // finalize audit write can lag slightly behind the modal close).
+    let actions: Array<{ action_type: string; metadata: unknown; timestamp: string }> = [];
+    await expect
+      .poll(
+        async () => {
+          const { data } = await supabase
+            .from('admin_actions')
+            .select('action_type, metadata, timestamp')
+            .eq('target_id', SPEC20_CONTEST_ID)
+            .in('action_type', ['miocoin_save_begin', 'miocoin_bulk_create'])
+            .order('timestamp', { ascending: true });
+          actions = data ?? [];
+          const t = actions.map((a) => a.action_type);
+          return t.includes('miocoin_save_begin') && t.includes('miocoin_bulk_create');
+        },
+        { timeout: 30_000, intervals: [1_000, 2_000, 3_000, 5_000] },
+      )
+      .toBe(true);
     const types = (actions ?? []).map((a) => a.action_type);
     expect(types).toContain('miocoin_save_begin');
     expect(types).toContain('miocoin_bulk_create');

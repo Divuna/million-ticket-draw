@@ -144,10 +144,13 @@ test.describe.serial('44 — Partner invoice PDF + email EF contract', () => {
     if (auErr) throw new Error(`admin user: ${auErr.message}`);
     ctx.adminAuthId = au.user.id;
 
+    // The invoice PDF + email Edge Functions are superadmin-only (partner
+    // finance lock). The throwaway EF-calling account must therefore be a
+    // superadmin for the authorized-path assertions (44e/44f) to pass.
     const { error: roleErr } = await (admin as any)
       .from('user_roles')
-      .insert({ user_id: au.user.id, role: 'admin' });
-    if (roleErr) throw new Error(`admin role insert: ${roleErr.message}`);
+      .insert({ user_id: au.user.id, role: 'superadmin' });
+    if (roleErr) throw new Error(`superadmin role insert: ${roleErr.message}`);
 
     const { data: p, error: pErr } = await (admin as any)
       .from('partners')

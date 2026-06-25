@@ -42,6 +42,9 @@ const EXPECTED_SUPERADMIN_EMAIL = 'divispavel2@gmail.com';
 
 const FALLBACK_TEXT =
   'Tato část je dostupná pouze superadminovi nebo administrátorovi s oprávněním.';
+// RequireSuperadmin (Phase 3) renders this distinct in-place fallback (note the
+// trailing period after "superadminovi", absent in the RequirePermission text).
+const SUPERADMIN_ONLY_FALLBACK_TEXT = 'Tato část je dostupná pouze superadminovi.';
 
 const SAFE_PERMISSION_KEYS = [
   'vouchers.manage',
@@ -244,11 +247,14 @@ test.describe.serial('Phase 2 admin permissions - staging targeted smoke', () =>
       });
     }
 
+    // Phase 3: /admin/admins is wrapped in RequireSuperadmin, which renders an
+    // in-place Czech fallback (URL stays /admin/admins) rather than redirecting.
     await page.goto('/admin/admins');
     await page.waitForLoadState('networkidle').catch(() => undefined);
-    expect(new URL(page.url()).pathname, '/admin/admins should redirect/deny for scoped admin').not.toBe(
-      '/admin/admins',
-    );
+    await expect(
+      page.getByText(SUPERADMIN_ONLY_FALLBACK_TEXT),
+      '/admin/admins should show superadmin-only fallback for scoped admin',
+    ).toBeVisible({ timeout: 20_000 });
     await expectNoVisibleAdminLink(page, '/admin/admins');
 
     expect(pageErrors, `Unexpected page errors: ${pageErrors.join(' | ')}`).toEqual([]);
