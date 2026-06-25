@@ -45,6 +45,7 @@ const ADMIN_PASSWORD    = (process.env.E2E_SUPERADMIN_PASSWORD || process.env.E2
 const SPEC20_CONTEST_ID = process.env.E2E_SPEC20_CONTEST_ID ?? '';
 const SUPABASE_URL      = process.env.VITE_SUPABASE_URL     ?? '';
 const SUPABASE_ANON_KEY = process.env.VITE_SUPABASE_ANON_KEY ?? '';
+const SERVICE_ROLE_KEY  = process.env.E2E_SUPABASE_SERVICE_ROLE_KEY ?? '';
 
 const TOTAL_MIOCOINS = 6000;
 const STEP_VALUE     = 10;
@@ -61,7 +62,8 @@ test.describe('Admin — MioCoin Chunked Save (issue #71)', () => {
       !ADMIN_PASSWORD ||
       !SPEC20_CONTEST_ID ||
       !SUPABASE_URL ||
-      !SUPABASE_ANON_KEY
+      !SUPABASE_ANON_KEY ||
+      !SERVICE_ROLE_KEY
     ) {
       test.skip(
         true,
@@ -127,19 +129,15 @@ test.describe('Admin — MioCoin Chunked Save (issue #71)', () => {
     await expect(saveBtn).toBeEnabled({ timeout: 5_000 });
     await saveBtn.click();
 
-    // ── Step 6: DB read-back via Supabase JS with admin auth ─────────────────
+    // ── Step 6: DB read-back via Supabase JS (service role) ──────────────────
     // The DB is the source of truth for "persisted via chunked RPC flow". The UI
     // modal-close can lag on a loaded staging DB even after the chunked save has
     // fully committed, so we poll the DB for the end-state rather than gating on
-    // the modal. RLS allows the admin/superadmin user to read these tables.
-    const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
+    // the modal. Use the service-role key for read-back so RLS/session quirks
+    // can never mask committed data.
+    const supabase = createClient(SUPABASE_URL, SERVICE_ROLE_KEY, {
       auth: { persistSession: false, autoRefreshToken: false },
     });
-    const { error: signInError } = await supabase.auth.signInWithPassword({
-      email: ADMIN_EMAIL,
-      password: ADMIN_PASSWORD,
-    });
-    expect(signInError, 'admin sign-in for read-back').toBeNull();
 
     let bonusCount = 0;
     let totalMc = 0;
