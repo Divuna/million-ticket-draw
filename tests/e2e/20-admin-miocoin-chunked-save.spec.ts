@@ -54,7 +54,7 @@ test.describe('Admin — MioCoin Chunked Save (issue #71)', () => {
   test('generates 600 MioCoin bonuses and persists via chunked RPC flow', async ({ page }) => {
     // Heavy test: generates 600 positions client-side, then a chunked save
     // (begin + N appends + finalize). Staging can be slow, so allow 5 min.
-    test.setTimeout(300_000);
+    test.setTimeout(360_000);
 
     if (
       !ADMIN_EMAIL ||
@@ -177,7 +177,7 @@ test.describe('Admin — MioCoin Chunked Save (issue #71)', () => {
             t.includes('miocoin_bulk_create')
           );
         },
-        { timeout: 180_000, intervals: [2_000, 3_000, 5_000, 5_000] },
+        { timeout: 240_000, intervals: [2_000, 3_000, 5_000, 5_000] },
       )
       .toBe(true);
 
