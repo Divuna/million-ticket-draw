@@ -430,6 +430,13 @@ export type Database = {
             referencedRelation: "partners"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "affiliate_company_leads_partner_id_fkey"
+            columns: ["partner_id"]
+            isOneToOne: false
+            referencedRelation: "public_partners"
+            referencedColumns: ["id"]
+          },
         ]
       }
       affiliate_company_refs: {
@@ -467,6 +474,13 @@ export type Database = {
             columns: ["partner_id"]
             isOneToOne: true
             referencedRelation: "partners"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "affiliate_company_refs_partner_id_fkey"
+            columns: ["partner_id"]
+            isOneToOne: true
+            referencedRelation: "public_partners"
             referencedColumns: ["id"]
           },
         ]
@@ -1742,6 +1756,13 @@ export type Database = {
             referencedRelation: "partners"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "influencer_campaign_bonuses_czk_influencer_partner_id_fkey"
+            columns: ["influencer_partner_id"]
+            isOneToOne: false
+            referencedRelation: "public_partners"
+            referencedColumns: ["id"]
+          },
         ]
       }
       influencer_campaign_events: {
@@ -1781,6 +1802,13 @@ export type Database = {
             referencedRelation: "partners"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "influencer_campaign_events_influencer_partner_id_fkey"
+            columns: ["influencer_partner_id"]
+            isOneToOne: false
+            referencedRelation: "public_partners"
+            referencedColumns: ["id"]
+          },
         ]
       }
       influencer_campaign_partners: {
@@ -1809,6 +1837,13 @@ export type Database = {
             columns: ["influencer_partner_id"]
             isOneToOne: false
             referencedRelation: "partners"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "influencer_campaign_partners_influencer_partner_id_fkey"
+            columns: ["influencer_partner_id"]
+            isOneToOne: false
+            referencedRelation: "public_partners"
             referencedColumns: ["id"]
           },
         ]
@@ -1882,6 +1917,13 @@ export type Database = {
             referencedRelation: "partners"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "influencer_commissions_influencer_partner_id_fkey"
+            columns: ["influencer_partner_id"]
+            isOneToOne: false
+            referencedRelation: "public_partners"
+            referencedColumns: ["id"]
+          },
         ]
       }
       influencer_referrals: {
@@ -1909,6 +1951,13 @@ export type Database = {
             columns: ["influencer_partner_id"]
             isOneToOne: false
             referencedRelation: "partners"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "influencer_referrals_influencer_partner_id_fkey"
+            columns: ["influencer_partner_id"]
+            isOneToOne: false
+            referencedRelation: "public_partners"
             referencedColumns: ["id"]
           },
         ]
@@ -1959,6 +2008,13 @@ export type Database = {
             columns: ["merchant_partner_id"]
             isOneToOne: true
             referencedRelation: "partners"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "merchant_affiliate_referrals_merchant_partner_id_fkey"
+            columns: ["merchant_partner_id"]
+            isOneToOne: true
+            referencedRelation: "public_partners"
             referencedColumns: ["id"]
           },
         ]
@@ -2109,6 +2165,13 @@ export type Database = {
             referencedRelation: "partners"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "partner_api_keys_partner_id_fkey"
+            columns: ["partner_id"]
+            isOneToOne: false
+            referencedRelation: "public_partners"
+            referencedColumns: ["id"]
+          },
         ]
       }
       partner_api_requests: {
@@ -2179,6 +2242,13 @@ export type Database = {
             columns: ["partner_id"]
             isOneToOne: false
             referencedRelation: "partners"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "partner_coin_activations_partner_id_fkey"
+            columns: ["partner_id"]
+            isOneToOne: false
+            referencedRelation: "public_partners"
             referencedColumns: ["id"]
           },
         ]
@@ -2344,6 +2414,13 @@ export type Database = {
             referencedRelation: "partners"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "partner_invoices_partner_id_fkey"
+            columns: ["partner_id"]
+            isOneToOne: false
+            referencedRelation: "public_partners"
+            referencedColumns: ["id"]
+          },
         ]
       }
       partner_offer_activations: {
@@ -2396,6 +2473,13 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "partner_offer_activations_partner_id_fkey"
+            columns: ["partner_id"]
+            isOneToOne: false
+            referencedRelation: "public_partners"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "partner_offer_activations_upo_id_fkey"
             columns: ["upo_id"]
             isOneToOne: true
@@ -2438,6 +2522,13 @@ export type Database = {
             columns: ["partner_id"]
             isOneToOne: true
             referencedRelation: "partners"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "partner_offer_billing_configs_partner_id_fkey"
+            columns: ["partner_id"]
+            isOneToOne: true
+            referencedRelation: "public_partners"
             referencedColumns: ["id"]
           },
         ]
@@ -2808,6 +2899,13 @@ export type Database = {
             referencedRelation: "partners"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "partner_offers_partner_id_fkey"
+            columns: ["partner_id"]
+            isOneToOne: false
+            referencedRelation: "public_partners"
+            referencedColumns: ["id"]
+          },
         ]
       }
       partner_reward_codes: {
@@ -2862,6 +2960,13 @@ export type Database = {
             columns: ["partner_id"]
             isOneToOne: false
             referencedRelation: "partners"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "partner_reward_codes_partner_id_fkey"
+            columns: ["partner_id"]
+            isOneToOne: false
+            referencedRelation: "public_partners"
             referencedColumns: ["id"]
           },
         ]
@@ -4600,6 +4705,39 @@ export type Database = {
         }
         Relationships: []
       }
+      public_partners: {
+        Row: {
+          created_at: string | null
+          id: string | null
+          logo_status: string | null
+          logo_url: string | null
+          name: string | null
+          status: Database["public"]["Enums"]["partner_status"] | null
+          updated_at: string | null
+          website_url: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          id?: string | null
+          logo_status?: string | null
+          logo_url?: string | null
+          name?: string | null
+          status?: Database["public"]["Enums"]["partner_status"] | null
+          updated_at?: string | null
+          website_url?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          id?: string | null
+          logo_status?: string | null
+          logo_url?: string | null
+          name?: string | null
+          status?: Database["public"]["Enums"]["partner_status"] | null
+          updated_at?: string | null
+          website_url?: string | null
+        }
+        Relationships: []
+      }
       system_health_monitor: {
         Row: {
           active_contests: number | null
@@ -4655,6 +4793,13 @@ export type Database = {
             referencedRelation: "partners"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "influencer_referrals_influencer_partner_id_fkey"
+            columns: ["influencer_partner_id"]
+            isOneToOne: false
+            referencedRelation: "public_partners"
+            referencedColumns: ["id"]
+          },
         ]
       }
       v_influencer_referrals_valid: {
@@ -4670,6 +4815,13 @@ export type Database = {
             columns: ["influencer_partner_id"]
             isOneToOne: false
             referencedRelation: "partners"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "influencer_referrals_influencer_partner_id_fkey"
+            columns: ["influencer_partner_id"]
+            isOneToOne: false
+            referencedRelation: "public_partners"
             referencedColumns: ["id"]
           },
         ]
@@ -4714,6 +4866,13 @@ export type Database = {
             columns: ["partner_id"]
             isOneToOne: false
             referencedRelation: "partners"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "partner_api_keys_partner_id_fkey"
+            columns: ["partner_id"]
+            isOneToOne: false
+            referencedRelation: "public_partners"
             referencedColumns: ["id"]
           },
         ]
