@@ -451,6 +451,112 @@ jobs:
           ADMIN_EMAIL: ${{ secrets.STAGING_E2E_ADMIN_EMAIL }}
           ADMIN_PASSWORD: ${{ secrets.STAGING_E2E_ADMIN_PASSWORD }}
 
+      - name: Ensure staging SUPERADMIN E2E user has superadmin role
+        # ── Why this step exists ──────────────────────────────────────────────
+        # Phase 3/3b hardening (RequireSuperadmin / RequireSuperadminOrRedirect /
+        # RequirePermission) correctly blocks non-superadmin admins from most
+        # admin pages. The full admin-area specs therefore log in as a dedicated
+        # SUPERADMIN E2E account, while admin-e2e@onemil.cz stays a plain admin
+        # (scoped) for phase2-admin-permissions specs.
+        #
+        # Idempotent. Mirrors the admin seed step but sets role=superadmin.
+        # Password falls back to the admin password secret when a dedicated
+        # superadmin password secret is not configured. Credentials are never
+        # echoed and are masked by GitHub Actions.
+        run: |
+          ADMIN_API="${SUPABASE_URL}/auth/v1/admin/users"
+          REST_API="${SUPABASE_URL}/rest/v1"
+
+          LIST_RESP=$(curl -s -w $'\n%{http_code}' \
+            "${ADMIN_API}?page=1&per_page=200" \
+            -H "apikey: ${SERVICE_ROLE_KEY}" \
+            -H "Authorization: Bearer ${SERVICE_ROLE_KEY}")
+          LIST_CODE=$(printf '%s' "$LIST_RESP" | tail -n1)
+          LIST_BODY=$(printf '%s' "$LIST_RESP" | sed '$d')
+
+          if [ -z "$LIST_CODE" ] || [ "$LIST_CODE" -lt 200 ] || [ "$LIST_CODE" -ge 300 ]; then
+            echo "ERROR: admin/users list failed (HTTP ${LIST_CODE:-no_response})." \
+                 "Body (truncated): $(printf '%s' "$LIST_BODY" | head -c 300)" >&2
+            exit 1
+          fi
+
+          SA_UUID=$(printf '%s' "$LIST_BODY" | jq -r \
+            --arg e "${SUPERADMIN_EMAIL}" \
+            '.users[]? | select(.email == $e) | .id' | head -1)
+
+          if [ -z "$SA_UUID" ] || [ "$SA_UUID" = "null" ]; then
+            echo "Superadmin E2E user not found — creating (credentials masked)"
+            PAYLOAD=$(jq -n \
+              --arg em "${SUPERADMIN_EMAIL}" \
+              --arg pw "${SUPERADMIN_PASSWORD}" \
+              '{email: $em, password: $pw, email_confirm: true}')
+            CREATE=$(curl -sf -X POST "${ADMIN_API}" \
+              -H "apikey: ${SERVICE_ROLE_KEY}" \
+              -H "Authorization: Bearer ${SERVICE_ROLE_KEY}" \
+              -H "Content-Type: application/json" \
+              -d "${PAYLOAD}")
+            SA_UUID=$(echo "$CREATE" | jq -r '.id // empty')
+            if [ -z "$SA_UUID" ]; then
+              echo "ERROR: failed to create superadmin E2E user." \
+                   "Verify STAGING_E2E_SUPERADMIN_* (or STAGING_E2E_ADMIN_PASSWORD) are set." >&2
+              exit 1
+            fi
+            echo "Superadmin E2E user created in auth.users (UUID masked)"
+          else
+            echo "Superadmin E2E user found in auth.users (UUID masked)"
+          fi
+
+          # public.users role=superadmin (overwrites stale role)
+          PU=$(jq -n \
+            --arg id "$SA_UUID" \
+            --arg em "${SUPERADMIN_EMAIL}" \
+            '{id: $id, email: $em, name: "Superadmin E2E", role: "superadmin"}')
+          PU_STATUS=$(curl -s -o /dev/null -w "%{http_code}" -X POST "${REST_API}/users" \
+            -H "apikey: ${SERVICE_ROLE_KEY}" \
+            -H "Authorization: Bearer ${SERVICE_ROLE_KEY}" \
+            -H "Content-Type: application/json" \
+            -H "Prefer: resolution=merge-duplicates,return=minimal" \
+            -d "${PU}")
+          if [ "$PU_STATUS" -lt 200 ] || [ "$PU_STATUS" -ge 300 ]; then
+            echo "ERROR: public.users upsert failed (HTTP ${PU_STATUS})" >&2
+            exit 1
+          fi
+          echo "public.users: role=superadmin ensured (HTTP ${PU_STATUS})"
+
+          # user_roles: superadmin row (ON CONFLICT DO NOTHING)
+          UR=$(jq -n --arg uid "$SA_UUID" '{user_id: $uid, role: "superadmin"}')
+          UR_STATUS=$(curl -s -o /dev/null -w "%{http_code}" -X POST "${REST_API}/user_roles" \
+            -H "apikey: ${SERVICE_ROLE_KEY}" \
+            -H "Authorization: Bearer ${SERVICE_ROLE_KEY}" \
+            -H "Content-Type: application/json" \
+            -H "Prefer: resolution=ignore-duplicates,return=minimal" \
+            -d "${UR}")
+          echo "user_roles: superadmin row ensured (HTTP ${UR_STATUS})"
+
+          # profiles + wallets (idempotent)
+          PR=$(jq -n --arg id "$SA_UUID" '{id: $id, full_name: "Superadmin E2E"}')
+          curl -s -o /dev/null -w "profiles: %{http_code}\n" -X POST "${REST_API}/profiles" \
+            -H "apikey: ${SERVICE_ROLE_KEY}" \
+            -H "Authorization: Bearer ${SERVICE_ROLE_KEY}" \
+            -H "Content-Type: application/json" \
+            -H "Prefer: resolution=ignore-duplicates,return=minimal" \
+            -d "${PR}"
+          WA=$(jq -n --arg uid "$SA_UUID" \
+            '{user_id: $uid, balance_coins: 0, bonus_balance_coins: 0}')
+          curl -s -o /dev/null -w "wallets: %{http_code}\n" -X POST "${REST_API}/wallets" \
+            -H "apikey: ${SERVICE_ROLE_KEY}" \
+            -H "Authorization: Bearer ${SERVICE_ROLE_KEY}" \
+            -H "Content-Type: application/json" \
+            -H "Prefer: resolution=ignore-duplicates,return=minimal" \
+            -d "${WA}"
+
+          echo "Superadmin E2E user seed complete"
+        env:
+          SUPABASE_URL: ${{ secrets.STAGING_VITE_SUPABASE_URL }}
+          SERVICE_ROLE_KEY: ${{ secrets.STAGING_SUPABASE_SERVICE_ROLE_KEY }}
+          SUPERADMIN_EMAIL: ${{ secrets.STAGING_E2E_SUPERADMIN_EMAIL || 'superadmin-e2e@onemil.cz' }}
+          SUPERADMIN_PASSWORD: ${{ secrets.STAGING_E2E_SUPERADMIN_PASSWORD || secrets.STAGING_E2E_ADMIN_PASSWORD }}
+
       - name: Run E2E (full suite nebo cílený spec)
         id: e2e_tests
         run: |
@@ -489,6 +595,8 @@ jobs:
           E2E_AFFILIATE_PASSWORD: ${{ secrets.STAGING_E2E_AFFILIATE_PASSWORD }}
           E2E_ADMIN_EMAIL: ${{ secrets.STAGING_E2E_ADMIN_EMAIL }}
           E2E_ADMIN_PASSWORD: ${{ secrets.STAGING_E2E_ADMIN_PASSWORD }}
+          E2E_SUPERADMIN_EMAIL: ${{ secrets.STAGING_E2E_SUPERADMIN_EMAIL || 'superadmin-e2e@onemil.cz' }}
+          E2E_SUPERADMIN_PASSWORD: ${{ secrets.STAGING_E2E_SUPERADMIN_PASSWORD || secrets.STAGING_E2E_ADMIN_PASSWORD }}
 
       - name: E2E status — OK
         if: success()

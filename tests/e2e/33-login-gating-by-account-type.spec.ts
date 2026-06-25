@@ -19,8 +19,8 @@ import { createClient } from '@supabase/supabase-js';
 
 const TEST_EMAIL    = process.env.E2E_TEST_EMAIL              ?? '';
 const TEST_PASSWORD = process.env.E2E_TEST_PASSWORD           ?? '';
-const ADMIN_EMAIL   = process.env.E2E_ADMIN_EMAIL            ?? '';
-const ADMIN_PASSWORD= process.env.E2E_ADMIN_PASSWORD         ?? '';
+const ADMIN_EMAIL   = (process.env.E2E_SUPERADMIN_EMAIL || process.env.E2E_ADMIN_EMAIL)            ?? '';
+const ADMIN_PASSWORD= (process.env.E2E_SUPERADMIN_PASSWORD || process.env.E2E_ADMIN_PASSWORD)         ?? '';
 const SUPABASE_URL  = process.env.VITE_SUPABASE_URL          ?? '';
 const SERVICE_KEY   = process.env.E2E_SUPABASE_SERVICE_ROLE_KEY ?? '';
 

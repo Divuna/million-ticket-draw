@@ -17,8 +17,8 @@
 import { test, expect, Locator } from '@playwright/test';
 import { loginViaUI } from './helpers/auth';
 
-const ADMIN_EMAIL    = process.env.E2E_ADMIN_EMAIL    ?? '';
-const ADMIN_PASSWORD = process.env.E2E_ADMIN_PASSWORD ?? '';
+const ADMIN_EMAIL    = (process.env.E2E_SUPERADMIN_EMAIL || process.env.E2E_ADMIN_EMAIL)    ?? '';
+const ADMIN_PASSWORD = (process.env.E2E_SUPERADMIN_PASSWORD || process.env.E2E_ADMIN_PASSWORD) ?? '';
 
 /**
  * Locate the value element next to a top economy summary bar metric.

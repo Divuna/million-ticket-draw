@@ -40,8 +40,8 @@ import { test, expect, Locator } from '@playwright/test';
 import { createClient } from '@supabase/supabase-js';
 import { loginViaUI } from './helpers/auth';
 
-const ADMIN_EMAIL       = process.env.E2E_ADMIN_EMAIL       ?? '';
-const ADMIN_PASSWORD    = process.env.E2E_ADMIN_PASSWORD    ?? '';
+const ADMIN_EMAIL       = (process.env.E2E_SUPERADMIN_EMAIL || process.env.E2E_ADMIN_EMAIL)       ?? '';
+const ADMIN_PASSWORD    = (process.env.E2E_SUPERADMIN_PASSWORD || process.env.E2E_ADMIN_PASSWORD)    ?? '';
 const SPEC20_CONTEST_ID = process.env.E2E_SPEC20_CONTEST_ID ?? '';
 const SUPABASE_URL      = process.env.VITE_SUPABASE_URL     ?? '';
 const SUPABASE_ANON_KEY = process.env.VITE_SUPABASE_ANON_KEY ?? '';

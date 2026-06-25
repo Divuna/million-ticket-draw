@@ -34,8 +34,8 @@
 import { test, expect } from '@playwright/test';
 import { loginViaUI } from './helpers/auth';
 
-const ADMIN_EMAIL    = process.env.E2E_ADMIN_EMAIL    ?? '';
-const ADMIN_PASSWORD = process.env.E2E_ADMIN_PASSWORD ?? '';
+const ADMIN_EMAIL    = (process.env.E2E_SUPERADMIN_EMAIL || process.env.E2E_ADMIN_EMAIL)    ?? '';
+const ADMIN_PASSWORD = (process.env.E2E_SUPERADMIN_PASSWORD || process.env.E2E_ADMIN_PASSWORD) ?? '';
 
 test.describe('Admin — Vouchers & Doporučení a odměny Pages Smoke', () => {
   test('admin can open /admin/vouchers and /admin/referrals without error', async ({ page }) => {
