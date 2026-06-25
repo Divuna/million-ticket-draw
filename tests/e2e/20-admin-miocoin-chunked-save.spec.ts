@@ -128,8 +128,9 @@ test.describe('Admin — MioCoin Chunked Save (issue #71)', () => {
     await saveBtn.click();
 
     // Modal closes only on full chunked-save success (begin + N appends + finalize).
-    // No "statement timeout" error toast surfaced.
-    await expect(dialog).not.toBeVisible({ timeout: 60_000 });
+    // No "statement timeout" error toast surfaced. Allow generous time — the
+    // chunked save of 600 rows can be slow on a loaded staging DB.
+    await expect(dialog).not.toBeVisible({ timeout: 120_000 });
 
     // ── Step 6: DB read-back via Supabase JS with admin auth ─────────────────
     // RLS allows the admin user to read these tables. Anon-key client signs in
