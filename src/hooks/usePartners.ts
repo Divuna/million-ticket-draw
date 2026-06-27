@@ -27,15 +27,12 @@ export const usePartners = () => {
     const fetchPartners = async () => {
       try {
         const { data, error } = await supabase
-          .from('partners')
-          .select('*')
-          .eq('status', 'approved')
-          .eq('logo_status', 'approved')
-          .not('logo_url', 'is', null)
+          .from('public_partners' as never)
+          .select('id, name, logo_url, website_url, created_at, updated_at, status, logo_status')
           .order('created_at', { ascending: false });
 
         if (error) throw error;
-        setPartners(data || []);
+        setPartners((data || []) as Partner[]);
       } catch (error) {
         console.error('Error fetching partners:', error);
       } finally {

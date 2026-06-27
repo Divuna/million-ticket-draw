@@ -5,6 +5,7 @@ import { Button } from '@/components/ui/button';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/hooks/use-toast';
 import { TicketProgressBar } from '@/components/TicketProgressBar';
+import { useUserRole } from '@/hooks/useUserRole';
 import { RefreshCw } from 'lucide-react';
 
 interface ContestRow {
@@ -25,6 +26,9 @@ interface ContestRow {
 }
 
 export const TicketMapAdmin: React.FC = () => {
+  // Ticket map reveals winning/bonus positions, raw ticket activity and progress —
+  // strictly superadmin-only. Scoped subadmins get a fallback and no data fetch.
+  const { isSuperAdmin, loading: roleLoading } = useUserRole();
   const [contests, setContests] = useState<ContestRow[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -109,6 +113,7 @@ export const TicketMapAdmin: React.FC = () => {
   };
 
   useEffect(() => {
+    if (!isSuperAdmin) return;
     fetchData();
 
     // Realtime: bonus_prizes changes
@@ -145,7 +150,18 @@ export const TicketMapAdmin: React.FC = () => {
       supabase.removeChannel(ticketsChannel);
       Object.values(highlightRef.current).forEach(clearTimeout);
     };
-  }, []);
+  }, [isSuperAdmin]);
+
+  // Non-superadmin: never render the ticket map (winning positions / raw tickets).
+  if (!roleLoading && !isSuperAdmin) {
+    return (
+      <Card className="w-full">
+        <CardContent className="py-10 text-center text-muted-foreground">
+          Tato část je dostupná pouze superadminovi.
+        </CardContent>
+      </Card>
+    );
+  }
 
   return (
     <Card className="w-full">

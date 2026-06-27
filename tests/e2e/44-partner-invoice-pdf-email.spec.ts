@@ -33,8 +33,8 @@ const STAGING_REF  = 'dxmowysntemfqfnanxua';
 const SUPABASE_URL = process.env.VITE_SUPABASE_URL ?? '';
 const SUPABASE_ANON = process.env.VITE_SUPABASE_ANON_KEY ?? '';
 const SERVICE_ROLE = process.env.E2E_SUPABASE_SERVICE_ROLE_KEY ?? '';
-const ADMIN_EMAIL  = process.env.E2E_ADMIN_EMAIL ?? '';
-const ADMIN_PASSWORD = process.env.E2E_ADMIN_PASSWORD ?? '';
+const ADMIN_EMAIL  = (process.env.E2E_SUPERADMIN_EMAIL || process.env.E2E_ADMIN_EMAIL) ?? '';
+const ADMIN_PASSWORD = (process.env.E2E_SUPERADMIN_PASSWORD || process.env.E2E_ADMIN_PASSWORD) ?? '';
 const INTERNAL_TOKEN = process.env.VITE_INTERNAL_FUNCTION_TOKEN ?? '';
 
 const PDF_EF_URL   = `${SUPABASE_URL}/functions/v1/generate-partner-invoice-pdf`;
@@ -144,10 +144,13 @@ test.describe.serial('44 — Partner invoice PDF + email EF contract', () => {
     if (auErr) throw new Error(`admin user: ${auErr.message}`);
     ctx.adminAuthId = au.user.id;
 
+    // The invoice PDF + email Edge Functions are superadmin-only (partner
+    // finance lock). The throwaway EF-calling account must therefore be a
+    // superadmin for the authorized-path assertions (44e/44f) to pass.
     const { error: roleErr } = await (admin as any)
       .from('user_roles')
-      .insert({ user_id: au.user.id, role: 'admin' });
-    if (roleErr) throw new Error(`admin role insert: ${roleErr.message}`);
+      .insert({ user_id: au.user.id, role: 'superadmin' });
+    if (roleErr) throw new Error(`superadmin role insert: ${roleErr.message}`);
 
     const { data: p, error: pErr } = await (admin as any)
       .from('partners')

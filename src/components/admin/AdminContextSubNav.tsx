@@ -14,6 +14,7 @@ import { ShieldCheck } from "lucide-react";
 import { useUnreadMessagesCount } from "@/hooks/useUnreadMessagesCount";
 import { usePendingOffersCount } from "@/hooks/usePendingOffersCount";
 import { useUserRole } from "@/hooks/useUserRole";
+import { useAdminPermissions } from "@/hooks/useAdminPermissions";
 import { supabase } from "@/integrations/supabase/client";
 import { cn } from "@/lib/utils";
 import {
@@ -28,6 +29,44 @@ import {
   type AdminNavSectionId,
   type AdminSubNavItem,
 } from "./adminNavConfig";
+
+// ── Phase 2: permission-scoped nav for non-superadmin admins ────────────────
+// Superadmin sees the full nav (handled at the call site). A non-superadmin admin
+// sees ONLY links for permissions they hold. Items with no grantable permission
+// (incl. every sensitive contest/finance/winner/audit area) are hidden — this
+// also preserves the Phase 1 sensitive-nav hiding (strict subset).
+const NAV_PERMISSION_BY_PATH: Record<string, string> = {
+  "/admin/vouchers": "vouchers.manage",
+  "/admin/content": "content.manage",
+  "/admin/banners": "banners.manage",
+  "/admin/notifications": "notifications.manage",
+};
+
+/** Non-superadmin: an item is visible only if it maps to a permission they hold. */
+function isPermittedNavItem(item: AdminSubNavItem, can: (key: string) => boolean): boolean {
+  if (item.dashboardTab) return false; // dashboard-tab items are not permission-mapped
+  const perm = NAV_PERMISSION_BY_PATH[item.path];
+  return perm ? can(perm) : false;
+}
+
+/** Non-superadmin: keep only permitted links / menu-items; drop emptied menus. */
+function filterEntriesForSubadmin(
+  entries: AdminContextSecondRowEntry[],
+  can: (key: string) => boolean,
+): AdminContextSecondRowEntry[] {
+  const out: AdminContextSecondRowEntry[] = [];
+  for (const entry of entries) {
+    if (entry.kind === "link") {
+      if (isPermittedNavItem(entry.item, can)) out.push(entry);
+      continue;
+    }
+    const sections: AdminContextMenuSection[] = entry.sections
+      .map((sec) => ({ ...sec, items: sec.items.filter((it) => isPermittedNavItem(it, can)) }))
+      .filter((sec) => sec.items.length > 0);
+    if (sections.length > 0) out.push({ ...entry, sections });
+  }
+  return out;
+}
 
 const linkButtonClass = (active: boolean) =>
   `
@@ -63,6 +102,7 @@ function subNavItemTo(item: AdminSubNavItem): string | { pathname: string; searc
 export const AdminContextSubNav: React.FC = () => {
   const location = useLocation();
   const { isSuperAdmin } = useUserRole();
+  const { can, loading: permLoading } = useAdminPermissions();
   const { unreadCount } = useUnreadMessagesCount();
   const { pendingCount: pendingOffersCount } = usePendingOffersCount();
   const [pendingPartnerRegistrationsCount, setPendingPartnerRegistrationsCount] = useState(0);
@@ -290,7 +330,14 @@ export const AdminContextSubNav: React.FC = () => {
                 <span className="whitespace-nowrap">Správa adminů</span>
               </NavLink>
             )}
-            {seg.entries.map((e, i) => renderSecondRowEntry(e, seg.sectionId, i))}
+            {(isSuperAdmin
+              ? seg.entries
+              : permLoading
+              ? []
+              : filterEntriesForSubadmin(seg.entries, can)
+            ).map(
+              (e, i) => renderSecondRowEntry(e, seg.sectionId, i),
+            )}
           </div>
         ))}
       </div>

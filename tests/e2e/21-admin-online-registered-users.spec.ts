@@ -30,8 +30,8 @@ import { loginViaUI } from './helpers/auth';
 
 const E2E_TEST_EMAIL    = process.env.E2E_TEST_EMAIL     ?? '';
 const E2E_TEST_PASSWORD = process.env.E2E_TEST_PASSWORD  ?? '';
-const ADMIN_EMAIL       = process.env.E2E_ADMIN_EMAIL    ?? '';
-const ADMIN_PASSWORD    = process.env.E2E_ADMIN_PASSWORD ?? '';
+const ADMIN_EMAIL       = (process.env.E2E_SUPERADMIN_EMAIL || process.env.E2E_ADMIN_EMAIL)    ?? '';
+const ADMIN_PASSWORD    = (process.env.E2E_SUPERADMIN_PASSWORD || process.env.E2E_ADMIN_PASSWORD) ?? '';
 
 // Cookie consent pre-seed — prevents the banner from blocking pointer events.
 // Applied via addInitScript so it is in localStorage before the first render.

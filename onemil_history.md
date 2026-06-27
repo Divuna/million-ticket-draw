@@ -14,6 +14,78 @@
 
 ---
 
+## 2026-06-24 -- partners_table_public_exposure production fix completed
+
+The pre-existing `partners_table_public_exposure` finding was fixed in production `xkzhjldrojjlrkezorey`. PR #118 was merged to `main`. Migration `supabase/migrations/20260624122921_partners_public_view_rls_lock.sql` was applied atomically (COMMIT): it created the `public.public_partners` view exposing only safe approved/logo fields (granted to anon + authenticated), removed the broad `Public read partners` policy from the base `partners` table, revoked public/anon SELECT on `partners`, and added `partners_select_own_admin` (own row via `auth_user_id`, plus `is_admin()`/`is_superadmin()`). The public partner-logo display now reads from `public_partners` (`src/hooks/usePartners.ts`); production live bundle is `index-B-nGIJdT.js`.
+
+Verification on production: `public_partners` exists; anon reads it (1 approved logo row, all `status=approved` + `logo_status=approved`); anon direct `partners` read is blocked (HTTP 401 / `42501 permission denied`); authenticated non-admin direct `partners` read returns 0 rows; partner own-row read returns 1; admin and superadmin read all rows (11/11); homepage partner logos render again; BOHEMIA API key flow unchanged (1 active key, `partner_api_keys` untouched); Shoptet importer unchanged.
+
+A valid production pg_dump backup was created before the migration: `backups/onemil-production-pre-partners-exposure-fix-20260624-151442.dump` (~466 MB, `pg_restore -l` verified). A first dump attempt was interrupted and deleted; the retry is the valid backup. The migration was initially blocked from acquiring the exclusive lock by an orphaned `idle in transaction` backend PID `1131426` (left over from the interrupted first pg_dump, running `COPY public.admin_actions`); it was terminated via `pg_terminate_backend` with explicit Pavel approval (only that single PID), after which the migration applied successfully.
+
+Documentation-only record; no code change, no further SQL, Shoptet importer and API keys untouched, no secrets printed. Open reminder: rotate exposed/test tokens and the production DB password before real launch.
+
+## 2026-06-24 -- Phase 4 Slice A production smoke PASS
+
+Phase 4 Slice A (Partner Offers permission `partner_offers.finance.manage`) was published to production (Lovable Publish) and manually verified — **smoke PASS**. Verified: the new permission exists as a checkbox in `/admin/admins`; a subadmin granted the key sees the "Partnerské nabídky" nav item and opens `/admin/partner-offers` successfully; sensitive routes remain blocked with the superadmin-only fallback (`/admin/invoices`, `/admin/partners-portal`, `/admin/payments`, `/admin/winners`, `/admin/statistics`); no invoices, payments, payouts, commissions, winners, contests, audit/system, or admin role management were opened. The Partner Offers delegation (offer-only page) is now LIVE. Documentation-only record; no SQL, no deploy, no app code change, no production data, `backups/` not committed. Next possible step (Phase 4 Slice B, needs Pavel approval): a separate Partner Offers finance page for offer invoices only (`partner_invoices type='offer'` + `partner_offer_invoice_lines`), not reusing the mixed `/admin/invoices` or `/admin/partners-portal`; for real isolation consider DB/RLS scoping (Slice C). Open reminder: production DB password reset still pending (it appeared in chat during the Phase 2 apply).
+
+## 2026-06-24 -- Production partner API key rotation fix completed
+
+PR #117 (`fix: improve partner API key rotation errors`) was merged to `main`. Production Edge Functions `partner-rotate-api-key` and `rotate-partner-api-key` were deployed to `xkzhjldrojjlrkezorey`. A token mismatch was fixed by aligning `INTERNAL_FUNCTION_TOKEN` and `VITE_INTERNAL_FUNCTION_TOKEN` for temporary testing; safe probe without partner session returned `missing_session`, confirming internal token validation passes. BOHEMIA manual API key regeneration succeeded: exactly 1 active API key by `revoked_at IS NULL`, 15 older keys revoked, latest active prefix `01efbfaf`. `partner_api_keys` stores prefix/hash columns only (`key_prefix`, `key_hash`, `api_key_hash`), with no plaintext API key column. Security reminders: temporary/exposed test tokens must be rotated before real launch; pre-existing `partners_table_public_exposure` still must be fixed before production launch. No full API keys, hashes, or secrets recorded.
+
+## 2026-06-23 -- Phase 2: targeted staging permissions E2E spec
+
+Added `tests/e2e/phase2-admin-permissions.spec.ts`, a targeted staging-only Playwright spec for the Phase 2 safe permission slice. The spec uses staging CI secrets and enforces staging ref `dxmowysntemfqfnanxua`; it temporarily sets `admin-e2e@onemil.cz` to `vouchers.manage` only, verifies the DB helper matrix, checks `/admin/vouchers` access and Czech fallback on denied safe routes, verifies sensitive/unscoped admin nav is hidden, and restores the original permission rows in cleanup. `divispavel2@gmail.com` superadmin is DB-verified as implicit-all; browser superadmin smoke runs only when a dedicated superadmin password secret exists. No production, no Edge Function deploy, no full E2E, no app behavior change.
+
+## 2026-06-23 -- Phase 2: frontend gating prvního safe slice
+
+Frontend wiring granulárních subadmin oprávnění (navazuje na DB foundation `admin_permissions`). Klíče jen safe: vouchers/content/banners/notifications.manage. Nový hook `src/hooks/useAdminPermissions.ts` (`can(key)`, superadmin⇒vše, čte admin_permissions přes RLS; tabulka chybí→prázdné). Nový `src/components/admin/RequirePermission.tsx` obaluje 4 routy v `App.tsx` (vouchers/content/banners/notifications) → fallback „Tato část je dostupná pouze superadminovi nebo administrátorovi s oprávněním." `AdminContextSubNav.tsx` + `AdminPrimaryNav.tsx`: non-superadmin vidí jen položky/sekce s drženým oprávněním (strict scoping; zachovává Phase 1 sensitive hiding jako podmnožinu); superadmin plná nav beze změny. Grant/revoke UI v `AdminAdmins.tsx` (superadmin-only): sloupec se 4 checkboxy, toggle = insert/delete admin_permissions (RLS jen superadmin) + log_admin_action. Phase 1 contest gates beze změny. Žádná DB/RLS/EF/SQL změna, žádná produkce, žádný deploy. `npm run build` ✅, `tsc --noEmit` 0 chyb. ⚠️ Frontend nepublikovat na produkci před aplikací migrace admin_permissions na produkci.
+
+## 2026-06-23 -- Phase 2: admin_permissions DB foundation (staging only)
+
+DB základ granulárních subadmin oprávnění. Migrace `supabase/migrations/20260623_admin_permissions.sql` aplikována **jen na staging `dxmowysntemfqfnanxua`; produkce `xkzhjldrojjlrkezorey` nedotčena.** Tabulka `public.admin_permissions` (UNIQUE(user_id, permission_key), index, RLS on) + helper `public.has_admin_permission(check_key text, check_user_id uuid default auth.uid())` (SECURITY DEFINER, owner postgres, search_path=public, execute jen authenticated). Superadmin implicitně všechna oprávnění; jinak explicit řádek. RLS: select = vlastní/superadmin vše, write (grant/revoke) = jen superadmin. Klíče jen safe (vouchers/content/banners/notifications.manage), žádné citlivé. Testy (transakce s rollbackem): superadmin→true (i náhodný klíč), admin bez práv→false, admin s vouchers→true jen ten klíč, admin čte jen vlastní, admin grant→42501, superadmin grant→OK, anon exec=false; staging beze změny (rows=0, admin:2). Aditivní, zatím to nic nečte. Rollback: DROP FUNCTION/ DROP TABLE. Žádný frontend, žádný EF deploy, žádná produkce.
+
+## 2026-06-23 -- Subadmin sensitive admin nav links hidden (frontend-only)
+
+Navázáno na contest UI gate (46715ee3). `src/components/admin/AdminContextSubNav.tsx`: pro non-superadmina nový `filterEntriesForSubadmin` odstraní citlivé sub-nav položky (`dashboardTab ∈ {ticketmap, bonus-overview, prizes, distribution, contest-control}`, `path = /admin/statistics`) a zahodí vyprázdněné menu. Skryto subadminovi: Mapa tiketů, Přehled bonusů, Bonusové ceny, Distribuce bonusů, Contest control, Statistiky. Zůstává: Správa soutěží, Seznam soutěží + ostatní nescitlivé. Superadmin nav beze změny (`isSuperAdmin ? seg.entries : filterEntriesForSubadmin(...)`). Žádná DB/RLS/RPC/EF/SQL změna, žádný deploy. `npm run build` ✅, `tsc --noEmit` 0 chyb.
+
+## 2026-06-23 -- Subadmin contest UI gating (frontend-only)
+
+Po Phase 1 backend locku přidáno frontend-only skrytí citlivých contest interních dat před non-superadminy. Gate = `useUserRole().isSuperAdmin`. **Žádná DB/RLS/RPC/EF/SQL změna, žádný deploy.** Gatováno: `AdminContestManagement.tsx` (nefetchuje contest_progress/contest_revenue/contest_activity_last_24h pro non-superadmina; skryt souhrnný panel + sloupce Tikety/% hotovo/Bonusové MioCoiny; modal taby Bonusy–MioCoins/Bonusy–věcné/Ekonomika), `TicketMapAdmin.tsx` (fallback + žádný fetch), `AdminBonusOverview.tsx` (fallback + žádný fetch/realtime), `admin/ContestControlPanel.tsx` (fallback), `ContestDetailAdmin.tsx` (guard isAdmin→isSuperAdmin, subadmin dostane fallback místo login redirectu). Fallback: „Tato část je dostupná pouze superadminovi." NEzměněn `AdminContestView.tsx` (zákaznický buy-ticket view) ani public flows. Superadmin UI beze změny. `npm run build` ✅. Volitelný follow-up: skrýt nav odkazy na citlivé taby.
+
+## 2026-06-23 -- Phase 1 post-production smoke fix: contest_progress public aggregate restored
+
+After Phase 1 production lock, `/games` smoke showed a browser console warning `permission denied for table tickets` while fetching contest progress. Investigation found no direct `/games` raw `tickets` read; frontend reads `public.contest_progress`, which aggregates `contests` + `tickets`. Production had `security_invoker=true`, so anon/authenticated callers needed raw `tickets` access, now correctly blocked by Phase 1.
+
+Applied one production SQL statement on `xkzhjldrojjlrkezorey`: `ALTER VIEW public.contest_progress RESET (security_invoker);`. This restored the previously owner-accepted E22 behavior: public aggregate progress only, no raw ticket exposure. No tickets RLS change, no frontend edit, no Edge Function deploy, no `db push`.
+
+Verification passed: anon can read `contest_id, tickets_sold, tickets_total` from `contest_progress`; anon raw `tickets` read still fails with permission denied; authenticated normal user with own tickets sees own rows and `0` other-user rows; superadmin still has `is_superadmin() = true` and reads admin-locked `tickets` / `payments`; `https://onemil.cz/games` no longer logs the `contest_progress` / `tickets` permission warning. Backups remain uncommitted.
+
+## 2026-06-22 — Phase 1 sensitive-admin production DB/RLS/RPC lock applied
+
+Production apply completed on project `xkzhjldrojjlrkezorey` after Pavel's explicit approval: `SCHVALUJI PRODUKČNÍ APPLY`.
+
+Pre-apply safety was verified: manual production backup exists at `backups/onemil-production-pre-phase1-20260622-220723.dump` (`465,594,754` bytes / `444.03 MB`) and `pg_restore -l` passed with `2195` TOC entries. Backup folder remains local/uncommitted and must not be committed. Rollback remained available from `docs/rollback/phase1_production_rollback.sql` with baseline `docs/rollback/phase1_baseline.sql`.
+
+Applied production DB/RLS/RPC lock: helper `public.is_superadmin(check_user_id uuid default auth.uid())` exists, `SECURITY DEFINER`, owner `postgres`; `divispavel2@gmail.com` returns true; sensitive RLS policy fail count `0`; target RPC fail count `0`; affiliate own commission SELECT preserved; payments/tickets own-row policies preserved; partner own invoice policies preserved; `winners` / `bonus_prizes` public-read behavior preserved; production-only `get_admin_top_bar_stats()` included in RPC lock.
+
+Edge Functions were not deployed and remain verification-only; production sources were already superadmin-gated on JWT/user paths, with partner invoice internal token / service-role automation paths unchanged. Rollback was not needed.
+
+Follow-up completed: Pavel reset the production DB password again because one password appeared in chat during backup work. The stale tracked local `.cursor/mcp.json` direct production DB credential was removed after the reset; app/runtime remains unaffected because it does not use the direct DB password. `backups/` is gitignored and must remain uncommitted.
+
+## 2026-06-22 — Phase 1 sensitive-admin staging lock final milestone
+
+Recorded final documentation milestone for Phase 1 sensitive-admin staging lock. Full lock is complete on staging `dxmowysntemfqfnanxua`; production `xkzhjldrojjlrkezorey` was not touched. Staging now blocks scoped admin/subadmin access to sensitive admin data across RLS, RPCs, and Edge Functions.
+
+Covered areas: `payments`, `influencer_commissions`, affiliate finance RLS/RPC/Edge Functions, partner invoice Edge Functions, partner invoices and exports, `contest_economy`, tickets admin read / contest revenue dependencies, contest admin RPCs, winners write/status history, prize delivery RPCs, `referral_rewards`, `settings`, and `event_logs`.
+
+Partner invoice Edge Functions changed on staging: `generate-partner-invoice-pdf` and `send-partner-invoice-email`; JWT path now requires `role='superadmin'`, while internal token / service-role automation paths intentionally remain unchanged.
+
+Tests passed: superadmin allowed; admin/subadmin blocked; normal user blocked; anon blocked; affiliate own commission visibility preserved; staging data and roles unchanged after cleanup.
+
+Operational notes recorded: old worktree previously had Supabase CLI linked to production, so future staging deploys must explicitly use `--project-ref dxmowysntemfqfnanxua` or the clean main worktree after target verification; production-only `get_admin_top_bar_stats` still must be handled during production rollout; public-read `winners` / `bonus_prizes` behavior is a separate product/design decision. Production rollout requires explicit Pavel approval, manual `pg_dump` first because PITR is off, rollback from `docs/rollback/phase1_baseline.sql`, and staged rollout with stop points.
+
+Documentation only: no SQL run, no Edge Functions deployed, no production changes made, no app behavior changed.
+
 ## 2026-06-22 — Phase 1: affiliate finance lock KOMPLETNÍ na stagingu
 
 Celá affiliate finance oblast uzamčena superadmin-only na stagingu `dxmowysntemfqfnanxua` ve 3 vrstvách; **produkce `xkzhjldrojjlrkezorey` nedotčena.**
@@ -4542,3 +4614,91 @@ Owner decision Pavel: kanonická cookies stránka je `/legal/cookies`, owner-man
 ## 2026-06-16 — PWA install CTA připraveno na větvi `feature/pwa-install-ui`
 
 Vytvořen plán `docs/launch-readiness/PWA_INSTALL_IMPLEMENTATION_PLAN.md` před kódem. Implementační commit `a030ad512f2b01fa81ec84de110e92dabdbf9ddd` přidal `src/hooks/usePwaInstallPrompt.ts`, `src/components/InstallAppButton.tsx` a napojení do `src/pages/Homepage.tsx`. Build `npm run build` prošel. Runtime ověřeno simulací: desktop bez promptu CTA hidden, Android `beforeinstallprompt` → CTA + `prompt()`, accepted → hidden, iPhone Safari UA → instruction modal, standalone mode → hidden. Nedotčeno: `public/manifest.webmanifest`, public ikony, `public/OneSignalSDKWorker.js`, Supabase, Stripe, payments, wallet, contests, tickets, winners, Partner Offers, affiliate, Bob, routes a legal pages. Zbývá ruční ověření na reálném Android Chrome a iPhone Safari/home-screen režimu. Nemergovat do `main` bez Pavlova potvrzení manual phone testingu.
+
+---
+
+## 2026-06-23 — Phase 2 granulární subadmin oprávnění: targeted staging E2E prošel, staging-validated
+
+Targeted Phase 2 staging E2E **prošel**: GitHub Actions run `28043183824`, workflow `playwright-staging.yml`, spec `tests/e2e/phase2-admin-permissions.spec.ts`, conclusion **success**, headSha `d92c5ca2` (ověřeno přes `gh run view`). Související commity: `6330a060` (staging DB foundation `admin_permissions` + `has_admin_permission()`), `6d04d82b` (frontend permission gating — `useAdminPermissions()`, `RequirePermission`, route/nav gating pro vouchers/content/banners/notifications, grant/revoke UI v `/admin/admins`), `d92c5ca2` (targeted Phase 2 staging E2E spec). Phase 2 je nyní **staging-validated** na stagingu `dxmowysntemfqfnanxua`. **Produkční DB apply `admin_permissions` NENÍ schválen — produkce `xkzhjldrojjlrkezorey` nedotčena.** Další krok: připravit produkční apply migrace `admin_permissions` POUZE po výslovném schválení Pavla + kontrole zálohy (manuální `pg_dump`, PITR off); frontend Phase 2 nepublikovat na produkci PŘED aplikací migrace. Dokumentace-only změna; žádný kód, SQL, deploy ani produkční zásah.
+
+---
+
+## 2026-06-23 — Phase 2 produkční apply package připraven (NEAPLIKOVÁNO)
+
+Připraven bezpečný produkční apply package pro aditivní `admin_permissions` DB foundation (jen Phase 2 foundation). **Nic neaplikováno na produkci `xkzhjldrojjlrkezorey`; žádný produkční SQL nespuštěn; žádný EF deploy; žádný frontend publish; žádné secrets v commitu; `backups/` nedotčeno.** Vytvořeny 4 soubory v `docs/rollback/`: `phase2_admin_permissions_production_plan.md` (plán + pre-apply checklist + deploy-order), `phase2_admin_permissions_apply.sql` (transakční, idempotentní, pre-apply guard na `is_superadmin()`; vytvoří tabulku `public.admin_permissions` s UNIQUE(user_id,permission_key) + index + RLS, helper `public.has_admin_permission(text, uuid default auth.uid())` SECURITY DEFINER s execute jen authenticated, policy `admin_permissions_select` + `admin_permissions_superadmin_write`), `phase2_admin_permissions_rollback.sql` (dropuje JEN Phase 2 objekty — policies → helper → table; **netýká se** `is_superadmin()`, `user_roles`, Phase 1), `phase2_admin_permissions_verification.sql` (10 read-only checků se STRING_AGG folded výstupy). Povolené klíče: `vouchers.manage`, `content.manage`, `banners.manage`, `notifications.manage`; žádná citlivá oblast. Package mirroruje staging migraci `supabase/migrations/20260623_admin_permissions.sql` validovanou run `28043183824`. ⛔ Produkční apply NENÍ schválen — vyžaduje výslovné schválení Pavla + manuální `pg_dump` (PITR off); frontend Phase 2 nepublikovat před DB apply.
+
+---
+
+## 2026-06-23 — Phase 2 `admin_permissions` APLIKOVÁN NA PRODUKCI (schválení Pavla)
+
+Pavel výslovně schválil („SCHVALUJI PHASE 2 PRODUKČNÍ APPLY"). Aditivní `admin_permissions` DB foundation aplikován na produkci `xkzhjldrojjlrkezorey`. **Žádný frontend publish, žádný Edge Function deploy, žádný `db push`, žádná jiná produkční změna; `backups/` necommitováno.**
+
+Pre-apply backup: `backups/onemil-production-pre-phase2-admin-permissions-20260623-195824.dump` (465 655 142 B, `pg_restore -l` OK, 2197 TOC entries). Precheck před apply: `is_superadmin` existuje, `admin_permissions`/`has_admin_permission` neexistovaly, `user_roles` baseline 565 (admin:1, superadmin:1, user:563), Phase 1 objekty přítomny.
+
+Apply: `docs/rollback/phase2_admin_permissions_apply.sql` přes psql (BEGIN…COMMIT, exit 0; NOTICE u `DROP POLICY IF EXISTS` očekávané). Vytvořeno: `public.admin_permissions` (RLS on, UNIQUE(user_id,permission_key), index `idx_admin_permissions_user_id`), helper `public.has_admin_permission(text, uuid default auth.uid())` (SECURITY DEFINER, owner postgres), policy `admin_permissions_select` (own/superadmin SELECT) + `admin_permissions_superadmin_write` (superadmin ALL).
+
+Verifikace `docs/rollback/phase2_admin_permissions_verification.sql` — všech 10 checků ✅: dependency is_superadmin t; table exists+RLS t/t; sloupce OK; UNIQUE+index OK; obě policy OK; helper SECURITY DEFINER owner postgres; helper EXECUTE = authenticated+postgres+service_role (anon/PUBLIC NEMAJÍ, `anon_can_execute=f`); 0 řádků / 0 unexpected keys; `user_roles=565` beze změny. Post-apply potvrzeno: Phase 1 funkce (is_superadmin, is_admin, has_role, get_admin_subadmins_overview) i superadmin-only policy (apd_admin_all, apbi_admin_all, apb_admin_all, aff_commissions_admin_write, aff_commissions_select, admin_payments_read_all) beze změny. **Rollback nebyl potřeba.**
+
+Connection string použit jen in-memory pro pg_dump + psql, neuložen, necommitnut. **Po dokončení rolloutu resetovat produkční DB heslo** (objevilo se v chatu). Další krok: samostatně publikovat Phase 2 frontend (DB ready), poté grantovat subadminům konkrétní klíče v `/admin/admins`.
+
+---
+
+## 2026-06-23 — Phase 2 oprava: subadmin už nevidí Dashboard / Statistiky / platform metriky (frontend-only)
+
+Po grantu safe oprávnění subadmin stále viděl Dashboard pill, Statistiky aplikace a agregátní platform karty (počty uživatelů, aktivní soutěže, bonusy, vouchery). Příčina: „Dashboard" sekční pill (→ `/admin/statistics`) se zobrazoval non-superadminovi a `/admin` (AdminDashboard) i `/admin/statistics` (AdminStatistics) nebyly permission-gated. **Frontend-only oprava; žádná DB/RLS/EF/produkční změna, žádné SQL, žádný deploy.**
+
+Změny: (1) `src/hooks/useAdminPermissions.ts` — přidán `SUBADMIN_ENTRY_ROUTES` (ordered safe entry routes: vouchers → content → banners → notifications). (2) `src/components/admin/RequireSuperadminOrRedirect.tsx` (nový) — superadmin render beze změny; non-superadmin redirect na první držený safe route, bez oprávnění text „Nemáte přiřazené žádné oprávnění administrace."; wrapuje `/admin` a `/admin/statistics` v `src/App.tsx`. (3) `src/components/admin/AdminPrimaryNav.tsx` — non-superadmin row 1 přepsán z sekčních pills na přímé safe odkazy jen na držené klíče (Vouchery/Obsah stránek/Bannery/Notifikace, ikony Gift/BookOpen/Image/Bell), aktivní stav dle path matchů; superadmin sekční nav beze změny. AdminLayout dál redirectuje ne-adminy na `/`.
+
+Subadmin po fixu: row 1 jen grantnuté safe oblasti, žádný Dashboard; přímý vstup na `/admin` nebo `/admin/statistics` → redirect na první grantnutou oblast (nebo no-permission hláška). Superadmin: Dashboard + Statistiky + plná nav beze změny. `npm run build` ✅ exit 0, `npx tsc --noEmit` ✅ 0 chyb. Vyžaduje Lovable Publish, aby se projevilo na produkci.
+
+---
+
+## 2026-06-23 — Phase 2 produkční frontend smoke ✅ PASS
+
+Phase 2 frontend publikován na produkci (Lovable Publish) a ručně ověřen — **smoke PASS**. DB apply `admin_permissions` byl dokončen a ověřen dříve; tím jsou granulární subadmin oprávnění LIVE end-to-end. **Dokumentace-only zápis; žádné SQL, žádný deploy, žádná změna app kódu, žádná produkční data, `backups/` necommitováno.**
+
+Ověřeno ručně na produkci: superadmin vidí Phase 2 permission checkboxy v `/admin/admins`; subadmin se všemi 4 safe oprávněními vidí JEN Vouchery / Obsah stránek / Bannery / Notifikace; subadmin už NEvidí Dashboard ani Statistiky aplikace; přímý `/admin` redirectuje subadmina na `/admin/vouchers`; `/admin/statistics` je subadminovi nepřístupné; contest internals, finance, users/admin management, winners a audit/system zůstávají skryté.
+
+Otevřený follow-up: **produkční DB heslo (objevilo se v chatu) ZATÍM NEresetovat** — Pavel ho resetuje až po dokončení veškerých zbývajících rollout prací.
+
+---
+
+## 2026-06-23 — Phase 3 route-level hardening citlivých admin rout (frontend-only)
+
+Před přidáním support oprávnění uzavřena díra přímého URL přístupu: non-superadmin admin (subadmin) se nedostane na citlivé admin routy ani přes přímý odkaz (dříve Phase 2 jen skrývala nav, ale routy chránil pouze `AdminLayout` is_admin). **Frontend-only; žádné DB/RLS/SQL/EF/produkční změny; support oprávnění zatím NEPŘIDÁNA.**
+
+Změny: (1) `src/components/admin/RequireSuperadmin.tsx` (nový) — superadmin render beze změny; non-superadmin → „Tato část je dostupná pouze superadminovi." (page body se nenamountuje); čeká na role resolution. (2) `src/App.tsx` — wrapnuto `RequireSuperadmin` na: `/admin/users`, `/admin/admins`, `/admin/payments`, `/admin/winners`, `/admin/prize-delivery`, `/admin/tests`, `/admin/partners`, `/admin/partner-offers`, `/admin/messages`, `/admin/messages/:userId`, `/admin/audit-logs`, `/admin/event-queue`, `/admin/audit-repair`, `/admin/onemil-audit`, `/admin/contest/:contestId`, `/admin/legal-acceptances`, `/admin/onboarding-incomplete`, `/admin/partners-portal`, `/admin/invoices`, `/admin/referrals`, `/admin/referral-dashboard`, `/admin/influencers`, `/admin/affiliate-accounts`, `/admin/influencer-commissions`, `/admin/influencer-campaigns`, `/admin/company-leads`, `/admin/affiliate-commissions`, `/admin/affiliate-payouts`, `/admin/affiliate-payouts/:batchId`.
+
+Beze změny: `/admin` + `/admin/statistics` (`RequireSuperadminOrRedirect`, efektivně superadmin-only); Phase 2 safe routy `/admin/vouchers`, `/admin/content`, `/admin/banners`, `/admin/notifications` (`RequirePermission`); `/admin/*` 404. Superadmin chování beze změny.
+
+Pozn.: `/admin/messages` a `/admin/users` jsou pro teď superadmin-only; Phase 3b je přepne na `support.messages` / `users.view.basic` (swap `RequireSuperadmin` → `RequirePermission`). Ochrana dat zůstává per-table superadmin RLS (Phase 1) — toto je UI/route vrstva defense-in-depth. `npm run build` ✅ exit 0, `npx tsc --noEmit` ✅ 0 chyb. Vyžaduje Lovable Publish, aby se projevilo na produkci.
+
+---
+
+## 2026-06-23 — Phase 3b support oprávnění (frontend-only)
+
+Přidána dvě safe support oprávnění pro subadminy, aby mohli bezpečně pomáhat uživatelům. **Frontend-only; žádné DB/RLS/SQL/EF/produkční změny.** Grant = vložení řádku do `admin_permissions` (klíče jsou volný text, bez migrace).
+
+Změny: (1) `src/hooks/useAdminPermissions.ts` — přidány klíče `support.messages` (label „Zprávy (podpora)") a `users.view.basic` (label „Uživatelé (základní)") do `ADMIN_PERMISSION_KEYS`/`ADMIN_PERMISSION_LABELS`; mapy `ADMIN_ROUTE_PERMISSION` (`/admin/messages`→support.messages, `/admin/users`→users.view.basic) a `SUBADMIN_ENTRY_ROUTES` (nav labels „Zprávy"/„Uživatelé"). (2) `src/App.tsx` — `/admin/messages` + `/admin/messages/:userId` přepnuty z `RequireSuperadmin` na `RequirePermission("support.messages")`; `/admin/users` na `RequirePermission("users.view.basic")`. (3) `src/components/admin/AdminPrimaryNav.tsx` — ikony MessageSquare/Users pro nové klíče (non-superadmin tak vidí „Zprávy" jen s support.messages, „Uživatelé" jen s users.view.basic). (4) `src/pages/AdminMessages.tsx` — globální Bob ON/OFF toggle zabalen do `isSuperAdmin` (support subadmin ho nevidí; reply/ukončit/označit přečtené fungují dál přes RLS `is_admin`). (5) `src/pages/AdminUsers.tsx` — pro non-superadmina `profiles` SELECT zúžen na `id, full_name, first_name, last_name, phone, updated_at` (žádné `date_of_birth/street/city/zip/country/avatar` neopustí server); role-change UI zůstává superadmin-only.
+
+Support smí: číst support konverzace, odpovídat, označit přečtené, ukončit chat, vidět základní seznam uživatelů. Support NESMÍ: přepínat Boba, měnit role, vidět DOB/adresu/citlivá finanční data, ani contest internals/tikety/progress/platby/faktury/výherce/audit (chrání Phase 3 route guardy + Phase 1 superadmin RLS). Superadmin chování beze změny. `npm run build` ✅ exit 0, `npx tsc --noEmit` ✅ 0 chyb. Vyžaduje Lovable Publish + grant klíčů subadminům v `/admin/admins`.
+
+---
+
+## 2026-06-23 — Phase 3b produkční smoke ✅ PASS
+
+Phase 3b support oprávnění publikována na produkci (Lovable Publish) a ručně ověřena — **smoke PASS**. Granulární support role je tím LIVE end-to-end (Phase 2 DB foundation + Phase 3 route hardening + Phase 3b support klíče). **Dokumentace-only zápis; žádné SQL, žádný deploy, žádná změna app kódu, žádná produkční data, `backups/` necommitováno.**
+
+Ověřeno ručně na produkci: superadmin vidí v `/admin/admins` nové checkboxy `support.messages` + `users.view.basic`; subadmin se `support.messages` vidí jen „Zprávy", NEvidí Bob ON/OFF a může používat support zprávy; subadmin s `users.view.basic` vidí „Uživatelé", NEvidí adresu ani datum narození a NEmůže měnit role; přímé citlivé URL (`/admin/payments`, `/admin/winners`, `/admin/statistics` a další) jsou blokovány superadmin-only fallbackem („Tato část je dostupná pouze superadminovi."); superadmin chování beze změny.
+
+**Finální akce (poslední otevřený rollout follow-up): resetovat produkční DB heslo** `xkzhjldrojjlrkezorey` — objevilo se v chatu během Phase 2 produkčního apply. Reset proběhne hned po tomto dokumentačním zápisu (Supabase Dashboard → Settings → Database → Reset database password).
+
+---
+
+## 2026-06-23 — Phase 4 Slice A: Partner Offers oprávnění (frontend-only)
+
+Nejmenší safe krok delegace Partner Offers: nový klíč `partner_offers.finance.manage` pro jedinou offer-only stránku `/admin/partner-offers`. **Frontend-only; žádné DB/RLS/SQL/EF/produkční změny; faktury, partner portál, platby, payouty, provize, výherci, soutěže, tikety, audit ani admin role logika netknuty.** Grant = řádek v `admin_permissions` (volný textový klíč, bez migrace).
+
+Změny: (1) `src/hooks/useAdminPermissions.ts` — `partner_offers.finance.manage` (label „Partnerské nabídky (finance)") do `ADMIN_PERMISSION_KEYS`/`ADMIN_PERMISSION_LABELS`; `ADMIN_ROUTE_PERMISSION['/admin/partner-offers']`; položka v `SUBADMIN_ENTRY_ROUTES` (nav label „Partnerské nabídky"). (2) `src/App.tsx` — `/admin/partner-offers` přepnuto z `RequireSuperadmin` na `RequirePermission("partner_offers.finance.manage")` (jediná změněná routa). (3) `src/components/admin/AdminPrimaryNav.tsx` — ikona `Tag` pro nový klíč. Grant UI v `/admin/admins` se zobrazí automaticky (iteruje `ADMIN_PERMISSION_KEYS`). `AdminPartnerOffers` business logika beze změny.
+
+Rozsah role: jen `/admin/partner-offers` (moderace nabídek + per-offer billing `billing_mode`/`price_per_activation`/`billing_admin_override` + aktivace/kliky — čistě offer tabulky). Superadmin-only zůstává (Slice B/C, mimo tento krok): offer faktury (`partner_invoices type='offer'`, `partner_offer_invoice_lines`) ve smíšených `/admin/invoices` + `/admin/partners-portal`, globální platby, affiliate/influencer commissions+payouts, výherci, prize-delivery, contest internals, audit/system, `/admin/admins`. Superadmin chování beze změny. `npm run build` ✅ exit 0, `npx tsc --noEmit` ✅ 0 chyb. Vyžaduje Lovable Publish + grant klíče subadminovi v `/admin/admins`.

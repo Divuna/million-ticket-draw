@@ -17,8 +17,8 @@ import { test, expect } from '@playwright/test';
 import { createClient } from '@supabase/supabase-js';
 import { loginViaUI } from './helpers/auth';
 
-const ADMIN_EMAIL    = process.env.E2E_ADMIN_EMAIL              ?? '';
-const ADMIN_PASSWORD = process.env.E2E_ADMIN_PASSWORD           ?? '';
+const ADMIN_EMAIL    = (process.env.E2E_SUPERADMIN_EMAIL || process.env.E2E_ADMIN_EMAIL)              ?? '';
+const ADMIN_PASSWORD = (process.env.E2E_SUPERADMIN_PASSWORD || process.env.E2E_ADMIN_PASSWORD)           ?? '';
 const TEST_EMAIL     = process.env.E2E_TEST_EMAIL              ?? '';
 const TEST_PASSWORD  = process.env.E2E_TEST_PASSWORD           ?? '';
 const SUPABASE_URL   = process.env.VITE_SUPABASE_URL           ?? '';

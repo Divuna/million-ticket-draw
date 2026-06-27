@@ -6,10 +6,12 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Input } from '@/components/ui/input';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
+import { Checkbox } from '@/components/ui/checkbox';
 import { toast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { useUserRole } from '@/hooks/useUserRole';
+import { ADMIN_PERMISSION_KEYS, ADMIN_PERMISSION_LABELS } from '@/hooks/useAdminPermissions';
 import { Search, ShieldCheck, ShieldOff, ShieldPlus, Crown, Mail } from 'lucide-react';
 
 interface ManagedUser {
@@ -104,14 +106,78 @@ const AdminAdmins: React.FC = () => {
   const [inviting, setInviting] = useState(false);
   const [overview, setOverview] = useState<SubadminOverview[]>([]);
   const [onlineIds, setOnlineIds] = useState<Set<string>>(new Set());
+  // Phase 2: granular permissions per admin user_id → Set of permission_key.
+  const [permsByUser, setPermsByUser] = useState<Record<string, Set<string>>>({});
+  const [permBusy, setPermBusy] = useState<string | null>(null);
 
   useEffect(() => {
     if (authLoading || roleLoading) return;
     if (!user || !isSuperAdmin) return;
     fetchUsers();
     fetchOverview();
+    fetchPermissions();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [authLoading, roleLoading, user, isSuperAdmin]);
+
+  // Superadmin reads all admin_permissions rows (RLS allows). Build per-user map.
+  const fetchPermissions = async () => {
+    try {
+      const { data, error } = await (supabase as any)
+        .from('admin_permissions')
+        .select('user_id, permission_key');
+      if (error) {
+        console.error('Error fetching admin permissions:', error);
+        return;
+      }
+      const map: Record<string, Set<string>> = {};
+      for (const row of (data ?? []) as { user_id: string; permission_key: string }[]) {
+        (map[row.user_id] ??= new Set()).add(row.permission_key);
+      }
+      setPermsByUser(map);
+    } catch (err) {
+      console.error('Unexpected error fetching admin permissions:', err);
+    }
+  };
+
+  // Grant/revoke a single permission for an admin user (superadmin-only via RLS).
+  const togglePermission = async (userId: string, key: string, currentlyHas: boolean) => {
+    if (!isSuperAdmin) return;
+    setPermBusy(`${userId}:${key}`);
+    try {
+      if (currentlyHas) {
+        const { error } = await (supabase as any)
+          .from('admin_permissions')
+          .delete()
+          .eq('user_id', userId)
+          .eq('permission_key', key);
+        if (error) throw error;
+        await supabase.rpc('log_admin_action', {
+          action_name: 'admin_permission_revoked',
+          entity_type: 'user',
+          entity_id: userId,
+          new_data: { permission_key: key },
+        });
+      } else {
+        const { error } = await (supabase as any)
+          .from('admin_permissions')
+          .insert({ user_id: userId, permission_key: key, granted_by: user?.id ?? null });
+        if (error) throw error;
+        await supabase.rpc('log_admin_action', {
+          action_name: 'admin_permission_granted',
+          entity_type: 'user',
+          entity_id: userId,
+          new_data: { permission_key: key },
+        });
+      }
+      await fetchPermissions();
+      toast({ title: 'Hotovo', description: currentlyHas ? 'Oprávnění odebráno.' : 'Oprávnění přiděleno.' });
+    } catch (err) {
+      console.error('Error toggling admin permission:', err);
+      toast({ title: 'Chyba', description: 'Nepodařilo se změnit oprávnění.', variant: 'destructive' });
+    } finally {
+      setPermBusy(null);
+    }
+  };
 
   // Poll "online now" via the existing presence RPC (5-minute window).
   useEffect(() => {
@@ -502,6 +568,7 @@ const AdminAdmins: React.FC = () => {
                   <TableHead>Účet</TableHead>
                   <TableHead>Pozvánka</TableHead>
                   <TableHead>Aktivita</TableHead>
+                  <TableHead>Oprávnění (Phase 2)</TableHead>
                   <TableHead className="text-right">Akce</TableHead>
                 </TableRow>
               </TableHeader>
@@ -513,6 +580,27 @@ const AdminAdmins: React.FC = () => {
                     <TableCell>{renderAccountBadge(r)}</TableCell>
                     <TableCell>{renderInviteBadge(r)}</TableCell>
                     <TableCell>{renderPresence(r)}</TableCell>
+                    <TableCell>
+                      {r.role === 'superadmin' ? (
+                        <span className="text-xs text-muted-foreground">vše (superadmin)</span>
+                      ) : (
+                        <div className="flex flex-col gap-1.5">
+                          {ADMIN_PERMISSION_KEYS.map((key) => {
+                            const has = permsByUser[r.user_id]?.has(key) ?? false;
+                            return (
+                              <label key={key} className="inline-flex items-center gap-2 text-xs cursor-pointer">
+                                <Checkbox
+                                  checked={has}
+                                  disabled={permBusy === `${r.user_id}:${key}`}
+                                  onCheckedChange={() => togglePermission(r.user_id, key, has)}
+                                />
+                                <span className="whitespace-nowrap">{ADMIN_PERMISSION_LABELS[key]}</span>
+                              </label>
+                            );
+                          })}
+                        </div>
+                      )}
+                    </TableCell>
                     <TableCell className="text-right">
                       {r.role === 'superadmin' ? (
                         <span className="text-xs text-muted-foreground">Vlastník — nelze měnit</span>
@@ -532,7 +620,7 @@ const AdminAdmins: React.FC = () => {
                 ))}
                 {overview.length === 0 && (
                   <TableRow>
-                    <TableCell colSpan={6} className="text-center text-muted-foreground">
+                    <TableCell colSpan={7} className="text-center text-muted-foreground">
                       Žádní admini.
                     </TableCell>
                   </TableRow>

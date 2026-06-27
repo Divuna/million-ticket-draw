@@ -52,7 +52,7 @@ function safePlainTextFromMessageContent(content: unknown): string {
 export default function AdminMessages() {
   const navigate = useNavigate();
   const { user } = useAuth();
-  const { isAdmin, loading: roleLoading } = useUserRole();
+  const { isAdmin, isSuperAdmin, loading: roleLoading } = useUserRole();
   const { bobEnabled, setBobEnabledRemote } = useBobEnabled();
   const [bobSaving, setBobSaving] = useState(false);
 
@@ -267,31 +267,35 @@ export default function AdminMessages() {
     <div className="flex flex-col p-6 gap-6">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <h2 className="text-xl font-bold text-foreground">Zprávy uživatelů</h2>
-        <div
-          className={`flex items-center gap-3 rounded-xl border px-4 py-2 ${
-            bobEnabled
-              ? "border-border/50 bg-card/60"
-              : "border-[hsl(35,90%,55%,0.5)] bg-[hsl(35,90%,12%)]"
-          }`}
-          data-testid="admin-bob-toggle"
-        >
-          <div className="flex flex-col">
-            <span className="text-sm font-semibold text-foreground" data-testid="admin-bob-status">
-              {bobEnabled ? "Bob aktivní" : "Bob vypnutý"}
-            </span>
-            <span className="text-[11px] text-muted-foreground">
-              {bobEnabled
-                ? "AI odpovídá zákazníkům"
-                : "Zprávy jdou přímo adminovi"}
-            </span>
+        {/* Global Bob ON/OFF is a platform-wide AI switch — superadmin only.
+            Support subadmins (support.messages) can read/reply but never toggle Bob. */}
+        {isSuperAdmin && (
+          <div
+            className={`flex items-center gap-3 rounded-xl border px-4 py-2 ${
+              bobEnabled
+                ? "border-border/50 bg-card/60"
+                : "border-[hsl(35,90%,55%,0.5)] bg-[hsl(35,90%,12%)]"
+            }`}
+            data-testid="admin-bob-toggle"
+          >
+            <div className="flex flex-col">
+              <span className="text-sm font-semibold text-foreground" data-testid="admin-bob-status">
+                {bobEnabled ? "Bob aktivní" : "Bob vypnutý"}
+              </span>
+              <span className="text-[11px] text-muted-foreground">
+                {bobEnabled
+                  ? "AI odpovídá zákazníkům"
+                  : "Zprávy jdou přímo adminovi"}
+              </span>
+            </div>
+            <Switch
+              checked={bobEnabled}
+              disabled={bobSaving}
+              onCheckedChange={handleToggleBob}
+              aria-label="Přepnout Boba"
+            />
           </div>
-          <Switch
-            checked={bobEnabled}
-            disabled={bobSaving}
-            onCheckedChange={handleToggleBob}
-            aria-label="Přepnout Boba"
-          />
-        </div>
+        )}
       </div>
 
       {loading ? (
