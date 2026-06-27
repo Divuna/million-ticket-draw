@@ -14,6 +14,14 @@
 
 ---
 
+## 2026-06-27 -- Shoptet Phase 1 staging handoff documented
+
+Documented the Shoptet Phase 1 handoff after staging-only completion of Phase 1A/1B/1C. Staging project: `dxmowysntemfqfnanxua`; production project: `xkzhjldrojjlrkezorey`; Phase 1A/1B commit: `2f0027e4`. The Shoptet URL remains Vault-only and was not written to documentation.
+
+Recorded staging results: dry run = 6 rows total, 6 valid, 0 invalid, would create 6, status `paid` 6; Phase 1C created and issued 6 BOHEMIA reward codes on staging; idempotency second run created 0 duplicates; 1 Shoptet test email delivered to `veru.enge@gmail.com`; `eshop@onemil.cz` is the test e-shop / partner side and `veru.enge@gmail.com` is the test customer / buyer side. Also recorded cleanup of 474 old E2E emails parked then moved to `failed`, leaving final staging queue at 1 sent Shoptet test email, 0 pending, old artifacts failed.
+
+Redeem was not completed because there is no public staging frontend. Pavel accidentally tested staging code on production `onemil.cz`; production correctly showed invalid because production DB does not contain staging codes. Production was untouched. Next task is production rollout planning only, not execution. Documentation-only change.
+
 ## 2026-06-24 -- partners_table_public_exposure production fix completed
 
 The pre-existing `partners_table_public_exposure` finding was fixed in production `xkzhjldrojjlrkezorey`. PR #118 was merged to `main`. Migration `supabase/migrations/20260624122921_partners_public_view_rls_lock.sql` was applied atomically (COMMIT): it created the `public.public_partners` view exposing only safe approved/logo fields (granted to anon + authenticated), removed the broad `Public read partners` policy from the base `partners` table, revoked public/anon SELECT on `partners`, and added `partners_select_own_admin` (own row via `auth_user_id`, plus `is_admin()`/`is_superadmin()`). The public partner-logo display now reads from `public_partners` (`src/hooks/usePartners.ts`); production live bundle is `index-B-nGIJdT.js`.

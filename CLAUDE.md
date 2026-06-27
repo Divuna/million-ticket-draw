@@ -1,5 +1,20 @@
 # CLAUDE.md
 
+## SHOPTET PHASE 1 HANDOFF -- STAGING COMPLETE, PRODUCTION UNTOUCHED (27. 06. 2026)
+
+Shoptet Phase 1A/1B/1C is complete on staging only. Staging project: `dxmowysntemfqfnanxua`; production project: `xkzhjldrojjlrkezorey`; production remains untouched. Phase 1A/1B commit: `2f0027e4`. Shoptet URL is stored in Vault only; do not print or copy it into docs, logs, commits, or prompts.
+
+- Dry run on staging: 6 rows total, 6 valid, 0 invalid, would create 6, status `paid` 6.
+- Phase 1C: 6 BOHEMIA reward codes created and issued on staging; do not record full reward codes.
+- Idempotency verified: second run created 0 duplicates.
+- 1 test email delivered to `veru.enge@gmail.com`.
+- `eshop@onemil.cz` = test e-shop / partner side; `veru.enge@gmail.com` = test customer / buyer side.
+- 474 old E2E emails were parked and then moved to `failed`; final staging email queue = 1 sent Shoptet test email, 0 pending, old artifacts failed.
+- Redeem was not completed because there is no public staging frontend.
+- Pavel accidentally tested staging code on production `onemil.cz`; production correctly showed invalid because production DB does not contain staging codes.
+- Next task: production rollout plan only, not execution. Do not run production SQL, deploy, send emails, touch production, or reveal Shoptet URL, full reward codes, API keys, tokens, hashes, or CSV customer emails.
+- Full handoff: `SHOPTET_PHASE1_HANDOFF.md`.
+
 ## PARTNERS_TABLE_PUBLIC_EXPOSURE — PRODUKČNÍ FIX HOTOVÝ (24. 06. 2026)
 
 Pre-existing nález `partners_table_public_exposure` je na produkci `xkzhjldrojjlrkezorey` opraven. PR #118 mergnut do `main`.
