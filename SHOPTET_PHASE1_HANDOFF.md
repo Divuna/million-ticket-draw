@@ -58,3 +58,24 @@ Do not run production SQL, deploy, send emails, touch production, or reveal Shop
 ## Rollback Readiness
 
 Rollback SQL now exists at `docs/rollback/shoptet_import_phase1a_rollback.sql`. It is a conservative Phase 1A-only rollback package and must be reviewed against the current production state before any production use. It disables Shoptet import first, drops empty monitoring tables only when safe, removes partner Shoptet columns only when no config or Vault secret-name references remain, drops the Shoptet Vault RPC surface, and never deletes Vault secrets or touches reward codes, email queue rows, deployments, or production emails.
+
+## Production Partial-State Finding
+
+Read-only reconciliation found production `xkzhjldrojjlrkezorey` in a partial Shoptet Phase 1A state:
+
+- `shoptet_import_runs` exists and is empty.
+- `shoptet_import_row_log` exists and is empty.
+- `partners.shoptet_import_enabled` is missing.
+- `partners.shoptet_export_secret_name` is missing.
+- `partners.shoptet_customer_delivery` is missing.
+- `set_shoptet_export_secret(uuid, text)` is missing.
+- `get_shoptet_export_url(uuid)` is missing.
+- Edge Functions `import-shoptet-orders` and `set-shoptet-export-secret` are already active version 1.
+- `email_queue` has 3 risky pending invoice emails from 2026-02-08. They must be left untouched, parked, or failed only after explicit Pavel approval.
+
+Prepared reconciliation artifacts:
+
+- Plan: `docs/production/shoptet_phase1a_reconciliation_plan.md`
+- SQL for later approval only: `docs/sql/shoptet_phase1a_production_reconcile.sql`
+
+Next gate: Pavel must approve the reconciliation SQL before any production execution. Production dry-run rollout remains blocked until reconciliation is applied, the 3 pending invoice emails have an explicit owner decision, and final precheck passes.
