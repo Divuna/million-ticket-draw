@@ -54,3 +54,7 @@ Pavel accidentally tested a staging reward code on production `onemil.cz`; produ
 The next task is production rollout planning only, not execution.
 
 Do not run production SQL, deploy, send emails, touch production, or reveal Shoptet URL, reward codes, API keys, tokens, hashes, or CSV customer emails during the planning task.
+
+## Rollback Readiness
+
+Rollback SQL now exists at `docs/rollback/shoptet_import_phase1a_rollback.sql`. It is a conservative Phase 1A-only rollback package and must be reviewed against the current production state before any production use. It disables Shoptet import first, drops empty monitoring tables only when safe, removes partner Shoptet columns only when no config or Vault secret-name references remain, drops the Shoptet Vault RPC surface, and never deletes Vault secrets or touches reward codes, email queue rows, deployments, or production emails.
