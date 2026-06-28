@@ -56,6 +56,19 @@ OneMil nabízí tři způsoby napojení partnerského e-shopu. Výběr závisí 
 - „Větší e-shop s vývojáři? → Partner API (pište na `eshop@onemil.cz`)."
 - „Individuální doručení → jen po domluvě s OneMil."
 
+## SHOPTET PHASE 2 — STEP 6: ADMIN UI Shoptet žádosti (badge + schvalovací flow) ✅ (28. 06. 2026)
+
+Admin UI přidáno do `src/pages/AdminPartners.tsx`. Commit `b89e197f`. **Frontend-only, žádná DB/EF/produkční změna. Build ✅.**
+
+- **Nový tab „Shoptet žádosti"** v `/admin/partners` (grid rozšířen na 5 sloupců) — listuje žádosti `status='submitted'` (admin RLS `scr_admin_all`).
+- **Badge:** červený count v hlavičce stránky + na tab triggeru; zobrazen jen když > 0.
+- **Detail žádosti (karta):** partner name/email (`partners(name, contact_email)` join), shop_name, submitted_at, trigger_status (label „Po zaplacení/odeslání/dokončení objednávky"), reward_czk/reward_mc, **url_received jen bool badge** (Přijata/Chybí), partner_note.
+- **Schválit** → EF `approve-shoptet-connection` `action='approve'`. **Zamítnout** → dialog s povinným `rejection_reason` → `action='reject'`.
+- Po akci refresh listu i badge.
+- **Shoptet URL nikdy neselektována/nezobrazena/nelogována** (SELECT neobsahuje URL — sloupec v tabulce neexistuje). Delivery mode v UI nevystaven; approve EF nastaví `shoptet_customer_delivery='onemil'` automaticky.
+
+**Staging ready pro:** E2E / full self-service flow test (partner submit → admin approve → import s reward_trigger_status). Produkční rollout vyžaduje samostatné schválení Pavla.
+
 ## SHOPTET PHASE 2 — STEP 5: PARTNER UI „Napojení e-shopu / Shoptet" ✅ (28. 06. 2026)
 
 Partner UI sekce přidána do `src/pages/PartnerDashboard.tsx`. Commit `d487048d`. **Frontend-only, žádná DB/EF/produkční změna. Build ✅.**
