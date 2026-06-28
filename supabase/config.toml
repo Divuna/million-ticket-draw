@@ -119,3 +119,6 @@ verify_jwt = false
 
 [functions.import-shoptet-orders]
 verify_jwt = false
+
+[functions.submit-shoptet-connection]
+verify_jwt = false
