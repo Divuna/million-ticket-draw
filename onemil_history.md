@@ -14,6 +14,10 @@
 
 ---
 
+## 2026-06-28 -- EF submit-shoptet-connection deployed to staging (v1 ACTIVE)
+
+Edge Function `submit-shoptet-connection` nasazena na staging `dxmowysntemfqfnanxua` (v1 ACTIVE, verify_jwt=true). Commit `cbcef02f`. Auth-boundary smokes: HTTP 401 (no auth, fake token). DB-level: draft→submitted + Vault store + url_received=true + URL nikdy v DB. Race guard + Vault cleanup on failure. Veškerý test data cleanup proveden; BOHEMIA beze změny. Produkce nedotčena.
+
 ## 2026-06-28 -- Shoptet Phase 2 DB migration applied to staging (shoptet_connection_requests + reward_trigger_status + Vault RPCs)
 
 Migration `20260628120000_shoptet_connection_requests.sql` applied to staging `dxmowysntemfqfnanxua`, commit `8bef720a`. New table `shoptet_connection_requests` (15 columns, RLS enabled, 4 policies with strict INSERT/UPDATE guards preventing partner from escalating draft status directly), unique partial index on partner_id for pending/active states, updated_at trigger, `reward_trigger_status` column added to `partners` (default `'paid'`, CHECK paid/shipped/completed), three `SECURITY DEFINER` Vault RPCs (`store_shoptet_pending_url`, `promote_shoptet_pending_url`, `delete_shoptet_pending_url`) with `service_role`-only execute. All postchecks green. BOHEMIA unchanged (`shoptet_customer_delivery='partner'`, `reward_trigger_status='paid'`). Production untouched. Staging ready for EF `submit-shoptet-connection` and `approve-shoptet-connection`.

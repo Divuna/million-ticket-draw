@@ -56,6 +56,22 @@ OneMil nabízí tři způsoby napojení partnerského e-shopu. Výběr závisí 
 - „Větší e-shop s vývojáři? → Partner API (pište na `eshop@onemil.cz`)."
 - „Individuální doručení → jen po domluvě s OneMil."
 
+## SHOPTET PHASE 2 — EF `submit-shoptet-connection` STAGING ✅ (28. 06. 2026)
+
+EF `submit-shoptet-connection` nasazena na staging `dxmowysntemfqfnanxua` jako **v1 ACTIVE** (`verify_jwt=true`). Commit `cbcef02f`. **Produkce `xkzhjldrojjlrkezorey` nedotčena.**
+
+**Flow:** auth → partner check → body validate (UUID, https://) → draft lookup (status=draft, url_received=false, own) → `store_shoptet_pending_url` (Vault, service_role) → UPDATE draft→submitted + url_received=true → `{ success, request_id, status: 'submitted' }` (URL nikdy v odpovědi ani v DB).
+
+**Smoke testy:**
+- No auth → HTTP 401 ✅
+- Fake Bearer → HTTP 401 ✅
+- DB-level: draft→submitted + Vault store ✅ | url_received=true, status=submitted ✅ | URL není v shoptet_connection_requests ✅ | Vault key existuje ✅
+- Race guard: UPDATE `.eq('status','draft')` → prevent double-submit ✅
+- Vault cleanup on update failure: best-effort `delete_shoptet_pending_url` ✅
+- Cleanup: veškerá test data smazána; BOHEMIA beze změny ✅
+
+**Staging ready pro:** EF `approve-shoptet-connection` (MUSÍ nastavit `shoptet_customer_delivery='onemil'` + `promote_shoptet_pending_url` + `shoptet_import_enabled=true`), partner UI, admin UI.
+
 ## SHOPTET PHASE 2 — STAGING DB MIGRACE APLIKOVÁNA ✅ (28. 06. 2026)
 
 Migrace `20260628120000_shoptet_connection_requests.sql` aplikována na staging `dxmowysntemfqfnanxua`. Commit `8bef720a`. **Produkce `xkzhjldrojjlrkezorey` nedotčena.**
