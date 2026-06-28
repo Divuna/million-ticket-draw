@@ -1,81 +1,19 @@
 ﻿# OneMil – aktuální stav projektu
 
-## ⏳ SHOPTET IMPORTER — CODEX NEXT STEP: PRODUKČNÍ ROLLOUT PLÁN (27. 06. 2026)
+## SHOPTET PHASE 1 HANDOFF -- STAGING COMPLETE, PRODUCTION UNTOUCHED (27. 06. 2026)
 
-**Aktuální stav:** Phase 1A/1B/1C kompletně staging-ověřena. Produkce `xkzhjldrojjlrkezorey` NEDOTČENA. Commit `2f0027e4`.
+Shoptet Phase 1A/1B/1C is complete on staging only. Staging project is `dxmowysntemfqfnanxua`; production project is `xkzhjldrojjlrkezorey` and remains untouched. Phase 1A/1B commit is `2f0027e4`. The Shoptet URL is stored in Vault only and must not be printed or copied into docs/prompts/logs.
 
-**Co je hotovo (staging `dxmowysntemfqfnanxua`):**
-- Migrace `20260624160000_shoptet_import_phase1a.sql` aplikována na staging ✅
-- Edge Functions `set-shoptet-export-secret` + `import-shoptet-orders` nasazeny na staging ✅
-- BOHEMIA Shoptet export URL uložena v staging Vault ✅
-- Dry-run BOHEMIA: 6/6 valid řádků, 0 chyb ✅
-- Phase 1C live-write: 6 BOHEMIA reward kódů vytvořeno (status `issued`), idempotence ověřena ✅
-- Staging e-mail test: 1 e-mail doručen na `veru.enge@gmail.com`, 0 starých E2E e-mailů odeslány ✅
-- email_queue staging cleanup: 474 staging_hold → failed, 0 pending ✅
-
-**Co není hotovo (vyžaduje schválení Pavla):**
-- Produkční rollout: migrace, EF deploy, Vault secret, BOHEMIA config, smoke test
-
-**Testovací účty (staging):**
-- `eshop@onemil.cz` = BOHEMIA partner/e-shop strana
-- `veru.enge@gmail.com` = testovací zákazník, příjemce MioCoin kódu
-
-**Staging MioCoin kódy (6 kusů, staging only):**
-- Všechny status `issued`, `activated_at=null` — neuplatněny
-- Vázány na `veru.enge@gmail.com` přes `coalesce(issued_to_email, customer_email)`
-- Uplatnění možné jen přes lokální staging frontend (`npm run dev` + `.env.staging`), ne přes `onemil.cz`
-
-**Invarianty (neměnit):**
-- Shoptet export URL výhradně Vault — nikdy v DB sloupcích, logu, response body
-- `shoptet_import_row_log` = order kódy + výsledky, bez PII (bez e-mailů zákazníků z CSV)
-- Idempotence přes `external_order_id` UNIQUE constraint
-- Aktivace MioCoinů nastává až při `redeem_miocoin_code` — ne při importu
-- Neposílat e-maily z CSV zákazníkům bez schválení Pavla
-
-**⏳ PRODUKČNÍ ROLLOUT CHECKLIST (neaplikováno, čeká na schválení Pavla):**
-
-| # | Krok | Stav |
-|---|------|------|
-| 1 | Manuální `pg_dump` záloha produkce | ⛔ nutný před čímkoliv |
-| 2 | Ověřit `RESEND_API_KEY` na produkci (EF secret, ne Vault) | ⛔ nutný před EF deploy |
-| 3 | Ověřit `email_queue` stav na produkci — 0 problematických pending | ⛔ nutný před enablem |
-| 4 | Aplikovat migraci `20260624160000_shoptet_import_phase1a.sql` na produkci | ⛔ čeká schválení |
-| 5 | Nasadit EF `set-shoptet-export-secret` + `import-shoptet-orders` na produkci | ⛔ čeká schválení |
-| 6 | Uložit BOHEMIA Shoptet export URL do produkčního Vault | ⛔ čeká schválení |
-| 7 | Nastavit `shoptet_import_enabled=true` pro BOHEMIA na produkci | ⛔ čeká schválení |
-| 8 | Produkční smoke: 1 testovací objednávka → 1 e-mail na `veru.enge@gmail.com` | ⛔ čeká schválení |
-| 9 | Definovat a ověřit rollback kroky | ⛔ nutný před nasazením |
-
-⛔ Produkci neměnit bez výslovného písemného schválení Pavla.
-
----
-
-## SHOPTET IMPORTER — FÁZE 1A/1B/1C STAGING KOMPLETNÍ (27. 06. 2026)
-
-Shoptet CSV importer implementován a staging-ověřen. Produkce nedotčena.
-
-**Soubory (commit `2f0027e4`):**
-- `supabase/migrations/20260624160000_shoptet_import_phase1a.sql` — DB základ (staging aplikováno)
-- `supabase/functions/set-shoptet-export-secret/index.ts` — Vault setter EF (staging nasazeno)
-- `supabase/functions/import-shoptet-orders/index.ts` — CSV pull importer EF (staging nasazeno, Phase 1B dry-run + Phase 1C live-write)
-- `supabase/config.toml` — registrace EF
-
-**DB schéma (staging; totéž nutno aplikovat na produkci):**
-- `partners.shoptet_import_enabled` (bool, default false)
-- `partners.shoptet_export_secret_name` (text — název Vault klíče, ne URL)
-- `partners.shoptet_customer_delivery` (text: `email` | `api`)
-- `shoptet_import_runs` (monitoring: partner_id, run_at, rows_total/valid/invalid, status, error, metadata)
-- `shoptet_import_row_log` (per-řádek: run_id, external_order_id, outcome, error_msg — bez PII)
-- SECURITY DEFINER `set_shoptet_export_secret(uuid, text)` — service_role only, anon/auth execute=false
-- SECURITY DEFINER `get_shoptet_export_url(uuid)` — service_role only, anon/auth execute=false
-
-**Staging E2E test-infra cleanup (27. 06. 2026):**
-- Phase 3/3b hardening rozbilo admin-area specy (`admin-e2e@onemil.cz` je scoped admin, ne superadmin).
-- Opraveno přidáním `superadmin-e2e@onemil.cz` jako dedikovaný staging E2E superadmin.
-- `admin-e2e@onemil.cz` zůstává scoped admin pro permission testy (Phase 2/3b specy).
-- App autorizace nebyla oslabena. Test-infra only.
-
----
+- Dry-run result on staging: 6 rows total, 6 valid, 0 invalid, would create 6, status `paid` 6.
+- Phase 1C: 6 BOHEMIA reward codes created and issued on staging; reward codes are not recorded in docs.
+- Idempotency verified: second run created 0 duplicates.
+- Test email delivered: 1 Shoptet test email to `veru.enge@gmail.com`.
+- Test roles: `eshop@onemil.cz` = test e-shop / partner side; `veru.enge@gmail.com` = test customer / buyer side.
+- Email queue cleanup: 474 old E2E emails parked and then moved to `failed`; final staging queue = 1 sent Shoptet test email, 0 pending, old artifacts failed.
+- Redeem not completed because there is no public staging frontend.
+- Pavel accidentally tested staging code on production `onemil.cz`; production correctly showed invalid because production DB does not contain staging codes.
+- Next task: production rollout plan only, not execution. No production SQL, deploy, emails, or production touch without a separate explicit approval.
+- Handoff artifact: `SHOPTET_PHASE1_HANDOFF.md`.
 
 ## PARTNERS_TABLE_PUBLIC_EXPOSURE — PRODUKČNÍ FIX HOTOVÝ (24. 06. 2026)
 

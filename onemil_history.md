@@ -14,26 +14,13 @@
 
 ---
 
-## 2026-06-27 -- Shoptet importer Phase 1A/1B/1C staging complete + staging E2E test-infra cleanup
+## 2026-06-27 -- Shoptet Phase 1 staging handoff documented
 
-**Context:** OneMil previously had no Shoptet CSV importer. The only existing partner reward flow was the Partner API push (`partner-activate` Edge Function). A new pull-based CSV importer was designed for Shoptet because BOHEMIA cannot push individual order events — they only expose a bulk CSV export endpoint.
+Documented the Shoptet Phase 1 handoff after staging-only completion of Phase 1A/1B/1C. Staging project: `dxmowysntemfqfnanxua`; production project: `xkzhjldrojjlrkezorey`; Phase 1A/1B commit: `2f0027e4`. The Shoptet URL remains Vault-only and was not written to documentation.
 
-**Phase 1A — DB foundation applied to staging `dxmowysntemfqfnanxua` (commit `2f0027e4`):**
-Migration `supabase/migrations/20260624160000_shoptet_import_phase1a.sql` adds three fields to `partners` (`shoptet_import_enabled`, `shoptet_export_secret_name`, `shoptet_customer_delivery`) and creates two monitoring tables (`shoptet_import_runs`, `shoptet_import_row_log`) with superadmin-only RLS. Two SECURITY DEFINER helpers manage the Vault: `set_shoptet_export_secret(partner_id, secret)` stores the export URL (service_role only), `get_shoptet_export_url(partner_id)` retrieves it (service_role only). The export URL is stored exclusively in Vault — never in DB columns, logs, or HTTP responses.
+Recorded staging results: dry run = 6 rows total, 6 valid, 0 invalid, would create 6, status `paid` 6; Phase 1C created and issued 6 BOHEMIA reward codes on staging; idempotency second run created 0 duplicates; 1 Shoptet test email delivered to `veru.enge@gmail.com`; `eshop@onemil.cz` is the test e-shop / partner side and `veru.enge@gmail.com` is the test customer / buyer side. Also recorded cleanup of 474 old E2E emails parked then moved to `failed`, leaving final staging queue at 1 sent Shoptet test email, 0 pending, old artifacts failed.
 
-**Phase 1B — dry-run Edge Functions deployed to staging:**
-`supabase/functions/set-shoptet-export-secret/index.ts` writes to Vault; auth: x-internal-token OR service-role OR superadmin JWT. `supabase/functions/import-shoptet-orders/index.ts` fetches CSV from Vault-backed URL, validates headers, parses rows, writes `shoptet_import_runs` + `shoptet_import_row_log` (order codes and outcomes only, no PII). Phase 1B is dry-run only: no `create_partner_order_reward` call, no emails. BOHEMIA Shoptet export URL was stored in staging Vault. Dry-run result: `rows_total:6, rows_valid:6, rows_invalid:0, would_create:6, would_update_status:6, paid:6`. No rewards created, no emails sent.
-
-**Phase 1C — live-write test on staging:**
-`import-shoptet-orders` called with `dry_run: false`. Created 6 BOHEMIA `partner_reward_codes` (status `issued`). Re-run confirmed idempotency: 0 duplicate codes, 0 duplicate emails. `partner_coin_activations` unchanged — wallet credit happens only on `redeem_miocoin_code` (customer action). Staging email_queue had 475 pending rows: 1 Shoptet Phase 1C test email + 474 old E2E partner invite artifacts. Safe single-send procedure: 474 artifacts moved to `staging_hold` status, RESEND_API_KEY added to staging EF secrets, `process-email-queue` invoked once, exactly 1 email sent. Then 474 `staging_hold` moved to `failed` (not deleted, audit trail preserved). Result: test customer email delivered to `veru.enge@gmail.com`. Old E2E emails sent: 0. Production untouched.
-
-**Staging MioCoin codes finding:**
-All 6 codes `status=issued`, none redeemed. Codes are email-locked to `veru.enge@gmail.com` via `coalesce(issued_to_email, customer_email)`. `redeem_miocoin_code` RPC returns `email_mismatch` for any other logged-in user — working as designed. There is no public staging frontend URL; the staging backend `dxmowysntemfqfnanxua` is accessible only via local dev server (`npm run dev` + `.env.staging`), so Pavel correctly saw "invalid code" on production `onemil.cz` (production DB does not contain staging codes). Codes are functional.
-
-**Staging E2E test-infra cleanup:**
-Phase 3/3b superadmin hardening caused admin-area Playwright specs to fail because `admin-e2e@onemil.cz` is a scoped admin and many pages require superadmin. Fixed by adding `superadmin-e2e@onemil.cz` as a dedicated staging E2E superadmin. `admin-e2e@onemil.cz` remains scoped admin for Phase 2/3b permission specs. App authorization rules were not weakened, Shoptet importer was not touched. Test-infra only.
-
-**Production status:** `xkzhjldrojjlrkezorey` untouched by all Shoptet work. Next step (requires Pavel approval): production rollout plan — migration apply, EF deploy, Vault secret, BOHEMIA config, smoke test with exactly 1 order → 1 email to `veru.enge@gmail.com` (not real CSV customers), rollback definition.
+Redeem was not completed because there is no public staging frontend. Pavel accidentally tested staging code on production `onemil.cz`; production correctly showed invalid because production DB does not contain staging codes. Production was untouched. Next task is production rollout planning only, not execution. Documentation-only change.
 
 ## 2026-06-24 -- partners_table_public_exposure production fix completed
 
