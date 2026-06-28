@@ -56,6 +56,38 @@ OneMil nabízí tři způsoby napojení partnerského e-shopu. Výběr závisí 
 - „Větší e-shop s vývojáři? → Partner API (pište na `eshop@onemil.cz`)."
 - „Individuální doručení → jen po domluvě s OneMil."
 
+## SHOPTET PHASE 2 — EF `approve-shoptet-connection` STAGING ✅ (28. 06. 2026)
+
+EF `approve-shoptet-connection` nasazena na staging `dxmowysntemfqfnanxua` jako **v1 ACTIVE** (`verify_jwt=false`, interní admin/superadmin JWT check). Commit `d8fb8a69`. **Produkce `xkzhjldrojjlrkezorey` nedotčena.**
+
+**Flow — approve:**
+1. Auth: JWT → `auth.getUser` → `user_roles` check role IN ('admin','superadmin') → 403 jinak.
+2. Validate body: `request_id` (UUID), `action` ('approve'|'reject'), optional `rejection_reason`.
+3. Load SCR WHERE status='submitted' → 404 jinak.
+4. `promote_shoptet_pending_url(request_id, partner_id)` → vrátí final Vault key name (URL nikdy v odpovědi ani v DB).
+5. UPDATE partners: `shoptet_export_secret_name=finalKeyName`, **`shoptet_customer_delivery='onemil'` (KRITICKÉ — self-service)**, `reward_trigger_status=scr.trigger_status`, `shoptet_import_enabled=true`.
+6. UPDATE SCR: `status='active'`, `reviewed_at`, `reviewed_by`.
+7. Best-effort email_queue notify partnera.
+8. Response: `{ success, request_id, status: 'active', partner_delivery: 'onemil' }`.
+
+**Flow — reject:**
+1–3. Stejně jako approve.
+4. `delete_shoptet_pending_url(request_id)` (best-effort).
+5. UPDATE SCR: `status='rejected'`, `rejection_reason`, `reviewed_at`, `reviewed_by`.
+6. Partners: **žádná změna** — `shoptet_import_enabled` zůstane false.
+7. Best-effort email_queue notify partnera.
+8. Response: `{ success, request_id, status: 'rejected' }`.
+
+**Smoke testy:**
+- No auth → HTTP 401 ✅
+- Fake Bearer → HTTP 401 ✅
+- DB-level approve: `promote_shoptet_pending_url` ✅ | partners `delivery='onemil'`, `import_enabled=true`, `trigger_status='shipped'` (z SCR) ✅ | SCR status=active, reviewed_at, reviewed_by ✅ | pending Vault key smazán ✅ | final Vault key existuje ✅
+- DB-level reject: SCR status=rejected, rejection_reason, reviewed_at ✅ | pending Vault key smazán ✅ | partners nezměněny ✅
+- BOHEMIA: `shoptet_customer_delivery='partner'` beze změny ✅
+- Cleanup: veškerá test data smazána ✅
+
+**Staging ready pro:** partner UI (`Napojení e-shopu` formulář), admin UI (badge + approve/reject flow), produkční rollout (vyžaduje samostatné schválení Pavla).
+
 ## SHOPTET PHASE 2 — EF `submit-shoptet-connection` STAGING ✅ (28. 06. 2026)
 
 EF `submit-shoptet-connection` nasazena na staging `dxmowysntemfqfnanxua` jako **v1 ACTIVE** (`verify_jwt=true`). Commit `cbcef02f`. **Produkce `xkzhjldrojjlrkezorey` nedotčena.**

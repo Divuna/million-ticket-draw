@@ -14,6 +14,10 @@
 
 ---
 
+## 2026-06-28 -- EF approve-shoptet-connection deployed to staging (v1 ACTIVE)
+
+Edge Function `approve-shoptet-connection` nasazena na staging `dxmowysntemfqfnanxua` (v1 ACTIVE, verify_jwt=false, interní admin/superadmin check). Commit `d8fb8a69`. Approve flow: `promote_shoptet_pending_url` → partners update (`delivery='onemil'`, `import_enabled=true`, `trigger_status` z SCR, `export_secret_name`) → SCR status=active → best-effort email notify. Reject flow: `delete_shoptet_pending_url` (best-effort) → SCR status=rejected → partners beze změny → best-effort email notify. Smokes: auth-boundary 401/403, DB-level approve + reject + Vault klíče + BOHEMIA beze změny. Cleanup proveden. Produkce nedotčena.
+
 ## 2026-06-28 -- EF submit-shoptet-connection deployed to staging (v1 ACTIVE)
 
 Edge Function `submit-shoptet-connection` nasazena na staging `dxmowysntemfqfnanxua` (v1 ACTIVE, verify_jwt=true). Commit `cbcef02f`. Auth-boundary smokes: HTTP 401 (no auth, fake token). DB-level: draft→submitted + Vault store + url_received=true + URL nikdy v DB. Race guard + Vault cleanup on failure. Veškerý test data cleanup proveden; BOHEMIA beze změny. Produkce nedotčena.
