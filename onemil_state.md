@@ -16,6 +16,39 @@ Shoptet Phase 1A/1B/1C dokončeno na stagingu i **produkci** (`xkzhjldrojjlrkezo
 - **Final postcheck ✅:** 2 kódy s ext_order_id (oba issued), 0 failed import rows, 0 pending email_queue, partner_coin_activations=3 (nedotčeno), latest live run=`ok`, staré 3 null-ext-id kódy nedotčeny. Produkce v očekávaném stavu.
 - **Monitoring (bez nového kódu):** denně — `shoptet_import_runs` latest status, `shoptet_import_row_log` failed rows, `email_queue` pending count. Týdně — `rows_created` vs. nové objednávky, `rows_skipped_dup` spike, `partner_coin_activations` růst po redemption, stale `issued` kódy > 30 dní. Vše read-only SQL. Volitelně: admin view `/admin/shoptet-imports` + Telegram alert (Phase 2, vyžaduje schválení Pavla).
 
+## SHOPTET PHASE 2 — PRODUKTOVÉ ROZHODNUTÍ: TŘI ZPŮSOBY NAPOJENÍ E-SHOPU (28. 06. 2026)
+
+OneMil nabízí tři způsoby napojení partnerského e-shopu. Výběr závisí na technické úrovni partnera a dohodnutém modelu doručení.
+
+| Způsob | Komu | Doručení kódu zákazníkovi |
+|---|---|---|
+| Shoptet CSV automat | Shoptet e-shopy, samoobslužně | OneMil e-mailem (výchozí) |
+| OneMil Partner API | Větší e-shopy s vývojáři | OneMil e-mailem (nebo `shoptet_customer_delivery`) |
+| Individuální partner delivery | Výjimka po domluvě | Partner vlastním systémem |
+
+**1. Shoptet CSV automat** — výchozí doporučená cesta:
+- Partner zadá URL Shoptet exportu v `/partner/dashboard`; admin schválí.
+- OneMil pravidelně stahuje CSV a automaticky vytváří MioCoin kódy.
+- Zákazník dostane kód e-mailem od OneMil ihned po vydání.
+- Phase 2 implementační návrh připraven 28. 06. 2026 (nová tabulka `shoptet_connection_requests`, EF `submit-shoptet-connection` + `approve-shoptet-connection`, partner UI formulář, admin badge + schvalovací flow).
+
+**2. OneMil Partner API** — pro technicky schopné e-shopy:
+- E-shop posílá objednávku přímo do OneMil přes Partner API (EF `partner-activate`).
+- Přesnější a rychlejší napojení než CSV — bez prodlevy, bez exportního souboru.
+- Existující implementace: `create_partner_order_reward` + `update_partner_order_reward_status`.
+- Zákazník dostane kód standardně e-mailem od OneMil.
+
+**3. Individuální partner delivery** — výjimka po domluvě:
+- OneMil vytvoří kód, ale doručení zákazníkovi zajistí partner vlastním systémem.
+- Nastavení: `shoptet_customer_delivery='partner'` — OneMil neposílá e-mail zákazníkovi.
+- BOHEMIA zůstává v tomto režimu: kódy `issued` v OneMil, BOHEMIA doručuje přes vlastní e-shop.
+- Aktivuje admin ručně — partner si toto nastavení samoobslužně nezvolí.
+
+**Partner dashboard wording (Phase 2):**
+- „Shoptet e-shop? → Shoptet automat (zadejte export URL, my se postaráme o zbytek)."
+- „Větší e-shop s vývojáři? → Partner API (pište na `eshop@onemil.cz`)."
+- „Individuální doručení → jen po domluvě s OneMil."
+
 ## PARTNERS_TABLE_PUBLIC_EXPOSURE — PRODUKČNÍ FIX HOTOVÝ (24. 06. 2026)
 
 Pre-existing nález `partners_table_public_exposure` opraven na produkci `xkzhjldrojjlrkezorey`. PR #118 mergnut.

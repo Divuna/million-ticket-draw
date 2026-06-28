@@ -14,6 +14,10 @@
 
 ---
 
+## 2026-06-28 -- Shoptet Phase 2 product decision: three e-shop connection methods documented
+
+Product decision documented for OneMil partner onboarding: three e-shop connection methods defined — (1) Shoptet CSV automat (default self-service path: partner submits export URL, admin approves, OneMil creates codes and emails customer), (2) OneMil Partner API (for technically capable e-shops sending orders directly via `partner-activate` EF), (3) individual partner delivery (exception by agreement — OneMil creates codes but partner delivers to customer, BOHEMIA remains in this mode with `shoptet_customer_delivery='partner'`). Phase 2 implementation proposal for self-service Shoptet onboarding prepared (new table `shoptet_connection_requests`, EF `submit-shoptet-connection` + `approve-shoptet-connection`, partner UI form, admin badge + approval flow). Documentation only — no code, no migrations, no production changes.
+
 ## 2026-06-28 -- Shoptet import monitoring proposal documented
 
 Following completion of Shoptet Phase 1C, a monitoring plan was documented for BOHEMIA ongoing imports. No code changes. Daily checks (read-only SQL): latest live run status in `shoptet_import_runs`, failed rows in `shoptet_import_row_log`, pending count in `email_queue` (expected 0 — BOHEMIA uses partner delivery). Weekly checks: `rows_created` vs. new orders, `rows_skipped_dup` spikes as signal of upstream Shoptet export anomalies, `partner_coin_activations` growth after customer redemption, stale `issued` codes older than 30 days. Optional Phase 2 (requires Pavel approval): admin view at `/admin/shoptet-imports` and Telegram alert on `status != 'ok'` if cron automation is added.
