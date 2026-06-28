@@ -56,6 +56,21 @@ OneMil nabízí tři způsoby napojení partnerského e-shopu. Výběr závisí 
 - „Větší e-shop s vývojáři? → Partner API (pište na `eshop@onemil.cz`)."
 - „Individuální doručení → jen po domluvě s OneMil."
 
+## SHOPTET PHASE 2 — STEP 5: PARTNER UI „Napojení e-shopu / Shoptet" ✅ (28. 06. 2026)
+
+Partner UI sekce přidána do `src/pages/PartnerDashboard.tsx`. Commit `d487048d`. **Frontend-only, žádná DB/EF/produkční změna. Build ✅.**
+
+- **Viditelnost:** jen pro `isAccountApproved` partnery (gated kartou).
+- **Vysvětluje 3 cesty napojení:** Shoptet automat (doporučeno) · OneMil Partner API (větší e-shopy, `eshop@onemil.cz`) · Individuální doručení (po domluvě).
+- **Formulář Shoptet automat:** `shop_name`, `reward_czk`, `reward_mc`, `trigger_status` (paid/shipped/completed select: „Po zaplacení/odeslání/dokončení objednávky"), `partner_note`, URL exportu jako **password input** (nikdy nepředvyplněna).
+- **Uložit koncept** bez URL → přímý RLS insert/update vlastního čistého draftu (`scr_partner_insert`/`scr_partner_update_draft`).
+- **Odeslat ke schválení** → upsert draftu + EF `submit-shoptet-connection({ request_id, url })`; URL po odeslání **okamžitě smazána z client state** (i při chybě/exception).
+- **Stavy:** draft (Koncept) · submitted (Odesláno ke schválení) · approved/active (Aktivní) · rejected (Zamítnuto + důvod). Form je locked při submitted/approved/active.
+- **URL nikdy nezobrazena ani nelogována.** `loadShoptetRequest` SELECTuje jen flag `url_received`, ne URL. Delivery mode (`shoptet_customer_delivery`) partnerovi nevystaven.
+- **Ověření v prohlížeči neproběhlo** — vyžaduje přihlášeného schváleného staging partnera; build pass je hlavní záruka. BOHEMIA beze změny.
+
+**Staging ready pro:** Step 6 — admin UI (badge + approve/reject přes `approve-shoptet-connection`).
+
 ## SHOPTET PHASE 2 — STEP 4: import-shoptet-orders RESPEKTUJE reward_trigger_status STAGING ✅ (28. 06. 2026)
 
 EF `import-shoptet-orders` přepsán a nasazen na staging `dxmowysntemfqfnanxua` jako **v5 ACTIVE**. Commit `2d60eee4`. **Produkce `xkzhjldrojjlrkezorey` nedotčena.**
