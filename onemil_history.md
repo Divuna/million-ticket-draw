@@ -14,6 +14,10 @@
 
 ---
 
+## 2026-06-28 14:30 UTC -- Shoptet Phase 2 E2E staging test PASSED + production rollout plan prepared
+
+Shoptet Phase 2 self-service e-shop connection completed full staging E2E validation. Method: API-level test (EF invocations via curl + PostgREST queries) on project `dxmowysntemfqfnanxua`. All 6 phases verified: (1) partner draft creation, (2) URL submit via EF to Vault_pending, (3) admin badge display, (4) EF approve with delivery='onemil' + trigger copy + import enable, (5) EF reject with reason, (6) import dry-run respecting reward_trigger_status threshold. Safety: 0 emails, 0 codes created (dry_run mode), URL never in DB (only flag), BOHEMIA unchanged (`delivery='partner'`), production untouched. Artifacts: `src/pages/PartnerDashboard.tsx` (Step 5 UI), `src/pages/AdminPartners.tsx` (Step 6 UI), `docs/shoptet/PRODUCTION_ROLLOUT_PLAN.md` (comprehensive rollout with backup/migration/EF/publish/postcheck/rollback). Next: production rollout pending Pavel approval per text template in rollout plan. No production changes until approval sent.
+
 ## 2026-06-28 -- EF approve-shoptet-connection deployed to staging (v1 ACTIVE)
 
 Edge Function `approve-shoptet-connection` nasazena na staging `dxmowysntemfqfnanxua` (v1 ACTIVE, verify_jwt=false, interní admin/superadmin check). Commit `d8fb8a69`. Approve flow: `promote_shoptet_pending_url` → partners update (`delivery='onemil'`, `import_enabled=true`, `trigger_status` z SCR, `export_secret_name`) → SCR status=active → best-effort email notify. Reject flow: `delete_shoptet_pending_url` (best-effort) → SCR status=rejected → partners beze změny → best-effort email notify. Smokes: auth-boundary 401/403, DB-level approve + reject + Vault klíče + BOHEMIA beze změny. Cleanup proveden. Produkce nedotčena.

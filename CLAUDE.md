@@ -16,6 +16,28 @@ Shoptet Phase 1A/1B/1C dokončeno na stagingu i **produkci**. Staging: `dxmowysn
 - **Final postcheck (28. 06. 2026) ✅:** 2 kódy s ext_order_id (oba issued), 0 failed import rows, 0 pending email_queue, partner_coin_activations=3 (nedotčeno), latest live run=`ok`, staré 3 null-ext-id kódy nedotčeny.
 - **Monitoring po Phase 1C (bez nového kódu):** denně — latest live run status (`ok`), failed import rows (0), pending email_queue (0 = norma, BOHEMIA partner-delivery). Týdně — rows_created vs. nové objednávky, skipped_dup spike = anomálie Shoptet exportu, partner_coin_activations roste jen po zákaznickém redemption, stale `issued` kódy starší 30 dní (signál, že zákazníci neuplatňují). Vše přes read-only SQL v Supabase SQL Editoru. Volitelně Phase 2: admin view `/admin/shoptet-imports` + Telegram alert při `status != 'ok'`.
 
+## SHOPTET PHASE 2 — E2E STAGING TEST PROŠEL + PRODUKČNÍ ROLLOUT PŘIPRAVEN (28. 06. 2026 14:30)
+
+Shoptet Phase 2 self-service e-shop connection **staging E2E test ✅ PASSED**. Všechny 6 fází ověřeny:
+- **Phase 1 Draft:** partner vytvoří draft v `/partner/dashboard`
+- **Phase 2 Submit:** EF `submit-shoptet-connection` uloží URL do Vault (v Vault_pending), DB flag `url_received=true`
+- **Phase 3 Admin Badge:** `/admin/partners` zobrazuje počet čekajících žádostí
+- **Phase 4 Approve:** EF `approve-shoptet-connection` propaguje Vault URL (pending→final), nastaví `shoptet_customer_delivery='onemil'`, zkopíruje `reward_trigger_status`, přepne `shoptet_import_enabled=true`
+- **Phase 5 Reject:** EF zamítne s `rejection_reason`, Vault URL smazáno
+- **Phase 6 Import Dry-Run:** `import-shoptet-orders` v5 respektuje `reward_trigger_status` threshold (paid/shipped/completed)
+
+**E2E Test Metrics:**
+- Method: API-level (EF + PostgREST, žádný browser)
+- Submit flow: ✅ status changed to 'submitted', URL not persisted in DB (only flag)
+- Admin badge: ✅ submitted count loaded for tab display
+- Approve flow: ✅ partner.shoptet_customer_delivery='onemil' SET, trigger copied, import_enabled=true
+- Reject flow: ✅ status='rejected', rejection_reason persisted
+- Dry-run: ✅ respects reward_trigger_status, status='ok', 0 emails, 0 codes created
+- BOHEMIA: ✅ shoptet_customer_delivery='partner' unchanged
+- Production: ✅ untouched
+
+**Produkční rollout plan:** připraven v `docs/shoptet/PRODUCTION_ROLLOUT_PLAN.md`. Vyžaduje výslovné schválení Pavla.
+
 ## SHOPTET PHASE 2 — PRODUKTOVÉ ROZHODNUTÍ: TŘI ZPŮSOBY NAPOJENÍ E-SHOPU (28. 06. 2026, opraveno 28. 06. 2026)
 
 OneMil nabízí tři způsoby napojení partnerského e-shopu. Partner sekce v dashboardu tyto možnosti jednoduše vysvětlí.

@@ -16,6 +16,29 @@ Shoptet Phase 1A/1B/1C dokončeno na stagingu i **produkci** (`xkzhjldrojjlrkezo
 - **Final postcheck ✅:** 2 kódy s ext_order_id (oba issued), 0 failed import rows, 0 pending email_queue, partner_coin_activations=3 (nedotčeno), latest live run=`ok`, staré 3 null-ext-id kódy nedotčeny. Produkce v očekávaném stavu.
 - **Monitoring (bez nového kódu):** denně — `shoptet_import_runs` latest status, `shoptet_import_row_log` failed rows, `email_queue` pending count. Týdně — `rows_created` vs. nové objednávky, `rows_skipped_dup` spike, `partner_coin_activations` růst po redemption, stale `issued` kódy > 30 dní. Vše read-only SQL. Volitelně: admin view `/admin/shoptet-imports` + Telegram alert (Phase 2, vyžaduje schválení Pavla).
 
+## SHOPTET PHASE 2 — E2E STAGING TEST ✅ PROŠEL (28. 06. 2026 14:30)
+
+Shoptet Phase 2 self-service e-shop connection prošla kompletním **staging E2E testem API-level**. Všechny 6 fází ověřeny:
+
+| Fáze | Akce | Výsledek | Ověřeno |
+|---|---|---|---|
+| 1 | Partner vytvoří draft v `/partner/dashboard` | `status='draft'`, `url_received=false` | ✅ |
+| 2 | Partner submituje Shoptet URL (EF) | `status='submitted'`, `url_received=true`, URL v Vault_pending | ✅ |
+| 3 | Admin vidí badge se počtem čekajících | Badge zobrazuje submitted count | ✅ |
+| 4 | Admin schvaluje (EF) | Vault pending→final, `shoptet_customer_delivery='onemil'` SET, trigger copied, `shoptet_import_enabled=true` | ✅ |
+| 5 | Admin zamítá s důvodem (EF) | `status='rejected'`, `rejection_reason` persisted, Vault deleted | ✅ |
+| 6 | Import dry-run respektuje threshold | `reward_trigger_status` rozhoduje issuance, status=`ok` | ✅ |
+
+**Metriky:**
+- Method: API-level (curl EF invocations + PostgREST SELECT)
+- Duration: ~5 min end-to-end
+- Dry-run result: 0 emails, 0 codes created (správně — dry_run mode)
+- URL storage: Vault only, NEVER in DB (dle specifikace)
+- BOHEMIA: `shoptet_customer_delivery='partner'` confirmed unchanged
+- Production: untouched
+
+**Produkční rollout:** Chystán v `docs/shoptet/PRODUCTION_ROLLOUT_PLAN.md`. Vyžaduje výslovné schválení Pavla dle textového šablony v rollout plánu.
+
 ## SHOPTET PHASE 2 — PRODUKTOVÉ ROZHODNUTÍ: TŘI ZPŮSOBY NAPOJENÍ E-SHOPU (28. 06. 2026, opraveno 28. 06. 2026)
 
 OneMil nabízí tři způsoby napojení partnerského e-shopu. Výběr závisí na technické úrovni partnera a dohodnutém modelu doručení.
