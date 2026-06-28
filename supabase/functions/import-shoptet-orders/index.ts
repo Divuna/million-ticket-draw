@@ -7,13 +7,20 @@ const corsHeaders = {
 };
 
 type ImportMode = "dry_run" | "live";
-type StatusAction = "paid" | "cancelled" | "pending";
+
+// Five-bucket Shoptet order status taxonomy.
+// completed: fully fulfilled  → issue for all trigger thresholds.
+// shipped:   dispatched       → issue for 'paid' and 'shipped' thresholds.
+// paid:      payment received → issue only for 'paid' threshold.
+// cancelled: stopped/returned → always cancel the reward code.
+// pending:   below threshold  → leave reward code as pending.
+type ShoptetStatus = "paid" | "shipped" | "completed" | "cancelled" | "pending";
 
 type ImportRow = {
   orderId: string;
   total: number;
   customerEmail: string;
-  statusAction: StatusAction;
+  shoptetStatus: ShoptetStatus;
 };
 
 type RpcResult = {
@@ -37,6 +44,11 @@ function json(body: unknown, status = 200) {
  * emails, full reward codes, API keys, tokens, or hashes.
  *
  * Auth: x-internal-token (automation) OR service-role bearer OR superadmin JWT.
+ *
+ * Reward issuance respects partners.reward_trigger_status:
+ *   'paid'      → issue when Shoptet status is paid, shipped, or completed.
+ *   'shipped'   → issue when Shoptet status is shipped or completed.
+ *   'completed' → issue only when Shoptet status is completed.
  */
 async function authorize(req: Request, admin: ReturnType<typeof createClient>) {
   const internalToken = Deno.env.get("INTERNAL_FUNCTION_TOKEN");
@@ -91,7 +103,7 @@ function parseCsvLine(line: string, delim: string): string[] {
 }
 
 function norm(s: string): string {
-  return (s ?? "").toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+  return (s ?? "").toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g, "");
 }
 
 const HEADER_CANDIDATES = {
@@ -110,11 +122,33 @@ function findCol(headers: string[], candidates: string[]): number {
   return -1;
 }
 
-function mapStatus(raw: string): StatusAction {
+// Maps raw Shoptet status string to 5-bucket taxonomy.
+// completed must be checked BEFORE shipped and paid — Czech "vyřízená" (vyriz)
+// would otherwise match the paid pattern first.
+function mapStatus(raw: string): ShoptetStatus {
   const s = norm(raw);
-  if (/(zaplac|paid|completed|dokon|odeslan|shipped|vyriz)/.test(s)) return "paid";
+  if (/(completed|dokon|vyriz|dorucen|delivered)/.test(s))                     return "completed";
+  if (/(shipped|odeslan|dispatched)/.test(s))                                   return "shipped";
+  if (/(zaplac|paid|pripravena|processing|vyrizuje)/.test(s))                   return "paid";
   if (/(storn|zrusen|cancel|vracen|returned|nevyzved|unpaid|nezaplac)/.test(s)) return "cancelled";
   return "pending";
+}
+
+// Returns true if the reward code should be issued NOW given the partner's threshold.
+function shouldIssue(status: ShoptetStatus, triggerThreshold: string): boolean {
+  if (status === "completed") return true;                              // all thresholds
+  if (status === "shipped")   return triggerThreshold !== "completed";  // 'paid' + 'shipped'
+  if (status === "paid")      return triggerThreshold === "paid";       // 'paid' only
+  return false;                                                         // pending, cancelled
+}
+
+// Maps ShoptetStatus → value accepted by update_partner_order_reward_status.
+// RPC positive set: 'paid', 'delivered', 'completed'. 'shipped' is not accepted → 'delivered'.
+function toRpcStatus(s: ShoptetStatus): string {
+  if (s === "completed") return "completed";
+  if (s === "shipped")   return "delivered";
+  if (s === "paid")      return "paid";
+  return "cancelled";
 }
 
 function asMode(raw: unknown): ImportMode {
@@ -147,14 +181,18 @@ serve(async (req) => {
   if (!partnerId) return json({ status: "error", error: "partner_id is required" }, 400);
   const mode = asMode(body.mode);
 
+  // Load reward_trigger_status and shoptet_customer_delivery alongside existing fields.
+  // Default 'paid' preserves BOHEMIA and all legacy partner behaviour.
   const { data: partner, error: pErr } = await admin
     .from("partners")
-    .select("id, shoptet_import_enabled, shoptet_export_secret_name")
+    .select("id, shoptet_import_enabled, shoptet_export_secret_name, reward_trigger_status, shoptet_customer_delivery")
     .eq("id", partnerId)
     .maybeSingle();
   if (pErr || !partner) return json({ status: "error", error: "partner_not_found" }, 404);
   if (!partner.shoptet_import_enabled) return json({ status: "error", error: "import_not_enabled" }, 400);
   if (!partner.shoptet_export_secret_name) return json({ status: "error", error: "export_url_not_configured" }, 400);
+
+  const triggerThreshold: string = partner.reward_trigger_status ?? "paid";
 
   const { data: run, error: runErr } = await admin
     .from("shoptet_import_runs")
@@ -229,7 +267,7 @@ serve(async (req) => {
       const total = Number(totalRaw);
       const customerEmail = (cols[colEmail] ?? "").trim();
       const emailPresent = customerEmail.includes("@");
-      const statusAction = colStatus >= 0 ? mapStatus(cols[colStatus] ?? "") : "pending";
+      const shoptetStatus: ShoptetStatus = colStatus >= 0 ? mapStatus(cols[colStatus] ?? "") : "pending";
 
       if (!orderId || !Number.isFinite(total) || total <= 0 || !emailPresent) {
         rowsInvalid++;
@@ -244,11 +282,13 @@ serve(async (req) => {
         continue;
       }
 
-      validRows.push({ orderId, total, customerEmail, statusAction });
+      validRows.push({ orderId, total, customerEmail, shoptetStatus });
       if (!existingIds.has(orderId)) {
         rowsWouldCreate++;
-        logBatch.push({ run_id: runId, external_order_id: orderId, action: "would_create", result: statusAction });
-        if (statusAction === "paid" || statusAction === "cancelled") rowsWouldStatusUpdate++;
+        logBatch.push({ run_id: runId, external_order_id: orderId, action: "would_create", result: shoptetStatus });
+        if (shouldIssue(shoptetStatus, triggerThreshold) || shoptetStatus === "cancelled") {
+          rowsWouldStatusUpdate++;
+        }
       }
     }
 
@@ -286,12 +326,16 @@ serve(async (req) => {
             logBatch.push({ run_id: runId, external_order_id: row.orderId, action: "create", result: "ok" });
           }
 
-          if (row.statusAction === "pending") continue;
+          // Apply reward_trigger_status threshold logic.
+          const willIssue  = shouldIssue(row.shoptetStatus, triggerThreshold);
+          const willCancel = row.shoptetStatus === "cancelled";
+
+          if (!willIssue && !willCancel) continue; // below threshold → leave as pending
 
           const { data: statusResult, error: statusErr } = await admin.rpc("update_partner_order_reward_status", {
             p_partner_id: partnerId,
             p_external_order_id: row.orderId,
-            p_order_status: row.statusAction,
+            p_order_status: toRpcStatus(row.shoptetStatus),
           });
 
           if (statusErr || !isSuccessResult(statusResult)) {
@@ -301,7 +345,7 @@ serve(async (req) => {
           }
 
           rowsStatusUpdated++;
-          logBatch.push({ run_id: runId, external_order_id: row.orderId, action: "status_update", result: row.statusAction });
+          logBatch.push({ run_id: runId, external_order_id: row.orderId, action: "status_update", result: toRpcStatus(row.shoptetStatus) });
         }
       }
     }
