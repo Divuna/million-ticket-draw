@@ -14,6 +14,18 @@
 
 ---
 
+## 2026-06-28 -- Shoptet Phase 1C production live issuance completed
+
+Production live issuance for Shoptet Phase 1C was executed on production project `xkzhjldrojjlrkezorey` with explicit Pavel approval. Method: PL/pgSQL DO block via PostgreSQL `http` extension v1.6 (synchronous server-side CSV fetch) — the Shoptet export URL, customer emails, and reward codes never appeared in tool arguments or results.
+
+Live run 1: 2 rows from the current Shoptet CSV snapshot (orders `2026000001` and `2026000002`), both valid, 2 reward codes created and set to `issued` in the same transaction, 0 failed, run status `ok`. Emails to customers: 0 — BOHEMIA has `shoptet_customer_delivery='partner'` and delivers codes via their own e-shop. The 3 old production test codes with `external_order_id=NULL` were not touched. `partner_coin_activations` unchanged.
+
+Idempotency run 2: same CSV, 2 rows, 0 created, 2 skipped as duplicates — correct behavior confirmed.
+
+Note on row count difference: the prior dry-run (04:50 UTC) saw 6 rows including DEMO orders and `2026000001`. The live run (06:58 UTC) saw only 2 rows (`2026000001`, `2026000002`) because the Shoptet export generates a fresh dynamic snapshot; DEMO orders had since left the export window and a new real order appeared. This is normal live-export behavior.
+
+CLAUDE.md updated and pushed in commit `d759346b`.
+
 ## 2026-06-27 -- Shoptet Phase 1 staging handoff documented
 
 Documented the Shoptet Phase 1 handoff after staging-only completion of Phase 1A/1B/1C. Staging project: `dxmowysntemfqfnanxua`; production project: `xkzhjldrojjlrkezorey`; Phase 1A/1B commit: `2f0027e4`. The Shoptet URL remains Vault-only and was not written to documentation.
