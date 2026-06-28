@@ -56,6 +56,25 @@ OneMil nabízí tři způsoby napojení partnerského e-shopu. Výběr závisí 
 - „Větší e-shop s vývojáři? → Partner API (pište na `eshop@onemil.cz`)."
 - „Individuální doručení → jen po domluvě s OneMil."
 
+## SHOPTET PHASE 2 — STEP 4: import-shoptet-orders RESPEKTUJE reward_trigger_status STAGING ✅ (28. 06. 2026)
+
+EF `import-shoptet-orders` přepsán a nasazen na staging `dxmowysntemfqfnanxua` jako **v5 ACTIVE**. Commit `2d60eee4`. **Produkce `xkzhjldrojjlrkezorey` nedotčena.**
+
+**Nová logika — 5-bucket ShoptetStatus taxonomy:**
+- `completed` → vydej při jakémkoli threshold.
+- `shipped` → vydej při `threshold='paid'` nebo `'shipped'`; drž pending při `'completed'`.
+- `paid` → vydej pouze při `threshold='paid'`; drž pending jinak.
+- `cancelled` → vždy stornuj (volá RPC s `'cancelled'`).
+- `pending` → nikdy nevydej, drž pending.
+
+`toRpcStatus`: `shipped` → `'delivered'` (RPC nepřijímá shipped).
+
+**BOHEMIA backward compat (threshold='paid'):** paid/shipped/completed → vše vydá = identické chování. ✅
+
+**Ověřeno:** auth boundary 401 ✅ | EF kód verifikován přes `get_edge_function` ✅ | BOHEMIA SQL `reward_trigger_status='paid'`, `shoptet_customer_delivery='partner'` ✅ | threshold logika kódová verifikace ✅ | produkce nedotčena ✅
+
+**Staging ready pro:** partner UI + admin UI (krok 5+6 Phase 2), produkční rollout (vyžaduje schválení Pavla).
+
 ## SHOPTET PHASE 2 — EF `approve-shoptet-connection` STAGING ✅ (28. 06. 2026)
 
 EF `approve-shoptet-connection` nasazena na staging `dxmowysntemfqfnanxua` jako **v1 ACTIVE** (`verify_jwt=false`, interní admin/superadmin JWT check). Commit `d8fb8a69`. **Produkce `xkzhjldrojjlrkezorey` nedotčena.**
