@@ -14,6 +14,7 @@ Shoptet Phase 1A/1B/1C dokončeno na stagingu i **produkci**. Staging: `dxmowysn
 - `eshop@onemil.cz` = partner strana (BOHEMIA); `veru.enge@gmail.com` = testovací zákazník (staging only).
 - Full handoff: `docs/shoptet/SHOPTET_PHASE1_HANDOFF.md`.
 - **Final postcheck (28. 06. 2026) ✅:** 2 kódy s ext_order_id (oba issued), 0 failed import rows, 0 pending email_queue, partner_coin_activations=3 (nedotčeno), latest live run=`ok`, staré 3 null-ext-id kódy nedotčeny.
+- **Monitoring po Phase 1C (bez nového kódu):** denně — latest live run status (`ok`), failed import rows (0), pending email_queue (0 = norma, BOHEMIA partner-delivery). Týdně — rows_created vs. nové objednávky, skipped_dup spike = anomálie Shoptet exportu, partner_coin_activations roste jen po zákaznickém redemption, stale `issued` kódy starší 30 dní (signál, že zákazníci neuplatňují). Vše přes read-only SQL v Supabase SQL Editoru. Volitelně Phase 2: admin view `/admin/shoptet-imports` + Telegram alert při `status != 'ok'`.
 
 ## PARTNERS_TABLE_PUBLIC_EXPOSURE — PRODUKČNÍ FIX HOTOVÝ (24. 06. 2026)
 

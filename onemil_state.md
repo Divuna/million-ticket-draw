@@ -14,6 +14,7 @@ Shoptet Phase 1A/1B/1C dokončeno na stagingu i **produkci** (`xkzhjldrojjlrkezo
 - Handoff: `docs/shoptet/SHOPTET_PHASE1_HANDOFF.md`.
 - CLAUDE.md commit: `d759346b`.
 - **Final postcheck ✅:** 2 kódy s ext_order_id (oba issued), 0 failed import rows, 0 pending email_queue, partner_coin_activations=3 (nedotčeno), latest live run=`ok`, staré 3 null-ext-id kódy nedotčeny. Produkce v očekávaném stavu.
+- **Monitoring (bez nového kódu):** denně — `shoptet_import_runs` latest status, `shoptet_import_row_log` failed rows, `email_queue` pending count. Týdně — `rows_created` vs. nové objednávky, `rows_skipped_dup` spike, `partner_coin_activations` růst po redemption, stale `issued` kódy > 30 dní. Vše read-only SQL. Volitelně: admin view `/admin/shoptet-imports` + Telegram alert (Phase 2, vyžaduje schválení Pavla).
 
 ## PARTNERS_TABLE_PUBLIC_EXPOSURE — PRODUKČNÍ FIX HOTOVÝ (24. 06. 2026)
 

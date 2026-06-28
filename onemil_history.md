@@ -14,6 +14,10 @@
 
 ---
 
+## 2026-06-28 -- Shoptet import monitoring proposal documented
+
+Following completion of Shoptet Phase 1C, a monitoring plan was documented for BOHEMIA ongoing imports. No code changes. Daily checks (read-only SQL): latest live run status in `shoptet_import_runs`, failed rows in `shoptet_import_row_log`, pending count in `email_queue` (expected 0 — BOHEMIA uses partner delivery). Weekly checks: `rows_created` vs. new orders, `rows_skipped_dup` spikes as signal of upstream Shoptet export anomalies, `partner_coin_activations` growth after customer redemption, stale `issued` codes older than 30 days. Optional Phase 2 (requires Pavel approval): admin view at `/admin/shoptet-imports` and Telegram alert on `status != 'ok'` if cron automation is added.
+
 ## 2026-06-28 -- Shoptet Phase 1C production live issuance completed
 
 Production live issuance for Shoptet Phase 1C was executed on production project `xkzhjldrojjlrkezorey` with explicit Pavel approval. Method: PL/pgSQL DO block via PostgreSQL `http` extension v1.6 (synchronous server-side CSV fetch) — the Shoptet export URL, customer emails, and reward codes never appeared in tool arguments or results.
