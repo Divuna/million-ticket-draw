@@ -1,7 +1,7 @@
 # Shoptet Phase 2 — Production Rollout Plan
 
-**Status:** Staging E2E passed ✅ · Production rollout pending approval  
-**Date:** 28. 06. 2026 14:30 UTC  
+**Status:** Staging E2E passed ✅ · Production rollout pending approval · Migration files audited ✅  
+**Date:** 28. 06. 2026 14:30 UTC · Corrected 28. 06. 2026 after migration audit  
 **Staging Project:** `dxmowysntemfqfnanxua`  
 **Production Project:** `xkzhjldrojjlrkezorey`
 
@@ -32,31 +32,29 @@ pg_dump --host=prod.supabase.co \
 - **Verify:** `pg_restore -l backup.dump | wc -l` (should show ~2200+ TOC entries)
 - **Document filename in this plan**
 
-### Step 2: Production Database Migrations (in order)
+### Step 2: Production Database Migrations
 
 **Prerequisites:**
-- Staging migrations have been applied to `dxmowysntemfqfnanxua` and tested
-- All three migration files exist in `supabase/migrations/`
+- Staging migration was applied to `dxmowysntemfqfnanxua` and tested (commit `8bef720a`)
+- Migration file exists in `supabase/migrations/`
 
-**Migrations to apply (in this exact order):**
+**⚠️ CORRECTED — ONE migration file, not three:**
 
-1. `20260623_shoptet_connection_requests_base.sql`
-   - Creates `shoptet_connection_requests` table
-   - Adds RLS policies: `scr_partner_insert`, `scr_partner_update_draft`, `scr_admin_all`
-   - Creates indexes
+The earlier rollout plan incorrectly listed three fictional files. The actual migration applied to staging is:
 
-2. `20260623_shoptet_connection_requests_hardening.sql`
-   - Adds trigger for `submitted_at` and `created_at` defaults
-   - Hardens RLS WITH CHECK constraints
+**`supabase/migrations/20260628120000_shoptet_connection_requests.sql`**
 
-3. `20260623_shoptet_import_runs_extend.sql`
-   - Adds missing `shoptet_import_runs` columns if needed
-   - Updates indexes and constraints
+This single file covers everything in one atomic transaction:
+- `partners.reward_trigger_status` column (default `'paid'`, CHECK paid/shipped/completed)
+- `shoptet_connection_requests` table (15 columns, RLS enabled, 4 policies, unique partial index, updated_at trigger)
+- Vault helper RPCs: `store_shoptet_pending_url`, `promote_shoptet_pending_url`, `delete_shoptet_pending_url` (service_role only execute)
 
 **Application method:**
 - Via Supabase SQL Editor only (never `supabase db push` on production)
-- Each migration in separate transaction
-- Verify each migration completes with `COMMIT`
+- Single transaction — entire file is wrapped in `begin; … commit;`
+- Verify with `COMMIT` message in SQL Editor output
+
+**Note:** Phase 1A migration `20260624160000_shoptet_import_phase1a.sql` is already on production (it added `shoptet_import_enabled`, `shoptet_export_secret_name`, `shoptet_customer_delivery`, `shoptet_import_runs` table). Phase 2 migration adds only what is missing: `shoptet_connection_requests` table + `reward_trigger_status` column + Vault RPCs.
 
 ### Step 3: Production Edge Function Deployments
 
@@ -207,7 +205,7 @@ Before rolling out to production, verify:
 
 **When Pavel is ready to approve, he should send:**
 
-> Schvaluji produkční rollout Shoptet Phase 2: aplikovat migrace, nasadit EF `submit-shoptet-connection`, `approve-shoptet-connection`, `import-shoptet-orders` v5, publikovat frontend. Rozumím rizikům a potvrzuji zálohu.
+> Schvaluji produkční rollout Shoptet Phase 2: aplikovat migraci `20260628120000_shoptet_connection_requests.sql`, nasadit EF `submit-shoptet-connection`, `approve-shoptet-connection`, `import-shoptet-orders` v5, publikovat frontend. Rozumím rizikům a potvrzuji zálohu.
 
 ---
 
