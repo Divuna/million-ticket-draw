@@ -56,6 +56,23 @@ OneMil nabízí tři způsoby napojení partnerského e-shopu. Výběr závisí 
 - „Větší e-shop s vývojáři? → Partner API (pište na `eshop@onemil.cz`)."
 - „Individuální doručení → jen po domluvě s OneMil."
 
+## SHOPTET PHASE 2 — STAGING DB MIGRACE APLIKOVÁNA ✅ (28. 06. 2026)
+
+Migrace `20260628120000_shoptet_connection_requests.sql` aplikována na staging `dxmowysntemfqfnanxua`. Commit `8bef720a`. **Produkce `xkzhjldrojjlrkezorey` nedotčena.**
+
+**Postchecky (všechny ✅):**
+- Tabulka `shoptet_connection_requests`: existuje, RLS zapnuto.
+- 4 RLS policies: `scr_partner_select` (SELECT own), `scr_partner_insert` (INSERT jen čistý draft), `scr_partner_update_draft` (UPDATE jen own draft, clean state), `scr_admin_all` (ALL admin/superadmin).
+- Unikátní partial index `scr_partner_pending_unique` (partner_id WHERE status IN submitted/approved/active): ✅
+- Sloupce: 15 — id, partner_id, shop_name, trigger_status, reward_czk, reward_mc (numeric), url_received, status, partner_note, rejection_reason, submitted_at, reviewed_at, reviewed_by, created_at, updated_at.
+- `partners.reward_trigger_status` (default `'paid'`, NOT NULL, CHECK paid/shipped/completed): ✅
+- 3 Vault RPCs `SECURITY DEFINER`, `service_role` only — `store_shoptet_pending_url`, `promote_shoptet_pending_url`, `delete_shoptet_pending_url`: anon=false, authenticated=false ✅
+- Trigger `scr_updated_at` (BEFORE UPDATE): ✅
+- BOHEMIA: `shoptet_customer_delivery='partner'`, `shoptet_import_enabled=true`, `reward_trigger_status='paid'` — beze změny ✅
+
+**Staging ready pro:** EF `submit-shoptet-connection`, EF `approve-shoptet-connection`, partner UI, admin UI.
+**Rollback SQL** je v hlavičce migračního souboru. Produkce vyžaduje samostatné schválení Pavla.
+
 ## PARTNERS_TABLE_PUBLIC_EXPOSURE — PRODUKČNÍ FIX HOTOVÝ (24. 06. 2026)
 
 Pre-existing nález `partners_table_public_exposure` opraven na produkci `xkzhjldrojjlrkezorey`. PR #118 mergnut.

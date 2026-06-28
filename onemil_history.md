@@ -14,6 +14,10 @@
 
 ---
 
+## 2026-06-28 -- Shoptet Phase 2 DB migration applied to staging (shoptet_connection_requests + reward_trigger_status + Vault RPCs)
+
+Migration `20260628120000_shoptet_connection_requests.sql` applied to staging `dxmowysntemfqfnanxua`, commit `8bef720a`. New table `shoptet_connection_requests` (15 columns, RLS enabled, 4 policies with strict INSERT/UPDATE guards preventing partner from escalating draft status directly), unique partial index on partner_id for pending/active states, updated_at trigger, `reward_trigger_status` column added to `partners` (default `'paid'`, CHECK paid/shipped/completed), three `SECURITY DEFINER` Vault RPCs (`store_shoptet_pending_url`, `promote_shoptet_pending_url`, `delete_shoptet_pending_url`) with `service_role`-only execute. All postchecks green. BOHEMIA unchanged (`shoptet_customer_delivery='partner'`, `reward_trigger_status='paid'`). Production untouched. Staging ready for EF `submit-shoptet-connection` and `approve-shoptet-connection`.
+
 ## 2026-06-28 -- Shoptet Phase 2 product decision: three e-shop connection methods documented + delivery mode rule corrected
 
 Product decision documented for OneMil partner onboarding: three e-shop connection methods defined — (1) Shoptet CSV automat (default self-service path: partner submits export URL, admin approves, OneMil creates codes and emails customer), (2) OneMil Partner API (for technically capable e-shops sending orders directly via `partner-activate` EF), (3) individual partner delivery (exception by agreement — OneMil creates codes but partner delivers to customer, BOHEMIA remains in this mode with `shoptet_customer_delivery='partner'`). Phase 2 implementation proposal for self-service Shoptet onboarding prepared (new table `shoptet_connection_requests`, EF `submit-shoptet-connection` + `approve-shoptet-connection`, partner UI form, admin badge + approval flow). Documentation only — no code, no migrations, no production changes.
