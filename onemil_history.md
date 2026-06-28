@@ -24,7 +24,7 @@ Idempotency run 2: same CSV, 2 rows, 0 created, 2 skipped as duplicates — corr
 
 Note on row count difference: the prior dry-run (04:50 UTC) saw 6 rows including DEMO orders and `2026000001`. The live run (06:58 UTC) saw only 2 rows (`2026000001`, `2026000002`) because the Shoptet export generates a fresh dynamic snapshot; DEMO orders had since left the export window and a new real order appeared. This is normal live-export behavior.
 
-CLAUDE.md updated and pushed in commit `d759346b`.
+CLAUDE.md updated and pushed in commit `d759346b`. Final read-only postcheck passed: 2 BOHEMIA codes with `external_order_id` both `issued`, 0 failed import rows, 0 pending `email_queue`, `partner_coin_activations` unchanged at 3, latest live run status `ok`, old 3 null-`external_order_id` test codes untouched. Production in expected state.
 
 ## 2026-06-27 -- Shoptet Phase 1 staging handoff documented
 

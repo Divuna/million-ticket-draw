@@ -13,6 +13,7 @@ Shoptet Phase 1A/1B/1C dokončeno na stagingu i **produkci**. Staging: `dxmowysn
 - Metoda: PL/pgSQL DO blok přes `http` extension (v1.6) — URL ani emaily zákazníků nikdy nevratil do tool results.
 - `eshop@onemil.cz` = partner strana (BOHEMIA); `veru.enge@gmail.com` = testovací zákazník (staging only).
 - Full handoff: `docs/shoptet/SHOPTET_PHASE1_HANDOFF.md`.
+- **Final postcheck (28. 06. 2026) ✅:** 2 kódy s ext_order_id (oba issued), 0 failed import rows, 0 pending email_queue, partner_coin_activations=3 (nedotčeno), latest live run=`ok`, staré 3 null-ext-id kódy nedotčeny.
 
 ## PARTNERS_TABLE_PUBLIC_EXPOSURE — PRODUKČNÍ FIX HOTOVÝ (24. 06. 2026)
 
