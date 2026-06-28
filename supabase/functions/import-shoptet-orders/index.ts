@@ -6,6 +6,22 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type, x-internal-token",
 };
 
+type ImportMode = "dry_run" | "live";
+type StatusAction = "paid" | "cancelled" | "pending";
+
+type ImportRow = {
+  orderId: string;
+  total: number;
+  customerEmail: string;
+  statusAction: StatusAction;
+};
+
+type RpcResult = {
+  success?: boolean;
+  duplicate?: boolean;
+  error?: string;
+};
+
 function json(body: unknown, status = 200) {
   return new Response(JSON.stringify(body), {
     status,
@@ -14,14 +30,11 @@ function json(body: unknown, status = 200) {
 }
 
 /**
- * Shoptet CSV importer — DRY-RUN ONLY (Phase 1B).
+ * Shoptet CSV importer.
  *
- * Fetches a partner's Shoptet CSV export (URL read from Vault, never logged),
- * validates headers, parses rows, and writes a shoptet_import_runs summary plus
- * per-row outcomes (order code + outcome only — NO customer emails, NO URL).
- *
- * It does NOT call create_partner_order_reward, does NOT update reward status,
- * and does NOT send any email. It only reports what a live run WOULD do.
+ * Default mode is dry-run. Live issuance runs only when the caller sends
+ * { "mode": "live" }. The importer never logs/returns the Shoptet URL, customer
+ * emails, full reward codes, API keys, tokens, or hashes.
  *
  * Auth: x-internal-token (automation) OR service-role bearer OR superadmin JWT.
  */
@@ -47,7 +60,6 @@ async function authorize(req: Request, admin: ReturnType<typeof createClient>) {
   return null;
 }
 
-// ── CSV parsing (delimiter auto-detect ; or ,) ───────────────────────────────
 function detectDelimiter(headerLine: string): string {
   const semi = (headerLine.match(/;/g) || []).length;
   const comma = (headerLine.match(/,/g) || []).length;
@@ -61,10 +73,15 @@ function parseCsvLine(line: string, delim: string): string[] {
   for (let i = 0; i < line.length; i++) {
     const ch = line[i];
     if (ch === '"') {
-      if (inQuotes && line[i + 1] === '"') { cur += '"'; i++; }
-      else inQuotes = !inQuotes;
+      if (inQuotes && line[i + 1] === '"') {
+        cur += '"';
+        i++;
+      } else {
+        inQuotes = !inQuotes;
+      }
     } else if (ch === delim && !inQuotes) {
-      out.push(cur); cur = "";
+      out.push(cur);
+      cur = "";
     } else {
       cur += ch;
     }
@@ -73,12 +90,10 @@ function parseCsvLine(line: string, delim: string): string[] {
   return out.map((s) => s.trim());
 }
 
-// Diacritic-insensitive normalizer (Czech statuses like "Odesláno" → "odeslano").
 function norm(s: string): string {
-  return (s ?? "").toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g, "");
+  return (s ?? "").toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
 }
 
-// Candidate header names (normalized substring match — ASCII forms only).
 const HEADER_CANDIDATES = {
   order: ["code", "cislo objednavky", "order", "order_number", "objednavka"],
   total: ["total", "celkem", "cena celkem", "price", "totalprice", "grand total", "amount"],
@@ -95,12 +110,19 @@ function findCol(headers: string[], candidates: string[]): number {
   return -1;
 }
 
-// Conservative Shoptet status → reward action mapping (dry-run reporting only).
-function mapStatus(raw: string): "paid" | "cancelled" | "pending" {
+function mapStatus(raw: string): StatusAction {
   const s = norm(raw);
   if (/(zaplac|paid|completed|dokon|odeslan|shipped|vyriz)/.test(s)) return "paid";
   if (/(storn|zrusen|cancel|vracen|returned|nevyzved|unpaid|nezaplac)/.test(s)) return "cancelled";
   return "pending";
+}
+
+function asMode(raw: unknown): ImportMode {
+  return raw === "live" ? "live" : "dry_run";
+}
+
+function isSuccessResult(value: unknown): value is RpcResult {
+  return Boolean(value && typeof value === "object" && (value as RpcResult).success === true);
 }
 
 serve(async (req) => {
@@ -114,12 +136,17 @@ serve(async (req) => {
   const authFailure = await authorize(req, admin);
   if (authFailure) return json({ status: "error", error: authFailure.error }, authFailure.status);
 
-  let body: { partner_id?: string };
-  try { body = await req.json(); } catch { return json({ status: "error", error: "invalid_json" }, 400); }
+  let body: { partner_id?: string; mode?: string };
+  try {
+    body = await req.json();
+  } catch {
+    return json({ status: "error", error: "invalid_json" }, 400);
+  }
+
   const partnerId = (body.partner_id ?? "").trim();
   if (!partnerId) return json({ status: "error", error: "partner_id is required" }, 400);
+  const mode = asMode(body.mode);
 
-  // Partner must exist and be enabled for import.
   const { data: partner, error: pErr } = await admin
     .from("partners")
     .select("id, shoptet_import_enabled, shoptet_export_secret_name")
@@ -129,10 +156,9 @@ serve(async (req) => {
   if (!partner.shoptet_import_enabled) return json({ status: "error", error: "import_not_enabled" }, 400);
   if (!partner.shoptet_export_secret_name) return json({ status: "error", error: "export_url_not_configured" }, 400);
 
-  // Open a dry-run record up front.
   const { data: run, error: runErr } = await admin
     .from("shoptet_import_runs")
-    .insert({ partner_id: partnerId, trigger: "admin", mode: "dry_run", status: "running" })
+    .insert({ partner_id: partnerId, trigger: "admin", mode, status: "running" })
     .select("id")
     .single();
   if (runErr || !run) return json({ status: "error", error: "could_not_create_run" }, 500);
@@ -143,7 +169,6 @@ serve(async (req) => {
   };
 
   try {
-    // Read URL from Vault (server-side only, never logged/returned).
     const { data: url, error: urlErr } = await admin.rpc("get_shoptet_export_url", { p_partner_id: partnerId });
     if (urlErr || !url) {
       await finalize({ status: "failed", error_summary: "export_url_unavailable" });
@@ -155,6 +180,7 @@ serve(async (req) => {
       await finalize({ status: "failed", error_summary: `fetch_failed_http_${resp.status}` });
       return json({ status: "error", error: "fetch_failed", http_status: resp.status, run_id: runId }, 502);
     }
+
     const text = await resp.text();
     const lines = text.split(/\r?\n/).filter((l) => l.trim().length > 0);
     if (lines.length < 1) {
@@ -179,22 +205,30 @@ serve(async (req) => {
     }
 
     const dataRows = lines.slice(1);
-    let rowsValid = 0, rowsInvalid = 0, rowsWouldCreate = 0, rowsWouldStatusUpdate = 0, rowsSkipDup = 0;
+    let rowsValid = 0;
+    let rowsInvalid = 0;
+    let rowsWouldCreate = 0;
+    let rowsWouldStatusUpdate = 0;
+    let rowsSkipDup = 0;
+    let rowsCreated = 0;
+    let rowsStatusUpdated = 0;
+    let rowsFailed = 0;
 
-    // Pre-load existing external_order_ids for this partner (dup detection).
     const { data: existing } = await admin
       .from("partner_reward_codes")
       .select("external_order_id")
       .eq("partner_id", partnerId);
     const existingIds = new Set((existing ?? []).map((r: { external_order_id: string }) => r.external_order_id));
 
+    const validRows: ImportRow[] = [];
     const logBatch: Array<Record<string, unknown>> = [];
     for (const line of dataRows) {
       const cols = parseCsvLine(line, delim);
       const orderId = (cols[colOrder] ?? "").trim();
       const totalRaw = (cols[colTotal] ?? "").replace(/\s/g, "").replace(",", ".");
       const total = Number(totalRaw);
-      const emailPresent = colEmail >= 0 && (cols[colEmail] ?? "").includes("@"); // presence only; never stored
+      const customerEmail = (cols[colEmail] ?? "").trim();
+      const emailPresent = customerEmail.includes("@");
       const statusAction = colStatus >= 0 ? mapStatus(cols[colStatus] ?? "") : "pending";
 
       if (!orderId || !Number.isFinite(total) || total <= 0 || !emailPresent) {
@@ -202,19 +236,77 @@ serve(async (req) => {
         logBatch.push({ run_id: runId, external_order_id: orderId || null, action: "invalid", result: "skipped" });
         continue;
       }
+
       rowsValid++;
-      if (existingIds.has(orderId)) {
+      if (mode === "dry_run" && existingIds.has(orderId)) {
         rowsSkipDup++;
         logBatch.push({ run_id: runId, external_order_id: orderId, action: "skip_dup", result: "exists" });
         continue;
       }
-      rowsWouldCreate++;
-      logBatch.push({ run_id: runId, external_order_id: orderId, action: "would_create", result: statusAction });
-      if (statusAction === "paid" || statusAction === "cancelled") rowsWouldStatusUpdate++;
+
+      validRows.push({ orderId, total, customerEmail, statusAction });
+      if (!existingIds.has(orderId)) {
+        rowsWouldCreate++;
+        logBatch.push({ run_id: runId, external_order_id: orderId, action: "would_create", result: statusAction });
+        if (statusAction === "paid" || statusAction === "cancelled") rowsWouldStatusUpdate++;
+      }
+    }
+
+    if (mode === "live") {
+      const preLiveLogBatch = logBatch.filter((row) => row.action === "invalid");
+      logBatch.length = 0;
+      logBatch.push(...preLiveLogBatch);
+
+      if (rowsInvalid > 0) {
+        rowsFailed = rowsInvalid;
+      } else {
+        for (const row of validRows) {
+          const { data: createResult, error: createErr } = await admin.rpc("create_partner_order_reward", {
+            p_partner_id: partnerId,
+            p_external_order_id: row.orderId,
+            p_order_total_czk: row.total,
+            p_customer_email: row.customerEmail,
+            p_metadata: {
+              source_detail: "shoptet_import",
+              shoptet_import_run_id: runId,
+            },
+          });
+
+          if (createErr || !isSuccessResult(createResult)) {
+            rowsFailed++;
+            logBatch.push({ run_id: runId, external_order_id: row.orderId, action: "error", result: "create_failed" });
+            continue;
+          }
+
+          if (createResult.duplicate === true) {
+            rowsSkipDup++;
+            logBatch.push({ run_id: runId, external_order_id: row.orderId, action: "skip_dup", result: "exists" });
+          } else {
+            rowsCreated++;
+            logBatch.push({ run_id: runId, external_order_id: row.orderId, action: "create", result: "ok" });
+          }
+
+          if (row.statusAction === "pending") continue;
+
+          const { data: statusResult, error: statusErr } = await admin.rpc("update_partner_order_reward_status", {
+            p_partner_id: partnerId,
+            p_external_order_id: row.orderId,
+            p_order_status: row.statusAction,
+          });
+
+          if (statusErr || !isSuccessResult(statusResult)) {
+            rowsFailed++;
+            logBatch.push({ run_id: runId, external_order_id: row.orderId, action: "error", result: "status_update_failed" });
+            continue;
+          }
+
+          rowsStatusUpdated++;
+          logBatch.push({ run_id: runId, external_order_id: row.orderId, action: "status_update", result: row.statusAction });
+        }
+      }
     }
 
     if (logBatch.length > 0) {
-      // Insert in chunks to keep payloads small.
       for (let i = 0; i < logBatch.length; i += 500) {
         await admin.from("shoptet_import_row_log").insert(logBatch.slice(i, i + 500));
       }
@@ -227,14 +319,32 @@ serve(async (req) => {
       rows_would_create: rowsWouldCreate,
       rows_would_status_update: rowsWouldStatusUpdate,
       rows_skipped_dup: rowsSkipDup,
-      status: rowsInvalid > 0 ? "partial" : "ok",
+      rows_created: rowsCreated,
+      rows_status_updated: rowsStatusUpdated,
+      rows_failed: rowsFailed,
+      status: rowsInvalid > 0 || rowsFailed > 0 ? "partial" : "ok",
     };
     await finalize(summary);
 
-    return json({ status: "ok", mode: "dry_run", run_id: runId, ...summary });
+    if (mode === "live") {
+      return json({
+        status: summary.status,
+        mode,
+        run_id: runId,
+        rows_total: summary.rows_total,
+        rows_valid: summary.rows_valid,
+        rows_invalid: summary.rows_invalid,
+        created: rowsCreated,
+        status_updated: rowsStatusUpdated,
+        skipped_duplicates: rowsSkipDup,
+        failed: rowsFailed,
+      }, summary.status === "ok" ? 200 : 500);
+    }
+
+    return json({ status: "ok", mode, run_id: runId, ...summary });
   } catch (e) {
     await finalize({ status: "failed", error_summary: "unexpected_error" });
-    console.error("import-shoptet-orders dry-run error:", (e as Error)?.message);
+    console.error("import-shoptet-orders error:", (e as Error)?.message);
     return json({ status: "error", error: "unexpected_error", run_id: runId }, 500);
   }
 });
