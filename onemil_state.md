@@ -16,15 +16,15 @@ Shoptet Phase 1A/1B/1C dokončeno na stagingu i **produkci** (`xkzhjldrojjlrkezo
 - **Final postcheck ✅:** 2 kódy s ext_order_id (oba issued), 0 failed import rows, 0 pending email_queue, partner_coin_activations=3 (nedotčeno), latest live run=`ok`, staré 3 null-ext-id kódy nedotčeny. Produkce v očekávaném stavu.
 - **Monitoring (bez nového kódu):** denně — `shoptet_import_runs` latest status, `shoptet_import_row_log` failed rows, `email_queue` pending count. Týdně — `rows_created` vs. nové objednávky, `rows_skipped_dup` spike, `partner_coin_activations` růst po redemption, stale `issued` kódy > 30 dní. Vše read-only SQL. Volitelně: admin view `/admin/shoptet-imports` + Telegram alert (Phase 2, vyžaduje schválení Pavla).
 
-## SHOPTET PHASE 2 — PRODUKTOVÉ ROZHODNUTÍ: TŘI ZPŮSOBY NAPOJENÍ E-SHOPU (28. 06. 2026)
+## SHOPTET PHASE 2 — PRODUKTOVÉ ROZHODNUTÍ: TŘI ZPŮSOBY NAPOJENÍ E-SHOPU (28. 06. 2026, opraveno 28. 06. 2026)
 
 OneMil nabízí tři způsoby napojení partnerského e-shopu. Výběr závisí na technické úrovni partnera a dohodnutém modelu doručení.
 
-| Způsob | Komu | Doručení kódu zákazníkovi |
-|---|---|---|
-| Shoptet CSV automat | Shoptet e-shopy, samoobslužně | OneMil e-mailem (výchozí) |
-| OneMil Partner API | Větší e-shopy s vývojáři | OneMil e-mailem (nebo `shoptet_customer_delivery`) |
-| Individuální partner delivery | Výjimka po domluvě | Partner vlastním systémem |
+| Způsob | Komu | Doručení kódu zákazníkovi | `shoptet_customer_delivery` |
+|---|---|---|---|
+| Shoptet CSV automat | Shoptet e-shopy, samoobslužně | OneMil e-mailem | `'onemil'` — nastavuje approve EF |
+| OneMil Partner API | Větší e-shopy s vývojáři | OneMil e-mailem | `'onemil'` (výchozí) |
+| Individuální partner delivery | Výjimka po domluvě | Partner vlastním systémem | `'partner'` — admin-only |
 
 **1. Shoptet CSV automat** — výchozí doporučená cesta:
 - Partner zadá URL Shoptet exportu v `/partner/dashboard`; admin schválí.
@@ -43,6 +43,13 @@ OneMil nabízí tři způsoby napojení partnerského e-shopu. Výběr závisí 
 - Nastavení: `shoptet_customer_delivery='partner'` — OneMil neposílá e-mail zákazníkovi.
 - BOHEMIA zůstává v tomto režimu: kódy `issued` v OneMil, BOHEMIA doručuje přes vlastní e-shop.
 - Aktivuje admin ručně — partner si toto nastavení samoobslužně nezvolí.
+
+**Kritické pravidlo Phase 2 — `shoptet_customer_delivery` při approve (neměnit):**
+- Produkční default `partners.shoptet_customer_delivery` je `'partner'` (BOHEMIA ho má od Phase 1).
+- Nový self-service Shoptet partner musí dostat `'onemil'` — OneMil posílá e-mail zákazníkovi.
+- **EF `approve-shoptet-connection` MUSÍ při každém schválení explicitně nastavit `shoptet_customer_delivery = 'onemil'`** na daném `partners` řádku. Bez tohoto SET by nový partner zdědil produkční default `'partner'` a zákazníci by nedostávali e-maily.
+- BOHEMIA nepodává žádost přes self-service — approve EF ji nikdy neovlivní.
+- `'partner'` nebo `'both'` pro nové partnery nastaví admin manuálně po schválení — formulář partner nenabízí.
 
 **Partner dashboard wording (Phase 2):**
 - „Shoptet e-shop? → Shoptet automat (zadejte export URL, my se postaráme o zbytek)."

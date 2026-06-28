@@ -14,9 +14,11 @@
 
 ---
 
-## 2026-06-28 -- Shoptet Phase 2 product decision: three e-shop connection methods documented
+## 2026-06-28 -- Shoptet Phase 2 product decision: three e-shop connection methods documented + delivery mode rule corrected
 
 Product decision documented for OneMil partner onboarding: three e-shop connection methods defined — (1) Shoptet CSV automat (default self-service path: partner submits export URL, admin approves, OneMil creates codes and emails customer), (2) OneMil Partner API (for technically capable e-shops sending orders directly via `partner-activate` EF), (3) individual partner delivery (exception by agreement — OneMil creates codes but partner delivers to customer, BOHEMIA remains in this mode with `shoptet_customer_delivery='partner'`). Phase 2 implementation proposal for self-service Shoptet onboarding prepared (new table `shoptet_connection_requests`, EF `submit-shoptet-connection` + `approve-shoptet-connection`, partner UI form, admin badge + approval flow). Documentation only — no code, no migrations, no production changes.
+
+Critical rule added on correction: production default `partners.shoptet_customer_delivery` is `'partner'`. Self-service Shoptet partners must receive `'onemil'` so OneMil emails the customer. EF `approve-shoptet-connection` must explicitly SET `shoptet_customer_delivery = 'onemil'` on approval — without this, new partners would silently inherit the `'partner'` default and customers would not receive codes by email. BOHEMIA is unaffected (does not use the self-service flow). Partner form does not offer delivery mode choice — `'partner'` and `'both'` are admin-only overrides set after approval.
 
 ## 2026-06-28 -- Shoptet import monitoring proposal documented
 
