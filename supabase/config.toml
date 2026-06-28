@@ -122,3 +122,6 @@ verify_jwt = false
 
 [functions.submit-shoptet-connection]
 verify_jwt = false
+
+[functions.approve-shoptet-connection]
+verify_jwt = false
