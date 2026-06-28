@@ -62,6 +62,24 @@ interface ApiActivity {
   created_at: string | null;
 }
 
+// Shoptet self-service connection request. The Shoptet export URL is NEVER
+// stored here, returned to, or held in client state after submit — only the
+// url_received boolean flag indicates whether a URL was provided.
+interface ShoptetConnRequest {
+  id: string;
+  shop_name: string;
+  trigger_status: string;
+  reward_czk: number;
+  reward_mc: number;
+  url_received: boolean;
+  status: string;
+  partner_note: string | null;
+  rejection_reason: string | null;
+  submitted_at: string | null;
+  reviewed_at: string | null;
+  created_at: string;
+}
+
 const PARTNER_ROTATE_ERROR_MESSAGES: Record<string, string> = {
   invalid_password: 'Neplatné heslo.',
   password_required: 'Heslo je povinné.',
@@ -188,6 +206,17 @@ const PartnerDashboard = () => {
   const [rotatePasswordVisible, setRotatePasswordVisible] = useState(false);
   const [newApiKey, setNewApiKey] = useState('');
   const [rotatingKey, setRotatingKey] = useState(false);
+
+  // ── Shoptet self-service connection state ───────────────────────────────────
+  const [shoptetReq, setShoptetReq] = useState<ShoptetConnRequest | null>(null);
+  const [shoptetShopName, setShoptetShopName] = useState('');
+  const [shoptetRewardCzk, setShoptetRewardCzk] = useState('');
+  const [shoptetRewardMc, setShoptetRewardMc] = useState('');
+  const [shoptetTrigger, setShoptetTrigger] = useState<'paid' | 'shipped' | 'completed'>('paid');
+  const [shoptetNote, setShoptetNote] = useState('');
+  const [shoptetUrl, setShoptetUrl] = useState(''); // never prefilled, cleared after submit
+  const [shoptetSavingDraft, setShoptetSavingDraft] = useState(false);
+  const [shoptetSubmitting, setShoptetSubmitting] = useState(false);
 
   // ── Offer billing state ────────────────────────────────────────────────────
   const [offerActivationCount, setOfferActivationCount] = useState<number>(0);
@@ -797,6 +826,10 @@ const PartnerDashboard = () => {
         .limit(50);
 
       setApiActivity(activityData || []);
+
+      // Load latest Shoptet connection request (RLS: own rows only).
+      // The Shoptet URL is never present here — only the url_received flag.
+      await loadShoptetRequest(partnerData.id);
     } catch (error) {
       console.error('Error loading partner data:', error);
       toast.error('Nepodařilo se načíst data');
@@ -806,6 +839,161 @@ const PartnerDashboard = () => {
   };
 
 
+
+  // ── Shoptet self-service handlers ────────────────────────────────────────────
+  const SHOPTET_SELECT = 'id, shop_name, trigger_status, reward_czk, reward_mc, url_received, status, partner_note, rejection_reason, submitted_at, reviewed_at, created_at';
+
+  const loadShoptetRequest = async (partnerId: string) => {
+    const { data } = await supabase
+      .from('shoptet_connection_requests')
+      .select(SHOPTET_SELECT)
+      .eq('partner_id', partnerId)
+      .order('created_at', { ascending: false })
+      .limit(1)
+      .maybeSingle();
+
+    const req = (data as ShoptetConnRequest | null) ?? null;
+    setShoptetReq(req);
+    if (req) {
+      setShoptetShopName(req.shop_name ?? '');
+      setShoptetRewardCzk(req.reward_czk != null ? String(req.reward_czk) : '');
+      setShoptetRewardMc(req.reward_mc != null ? String(req.reward_mc) : '');
+      setShoptetTrigger((['paid', 'shipped', 'completed'].includes(req.trigger_status) ? req.trigger_status : 'paid') as 'paid' | 'shipped' | 'completed');
+      setShoptetNote(req.partner_note ?? '');
+    }
+    // shoptetUrl is intentionally never set from server data.
+  };
+
+  // Validates and returns the draft field payload, or null with a toast on error.
+  const buildShoptetDraftPayload = () => {
+    const shopName = shoptetShopName.trim();
+    const czk = parseFloat(shoptetRewardCzk);
+    const mc = parseFloat(shoptetRewardMc);
+    if (!shopName) {
+      toast.error('Zadejte název e-shopu.');
+      return null;
+    }
+    if (!Number.isFinite(czk) || czk <= 0) {
+      toast.error('Základ (Kč) musí být kladné číslo.');
+      return null;
+    }
+    if (!Number.isFinite(mc) || mc <= 0) {
+      toast.error('MioCoiny musí být kladné číslo.');
+      return null;
+    }
+    return {
+      shop_name: shopName,
+      reward_czk: czk,
+      reward_mc: mc,
+      trigger_status: shoptetTrigger,
+      partner_note: shoptetNote.trim() ? shoptetNote.trim() : null,
+    };
+  };
+
+  // Saves (or updates) a clean draft without the URL. RLS allows partner
+  // INSERT/UPDATE only on own clean drafts.
+  const handleShoptetSaveDraft = async () => {
+    if (!partner) return;
+    const payload = buildShoptetDraftPayload();
+    if (!payload) return;
+
+    setShoptetSavingDraft(true);
+    try {
+      const editableDraft = shoptetReq && shoptetReq.status === 'draft' && !shoptetReq.url_received;
+      if (editableDraft) {
+        const { error } = await supabase
+          .from('shoptet_connection_requests')
+          .update(payload)
+          .eq('id', shoptetReq!.id)
+          .eq('partner_id', partner.id)
+          .eq('status', 'draft');
+        if (error) throw error;
+      } else {
+        const { error } = await supabase
+          .from('shoptet_connection_requests')
+          .insert({ ...payload, partner_id: partner.id, status: 'draft', url_received: false });
+        if (error) throw error;
+      }
+      await loadShoptetRequest(partner.id);
+      toast.success('Koncept napojení uložen.');
+    } catch (e) {
+      console.error('shoptet draft save failed');
+      toast.error('Nepodařilo se uložit koncept.');
+    } finally {
+      setShoptetSavingDraft(false);
+    }
+  };
+
+  // Submits the request to admin review with the Shoptet export URL.
+  // The URL goes only to the EF (→ Vault) and is cleared from client state right after.
+  const handleShoptetSubmit = async () => {
+    if (!partner) return;
+    const payload = buildShoptetDraftPayload();
+    if (!payload) return;
+    const url = shoptetUrl.trim();
+    if (!url) {
+      toast.error('Zadejte URL Shoptet exportu pro odeslání.');
+      return;
+    }
+    try {
+      const parsed = new URL(url);
+      if (parsed.protocol !== 'https:') {
+        toast.error('URL exportu musí začínat https://');
+        return;
+      }
+    } catch {
+      toast.error('Zadejte platnou URL exportu.');
+      return;
+    }
+
+    setShoptetSubmitting(true);
+    try {
+      // Ensure a clean draft row exists and carries the latest field values.
+      let requestId: string | null = null;
+      const editableDraft = shoptetReq && shoptetReq.status === 'draft' && !shoptetReq.url_received;
+      if (editableDraft) {
+        const { error } = await supabase
+          .from('shoptet_connection_requests')
+          .update(payload)
+          .eq('id', shoptetReq!.id)
+          .eq('partner_id', partner.id)
+          .eq('status', 'draft');
+        if (error) throw error;
+        requestId = shoptetReq!.id;
+      } else {
+        const { data, error } = await supabase
+          .from('shoptet_connection_requests')
+          .insert({ ...payload, partner_id: partner.id, status: 'draft', url_received: false })
+          .select('id')
+          .single();
+        if (error) throw error;
+        requestId = (data as { id: string }).id;
+      }
+
+      const { data: efData, error: efError } = await supabase.functions.invoke('submit-shoptet-connection', {
+        body: { request_id: requestId, url },
+      });
+
+      // Clear the URL from client state immediately, regardless of outcome.
+      setShoptetUrl('');
+
+      const efResult = efData as { success?: boolean; error?: string } | null;
+      if (efError || !efResult?.success) {
+        toast.error('Nepodařilo se odeslat žádost ke schválení.');
+        await loadShoptetRequest(partner.id);
+        return;
+      }
+
+      await loadShoptetRequest(partner.id);
+      toast.success('Žádost o napojení odeslána ke schválení.');
+    } catch (e) {
+      console.error('shoptet submit failed');
+      setShoptetUrl('');
+      toast.error('Nepodařilo se odeslat žádost ke schválení.');
+    } finally {
+      setShoptetSubmitting(false);
+    }
+  };
 
   const handleLogoFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -1523,6 +1711,217 @@ const PartnerDashboard = () => {
                   </div>
                 </div>
               </div>
+            </CardContent>
+          </Card>
+        )}
+
+        {/* Shoptet self-service connection — approved partners only. URL never displayed. */}
+        {isAccountApproved && (
+          <Card className="border-[hsl(var(--neon-gold)/0.15)] hover:border-[hsl(var(--neon-gold)/0.25)] transition-colors">
+            <CardHeader className="pb-3">
+              <CardTitle className="flex items-center gap-2 text-[hsl(var(--text-silver))]">
+                <Rocket className="w-5 h-5 text-[hsl(var(--neon-gold))]" />
+                Napojení e-shopu / Shoptet
+              </CardTitle>
+              <CardDescription>
+                Propojte svůj e-shop s OneMil — vyberte způsob, který vám nejvíc vyhovuje.
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-5">
+              {/* 3 connection paths explainer */}
+              <div className="grid gap-3 sm:grid-cols-3">
+                <div className="rounded-lg border border-[hsl(var(--neon-gold)/0.25)] bg-[hsl(var(--neon-gold)/0.06)] p-3">
+                  <div className="flex items-center gap-2 mb-1">
+                    <Rocket className="w-4 h-4 text-[hsl(var(--neon-gold))]" />
+                    <span className="text-sm font-medium">Shoptet automat</span>
+                    <Badge variant="secondary" className="text-[10px] px-1.5 py-0">Doporučeno</Badge>
+                  </div>
+                  <p className="text-xs text-muted-foreground leading-relaxed">
+                    Shoptet e-shop? Zadejte URL exportu objednávek níže — my pravidelně stáhneme data a automaticky vytvoříme MioCoin kódy.
+                  </p>
+                </div>
+                <div className="rounded-lg border border-border/50 bg-muted/20 p-3">
+                  <div className="flex items-center gap-2 mb-1">
+                    <Key className="w-4 h-4 text-muted-foreground" />
+                    <span className="text-sm font-medium">OneMil Partner API</span>
+                  </div>
+                  <p className="text-xs text-muted-foreground leading-relaxed">
+                    Větší e-shop s vývojáři? Posílejte objednávky přímo přes API — bez prodlevy a exportního souboru. Napište nám na <span className="font-medium">eshop@onemil.cz</span>.
+                  </p>
+                </div>
+                <div className="rounded-lg border border-border/50 bg-muted/20 p-3">
+                  <div className="flex items-center gap-2 mb-1">
+                    <Settings className="w-4 h-4 text-muted-foreground" />
+                    <span className="text-sm font-medium">Individuální doručení</span>
+                  </div>
+                  <p className="text-xs text-muted-foreground leading-relaxed">
+                    Vlastní způsob doručení kódů zákazníkům? Možné po domluvě s OneMil.
+                  </p>
+                </div>
+              </div>
+
+              {/* Current request status */}
+              {shoptetReq && (
+                <div className="rounded-lg bg-muted/30 border border-border/50 p-3 space-y-1">
+                  <div className="flex items-center gap-2 text-sm">
+                    <span className="text-muted-foreground">Stav napojení:</span>
+                    {shoptetReq.status === 'draft' && (
+                      <Badge variant="outline" className="gap-1"><FileText className="w-3 h-3" /> Koncept</Badge>
+                    )}
+                    {shoptetReq.status === 'submitted' && (
+                      <Badge variant="secondary" className="gap-1"><Clock className="w-3 h-3" /> Odesláno ke schválení</Badge>
+                    )}
+                    {(shoptetReq.status === 'approved' || shoptetReq.status === 'active') && (
+                      <Badge className="gap-1 bg-emerald-600 hover:bg-emerald-600 text-white"><CheckCircle className="w-3 h-3" /> Aktivní</Badge>
+                    )}
+                    {shoptetReq.status === 'rejected' && (
+                      <Badge variant="destructive" className="gap-1"><XCircle className="w-3 h-3" /> Zamítnuto</Badge>
+                    )}
+                  </div>
+                  {shoptetReq.status === 'rejected' && shoptetReq.rejection_reason && (
+                    <p className="text-xs text-destructive">Důvod: {shoptetReq.rejection_reason}</p>
+                  )}
+                  {shoptetReq.url_received && shoptetReq.status !== 'rejected' && (
+                    <p className="text-xs text-muted-foreground flex items-center gap-1">
+                      <CheckCircle className="w-3 h-3" /> URL exportu jsme bezpečně přijali.
+                    </p>
+                  )}
+                </div>
+              )}
+
+              {/* Shoptet automat form */}
+              {(() => {
+                const locked = !!shoptetReq && (shoptetReq.status === 'submitted' || shoptetReq.status === 'approved' || shoptetReq.status === 'active');
+                return (
+                  <div className="space-y-4">
+                    <h4 className="text-sm font-medium flex items-center gap-2">
+                      <Rocket className="w-4 h-4 text-[hsl(var(--neon-gold))]" />
+                      Shoptet automat — nastavení
+                    </h4>
+                    <div className="grid gap-3 sm:grid-cols-2">
+                      <div className="space-y-1">
+                        <Label htmlFor="shoptet-shop-name" className="text-xs">Název e-shopu</Label>
+                        <Input
+                          id="shoptet-shop-name"
+                          value={shoptetShopName}
+                          onChange={(e) => setShoptetShopName(e.target.value)}
+                          placeholder="Můj e-shop"
+                          maxLength={200}
+                          disabled={locked}
+                          className="h-9"
+                        />
+                      </div>
+                      <div className="space-y-1">
+                        <Label htmlFor="shoptet-trigger" className="text-xs">Kdy vydat odměnu</Label>
+                        <Select
+                          value={shoptetTrigger}
+                          onValueChange={(v) => setShoptetTrigger(v as 'paid' | 'shipped' | 'completed')}
+                          disabled={locked}
+                        >
+                          <SelectTrigger id="shoptet-trigger" className="h-9">
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="paid">Po zaplacení objednávky</SelectItem>
+                            <SelectItem value="shipped">Po odeslání objednávky</SelectItem>
+                            <SelectItem value="completed">Po dokončení objednávky</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
+                      <div className="space-y-1">
+                        <Label htmlFor="shoptet-reward-czk" className="text-xs">Základ (Kč)</Label>
+                        <Input
+                          id="shoptet-reward-czk"
+                          type="number"
+                          min="1"
+                          step="1"
+                          value={shoptetRewardCzk}
+                          onChange={(e) => setShoptetRewardCzk(e.target.value)}
+                          placeholder="100"
+                          disabled={locked}
+                          className="h-9"
+                        />
+                      </div>
+                      <div className="space-y-1">
+                        <Label htmlFor="shoptet-reward-mc" className="text-xs">MioCoiny</Label>
+                        <Input
+                          id="shoptet-reward-mc"
+                          type="number"
+                          min="0.1"
+                          step="0.1"
+                          value={shoptetRewardMc}
+                          onChange={(e) => setShoptetRewardMc(e.target.value)}
+                          placeholder="1"
+                          disabled={locked}
+                          className="h-9"
+                        />
+                      </div>
+                    </div>
+
+                    <div className="space-y-1">
+                      <Label htmlFor="shoptet-note" className="text-xs">Poznámka (volitelné)</Label>
+                      <Textarea
+                        id="shoptet-note"
+                        value={shoptetNote}
+                        onChange={(e) => setShoptetNote(e.target.value)}
+                        placeholder="Cokoliv, co bychom měli vědět k napojení."
+                        maxLength={500}
+                        disabled={locked}
+                        className="min-h-[60px] text-sm"
+                      />
+                    </div>
+
+                    <div className="space-y-1">
+                      <Label htmlFor="shoptet-url" className="text-xs flex items-center gap-1">
+                        <Key className="w-3 h-3" /> URL Shoptet exportu objednávek
+                      </Label>
+                      <Input
+                        id="shoptet-url"
+                        type="password"
+                        autoComplete="off"
+                        value={shoptetUrl}
+                        onChange={(e) => setShoptetUrl(e.target.value)}
+                        placeholder="https://…"
+                        disabled={locked}
+                        className="h-9"
+                      />
+                      <p className="text-[11px] text-muted-foreground leading-relaxed">
+                        URL ukládáme bezpečně a nikdy ji nezobrazujeme zpět. Koncept můžete uložit i bez URL; pro odeslání ke schválení je URL nutná.
+                      </p>
+                    </div>
+
+                    {!locked && (
+                      <div className="flex flex-wrap justify-end gap-2">
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          className="gap-2"
+                          onClick={handleShoptetSaveDraft}
+                          disabled={shoptetSavingDraft || shoptetSubmitting}
+                        >
+                          {shoptetSavingDraft ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
+                          Uložit koncept
+                        </Button>
+                        <Button
+                          size="sm"
+                          className="gap-2"
+                          onClick={handleShoptetSubmit}
+                          disabled={shoptetSubmitting || shoptetSavingDraft}
+                        >
+                          {shoptetSubmitting ? <Loader2 className="w-4 h-4 animate-spin" /> : <Send className="w-4 h-4" />}
+                          Odeslat ke schválení
+                        </Button>
+                      </div>
+                    )}
+
+                    {locked && shoptetReq?.status === 'submitted' && (
+                      <p className="text-xs text-muted-foreground flex items-center gap-1">
+                        <Clock className="w-3 h-3" /> Žádost čeká na schválení OneMil. Po schválení se napojení aktivuje automaticky.
+                      </p>
+                    )}
+                  </div>
+                );
+              })()}
             </CardContent>
           </Card>
         )}
