@@ -35,6 +35,8 @@ import {
   UserPlus,
   BookOpen,
   Save,
+  Rocket,
+  Coins,
 } from "lucide-react";
 import { Textarea } from "@/components/ui/textarea";
 import { NavigateToLogin } from "@/components/NavigateToLogin";
@@ -80,6 +82,30 @@ interface ApiKey {
   created_at: string;
   revoked_at: string | null;
 }
+
+// Shoptet self-service connection request (admin view). The Shoptet export URL
+// is NEVER selected, displayed, or logged here — only the url_received flag.
+interface ShoptetRequest {
+  id: string;
+  partner_id: string;
+  shop_name: string;
+  trigger_status: string;
+  reward_czk: number;
+  reward_mc: number;
+  url_received: boolean;
+  status: string;
+  partner_note: string | null;
+  submitted_at: string | null;
+  created_at: string;
+  partner_name: string | null;
+  partner_email: string | null;
+}
+
+const shoptetTriggerLabels: Record<string, string> = {
+  paid: "Po zaplacení objednávky",
+  shipped: "Po odeslání objednávky",
+  completed: "Po dokončení objednávky",
+};
 
 const statusLabels: Record<PartnerStatus, string> = {
   pending: "Čeká na schválení",
@@ -150,6 +176,14 @@ const AdminPartners = () => {
   const [apiDocLoading, setApiDocLoading] = useState(true);
   const [apiDocSaving, setApiDocSaving] = useState(false);
 
+  // Shoptet connection requests state
+  const [shoptetRequests, setShoptetRequests] = useState<ShoptetRequest[]>([]);
+  const [shoptetLoading, setShoptetLoading] = useState(true);
+  const [shoptetActionLoading, setShoptetActionLoading] = useState<string | null>(null);
+  const [rejectDialogOpen, setRejectDialogOpen] = useState(false);
+  const [rejectTarget, setRejectTarget] = useState<ShoptetRequest | null>(null);
+  const [rejectReason, setRejectReason] = useState("");
+
   /* ===================== INIT ===================== */
 
   useEffect(() => {
@@ -157,7 +191,115 @@ const AdminPartners = () => {
     fetchPartners();
     loadPendingRegistrations();
     loadApiDocumentation();
+    loadShoptetRequests();
   }, [user, isAdmin]);
+
+  /* ===================== SHOPTET CONNECTION REQUESTS ===================== */
+
+  const loadShoptetRequests = async () => {
+    setShoptetLoading(true);
+    try {
+      // Admin RLS (scr_admin_all) allows full SELECT. The export URL column
+      // does not exist in this table — only url_received boolean.
+      const { data, error } = await supabase
+        .from("shoptet_connection_requests")
+        .select(
+          "id, partner_id, shop_name, trigger_status, reward_czk, reward_mc, url_received, status, partner_note, submitted_at, created_at, partners(name, contact_email)"
+        )
+        .eq("status", "submitted")
+        .order("submitted_at", { ascending: true });
+
+      if (error) throw error;
+
+      const mapped: ShoptetRequest[] = (data || []).map((r: Record<string, unknown>) => {
+        const partner = r.partners as { name?: string; contact_email?: string } | null;
+        return {
+          id: r.id as string,
+          partner_id: r.partner_id as string,
+          shop_name: r.shop_name as string,
+          trigger_status: r.trigger_status as string,
+          reward_czk: Number(r.reward_czk),
+          reward_mc: Number(r.reward_mc),
+          url_received: Boolean(r.url_received),
+          status: r.status as string,
+          partner_note: (r.partner_note as string | null) ?? null,
+          submitted_at: (r.submitted_at as string | null) ?? null,
+          created_at: r.created_at as string,
+          partner_name: partner?.name ?? null,
+          partner_email: partner?.contact_email ?? null,
+        };
+      });
+      setShoptetRequests(mapped);
+    } catch (error) {
+      console.error("Error loading Shoptet requests:", error);
+    } finally {
+      setShoptetLoading(false);
+    }
+  };
+
+  // Approve: EF sets shoptet_customer_delivery='onemil' automatically (not exposed here).
+  const handleShoptetApprove = async (request: ShoptetRequest) => {
+    setShoptetActionLoading(request.id);
+    try {
+      const { data: sessionData } = await supabase.auth.getSession();
+      if (!sessionData.session) throw new Error("Nejste přihlášen");
+
+      const res = await supabase.functions.invoke("approve-shoptet-connection", {
+        headers: { Authorization: `Bearer ${sessionData.session.access_token}` },
+        body: { request_id: request.id, action: "approve" },
+      });
+
+      const data = res.data as { success?: boolean } | null;
+      if (res.error || !data?.success) throw new Error("approve_failed");
+
+      toast.success("Napojení e-shopu schváleno");
+      await loadShoptetRequests();
+    } catch (error) {
+      console.error("Error approving Shoptet request");
+      toast.error("Nepodařilo se schválit napojení");
+    } finally {
+      setShoptetActionLoading(null);
+    }
+  };
+
+  const openRejectDialog = (request: ShoptetRequest) => {
+    setRejectTarget(request);
+    setRejectReason("");
+    setRejectDialogOpen(true);
+  };
+
+  const handleShoptetReject = async () => {
+    if (!rejectTarget) return;
+    const reason = rejectReason.trim();
+    if (!reason) {
+      toast.error("Zadejte důvod zamítnutí");
+      return;
+    }
+    setShoptetActionLoading(rejectTarget.id);
+    try {
+      const { data: sessionData } = await supabase.auth.getSession();
+      if (!sessionData.session) throw new Error("Nejste přihlášen");
+
+      const res = await supabase.functions.invoke("approve-shoptet-connection", {
+        headers: { Authorization: `Bearer ${sessionData.session.access_token}` },
+        body: { request_id: rejectTarget.id, action: "reject", rejection_reason: reason },
+      });
+
+      const data = res.data as { success?: boolean } | null;
+      if (res.error || !data?.success) throw new Error("reject_failed");
+
+      toast.success("Napojení e-shopu zamítnuto");
+      setRejectDialogOpen(false);
+      setRejectTarget(null);
+      setRejectReason("");
+      await loadShoptetRequests();
+    } catch (error) {
+      console.error("Error rejecting Shoptet request");
+      toast.error("Nepodařilo se zamítnout napojení");
+    } finally {
+      setShoptetActionLoading(null);
+    }
+  };
 
   /* ===================== API DOCUMENTATION ===================== */
 
@@ -543,6 +685,12 @@ const AdminPartners = () => {
               <Image className="w-3 h-3" />
               {pendingLogoPartners.length} log ke schválení
             </Badge>
+            {shoptetRequests.length > 0 && (
+              <Badge variant="destructive" className="text-sm flex items-center gap-1">
+                <Rocket className="w-3 h-3" />
+                {shoptetRequests.length} Shoptet žádostí
+              </Badge>
+            )}
             <Button onClick={openNewDialog} size="sm">
               <Plus className="w-4 h-4 mr-2" />
               Přidat partnera
@@ -551,10 +699,19 @@ const AdminPartners = () => {
         </div>
 
         <Tabs defaultValue="pending" className="space-y-6">
-          <TabsList className="grid w-full max-w-2xl grid-cols-4">
+          <TabsList className="grid w-full max-w-3xl grid-cols-5">
             <TabsTrigger value="pending" className="flex items-center gap-2">
               <UserPlus className="w-4 h-4" />
               Čekající registrace
+            </TabsTrigger>
+            <TabsTrigger value="shoptet" className="flex items-center gap-2">
+              <Rocket className="w-4 h-4" />
+              Shoptet žádosti
+              {shoptetRequests.length > 0 && (
+                <Badge variant="destructive" className="ml-1 px-1.5 py-0 text-[10px]">
+                  {shoptetRequests.length}
+                </Badge>
+              )}
             </TabsTrigger>
             <TabsTrigger value="partners" className="flex items-center gap-2">
               <Building2 className="w-4 h-4" />
@@ -655,6 +812,114 @@ const AdminPartners = () => {
                               variant="destructive"
                               onClick={() => handleApproveRegistration(reg, "reject")}
                               disabled={approvalLoading === reg.id}
+                            >
+                              <XCircle className="w-4 h-4" />
+                            </Button>
+                          </div>
+                        </CardContent>
+                      </Card>
+                    ))}
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          </TabsContent>
+
+          {/* Shoptet Connection Requests Tab */}
+          <TabsContent value="shoptet">
+            <Card className="border-border/50">
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <Rocket className="w-5 h-5 text-primary" />
+                  Žádosti o napojení Shoptet
+                </CardTitle>
+                <CardDescription>
+                  Self-service žádosti partnerů o napojení e-shopu přes Shoptet export. Po schválení OneMil
+                  posílá zákazníkům kódy e-mailem automaticky.
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                {shoptetLoading ? (
+                  <div className="flex justify-center py-8">
+                    <Loader2 className="w-6 h-6 animate-spin text-primary" />
+                  </div>
+                ) : shoptetRequests.length === 0 ? (
+                  <div className="text-center py-12 text-muted-foreground">
+                    <Rocket className="w-12 h-12 mx-auto mb-4 opacity-30" />
+                    <p>Žádné čekající žádosti o napojení</p>
+                  </div>
+                ) : (
+                  <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+                    {shoptetRequests.map((req) => (
+                      <Card key={req.id} className="border-border/50">
+                        <CardHeader className="pb-2">
+                          <CardTitle className="text-base">{req.shop_name}</CardTitle>
+                          <CardDescription className="text-xs">
+                            {req.partner_name || "Neznámý partner"}
+                            {req.partner_email ? ` · ${req.partner_email}` : ""}
+                          </CardDescription>
+                        </CardHeader>
+                        <CardContent className="space-y-3">
+                          <div className="text-sm space-y-1">
+                            <div className="flex justify-between gap-2">
+                              <span className="text-muted-foreground">Odesláno:</span>
+                              <span className="text-xs">
+                                {req.submitted_at
+                                  ? format(new Date(req.submitted_at), "dd.MM.yyyy HH:mm", { locale: cs })
+                                  : "—"}
+                              </span>
+                            </div>
+                            <div className="flex justify-between gap-2">
+                              <span className="text-muted-foreground">Vydat odměnu:</span>
+                              <span className="text-right text-xs">
+                                {shoptetTriggerLabels[req.trigger_status] || req.trigger_status}
+                              </span>
+                            </div>
+                            <div className="flex justify-between gap-2">
+                              <span className="text-muted-foreground flex items-center gap-1">
+                                <Coins className="w-3 h-3" /> Konverze:
+                              </span>
+                              <span className="font-medium">
+                                {req.reward_czk} Kč = {req.reward_mc} MC
+                              </span>
+                            </div>
+                            <div className="flex justify-between gap-2">
+                              <span className="text-muted-foreground">Export URL:</span>
+                              {req.url_received ? (
+                                <Badge variant="success" className="text-[10px] gap-1">
+                                  <CheckCircle className="w-3 h-3" /> Přijata
+                                </Badge>
+                              ) : (
+                                <Badge variant="outline" className="text-[10px]">Chybí</Badge>
+                              )}
+                            </div>
+                          </div>
+                          {req.partner_note && (
+                            <div className="rounded-md bg-muted/30 border border-border/50 p-2">
+                              <p className="text-xs text-muted-foreground whitespace-pre-wrap">
+                                {req.partner_note}
+                              </p>
+                            </div>
+                          )}
+                          <div className="flex gap-2 pt-1">
+                            <Button
+                              size="sm"
+                              className="flex-1"
+                              onClick={() => handleShoptetApprove(req)}
+                              disabled={shoptetActionLoading === req.id}
+                            >
+                              {shoptetActionLoading === req.id ? (
+                                <Loader2 className="w-4 h-4 animate-spin mr-2" />
+                              ) : (
+                                <CheckCircle className="w-4 h-4 mr-2" />
+                              )}
+                              Schválit
+                            </Button>
+                            <Button
+                              size="sm"
+                              variant="destructive"
+                              onClick={() => openRejectDialog(req)}
+                              disabled={shoptetActionLoading === req.id}
                             >
                               <XCircle className="w-4 h-4" />
                             </Button>
@@ -1140,6 +1405,50 @@ const AdminPartners = () => {
               </div>
             </>
           )}
+        </DialogContent>
+      </Dialog>
+
+      {/* Shoptet Reject Dialog */}
+      <Dialog open={rejectDialogOpen} onOpenChange={setRejectDialogOpen}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>Zamítnout napojení e-shopu</DialogTitle>
+            <DialogDescription>
+              {rejectTarget ? `${rejectTarget.shop_name} — ${rejectTarget.partner_name ?? ""}` : ""}
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-2">
+            <Label htmlFor="shoptet-reject-reason">Důvod zamítnutí</Label>
+            <Textarea
+              id="shoptet-reject-reason"
+              value={rejectReason}
+              onChange={(e) => setRejectReason(e.target.value)}
+              placeholder="Napište partnerovi důvod zamítnutí…"
+              maxLength={500}
+              className="min-h-[100px]"
+            />
+          </div>
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => setRejectDialogOpen(false)}
+              disabled={shoptetActionLoading === rejectTarget?.id}
+            >
+              Zrušit
+            </Button>
+            <Button
+              variant="destructive"
+              onClick={handleShoptetReject}
+              disabled={!rejectReason.trim() || shoptetActionLoading === rejectTarget?.id}
+            >
+              {shoptetActionLoading === rejectTarget?.id ? (
+                <Loader2 className="w-4 h-4 animate-spin mr-2" />
+              ) : (
+                <XCircle className="w-4 h-4 mr-2" />
+              )}
+              Zamítnout
+            </Button>
+          </DialogFooter>
         </DialogContent>
       </Dialog>
 
