@@ -1,5 +1,31 @@
 # CLAUDE.md
 
+## SHOPTET AUTOMATIC IMPORT SCHEDULER — PRODUKČNÍ ROLLOUT DOKONČEN (29. 06. 2026, schválení Pavla)
+
+Automatický Shoptet import **nasazeno na produkci `xkzhjldrojjlrkezorey`** (29. 06. 2026 17:30 UTC, výslovné schválení Pavla). Cron poběží automaticky každých 15 minut.
+
+**Aplikováno na produkci:**
+- **DB migrace:** `20260629150000_shoptet_auto_import_cron_prod.sql` (atomická transakce). Obsahuje: `pg_net` + `pg_cron` extensions, Vault secret `shoptet_cron_internal_token` (generován jednou, nikdy netisknout), SECURITY DEFINER funkce `verify_shoptet_cron_token(text)` (service_role only, revoke public/anon/authenticated), orchestrator `run_shoptet_cron_imports()` (SECURITY DEFINER, loop přes partnery WHERE `shoptet_import_enabled=true`, overlap guard 30 min, dispatch přes `net.http_post` s x-internal-token header, body `{partner_id, mode='live', trigger='cron'}`), pg_cron job `shoptet_auto_import_15min` schedule `*/15 * * * *`.
+- **EF `import-shoptet-orders` v8 ACTIVE** (verify_jwt=false, Vault token verification via RPC `verify_shoptet_cron_token(p_token)`, trigger='cron' support, overlap guard, respektuje `reward_trigger_status` threshold, 5-bucket status taxonomie, idempotentní).
+- **Backup před apply:** `backups/onemil-production-pre-shoptet-cron-20260629-143257.dump` (465 825 272 B, ověřen `pg_restore -l` exit 0, 1643 TOC entries, obsahuje shoptet_import_runs).
+
+**Produkční postcheck ✅ (29. 06. 2026):**
+- Cron job `shoptet_auto_import_15min`: active=true, schedule `*/15 * * * *` ✅
+- Latest cron run: status=`ok`, rows_failed=0 ✅
+- Idempotence ověřena: run 1 created=1 skipped_dup=2; run 2 created=0 skipped_dup=3 ✅
+- BOHEMIA `shoptet_customer_delivery='partner'`, žádné OneMil e-maily zákazníkům ✅
+- Cron stále funguje po resetu DB hesla ✅
+
+**Kritická pravidla (neměnit):**
+- Orchestrator `run_shoptet_cron_imports` běží každých 15 minut; partner s `shoptet_import_enabled=true` bez běžícího importu <30 min starého se dispatchuje.
+- EF verifikuje token server-side přes RPC `verify_shoptet_cron_token` — token se nikdy nevystavuje klientovi.
+- BOHEMIA zůstává `shoptet_customer_delivery='partner'` — OneMil neposílá zákazníkům e-maily.
+- Duplicate detection v `create_partner_order_reward` (advisory lock + dedup na `external_order_id`).
+
+**Rollback:** `SELECT cron.unschedule('shoptet_auto_import_15min'); DROP FUNCTION IF EXISTS public.run_shoptet_cron_imports(); DROP FUNCTION IF EXISTS public.verify_shoptet_cron_token(text);` Vault secret lze smazat přes API.
+
+**Commit:** `cd811f41` (migrace + aplikace + push na main).
+
 ## PARTNER DASHBOARD WEEKLY OVERVIEW — RLS FIX NA STAGINGU + PRODUKČNÍ ROLLOUT DOKONČEN (29. 06. 2026)
 
 Partner dashboard „Týdenní přehled" (a statistické karty „Vydané kódy / Aktivované kódy") ukazoval BOHEMIA všude 0, přestože data v DB existovala. **Root cause (read-only audit):** `partner_reward_codes`, `partner_coin_activations` a `partner_api_keys` měly **RLS enabled, ale 0 policies → deny-all** pro partnerovu `authenticated` session. Frontend čte tyto tabulky přímo přes `.from()` s partner JWT → PostgREST vrací `[]` (bez chyby) → vše 0. Data byla správná (`issued_at` vyplněn, žádný backfill nepotřeba); UI `weeklyReports` v `PartnerDashboard.tsx` je správné a nemění se.

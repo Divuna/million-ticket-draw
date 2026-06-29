@@ -1,6 +1,6 @@
 # OneMil — DEVELOPMENT HISTORY (CHRONOLOGICAL ONLY)
 
-**Timestamp (Europe/Prague): 2026-06-29 10:15:00 +02:00** (Partner dashboard weekly overview RLS fix applied to production; postcheck ✅)
+**Timestamp (Europe/Prague): 2026-06-29 19:45:00 +02:00** (Shoptet automatic import scheduler production rollout + verification complete)
 
 ## Strict header (do not break)
 ### What belongs in this file
@@ -13,6 +13,14 @@
 - Undated narrative dumps.
 
 ---
+
+## 2026-06-29 17:30 UTC -- Shoptet automatic import scheduler production rollout COMPLETE
+
+Shoptet automatic import scheduler fully deployed to production `xkzhjldrojjlrkezorey` (29. 06. 2026, explicit Pavel approval). Migration `20260629150000_shoptet_auto_import_cron_prod.sql` applied (atomic transaction): pg_net + pg_cron extensions, Vault secret `shoptet_cron_internal_token` generated once (never printed), SECURITY DEFINER function `verify_shoptet_cron_token(text)` service_role-only with revoked public/anon/authenticated, orchestrator `run_shoptet_cron_imports()` SECURITY DEFINER looping partners WHERE `shoptet_import_enabled=true` with 30-minute overlap guard and pg_net dispatch (x-internal-token header), pg_cron job `shoptet_auto_import_15min` scheduled `*/15 * * * *`. Edge Function `import-shoptet-orders` deployed v8 ACTIVE: `verify_jwt=false`, Vault token verify via RPC, `trigger='cron'` support, overlap guard, `reward_trigger_status` threshold respect, 5-bucket status taxonomy, idempotent. Backup before apply: `backups/onemil-production-pre-shoptet-cron-20260629-143257.dump` (465 825 272 B, verified pg_restore -l exit 0, 1643 TOC entries). Production postcheck ✅: cron job active=true schedule `*/15 * * * *`; latest cron run status=`ok` rows_failed=0; idempotence verified — run 1 created=1 skipped_dup=2, run 2 created=0 skipped_dup=3; BOHEMIA `shoptet_customer_delivery='partner'` zero OneMil customer emails; cron still running after DB password reset. No production data mutations except approved Phase 2 rollout. Commit: `cd811f41`. Next: monitor cron runs (daily latest status + failed rows + pending email queue, weekly created vs. orders + dup spikes + activation growth + stale codes >30 dní). Optional Phase 3 (requires Pavel approval): admin view `/admin/shoptet-imports` + Telegram alert on `status != 'ok'`.
+
+## 2026-06-29 17:45 UTC -- Database password reset after token exposure + cron verification
+
+Production database password reset in Supabase Dashboard after token appeared in chat during `pg_dump` backup (commit cd811f41 backup step). Cron and EF continue functioning normally — app uses anon key and service_role key for runtime, not direct DB password (no hardcoded connection strings in repo). Verification post-reset: `shoptet_auto_import_15min` active=true, schedule `*/15 * * * *`, latest run status=`ok` rows_failed=0, BOHEMIA `delivery='partner'` unchanged, emails_sent_1h=0. Cron operational after password change ✅. Per project convention, exposed production credentials must be rotated; reset is non-breaking for the app.
 
 ## 2026-06-29 -- Partner dashboard weekly overview RLS fix applied to PRODUCTION
 

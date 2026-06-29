@@ -1,5 +1,28 @@
 ﻿# OneMil – aktuální stav projektu
 
+## SHOPTET AUTOMATIC IMPORT SCHEDULER — PRODUKČNÍ ROLLOUT DOKONČEN (29. 06. 2026)
+
+Automatický Shoptet import **LIVE na produkci `xkzhjldrojjlrkezorey`** (29. 06. 2026 17:30 UTC, schválení Pavla). Cron běží každých 15 minut.
+
+**Aplikováno:**
+- **Migrace:** `20260629150000_shoptet_auto_import_cron_prod.sql` (pg_net + pg_cron extensions, Vault secret `shoptet_cron_internal_token`, RPC `verify_shoptet_cron_token` service_role-only, orchestrator `run_shoptet_cron_imports` s overlap guard 30 min, cron job `*/15 * * * *`).
+- **EF:** `import-shoptet-orders` v8 ACTIVE (verify_jwt=false, Vault token verify via RPC, trigger='cron', overlap guard, reward_trigger_status threshold respect, idempotentní).
+- **Backup:** `backups/onemil-production-pre-shoptet-cron-20260629-143257.dump` (465 MB, ověřen pg_restore -l).
+
+**Stav (29. 06. 2026):**
+- Cron active: true, schedule `*/15 * * * *` ✅
+- Latest run: status=`ok`, rows_failed=0, idempotence ověřena (run 1: created=1, run 2: created=0) ✅
+- BOHEMIA delivery=`partner`, no OneMil emails ✅
+- Cron po resetu DB hesla: stále funguje ✅
+
+**Monitoring:** denně — latest cron status, failed rows, pending email queue. Týdně — created vs. orders, dup spikes, activations growth, stale codes >30 dní.
+
+**Pravidlo (neměnit):** cron poběží každých 15 minut pro alle partnery WHERE `shoptet_import_enabled=true` bez běžícího importu <30 min. Token verifikace server-side (RPC). Duplicate detection v `create_partner_order_reward`. BOHEMIA zůstává `delivery='partner'`.
+
+**Rollback:** `cron.unschedule + DROP FUNCTION`.
+
+**Commit:** `cd811f41`.
+
 ## PARTNER DASHBOARD WEEKLY OVERVIEW — RLS FIX (STAGING + PRODUKCE, 29. 06. 2026)
 
 Partner dashboard „Týdenní přehled" + statistické karty ukazovaly partnerovi (BOHEMIA) samé 0. Root cause: `partner_reward_codes`, `partner_coin_activations`, `partner_api_keys` měly RLS enabled, ale 0 policies → deny-all pro partner `authenticated` session; frontend `.from()` čtení vracelo `[]`. Data byla správná (žádný backfill).
