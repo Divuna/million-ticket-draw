@@ -1,6 +1,6 @@
 # OneMil — DEVELOPMENT HISTORY (CHRONOLOGICAL ONLY)
 
-**Timestamp (Europe/Prague): 2026-06-29 19:45:00 +02:00** (Shoptet customer e-mail enqueue production rollout documented)
+**Timestamp (Europe/Prague): 2026-06-29 19:45:00 +02:00** (Shoptet customer e-mail enqueue real production order verification documented)
 
 ## Strict header (do not break)
 ### What belongs in this file
@@ -13,6 +13,10 @@
 - Undated narrative dumps.
 
 ---
+
+## 2026-06-29 -- BOHEMIA order 2026000005 verified customer e-mail enqueue end-to-end
+
+Read-only production verification confirmed BOHEMIA order `2026000005` completed the intended live flow after the customer e-mail enqueue fix: imported=yes, reward code created=yes, status=`activated`, e-mail queued=yes, e-mail sent=yes, duplicate=no. This verifies the full production path `Shoptet import -> reward code -> email_queue -> sent e-mail -> customer activation`. No customer e-mail, full reward code, Shoptet URL, or secret value was recorded.
 
 ## 2026-06-29 -- Shoptet customer e-mail enqueue fix production rollout COMPLETE
 

@@ -34,6 +34,8 @@ Behavior: `public.update_partner_order_reward_status(...)` atomically enqueues o
 
 Production rollout/postcheck: backup created and verified; migration applied and recorded; EF deployed; BOHEMIA remains `shoptet_customer_delivery='onemil'`; no historical e-mails were backfilled; BOHEMIA order `2026000004` was not resent; no manual e-mails were sent; `partner_coin_activations` stayed unchanged; pending `email_queue` remained 0. New future orders are ready to enqueue the customer MioCoin e-mail during the fresh `pending -> issued` transition.
 
+Real production verification: BOHEMIA order `2026000005` passed the full live flow: imported=yes, reward code created=yes, status=`activated`, customer e-mail queued=yes, e-mail sent=yes, duplicate=no. The verified path is `Shoptet import -> reward code -> email_queue -> sent e-mail -> customer activation`; customer e-mail, full code, Shoptet URL, and secrets are not recorded in documentation.
+
 Rollback: restore the previous `update_partner_order_reward_status` function definition from the pre-rollout backup or prior migration source, mark `20260629160000` reverted in migration history if rolling back DB, and redeploy the previous `import-shoptet-orders` version/source. Do not delete or edit any `email_queue` rows without separate explicit approval.
 
 ## PARTNER DASHBOARD WEEKLY OVERVIEW — RLS FIX (STAGING + PRODUKCE, 29. 06. 2026)
