@@ -1,6 +1,6 @@
 # OneMil — DEVELOPMENT HISTORY (CHRONOLOGICAL ONLY)
 
-**Timestamp (Europe/Prague): 2026-06-29 08:30:00 +02:00** (Partner dashboard weekly overview RLS fix applied to staging)
+**Timestamp (Europe/Prague): 2026-06-29 10:15:00 +02:00** (Partner dashboard weekly overview RLS fix applied to production; postcheck ✅)
 
 ## Strict header (do not break)
 ### What belongs in this file
@@ -13,6 +13,10 @@
 - Undated narrative dumps.
 
 ---
+
+## 2026-06-29 -- Partner dashboard weekly overview RLS fix applied to PRODUCTION
+
+Migrace `supabase/migrations/20260629120000_partner_own_select_rls.sql` aplikována na produkci `xkzhjldrojjlrkezorey` (29. 06. 2026 10:15, výslovné schválení Pavla). Transakční COMMIT OK. Produkční postcheck ✅: 3× SELECT policies (cmd='r', role authenticated), 0 write policies; BOHEMIA partner visibility OK (vidí 5 own PRC: 2 Shoptet, 1 aktivovaný, `is_admin=false`); admin/superadmin visibility OK (PRC 5, PCA 3, PAK 17); data intaktní (4 issued, 1 activated, `auth_user_id` intaktní, `shoptet_customer_delivery='partner'` beze změny). Žádné DML mutace, postcheck transakce ROLLBACK. Partner dashboard se změní projeví po znovunačtení stránky. Rollback: 3× `DROP POLICY IF EXISTS`.
 
 ## 2026-06-29 -- Partner dashboard weekly overview RLS fix applied to STAGING
 

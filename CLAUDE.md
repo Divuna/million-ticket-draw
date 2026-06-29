@@ -1,14 +1,16 @@
 # CLAUDE.md
 
-## PARTNER DASHBOARD WEEKLY OVERVIEW — RLS FIX NA STAGINGU (29. 06. 2026)
+## PARTNER DASHBOARD WEEKLY OVERVIEW — RLS FIX NA STAGINGU + PRODUKČNÍ ROLLOUT DOKONČEN (29. 06. 2026)
 
 Partner dashboard „Týdenní přehled" (a statistické karty „Vydané kódy / Aktivované kódy") ukazoval BOHEMIA všude 0, přestože data v DB existovala. **Root cause (read-only audit):** `partner_reward_codes`, `partner_coin_activations` a `partner_api_keys` měly **RLS enabled, ale 0 policies → deny-all** pro partnerovu `authenticated` session. Frontend čte tyto tabulky přímo přes `.from()` s partner JWT → PostgREST vrací `[]` (bez chyby) → vše 0. Data byla správná (`issued_at` vyplněn, žádný backfill nepotřeba); UI `weeklyReports` v `PartnerDashboard.tsx` je správné a nemění se.
 
-**Oprava (STAGING `dxmowysntemfqfnanxua` only):** migrace `supabase/migrations/20260629120000_partner_own_select_rls.sql` — přidány **3 SELECT-only** partner-own + admin/superadmin policies (`partner_reward_codes_select_own`, `partner_coin_activations_select_own`, `partner_api_keys_select_own`), vzor `partner_id IN (SELECT id FROM partners WHERE auth_user_id = auth.uid()) OR is_admin() OR is_superadmin()`. **Žádné INSERT/UPDATE/DELETE policy** — zápisy zůstávají výhradně přes SECURITY DEFINER RPC / service_role.
+**Oprava (STAGING `dxmowysntemfqfnanxua`):** migrace `supabase/migrations/20260629120000_partner_own_select_rls.sql` — přidány **3 SELECT-only** partner-own + admin/superadmin policies (`partner_reward_codes_select_own`, `partner_coin_activations_select_own`, `partner_api_keys_select_own`), vzor `partner_id IN (SELECT id FROM partners WHERE auth_user_id = auth.uid()) OR is_admin() OR is_superadmin()`. **Žádné INSERT/UPDATE/DELETE policy** — zápisy zůstávají výhradně přes SECURITY DEFINER RPC / service_role.
 
 **Staging postcheck ✅:** 3× SELECT (`cmd='r'`, role authenticated), 0 write policies; partner UPDATE vlastního řádku = 0 rows, INSERT = RLS denied; partner vidí jen vlastní řádky (9 PRC, ne 15; PCA 2, ne 5; PAK 0); cross-partner izolace (cizí partner = 0); admin/superadmin vidí vše (15/5/4); `is_admin()` u partnera = false; BOHEMIA staging nezměněna. (Izolace testována v transakcích s ROLLBACK přes dočasný `auth_user_id` flip na reálného ne-admin uživatele — `auth_user_id` má FK na `auth.users`.)
 
-**Pravidlo (neměnit):** tyto 3 tabulky musí mít partner-own SELECT policy (bez ní partner dashboard nevidí vlastní data); nepřidávat partnerovi write policy — zápisy jen přes SECURITY DEFINER/service_role. **Produkce `xkzhjldrojjlrkezorey` NEDOTČENA** — produkční rollout je samostatný krok (výslovné schválení Pavla + `pg_dump` před aplikací). Žádný frontend deploy.
+**Produkční rollout ✅ (29. 06. 2026, schválení Pavla):** migrace aplikována na `xkzhjldrojjlrkezorey` (transakční, COMMIT OK); 3× SELECT policies (`cmd='r'`, role `authenticated`), 0 write policies. **BOHEMIA partner visibility ověřena:** vidí 5 partner_reward_codes (z toho 2 Shoptet + 1 aktivovaný), `is_admin=false`. **Admin/superadmin vidí vše:** PRC 5 / PCA 3 / PAK 17. **Data intaktní:** všech 5 kódů (4 issued, 1 activated), 2 Shoptet, `auth_user_id` intaktní, `delivery='partner'` beze změny. Žádné mutace, transakce ROLLBACK; partnera se změní projeví po znovunačtení dashboardu.
+
+**Pravidlo (neměnit):** tyto 3 tabulky musí mít partner-own SELECT policy (bez ní partner dashboard nevidí vlastní data); nepřidávat partnerovi write policy — zápisy jen přes SECURITY DEFINER/service_role. Rollback: 3× `DROP POLICY IF EXISTS` (viz migrace). Žádný frontend deploy.
 
 ## SHOPTET PHASE 2 — PRODUKČNÍ ROLLOUT DOKONČEN (29. 06. 2026, schválení Pavla)
 
