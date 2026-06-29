@@ -1,5 +1,27 @@
 ﻿# OneMil – aktuální stav projektu
 
+## TODO — PARTNER FAKTURA: DETAILNÍ KONTROLNÍ PŘEHLED FAKTUROVANÝCH POLOŽEK (29. 06. 2026, jen návrh — NEIMPLEMENTOVÁNO)
+
+Budoucí úkol (zatím jen zápis, žádný kód). Navazuje na dokončený VAT fix partner faktury (29. 06. 2026 — DPH se počítá jako `net * vat_rate` se zlomkovou konvencí `vat_rate=0.21`; ověřeno na stagingu, částky sedí: net 14,00 → DPH 21 % 2,94 → s DPH 16,94; produkce nedotčena).
+
+**Požadavek (Pavel):** partnerská faktura má obsahovat jasný **kontrolní přehled, za co se fakturuje** — detailní rozpis aktivovaných MioCoinů, aby partner viděl, z čeho se částka skládá.
+
+**Cílový obsah kontrolního přehledu na faktuře (per položka):**
+- datum aktivace,
+- číslo externí objednávky (`external_order_id`),
+- počet MioCoinů,
+- částka za položku (počet MioCoinů × `price_per_coin`, příp. i s DPH),
+- volitelně **zkrácený / anonymizovaný** údaj o zákazníkovi nebo kódu (např. maskovaný identifikátor).
+
+**Bezpečnostní pravidla pro tento přehled (závazná):**
+- NIKDY nevypisovat celé reward kódy.
+- NIKDY nevypisovat celé e-maily zákazníků ani jiné citlivé osobní údaje — pouze zkrácené/anonymizované.
+- Žádné Shoptet URL, tokeny, secrety, hashe.
+
+**Datové zdroje (existují):** `partner_invoice_lines` (per-invoice snapshot: `external_order_id`, `coins`, `activated_at`, `activation_id`) + `partner_coin_activations` (kód, user). PDF generuje EF `generate-partner-invoice-pdf` — už dnes vykresluje sekci „Kontrolní přehled aktivací MioCoinů", ale e-mailový/kódový sloupec je nutné při rozšíření anonymizovat dle pravidel výše.
+
+**Rozsah až při implementaci:** úprava `supabase/functions/generate-partner-invoice-pdf/index.ts` (rozšířený rozpis položek + anonymizace), staging-first, ověření částek + GDPR-safe výpisu, teprve pak produkční rollout se samostatným schválením Pavla.
+
 ## SHOPTET AUTOMATIC IMPORT SCHEDULER — PRODUKČNÍ ROLLOUT DOKONČEN (29. 06. 2026)
 
 Automatický Shoptet import **LIVE na produkci `xkzhjldrojjlrkezorey`** (29. 06. 2026 17:30 UTC, schválení Pavla). Cron běží každých 15 minut.
