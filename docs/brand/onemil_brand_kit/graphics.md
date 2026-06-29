@@ -1,7 +1,7 @@
 # OneMil — Brand & Graphics Guidelines
 
 **Direction:** dark premium tech-luxury
-**Tagline:** Luxusní soutěže. Skutečné výhry.
+**Tagline:** Luxusní soutěže. Prémiové výhry.
 
 Source of truth: `docs/brand/onemil_brand_kit.zip`
 
@@ -146,7 +146,7 @@ Named colors from brand kit:
 | — | roulette / slot / slot-machine | — |
 
 ### Recommended terms
-soutěž, výhra, ticket, MioCoin, voucher, luxusní cena, skutečné výhry, rychlá hra, denní šance
+soutěž, výhra, ticket, MioCoin, voucher, luxusní cena, prémiové výhry, prémiové ceny, hodnotné ceny, rychlá hra, denní šance
 
 ### Legal framing
 - MioCoin je interní digitální kredit — nelze vybrat zpět na peníze
