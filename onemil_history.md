@@ -1,6 +1,6 @@
 # OneMil — DEVELOPMENT HISTORY (CHRONOLOGICAL ONLY)
 
-**Timestamp (Europe/Prague): 2026-04-13 20:46:33 +02:00** (poslední dokumentační synchronizace)
+**Timestamp (Europe/Prague): 2026-06-29 07:15:00 +02:00** (Shoptet Phase 2 production rollout complete)
 
 ## Strict header (do not break)
 ### What belongs in this file
@@ -13,6 +13,10 @@
 - Undated narrative dumps.
 
 ---
+
+## 2026-06-29 07:15 UTC -- Shoptet Phase 2 production rollout COMPLETE
+
+Shoptet Phase 2 self-service e-shop connection fully deployed to production `xkzhjldrojjlrkezorey` (29. 06. 2026, explicit Pavel approval). Sequence: (1) DB migration `20260628120000_shoptet_connection_requests.sql` applied (atomic transaction, includes `shoptet_connection_requests` table + 4 RLS policies + 4 indexes + trigger + `reward_trigger_status` column on partners + 3 Vault RPC), (2) EF `submit-shoptet-connection` v3 deployed ACTIVE (verify_jwt=false, internal partner JWT validation), (3) EF `approve-shoptet-connection` v3 deployed ACTIVE (verify_jwt=false, admin/superadmin JWT validation, CRITICAL: always SET `shoptet_customer_delivery='onemil'` on approve), (4) EF `import-shoptet-orders` v5 deployed ACTIVE (replaces older version, verify_jwt=false, respects `reward_trigger_status` threshold, 5-bucket status taxonomy, idempotent), (5) Lovable Publish complete. Production postcheck ✅: table + 4 policies + 4 indexes present; Vault RPC anon=false/service_role=true; BOHEMIA `delivery='partner'` unchanged; 0 test SCR rows; all 3 EF ACTIVE; no Shoptet URLs in DB (Vault only). Monitoring: read-only SQL checks per Phase 1 plan. No production data mutations except approved Phase 2 rollout. Artifact: `docs/shoptet/PRODUCTION_ROLLOUT_PLAN.md` (corrected for single migration file). Commit: `c8d3f7bb` (CLAUDE.md), `[pending]` (onemil_state.md + onemil_history.md).
 
 ## 2026-06-28 14:30 UTC -- Shoptet Phase 2 E2E staging test PASSED + production rollout plan prepared
 
