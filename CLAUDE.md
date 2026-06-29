@@ -1,5 +1,25 @@
 # CLAUDE.md
 
+## SHOPTET PHASE 2 — PRODUKČNÍ ROLLOUT DOKONČEN (29. 06. 2026, schválení Pavla)
+
+Shoptet Phase 2 self-service e-shop connection **nasazeno na produkci `xkzhjldrojjlrkezorey`** (29. 06. 2026, výslovné schválení Pavla).
+
+**Aplikováno na produkci:**
+- **DB migrace:** `20260628120000_shoptet_connection_requests.sql` (jediný soubor — atomická transakce). Obsahuje: `partners.reward_trigger_status` sloupec (default `'paid'`), `shoptet_connection_requests` tabulka + 4 RLS policies + 4 indexy + trigger, 3 Vault RPC (service_role only).
+- **EF `submit-shoptet-connection` v3 ACTIVE** — partner podá žádost přes `/partner/dashboard`, URL uložena do Vault (nikdy do DB).
+- **EF `approve-shoptet-connection` v3 ACTIVE** — admin schválí/zamítne, při schválení: promote Vault URL, `shoptet_customer_delivery='onemil'` (non-negotiable), `reward_trigger_status` zkopírován z žádosti, `shoptet_import_enabled=true`.
+- **EF `import-shoptet-orders` v5 ACTIVE** — respektuje `reward_trigger_status` threshold (paid/shipped/completed), 5-bucket status taxonomie, idempotentní.
+
+**Produkční postcheck ✅ (29. 06. 2026):** tabulka + 4 policies + 4 indexy existují; Vault RPCs anon=false/service_role=true; BOHEMIA `shoptet_customer_delivery='partner'` beze změny; 0 testovacích SCR řádků; všechny 3 EF ACTIVE.
+
+**Frontend:** vyžaduje Lovable Publish (UI pro `/partner/dashboard` Step 5 + `/admin/partners` Step 6 — Shoptet badge + formulář).
+
+**Kritická pravidla (neměnit):**
+- `approve-shoptet-connection` MUSÍ vždy SET `shoptet_customer_delivery='onemil'` pro self-service partnery.
+- BOHEMIA (`61c23960-7271-4c75-a1a4-dcb6e81b41ce`) má `delivery='partner'` — nikdy neprochází self-service flow.
+- Shoptet URL se NIKDY neukládá do žádné aplikační tabulky — výhradně Vault.
+- `reward_trigger_status` default `'paid'` zachovává BOHEMIA legacy chování.
+
 ## SHOPTET PHASE 1 PRODUKČNÍ LIVE ISSUANCE — DOKONČENO (28. 06. 2026)
 
 Shoptet Phase 1A/1B/1C dokončeno na stagingu i **produkci**. Staging: `dxmowysntemfqfnanxua`; produkce: `xkzhjldrojjlrkezorey`. Phase 1A/1B commit: `2f0027e4`. Shoptet URL uložena výhradně ve Vault; nikdy netisknout.
@@ -16,7 +36,7 @@ Shoptet Phase 1A/1B/1C dokončeno na stagingu i **produkci**. Staging: `dxmowysn
 - **Final postcheck (28. 06. 2026) ✅:** 2 kódy s ext_order_id (oba issued), 0 failed import rows, 0 pending email_queue, partner_coin_activations=3 (nedotčeno), latest live run=`ok`, staré 3 null-ext-id kódy nedotčeny.
 - **Monitoring po Phase 1C (bez nového kódu):** denně — latest live run status (`ok`), failed import rows (0), pending email_queue (0 = norma, BOHEMIA partner-delivery). Týdně — rows_created vs. nové objednávky, skipped_dup spike = anomálie Shoptet exportu, partner_coin_activations roste jen po zákaznickém redemption, stale `issued` kódy starší 30 dní (signál, že zákazníci neuplatňují). Vše přes read-only SQL v Supabase SQL Editoru. Volitelně Phase 2: admin view `/admin/shoptet-imports` + Telegram alert při `status != 'ok'`.
 
-## SHOPTET PHASE 2 — E2E STAGING TEST PROŠEL + PRODUKČNÍ ROLLOUT PŘIPRAVEN (28. 06. 2026 14:30)
+## SHOPTET PHASE 2 — E2E STAGING TEST PROŠEL + PRODUKČNÍ ROLLOUT DOKONČEN (28.–29. 06. 2026)
 
 Shoptet Phase 2 self-service e-shop connection **staging E2E test ✅ PASSED**. Všechny 6 fází ověřeny:
 - **Phase 1 Draft:** partner vytvoří draft v `/partner/dashboard`
@@ -36,7 +56,7 @@ Shoptet Phase 2 self-service e-shop connection **staging E2E test ✅ PASSED**. 
 - BOHEMIA: ✅ shoptet_customer_delivery='partner' unchanged
 - Production: ✅ untouched
 
-**Produkční rollout plan:** připraven v `docs/shoptet/PRODUCTION_ROLLOUT_PLAN.md`. Vyžaduje výslovné schválení Pavla.
+**Produkční rollout:** dokončen 29. 06. 2026 (viz sekce výše). Frontend Lovable Publish zbývá.
 
 ## SHOPTET PHASE 2 — PRODUKTOVÉ ROZHODNUTÍ: TŘI ZPŮSOBY NAPOJENÍ E-SHOPU (28. 06. 2026, opraveno 28. 06. 2026)
 
