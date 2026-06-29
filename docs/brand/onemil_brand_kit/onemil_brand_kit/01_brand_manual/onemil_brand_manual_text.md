@@ -4,7 +4,7 @@
 OneMil je moderní prémiová soutěžní platforma pro Česko a Slovensko. Značka má působit luxusně, důvěryhodně, energicky a digitálně moderně. Nesmí působit jako casino, hazard, loterie nebo rychlé zbohatnutí.
 
 ## 2. Brand statement
-Luxusní soutěže. Skutečné výhry.
+Luxusní soutěže. Prémiové výhry.
 
 ## 3. Vizuální směr
 Dark premium tech-luxury: tmavý základ, kovová stříbrná, oranžový akcent, jemné světlo, realistické luxusní ceny, čisté rozhraní.
@@ -29,7 +29,7 @@ Karty mají být tmavé, čisté, s jemným okrajem a prémiovým světlem. CTA 
 Oficiální poměr: 1920 × 480 px, wide 4:1. Použít tmavé okraje, safe margins, object-cover. Banner může obsahovat luxusní vůz, motorku, hodinky, šperky, elektroniku, Dyson, Apple produkty, PlayStation nebo prémiový lifestyle.
 
 ## 9. Komunikace
-Doporučené výrazy: soutěž, výhra, ticket, MioCoin, voucher, luxusní cena, skutečné výhry, rychlá hra, denní šance.
+Doporučené výrazy: soutěž, výhra, ticket, MioCoin, voucher, luxusní cena, prémiové výhry, prémiové ceny, hodnotné ceny, rychlá hra, denní šance.
 
 Zakázané výrazy: casino, hazard, sázení, sázka, jackpot, žetony, zbohatni.
 
