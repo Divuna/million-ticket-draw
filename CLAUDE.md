@@ -26,11 +26,13 @@ Automatický Shoptet import **nasazeno na produkci `xkzhjldrojjlrkezorey`** (29.
 
 **Commit:** `cd811f41` (migrace + aplikace + push na main).
 
-## SHOPTET CUSTOMER E-MAIL ENQUEUE -- STAGING VALIDATED, PRODUCTION PENDING (29. 06. 2026)
+## SHOPTET CUSTOMER E-MAIL ENQUEUE -- PRODUCTION ROLLOUT COMPLETE (29. 06. 2026)
 
-BOHEMIA/Shoptet customer e-mail enqueue fix is prepared in `supabase/migrations/20260629160000_shoptet_onemil_customer_email.sql` and `supabase/functions/import-shoptet-orders/index.ts`. The DB fix is intentionally atomic inside `public.update_partner_order_reward_status(...)`: when a partner-order reward code transitions from `pending` to `issued`, it enqueues exactly one pending `email_queue` row only if `partners.shoptet_customer_delivery = 'onemil'`. `shoptet_customer_delivery = 'partner'` does not enqueue a customer e-mail. Duplicate status updates do not enqueue duplicates. `partner_coin_activations` remain redeem-only and are not touched by this fix.
+BOHEMIA/Shoptet customer e-mail enqueue fix is now **applied on production `xkzhjldrojjlrkezorey`** after explicit Pavel approval. Applied migration: `supabase/migrations/20260629160000_shoptet_onemil_customer_email.sql`. Deployed Edge Function: `import-shoptet-orders` **ACTIVE version 10**. A fresh production backup was created and verified with `pg_restore -l` before rollout.
 
-Staging validation from the previous code session: e-mail queued on issued = yes; duplicate e-mail prevented = yes; partner delivery still no e-mail = yes; production touched = no. Current clean `main` now contains the missing source-of-truth migration and importer aggregate wiring. Production is not fixed yet: do not apply the migration, deploy the production Edge Function, send e-mails, or touch production without a separate explicit Pavel approval. BOHEMIA order `2026000004` already has an issued code and will not self-send retroactively because the fix only acts on a fresh `pending -> issued` transition.
+The DB fix is intentionally atomic inside `public.update_partner_order_reward_status(...)`: when a partner-order reward code transitions from `pending` to `issued`, it enqueues exactly one pending `email_queue` row only if `partners.shoptet_customer_delivery = 'onemil'`. `shoptet_customer_delivery = 'partner'` does not enqueue a customer e-mail. Duplicate status updates do not enqueue duplicates. `partner_coin_activations` remain redeem-only and were not touched by this rollout.
+
+Production postcheck: migration applied and recorded; EF active v10; BOHEMIA remains `shoptet_customer_delivery='onemil'`; no historical e-mails backfilled; BOHEMIA order `2026000004` was not resent; no manual e-mails sent; `partner_coin_activations` unchanged; pending `email_queue` remained 0; new future orders are ready to enqueue the customer e-mail on fresh `pending -> issued`. Rollback: restore the previous `update_partner_order_reward_status` definition from backup/prior migration source, mark migration `20260629160000` reverted if DB rollback is performed, and redeploy the previous `import-shoptet-orders` version/source; never delete/modify queued e-mails without separate approval.
 
 ## PARTNER DASHBOARD WEEKLY OVERVIEW — RLS FIX NA STAGINGU + PRODUKČNÍ ROLLOUT DOKONČEN (29. 06. 2026)
 

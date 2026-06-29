@@ -1,6 +1,6 @@
 # OneMil — DEVELOPMENT HISTORY (CHRONOLOGICAL ONLY)
 
-**Timestamp (Europe/Prague): 2026-06-29 19:45:00 +02:00** (Shoptet automatic import scheduler production rollout + verification complete)
+**Timestamp (Europe/Prague): 2026-06-29 19:45:00 +02:00** (Shoptet customer e-mail enqueue production rollout documented)
 
 ## Strict header (do not break)
 ### What belongs in this file
@@ -13,6 +13,10 @@
 - Undated narrative dumps.
 
 ---
+
+## 2026-06-29 -- Shoptet customer e-mail enqueue fix production rollout COMPLETE
+
+BOHEMIA/Shoptet customer e-mail enqueue fix was rolled out to production `xkzhjldrojjlrkezorey` after explicit Pavel approval. Fresh production backup was created and verified with `pg_restore -l`. Migration `supabase/migrations/20260629160000_shoptet_onemil_customer_email.sql` was applied and recorded in migration history. Edge Function `import-shoptet-orders` was deployed to production as ACTIVE version 10. Postcheck passed: BOHEMIA remains `shoptet_customer_delivery='onemil'`; no historical e-mails were backfilled; order `2026000004` was not resent; no manual e-mails were sent; `partner_coin_activations` stayed unchanged; pending `email_queue` remained 0; future new Shoptet orders are ready to enqueue the customer e-mail on fresh `pending -> issued`. Production was touched only by the approved backup, migration, migration-history repair, EF deploy, and read-only postchecks.
 
 ## 2026-06-29 17:30 UTC -- Shoptet automatic import scheduler production rollout COMPLETE
 
