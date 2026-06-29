@@ -1,6 +1,6 @@
 # OneMil — DEVELOPMENT HISTORY (CHRONOLOGICAL ONLY)
 
-**Timestamp (Europe/Prague): 2026-06-29 07:15:00 +02:00** (Shoptet Phase 2 production rollout complete)
+**Timestamp (Europe/Prague): 2026-06-29 08:30:00 +02:00** (Partner dashboard weekly overview RLS fix applied to staging)
 
 ## Strict header (do not break)
 ### What belongs in this file
@@ -13,6 +13,10 @@
 - Undated narrative dumps.
 
 ---
+
+## 2026-06-29 -- Partner dashboard weekly overview RLS fix applied to STAGING
+
+Fixed partner dashboard „Týdenní přehled" + stat cards showing all 0 for partner accounts (BOHEMIA). Root cause (read-only audit): `partner_reward_codes`, `partner_coin_activations`, `partner_api_keys` had RLS enabled but ZERO policies → deny-all for the partner's `authenticated` PostgREST session; the dashboard reads these via direct `.from()` with the partner JWT, so every read returned `[]` and rendered zeros. Data was correct (`issued_at` populated, no `created_at` column, no backfill needed); UI `weeklyReports` in `src/pages/PartnerDashboard.tsx` was already correct and unchanged. Fix: migration `supabase/migrations/20260629120000_partner_own_select_rls.sql` (STAGING `dxmowysntemfqfnanxua` only) adds 3 SELECT-only partner-own + admin/superadmin policies (`partner_id IN (SELECT id FROM partners WHERE auth_user_id = auth.uid()) OR is_admin() OR is_superadmin()`). No INSERT/UPDATE/DELETE policies — writes remain only via SECURITY DEFINER RPC / service_role. Staging postcheck ✅: 3× SELECT policies (role authenticated), 0 write policies; partner sees own rows only (9 PRC not 15, 2 PCA not 5, 0 PAK), cross-partner isolation (other partner = 0), admin/superadmin sees all (15/5/4), partner write blocked (UPDATE 0 rows, INSERT RLS-denied), BOHEMIA staging unchanged. Isolation tested in rolled-back transactions via temporary `auth_user_id` flip to a real non-admin user (FK to `auth.users`). Production `xkzhjldrojjlrkezorey` NOT touched (same deny-all confirmed there by audit; rollout is a separate step requiring explicit Pavel approval + `pg_dump`). No frontend deploy. Commit: `[pending]`.
 
 ## 2026-06-29 07:15 UTC -- Shoptet Phase 2 production rollout COMPLETE
 

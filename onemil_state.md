@@ -1,5 +1,15 @@
 ﻿# OneMil – aktuální stav projektu
 
+## PARTNER DASHBOARD WEEKLY OVERVIEW — RLS FIX (STAGING ONLY, 29. 06. 2026)
+
+Partner dashboard „Týdenní přehled" + statistické karty ukazovaly partnerovi (BOHEMIA) samé 0. Root cause: `partner_reward_codes`, `partner_coin_activations`, `partner_api_keys` měly RLS enabled, ale 0 policies → deny-all pro partner `authenticated` session; frontend `.from()` čtení vracelo `[]`. Data byla správná (žádný backfill).
+
+- **Migrace (staging `dxmowysntemfqfnanxua` only):** `supabase/migrations/20260629120000_partner_own_select_rls.sql` — 3 SELECT-only partner-own + admin/superadmin policies. Žádné write policy. Zápisy zůstávají přes SECURITY DEFINER RPC / service_role.
+- **Postcheck ✅:** partner vidí jen vlastní (9 PRC / 2 PCA / 0 PAK), cross-partner = 0, admin vše (15/5/4), partner write blokován (UPDATE 0 rows, INSERT RLS-denied), BOHEMIA staging nezměněna.
+- **UI nezměněno** — `weeklyReports` v `PartnerDashboard.tsx` je správné; oprava je čistě DB RLS.
+- **Produkce NEDOTČENA.** Produkční rollout = samostatný krok (výslovné schválení Pavla + `pg_dump`). Stejný deny-all stav je i na produkci (potvrzeno auditem).
+- **Pravidlo:** nepřidávat partnerovi write policy na tyto 3 tabulky; partner-own SELECT policy neodstraňovat.
+
 ## SHOPTET PHASE 1 PRODUKČNÍ LIVE ISSUANCE — DOKONČENO (28. 06. 2026)
 
 Shoptet Phase 1A/1B/1C dokončeno na stagingu i **produkci** (`xkzhjldrojjlrkezorey`). Phase 1A/1B commit: `2f0027e4`. Shoptet URL uložena výhradně ve Vault; nikdy netisknout.
