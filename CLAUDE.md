@@ -26,6 +26,12 @@ Automatický Shoptet import **nasazeno na produkci `xkzhjldrojjlrkezorey`** (29.
 
 **Commit:** `cd811f41` (migrace + aplikace + push na main).
 
+## SHOPTET CUSTOMER E-MAIL ENQUEUE -- STAGING VALIDATED, PRODUCTION PENDING (29. 06. 2026)
+
+BOHEMIA/Shoptet customer e-mail enqueue fix is prepared in `supabase/migrations/20260629160000_shoptet_onemil_customer_email.sql` and `supabase/functions/import-shoptet-orders/index.ts`. The DB fix is intentionally atomic inside `public.update_partner_order_reward_status(...)`: when a partner-order reward code transitions from `pending` to `issued`, it enqueues exactly one pending `email_queue` row only if `partners.shoptet_customer_delivery = 'onemil'`. `shoptet_customer_delivery = 'partner'` does not enqueue a customer e-mail. Duplicate status updates do not enqueue duplicates. `partner_coin_activations` remain redeem-only and are not touched by this fix.
+
+Staging validation from the previous code session: e-mail queued on issued = yes; duplicate e-mail prevented = yes; partner delivery still no e-mail = yes; production touched = no. Current clean `main` now contains the missing source-of-truth migration and importer aggregate wiring. Production is not fixed yet: do not apply the migration, deploy the production Edge Function, send e-mails, or touch production without a separate explicit Pavel approval. BOHEMIA order `2026000004` already has an issued code and will not self-send retroactively because the fix only acts on a fresh `pending -> issued` transition.
+
 ## PARTNER DASHBOARD WEEKLY OVERVIEW — RLS FIX NA STAGINGU + PRODUKČNÍ ROLLOUT DOKONČEN (29. 06. 2026)
 
 Partner dashboard „Týdenní přehled" (a statistické karty „Vydané kódy / Aktivované kódy") ukazoval BOHEMIA všude 0, přestože data v DB existovala. **Root cause (read-only audit):** `partner_reward_codes`, `partner_coin_activations` a `partner_api_keys` měly **RLS enabled, ale 0 policies → deny-all** pro partnerovu `authenticated` session. Frontend čte tyto tabulky přímo přes `.from()` s partner JWT → PostgREST vrací `[]` (bez chyby) → vše 0. Data byla správná (`issued_at` vyplněn, žádný backfill nepotřeba); UI `weeklyReports` v `PartnerDashboard.tsx` je správné a nemění se.

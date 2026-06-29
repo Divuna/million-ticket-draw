@@ -23,6 +23,17 @@ Automatický Shoptet import **LIVE na produkci `xkzhjldrojjlrkezorey`** (29. 06.
 
 **Commit:** `cd811f41`.
 
+## SHOPTET CUSTOMER E-MAIL ENQUEUE — STAGING VALIDATED, PRODUCTION PENDING (29. 06. 2026)
+
+BOHEMIA/Shoptet customer e-mail enqueue fix is ready in the clean `main` worktree:
+
+- `supabase/migrations/20260629160000_shoptet_onemil_customer_email.sql`
+- `supabase/functions/import-shoptet-orders/index.ts`
+
+Behavior: `public.update_partner_order_reward_status(...)` atomically enqueues one pending `email_queue` row only on a fresh reward-code transition `pending -> issued` and only when `partners.shoptet_customer_delivery = 'onemil'`. Partner-side delivery (`'partner'`) still creates no customer e-mail. Re-running the status update does not create duplicate e-mails. `partner_coin_activations` are unchanged and still arise only after the customer redeems the code.
+
+Staging validation from the previous code session: e-mail queued on issued = yes; duplicate e-mail prevented = yes; partner delivery still no e-mail = yes; production touched = no. Production is not fixed yet and needs an explicit rollout gate before applying the migration or deploying the production importer. BOHEMIA order `2026000004` already has an issued code and will not self-send retroactively; it needs a separate approved handling plan if Pavel wants that specific customer e-mail sent.
+
 ## PARTNER DASHBOARD WEEKLY OVERVIEW — RLS FIX (STAGING + PRODUKCE, 29. 06. 2026)
 
 Partner dashboard „Týdenní přehled" + statistické karty ukazovaly partnerovi (BOHEMIA) samé 0. Root cause: `partner_reward_codes`, `partner_coin_activations`, `partner_api_keys` měly RLS enabled, ale 0 policies → deny-all pro partner `authenticated` session; frontend `.from()` čtení vracelo `[]`. Data byla správná (žádný backfill).

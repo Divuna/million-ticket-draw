@@ -26,6 +26,7 @@ type ImportRow = {
 type RpcResult = {
   success?: boolean;
   duplicate?: boolean;
+  email_enqueued?: boolean;
   error?: string;
 };
 
@@ -278,6 +279,7 @@ serve(async (req) => {
     let rowsSkipDup = 0;
     let rowsCreated = 0;
     let rowsStatusUpdated = 0;
+    let rowsEmailEnqueued = 0;
     let rowsFailed = 0;
 
     const { data: existing } = await admin
@@ -373,6 +375,7 @@ serve(async (req) => {
           }
 
           rowsStatusUpdated++;
+          if (statusResult.email_enqueued === true) rowsEmailEnqueued++;
           logBatch.push({ run_id: runId, external_order_id: row.orderId, action: "status_update", result: toRpcStatus(row.shoptetStatus) });
         }
       }
@@ -408,6 +411,7 @@ serve(async (req) => {
         rows_invalid: summary.rows_invalid,
         created: rowsCreated,
         status_updated: rowsStatusUpdated,
+        email_enqueued: rowsEmailEnqueued,
         skipped_duplicates: rowsSkipDup,
         failed: rowsFailed,
       }, summary.status === "ok" ? 200 : 500);
