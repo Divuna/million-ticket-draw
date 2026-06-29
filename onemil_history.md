@@ -1,6 +1,6 @@
 # OneMil — DEVELOPMENT HISTORY (CHRONOLOGICAL ONLY)
 
-**Timestamp (Europe/Prague): 2026-06-29 19:45:00 +02:00** (Shoptet customer e-mail enqueue real production order verification documented)
+**Timestamp (Europe/Prague): 2026-06-29 23:30:00 +02:00** (Partner invoice VAT fix production rollout documented)
 
 ## Strict header (do not break)
 ### What belongs in this file
@@ -13,6 +13,14 @@
 - Undated narrative dumps.
 
 ---
+
+## 2026-06-29 -- Partner invoice VAT fix production rollout COMPLETE
+
+Partner invoice VAT calculation fix was rolled out to production `xkzhjldrojjlrkezorey` after explicit Pavel approval, following the gate `docs/rollback/partner_invoice_vat_fraction_production_gate.md`. Backup relied on the Supabase scheduled physical backup 29 Jun 2026 02:17:36 +0000. Data fix: a guarded transaction updated the single partner with `vat_rate=21` (id `44253103-7d55-416a-8db4-57f945f1cf3b`) to `0.21`, after which `percent_partners=0`. Migration `supabase/migrations/20260629180000_partner_invoice_vat_fraction_fix.sql` (commit `9b4df3a8`) was applied, unifying `create_partner_invoices_for_last_week` and `generate_partner_invoice` on `net * vat_rate` (removing the `/100` that produced VAT 100x too small for the fraction convention); `create_partner_invoices_for_period` was already correct and unchanged. Postcheck passed: all 11 partners `vat_rate=0.2100`; `lastweek_div100=false`, `generate_div100=false`, `period_div100=false`; dry-run `0.21` -> VAT 21.00 / gross 121.00; `existing_invoice_mismatch=0`. No invoice was created, no e-mail was sent, no data was deleted, and existing invoices were unchanged. Production was touched only by the approved 1-row data fix and the 2 function replacements.
+
+## 2026-06-29 -- Partner invoice VAT fix staging verification + production audit
+
+Partner invoice PDF showed wrong VAT (net 14.00 -> VAT 294.00 -> gross 308.00). Root cause: `partners.vat_rate` is stored as a fraction (default 0.2100), but `create_partner_invoices_for_last_week` and `generate_partner_invoice` divided by 100 (100x too small for fraction data); `create_partner_invoices_for_period` (live weekly cron path) already computed `net * vat_rate` correctly. The reported 294/308 originated from a partner whose `vat_rate` was 21 at test time. Fix unified all functions on the fraction convention. Verified on staging `dxmowysntemfqfnanxua` (net 14.00 -> VAT 2.94 -> gross 16.94) via a corrected `generate_partner_invoice` invoice; staging test mutations were reverted. Read-only production audit then found mixed data (10 partners 0.21, 1 partner 21) and inconsistent functions, so a rollout gate requiring a data fix before the migration was prepared and committed. Migration committed `9b4df3a8`; gate doc committed `b42cdd97`; TODO for a detailed per-line invoice activation overview committed `1042749b`. No production change in this verification/audit step.
 
 ## 2026-06-29 -- BOHEMIA order 2026000005 verified customer e-mail enqueue end-to-end
 

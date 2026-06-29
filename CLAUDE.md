@@ -1,5 +1,22 @@
 # CLAUDE.md
 
+## PARTNER INVOICE VAT FIX — PRODUKČNÍ ROLLOUT DOKONČEN (29. 06. 2026, schválení Pavla)
+
+VAT výpočet partnerských faktur **opraven a sjednocen na produkci `xkzhjldrojjlrkezorey`** (29. 06. 2026, výslovné schválení Pavla). `vat_rate` je konvenčně **zlomek** (0.21 = 21 %); DPH = `net * vat_rate`, gross = `net + DPH`.
+
+**Root cause:** dvě fakturační funkce (`create_partner_invoices_for_last_week`, `generate_partner_invoice`) dělily `vat_rate / 100`, což pro zlomkovou konvenci dávalo DPH 100× menší; `create_partner_invoices_for_period` (živá weekly cron cesta, job 17) už počítala správně `net * vat_rate`. Navíc produkce měla **smíšená data**: 10 partnerů `0.2100`, 1 partner `21.0000` — proto samotná migrace nestačila a musela předcházet datová oprava.
+
+**Aplikováno (gate: `docs/rollback/partner_invoice_vat_fraction_production_gate.md`):**
+- **Backup:** Supabase scheduled physical backup 29 Jun 2026 02:17:36 +0000.
+- **Data fix:** guarded transakce — `UPDATE partners SET vat_rate=0.21 WHERE vat_rate=21` (1 řádek, partner `44253103-7d55-416a-8db4-57f945f1cf3b`); po opravě `percent_partners=0`.
+- **Migrace:** `20260629180000_partner_invoice_vat_fraction_fix.sql` — `create_partner_invoices_for_last_week` + `generate_partner_invoice` sjednoceny na `net * vat_rate` (bez `/100`). `create_partner_invoices_for_period` beze změny (už správně). Commit migrace `9b4df3a8`.
+
+**Postcheck ✅:** všech 11 partnerů `vat_rate=0.2100`; `lastweek_div100=false`, `generate_div100=false`, `period_div100=false`; dry-run `0.21` → vat 21,00 / gross 121,00; `existing_invoice_mismatch=0`. Ověřeno na stagingu předtím (net 14,00 → DPH 2,94 → gross 16,94).
+
+**Bez vedlejších efektů:** žádná faktura nevytvořena, žádné e-maily, existující faktury nezměněny, žádná data smazána.
+
+**Pravidla (neměnit):** `partners.vat_rate` držet jako zlomek (0.21), nikdy procento (21). Všechny 3 fakturační funkce počítají `net * vat_rate` (bez `/100`) — nevracet `/100` zpět. **Rollback:** vrátit definice funkcí z `20260612125606_partner_invoice_line_snapshots.sql` (varianty s `/100`) + `UPDATE partners SET vat_rate=21 WHERE id='44253103-7d55-416a-8db4-57f945f1cf3b'`. Otevřené TODO (jen návrh): detailní kontrolní přehled položek na partnerské faktuře (viz `onemil_state.md`).
+
 ## SHOPTET AUTOMATIC IMPORT SCHEDULER — PRODUKČNÍ ROLLOUT DOKONČEN (29. 06. 2026, schválení Pavla)
 
 Automatický Shoptet import **nasazeno na produkci `xkzhjldrojjlrkezorey`** (29. 06. 2026 17:30 UTC, výslovné schválení Pavla). Cron poběží automaticky každých 15 minut.

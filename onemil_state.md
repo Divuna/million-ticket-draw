@@ -1,8 +1,21 @@
 ﻿# OneMil – aktuální stav projektu
 
+## PARTNER INVOICE VAT FIX — LIVE NA PRODUKCI (29. 06. 2026, schválení Pavla)
+
+VAT výpočet partnerských faktur je opravený a sjednocený na produkci `xkzhjldrojjlrkezorey`. Konvence: `partners.vat_rate` = **zlomek** (0.21); DPH = `net * vat_rate`; gross = `net + DPH`.
+
+- **Stav funkcí (všechny zlomkové, bez `/100`):** `create_partner_invoices_for_last_week`, `generate_partner_invoice`, `create_partner_invoices_for_period`.
+- **Data:** všech 11 partnerů `vat_rate=0.2100` (default sloupce 0.2100). Dřívější 1 partner s `21.0000` (`44253103-7d55-416a-8db4-57f945f1cf3b`) sjednocen na `0.21`.
+- **Migrace:** `supabase/migrations/20260629180000_partner_invoice_vat_fraction_fix.sql` (commit `9b4df3a8`). Aplikováno na staging i produkci.
+- **Backup:** Supabase scheduled physical backup 29 Jun 2026 02:17:36 +0000.
+- **Postcheck ✅:** `percent_partners=0`; všechny 3 funkce `div100=false`; dry-run `0.21` → vat 21,00 / gross 121,00; `existing_invoice_mismatch=0`; existující faktury nezměněny.
+- **Bez vedlejších efektů:** žádná faktura nevytvořena, žádné e-maily, žádná data smazána. Weekly cron (job 17) nyní počítá zlomkově správně pro všechny partnery.
+- **Gate dokument:** `docs/rollback/partner_invoice_vat_fraction_production_gate.md` (precheck/data fix/migrace/postcheck/rollback).
+- **Pravidlo:** `vat_rate` držet jako zlomek (0.21), nevracet `/100` do žádné fakturační funkce.
+
 ## TODO — PARTNER FAKTURA: DETAILNÍ KONTROLNÍ PŘEHLED FAKTUROVANÝCH POLOŽEK (29. 06. 2026, jen návrh — NEIMPLEMENTOVÁNO)
 
-Budoucí úkol (zatím jen zápis, žádný kód). Navazuje na dokončený VAT fix partner faktury (29. 06. 2026 — DPH se počítá jako `net * vat_rate` se zlomkovou konvencí `vat_rate=0.21`; ověřeno na stagingu, částky sedí: net 14,00 → DPH 21 % 2,94 → s DPH 16,94; produkce nedotčena).
+Budoucí úkol (zatím jen zápis, žádný kód). Navazuje na dokončený VAT fix partner faktury (29. 06. 2026 — DPH se počítá jako `net * vat_rate` se zlomkovou konvencí `vat_rate=0.21`; ověřeno na stagingu i **opraveno na produkci** 29. 06. 2026; částky sedí: net 14,00 → DPH 21 % 2,94 → s DPH 16,94).
 
 **Požadavek (Pavel):** partnerská faktura má obsahovat jasný **kontrolní přehled, za co se fakturuje** — detailní rozpis aktivovaných MioCoinů, aby partner viděl, z čeho se částka skládá.
 
