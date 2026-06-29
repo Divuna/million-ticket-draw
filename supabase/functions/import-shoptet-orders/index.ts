@@ -55,6 +55,14 @@ async function authorize(req: Request, admin: ReturnType<typeof createClient>) {
   const provided = req.headers.get("x-internal-token");
   if (internalToken && provided && provided === internalToken) return null;
 
+  // Vault-stored dispatch token used by the pg_cron orchestrator
+  // (run_shoptet_cron_imports). Verified server-side via SECURITY DEFINER RPC so
+  // the secret is never exposed to the function environment or logs.
+  if (provided) {
+    const { data: vaultOk } = await admin.rpc("verify_shoptet_cron_token", { p_token: provided });
+    if (vaultOk === true) return null;
+  }
+
   const token = (req.headers.get("authorization") ?? "").replace(/^Bearer\s+/i, "").trim();
   if (!token) return { status: 401, error: "missing_authorization" };
   const serviceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "";
@@ -170,7 +178,7 @@ serve(async (req) => {
   const authFailure = await authorize(req, admin);
   if (authFailure) return json({ status: "error", error: authFailure.error }, authFailure.status);
 
-  let body: { partner_id?: string; mode?: string };
+  let body: { partner_id?: string; mode?: string; trigger?: string };
   try {
     body = await req.json();
   } catch {
@@ -180,6 +188,9 @@ serve(async (req) => {
   const partnerId = (body.partner_id ?? "").trim();
   if (!partnerId) return json({ status: "error", error: "partner_id is required" }, 400);
   const mode = asMode(body.mode);
+  // Run origin recorded in shoptet_import_runs.trigger. 'cron' for the scheduled
+  // orchestrator, 'admin' for manual/UI invocations (default).
+  const trigger = body.trigger === "cron" ? "cron" : "admin";
 
   // Load reward_trigger_status and shoptet_customer_delivery alongside existing fields.
   // Default 'paid' preserves BOHEMIA and all legacy partner behaviour.
@@ -194,9 +205,26 @@ serve(async (req) => {
 
   const triggerThreshold: string = partner.reward_trigger_status ?? "paid";
 
+  // Overlap guard: skip if an import is already running for this partner
+  // (started within the last 30 min). Protects against cron/admin overlap and
+  // double-firing. Stale 'running' rows older than 30 min are ignored so a
+  // crashed run never blocks the partner permanently.
+  const staleCutoff = new Date(Date.now() - 30 * 60 * 1000).toISOString();
+  const { data: runningRun } = await admin
+    .from("shoptet_import_runs")
+    .select("id")
+    .eq("partner_id", partnerId)
+    .eq("status", "running")
+    .gte("started_at", staleCutoff)
+    .limit(1)
+    .maybeSingle();
+  if (runningRun) {
+    return json({ status: "skipped", reason: "already_running", partner_id: partnerId }, 200);
+  }
+
   const { data: run, error: runErr } = await admin
     .from("shoptet_import_runs")
-    .insert({ partner_id: partnerId, trigger: "admin", mode, status: "running" })
+    .insert({ partner_id: partnerId, trigger, mode, status: "running" })
     .select("id")
     .single();
   if (runErr || !run) return json({ status: "error", error: "could_not_create_run" }, 500);
