@@ -83,6 +83,31 @@ function parseDateForForm(iso: string | null | undefined): Date | undefined {
   return d ?? undefined;
 }
 
+/**
+ * Single source of truth for voucher status — same logic already used across
+ * the filter, status badge and summary cards in this file, extracted so the
+ * section tabs (Aktivní / Naplánované / Archiv) classify identically.
+ */
+type VoucherStatus = 'active' | 'scheduled' | 'expired' | 'exhausted';
+function getVoucherStatus(voucher: Voucher): VoucherStatus {
+  const now = new Date();
+  const startDate = parseBoundaryDate(voucher.start_date);
+  const endDate = parseBoundaryDate(voucher.end_date);
+  const redeemed = Number(voucher.redeemed_count ?? 0);
+  const safeRedeemed = Number.isFinite(redeemed) ? redeemed : 0;
+  const remainingQuantity =
+    voucher.max_quantity != null && Number.isFinite(voucher.max_quantity)
+      ? voucher.max_quantity - safeRedeemed
+      : null;
+
+  if (startDate && now < startDate) return 'scheduled';
+  if (endDate && now > endDate) return 'expired';
+  if (remainingQuantity !== null && remainingQuantity <= 0) return 'exhausted';
+  return 'active';
+}
+
+type VoucherSection = 'active' | 'scheduled' | 'archive' | 'purchases';
+
 /** Coerce Supabase row so render never throws on null/odd shapes */
 function normalizeVoucherRow(row: Record<string, unknown> | null | undefined): Voucher | null {
   if (!row || row.id == null) return null;
@@ -136,7 +161,7 @@ const AdminVouchers: React.FC = () => {
   const [showEditDialog, setShowEditDialog] = useState(false);
   const [editingVoucher, setEditingVoucher] = useState<Voucher | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
-  const [statusFilter, setStatusFilter] = useState<string>('all');
+  const [sectionTab, setSectionTab] = useState<VoucherSection>('active');
   const [selectedVoucher, setSelectedVoucher] = useState<Voucher | null>(null);
   const [voucherPurchases, setVoucherPurchases] = useState<{ id: string; user_email: string; voucher_name: string; created_at: string }[]>([]);
   const [purchasesLoading, setPurchasesLoading] = useState(false);
@@ -524,24 +549,13 @@ const AdminVouchers: React.FC = () => {
     const matchesSearch = (voucher.name ?? '')
       .toLowerCase()
       .includes((searchTerm ?? '').toLowerCase());
-    if (statusFilter === 'all') return matchesSearch;
+    if (!matchesSearch) return false;
 
-    const now = new Date();
-    const startDate = parseBoundaryDate(voucher.start_date);
-    const endDate = parseBoundaryDate(voucher.end_date);
-    const redeemed = Number(voucher.redeemed_count ?? 0);
-    const safeRedeemed = Number.isFinite(redeemed) ? redeemed : 0;
-    const remainingQuantity =
-      voucher.max_quantity != null && Number.isFinite(voucher.max_quantity)
-        ? voucher.max_quantity - safeRedeemed
-        : null;
-
-    let voucherStatus = 'active';
-    if (startDate && now < startDate) voucherStatus = 'scheduled';
-    else if (endDate && now > endDate) voucherStatus = 'expired';
-    else if (remainingQuantity !== null && remainingQuantity <= 0) voucherStatus = 'exhausted';
-
-    return matchesSearch && voucherStatus === statusFilter;
+    const status = getVoucherStatus(voucher);
+    if (sectionTab === 'active') return status === 'active';
+    if (sectionTab === 'scheduled') return status === 'scheduled';
+    if (sectionTab === 'archive') return status === 'expired' || status === 'exhausted';
+    return false; // 'purchases' section renders the purchases table, not vouchers
   });
 
   const getRemainingText = (voucher: Voucher) => {
@@ -553,24 +567,10 @@ const AdminVouchers: React.FC = () => {
   };
 
   const getStatusBadge = (voucher: Voucher) => {
-    const now = new Date();
-    const startDate = parseBoundaryDate(voucher.start_date);
-    const endDate = parseBoundaryDate(voucher.end_date);
-    const redeemed = Number(voucher.redeemed_count ?? 0);
-    const remainingQuantity =
-      voucher.max_quantity != null && Number.isFinite(voucher.max_quantity)
-        ? voucher.max_quantity - (Number.isFinite(redeemed) ? redeemed : 0)
-        : null;
-
-    if (startDate && now < startDate) {
-      return <Badge variant="pending">Naplánováno</Badge>;
-    }
-    if (endDate && now > endDate) {
-      return <Badge variant="destructive">Vypršelo</Badge>;
-    }
-    if (remainingQuantity !== null && remainingQuantity <= 0) {
-      return <Badge variant="destructive">Vyčerpáno</Badge>;
-    }
+    const status = getVoucherStatus(voucher);
+    if (status === 'scheduled') return <Badge variant="pending">Naplánováno</Badge>;
+    if (status === 'expired') return <Badge variant="destructive">Vypršelo</Badge>;
+    if (status === 'exhausted') return <Badge variant="destructive">Vyčerpáno</Badge>;
     return <Badge variant="success">Aktivní</Badge>;
   };
 
@@ -811,22 +811,7 @@ const AdminVouchers: React.FC = () => {
             </CardHeader>
             <CardContent>
               <div className="text-2xl font-bold text-green-600">
-                {safeVouchers.filter((v) => {
-                  if (!v || v.id == null) return false;
-                  const now = new Date();
-                  const startDate = parseBoundaryDate(v.start_date);
-                  const endDate = parseBoundaryDate(v.end_date);
-                  const redeemed = Number(v.redeemed_count ?? 0);
-                  const remainingQuantity =
-                    v.max_quantity != null && Number.isFinite(v.max_quantity)
-                      ? v.max_quantity - (Number.isFinite(redeemed) ? redeemed : 0)
-                      : null;
-
-                  if (startDate && now < startDate) return false;
-                  if (endDate && now > endDate) return false;
-                  if (remainingQuantity !== null && remainingQuantity <= 0) return false;
-                  return true;
-                }).length}
+                {safeVouchers.filter((v) => v && v.id != null && getVoucherStatus(v) === 'active').length}
               </div>
             </CardContent>
           </Card>
@@ -844,7 +829,26 @@ const AdminVouchers: React.FC = () => {
           </Card>
         </div>
 
-        {/* Voucher Purchases */}
+        {/* Section tabs: Aktivní / Naplánované / Archiv / Nákupy voucherů */}
+        <div className="flex flex-wrap gap-2">
+          {([
+            { key: 'active', label: 'Aktivní' },
+            { key: 'scheduled', label: 'Naplánované' },
+            { key: 'archive', label: 'Archiv' },
+            { key: 'purchases', label: 'Nákupy voucherů' },
+          ] as { key: VoucherSection; label: string }[]).map((tab) => (
+            <Button
+              key={tab.key}
+              variant={sectionTab === tab.key ? 'default' : 'outline'}
+              onClick={() => setSectionTab(tab.key)}
+            >
+              {tab.label}
+            </Button>
+          ))}
+        </div>
+
+        {/* Voucher Purchases — only in its own section, not above voucher management */}
+        {sectionTab === 'purchases' && (
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
@@ -885,8 +889,10 @@ const AdminVouchers: React.FC = () => {
             )}
           </CardContent>
         </Card>
+        )}
 
-        {/* Main Voucher Table */}
+        {/* Main Voucher Table — voucher management sections (Aktivní / Naplánované / Archiv) */}
+        {sectionTab !== 'purchases' && (
         <Card>
           <CardHeader>
             <div className="flex items-center justify-between">
@@ -900,23 +906,10 @@ const AdminVouchers: React.FC = () => {
                     className="max-w-sm"
                   />
                 </div>
-                
-                <Select value={statusFilter} onValueChange={setStatusFilter}>
-                  <SelectTrigger className="w-[180px]">
-                    <SelectValue placeholder="Filtrovat stav" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="all">Všechny</SelectItem>
-                    <SelectItem value="active">Aktivní</SelectItem>
-                    <SelectItem value="scheduled">Naplánované</SelectItem>
-                    <SelectItem value="expired">Vypršelé</SelectItem>
-                    <SelectItem value="exhausted">Vyčerpané</SelectItem>
-                  </SelectContent>
-                </Select>
               </div>
             </div>
           </CardHeader>
-          
+
           <CardContent>
             {loading ? (
               <div className="text-center py-8">
@@ -926,7 +919,7 @@ const AdminVouchers: React.FC = () => {
             ) : filteredVouchers.length === 0 ? (
               <div className="text-center py-8">
                 <p className="text-muted-foreground">
-                  {searchTerm || statusFilter !== 'all' ? 'Žádné vouchery nenalezeny.' : 'Zatím nebyly vytvořeny žádné vouchery.'}
+                  {searchTerm ? 'Žádné vouchery nenalezeny.' : 'V této sekci nejsou žádné vouchery.'}
                 </p>
               </div>
             ) : (
@@ -1065,6 +1058,7 @@ const AdminVouchers: React.FC = () => {
             )}
           </CardContent>
         </Card>
+        )}
 
         {/* Voucher Preview Dialog */}
         {selectedVoucher && (
