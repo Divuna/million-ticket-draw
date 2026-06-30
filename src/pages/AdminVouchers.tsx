@@ -25,7 +25,6 @@ import { cn } from '@/lib/utils';
 
 interface VoucherForm {
   name: string;
-  imageFile: File | null;
   bannerFile: File | null;
   maxQuantity: number | null;
   startDate: Date | undefined;
@@ -170,6 +169,14 @@ function downloadCsv(filename: string, rows: string[][]): void {
   URL.revokeObjectURL(url);
 }
 
+function getSupabaseErrorMessage(error: unknown): string {
+  if (error && typeof error === 'object' && 'message' in error) {
+    const message = (error as { message?: unknown }).message;
+    if (typeof message === 'string' && message.trim() !== '') return message;
+  }
+  return 'Neznámá chyba Supabase';
+}
+
 /**
  * Single source of truth for voucher status — same logic already used across
  * the filter, status badge and summary cards in this file, extracted so the
@@ -278,7 +285,6 @@ const AdminVouchers: React.FC = () => {
   
   const [voucherForm, setVoucherForm] = useState<VoucherForm>({
     name: '',
-    imageFile: null,
     bannerFile: null,
     maxQuantity: null,
     startDate: undefined,
@@ -513,8 +519,8 @@ const AdminVouchers: React.FC = () => {
     if (!voucherForm.name.trim()) {
       return 'Vyplňte název voucheru.';
     }
-    if (mode === 'create' && !voucherForm.imageFile) {
-      return 'Nahrajte hlavní obrázek voucheru.';
+    if (mode === 'create' && !voucherForm.bannerFile) {
+      return 'Nahrajte banner voucheru.';
     }
     if (
       voucherForm.startDate &&
@@ -575,19 +581,14 @@ const AdminVouchers: React.FC = () => {
         return;
       }
 
-      // Upload images
-      const imageUrl = await uploadImage(voucherForm.imageFile);
-      let bannerUrl = null;
-      if (voucherForm.bannerFile) {
-        bannerUrl = await uploadImage(voucherForm.bannerFile);
-      }
+      const bannerUrl = await uploadImage(voucherForm.bannerFile);
 
       // Create voucher
       const { data, error } = await supabase
         .from('vouchers')
         .insert({
           name: voucherForm.name,
-          image_url: imageUrl,
+          image_url: bannerUrl,
           banner_url: bannerUrl,
           max_quantity: voucherForm.maxQuantity,
           redeemed_count: 0,
@@ -620,7 +621,7 @@ const AdminVouchers: React.FC = () => {
       if (createdVoucherId) {
         await supabase.from('vouchers').delete().eq('id', createdVoucherId);
       }
-      toast.error('Chyba při vytváření voucheru');
+      toast.error(`Chyba při vytváření voucheru/kódů: ${getSupabaseErrorMessage(error)}`);
     } finally {
       setCreateLoading(false);
     }
@@ -629,7 +630,6 @@ const AdminVouchers: React.FC = () => {
   const resetForm = () => {
     setVoucherForm({
       name: '',
-      imageFile: null,
       bannerFile: null,
       maxQuantity: null,
       startDate: undefined,
@@ -643,7 +643,6 @@ const AdminVouchers: React.FC = () => {
     resetWizardState();
     setVoucherForm({
       name: voucher.name ?? '(Bez názvu)',
-      imageFile: null,
       bannerFile: null,
       maxQuantity:
         voucher.max_quantity != null && Number.isFinite(Number(voucher.max_quantity))
@@ -669,12 +668,10 @@ const AdminVouchers: React.FC = () => {
       let imageUrl = editingVoucher.image_url;
       let bannerUrl = editingVoucher.banner_url;
 
-      // Upload new images if provided
-      if (voucherForm.imageFile) {
-        imageUrl = await uploadImage(voucherForm.imageFile);
-      }
+      // Upload new banner if provided and keep legacy image_url in sync.
       if (voucherForm.bannerFile) {
         bannerUrl = await uploadImage(voucherForm.bannerFile);
+        imageUrl = bannerUrl;
       }
 
       // Update voucher
@@ -868,7 +865,10 @@ const AdminVouchers: React.FC = () => {
       .select()
       .single();
 
-    if (batchError) throw batchError;
+    if (batchError) {
+      console.error('Error creating voucher code batch:', batchError);
+      throw batchError;
+    }
 
     const { error: codesError } = await supabase
       .from('voucher_codes')
@@ -883,6 +883,7 @@ const AdminVouchers: React.FC = () => {
       );
 
     if (codesError) {
+      console.error('Error creating voucher codes:', codesError);
       await supabase
         .from('voucher_code_batches')
         .delete()
@@ -1179,30 +1180,11 @@ const AdminVouchers: React.FC = () => {
         )}
 
         {voucherWizardStep === 'graphics' && (
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div className="space-y-4">
             <div className="space-y-2">
-              <Label htmlFor={`${mode}-main-image`}>
-                Hlavní obrázek voucheru {isCreate ? '*' : ''}
+              <Label htmlFor={`${mode}-banner-image`}>
+                Banner voucheru {isCreate ? '*' : ''}
               </Label>
-              <div className="flex items-center gap-2">
-                <Input
-                  id={`${mode}-main-image`}
-                  type="file"
-                  accept="image/*"
-                  onChange={(event) =>
-                    setVoucherForm({ ...voucherForm, imageFile: event.target.files?.[0] || null })
-                  }
-                  className="flex-1"
-                />
-                <ImageIcon className="h-4 w-4 text-muted-foreground" />
-              </div>
-              <p className="text-xs text-muted-foreground">
-                {isCreate ? 'Fallback obrázek je povinný.' : 'Nechte prázdné pro zachování současného obrázku.'}
-              </p>
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor={`${mode}-banner-image`}>Full-card banner</Label>
               <div className="flex items-center gap-2">
                 <Input
                   id={`${mode}-banner-image`}
@@ -1213,12 +1195,17 @@ const AdminVouchers: React.FC = () => {
                   }
                   className="flex-1"
                 />
-                <Upload className="h-4 w-4 text-muted-foreground" />
+                <ImageIcon className="h-4 w-4 text-muted-foreground" />
               </div>
               <p className="text-xs text-muted-foreground">
-                Banner má nést partnera, nabídku a hlavní sdělení voucheru.
+                Jeden obrázek se uloží do banner_url i image_url kvůli kompatibilitě se starým systémem.
               </p>
             </div>
+            {voucherForm.bannerFile && (
+              <div className="rounded-lg border p-3 text-sm text-muted-foreground">
+                Vybraný soubor: {voucherForm.bannerFile.name}
+              </div>
+            )}
           </div>
         )}
 
