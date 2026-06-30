@@ -246,6 +246,94 @@ export interface Database {
           updated_at?: string | null
         }
       }
+      voucher_code_batches: {
+        Row: {
+          id: string
+          voucher_id: string
+          source: string
+          label: string | null
+          total_count: number
+          import_filename: string | null
+          notes: string | null
+          created_by: string | null
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          voucher_id: string
+          source: string
+          label?: string | null
+          total_count?: number
+          import_filename?: string | null
+          notes?: string | null
+          created_by?: string | null
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          voucher_id?: string
+          source?: string
+          label?: string | null
+          total_count?: number
+          import_filename?: string | null
+          notes?: string | null
+          created_by?: string | null
+          created_at?: string
+          updated_at?: string
+        }
+      }
+      voucher_codes: {
+        Row: {
+          id: string
+          voucher_id: string
+          batch_id: string | null
+          code: string
+          status: string
+          issued_to_user_id: string | null
+          issued_user_voucher_id: string | null
+          issued_at: string | null
+          voided_at: string | null
+          voided_by: string | null
+          void_reason: string | null
+          created_by: string | null
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          voucher_id: string
+          batch_id?: string | null
+          code: string
+          status?: string
+          issued_to_user_id?: string | null
+          issued_user_voucher_id?: string | null
+          issued_at?: string | null
+          voided_at?: string | null
+          voided_by?: string | null
+          void_reason?: string | null
+          created_by?: string | null
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          voucher_id?: string
+          batch_id?: string | null
+          code?: string
+          status?: string
+          issued_to_user_id?: string | null
+          issued_user_voucher_id?: string | null
+          issued_at?: string | null
+          voided_at?: string | null
+          voided_by?: string | null
+          void_reason?: string | null
+          created_by?: string | null
+          created_at?: string
+          updated_at?: string
+        }
+      }
       tickets: {
         Row: {
           id: string
