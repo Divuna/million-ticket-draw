@@ -15,6 +15,8 @@ Celý Stripe TEST checkout flow ověřen end-to-end na stagingu `dxmowysntemfqfn
 
 **Live Stripe přepnutí = samostatný vědomě schválený krok** — produkční Stripe stále v TEST mode.
 
+**Staging e2e wallet — testovací navýšení (30. 06. 2026):** po opakovaných Stripe TEST checkout testech vzniklo na stagingu `dxmowysntemfqfnanxua` celkem **7 completed plateb** pro účet `e2e@onemil.cz` (každá 310 MioCoinů, `cs_test_`). Wallet `e2e@onemil.cz` je nyní **7130.00** (4960 + 7×310 = vše korektně připsáno přes webhook). **Stripe staging test je hotový.** Redirect na Lovable preview je očekávaný (staging `PUBLIC_APP_URL` vrácen na Lovable; webhook/kredit běží server-side nezávisle na redirectu). **Toto navýšení je čistě testovací — NEČISTIT bez samostatného schválení Pavla.** Produkce `xkzhjldrojjlrkezorey` nedotčena (133 plateb, poslední 07:18 = incident).
+
 ## STRIPE TEST CLEANUP — 5 TESTOVACÍCH PAYMENTS Z OMYLU (30. 06. 2026, schválení Pavla)
 
 **Incident:** Frontend (Lovable preview) mířil na produkční Supabase `xkzhjldrojjlrkezorey` místo stagingu. V produkci vzniklo 5 testovacích Stripe payments (30. 06. 2026 07:10–07:18 UTC).

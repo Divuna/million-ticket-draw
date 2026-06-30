@@ -1,5 +1,9 @@
 # OneMil — DEVELOPMENT HISTORY (CHRONOLOGICAL ONLY)
 
+**Timestamp (Europe/Prague): 2026-06-30 17:05:00 +02:00** (Staging Stripe TEST hotový — poznámka k e2e wallet)
+
+- **2026-06-30** — **Stripe staging TEST hotový.** Po opakovaných TEST checkout testech vzniklo na stagingu `dxmowysntemfqfnanxua` 7 completed plateb pro `e2e@onemil.cz` (každá 310 MC, `cs_test_`), wallet e2e nyní **7130.00** (4960 + 7×310, vše připsáno přes webhook). Redirect na Lovable preview je očekávaný (staging `PUBLIC_APP_URL` vrácen na Lovable; webhook/kredit běží server-side nezávisle na redirectu — není to produkční problém). Staging e2e wallet navýšení je **čistě testovací — nečistit bez samostatného schválení Pavla.** Produkce nedotčena (133 plateb, poslední 07:18 = incident).
+
 **Timestamp (Europe/Prague): 2026-06-30 16:10:00 +02:00** (Stripe PAY01–PAY04 staging TEST ověřeno)
 
 - **2026-06-30** — **Stripe PAY01–PAY04 staging TEST mode ověřeno ✅.** Flow ověřen end-to-end na stagingu `dxmowysntemfqfnanxua` přes lokální frontend `localhost:8090`. PAY01 checkout 200; PAY02 webhook 200 + payment completed 310 + wallet e2e 4960→5270; PAY03 redirect na localhost/payment-success; PAY04 druhý Resend → 0 duplicit, žádný druhý credit. Root cause fix (staging only): trigger `update_wallet_after_payment` zapisoval do neexistujícího `wallets.balance_vouchers` → webhook 500 → sjednoceno s produkční `balance_coins`-only definicí (`CREATE OR REPLACE`, žádná data). Staging `PUBLIC_APP_URL` dočasně na localhost pro test, poté vráceno na `https://preview--million-ticket-draw.lovable.app`. Produkce nedotčena, žádná reálná platba. Live Stripe přepnutí = samostatný schválený krok (produkce stále TEST mode).
