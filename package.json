@@ -5,6 +5,7 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
+    "dev:staging": "vite --mode staging",
     "build": "vite build",
     "e2e:contest": "node scripts/e2e-contest-test.mjs",
     "e2e:apply-migration": "node scripts/apply-e2e-migration.mjs",
