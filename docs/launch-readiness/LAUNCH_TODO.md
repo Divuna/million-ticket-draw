@@ -76,10 +76,10 @@
 
 | ID | Prio | Oblast | Krok | Očekávaný výsledek | Skutečný | Odkaz | Důkaz | Stav | Pozn. |
 |----|------|--------|------|--------------------|----------|-------|-------|------|-------|
-| PAY01 | P0 | Stripe checkout | Top-up (test mode) | Redirect na Stripe | | /profile | | neověřeno | netestovat na produkci; **30.06. cleanup:** 5 test payments z omylu (frontend → produkce) vyčištěno — wallet −1550 MC, 5× status='refunded'; zbývá 52 historických cs_test_* → pre-launch data reset |
-| PAY02 | P0 | Stripe webhook | Platba dokončena | Wallet credit, idempotence | | — | | neověřeno | |
-| PAY03 | P0 | Success/Cancel | Návrat z plateb | Správné routy | | /payment-success, /payment-cancel | | neotestováno | |
-| PAY04 | P1 | Webhook fail | Selhání | 500 → retry, žádný dvojí credit | | — | | neověřeno | |
+| PAY01 | P0 | Stripe checkout | Top-up (test mode) | Redirect na Stripe | | /profile | | **prošlo (staging TEST 30.06.)** | netestovat na produkci; ověřeno na stagingu přes lokální frontend localhost:8090; **30.06. cleanup:** 5 test payments z omylu (frontend → produkce) vyčištěno — wallet −1550 MC, 5× status='refunded'; zbývá 52 historických cs_test_* → pre-launch data reset |
+| PAY02 | P0 | Stripe webhook | Platba dokončena | Wallet credit, idempotence | | — | | **prošlo (staging TEST 30.06.)** | webhook 200, payment completed 310, wallet e2e 4960→5270; root cause fix: staging trigger `update_wallet_after_payment` přestal zapisovat do neexistujícího `balance_vouchers`, sjednoceno s produkcí |
+| PAY03 | P0 | Success/Cancel | Návrat z plateb | Správné routy | | /payment-success, /payment-cancel | | **prošlo (staging TEST 30.06.)** | redirect na localhost:8090/payment-success po dočasném nastavení staging PUBLIC_APP_URL; po testu vráceno na Lovable preview |
+| PAY04 | P1 | Webhook fail | Selhání | 500 → retry, žádný dvojí credit | | — | | **prošlo (staging TEST 30.06.)** | druhý Resend stejného eventu: payment count zůstal 1, wallet 5270, 0 duplicit, žádný druhý credit (idempotence guard `existingPayment`) |
 
 ## Právní a veřejné (F)
 

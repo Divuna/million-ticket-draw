@@ -1,5 +1,20 @@
 ﻿# OneMil – aktuální stav projektu
 
+## STRIPE PAY01–PAY04 — STAGING TEST MODE OVĚŘENO ✅ (30. 06. 2026)
+
+Celý Stripe TEST checkout flow ověřen end-to-end na stagingu `dxmowysntemfqfnanxua` přes lokální frontend `http://localhost:8090`. Produkce `xkzhjldrojjlrkezorey` nedotčena, žádná reálná platba.
+
+- **PAY01:** `create-stripe-checkout` → 200, redirect na Stripe TEST. ✅
+- **PAY02:** webhook 200, `payments` 1× (completed, 310, stripe), wallet `e2e@onemil.cz` 4960 → 5270. ✅
+- **PAY03:** redirect na `http://localhost:8090/payment-success` (dočasné staging PUBLIC_APP_URL = localhost). ✅
+- **PAY04 idempotence:** druhý Resend → payment count 1, wallet 5270, 0 duplicit, žádný druhý credit. ✅
+
+**Root cause fix (staging only):** trigger `update_wallet_after_payment` zapisoval do neexistujícího `wallets.balance_vouchers` → insert do `payments` rollback → webhook 500. Funkce sjednocena s produkcí (`balance_coins`-only, `CREATE OR REPLACE`). Žádná data nezměněna.
+
+**Staging `PUBLIC_APP_URL` vráceno** z `http://localhost:8090` zpět na `https://preview--million-ticket-draw.lovable.app` (ověřeno SHA-256).
+
+**Live Stripe přepnutí = samostatný vědomě schválený krok** — produkční Stripe stále v TEST mode.
+
 ## STRIPE TEST CLEANUP — 5 TESTOVACÍCH PAYMENTS Z OMYLU (30. 06. 2026, schválení Pavla)
 
 **Incident:** Frontend (Lovable preview) mířil na produkční Supabase `xkzhjldrojjlrkezorey` místo stagingu. V produkci vzniklo 5 testovacích Stripe payments (30. 06. 2026 07:10–07:18 UTC).

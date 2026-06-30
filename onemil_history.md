@@ -1,5 +1,9 @@
 # OneMil — DEVELOPMENT HISTORY (CHRONOLOGICAL ONLY)
 
+**Timestamp (Europe/Prague): 2026-06-30 16:10:00 +02:00** (Stripe PAY01–PAY04 staging TEST ověřeno)
+
+- **2026-06-30** — **Stripe PAY01–PAY04 staging TEST mode ověřeno ✅.** Flow ověřen end-to-end na stagingu `dxmowysntemfqfnanxua` přes lokální frontend `localhost:8090`. PAY01 checkout 200; PAY02 webhook 200 + payment completed 310 + wallet e2e 4960→5270; PAY03 redirect na localhost/payment-success; PAY04 druhý Resend → 0 duplicit, žádný druhý credit. Root cause fix (staging only): trigger `update_wallet_after_payment` zapisoval do neexistujícího `wallets.balance_vouchers` → webhook 500 → sjednoceno s produkční `balance_coins`-only definicí (`CREATE OR REPLACE`, žádná data). Staging `PUBLIC_APP_URL` dočasně na localhost pro test, poté vráceno na `https://preview--million-ticket-draw.lovable.app`. Produkce nedotčena, žádná reálná platba. Live Stripe přepnutí = samostatný schválený krok (produkce stále TEST mode).
+
 **Timestamp (Europe/Prague): 2026-06-30 09:30:00 +02:00** (Stripe TEST cleanup documented)
 
 ## Strict header (do not break)

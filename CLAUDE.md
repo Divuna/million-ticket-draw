@@ -1,5 +1,20 @@
 # CLAUDE.md
 
+## STRIPE PAY01–PAY04 — STAGING TEST MODE OVĚŘENO ✅ (30. 06. 2026)
+
+Celý Stripe TEST checkout flow ověřen **end-to-end na stagingu `dxmowysntemfqfnanxua`** přes lokální frontend `http://localhost:8090` (Lovable preview se pro tento test nepoužíval). Produkce `xkzhjldrojjlrkezorey` nedotčena, žádná reálná platba.
+
+- **PAY01 checkout:** `create-stripe-checkout` → 200, redirect na Stripe TEST. ✅
+- **PAY02 payment + wallet credit:** webhook 200, `payments` 1 řádek (status=`completed`, amount=310, method=`stripe`), wallet `e2e@onemil.cz` 4960 → **5270**. ✅
+- **PAY03 success redirect:** návrat na `http://localhost:8090/payment-success` po dočasném nastavení staging `PUBLIC_APP_URL` na localhost. ✅
+- **PAY04 idempotence:** druhý Resend stejného `checkout.session.completed` eventu → payment count zůstal 1, wallet zůstal 5270, **0 duplicit, žádný druhý credit** (idempotence guard `existingPayment` ve `stripe-webhook`). ✅
+
+**Root cause fix (staging only, schválení Pavla):** staging trigger funkce `update_wallet_after_payment` zapisovala do neexistujícího sloupce `wallets.balance_vouchers` → každý insert do `payments` se rollbacknul → webhook 500 → 0 kreditu. Funkce sjednocena s produkční definicí (jen `UPDATE wallets SET balance_coins = balance_coins + NEW.amount`). Žádná data nezměněna, žádný `balance_vouchers`. **Pravidlo: nevracet `balance_vouchers` do `update_wallet_after_payment`; staging i produkce drží `balance_coins`-only definici.**
+
+**Staging `PUBLIC_APP_URL`** byl po testu **vrácen** z `http://localhost:8090` zpět na `https://preview--million-ticket-draw.lovable.app` (ověřeno SHA-256). Pravidlo: staging `PUBLIC_APP_URL` měnit na localhost jen dočasně pro lokální test, vždy vrátit zpět (jinak staging CI E2E dostane localhost redirect).
+
+**⚠️ Live Stripe přepnutí je samostatný vědomě schválený krok** — produkční Stripe běží stále v TEST mode; live klíče, live webhook a finální produkční nastavení vyžadují výslovné schválení Pavla.
+
 ## STRIPE TEST CLEANUP — 5 TESTOVACÍCH PLATEB Z OMYLU (30. 06. 2026, schválení Pavla)
 
 **Incident:** Frontend přes Lovable (preview environment) míř na produkční Supabase projekt `xkzhjldrojjlrkezorey` místo stagingu `dxmowysntemfqfnanxua`. V produkci vzniklo **5 testovacích Stripe payments**:
