@@ -1,6 +1,6 @@
 # OneMil — DEVELOPMENT HISTORY (CHRONOLOGICAL ONLY)
 
-**Timestamp (Europe/Prague): 2026-06-29 23:30:00 +02:00** (Partner invoice VAT fix production rollout documented)
+**Timestamp (Europe/Prague): 2026-06-30 09:30:00 +02:00** (Stripe TEST cleanup documented)
 
 ## Strict header (do not break)
 ### What belongs in this file
@@ -13,6 +13,10 @@
 - Undated narrative dumps.
 
 ---
+
+## 2026-06-30 -- Stripe TEST cleanup from accidental frontend production redirect
+
+A Lovable preview environment (frontend) was discovered to be pointing to the production Supabase project `xkzhjldrojjlrkezorey` instead of the staging project `dxmowysntemfqfnanxua`. This resulted in 5 unintended test Stripe payments (cs_test_* session ids, 310 MioCoinUs each, user `435ab4e9…`) being recorded on production at 2026-06-30 07:10–07:18 UTC. Cleanup was approved by Pavel and executed: wallet debited by 1550 MioCoinUs (guarded UPDATE, final balance 7650.50); the 5 payments were marked as status='refunded' (not deleted, audit trail preserved); 0 tickets affected, 0 referral rewards affected, remaining 52 historical `cs_test_` payments left untouched. No e-mails were sent, no mutations occurred outside wallet + payment status, and no data was deleted. Root cause (frontend redirect) and broader historical test data (52 other TEST payments) remain open for separate resolution during the pre-launch data reset and Stripe live transition planning. No code was changed; production was touched only by the guarded wallet + refund-status updates.
 
 ## 2026-06-29 -- Partner invoice VAT fix production rollout COMPLETE
 

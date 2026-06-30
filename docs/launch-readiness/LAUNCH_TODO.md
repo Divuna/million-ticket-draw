@@ -76,7 +76,7 @@
 
 | ID | Prio | Oblast | Krok | Očekávaný výsledek | Skutečný | Odkaz | Důkaz | Stav | Pozn. |
 |----|------|--------|------|--------------------|----------|-------|-------|------|-------|
-| PAY01 | P0 | Stripe checkout | Top-up (test mode) | Redirect na Stripe | | /profile | | neověřeno | netestovat na produkci |
+| PAY01 | P0 | Stripe checkout | Top-up (test mode) | Redirect na Stripe | | /profile | | neověřeno | netestovat na produkci; **30.06. cleanup:** 5 test payments z omylu (frontend → produkce) vyčištěno — wallet −1550 MC, 5× status='refunded'; zbývá 52 historických cs_test_* → pre-launch data reset |
 | PAY02 | P0 | Stripe webhook | Platba dokončena | Wallet credit, idempotence | | — | | neověřeno | |
 | PAY03 | P0 | Success/Cancel | Návrat z plateb | Správné routy | | /payment-success, /payment-cancel | | neotestováno | |
 | PAY04 | P1 | Webhook fail | Selhání | 500 → retry, žádný dvojí credit | | — | | neověřeno | |

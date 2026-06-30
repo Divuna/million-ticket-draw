@@ -1,5 +1,33 @@
 # CLAUDE.md
 
+## STRIPE TEST CLEANUP — 5 TESTOVACÍCH PLATEB Z OMYLU (30. 06. 2026, schválení Pavla)
+
+**Incident:** Frontend přes Lovable (preview environment) míř na produkční Supabase projekt `xkzhjldrojjlrkezorey` místo stagingu `dxmowysntemfqfnanxua`. V produkci vzniklo **5 testovacích Stripe payments**:
+- Čas: 2026-06-30 07:10–07:18 UTC
+- User: `435ab4e9…`
+- Částka: 5× 310 MioCoinů (cs_test_* session ids)
+- Celkem: 1550 MioCoinů
+- Status: completed (před cleanup)
+- Referral rewards: 0
+- Tickets: 0 (coiny nebyly utracené)
+
+**Cleanup (schválen Pavel, proveden 30. 06. 2026):**
+1. **Wallet deducted:** −1550 MioCoinů (guarded, zůstane na 7650.50 ✓)
+2. **Payments marked refunded:** 5× `status='completed' → status='refunded'` (žádné smazání, zachován audit trail)
+3. **Downstream:** 0 tikety dotčeny, 0 referral rewards dotčeny
+4. **Postcheck:** wallet sedí, 5 řádků refunded, ostatních 52 historických `cs_test_` payments nedotčeno
+
+**Bez vedlejších efektů:** žádné e-maily, žádné mutace mimo wallet + payment status, existující faktury, tikety, referrals beze změny, žádná data smazána.
+
+**Otevřené (mimo tento cleanup):**
+- 52 historických `cs_test_` payments v produkci (testovací fáze) — řešit v pre-launch data resetu
+- Frontend Lovable aktuálně mířit na produkci (root cause) — ověřit, že je přesměrován na staging pro TEST checkout
+- Produkční Stripe je aktuálně v TEST mode — live přepnutí je samostatný schválený krok
+
+**Commit:** Zaznamenáno v CLAUDE.md, onemil_state.md, onemil_history.md, LAUNCH_TODO.md.
+
+---
+
 ## PARTNER INVOICE VAT FIX — PRODUKČNÍ ROLLOUT DOKONČEN (29. 06. 2026, schválení Pavla)
 
 VAT výpočet partnerských faktur **opraven a sjednocen na produkci `xkzhjldrojjlrkezorey`** (29. 06. 2026, výslovné schválení Pavla). `vat_rate` je konvenčně **zlomek** (0.21 = 21 %); DPH = `net * vat_rate`, gross = `net + DPH`.

@@ -1,5 +1,20 @@
 ﻿# OneMil – aktuální stav projektu
 
+## STRIPE TEST CLEANUP — 5 TESTOVACÍCH PAYMENTS Z OMYLU (30. 06. 2026, schválení Pavla)
+
+**Incident:** Frontend (Lovable preview) mířil na produkční Supabase `xkzhjldrojjlrkezorey` místo stagingu. V produkci vzniklo 5 testovacích Stripe payments (30. 06. 2026 07:10–07:18 UTC).
+
+**Cleanup provedený:**
+- **Payments:** 5× (user `435ab4e9…`, cs_test_* session ids, 310 MC each, status refunded)
+- **Wallet:** −1550 MioCoinů (guarded UPDATE, final balance 7650.50)
+- **Postcheck:** 0 tikety, 0 referral rewards, ostatní 52 historických `cs_test_` payments nedotčeny
+
+**Bez vedlejších efektů:** žádné e-maily, žádné mutace mimo wallet + payment status, existující faktury/tikety beze změny.
+
+**Otevřené:** 52 historických `cs_test_` payments v produkci (testovací fáze) řešit v pre-launch data resetu; Lovable frontend ověřit oprávňování (staging vs. produkce); Stripe TEST vs. LIVE přepnutí = samostatný krok.
+
+---
+
 ## PARTNER INVOICE VAT FIX — LIVE NA PRODUKCI (29. 06. 2026, schválení Pavla)
 
 VAT výpočet partnerských faktur je opravený a sjednocený na produkci `xkzhjldrojjlrkezorey`. Konvence: `partners.vat_rate` = **zlomek** (0.21); DPH = `net * vat_rate`; gross = `net + DPH`.
