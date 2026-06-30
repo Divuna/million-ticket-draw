@@ -3868,6 +3868,7 @@ export type Database = {
           redeemed: boolean
           updated_at: string
           user_id: string
+          voucher_code_id: string | null
           voucher_id: string
         }
         Insert: {
@@ -3876,6 +3877,7 @@ export type Database = {
           redeemed?: boolean
           updated_at?: string
           user_id: string
+          voucher_code_id?: string | null
           voucher_id: string
         }
         Update: {
@@ -3884,9 +3886,17 @@ export type Database = {
           redeemed?: boolean
           updated_at?: string
           user_id?: string
+          voucher_code_id?: string | null
           voucher_id?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "user_vouchers_voucher_code_id_fkey"
+            columns: ["voucher_code_id"]
+            isOneToOne: true
+            referencedRelation: "voucher_codes"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "user_vouchers_user_id_fkey"
             columns: ["user_id"]
@@ -3956,6 +3966,154 @@ export type Database = {
           show_user_menu?: boolean | null
         }
         Relationships: []
+      }
+      voucher_code_batches: {
+        Row: {
+          created_at: string
+          created_by: string | null
+          id: string
+          import_filename: string | null
+          label: string | null
+          notes: string | null
+          source: string
+          total_count: number
+          updated_at: string
+          voucher_id: string
+        }
+        Insert: {
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          import_filename?: string | null
+          label?: string | null
+          notes?: string | null
+          source: string
+          total_count?: number
+          updated_at?: string
+          voucher_id: string
+        }
+        Update: {
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          import_filename?: string | null
+          label?: string | null
+          notes?: string | null
+          source?: string
+          total_count?: number
+          updated_at?: string
+          voucher_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "voucher_code_batches_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "voucher_code_batches_voucher_id_fkey"
+            columns: ["voucher_id"]
+            isOneToOne: false
+            referencedRelation: "vouchers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      voucher_codes: {
+        Row: {
+          batch_id: string | null
+          code: string
+          created_at: string
+          created_by: string | null
+          id: string
+          issued_at: string | null
+          issued_to_user_id: string | null
+          issued_user_voucher_id: string | null
+          status: string
+          updated_at: string
+          void_reason: string | null
+          voided_at: string | null
+          voided_by: string | null
+          voucher_id: string
+        }
+        Insert: {
+          batch_id?: string | null
+          code: string
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          issued_at?: string | null
+          issued_to_user_id?: string | null
+          issued_user_voucher_id?: string | null
+          status?: string
+          updated_at?: string
+          void_reason?: string | null
+          voided_at?: string | null
+          voided_by?: string | null
+          voucher_id: string
+        }
+        Update: {
+          batch_id?: string | null
+          code?: string
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          issued_at?: string | null
+          issued_to_user_id?: string | null
+          issued_user_voucher_id?: string | null
+          status?: string
+          updated_at?: string
+          void_reason?: string | null
+          voided_at?: string | null
+          voided_by?: string | null
+          voucher_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "voucher_codes_batch_id_fkey"
+            columns: ["batch_id"]
+            isOneToOne: false
+            referencedRelation: "voucher_code_batches"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "voucher_codes_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "voucher_codes_issued_to_user_id_fkey"
+            columns: ["issued_to_user_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "voucher_codes_issued_user_voucher_id_fkey"
+            columns: ["issued_user_voucher_id"]
+            isOneToOne: true
+            referencedRelation: "user_vouchers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "voucher_codes_voided_by_fkey"
+            columns: ["voided_by"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "voucher_codes_voucher_id_fkey"
+            columns: ["voucher_id"]
+            isOneToOne: false
+            referencedRelation: "vouchers"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       vouchers: {
         Row: {
