@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState } from "react";
+﻿import React, { useEffect, useRef, useState } from "react";
 import { useNavigate, Link, useLocation } from "react-router-dom";
 import { buildLoginRedirectUrl } from "@/lib/loginRedirect";
 import { setPendingPaymentSuccessContext } from "@/lib/paymentSuccessContext";
@@ -6,6 +6,7 @@ import { Header } from "@/components/Header";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { VoucherDetailDialog, VoucherShowcaseCard } from "@/components/VoucherShowcase";
 import { supabase } from "@/integrations/supabase/client";
 import { useUserRole } from "@/hooks/useUserRole";
 import { useAuth } from "@/hooks/useAuth";
@@ -57,7 +58,7 @@ const Homepage = () => {
   const { vouchers: userVouchers } = useUserVouchers();
 
   // Hide vouchers the logged-in user already owns (purchased) or saved (favorite)
-  // in user_vouchers. For anon visitors userVouchers is empty → show all.
+  // in user_vouchers. For anon visitors userVouchers is empty â†’ show all.
   const ownedVoucherIds = new Set(userVouchers.map((uv) => uv.voucher_id));
   const homepageVouchers = allHomepageVouchers.filter((v) => !ownedVoucherIds.has(v.id));
 
@@ -79,6 +80,16 @@ const Homepage = () => {
   const [currentBannerIndex, setCurrentBannerIndex] = useState(0);
   const [favorites, setFavorites] = useState<Set<string>>(new Set());
   const [infoPopup, setInfoPopup] = useState<{ title: string | null; description: string } | null>(null);
+  const [selectedVoucher, setSelectedVoucher] = useState<{
+    id: string;
+    name: string;
+    image_url: string | null;
+    banner_url: string | null;
+    max_quantity: number | null;
+    redeemed_count: number;
+    start_date: string | null;
+    end_date: string | null;
+  } | null>(null);
 
   // Fetch contests from database
   const fetchContests = async () => {
@@ -96,7 +107,7 @@ const Homepage = () => {
       setContests(contestRows);
     } catch (error) {
       console.error("Error fetching contests:", error);
-      toast.error("Nepodařilo se načíst soutěže");
+      toast.error("NepodaĹ™ilo se naÄŤĂ­st soutÄ›Ĺľe");
     } finally {
       setLoading(false);
     }
@@ -124,7 +135,7 @@ const Homepage = () => {
     e.stopPropagation();
     
     if (!user) {
-      toast.error('Pro uložení oblíbených se musíte přihlásit');
+      toast.error('Pro uloĹľenĂ­ oblĂ­benĂ˝ch se musĂ­te pĹ™ihlĂˇsit');
       return;
     }
 
@@ -145,7 +156,7 @@ const Homepage = () => {
           newSet.delete(contestId);
           return newSet;
         });
-        toast.success('Odebráno z oblíbených');
+        toast.success('OdebrĂˇno z oblĂ­benĂ˝ch');
       } else {
         const { error } = await supabase
           .from('user_contest_favorites')
@@ -154,11 +165,11 @@ const Homepage = () => {
         if (error) throw error;
 
         setFavorites(prev => new Set(prev).add(contestId));
-        toast.success('Přidáno do oblíbených');
+        toast.success('PĹ™idĂˇno do oblĂ­benĂ˝ch');
       }
     } catch (error: any) {
       console.error('Error toggling favorite:', error);
-      toast.error('Chyba při ukládání oblíbené');
+      toast.error('Chyba pĹ™i uklĂˇdĂˇnĂ­ oblĂ­benĂ©');
     }
   };
 
@@ -263,7 +274,7 @@ const Homepage = () => {
 
   const handleContestClick = (contestId: string) => {
     if (!user) {
-      toast.error("Pro hraní her se musíte přihlásit");
+      toast.error("Pro hranĂ­ her se musĂ­te pĹ™ihlĂˇsit");
       navigate(buildLoginRedirectUrl(location.pathname + location.search));
       return;
     }
@@ -275,7 +286,7 @@ const Homepage = () => {
 
   const handleVoucherPurchase = async (voucherId: string) => {
     if (!user) {
-      toast.error("Pro koupi voucheru se musíte přihlásit");
+      toast.error("Pro koupi voucheru se musĂ­te pĹ™ihlĂˇsit");
       navigate(buildLoginRedirectUrl(location.pathname + location.search));
       return;
     }
@@ -294,15 +305,18 @@ const Homepage = () => {
       const result = data as { success: boolean; error?: string };
 
       if (!result.success) {
-        toast.error(result.error || "Nepodařilo se zakoupit voucher");
+        toast.error(result.error || "NepodaĹ™ilo se zakoupit voucher");
         return;
       }
 
       analytics.voucherRedeem(voucherId, 5);
-      toast.success("Voucher úspěšně zakoupen za 5 MioCoinů!");
+      if (selectedVoucher?.id === voucherId) {
+        setSelectedVoucher(null);
+      }
+      toast.success("Voucher ĂşspÄ›ĹˇnÄ› zakoupen za 5 MioCoinĹŻ!");
     } catch (error) {
       console.error("Error purchasing voucher:", error);
-      toast.error("Nepodařilo se zakoupit voucher");
+      toast.error("NepodaĹ™ilo se zakoupit voucher");
     }
   };
 
@@ -310,7 +324,7 @@ const Homepage = () => {
 
   const handleCoinPurchase = async (priceInCzk: number, totalCoins: number) => {
     if (!user) {
-      toast.error("Pro nákup MioCoinů se musíte přihlásit");
+      toast.error("Pro nĂˇkup MioCoinĹŻ se musĂ­te pĹ™ihlĂˇsit");
       navigate(buildLoginRedirectUrl(location.pathname + location.search));
       return;
     }
@@ -322,14 +336,14 @@ const Homepage = () => {
     const cleanCoins = Number(totalCoins);
 
     if (isNaN(cleanPrice) || cleanPrice < 50) {
-      toast.error("Neplatná částka");
+      toast.error("NeplatnĂˇ ÄŤĂˇstka");
       return;
     }
 
     setTopUpLoading(true);
 
     try {
-      toast.loading("Otevírám platební bránu...", { id: "topup-loading" });
+      toast.loading("OtevĂ­rĂˇm platebnĂ­ brĂˇnu...", { id: "topup-loading" });
       
       // Wait for session to be ready
       const { data: sessionData } = await supabase.auth.getSession();
@@ -340,7 +354,7 @@ const Homepage = () => {
           price_czk: cleanPrice,
         });
         toast.dismiss("topup-loading");
-        toast.error("Nepodařilo se ověřit uživatele. Zkuste se znovu přihlásit.");
+        toast.error("NepodaĹ™ilo se ovÄ›Ĺ™it uĹľivatele. Zkuste se znovu pĹ™ihlĂˇsit.");
         setTopUpLoading(false);
         return;
       }
@@ -362,13 +376,13 @@ const Homepage = () => {
         window.location.href = data.checkout_url;
         // Don't reset loading state as page is redirecting
       } else {
-        throw new Error("Nepodařilo se získat platební odkaz");
+        throw new Error("NepodaĹ™ilo se zĂ­skat platebnĂ­ odkaz");
       }
     } catch (error) {
       console.error("Error creating checkout:", error);
       if (user) {
         const phase =
-          error instanceof Error && error.message.includes("platební odkaz")
+          error instanceof Error && error.message.includes("platebnĂ­ odkaz")
             ? "response"
             : "invoke";
         logStripeCheckoutClientFailure({
@@ -379,7 +393,7 @@ const Homepage = () => {
         });
       }
       toast.dismiss("topup-loading");
-      toast.error("Nepodařilo se otevřít platební bránu");
+      toast.error("NepodaĹ™ilo se otevĹ™Ă­t platebnĂ­ brĂˇnu");
       setTopUpLoading(false);
     }
   };
@@ -388,7 +402,7 @@ const Homepage = () => {
     <div className="min-h-screen bg-background dark pb-20">
       <Header />
 
-      {/* Hero banner — full viewport width, outside container */}
+      {/* Hero banner â€” full viewport width, outside container */}
       <section className="w-full">
         {bannersLoading ? (
           <div className="w-full h-[120px] sm:aspect-[16/5] sm:max-h-[600px] sm:min-h-[160px] sm:h-auto bg-muted/30 animate-pulse" />
@@ -406,7 +420,7 @@ const Homepage = () => {
 
             <div className="relative">
               <div className="w-full h-[240px] sm:h-[360px] md:h-[480px] relative overflow-hidden bg-[hsl(220_30%_6%)]">
-                {/* Banner image — fixed responsive heights; object-cover fills frame */}
+                {/* Banner image â€” fixed responsive heights; object-cover fills frame */}
                 <img
                   src={megajackpotBanners[currentBannerIndex]?.image_url}
                   alt={megajackpotBanners[currentBannerIndex]?.title || "Banner"}
@@ -497,7 +511,7 @@ const Homepage = () => {
         ) : null}
       </section>
 
-      {/* Page content — constrained container */}
+      {/* Page content â€” constrained container */}
       <div className="container mx-auto px-4 py-8 space-y-8">
         {/* Coin Top-up Section */}
         <section className="w-full overflow-x-hidden grid grid-cols-1 lg:grid-cols-2 gap-4">
@@ -510,12 +524,12 @@ const Homepage = () => {
                     <OneMilMioCoinIcon size={24} className="w-6 h-6 md:w-7 md:h-7" />
                     Dobijte si MioCoiny
                   </h2>
-                  <p className="text-sm text-text-silver">Dobíjejte si MioCoiny pro otevření voucherů nebo účasti ve hře.</p>
+                  <p className="text-sm text-text-silver">DobĂ­jejte si MioCoiny pro otevĹ™enĂ­ voucherĹŻ nebo ĂşÄŤasti ve hĹ™e.</p>
                 </div>
 
                 {/* Coin Packages Grid */}
                 <div className="grid grid-cols-2 md:grid-cols-4 gap-3 flex-1">
-                  {/* Package 50 Kč → 50 MC */}
+                  {/* Package 50 KÄŤ â†’ 50 MC */}
                   <div className="rounded-xl w-full min-h-[160px] bg-[hsl(220_45%_6%)] border-2 border-package-blue/30 flex flex-col shadow-[inset_0_1px_12px_hsl(var(--package-blue)/0.08)] overflow-hidden">
                     {/* Top area: image or fallback text */}
                     <div className="flex-1 min-h-0 flex flex-col items-center justify-center overflow-hidden">
@@ -528,12 +542,12 @@ const Homepage = () => {
                       ) : (
                         <div className="text-center py-3">
                           <div className="text-3xl font-bold text-package-blue drop-shadow-[0_2px_4px_rgba(0,0,0,0.8)]">50</div>
-                          <div className="text-sm text-muted-foreground drop-shadow-[0_1px_2px_rgba(0,0,0,0.8)]">MioCoinů</div>
-                          <div className="text-xs text-muted-foreground/70 drop-shadow-[0_1px_2px_rgba(0,0,0,0.8)]">50 Kč</div>
+                          <div className="text-sm text-muted-foreground drop-shadow-[0_1px_2px_rgba(0,0,0,0.8)]">MioCoinĹŻ</div>
+                          <div className="text-xs text-muted-foreground/70 drop-shadow-[0_1px_2px_rgba(0,0,0,0.8)]">50 KÄŤ</div>
                         </div>
                       )}
                     </div>
-                    {/* Button — always at bottom */}
+                    {/* Button â€” always at bottom */}
                     <div className="flex-shrink-0 px-3 pb-3 pt-2">
                       <Button
                         size="sm"
@@ -541,12 +555,12 @@ const Homepage = () => {
                         onClick={() => handleCoinPurchase(50, 50)}
                         disabled={topUpLoading}
                       >
-                        {topUpLoading ? "..." : "Dobít"}
+                        {topUpLoading ? "..." : "DobĂ­t"}
                       </Button>
                     </div>
                   </div>
 
-                  {/* Package 300 Kč → 310 MC (+10 Bonus) */}
+                  {/* Package 300 KÄŤ â†’ 310 MC (+10 Bonus) */}
                   <div className="relative z-20 overflow-visible h-full">
                     <Badge className="absolute -top-2 -right-2 bg-package-gold/90 text-black text-xs font-medium z-50 pointer-events-none">+10 Bonus</Badge>
                     <div className="rounded-xl w-full h-full min-h-[160px] bg-[hsl(220_45%_6%)] border-2 border-package-gold/30 flex flex-col shadow-[inset_0_1px_12px_hsl(var(--package-gold)/0.08)] overflow-hidden">
@@ -561,12 +575,12 @@ const Homepage = () => {
                         ) : (
                           <div className="text-center py-3">
                             <div className="text-3xl font-bold text-package-gold drop-shadow-[0_2px_4px_rgba(0,0,0,0.8)]">310</div>
-                            <div className="text-sm text-muted-foreground drop-shadow-[0_1px_2px_rgba(0,0,0,0.8)]">MioCoinů</div>
-                            <div className="text-xs text-muted-foreground/70 drop-shadow-[0_1px_2px_rgba(0,0,0,0.8)]">300 Kč</div>
+                            <div className="text-sm text-muted-foreground drop-shadow-[0_1px_2px_rgba(0,0,0,0.8)]">MioCoinĹŻ</div>
+                            <div className="text-xs text-muted-foreground/70 drop-shadow-[0_1px_2px_rgba(0,0,0,0.8)]">300 KÄŤ</div>
                           </div>
                         )}
                       </div>
-                      {/* Button — always at bottom */}
+                      {/* Button â€” always at bottom */}
                       <div className="flex-shrink-0 px-3 pb-3 pt-2">
                         <Button
                           size="sm"
@@ -574,13 +588,13 @@ const Homepage = () => {
                           onClick={() => handleCoinPurchase(300, 310)}
                           disabled={topUpLoading}
                         >
-                          {topUpLoading ? "..." : "Dobít"}
+                          {topUpLoading ? "..." : "DobĂ­t"}
                         </Button>
                       </div>
                     </div>
                   </div>
 
-                  {/* Package 500 Kč → 525 MC (+25 Bonus) */}
+                  {/* Package 500 KÄŤ â†’ 525 MC (+25 Bonus) */}
                   <div className="relative z-20 overflow-visible h-full">
                     <Badge className="absolute -top-2 -right-2 bg-package-purple/90 text-white text-xs font-medium z-50 pointer-events-none">+25 Bonus</Badge>
                     <div className="rounded-xl w-full h-full min-h-[160px] bg-[hsl(220_45%_6%)] border-2 border-package-purple/30 flex flex-col shadow-[inset_0_1px_12px_hsl(var(--package-purple)/0.08)] overflow-hidden">
@@ -595,12 +609,12 @@ const Homepage = () => {
                         ) : (
                           <div className="text-center py-3">
                             <div className="text-3xl font-bold text-package-purple drop-shadow-[0_2px_4px_rgba(0,0,0,0.8)]">525</div>
-                            <div className="text-sm text-muted-foreground drop-shadow-[0_1px_2px_rgba(0,0,0,0.8)]">MioCoinů</div>
-                            <div className="text-xs text-muted-foreground/70 drop-shadow-[0_1px_2px_rgba(0,0,0,0.8)]">500 Kč</div>
+                            <div className="text-sm text-muted-foreground drop-shadow-[0_1px_2px_rgba(0,0,0,0.8)]">MioCoinĹŻ</div>
+                            <div className="text-xs text-muted-foreground/70 drop-shadow-[0_1px_2px_rgba(0,0,0,0.8)]">500 KÄŤ</div>
                           </div>
                         )}
                       </div>
-                      {/* Button — always at bottom */}
+                      {/* Button â€” always at bottom */}
                       <div className="flex-shrink-0 px-3 pb-3 pt-2">
                         <Button
                           size="sm"
@@ -608,13 +622,13 @@ const Homepage = () => {
                           onClick={() => handleCoinPurchase(500, 525)}
                           disabled={topUpLoading}
                         >
-                          {topUpLoading ? "..." : "Dobít"}
+                          {topUpLoading ? "..." : "DobĂ­t"}
                         </Button>
                       </div>
                     </div>
                   </div>
 
-                  {/* Package 1200 Kč → 1280 MC (+80 Bonus) */}
+                  {/* Package 1200 KÄŤ â†’ 1280 MC (+80 Bonus) */}
                   <div className="relative z-20 overflow-visible h-full">
                     <Badge className="absolute -top-2 -right-2 bg-package-green/90 text-white text-xs font-medium z-50 pointer-events-none">+80 Bonus</Badge>
                     <div className="rounded-xl w-full h-full min-h-[160px] bg-[hsl(220_45%_6%)] border-2 border-package-green/30 flex flex-col shadow-[inset_0_1px_12px_hsl(var(--package-green)/0.08)] overflow-hidden">
@@ -629,12 +643,12 @@ const Homepage = () => {
                         ) : (
                           <div className="text-center py-3">
                             <div className="text-3xl font-bold text-package-green drop-shadow-[0_2px_4px_rgba(0,0,0,0.8)]">1280</div>
-                            <div className="text-sm text-muted-foreground drop-shadow-[0_1px_2px_rgba(0,0,0,0.8)]">MioCoinů</div>
-                            <div className="text-xs text-muted-foreground/70 drop-shadow-[0_1px_2px_rgba(0,0,0,0.8)]">1200 Kč</div>
+                            <div className="text-sm text-muted-foreground drop-shadow-[0_1px_2px_rgba(0,0,0,0.8)]">MioCoinĹŻ</div>
+                            <div className="text-xs text-muted-foreground/70 drop-shadow-[0_1px_2px_rgba(0,0,0,0.8)]">1200 KÄŤ</div>
                           </div>
                         )}
                       </div>
-                      {/* Button — always at bottom */}
+                      {/* Button â€” always at bottom */}
                       <div className="flex-shrink-0 px-3 pb-3 pt-2">
                         <Button
                           size="sm"
@@ -642,7 +656,7 @@ const Homepage = () => {
                           onClick={() => handleCoinPurchase(1200, 1280)}
                           disabled={topUpLoading}
                         >
-                          {topUpLoading ? "..." : "Dobít"}
+                          {topUpLoading ? "..." : "DobĂ­t"}
                         </Button>
                       </div>
                     </div>
@@ -651,7 +665,7 @@ const Homepage = () => {
 
                 {/* Two Boxes Below */}
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mt-3">
-                  {/* Box 1: Probíhající soutěže */}
+                  {/* Box 1: ProbĂ­hajĂ­cĂ­ soutÄ›Ĺľe */}
                   <div
                     className="rounded-xl p-4 min-h-[88px] md:min-h-[96px] bg-[hsl(220_45%_6%)] border-2 border-[rgba(255,138,0,0.3)] cursor-pointer hover:border-[rgba(255,138,0,0.5)] transition-all duration-200 flex flex-col items-center justify-center text-center shadow-[inset_0_1px_12px_rgba(255,138,0,0.05)] relative overflow-hidden"
                     onClick={() => navigate("/games")}
@@ -659,14 +673,14 @@ const Homepage = () => {
                     {placementBanners.probihajici_souteze?.image_url && (
                       <img
                         src={placementBanners.probihajici_souteze.image_url}
-                        alt="Probíhající soutěže"
+                        alt="ProbĂ­hajĂ­cĂ­ soutÄ›Ĺľe"
                         className="absolute inset-0 w-full h-full object-cover"
                       />
                     )}
                     {!placementBanners.probihajici_souteze?.image_url && (
                       <>
                         <OneMilTrophyIcon size={32} className="w-8 h-8 mb-2 relative z-10 text-[#FF8A00]" />
-                        <div className="text-sm font-semibold text-foreground relative z-10">Probíhající soutěže</div>
+                        <div className="text-sm font-semibold text-foreground relative z-10">ProbĂ­hajĂ­cĂ­ soutÄ›Ĺľe</div>
                       </>
                     )}
                   </div>
@@ -695,16 +709,16 @@ const Homepage = () => {
             </CardContent>
           </Card>
 
-          {/* Right Column - Poslední výherci */}
+          {/* Right Column - PoslednĂ­ vĂ˝herci */}
           <Card className="rounded-xl overflow-hidden bg-[hsl(220_45%_6%)] border border-[rgba(255,138,0,0.2)] shadow-[0_4px_16px_hsl(222_50%_3%/0.5)] h-full relative">
             <CardContent className="p-5 h-full flex flex-col relative z-10">
               <div className="space-y-4 flex-1 flex flex-col">
                 <div className="space-y-2">
                   <h2 className="text-xl md:text-2xl font-bold text-heading-gold flex items-center gap-2">
                     <OneMilTrophyIcon size={24} className="w-6 h-6 md:w-7 md:h-7" />
-                    Poslední výherci
+                    PoslednĂ­ vĂ˝herci
                   </h2>
-                  <p className="text-sm text-text-silver">Nejnovější výhry z našich soutěží</p>
+                  <p className="text-sm text-text-silver">NejnovÄ›jĹˇĂ­ vĂ˝hry z naĹˇich soutÄ›ĹľĂ­</p>
                 </div>
 
                 <div className="space-y-4 flex-1 overflow-y-auto">
@@ -716,8 +730,8 @@ const Homepage = () => {
                   ) : !latestWinners || latestWinners.length === 0 ? (
                     <div className="text-center py-12 space-y-3">
                       <OneMilTrophyIcon size={48} className="w-12 h-12 mx-auto text-muted-foreground/50" />
-                      <h3 className="text-lg font-bold text-foreground">Zatím žádní výherci</h3>
-                      <p className="text-sm text-muted-foreground">Momentálně nejsou k dispozici žádné výhry</p>
+                      <h3 className="text-lg font-bold text-foreground">ZatĂ­m ĹľĂˇdnĂ­ vĂ˝herci</h3>
+                      <p className="text-sm text-muted-foreground">MomentĂˇlnÄ› nejsou k dispozici ĹľĂˇdnĂ© vĂ˝hry</p>
                     </div>
                   ) : (
                     latestWinners
@@ -741,7 +755,7 @@ const Homepage = () => {
                 </div>
 
                 <Button variant="ghost" size="lg" className="w-full gap-2 mt-2 text-muted-foreground hover:text-foreground hover:bg-muted/30" onClick={() => navigate("/winners")}>
-                  Zobrazit všechny
+                  Zobrazit vĹˇechny
                   <ChevronRight className="w-4 h-4" />
                 </Button>
               </div>
@@ -777,7 +791,7 @@ const Homepage = () => {
           </div>
         </div>
 
-        {/* Premium value message — MioCoiny jako odměna */}
+        {/* Premium value message â€” MioCoiny jako odmÄ›na */}
         <section className="w-full">
           <div className="max-w-[720px] mx-auto px-4 py-2 text-center">
             <div className="flex items-center justify-center gap-2 mb-2">
@@ -792,11 +806,11 @@ const Homepage = () => {
                   backgroundClip: 'text',
                 }}
               >
-                MioCoiny jako odměna za nákupy
+                MioCoiny jako odmÄ›na za nĂˇkupy
               </h3>
             </div>
             <p className="text-sm leading-relaxed max-w-[600px] mx-auto mt-2" style={{ color: '#8E98A6' }}>
-              Největší radost máme, když MioCoiny získáváte jako odměnu za nákupy u našich partnerů. Právě na tom je OneMil postavený. Dobití berte jen jako další možnost, když se chcete do soutěže zapojit hned a nechcete čekat na další odměnu z nákupu.
+              NejvÄ›tĹˇĂ­ radost mĂˇme, kdyĹľ MioCoiny zĂ­skĂˇvĂˇte jako odmÄ›nu za nĂˇkupy u naĹˇich partnerĹŻ. PrĂˇvÄ› na tom je OneMil postavenĂ˝. DobitĂ­ berte jen jako dalĹˇĂ­ moĹľnost, kdyĹľ se chcete do soutÄ›Ĺľe zapojit hned a nechcete ÄŤekat na dalĹˇĂ­ odmÄ›nu z nĂˇkupu.
             </p>
           </div>
         </section>
@@ -861,19 +875,19 @@ const Homepage = () => {
           <div className="flex items-center justify-between">
             <h3 className="text-2xl font-bold text-heading-gold flex items-center gap-2">
               <Ticket className="w-6 h-6" />
-              Probíhající Soutěže
+              ProbĂ­hajĂ­cĂ­ SoutÄ›Ĺľe
             </h3>
             <div className="flex items-center gap-2">
               <ChevronRight className="w-5 h-5 text-muted-foreground" />
               {/* Role indicator */}
               {isAdmin && (
                 <div className="px-2 py-1 bg-[rgba(255,138,0,0.08)] border border-[rgba(255,138,0,0.3)] rounded text-xs text-[#FF8A00]">
-                  Pouze čtení
+                  Pouze ÄŤtenĂ­
                 </div>
               )}
               {!user && (
                 <div className="px-2 py-1 bg-[rgba(255,138,0,0.1)] border border-[rgba(255,138,0,0.3)] rounded text-xs text-[#FFB547]">
-                  Přihlásit pro interakci
+                  PĹ™ihlĂˇsit pro interakci
                 </div>
               )}
             </div>
@@ -927,12 +941,12 @@ const Homepage = () => {
                   <div className="absolute right-0 top-1/2 transform -translate-y-1/2 w-4 h-4 bg-background rounded-full translate-x-2" />
                   <CardHeader className="pb-2">
                     <CardTitle className="text-lg font-bold text-[#FFB547]">
-                      Žádné aktivní soutěže
+                      Ĺ˝ĂˇdnĂ© aktivnĂ­ soutÄ›Ĺľe
                     </CardTitle>
                   </CardHeader>
                   <CardContent>
                     <div className="text-sm text-muted-foreground">
-                      Momentálně nejsou k dispozici žádné aktivní soutěže
+                      MomentĂˇlnÄ› nejsou k dispozici ĹľĂˇdnĂ© aktivnĂ­ soutÄ›Ĺľe
                     </div>
                   </CardContent>
                 </Card>
@@ -989,7 +1003,7 @@ const Homepage = () => {
           <div className="flex items-center justify-between">
             <h3 className="text-2xl font-bold text-heading-gold flex items-center gap-2">
               <OneMilVoucherIcon size={24} className="w-6 h-6" />
-              Dostupné vouchery
+              DostupnĂ© vouchery
             </h3>
             <div className="flex items-center gap-2">
               {user && (
@@ -1028,77 +1042,22 @@ const Homepage = () => {
               <div className="flex-none w-80">
                 <Card className="relative overflow-hidden rounded-2xl border border-primary/15 bg-card/40 h-full">
                   <CardContent className="p-6 space-y-2 text-center">
-                    <h3 className="text-xl font-bold text-primary">Žádné dostupné vouchery</h3>
+                    <h3 className="text-xl font-bold text-primary">Ĺ˝ĂˇdnĂ© dostupnĂ© vouchery</h3>
                     <div className="text-sm text-muted-foreground">
-                      Momentálně nejsou k dispozici žádné veřejné vouchery.
+                      MomentĂˇlnÄ› nejsou k dispozici ĹľĂˇdnĂ© veĹ™ejnĂ© vouchery.
                     </div>
                   </CardContent>
                 </Card>
               </div>
             ) : (
               homepageVouchers.map((voucher) => (
-                  <div key={voucher.id} className="flex-none w-80 cursor-pointer" onClick={() => navigate("/vouchers?tab=available")}>
-                  <Card className="voucher-card-glow relative overflow-hidden rounded-[20px] bg-gradient-to-b from-[hsl(220_35%_8%)] via-[hsl(220_30%_6%)] to-[hsl(220_25%_4%)] border-[3px] border-[rgba(255,138,0,0.35)] shadow-[0_4px_16px_hsl(222_50%_3%/0.5)] transition-all duration-300 hover:border-[rgba(255,138,0,0.55)] hover:shadow-[0_0_12px_rgba(255,138,0,0.2)] hover:scale-[1.02]">
-                    <div className="flex h-48 relative">
-                      {/* Left side - Content */}
-                      <div className="flex-1 p-5 flex flex-col justify-between">
-                        {/* Header */}
-                        <div>
-                          <h2 className="text-foreground font-bold text-xl tracking-wide mb-1">ONEMIL VOUCHER</h2>
-                          <p className="text-muted-foreground text-sm font-medium">HRAJ O CENY</p>
-                        </div>
-
-                        {/* Voucher name */}
-                        <div className="my-3">
-                          <h3 className="text-foreground font-bold text-lg mb-2">{voucher.name}</h3>
-                          <div className="text-primary font-bold text-2xl">5 MioCoinů</div>
-                        </div>
-
-                        {/* Button */}
-                        <div className="space-y-2">
-                          <Button
-                            className="w-full bg-primary text-primary-foreground font-bold shadow-[0_0_12px_hsl(var(--primary)/0.35)] hover:brightness-110 transition-all duration-200"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              if (!user) {
-                                navigate(buildLoginRedirectUrl(location.pathname + location.search));
-                              } else {
-                                handleVoucherPurchase(voucher.id);
-                              }
-                            }}
-                          >
-                            {!user ? "PŘIHLÁSIT SE" : "KOUPIT ZA 5 MC"}
-                          </Button>
-
-                          {/* Status indicator */}
-                          <div className="text-xs text-muted-foreground">
-                            {user ? "Klikněte pro nákup" : "Přihlaste se pro nákup"}
-                          </div>
-                        </div>
-                      </div>
-
-                      {/* Right side - Image */}
-                      <div className="w-32 relative border-l border-dashed border-border/50">
-                        {voucher.image_url ? (
-                          <img
-                            src={voucher.image_url}
-                            alt={voucher.name}
-                            className="w-full h-full object-cover"
-                            loading="lazy"
-                          />
-                        ) : (
-                          <div className="w-full h-full bg-muted/40 flex items-center justify-center">
-                            <span className="text-muted-foreground text-sm text-center px-2">VOUCHER</span>
-                          </div>
-                        )}
-                      </div>
-
-                      {/* Remaining count indicator */}
-                      <div className="absolute top-3 right-3 bg-background/80 backdrop-blur-sm text-foreground text-xs px-2 py-1 rounded border border-border">
-                        Zbývá: {getRemainingCount(voucher)}
-                      </div>
-                    </div>
-                  </Card>
+                <div key={voucher.id} className="flex-none w-80">
+                  <VoucherShowcaseCard
+                    voucher={voucher}
+                    remainingLabel={typeof getRemainingCount(voucher) === 'number' ? `Zbývá: ${getRemainingCount(voucher)}` : null}
+                    onDetail={() => setSelectedVoucher(voucher)}
+                    className="h-[21rem]"
+                  />
                 </div>
               ))
             )}
@@ -1138,7 +1097,7 @@ const Homepage = () => {
           <div className="flex items-center justify-between">
             <h3 className="text-2xl font-bold text-heading-gold flex items-center gap-2">
               <Handshake className="w-6 h-6" />
-              Naši partneři, kde můžete získat MioCoiny za nákup
+              NaĹˇi partneĹ™i, kde mĹŻĹľete zĂ­skat MioCoiny za nĂˇkup
             </h3>
           </div>
 
@@ -1151,7 +1110,7 @@ const Homepage = () => {
             ) : partners.length === 0 ? (
               // No partners message
               <div className="col-span-full text-center py-12">
-                <div className="text-muted-foreground">Momentálně nejsou k dispozici žádní partneři</div>
+                <div className="text-muted-foreground">MomentĂˇlnÄ› nejsou k dispozici ĹľĂˇdnĂ­ partneĹ™i</div>
               </div>
             ) : (
               partners.map((partner) => (
@@ -1218,7 +1177,7 @@ const Homepage = () => {
         <section className="space-y-6">
           <div className="flex items-center justify-between">
             <h3 className="text-2xl font-bold text-heading-gold flex items-center gap-2">
-              Připravujeme
+              PĹ™ipravujeme
             </h3>
           </div>
 
@@ -1239,7 +1198,7 @@ const Homepage = () => {
                   <CardContent className="p-0">
                     <div className="aspect-video rounded-lg overflow-hidden bg-muted/20 flex items-center justify-center">
                       <div className="text-center text-muted-foreground">
-                        <span className="text-sm">Připravujeme</span>
+                        <span className="text-sm">PĹ™ipravujeme</span>
                       </div>
                     </div>
                   </CardContent>
@@ -1255,7 +1214,7 @@ const Homepage = () => {
                         alt={banner.title || 'Coming soon'}
                         className="w-full h-full object-cover"
                       />
-                      {/* Pulsing info icon — only when description exists */}
+                      {/* Pulsing info icon â€” only when description exists */}
                       {banner.description && (
                         <button
                           onClick={() => setInfoPopup({ title: banner.title, description: banner.description! })}
@@ -1296,6 +1255,15 @@ const Homepage = () => {
         </section>
 
         {/* Coming Soon Info Modal */}
+      <VoucherDetailDialog
+        voucher={selectedVoucher}
+        open={!!selectedVoucher}
+        onOpenChange={(open) => !open && setSelectedVoucher(null)}
+        onPurchase={handleVoucherPurchase}
+        purchaseDisabled={isAdmin}
+        purchaseLoading={false}
+      />
+
         {infoPopup && (
           <div
             className="fixed inset-0 z-50 flex items-center justify-center p-4"
@@ -1353,7 +1321,7 @@ const Homepage = () => {
           <section className="space-y-6 mt-16">
             <div className="flex items-center justify-between">
               <h3 className="text-2xl font-bold text-heading-gold flex items-center gap-2">
-                🎬 Jak to funguje
+                đźŽ¬ Jak to funguje
               </h3>
             </div>
 
@@ -1362,30 +1330,30 @@ const Homepage = () => {
 
               <div className="text-center space-y-6">
                 <h4 className="text-xl sm:text-2xl font-semibold text-foreground leading-snug">
-                  Jak hra funguje, co se vyhrává a jak probíhá nákup voucherů
+                  Jak hra funguje, co se vyhrĂˇvĂˇ a jak probĂ­hĂˇ nĂˇkup voucherĹŻ
                 </h4>
                 <div className="space-y-4 max-w-2xl mx-auto text-left">
                   <div className="text-base leading-relaxed">
-                    <p className="text-foreground font-medium">🛒 Nakupujete u partnerských e-shopů</p>
-                    <p className="text-muted-foreground mt-1">Za nákup u zapojených e-shopů můžete získat digitální kredity MioCoiny jako marketingovou odměnu.</p>
+                    <p className="text-foreground font-medium">đź›’ Nakupujete u partnerskĂ˝ch e-shopĹŻ</p>
+                    <p className="text-muted-foreground mt-1">Za nĂˇkup u zapojenĂ˝ch e-shopĹŻ mĹŻĹľete zĂ­skat digitĂˇlnĂ­ kredity MioCoiny jako marketingovou odmÄ›nu.</p>
                   </div>
                   <div className="text-base leading-relaxed">
-                    <p className="text-foreground font-medium">💎 Získáváte MioCoiny za nákup</p>
-                    <p className="text-muted-foreground mt-1">Počet MioCoinů se odvíjí od hodnoty nákupu nebo konkrétních produktů – vždy podle pravidel daného e-shopu.</p>
+                    <p className="text-foreground font-medium">đź’Ž ZĂ­skĂˇvĂˇte MioCoiny za nĂˇkup</p>
+                    <p className="text-muted-foreground mt-1">PoÄŤet MioCoinĹŻ se odvĂ­jĂ­ od hodnoty nĂˇkupu nebo konkrĂ©tnĂ­ch produktĹŻ â€“ vĹľdy podle pravidel danĂ©ho e-shopu.</p>
                   </div>
                   <div className="text-base leading-relaxed">
-                    <p className="text-foreground font-medium">🎟 MioCoiny využijete k účasti v soutěžích</p>
-                    <p className="text-muted-foreground mt-1">MioCoiny slouží výhradně k účasti ve spotřebitelských soutěžích o věcné ceny v aplikaci OneMil.</p>
+                    <p className="text-foreground font-medium">đźŽź MioCoiny vyuĹľijete k ĂşÄŤasti v soutÄ›ĹľĂ­ch</p>
+                    <p className="text-muted-foreground mt-1">MioCoiny slouĹľĂ­ vĂ˝hradnÄ› k ĂşÄŤasti ve spotĹ™ebitelskĂ˝ch soutÄ›ĹľĂ­ch o vÄ›cnĂ© ceny v aplikaci OneMil.</p>
                   </div>
                   <div className="text-base leading-relaxed">
-                    <p className="text-foreground font-medium">🏆 Hrajete o luxusní věcné ceny</p>
-                    <p className="text-muted-foreground mt-1">Soutěže probíhají o ceny jako auta, dovolené, elektroniku nebo jiné hodnotné věcné výhry.</p>
+                    <p className="text-foreground font-medium">đźŹ† Hrajete o luxusnĂ­ vÄ›cnĂ© ceny</p>
+                    <p className="text-muted-foreground mt-1">SoutÄ›Ĺľe probĂ­hajĂ­ o ceny jako auta, dovolenĂ©, elektroniku nebo jinĂ© hodnotnĂ© vÄ›cnĂ© vĂ˝hry.</p>
                   </div>
                 </div>
                 <div className="text-xs text-muted-foreground/70 max-w-2xl mx-auto pt-2 space-y-0.5">
-                  <p>MioCoiny nejsou peníze a nelze je vybrat.</p>
-                  <p>Soutěže mají předem určené výherní pozice.</p>
-                  <p>Výhry jsou výhradně věcné.</p>
+                  <p>MioCoiny nejsou penĂ­ze a nelze je vybrat.</p>
+                  <p>SoutÄ›Ĺľe majĂ­ pĹ™edem urÄŤenĂ© vĂ˝hernĂ­ pozice.</p>
+                  <p>VĂ˝hry jsou vĂ˝hradnÄ› vÄ›cnĂ©.</p>
                 </div>
               </div>
             </div>
