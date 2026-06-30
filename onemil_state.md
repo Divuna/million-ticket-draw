@@ -1,5 +1,9 @@
 ﻿# OneMil – aktuální stav projektu
 
+## PRACOVNÍ PRAVIDLO — AKTIVNÍ POUŽÍVÁNÍ GITHUB / SUPABASE KONEKTORŮ (30. 06. 2026)
+
+ChatGPT / AI asistent musí sám aktivně používat dostupné GitHub a Supabase konektory, kdykoli úkol vyžaduje kontext repozitáře nebo databáze. Neptat se Pavla, ať spouští SQL, stahuje GitHub soubory nebo ručně dodává data, pokud k nim má asistent přímý přístup. U destruktivních produkčních změn si nejdřív vyžádat výslovné schválení.
+
 ## STRIPE PAY01–PAY04 — STAGING TEST MODE OVĚŘENO ✅ (30. 06. 2026)
 
 Celý Stripe TEST checkout flow ověřen end-to-end na stagingu `dxmowysntemfqfnanxua` přes lokální frontend `http://localhost:8090`. Produkce `xkzhjldrojjlrkezorey` nedotčena, žádná reálná platba.
