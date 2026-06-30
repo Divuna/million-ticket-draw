@@ -17,7 +17,7 @@ import { Calendar } from '@/components/ui/calendar';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
-import { Plus, Upload, Calendar as CalendarIcon, Infinity, Hash, Image as ImageIcon, Search, Edit, Trash2, Eye, Gift, KeyRound, FileUp, Download, Ban, RefreshCw } from 'lucide-react';
+import { Plus, Upload, Calendar as CalendarIcon, Infinity, Hash, Image as ImageIcon, Search, Edit, Trash2, Eye, Gift, KeyRound, FileUp, Download, Ban, RefreshCw, CheckCircle2 } from 'lucide-react';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { format } from 'date-fns';
@@ -195,6 +195,16 @@ function getVoucherStatus(voucher: Voucher): VoucherStatus {
 }
 
 type VoucherSection = 'active' | 'scheduled' | 'hidden' | 'archive' | 'purchases';
+type VoucherWizardStep = 'basic' | 'graphics' | 'detail' | 'codes' | 'review';
+type VoucherWizardCodeMode = 'generate' | 'import';
+
+const voucherWizardSteps: { key: VoucherWizardStep; label: string }[] = [
+  { key: 'basic', label: 'Základ' },
+  { key: 'graphics', label: 'Grafika' },
+  { key: 'detail', label: 'Detail' },
+  { key: 'codes', label: 'Kódy' },
+  { key: 'review', label: 'Kontrola' },
+];
 
 /** Coerce Supabase row so render never throws on null/odd shapes */
 function normalizeVoucherRow(row: Record<string, unknown> | null | undefined): Voucher | null {
@@ -261,6 +271,10 @@ const AdminVouchers: React.FC = () => {
   const [generateCount, setGenerateCount] = useState(0);
   const [importCodesText, setImportCodesText] = useState('');
   const [voidReasons, setVoidReasons] = useState<Record<string, string>>({});
+  const [voucherWizardStep, setVoucherWizardStep] = useState<VoucherWizardStep>('basic');
+  const [wizardCodeMode, setWizardCodeMode] = useState<VoucherWizardCodeMode>('generate');
+  const [wizardUnlimitedCodeCount, setWizardUnlimitedCodeCount] = useState(100);
+  const [wizardImportCodesText, setWizardImportCodesText] = useState('');
   
   const [voucherForm, setVoucherForm] = useState<VoucherForm>({
     name: '',
@@ -476,14 +490,90 @@ const AdminVouchers: React.FC = () => {
     return publicUrl;
   };
 
+  const resetWizardState = () => {
+    setVoucherWizardStep('basic');
+    setWizardCodeMode('generate');
+    setWizardUnlimitedCodeCount(100);
+    setWizardImportCodesText('');
+  };
+
+  const getWizardTargetCodeCount = () => {
+    if (voucherForm.maxQuantity != null && Number.isFinite(voucherForm.maxQuantity)) {
+      return Math.max(Math.floor(voucherForm.maxQuantity), 0);
+    }
+    return Math.max(Math.floor(Number(wizardUnlimitedCodeCount)), 0);
+  };
+
+  const getWizardPreparedCodes = () => {
+    if (wizardCodeMode === 'import') return parseVoucherCodesInput(wizardImportCodesText);
+    return generateOneMilVoucherCodes(getWizardTargetCodeCount(), new Set());
+  };
+
+  const validateWizardVoucherForm = (mode: 'create' | 'edit') => {
+    if (!voucherForm.name.trim()) {
+      return 'Vyplňte název voucheru.';
+    }
+    if (mode === 'create' && !voucherForm.imageFile) {
+      return 'Nahrajte hlavní obrázek voucheru.';
+    }
+    if (
+      voucherForm.startDate &&
+      voucherForm.endDate &&
+      voucherForm.startDate.getTime() > voucherForm.endDate.getTime()
+    ) {
+      return 'Datum začátku nesmí být později než datum konce.';
+    }
+    if (voucherForm.maxQuantity != null && voucherForm.maxQuantity <= 0) {
+      return 'Omezené množství musí být alespoň 1 kus.';
+    }
+    return null;
+  };
+
+  const validateWizardCodes = (codes: string[]) => {
+    if (codes.length === 0) {
+      return 'Připravte alespoň jeden unikátní kód.';
+    }
+    if (voucherForm.maxQuantity != null && codes.length !== voucherForm.maxQuantity) {
+      return `Počet kódů (${codes.length}) musí přesně odpovídat množství voucheru (${voucherForm.maxQuantity}).`;
+    }
+    return null;
+  };
+
+  const findExistingVoucherCodes = async (codes: string[]) => {
+    if (codes.length === 0) return new Set<string>();
+    const { data, error } = await supabase
+      .from('voucher_codes')
+      .select('code')
+      .in('code', codes);
+
+    if (error) throw error;
+    return new Set((data || []).map((row) => normalizeVoucherCodeValue(row.code)));
+  };
+
   const handleCreateVoucher = async () => {
-    if (!voucherForm.name || !voucherForm.imageFile) {
-      toast.error('Vyplňte všechna povinná pole');
+    const formError = validateWizardVoucherForm('create');
+    if (formError) {
+      toast.error(formError);
       return;
     }
 
+    const preparedCodes = getWizardPreparedCodes();
+    const codesError = validateWizardCodes(preparedCodes);
+    if (codesError) {
+      toast.error(codesError);
+      setVoucherWizardStep('codes');
+      return;
+    }
+
+    let createdVoucherId: string | null = null;
     try {
       setCreateLoading(true);
+      const existingCodes = await findExistingVoucherCodes(preparedCodes);
+      if (existingCodes.size > 0) {
+        toast.error(`Některé kódy už v systému existují (${existingCodes.size}).`);
+        setVoucherWizardStep('codes');
+        return;
+      }
 
       // Upload images
       const imageUrl = await uploadImage(voucherForm.imageFile);
@@ -509,13 +599,27 @@ const AdminVouchers: React.FC = () => {
         .single();
 
       if (error) throw error;
+      createdVoucherId = data.id;
 
-      toast.success('Voucher byl úspěšně vytvořen');
+      await createVoucherCodeBatch(
+        data.id,
+        wizardCodeMode === 'generate' ? 'generated_by_onemil' : 'provided_by_partner',
+        wizardCodeMode === 'generate'
+          ? `OneMil generování při vytvoření ${format(new Date(), 'yyyy-MM-dd HH:mm')}`
+          : `Import partner kódů při vytvoření ${format(new Date(), 'yyyy-MM-dd HH:mm')}`,
+        preparedCodes
+      );
+
+      toast.success(`Voucher byl úspěšně vytvořen včetně ${preparedCodes.length} kódů`);
       setShowCreateDialog(false);
       resetForm();
+      resetWizardState();
       fetchVouchers();
     } catch (error: any) {
       console.error('Error creating voucher:', error);
+      if (createdVoucherId) {
+        await supabase.from('vouchers').delete().eq('id', createdVoucherId);
+      }
       toast.error('Chyba při vytváření voucheru');
     } finally {
       setCreateLoading(false);
@@ -531,10 +635,12 @@ const AdminVouchers: React.FC = () => {
       startDate: undefined,
       endDate: undefined,
     });
+    resetWizardState();
   };
 
   const openEditDialog = (voucher: Voucher) => {
     setEditingVoucher(voucher);
+    resetWizardState();
     setVoucherForm({
       name: voucher.name ?? '(Bez názvu)',
       imageFile: null,
@@ -550,8 +656,10 @@ const AdminVouchers: React.FC = () => {
   };
 
   const handleEditVoucher = async () => {
-    if (!voucherForm.name || !editingVoucher?.id) {
-      toast.error('Vyplňte všechna povinná pole');
+    if (!editingVoucher?.id) return;
+    const formError = validateWizardVoucherForm('edit');
+    if (formError) {
+      toast.error(formError);
       return;
     }
 
@@ -590,6 +698,7 @@ const AdminVouchers: React.FC = () => {
       setShowEditDialog(false);
       setEditingVoucher(null);
       resetForm();
+      resetWizardState();
       fetchVouchers();
     } catch (error: any) {
       console.error('Error updating voucher:', error);
@@ -977,6 +1086,386 @@ const AdminVouchers: React.FC = () => {
     return <Badge variant="destructive">Zneplatněný</Badge>;
   };
 
+  const renderVoucherWizardContent = (mode: 'create' | 'edit') => {
+    const isCreate = mode === 'create';
+    const currentCodes =
+      isCreate && wizardCodeMode === 'import'
+        ? parseVoucherCodesInput(wizardImportCodesText)
+        : isCreate
+          ? Array.from({ length: getWizardTargetCodeCount() }, (_, index) => `OM-${index + 1}`)
+          : [];
+    const codeCount = currentCodes.length;
+    const codeCountMatches =
+      voucherForm.maxQuantity == null || codeCount === voucherForm.maxQuantity;
+    const canSubmit =
+      !createLoading &&
+      !validateWizardVoucherForm(mode) &&
+      (!isCreate || (codeCount > 0 && codeCountMatches));
+
+    return (
+      <div className="space-y-6">
+        <div className="flex flex-wrap gap-2">
+          {voucherWizardSteps.map((step) => (
+            <Button
+              key={step.key}
+              type="button"
+              variant={voucherWizardStep === step.key ? 'default' : 'outline'}
+              size="sm"
+              onClick={() => setVoucherWizardStep(step.key)}
+            >
+              {step.label}
+            </Button>
+          ))}
+        </div>
+
+        {voucherWizardStep === 'basic' && (
+          <div className="space-y-4">
+            <div className="space-y-2">
+              <Label htmlFor={`${mode}-voucher-name`}>Název voucheru *</Label>
+              <Input
+                id={`${mode}-voucher-name`}
+                value={voucherForm.name}
+                onChange={(event) => setVoucherForm({ ...voucherForm, name: event.target.value })}
+                placeholder="Např. Partner - sleva 20 %"
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label>Množství</Label>
+              <Select
+                value={voucherForm.maxQuantity === null ? 'unlimited' : 'limited'}
+                onValueChange={(value) =>
+                  setVoucherForm({
+                    ...voucherForm,
+                    maxQuantity: value === 'unlimited' ? null : (voucherForm.maxQuantity || 100),
+                  })
+                }
+              >
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="unlimited">
+                    <div className="flex items-center gap-2">
+                      <Infinity className="h-4 w-4" />
+                      Neomezené
+                    </div>
+                  </SelectItem>
+                  <SelectItem value="limited">
+                    <div className="flex items-center gap-2">
+                      <Hash className="h-4 w-4" />
+                      Omezené
+                    </div>
+                  </SelectItem>
+                </SelectContent>
+              </Select>
+
+              {voucherForm.maxQuantity !== null && (
+                <Input
+                  type="number"
+                  min="1"
+                  value={voucherForm.maxQuantity}
+                  onChange={(event) =>
+                    setVoucherForm({
+                      ...voucherForm,
+                      maxQuantity: parseInt(event.target.value, 10) || 1,
+                    })
+                  }
+                  placeholder="Počet dostupných voucherů"
+                />
+              )}
+            </div>
+          </div>
+        )}
+
+        {voucherWizardStep === 'graphics' && (
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="space-y-2">
+              <Label htmlFor={`${mode}-main-image`}>
+                Hlavní obrázek voucheru {isCreate ? '*' : ''}
+              </Label>
+              <div className="flex items-center gap-2">
+                <Input
+                  id={`${mode}-main-image`}
+                  type="file"
+                  accept="image/*"
+                  onChange={(event) =>
+                    setVoucherForm({ ...voucherForm, imageFile: event.target.files?.[0] || null })
+                  }
+                  className="flex-1"
+                />
+                <ImageIcon className="h-4 w-4 text-muted-foreground" />
+              </div>
+              <p className="text-xs text-muted-foreground">
+                {isCreate ? 'Fallback obrázek je povinný.' : 'Nechte prázdné pro zachování současného obrázku.'}
+              </p>
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor={`${mode}-banner-image`}>Full-card banner</Label>
+              <div className="flex items-center gap-2">
+                <Input
+                  id={`${mode}-banner-image`}
+                  type="file"
+                  accept="image/*"
+                  onChange={(event) =>
+                    setVoucherForm({ ...voucherForm, bannerFile: event.target.files?.[0] || null })
+                  }
+                  className="flex-1"
+                />
+                <Upload className="h-4 w-4 text-muted-foreground" />
+              </div>
+              <p className="text-xs text-muted-foreground">
+                Banner má nést partnera, nabídku a hlavní sdělení voucheru.
+              </p>
+            </div>
+          </div>
+        )}
+
+        {voucherWizardStep === 'detail' && (
+          <div className="space-y-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label>Datum začátku</Label>
+                <Popover>
+                  <PopoverTrigger asChild>
+                    <Button
+                      variant="outline"
+                      className={cn(
+                        'w-full justify-start text-left font-normal',
+                        !voucherForm.startDate && 'text-muted-foreground'
+                      )}
+                    >
+                      <CalendarIcon className="mr-2 h-4 w-4" />
+                      {safeFormatPickerDate(voucherForm.startDate, 'dd.MM.yyyy')}
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-auto p-0" align="start">
+                    <Calendar
+                      mode="single"
+                      selected={voucherForm.startDate}
+                      onSelect={(date) => setVoucherForm({ ...voucherForm, startDate: date })}
+                      initialFocus
+                      className="p-3 pointer-events-auto"
+                    />
+                  </PopoverContent>
+                </Popover>
+              </div>
+
+              <div className="space-y-2">
+                <Label>Datum konce</Label>
+                <Popover>
+                  <PopoverTrigger asChild>
+                    <Button
+                      variant="outline"
+                      className={cn(
+                        'w-full justify-start text-left font-normal',
+                        !voucherForm.endDate && 'text-muted-foreground'
+                      )}
+                    >
+                      <CalendarIcon className="mr-2 h-4 w-4" />
+                      {safeFormatPickerDate(voucherForm.endDate, 'dd.MM.yyyy')}
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-auto p-0" align="start">
+                    <Calendar
+                      mode="single"
+                      selected={voucherForm.endDate}
+                      onSelect={(date) => setVoucherForm({ ...voucherForm, endDate: date })}
+                      initialFocus
+                      className="p-3 pointer-events-auto"
+                    />
+                  </PopoverContent>
+                </Popover>
+              </div>
+            </div>
+
+            <div className="rounded-lg border p-4 space-y-2 text-sm">
+              <div className="flex items-center justify-between">
+                <span className="text-muted-foreground">Cena v detailu</span>
+                <Badge variant="outline">5 MioCoinů</Badge>
+              </div>
+              <div className="flex items-center justify-between">
+                <span className="text-muted-foreground">Detailové CTA</span>
+                <Badge variant="outline">Koupit za 5 MioCoinů</Badge>
+              </div>
+              <p className="text-xs text-muted-foreground">
+                Text nabídky, partner a hlavní sdělení patří podle návrhu primárně do banneru.
+              </p>
+            </div>
+          </div>
+        )}
+
+        {voucherWizardStep === 'codes' && (
+          <div className="space-y-4">
+            {isCreate ? (
+              <>
+                <Select
+                  value={wizardCodeMode}
+                  onValueChange={(value) => setWizardCodeMode(value as VoucherWizardCodeMode)}
+                >
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="generate">Vygenerovat OneMil kódy</SelectItem>
+                    <SelectItem value="import">Vložit/importovat partner kódy</SelectItem>
+                  </SelectContent>
+                </Select>
+
+                {wizardCodeMode === 'generate' ? (
+                  <div className="space-y-2 rounded-lg border p-4">
+                    <div className="flex items-center gap-2 font-medium">
+                      <KeyRound className="h-4 w-4" />
+                      OneMil kódy
+                    </div>
+                    {voucherForm.maxQuantity === null && (
+                      <Input
+                        type="number"
+                        min={1}
+                        value={wizardUnlimitedCodeCount}
+                        onChange={(event) =>
+                          setWizardUnlimitedCodeCount(parseInt(event.target.value, 10) || 1)
+                        }
+                        placeholder="Počet kódů pro neomezený voucher"
+                      />
+                    )}
+                    <p className="text-sm text-muted-foreground">
+                      Připraveno k vytvoření: {codeCount} kódů.
+                    </p>
+                  </div>
+                ) : (
+                  <div className="space-y-2">
+                    <Label htmlFor="wizard-import-codes">Partner kódy</Label>
+                    <Textarea
+                      id="wizard-import-codes"
+                      value={wizardImportCodesText}
+                      onChange={(event) => setWizardImportCodesText(event.target.value)}
+                      placeholder="Vložte kódy oddělené řádkem, čárkou nebo mezerou"
+                      className="min-h-[160px]"
+                    />
+                    <p className="text-sm text-muted-foreground">
+                      Rozpoznáno unikátních kódů: {codeCount}.
+                    </p>
+                  </div>
+                )}
+
+                {voucherForm.maxQuantity !== null && (
+                  <div className={cn('rounded-lg border p-3 text-sm', codeCountMatches ? 'text-green-700' : 'text-red-700')}>
+                    {codeCountMatches
+                      ? `Počet kódů sedí s množstvím (${voucherForm.maxQuantity}).`
+                      : `Počet kódů musí sedět s množstvím ${voucherForm.maxQuantity}; aktuálně ${codeCount}.`}
+                  </div>
+                )}
+              </>
+            ) : (
+              <div className="rounded-lg border p-4 space-y-3">
+                <div className="flex items-center gap-2 font-medium">
+                  <KeyRound className="h-4 w-4" />
+                  Správa existujících kódů
+                </div>
+                <p className="text-sm text-muted-foreground">
+                  U existujícího voucheru zůstává import, export, generování a zneplatnění v náhledu přes ikonu oka.
+                </p>
+                {editingVoucher && (
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={() => {
+                      setShowEditDialog(false);
+                      setSelectedVoucher(editingVoucher);
+                    }}
+                  >
+                    <Eye className="h-4 w-4 mr-2" />
+                    Otevřít správu kódů
+                  </Button>
+                )}
+              </div>
+            )}
+          </div>
+        )}
+
+        {voucherWizardStep === 'review' && (
+          <div className="space-y-4">
+            <div className="rounded-lg border p-4 space-y-3">
+              <div className="flex items-center gap-2 font-medium">
+                <CheckCircle2 className="h-4 w-4" />
+                Kontrola před uložením
+              </div>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-3 text-sm">
+                <div><strong>Název:</strong> {voucherForm.name || '—'}</div>
+                <div><strong>Množství:</strong> {voucherForm.maxQuantity ?? 'Neomezené'}</div>
+                <div><strong>Platnost od:</strong> {voucherForm.startDate ? format(voucherForm.startDate, 'dd.MM.yyyy') : '—'}</div>
+                <div><strong>Platnost do:</strong> {voucherForm.endDate ? format(voucherForm.endDate, 'dd.MM.yyyy') : '—'}</div>
+                <div><strong>Banner:</strong> {voucherForm.bannerFile ? voucherForm.bannerFile.name : isCreate ? '—' : 'beze změny'}</div>
+                <div><strong>Kódy:</strong> {isCreate ? `${codeCount} připraveno` : 'správa přes náhled'}</div>
+              </div>
+            </div>
+
+            {!canSubmit && (
+              <div className="rounded-lg border border-red-200 bg-red-50 p-3 text-sm text-red-700">
+                {validateWizardVoucherForm(mode) || (isCreate ? validateWizardCodes(currentCodes) : null)}
+              </div>
+            )}
+          </div>
+        )}
+
+        <div className="flex justify-between gap-2 pt-4">
+          <Button
+            type="button"
+            variant="outline"
+            onClick={() => {
+              if (isCreate) {
+                setShowCreateDialog(false);
+              } else {
+                setShowEditDialog(false);
+                setEditingVoucher(null);
+              }
+              resetForm();
+            }}
+          >
+            Zrušit
+          </Button>
+          <div className="flex gap-2">
+            {voucherWizardStep !== 'basic' && (
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => {
+                  const index = voucherWizardSteps.findIndex((step) => step.key === voucherWizardStep);
+                  setVoucherWizardStep(voucherWizardSteps[Math.max(index - 1, 0)].key);
+                }}
+              >
+                Zpět
+              </Button>
+            )}
+            {voucherWizardStep !== 'review' ? (
+              <Button
+                type="button"
+                onClick={() => {
+                  const index = voucherWizardSteps.findIndex((step) => step.key === voucherWizardStep);
+                  setVoucherWizardStep(voucherWizardSteps[Math.min(index + 1, voucherWizardSteps.length - 1)].key);
+                }}
+              >
+                Pokračovat
+              </Button>
+            ) : (
+              <Button
+                type="button"
+                onClick={isCreate ? handleCreateVoucher : handleEditVoucher}
+                disabled={!canSubmit}
+              >
+                {createLoading
+                  ? isCreate ? 'Vytváření...' : 'Ukládání...'
+                  : isCreate ? 'Vytvořit voucher a kódy' : 'Uložit změny'}
+              </Button>
+            )}
+          </div>
+        </div>
+      </div>
+    );
+  };
+
   if (authLoading || roleLoading) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center">
@@ -1026,170 +1515,24 @@ const AdminVouchers: React.FC = () => {
               Test Trigger
             </Button>
             
-            <Dialog open={showCreateDialog} onOpenChange={setShowCreateDialog}>
+            <Dialog
+              open={showCreateDialog}
+              onOpenChange={(open) => {
+                setShowCreateDialog(open);
+                if (!open) resetForm();
+              }}
+            >
               <DialogTrigger asChild>
                 <Button>
                   <Plus className="mr-2 h-4 w-4" />
                   Nový Voucher
                 </Button>
               </DialogTrigger>
-            <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+            <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
               <DialogHeader>
                 <DialogTitle>Vytvořit Nový Voucher</DialogTitle>
               </DialogHeader>
-              
-              <div className="space-y-6">
-                <div className="space-y-2">
-                  <Label htmlFor="name">Název voucheru *</Label>
-                  <Input
-                    id="name"
-                    value={voucherForm.name}
-                    onChange={(e) => setVoucherForm({...voucherForm, name: e.target.value})}
-                    placeholder="Např. Sleva 20% na celý nákup"
-                  />
-                </div>
-
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="mainImage">Hlavní obrázek voucheru *</Label>
-                    <div className="flex items-center gap-2">
-                      <Input
-                        id="mainImage"
-                        type="file"
-                        accept="image/*"
-                        onChange={(e) => setVoucherForm({...voucherForm, imageFile: e.target.files?.[0] || null})}
-                        className="flex-1"
-                      />
-                      <ImageIcon className="h-4 w-4 text-muted-foreground" />
-                    </div>
-                    <p className="text-xs text-muted-foreground">
-                      Doporučené rozměry: 64px × 64px (ikona voucheru)
-                    </p>
-                  </div>
-
-                  <div className="space-y-2">
-                    <Label htmlFor="bannerImage">Banner obrázek</Label>
-                    <div className="flex items-center gap-2">
-                      <Input
-                        id="bannerImage"
-                        type="file"
-                        accept="image/*"
-                        onChange={(e) => setVoucherForm({...voucherForm, bannerFile: e.target.files?.[0] || null})}
-                        className="flex-1"
-                      />
-                      <Upload className="h-4 w-4 text-muted-foreground" />
-                    </div>
-                    <p className="text-xs text-muted-foreground">
-                      Doporučené rozměry: Plná šířka × 128px (banner voucheru)
-                    </p>
-                  </div>
-                </div>
-
-                <div className="space-y-2">
-                  <Label>Množství</Label>
-                  <Select
-                    value={voucherForm.maxQuantity === null ? 'unlimited' : 'limited'}
-                    onValueChange={(value) => setVoucherForm({
-                      ...voucherForm, 
-                      maxQuantity: value === 'unlimited' ? null : 100
-                    })}
-                  >
-                    <SelectTrigger>
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="unlimited">
-                        <div className="flex items-center gap-2">
-                          <Infinity className="h-4 w-4" />
-                          Neomezené
-                        </div>
-                      </SelectItem>
-                      <SelectItem value="limited">
-                        <div className="flex items-center gap-2">
-                          <Hash className="h-4 w-4" />
-                          Omezené
-                        </div>
-                      </SelectItem>
-                    </SelectContent>
-                  </Select>
-
-                  {voucherForm.maxQuantity !== null && (
-                    <Input
-                      type="number"
-                      min="1"
-                      value={voucherForm.maxQuantity}
-                      onChange={(e) => setVoucherForm({
-                        ...voucherForm, 
-                        maxQuantity: parseInt(e.target.value) || 1
-                      })}
-                      placeholder="Počet dostupných voucherů"
-                    />
-                  )}
-                </div>
-
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div className="space-y-2">
-                    <Label>Datum začátku</Label>
-                    <Popover>
-                      <PopoverTrigger asChild>
-                        <Button
-                          variant="outline"
-                          className={cn("w-full justify-start text-left font-normal", 
-                            !voucherForm.startDate && "text-muted-foreground"
-                          )}
-                        >
-                          <CalendarIcon className="mr-2 h-4 w-4" />
-                          {safeFormatPickerDate(voucherForm.startDate, 'dd.MM.yyyy')}
-                        </Button>
-                      </PopoverTrigger>
-                      <PopoverContent className="w-auto p-0" align="start">
-                        <Calendar
-                          mode="single"
-                          selected={voucherForm.startDate}
-                          onSelect={(date) => setVoucherForm({...voucherForm, startDate: date})}
-                          initialFocus
-                          className="p-3 pointer-events-auto"
-                        />
-                      </PopoverContent>
-                    </Popover>
-                  </div>
-
-                  <div className="space-y-2">
-                    <Label>Datum konce</Label>
-                    <Popover>
-                      <PopoverTrigger asChild>
-                        <Button
-                          variant="outline"
-                          className={cn("w-full justify-start text-left font-normal", 
-                            !voucherForm.endDate && "text-muted-foreground"
-                          )}
-                        >
-                          <CalendarIcon className="mr-2 h-4 w-4" />
-                          {safeFormatPickerDate(voucherForm.endDate, 'dd.MM.yyyy')}
-                        </Button>
-                      </PopoverTrigger>
-                      <PopoverContent className="w-auto p-0" align="start">
-                        <Calendar
-                          mode="single"
-                          selected={voucherForm.endDate}
-                          onSelect={(date) => setVoucherForm({...voucherForm, endDate: date})}
-                          initialFocus
-                          className="p-3 pointer-events-auto"
-                        />
-                      </PopoverContent>
-                    </Popover>
-                  </div>
-                </div>
-
-                <div className="flex justify-end gap-2 pt-4">
-                  <Button variant="outline" onClick={() => setShowCreateDialog(false)}>
-                    Zrušit
-                  </Button>
-                  <Button onClick={handleCreateVoucher} disabled={createLoading}>
-                    {createLoading ? 'Vytváření...' : 'Vytvořit Voucher'}
-                  </Button>
-                </div>
-              </div>
+              {renderVoucherWizardContent('create')}
             </DialogContent>
           </Dialog>
           </div>
@@ -1709,176 +2052,21 @@ const AdminVouchers: React.FC = () => {
         )}
 
         {/* Edit Voucher Dialog */}
-        <Dialog open={showEditDialog} onOpenChange={setShowEditDialog}>
-          <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+        <Dialog
+          open={showEditDialog}
+          onOpenChange={(open) => {
+            setShowEditDialog(open);
+            if (!open) {
+              setEditingVoucher(null);
+              resetForm();
+            }
+          }}
+        >
+          <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
             <DialogHeader>
               <DialogTitle>Upravit Voucher</DialogTitle>
             </DialogHeader>
-            
-            <div className="space-y-6">
-              <div className="space-y-2">
-                <Label htmlFor="edit-name">Název voucheru *</Label>
-                <Input
-                  id="edit-name"
-                  value={voucherForm.name}
-                  onChange={(e) => setVoucherForm({...voucherForm, name: e.target.value})}
-                  placeholder="Např. Sleva 20% na celý nákup"
-                />
-              </div>
-
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label htmlFor="edit-mainImage">Hlavní obrázek voucheru</Label>
-                  <div className="flex items-center gap-2">
-                    <Input
-                      id="edit-mainImage"
-                      type="file"
-                      accept="image/*"
-                      onChange={(e) => setVoucherForm({...voucherForm, imageFile: e.target.files?.[0] || null})}
-                      className="flex-1"
-                    />
-                    <ImageIcon className="h-4 w-4 text-muted-foreground" />
-                  </div>
-                  <p className="text-xs text-muted-foreground">
-                    Nechte prázdné pro zachování současného obrázku
-                  </p>
-                </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="edit-bannerImage">Banner obrázek</Label>
-                  <div className="flex items-center gap-2">
-                    <Input
-                      id="edit-bannerImage"
-                      type="file"
-                      accept="image/*"
-                      onChange={(e) => setVoucherForm({...voucherForm, bannerFile: e.target.files?.[0] || null})}
-                      className="flex-1"
-                    />
-                    <Upload className="h-4 w-4 text-muted-foreground" />
-                  </div>
-                  <p className="text-xs text-muted-foreground">
-                    Nechte prázdné pro zachování současného banneru
-                  </p>
-                </div>
-              </div>
-
-              <div className="space-y-2">
-                <Label>Množství</Label>
-                <Select
-                  value={voucherForm.maxQuantity === null ? 'unlimited' : 'limited'}
-                  onValueChange={(value) => setVoucherForm({
-                    ...voucherForm, 
-                    maxQuantity: value === 'unlimited' ? null : (voucherForm.maxQuantity || 100)
-                  })}
-                >
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="unlimited">
-                      <div className="flex items-center gap-2">
-                        <Infinity className="h-4 w-4" />
-                        Neomezené
-                      </div>
-                    </SelectItem>
-                    <SelectItem value="limited">
-                      <div className="flex items-center gap-2">
-                        <Hash className="h-4 w-4" />
-                        Omezené
-                      </div>
-                    </SelectItem>
-                  </SelectContent>
-                </Select>
-
-                {voucherForm.maxQuantity !== null && (
-                  <Input
-                    type="number"
-                    min="1"
-                    value={voucherForm.maxQuantity}
-                    onChange={(e) => setVoucherForm({
-                      ...voucherForm, 
-                      maxQuantity: parseInt(e.target.value) || 1
-                    })}
-                    placeholder="Počet dostupných voucherů"
-                  />
-                )}
-              </div>
-
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label>Datum začátku</Label>
-                  <Popover>
-                    <PopoverTrigger asChild>
-                      <Button
-                        variant="outline"
-                        className={cn("w-full justify-start text-left font-normal", 
-                          !voucherForm.startDate && "text-muted-foreground"
-                        )}
-                      >
-                        <CalendarIcon className="mr-2 h-4 w-4" />
-                        {safeFormatPickerDate(voucherForm.startDate, 'dd.MM.yyyy')}
-                      </Button>
-                    </PopoverTrigger>
-                    <PopoverContent className="w-auto p-0" align="start">
-                      <Calendar
-                        mode="single"
-                        selected={voucherForm.startDate}
-                        onSelect={(date) => setVoucherForm({...voucherForm, startDate: date})}
-                        initialFocus
-                        className={cn("p-3 pointer-events-auto")}
-                      />
-                    </PopoverContent>
-                  </Popover>
-                </div>
-
-                <div className="space-y-2">
-                  <Label>Datum konce</Label>
-                  <Popover>
-                    <PopoverTrigger asChild>
-                      <Button
-                        variant="outline"
-                        className={cn("w-full justify-start text-left font-normal", 
-                          !voucherForm.endDate && "text-muted-foreground"
-                        )}
-                      >
-                        <CalendarIcon className="mr-2 h-4 w-4" />
-                        {safeFormatPickerDate(voucherForm.endDate, 'dd.MM.yyyy')}
-                      </Button>
-                    </PopoverTrigger>
-                    <PopoverContent className="w-auto p-0" align="start">
-                      <Calendar
-                        mode="single"
-                        selected={voucherForm.endDate}
-                        onSelect={(date) => setVoucherForm({...voucherForm, endDate: date})}
-                        initialFocus
-                        className={cn("p-3 pointer-events-auto")}
-                      />
-                    </PopoverContent>
-                  </Popover>
-                </div>
-              </div>
-
-              <div className="flex gap-2 pt-4">
-                <Button 
-                  variant="outline" 
-                  onClick={() => {
-                    setShowEditDialog(false);
-                    setEditingVoucher(null);
-                    resetForm();
-                  }}
-                  className="flex-1"
-                >
-                  Zrušit
-                </Button>
-                <Button 
-                  onClick={handleEditVoucher}
-                  disabled={createLoading}
-                  className="flex-1"
-                >
-                  {createLoading ? 'Ukládání...' : 'Uložit změny'}
-                </Button>
-              </div>
-            </div>
+            {renderVoucherWizardContent('edit')}
           </DialogContent>
         </Dialog>
       </div>
