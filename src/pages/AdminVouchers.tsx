@@ -45,6 +45,8 @@ interface Voucher {
   is_public: boolean;
 }
 
+type VoucherStatus = 'active' | 'scheduled' | 'hidden' | 'expired' | 'exhausted';
+
 function isValidDate(d: Date): boolean {
   return d instanceof Date && !Number.isNaN(d.getTime());
 }
@@ -81,6 +83,23 @@ function safeFormatPickerDate(d: Date | undefined, fmt: string): string {
 function parseDateForForm(iso: string | null | undefined): Date | undefined {
   const d = parseBoundaryDate(iso);
   return d ?? undefined;
+}
+
+function getVoucherStatus(voucher: Voucher, now = new Date()): VoucherStatus {
+  const startDate = parseBoundaryDate(voucher.start_date);
+  const endDate = parseBoundaryDate(voucher.end_date);
+  const redeemed = Number(voucher.redeemed_count ?? 0);
+  const safeRedeemed = Number.isFinite(redeemed) ? redeemed : 0;
+  const remainingQuantity =
+    voucher.max_quantity != null && Number.isFinite(voucher.max_quantity)
+      ? voucher.max_quantity - safeRedeemed
+      : null;
+
+  if (endDate && now > endDate) return 'expired';
+  if (remainingQuantity !== null && remainingQuantity <= 0) return 'exhausted';
+  if (!voucher.is_public) return 'hidden';
+  if (startDate && now < startDate) return 'scheduled';
+  return 'active';
 }
 
 /** Coerce Supabase row so render never throws on null/odd shapes */
@@ -526,22 +545,7 @@ const AdminVouchers: React.FC = () => {
       .includes((searchTerm ?? '').toLowerCase());
     if (statusFilter === 'all') return matchesSearch;
 
-    const now = new Date();
-    const startDate = parseBoundaryDate(voucher.start_date);
-    const endDate = parseBoundaryDate(voucher.end_date);
-    const redeemed = Number(voucher.redeemed_count ?? 0);
-    const safeRedeemed = Number.isFinite(redeemed) ? redeemed : 0;
-    const remainingQuantity =
-      voucher.max_quantity != null && Number.isFinite(voucher.max_quantity)
-        ? voucher.max_quantity - safeRedeemed
-        : null;
-
-    let voucherStatus = 'active';
-    if (startDate && now < startDate) voucherStatus = 'scheduled';
-    else if (endDate && now > endDate) voucherStatus = 'expired';
-    else if (remainingQuantity !== null && remainingQuantity <= 0) voucherStatus = 'exhausted';
-
-    return matchesSearch && voucherStatus === statusFilter;
+    return matchesSearch && getVoucherStatus(voucher) === statusFilter;
   });
 
   const getRemainingText = (voucher: Voucher) => {
@@ -553,22 +557,18 @@ const AdminVouchers: React.FC = () => {
   };
 
   const getStatusBadge = (voucher: Voucher) => {
-    const now = new Date();
-    const startDate = parseBoundaryDate(voucher.start_date);
-    const endDate = parseBoundaryDate(voucher.end_date);
-    const redeemed = Number(voucher.redeemed_count ?? 0);
-    const remainingQuantity =
-      voucher.max_quantity != null && Number.isFinite(voucher.max_quantity)
-        ? voucher.max_quantity - (Number.isFinite(redeemed) ? redeemed : 0)
-        : null;
+    const voucherStatus = getVoucherStatus(voucher);
 
-    if (startDate && now < startDate) {
+    if (voucherStatus === 'scheduled') {
       return <Badge variant="pending">Naplánováno</Badge>;
     }
-    if (endDate && now > endDate) {
+    if (voucherStatus === 'hidden') {
+      return <Badge variant="secondary">Skryté</Badge>;
+    }
+    if (voucherStatus === 'expired') {
       return <Badge variant="destructive">Vypršelo</Badge>;
     }
-    if (remainingQuantity !== null && remainingQuantity <= 0) {
+    if (voucherStatus === 'exhausted') {
       return <Badge variant="destructive">Vyčerpáno</Badge>;
     }
     return <Badge variant="success">Aktivní</Badge>;
@@ -811,22 +811,7 @@ const AdminVouchers: React.FC = () => {
             </CardHeader>
             <CardContent>
               <div className="text-2xl font-bold text-green-600">
-                {safeVouchers.filter((v) => {
-                  if (!v || v.id == null) return false;
-                  const now = new Date();
-                  const startDate = parseBoundaryDate(v.start_date);
-                  const endDate = parseBoundaryDate(v.end_date);
-                  const redeemed = Number(v.redeemed_count ?? 0);
-                  const remainingQuantity =
-                    v.max_quantity != null && Number.isFinite(v.max_quantity)
-                      ? v.max_quantity - (Number.isFinite(redeemed) ? redeemed : 0)
-                      : null;
-
-                  if (startDate && now < startDate) return false;
-                  if (endDate && now > endDate) return false;
-                  if (remainingQuantity !== null && remainingQuantity <= 0) return false;
-                  return true;
-                }).length}
+                {safeVouchers.filter((v) => v && getVoucherStatus(v) === 'active').length}
               </div>
             </CardContent>
           </Card>
@@ -909,6 +894,7 @@ const AdminVouchers: React.FC = () => {
                     <SelectItem value="all">Všechny</SelectItem>
                     <SelectItem value="active">Aktivní</SelectItem>
                     <SelectItem value="scheduled">Naplánované</SelectItem>
+                    <SelectItem value="hidden">Skryté</SelectItem>
                     <SelectItem value="expired">Vypršelé</SelectItem>
                     <SelectItem value="exhausted">Vyčerpané</SelectItem>
                   </SelectContent>
