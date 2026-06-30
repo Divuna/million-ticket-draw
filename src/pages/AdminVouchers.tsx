@@ -8,6 +8,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
+import { Textarea } from '@/components/ui/textarea';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
@@ -16,7 +17,7 @@ import { Calendar } from '@/components/ui/calendar';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
-import { Plus, Upload, Calendar as CalendarIcon, Infinity, Hash, Image as ImageIcon, Search, Edit, Trash2, Eye, Gift } from 'lucide-react';
+import { Plus, Upload, Calendar as CalendarIcon, Infinity, Hash, Image as ImageIcon, Search, Edit, Trash2, Eye, Gift, KeyRound, FileUp, Download, Ban, RefreshCw } from 'lucide-react';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { format } from 'date-fns';
@@ -43,6 +44,34 @@ interface Voucher {
   created_at: string | null;
   updated_at: string | null;
   is_public: boolean;
+}
+
+type VoucherCodeStatus = 'available' | 'issued' | 'voided';
+
+interface VoucherCode {
+  id: string;
+  voucher_id: string;
+  batch_id: string | null;
+  code: string;
+  status: VoucherCodeStatus;
+  issued_to_user_id: string | null;
+  issued_user_voucher_id: string | null;
+  issued_at: string | null;
+  voided_at: string | null;
+  voided_by: string | null;
+  void_reason: string | null;
+  created_at: string | null;
+  updated_at: string | null;
+}
+
+interface VoucherCodeBatch {
+  id: string;
+  voucher_id: string;
+  source: string;
+  label: string | null;
+  total_count: number;
+  created_by: string | null;
+  created_at: string | null;
 }
 
 function isValidDate(d: Date): boolean {
@@ -81,6 +110,64 @@ function safeFormatPickerDate(d: Date | undefined, fmt: string): string {
 function parseDateForForm(iso: string | null | undefined): Date | undefined {
   const d = parseBoundaryDate(iso);
   return d ?? undefined;
+}
+
+function normalizeVoucherCodeValue(code: string): string {
+  return code.trim().toUpperCase();
+}
+
+function parseVoucherCodesInput(value: string): string[] {
+  const seen = new Set<string>();
+  return value
+    .split(/[\s,;]+/)
+    .map(normalizeVoucherCodeValue)
+    .filter((code) => {
+      if (code === '' || seen.has(code)) return false;
+      seen.add(code);
+      return true;
+    });
+}
+
+function randomVoucherCodeChunk(): string {
+  const bytes = new Uint8Array(6);
+  crypto.getRandomValues(bytes);
+  return Array.from(bytes)
+    .map((byte) => byte.toString(36).padStart(2, '0'))
+    .join('')
+    .replace(/[^A-Z0-9]/gi, '')
+    .slice(0, 10)
+    .toUpperCase();
+}
+
+function generateOneMilVoucherCodes(count: number, existingCodes: Set<string>): string[] {
+  const codes: string[] = [];
+  let attempts = 0;
+  while (codes.length < count && attempts < count * 20) {
+    attempts += 1;
+    const code = `OM-${randomVoucherCodeChunk()}`;
+    if (existingCodes.has(code)) continue;
+    existingCodes.add(code);
+    codes.push(code);
+  }
+  return codes;
+}
+
+function escapeCsvValue(value: string | number | null | undefined): string {
+  const text = value == null ? '' : String(value);
+  return `"${text.replace(/"/g, '""')}"`;
+}
+
+function downloadCsv(filename: string, rows: string[][]): void {
+  const csv = rows.map((row) => row.map(escapeCsvValue).join(',')).join('\n');
+  const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement('a');
+  link.href = url;
+  link.download = filename;
+  document.body.appendChild(link);
+  link.click();
+  document.body.removeChild(link);
+  URL.revokeObjectURL(url);
 }
 
 /**
@@ -166,6 +253,14 @@ const AdminVouchers: React.FC = () => {
   const [selectedVoucher, setSelectedVoucher] = useState<Voucher | null>(null);
   const [voucherPurchases, setVoucherPurchases] = useState<{ id: string; user_email: string; voucher_name: string; created_at: string }[]>([]);
   const [purchasesLoading, setPurchasesLoading] = useState(false);
+  const [voucherCodes, setVoucherCodes] = useState<VoucherCode[]>([]);
+  const [voucherCodeBatches, setVoucherCodeBatches] = useState<VoucherCodeBatch[]>([]);
+  const [voucherCodeUsers, setVoucherCodeUsers] = useState<Record<string, string>>({});
+  const [codesLoading, setCodesLoading] = useState(false);
+  const [codeActionLoading, setCodeActionLoading] = useState(false);
+  const [generateCount, setGenerateCount] = useState(0);
+  const [importCodesText, setImportCodesText] = useState('');
+  const [voidReasons, setVoidReasons] = useState<Record<string, string>>({});
   
   const [voucherForm, setVoucherForm] = useState<VoucherForm>({
     name: '',
@@ -185,6 +280,25 @@ const AdminVouchers: React.FC = () => {
     if (!user || !isAdmin) return;
     fetchVoucherPurchases();
   }, [user, isAdmin]);
+
+  useEffect(() => {
+    if (!selectedVoucher?.id || !user || !isAdmin) {
+      setVoucherCodes([]);
+      setVoucherCodeBatches([]);
+      setVoucherCodeUsers({});
+      setGenerateCount(0);
+      setImportCodesText('');
+      setVoidReasons({});
+      return;
+    }
+
+    const suggestedCount =
+      selectedVoucher.max_quantity != null && Number.isFinite(selectedVoucher.max_quantity)
+        ? selectedVoucher.max_quantity
+        : 0;
+    setGenerateCount(suggestedCount);
+    fetchVoucherCodes(selectedVoucher.id);
+  }, [selectedVoucher?.id, user, isAdmin]);
 
   const fetchVouchers = async () => {
     try {
@@ -259,6 +373,91 @@ const AdminVouchers: React.FC = () => {
       }
     } finally {
       setPurchasesLoading(false);
+    }
+  };
+
+  const fetchVoucherCodes = async (voucherId: string) => {
+    if (!voucherId) return;
+
+    try {
+      setCodesLoading(true);
+      const [{ data: codesData, error: codesError }, { data: batchesData, error: batchesError }] =
+        await Promise.all([
+          supabase
+            .from('voucher_codes')
+            .select('*')
+            .eq('voucher_id', voucherId)
+            .order('created_at', { ascending: false }),
+          supabase
+            .from('voucher_code_batches')
+            .select('*')
+            .eq('voucher_id', voucherId)
+            .order('created_at', { ascending: false }),
+        ]);
+
+      if (codesError) throw codesError;
+      if (batchesError) throw batchesError;
+
+      const codes = (codesData || []).map((row) => ({
+        id: row.id,
+        voucher_id: row.voucher_id,
+        batch_id: row.batch_id,
+        code: row.code,
+        status: row.status as VoucherCodeStatus,
+        issued_to_user_id: row.issued_to_user_id,
+        issued_user_voucher_id: row.issued_user_voucher_id,
+        issued_at: row.issued_at,
+        voided_at: row.voided_at,
+        voided_by: row.voided_by,
+        void_reason: row.void_reason,
+        created_at: row.created_at,
+        updated_at: row.updated_at,
+      }));
+
+      const issuedUserIds = Array.from(
+        new Set(
+          codes
+            .map((code) => code.issued_to_user_id)
+            .filter((id): id is string => Boolean(id))
+        )
+      );
+
+      if (issuedUserIds.length > 0) {
+        const { data: usersData, error: usersError } = await supabase
+          .from('users')
+          .select('id, email')
+          .in('id', issuedUserIds);
+
+        if (usersError) throw usersError;
+        const emailMap = (usersData || []).reduce<Record<string, string>>((acc, row) => {
+          if (row.id) acc[row.id] = row.email ?? row.id;
+          return acc;
+        }, {});
+        setVoucherCodeUsers(emailMap);
+      } else {
+        setVoucherCodeUsers({});
+      }
+
+      setVoucherCodes(codes);
+      setVoucherCodeBatches(
+        (batchesData || []).map((row) => ({
+          id: row.id,
+          voucher_id: row.voucher_id,
+          source: row.source,
+          label: row.label,
+          total_count: row.total_count,
+          created_by: row.created_by,
+          created_at: row.created_at,
+        }))
+      );
+    } catch (error: unknown) {
+      console.error('Error fetching voucher codes:', error);
+      toast.error('Chyba při načítání kódů voucheru');
+      setVoucherCodes([]);
+      setVoucherCodeBatches([]);
+      setVoucherCodeUsers({});
+    } finally {
+      setCodesLoading(false);
     }
   };
 
@@ -542,8 +741,203 @@ const AdminVouchers: React.FC = () => {
     }
   };
 
+  const createVoucherCodeBatch = async (
+    voucherId: string,
+    source: 'generated_by_onemil' | 'provided_by_partner',
+    label: string,
+    codes: string[]
+  ) => {
+    const { data: batch, error: batchError } = await supabase
+      .from('voucher_code_batches')
+      .insert({
+        voucher_id: voucherId,
+        source,
+        label,
+        total_count: codes.length,
+        created_by: user?.id ?? null,
+      })
+      .select()
+      .single();
+
+    if (batchError) throw batchError;
+
+    const { error: codesError } = await supabase
+      .from('voucher_codes')
+      .insert(
+        codes.map((code) => ({
+          voucher_id: voucherId,
+          batch_id: batch.id,
+          code,
+          status: 'available',
+          created_by: user?.id ?? null,
+        }))
+      );
+
+    if (codesError) {
+      await supabase
+        .from('voucher_code_batches')
+        .delete()
+        .eq('id', batch.id);
+      throw codesError;
+    }
+  };
+
+  const handleGenerateVoucherCodes = async () => {
+    if (!selectedVoucher?.id) return;
+    const count = Math.floor(Number(generateCount));
+    if (!Number.isFinite(count) || count <= 0) {
+      toast.error('Zadejte počet kódů k vygenerování');
+      return;
+    }
+
+    const nonVoidedCodeCount = voucherCodes.filter((code) => code.status !== 'voided').length;
+    if (
+      selectedVoucher.max_quantity != null &&
+      nonVoidedCodeCount + count > selectedVoucher.max_quantity
+    ) {
+      toast.error('Počet kódů by překročil nastavený počet kusů voucheru');
+      return;
+    }
+
+    try {
+      setCodeActionLoading(true);
+      const existingCodes = new Set(voucherCodes.map((code) => normalizeVoucherCodeValue(code.code)));
+      const codes = generateOneMilVoucherCodes(count, existingCodes);
+      if (codes.length !== count) {
+        toast.error('Nepodařilo se připravit dost unikátních kódů');
+        return;
+      }
+
+      await createVoucherCodeBatch(
+        selectedVoucher.id,
+        'generated_by_onemil',
+        `OneMil generování ${format(new Date(), 'yyyy-MM-dd HH:mm')}`,
+        codes
+      );
+      toast.success(`Vygenerováno ${codes.length} kódů`);
+      await fetchVoucherCodes(selectedVoucher.id);
+    } catch (error: unknown) {
+      console.error('Error generating voucher codes:', error);
+      toast.error('Chyba při generování kódů');
+    } finally {
+      setCodeActionLoading(false);
+    }
+  };
+
+  const handleImportVoucherCodes = async () => {
+    if (!selectedVoucher?.id) return;
+    const codes = parseVoucherCodesInput(importCodesText);
+    if (codes.length === 0) {
+      toast.error('Vložte alespoň jeden kód');
+      return;
+    }
+
+    const existingCodes = new Set(voucherCodes.map((code) => normalizeVoucherCodeValue(code.code)));
+    const duplicates = codes.filter((code) => existingCodes.has(code));
+    if (duplicates.length > 0) {
+      toast.error(`Import obsahuje ${duplicates.length} kódů, které už u voucheru existují`);
+      return;
+    }
+
+    const nonVoidedCodeCount = voucherCodes.filter((code) => code.status !== 'voided').length;
+    if (
+      selectedVoucher.max_quantity != null &&
+      nonVoidedCodeCount + codes.length > selectedVoucher.max_quantity
+    ) {
+      toast.error('Počet kódů by překročil nastavený počet kusů voucheru');
+      return;
+    }
+
+    try {
+      setCodeActionLoading(true);
+      await createVoucherCodeBatch(
+        selectedVoucher.id,
+        'provided_by_partner',
+        `Import partner kódů ${format(new Date(), 'yyyy-MM-dd HH:mm')}`,
+        codes
+      );
+      setImportCodesText('');
+      toast.success(`Importováno ${codes.length} kódů`);
+      await fetchVoucherCodes(selectedVoucher.id);
+    } catch (error: unknown) {
+      console.error('Error importing voucher codes:', error);
+      toast.error('Chyba při importu kódů');
+    } finally {
+      setCodeActionLoading(false);
+    }
+  };
+
+  const handleExportVoucherCodes = () => {
+    if (!selectedVoucher) return;
+    const safeName = selectedVoucher.name
+      .toLowerCase()
+      .replace(/[^a-z0-9]+/gi, '-')
+      .replace(/^-+|-+$/g, '')
+      .slice(0, 48) || 'voucher';
+    const rows = [
+      ['code', 'status', 'issued_to', 'issued_at', 'voided_at', 'void_reason', 'batch_id'],
+      ...voucherCodes.map((code) => [
+        code.code,
+        code.status,
+        code.issued_to_user_id ? voucherCodeUsers[code.issued_to_user_id] ?? code.issued_to_user_id : '',
+        code.issued_at ? safeFormatDate(code.issued_at, 'yyyy-MM-dd HH:mm:ss') : '',
+        code.voided_at ? safeFormatDate(code.voided_at, 'yyyy-MM-dd HH:mm:ss') : '',
+        code.void_reason ?? '',
+        code.batch_id ?? '',
+      ]),
+    ];
+    downloadCsv(`${safeName}-voucher-codes.csv`, rows);
+  };
+
+  const handleVoidVoucherCode = async (code: VoucherCode) => {
+    if (!selectedVoucher?.id || code.status === 'voided') return;
+
+    try {
+      setCodeActionLoading(true);
+      const { error } = await supabase
+        .from('voucher_codes')
+        .update({
+          status: 'voided',
+          voided_at: new Date().toISOString(),
+          voided_by: user?.id ?? null,
+          void_reason: voidReasons[code.id]?.trim() || 'Zneplatněno adminem',
+        })
+        .eq('id', code.id);
+
+      if (error) throw error;
+      toast.success('Kód byl zneplatněn');
+      setVoidReasons((current) => {
+        const next = { ...current };
+        delete next[code.id];
+        return next;
+      });
+      await fetchVoucherCodes(selectedVoucher.id);
+    } catch (error: unknown) {
+      console.error('Error voiding voucher code:', error);
+      toast.error('Chyba při zneplatnění kódu');
+    } finally {
+      setCodeActionLoading(false);
+    }
+  };
+
   const safeVouchers = Array.isArray(vouchers) ? vouchers : [];
   const safePurchases = Array.isArray(voucherPurchases) ? voucherPurchases : [];
+  const codeStats = voucherCodes.reduce(
+    (acc, code) => {
+      acc.total += 1;
+      acc[code.status] += 1;
+      return acc;
+    },
+    { total: 0, available: 0, issued: 0, voided: 0 }
+  );
+  const suggestedGenerateCount =
+    selectedVoucher?.max_quantity != null && Number.isFinite(selectedVoucher.max_quantity)
+      ? Math.max(
+          selectedVoucher.max_quantity -
+            voucherCodes.filter((code) => code.status !== 'voided').length,
+          0
+        )
+      : 0;
 
   const filteredVouchers = safeVouchers.filter((voucher) => {
     if (!voucher || voucher.id == null) return false;
@@ -575,6 +969,12 @@ const AdminVouchers: React.FC = () => {
     if (status === 'expired') return <Badge variant="destructive">Vypršelo</Badge>;
     if (status === 'exhausted') return <Badge variant="destructive">Vyčerpáno</Badge>;
     return <Badge variant="success">Aktivní</Badge>;
+  };
+
+  const getCodeStatusBadge = (status: VoucherCodeStatus) => {
+    if (status === 'available') return <Badge variant="success">Volný</Badge>;
+    if (status === 'issued') return <Badge variant="pending">Vydaný</Badge>;
+    return <Badge variant="destructive">Zneplatněný</Badge>;
   };
 
   if (authLoading || roleLoading) {
@@ -1067,11 +1467,11 @@ const AdminVouchers: React.FC = () => {
         {/* Voucher Preview Dialog */}
         {selectedVoucher && (
           <Dialog open={!!selectedVoucher} onOpenChange={() => setSelectedVoucher(null)}>
-            <DialogContent className="max-w-2xl">
+            <DialogContent className="max-w-6xl max-h-[90vh] overflow-y-auto">
               <DialogHeader>
-                <DialogTitle>Náhled voucheru</DialogTitle>
+                <DialogTitle>Náhled a kódy voucheru</DialogTitle>
               </DialogHeader>
-              <div className="space-y-4">
+              <div className="space-y-6">
                 <div className="flex gap-4">
                   {selectedVoucher.image_url && (
                     <img 
@@ -1094,6 +1494,215 @@ const AdminVouchers: React.FC = () => {
                   <div><strong>Zbývající:</strong> {getRemainingText(selectedVoucher)}</div>
                   <div><strong>Uplatněno:</strong> {Number(selectedVoucher.redeemed_count ?? 0)}×</div>
                 </div>
+
+                <Card>
+                  <CardHeader>
+                    <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+                      <div>
+                        <CardTitle className="flex items-center gap-2">
+                          <KeyRound className="h-5 w-5" />
+                          Kódy voucheru
+                        </CardTitle>
+                        <CardDescription>
+                          Admin správa unikátních kódů pro partnera. Veřejná stránka a nákup voucherů se tím nemění.
+                        </CardDescription>
+                      </div>
+                      <Button
+                        variant="outline"
+                        onClick={handleExportVoucherCodes}
+                        disabled={voucherCodes.length === 0 || codesLoading}
+                      >
+                        <Download className="h-4 w-4 mr-2" />
+                        Export CSV
+                      </Button>
+                    </div>
+                  </CardHeader>
+                  <CardContent className="space-y-6">
+                    <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                      <div className="rounded-lg border p-3">
+                        <div className="text-xs text-muted-foreground">Celkem</div>
+                        <div className="text-2xl font-semibold">{codeStats.total}</div>
+                      </div>
+                      <div className="rounded-lg border p-3">
+                        <div className="text-xs text-muted-foreground">Volné</div>
+                        <div className="text-2xl font-semibold text-green-600">{codeStats.available}</div>
+                      </div>
+                      <div className="rounded-lg border p-3">
+                        <div className="text-xs text-muted-foreground">Vydané</div>
+                        <div className="text-2xl font-semibold text-amber-600">{codeStats.issued}</div>
+                      </div>
+                      <div className="rounded-lg border p-3">
+                        <div className="text-xs text-muted-foreground">Zneplatněné</div>
+                        <div className="text-2xl font-semibold text-red-600">{codeStats.voided}</div>
+                      </div>
+                    </div>
+
+                    <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+                      <div className="space-y-3 rounded-lg border p-4">
+                        <div className="flex items-center gap-2 font-medium">
+                          <RefreshCw className="h-4 w-4" />
+                          Generovat OneMil kódy
+                        </div>
+                        <div className="flex gap-2">
+                          <Input
+                            type="number"
+                            min={1}
+                            value={generateCount}
+                            onChange={(event) => setGenerateCount(Number(event.target.value))}
+                            placeholder="Počet kódů"
+                          />
+                          <Button
+                            variant="outline"
+                            onClick={() => setGenerateCount(suggestedGenerateCount)}
+                            disabled={suggestedGenerateCount <= 0}
+                          >
+                            Doplnit
+                          </Button>
+                        </div>
+                        <p className="text-xs text-muted-foreground">
+                          Doplnění vychází z nastaveného počtu kusů voucheru. Pro neomezený voucher zadejte počet ručně.
+                        </p>
+                        <Button
+                          onClick={handleGenerateVoucherCodes}
+                          disabled={codeActionLoading || generateCount <= 0}
+                          className="w-full"
+                        >
+                          <KeyRound className="h-4 w-4 mr-2" />
+                          {codeActionLoading ? 'Pracuji...' : 'Vygenerovat kódy'}
+                        </Button>
+                      </div>
+
+                      <div className="space-y-3 rounded-lg border p-4">
+                        <div className="flex items-center gap-2 font-medium">
+                          <FileUp className="h-4 w-4" />
+                          Import partner kódů
+                        </div>
+                        <Textarea
+                          value={importCodesText}
+                          onChange={(event) => setImportCodesText(event.target.value)}
+                          placeholder="Vložte kódy oddělené řádkem, čárkou nebo mezerou"
+                          className="min-h-[112px]"
+                        />
+                        <Button
+                          onClick={handleImportVoucherCodes}
+                          disabled={codeActionLoading || importCodesText.trim() === ''}
+                          className="w-full"
+                        >
+                          <Upload className="h-4 w-4 mr-2" />
+                          {codeActionLoading ? 'Importuji...' : 'Importovat kódy'}
+                        </Button>
+                      </div>
+                    </div>
+
+                    {voucherCodeBatches.length > 0 && (
+                      <div className="space-y-2">
+                        <Label>Batch importy a generování</Label>
+                        <div className="flex flex-wrap gap-2">
+                          {voucherCodeBatches.map((batch) => (
+                            <Badge key={batch.id} variant="outline" className="gap-1">
+                              {batch.source === 'generated_by_onemil' ? 'OneMil' : 'Partner'}
+                              <span>·</span>
+                              <span>{batch.total_count} ks</span>
+                              {batch.created_at && <span>· {safeFormatDate(batch.created_at, 'd. M. yyyy HH:mm')}</span>}
+                            </Badge>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+
+                    {codesLoading ? (
+                      <div className="text-sm text-muted-foreground">Načítání kódů...</div>
+                    ) : voucherCodes.length === 0 ? (
+                      <div className="text-sm text-muted-foreground border rounded-lg p-4">
+                        Zatím nejsou připravené žádné unikátní kódy.
+                      </div>
+                    ) : (
+                      <Table>
+                        <TableHeader>
+                          <TableRow>
+                            <TableHead>Kód</TableHead>
+                            <TableHead>Stav</TableHead>
+                            <TableHead>Vydáno komu</TableHead>
+                            <TableHead>Vydáno kdy</TableHead>
+                            <TableHead>Zneplatnění</TableHead>
+                            <TableHead className="text-right">Akce</TableHead>
+                          </TableRow>
+                        </TableHeader>
+                        <TableBody>
+                          {voucherCodes.map((code) => (
+                            <TableRow key={code.id}>
+                              <TableCell className="font-mono text-xs">{code.code}</TableCell>
+                              <TableCell>{getCodeStatusBadge(code.status)}</TableCell>
+                              <TableCell>
+                                {code.issued_to_user_id
+                                  ? voucherCodeUsers[code.issued_to_user_id] ?? code.issued_to_user_id
+                                  : '—'}
+                              </TableCell>
+                              <TableCell>
+                                {code.issued_at ? safeFormatDate(code.issued_at, 'd. M. yyyy HH:mm') : '—'}
+                              </TableCell>
+                              <TableCell>
+                                {code.voided_at ? (
+                                  <div className="space-y-1">
+                                    <div>{safeFormatDate(code.voided_at, 'd. M. yyyy HH:mm')}</div>
+                                    {code.void_reason && (
+                                      <div className="text-xs text-muted-foreground">{code.void_reason}</div>
+                                    )}
+                                  </div>
+                                ) : (
+                                  '—'
+                                )}
+                              </TableCell>
+                              <TableCell className="text-right">
+                                {code.status !== 'voided' && (
+                                  <AlertDialog>
+                                    <AlertDialogTrigger asChild>
+                                      <Button variant="outline" size="sm" disabled={codeActionLoading}>
+                                        <Ban className="h-4 w-4 mr-2" />
+                                        Zneplatnit
+                                      </Button>
+                                    </AlertDialogTrigger>
+                                    <AlertDialogContent>
+                                      <AlertDialogHeader>
+                                        <AlertDialogTitle>Zneplatnit kód?</AlertDialogTitle>
+                                        <AlertDialogDescription>
+                                          Kód {code.code} bude označen jako zneplatněný. Tato akce nemění nákup voucheru ani peněženku uživatele.
+                                        </AlertDialogDescription>
+                                      </AlertDialogHeader>
+                                      <div className="space-y-2">
+                                        <Label htmlFor={`void-reason-${code.id}`}>Důvod zneplatnění</Label>
+                                        <Input
+                                          id={`void-reason-${code.id}`}
+                                          value={voidReasons[code.id] ?? ''}
+                                          onChange={(event) =>
+                                            setVoidReasons((current) => ({
+                                              ...current,
+                                              [code.id]: event.target.value,
+                                            }))
+                                          }
+                                          placeholder="Volitelné"
+                                        />
+                                      </div>
+                                      <AlertDialogFooter>
+                                        <AlertDialogCancel>Zrušit</AlertDialogCancel>
+                                        <AlertDialogAction
+                                          onClick={() => handleVoidVoucherCode(code)}
+                                          disabled={codeActionLoading}
+                                        >
+                                          Zneplatnit
+                                        </AlertDialogAction>
+                                      </AlertDialogFooter>
+                                    </AlertDialogContent>
+                                  </AlertDialog>
+                                )}
+                              </TableCell>
+                            </TableRow>
+                          ))}
+                        </TableBody>
+                      </Table>
+                    )}
+                  </CardContent>
+                </Card>
               </div>
             </DialogContent>
           </Dialog>
