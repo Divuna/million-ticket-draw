@@ -10,6 +10,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useUserRole } from "@/hooks/useUserRole";
 import { useAuth } from "@/hooks/useAuth";
 import { useHomepageVouchers } from "@/hooks/useHomepageVouchers";
+import { useUserVouchers } from "@/hooks/useUserVouchers";
 
 import { useMegajackpotBanners } from "@/hooks/useMegajackpotBanners";
 import { useHomepageBanners } from "@/hooks/useHomepageBanners";
@@ -52,8 +53,14 @@ const Homepage = () => {
   const { isAdmin } = useUserRole();
   const navigate = useNavigate();
   const location = useLocation();
-  const { vouchers: homepageVouchers, loading: vouchersLoading, getRemainingCount } = useHomepageVouchers();
-  
+  const { vouchers: allHomepageVouchers, loading: vouchersLoading, getRemainingCount } = useHomepageVouchers();
+  const { vouchers: userVouchers } = useUserVouchers();
+
+  // Hide vouchers the logged-in user already owns (purchased) or saved (favorite)
+  // in user_vouchers. For anon visitors userVouchers is empty → show all.
+  const ownedVoucherIds = new Set(userVouchers.map((uv) => uv.voucher_id));
+  const homepageVouchers = allHomepageVouchers.filter((v) => !ownedVoucherIds.has(v.id));
+
   const { banners: megajackpotBanners, loading: bannersLoading } = useMegajackpotBanners();
   const { voucherBanner, gamesBanner, loading: homepageBannersLoading } = useHomepageBanners();
   const { partners, loading: partnersLoading } = usePartners();
