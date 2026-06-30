@@ -88,7 +88,7 @@ function parseDateForForm(iso: string | null | undefined): Date | undefined {
  * the filter, status badge and summary cards in this file, extracted so the
  * section tabs (Aktivní / Naplánované / Archiv) classify identically.
  */
-type VoucherStatus = 'active' | 'scheduled' | 'expired' | 'exhausted';
+type VoucherStatus = 'active' | 'scheduled' | 'hidden' | 'expired' | 'exhausted';
 function getVoucherStatus(voucher: Voucher): VoucherStatus {
   const now = new Date();
   const startDate = parseBoundaryDate(voucher.start_date);
@@ -100,13 +100,14 @@ function getVoucherStatus(voucher: Voucher): VoucherStatus {
       ? voucher.max_quantity - safeRedeemed
       : null;
 
-  if (startDate && now < startDate) return 'scheduled';
   if (endDate && now > endDate) return 'expired';
   if (remainingQuantity !== null && remainingQuantity <= 0) return 'exhausted';
+  if (!voucher.is_public) return 'hidden';
+  if (startDate && now < startDate) return 'scheduled';
   return 'active';
 }
 
-type VoucherSection = 'active' | 'scheduled' | 'archive' | 'purchases';
+type VoucherSection = 'active' | 'scheduled' | 'hidden' | 'archive' | 'purchases';
 
 /** Coerce Supabase row so render never throws on null/odd shapes */
 function normalizeVoucherRow(row: Record<string, unknown> | null | undefined): Voucher | null {
@@ -554,6 +555,7 @@ const AdminVouchers: React.FC = () => {
     const status = getVoucherStatus(voucher);
     if (sectionTab === 'active') return status === 'active';
     if (sectionTab === 'scheduled') return status === 'scheduled';
+    if (sectionTab === 'hidden') return status === 'hidden';
     if (sectionTab === 'archive') return status === 'expired' || status === 'exhausted';
     return false; // 'purchases' section renders the purchases table, not vouchers
   });
@@ -569,6 +571,7 @@ const AdminVouchers: React.FC = () => {
   const getStatusBadge = (voucher: Voucher) => {
     const status = getVoucherStatus(voucher);
     if (status === 'scheduled') return <Badge variant="pending">Naplánováno</Badge>;
+    if (status === 'hidden') return <Badge variant="secondary">Skryté</Badge>;
     if (status === 'expired') return <Badge variant="destructive">Vypršelo</Badge>;
     if (status === 'exhausted') return <Badge variant="destructive">Vyčerpáno</Badge>;
     return <Badge variant="success">Aktivní</Badge>;
@@ -834,6 +837,7 @@ const AdminVouchers: React.FC = () => {
           {([
             { key: 'active', label: 'Aktivní' },
             { key: 'scheduled', label: 'Naplánované' },
+            { key: 'hidden', label: 'Skryté' },
             { key: 'archive', label: 'Archiv' },
             { key: 'purchases', label: 'Nákupy voucherů' },
           ] as { key: VoucherSection; label: string }[]).map((tab) => (
