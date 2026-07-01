@@ -20,15 +20,21 @@ Voucher systém je po PR #120–#127 ve stavu částečné implementace podle `d
 - **PR #130:** homepage voucher karta má stejnou velikost jako soutěžní karta (`w-80 h-48`) v `src/pages/Homepage.tsx`.
 - **PR #132:** opraveny zakoupené voucher karty na `/vouchers` do full-banner stylu a doplněno srdíčko pro oblíbené.
 - **PR #133:** sjednocené full-banner karty ve všech záložkách `/vouchers` (`Dostupné`, `Oblíbené`, `Zakoupené`).
+- **PR #135:** nákup voucheru je napojený na inventář unikátních kódů. PR byl squash mergnutý do `main` a migrace `20260701073000_buy_voucher_atomic_issue_code.sql` byla aplikovaná na produkční Supabase projekt `xkzhjldrojjlrkezorey`.
 
 **Stav a omezení:**
-- Veřejné `/vouchers`, admin, DB základ a kódová evidence jsou připravené po fázích, ale nákup voucheru a vydání skutečného unikátního kódu přes nový inventář ještě není cílově zapojené.
+- Veřejné `/vouchers`, admin, DB základ a kódová evidence jsou připravené po fázích. Produkční `buy_voucher_atomic` při novém nákupu přiřadí jeden unikátní kód z `voucher_codes`.
+- Nový nákup nastaví `user_vouchers.voucher_code_id`; kód se zároveň změní z `available` na `issued` a vyplní `issued_to_user_id`, `issued_user_voucher_id`, `issued_at`.
+- Výběr kódu používá `FOR UPDATE SKIP LOCKED`, aby stejný kód nedostali dva uživatelé.
 - Na `/vouchers` mají záložky `Dostupné`, `Oblíbené`, `Zakoupené` stejný full-banner vzhled; bublinky s datem/počtem jsou odstraněné.
 - V zakoupených voucherech se unikátní kód nezobrazuje rovnou na kartě, ale až v modalu po kliknutí na `Zobrazit kód`.
+- Ověřeno v produkci: nový nákup má kód v modalu `Zobrazit kód`.
+- Staré zakoupené vouchery bez kódu nebyly zpětně opravovány.
 - Čeština po PR #127 zůstává opravená.
 - Po Lovable Publish bylo ověřeno, že homepage voucher karta je v pořádku.
 - Po Lovable Publish bylo ověřeno, že `/vouchers` funguje.
 - Produkce nebyla přímo dotčena těmito UI/dokumentačními opravami.
+- Produkční data nebyla při nasazení voucher kódů ručně měněna; proběhla pouze schválená migrace funkce.
 - Neměnit wallet, Stripe, ticket systém ani soutěže při dalších voucher krocích.
 
 ## STRIPE PAY01–PAY04 — STAGING TEST MODE OVĚŘENO ✅ (30. 06. 2026)
