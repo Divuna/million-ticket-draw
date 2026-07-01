@@ -16,6 +16,7 @@ interface WinnerCardProps {
   cardStyleImageUrl?: string | null;
   userAvatarUrl?: string | null;
   ticketNumber?: number | null;
+  variant?: 'dark' | 'champagne';
 }
 
 export const WinnerCard = ({
@@ -28,7 +29,9 @@ export const WinnerCard = ({
   cardStyleImageUrl,
   userAvatarUrl,
   ticketNumber,
+  variant = 'dark',
 }: WinnerCardProps) => {
+  const isChampagne = variant === 'champagne';
   const displayName = userNickname || userName;
   const initials = displayName
     .split(' ')
@@ -46,9 +49,13 @@ export const WinnerCard = ({
     <Card
       className="rounded-xl overflow-hidden hover:-translate-y-0.5 hover:scale-[1.01] transition-all duration-300 cursor-pointer relative"
       style={{
-        background: 'hsl(220 45% 6%)',
-        border: '1px solid rgba(255,138,0,0.22)',
-        boxShadow: '0 2px 12px hsl(222 50% 3% / 0.6), inset 0 1px 0 rgba(255,181,71,0.06)',
+        background: isChampagne
+          ? 'linear-gradient(135deg, rgba(255,255,255,0.96) 0%, rgba(255,249,239,0.94) 100%)'
+          : 'hsl(220 45% 6%)',
+        border: isChampagne ? '1px solid rgba(190,132,58,0.18)' : '1px solid rgba(255,138,0,0.22)',
+        boxShadow: isChampagne
+          ? '0 12px 30px rgba(120,73,24,0.10), inset 0 1px 0 rgba(255,255,255,0.9)'
+          : '0 2px 12px hsl(222 50% 3% / 0.6), inset 0 1px 0 rgba(255,181,71,0.06)',
       }}
     >
       {/* Very subtle star background — reduced to not compete with text */}
@@ -75,7 +82,7 @@ export const WinnerCard = ({
               backgroundImage: `url(${cardStyleImageUrl})`,
               backgroundSize: 'cover',
               backgroundPosition: 'center',
-              opacity: 0.42,
+              opacity: isChampagne ? 0.18 : 0.42,
             }}
           />
           {/* Dark gradient: kill left brown block, keep right decoration visible */}
@@ -84,11 +91,11 @@ export const WinnerCard = ({
             style={{
               background: [
                 'linear-gradient(to right,',
-                '  rgba(10,11,15,0.78) 0px,',
-                '  rgba(10,11,15,0.78) 88px,',
-                '  rgba(10,11,15,0.42) 130px,',
-                '  rgba(10,11,15,0.20) 55%,',
-                '  rgba(10,11,15,0.14) 100%',
+                isChampagne ? '  rgba(255,248,236,0.92) 0px,' : '  rgba(10,11,15,0.78) 0px,',
+                isChampagne ? '  rgba(255,248,236,0.88) 88px,' : '  rgba(10,11,15,0.78) 88px,',
+                isChampagne ? '  rgba(255,248,236,0.66) 130px,' : '  rgba(10,11,15,0.42) 130px,',
+                isChampagne ? '  rgba(255,248,236,0.34) 55%,' : '  rgba(10,11,15,0.20) 55%,',
+                isChampagne ? '  rgba(255,248,236,0.20) 100%' : '  rgba(10,11,15,0.14) 100%',
                 ')',
               ].join(' '),
             }}
@@ -100,7 +107,10 @@ export const WinnerCard = ({
         {/* Prize image — left strip */}
         <div
           className="w-[88px] flex-shrink-0 flex items-center justify-center overflow-hidden"
-          style={{ background: 'rgba(255,138,0,0.06)', borderRight: '1px solid rgba(255,138,0,0.12)' }}
+          style={{
+            background: isChampagne ? 'rgba(255,244,226,0.85)' : 'rgba(255,138,0,0.06)',
+            borderRight: isChampagne ? '1px solid rgba(190,132,58,0.16)' : '1px solid rgba(255,138,0,0.12)',
+          }}
         >
           {prizeImageUrl ? (
             <img src={prizeImageUrl} alt={prizeName} className="w-full h-full object-contain p-1.5" />
@@ -113,11 +123,11 @@ export const WinnerCard = ({
         <CardContent className="flex-1 px-4 py-3 overflow-hidden">
           <div className="flex gap-3 items-center h-full">
             {/* Avatar */}
-            <Avatar className="w-10 h-10 flex-shrink-0" style={{ border: '1.5px solid rgba(255,138,0,0.3)' }}>
+            <Avatar className="w-10 h-10 flex-shrink-0" style={{ border: isChampagne ? '1.5px solid rgba(190,132,58,0.28)' : '1.5px solid rgba(255,138,0,0.3)' }}>
               {userAvatarUrl && <AvatarImage src={userAvatarUrl} alt={displayName} />}
               <AvatarFallback
                 className="text-xs font-bold"
-                style={{ background: 'rgba(255,138,0,0.15)', color: '#FFB547' }}
+                style={{ background: isChampagne ? 'rgba(255,138,0,0.12)' : 'rgba(255,138,0,0.15)', color: isChampagne ? '#C66A00' : '#FFB547' }}
               >
                 {initials}
               </AvatarFallback>
@@ -143,19 +153,19 @@ export const WinnerCard = ({
               </div>
 
               {/* Winner name */}
-              <span className="text-sm font-semibold truncate" style={{ color: '#E7EBF0' }}>
+              <span className="text-sm font-semibold truncate" style={{ color: isChampagne ? '#1f2937' : '#E7EBF0' }}>
                 {displayName}
               </span>
 
               {/* Contest + ticket + time row */}
               <div className="flex items-center gap-2 min-w-0">
-                <span className="text-xs truncate flex-1" style={{ color: '#8E98A6' }}>
+                <span className="text-xs truncate flex-1" style={{ color: isChampagne ? '#64748b' : '#8E98A6' }}>
                   {contestTitle}
                   {ticketNumber != null && (
-                    <span className="ml-1.5" style={{ color: '#BFC6CF' }}>· #{ticketNumber.toLocaleString('cs-CZ')}</span>
+                    <span className="ml-1.5" style={{ color: isChampagne ? '#8b5e2d' : '#BFC6CF' }}>· #{ticketNumber.toLocaleString('cs-CZ')}</span>
                   )}
                 </span>
-                <span className="text-xs whitespace-nowrap flex-shrink-0" style={{ color: '#8E98A6' }}>
+                <span className="text-xs whitespace-nowrap flex-shrink-0" style={{ color: isChampagne ? '#8b5e2d' : '#8E98A6' }}>
                   {timeAgo}
                 </span>
               </div>
