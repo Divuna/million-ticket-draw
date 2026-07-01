@@ -1,4 +1,4 @@
-﻿import React, { useState } from 'react';
+import React, { useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { useAuth } from '@/hooks/useAuth';
 import { useUserRole } from '@/hooks/useUserRole';
@@ -89,9 +89,9 @@ const Vouchers: React.FC = () => {
       diffHours,
       expirationDate,
       text: isExpired
-        ? 'VyprĹˇel'
+        ? 'Vypršel'
         : diffDays > 0
-          ? `${diffDays} dnĂ­ ${diffHours} hod`
+          ? `${diffDays} dní ${diffHours} hod`
           : `${diffHours} hodin`,
     };
   };
@@ -100,7 +100,7 @@ const Vouchers: React.FC = () => {
     e.stopPropagation();
     
     if (!user) {
-      toast.error("Pro pĹ™idĂˇnĂ­ do oblĂ­benĂ˝ch se musĂ­te pĹ™ihlĂˇsit");
+      toast.error("Pro přidání do oblíbených se musíte přihlásit");
       return;
     }
 
@@ -112,7 +112,7 @@ const Vouchers: React.FC = () => {
       // Show confirmation dialog for removal - only for favorites
       setRemoveConfirmId(voucherId);
     } else if (existingPurchased) {
-      toast.info("ZakoupenĂ˝ voucher nelze odebrat z oblĂ­benĂ˝ch");
+      toast.info("Zakoupený voucher nelze odebrat z oblíbených");
     } else {
       // Add to favorites directly
       addToFavorites(voucherId);
@@ -147,12 +147,12 @@ const Vouchers: React.FC = () => {
         });
 
       if (error) throw error;
-      toast.success("Voucher pĹ™idĂˇn do oblĂ­benĂ˝ch");
+      toast.success("Voucher přidán do oblíbených");
       await refetchUserVouchers();
       await refetchAvailable();
     } catch (error) {
       console.error("Error adding favorite:", error);
-      toast.error("NepodaĹ™ilo se pĹ™idat do oblĂ­benĂ˝ch");
+      toast.error("Nepodařilo se přidat do oblíbených");
       // Revert optimistic update on error
       optimisticRemoveByVoucherId(voucherId);
     } finally {
@@ -173,7 +173,7 @@ const Vouchers: React.FC = () => {
     );
     
     if (!favoriteToRemove) {
-      toast.error("OblĂ­benĂ˝ voucher nenalezen");
+      toast.error("Oblíbený voucher nenalezen");
       setTogglingFavoriteId(null);
       return;
     }
@@ -202,15 +202,15 @@ const Vouchers: React.FC = () => {
       
       // Check if any row was actually deleted
       if (!data || data.length === 0) {
-        throw new Error('Voucher nebyl nalezen nebo nemĂˇte oprĂˇvnÄ›nĂ­ k jeho odebrĂˇnĂ­');
+        throw new Error('Voucher nebyl nalezen nebo nemáte oprávnění k jeho odebrání');
       }
       
-      toast.success("Voucher odebrĂˇn z oblĂ­benĂ˝ch");
+      toast.success("Voucher odebrán z oblíbených");
       await refetchUserVouchers();
       await refetchAvailable();
     } catch (error: any) {
       console.error("Error removing favorite:", error);
-      toast.error(error.message || "NepodaĹ™ilo se odebrat z oblĂ­benĂ˝ch");
+      toast.error(error.message || "Nepodařilo se odebrat z oblíbených");
       // Refetch to restore state on error
       await refetchUserVouchers();
     } finally {
@@ -220,7 +220,7 @@ const Vouchers: React.FC = () => {
 
   const handleVoucherPurchase = async (voucherId: string) => {
     if (!user) {
-      toast.error("Pro koupi voucheru se musĂ­te pĹ™ihlĂˇsit");
+      toast.error("Pro koupi voucheru se musíte přihlásit");
       return;
     }
 
@@ -255,16 +255,16 @@ const Vouchers: React.FC = () => {
 
       if (!result.success) {
         console.error('[buy_voucher_atomic] Business error:', result.error);
-        toast.error(result.error || "NepodaĹ™ilo se zakoupit voucher");
+        toast.error(result.error || "Nepodařilo se zakoupit voucher");
         return;
       }
 
       analytics.voucherRedeem(voucherId, 5);
 
-      // Optimistically remove from favorites list immediately (covers oblĂ­benĂ© tab)
+      // Optimistically remove from favorites list immediately (covers oblíbené tab)
       optimisticRemoveByVoucherId(voucherId);
 
-      toast.success(`Voucher ĂşspÄ›ĹˇnÄ› zakoupen za 5 MioCoinĹŻ!`);
+      toast.success(`Voucher úspěšně zakoupen za 5 MioCoinů!`);
       if (selectedVoucher?.id === voucherId) {
         setSelectedVoucher(null);
       }
@@ -272,7 +272,7 @@ const Vouchers: React.FC = () => {
       await refetchAvailable();
     } catch (error) {
       console.error("Error purchasing voucher:", error);
-      toast.error("NepodaĹ™ilo se zakoupit voucher");
+      toast.error("Nepodařilo se zakoupit voucher");
     } finally {
       setPurchasingId(null);
     }
@@ -280,7 +280,7 @@ const Vouchers: React.FC = () => {
 
   const handleCopyVoucherCode = (code: string) => {
     navigator.clipboard.writeText(code);
-    toast.success("KĂłd voucheru zkopĂ­rovĂˇn do schrĂˇnky!");
+    toast.success("Kód voucheru zkopírován do schránky!");
   };
 
   if (!user) {
@@ -334,7 +334,7 @@ const Vouchers: React.FC = () => {
               >
                 Vouchery
               </h1>
-              <p className="text-sm text-gray-400 mt-1">{'Sb\u00edrejte a uplat\u0148ujte exkluzivn\u00ed vouchery'}</p>
+              <p className="text-sm text-gray-400 mt-1">Sbírejte a uplatňujte exkluzivní vouchery</p>
             </div>
           </div>
         </div>
@@ -343,12 +343,12 @@ const Vouchers: React.FC = () => {
           <TabsList className="grid w-full grid-cols-3 max-w-lg mx-auto bg-card/60 border border-border/40 backdrop-blur-sm rounded-xl p-1">
             <TabsTrigger value="available" className="flex items-center gap-1 text-xs sm:text-sm data-[state=active]:bg-secondary/20 data-[state=active]:text-secondary rounded-lg transition-all">
               <OneMilTicketIcon size={16} className="w-4 h-4" />
-              <span className="hidden sm:inline">{'Dostupn\u00e9'}</span>
+              <span className="hidden sm:inline">Dostupné</span>
               <span className="sm:hidden">Dost.</span>
             </TabsTrigger>
             <TabsTrigger value="favorites" className="flex items-center gap-1 text-xs sm:text-sm data-[state=active]:bg-secondary/20 data-[state=active]:text-secondary rounded-lg transition-all">
               <OneMilHeartIcon size={16} className="w-4 h-4" />
-              <span className="hidden sm:inline">{'Obl\u00edben\u00e9'}</span>
+              <span className="hidden sm:inline">Oblíbené</span>
               <span className="sm:hidden">Obl.</span>
               {favoriteVouchers.length > 0 && (
                 <Badge variant="secondary" className="ml-1 text-xs">{favoriteVouchers.length}</Badge>
@@ -356,7 +356,7 @@ const Vouchers: React.FC = () => {
             </TabsTrigger>
             <TabsTrigger value="purchased" className="flex items-center gap-1 text-xs sm:text-sm data-[state=active]:bg-secondary/20 data-[state=active]:text-secondary rounded-lg transition-all">
               <OneMilCartIcon size={16} className="w-4 h-4" />
-              <span className="hidden sm:inline">{'Zakoupen\u00e9'}</span>
+              <span className="hidden sm:inline">Zakoupené</span>
               <span className="sm:hidden">Zak.</span>
               {purchasedVouchers.length > 0 && (
                 <Badge variant="secondary" className="ml-1 text-xs">{purchasedVouchers.length}</Badge>
@@ -364,7 +364,7 @@ const Vouchers: React.FC = () => {
             </TabsTrigger>
           </TabsList>
 
-          {/* DostupnĂ© vouchery Tab */}
+          {/* Dostupné vouchery Tab */}
           <TabsContent value="available" className="space-y-6">
             {availableLoading ? (
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
@@ -398,7 +398,7 @@ const Vouchers: React.FC = () => {
             )}
           </TabsContent>
 
-          {/* OblĂ­benĂ© vouchery Tab */}
+          {/* Oblíbené vouchery Tab */}
           <TabsContent value="favorites" className="space-y-6">
             {userVouchersLoading ? (
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
@@ -417,9 +417,9 @@ const Vouchers: React.FC = () => {
               <Card className="voucher-card-glow relative overflow-hidden rounded-[20px] bg-gradient-to-b from-[hsl(220_35%_8%)] via-[hsl(220_30%_6%)] to-[hsl(220_25%_4%)] border-[3px] border-[rgba(255,138,0,0.3)]">
                 <CardContent className="p-8 space-y-3 text-center">
                   <OneMilHeartIcon size={48} className="w-12 h-12 mx-auto text-secondary/50" />
-                  <h3 className="text-xl font-bold text-heading-gold">ZatĂ­m nemĂˇte ĹľĂˇdnĂ© oblĂ­benĂ© vouchery</h3>
+                  <h3 className="text-xl font-bold text-heading-gold">Zatím nemáte žádné oblíbené vouchery</h3>
                   <p className="text-sm text-muted-foreground">
-                    KliknutĂ­m na srdĂ­ÄŤko pĹ™idĂˇte voucher do oblĂ­benĂ˝ch
+                    Kliknutím na srdíčko přidáte voucher do oblíbených
                   </p>
                 </CardContent>
               </Card>
@@ -462,7 +462,7 @@ const Vouchers: React.FC = () => {
                         onClick={(e) => handleFavoriteClick(e, userVoucher.voucher_id)}
                         disabled={isTogglingFavorite}
                         className="absolute top-4 left-4 z-20 p-2 rounded-full bg-[hsl(220_30%_8%/0.8)] backdrop-blur-sm border border-[rgba(255,138,0,0.3)] hover:bg-[hsl(220_30%_12%)] transition-all duration-200 disabled:opacity-50"
-                        aria-label="Odebrat z oblĂ­benĂ˝ch"
+                        aria-label="Odebrat z oblíbených"
                       >
                         {isTogglingFavorite ? (
                           <Loader2 className="w-5 h-5 text-destructive animate-spin" />
@@ -483,7 +483,7 @@ const Vouchers: React.FC = () => {
                           {/* Voucher name */}
                           <div className="mb-3">
                             <h3 className="text-foreground font-semibold text-base leading-snug mb-1">{userVoucher.voucher?.name}</h3>
-                            <div className="text-[#FFB547] font-bold text-xl">5 MioCoinĹŻ</div>
+                            <div className="text-[#FFB547] font-bold text-xl">5 MioCoinů</div>
                           </div>
 
                           {/* Button */}
@@ -496,7 +496,7 @@ const Vouchers: React.FC = () => {
                               {isPurchasing ? "Kupuji..." : "KOUPIT ZA 5 MC"}
                             </Button>
                             <p className="text-[10px] text-muted-foreground/70">
-                              VybranĂ© kampanÄ› mohou podpoĹ™it dobroÄŤinnĂ˝ ĂşÄŤel. KonkrĂ©tnĂ­ pĹ™Ă­jemce, ĂşÄŤel a vĂ˝Ĺˇe podpory budou vĹľdy uvedeny u danĂ© kampanÄ›.
+                              Vybrané kampaně mohou podpořit dobročinný účel. Konkrétní příjemce, účel a výše podpory budou vždy uvedeny u dané kampaně.
                             </p>
                           </div>
                         </div>
@@ -519,7 +519,7 @@ const Vouchers: React.FC = () => {
 
                         {/* Added date indicator */}
                         <div className="absolute top-3 right-3 bg-[hsl(220_30%_8%/0.85)] backdrop-blur-sm text-foreground/80 text-xs px-2 py-1 rounded border border-[rgba(255,138,0,0.2)]">
-                          PĹ™idĂˇno: {new Date(userVoucher.created_at).toLocaleDateString('cs-CZ')}
+                          Přidáno: {new Date(userVoucher.created_at).toLocaleDateString('cs-CZ')}
                         </div>
                       </div>
                     </Card>
@@ -529,7 +529,7 @@ const Vouchers: React.FC = () => {
             )}
           </TabsContent>
 
-          {/* ZakoupenĂ© vouchery Tab */}
+          {/* Zakoupené vouchery Tab */}
           <TabsContent value="purchased" className="space-y-6">
             {userVouchersLoading ? (
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
@@ -549,9 +549,9 @@ const Vouchers: React.FC = () => {
               <Card className="voucher-card-glow relative overflow-hidden rounded-[20px] bg-gradient-to-b from-[hsl(220_35%_8%)] via-[hsl(220_30%_6%)] to-[hsl(220_25%_4%)] border-[3px] border-[rgba(255,138,0,0.3)]">
                 <CardContent className="p-8 space-y-3 text-center">
                   <OneMilCartIcon size={48} className="w-12 h-12 mx-auto text-secondary/50" />
-                  <h3 className="text-xl font-bold text-heading-gold">ZatĂ­m nemĂˇte ĹľĂˇdnĂ© zakoupenĂ© vouchery</h3>
+                  <h3 className="text-xl font-bold text-heading-gold">Zatím nemáte žádné zakoupené vouchery</h3>
                   <p className="text-sm text-muted-foreground">
-                    Zakupte si voucher v sekci "DostupnĂ©" nebo "OblĂ­benĂ©"
+                    Zakupte si voucher v sekci "Dostupné" nebo "Oblíbené"
                   </p>
                 </CardContent>
               </Card>
@@ -632,17 +632,17 @@ const Vouchers: React.FC = () => {
                                   onClick={() => handleCopyVoucherCode(userVoucher.code)}
                                 >
                                   <Copy className="w-4 h-4 mr-2" />
-                                  ZkopĂ­rovat kĂłd
+                                  Zkopírovat kód
                                 </Button>
                               </>
                             ) : (
                               <Badge variant="destructive" className="w-full justify-center py-2 text-sm">
-                                Voucher vyprĹˇel
+                                Voucher vypršel
                               </Badge>
                             )}
                             <div className={`flex items-center justify-center gap-1 text-[10px] ${expiration.isExpired ? 'text-destructive' : 'text-muted-foreground/70'}`}>
                               <Clock className="w-3 h-3" />
-                              <span>{expiration.isExpired ? 'VyprĹˇel' : `Platnost: ${expiration.text}`}</span>
+                              <span>{expiration.isExpired ? 'Vypršel' : `Platnost: ${expiration.text}`}</span>
                             </div>
                           </div>
                         </div>
@@ -682,13 +682,13 @@ const Vouchers: React.FC = () => {
       <AlertDialog open={!!removeConfirmId} onOpenChange={(open) => !open && setRemoveConfirmId(null)}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Odebrat z oblĂ­benĂ˝ch?</AlertDialogTitle>
+            <AlertDialogTitle>Odebrat z oblíbených?</AlertDialogTitle>
             <AlertDialogDescription>
-              Opravdu chcete odebrat tento voucher z oblĂ­benĂ˝ch?
+              Opravdu chcete odebrat tento voucher z oblíbených?
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel>ZruĹˇit</AlertDialogCancel>
+            <AlertDialogCancel>Zrušit</AlertDialogCancel>
             <AlertDialogAction onClick={confirmRemoveFavorite}>
               Odebrat
             </AlertDialogAction>
@@ -707,7 +707,7 @@ const Vouchers: React.FC = () => {
           </DialogHeader>
           <div className="space-y-4 py-2">
             <p className="text-sm text-muted-foreground">
-              PĹ™i platbÄ› u partnera zadejte nebo vloĹľte tento kĂłd:
+              Při platbě u partnera zadejte nebo vložte tento kód:
             </p>
             <div className="rounded-xl bg-[hsl(220_30%_10%)] border border-[rgba(255,138,0,0.3)] p-4 text-center">
               <span className="font-mono text-xl font-bold text-[#FFB547] tracking-wider">
@@ -723,11 +723,11 @@ const Vouchers: React.FC = () => {
               }}
             >
               <Copy className="w-4 h-4 mr-2" />
-              ZkopĂ­rovat kĂłd
+              Zkopírovat kód
             </Button>
           </div>
           <DialogFooter className="text-xs text-muted-foreground">
-            KĂłd uplatnÄ›te u partnera v pokladnÄ› nebo pĹ™i online nĂˇkupu.
+            Kód uplatněte u partnera v pokladně nebo při online nákupu.
           </DialogFooter>
         </DialogContent>
       </Dialog>
