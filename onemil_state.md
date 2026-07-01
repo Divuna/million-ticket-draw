@@ -16,11 +16,15 @@ Voucher systém je po PR #120–#127 ve stavu částečné implementace podle `d
 - **PR #124:** grafika voucheru zjednodušena na jeden upload `Banner voucheru`, ukládaný do `banner_url` i `image_url`.
 - **PR #125/#126:** veřejné voucher zobrazení na homepage a `/vouchers` převedeno na bannerové karty s detailem.
 - **PR #127:** opraveny rozbité české texty na homepage a `/vouchers`.
+- **PR #129:** veřejná voucher karta má opravený horizontální poměr v `src/components/VoucherShowcase.tsx`.
+- **PR #130:** homepage voucher karta má stejnou velikost jako soutěžní karta (`w-80 h-48`) v `src/pages/Homepage.tsx`.
 
 **Stav a omezení:**
 - Veřejné `/vouchers`, admin, DB základ a kódová evidence jsou připravené po fázích, ale nákup voucheru a vydání skutečného unikátního kódu přes nový inventář ještě není cílově zapojené.
+- Čeština po PR #127 zůstává opravená.
+- Po Lovable Publish bylo ověřeno, že homepage voucher karta je v pořádku.
+- Produkce nebyla přímo dotčena těmito UI/dokumentačními opravami.
 - Neměnit wallet, Stripe, ticket systém ani soutěže při dalších voucher krocích.
-- Další doporučený krok: opravit velikost/poměr veřejné voucher karty, aby odpovídala cílovému bannerovému formátu bez změny DB nebo nákupu.
 
 ## STRIPE PAY01–PAY04 — STAGING TEST MODE OVĚŘENO ✅ (30. 06. 2026)
 

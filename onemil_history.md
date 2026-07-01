@@ -1,5 +1,9 @@
 # OneMil — DEVELOPMENT HISTORY (CHRONOLOGICAL ONLY)
 
+**Timestamp (Europe/Prague): 2026-07-01** (Voucher card public sizing fixes documented)
+
+- **2026-07-01** — **Voucher card sizing fixes completed and documented.** PR #129 fixed the public voucher card horizontal ratio in `src/components/VoucherShowcase.tsx`. PR #130 made the homepage voucher card match the contest card size (`w-80 h-48`) in `src/pages/Homepage.tsx`. Czech texts remain fixed after PR #127. After Lovable Publish, the homepage voucher card was verified as OK. Production was not directly touched.
+
 **Timestamp (Europe/Prague): 2026-07-01** (Voucher system state after PR #120-#127 documented)
 
 - **2026-07-01** — **Voucher system state documented after PR #120-#127.** PR #120 created `docs/vouchers/VOUCHER_SYSTEM_DESIGN.md`; PR #121 added the DB foundation for voucher codes and the production Supabase voucher codes migration is applied; PR #122 added admin code management; PR #123 added the admin voucher creation/edit wizard; PR #124 simplified voucher graphics to one banner upload; PR #125/#126 added public voucher display; PR #127 fixed broken Czech public texts. Current next step recorded: fix the public voucher card size/aspect ratio. Documentation only; no app code, DB, migrations, UI, wallet, Stripe, contests, tickets, or production data changed.
