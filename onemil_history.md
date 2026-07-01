@@ -1,5 +1,9 @@
 # OneMil — DEVELOPMENT HISTORY (CHRONOLOGICAL ONLY)
 
+**Timestamp (Europe/Prague): 2026-07-01** (Voucher code purchase rollout documented)
+
+- **2026-07-01** — **Voucher code purchase rollout completed and documented.** PR #135 was squash merged into `main`. Migration `20260701073000_buy_voucher_atomic_issue_code.sql` was applied to production Supabase project `xkzhjldrojjlrkezorey`; production `buy_voucher_atomic` now assigns one unique code from `voucher_codes` on a new voucher purchase, writes `user_vouchers.voucher_code_id`, and moves the code from `available` to `issued`. The function uses `FOR UPDATE SKIP LOCKED` so the same code cannot be issued to two users. Old purchased vouchers without a code were not backfilled. Production verification confirmed a new purchase shows its code in the `Zobrazit kód` modal. Production data was not manually changed.
+
 **Timestamp (Europe/Prague): 2026-07-01** (`/vouchers` full-banner tabs documented)
 
 - **2026-07-01** — **`/vouchers` page fixes completed and documented.** PR #132 fixed purchased voucher cards to full-banner style and added the favorite heart flow. PR #133 unified full-banner cards across `Dostupné`, `Oblíbené`, and `Zakoupené`; purchased voucher codes are no longer shown directly on cards and open only in the `Zobrazit kód` modal; date/count bubbles were removed from `/vouchers`. After Lovable Publish, `/vouchers` was verified as working. Production was not directly touched.
