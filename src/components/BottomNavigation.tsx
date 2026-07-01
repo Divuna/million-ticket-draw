@@ -36,7 +36,7 @@ export const BottomNavigation = () => {
 
   return (
     <div
-      className="ios-pwa-bottom-nav fixed bottom-0 left-0 right-0 z-50 flex justify-around bg-[#0B0F19] border-t border-white/10 py-2 shadow-[0_-8px_24px_rgba(0,0,0,0.35)]"
+      className="public-customer-bottom-nav ios-pwa-bottom-nav fixed bottom-0 left-0 right-0 z-50 flex justify-around bg-[#0B0F19] border-t border-white/10 py-2 shadow-[0_-8px_24px_rgba(0,0,0,0.35)]"
       style={{ paddingBottom: "calc(0.5rem + env(safe-area-inset-bottom, 0px))" }}
       role="navigation"
       aria-label="Hlavní menu"
@@ -55,7 +55,7 @@ export const BottomNavigation = () => {
             type="button"
             onClick={() => navigate(item.path)}
             aria-current={isActive ? "page" : undefined}
-            className={`relative flex flex-col items-center justify-center gap-0.5 px-2.5 py-1.5 min-w-[3.75rem] rounded-2xl text-[11px] font-medium tracking-wide transition-all duration-200 ease-out
+            className={`public-customer-bottom-nav-item relative flex flex-col items-center justify-center gap-0.5 px-2.5 py-1.5 min-w-[3.75rem] rounded-2xl text-[11px] font-medium tracking-wide transition-all duration-200 ease-out
               ${
                 isActive
                   ? "text-white bg-white/[0.14] shadow-[0_0_0_1px_rgba(255,138,0,0.45),0_8px_24px_rgba(255,138,0,0.18)] ring-2 ring-[rgba(255,181,71,0.8)] ring-offset-2 ring-offset-[#0B0F19]"

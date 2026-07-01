@@ -16,7 +16,7 @@ export const Header: React.FC = () => {
 
   return (
     <>
-    <header className="sticky top-0 z-50 h-16 md:h-20 bg-background/70 backdrop-blur-xl border-b border-white/10 flex items-center justify-between px-4">
+    <header className="public-customer-header sticky top-0 z-50 h-16 md:h-20 bg-background/70 backdrop-blur-xl border-b border-white/10 flex items-center justify-between px-4">
       <div className="container mx-auto flex items-center justify-between px-4">
         <div className="flex items-center gap-4">
           <Link to="/" className="flex items-center gap-3">
@@ -43,24 +43,24 @@ export const Header: React.FC = () => {
             <>
               {/* All users see profile link, admins also see admin dashboard link */}
               <Link to="/profile">
-                <Button variant="ghost">Profil</Button>
+                <Button variant="ghost" className="public-customer-header-link">Profil</Button>
               </Link>
               {isAdmin && (
                 <Link to="/admin">
-                  <Button variant="ghost">Admin</Button>
+                  <Button variant="ghost" className="public-customer-header-link">Admin</Button>
                 </Link>
               )}
-              <Button variant="outline" onClick={signOut}>
+              <Button variant="outline" className="public-customer-header-outline" onClick={signOut}>
                 Odhlásit se
               </Button>
             </>
           ) : (
             <>
               <Link to={buildLoginRedirectUrl(location.pathname + location.search)}>
-                <Button variant="ghost">Přihlásit</Button>
+                <Button variant="ghost" className="public-customer-header-link">Přihlásit</Button>
               </Link>
               <Link to="/register">
-                <Button variant="default">Registrovat</Button>
+                <Button variant="default" className="public-customer-header-primary">Registrovat</Button>
               </Link>
             </>
           )}
