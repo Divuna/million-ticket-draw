@@ -20,6 +20,7 @@ import {
 import { analytics } from '@/lib/analytics';
 import { Trophy, Medal } from 'lucide-react';
 import { OneMilHeartIcon, OneMilTrophyIcon } from '@/components/icons/OneMilIcons';
+import { LoggedOutScreen } from '@/components/LoggedOutScreen';
 
 interface Contest {
   id: string;
