@@ -56,7 +56,7 @@ export const LoggedOutScreen = () => {
       className="min-h-screen relative overflow-hidden pb-24"
       style={{
         background:
-          'linear-gradient(180deg, #ffffff 0%, #fbf6ea 55%, #f6efdf 100%)',
+          'linear-gradient(180deg, #ffffff 0%, #ffffff 50%, #f8f1e7 66%, #e1d5c6 78%, #b9afa3 91%, #8f8a82 100%)',
       }}
     >
       {/* Soft champagne ambient glow */}
