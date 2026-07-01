@@ -85,8 +85,9 @@ export const LoggedOutScreen = () => {
               zIndex: 1,
               borderRadius: '10px',
               padding: '8px 14px',
-              background: 'rgba(10,11,15,0.50)',
-              boxShadow: '0 2px 14px rgba(0,0,0,0.45), inset 0 1px 0 rgba(255,181,71,0.07), 0 0 0 1px rgba(255,138,0,0.09)',
+              background: 'rgba(255,255,255,0.85)',
+              boxShadow:
+                '0 2px 14px rgba(180,130,60,0.14), inset 0 1px 0 rgba(255,255,255,0.9), 0 0 0 1px rgba(200,155,80,0.18)',
               animation: `${anim} ${duration}s ease-in-out infinite`,
               animationDelay: `${delay}s`,
             }}
@@ -99,10 +100,11 @@ export const LoggedOutScreen = () => {
               style={{
                 height: '72px',
                 maxWidth: '160px',
-                opacity: 0.62,
+                opacity: 0.82,
                 filter: 'none',
               }}
             />
+
           </div>
         );
       })}
