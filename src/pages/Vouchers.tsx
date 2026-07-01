@@ -46,7 +46,7 @@ const Vouchers: React.FC = () => {
   const [purchasingId, setPurchasingId] = useState<string | null>(null);
   const [togglingFavoriteId, setTogglingFavoriteId] = useState<string | null>(null);
   const [removeConfirmId, setRemoveConfirmId] = useState<string | null>(null);
-  const [codeModalVoucher, setCodeModalVoucher] = useState<{ code: string; name: string } | null>(null);
+  const [codeModalVoucher, setCodeModalVoucher] = useState<{ code: string | null; name: string } | null>(null);
   const [selectedVoucher, setSelectedVoucher] = useState<{
     id: string;
     name: string;
@@ -562,13 +562,20 @@ const Vouchers: React.FC = () => {
               Kód můžete zkopírovat, opsat nebo ukázat partnerovi.
             </p>
             <div className="rounded-xl bg-[hsl(220_30%_10%)] border border-[rgba(255,138,0,0.3)] p-4 text-center">
-              <span className="font-mono text-xl font-bold text-[#FFB547] tracking-wider">
-                {codeModalVoucher?.code}
-              </span>
+              {codeModalVoucher?.code ? (
+                <span className="font-mono text-xl font-bold text-[#FFB547] tracking-wider">
+                  {codeModalVoucher.code}
+                </span>
+              ) : (
+                <span className="text-sm font-medium text-white/75">
+                  Kód zatím není dostupný
+                </span>
+              )}
             </div>
             <Button
               variant="outline"
               className="w-full rounded-xl border-[rgba(255,138,0,0.3)] bg-[rgba(10,12,18,0.72)] text-white hover:bg-[rgba(255,138,0,0.12)] hover:border-[rgba(255,138,0,0.5)]"
+              disabled={!codeModalVoucher?.code}
               onClick={() => {
                 if (codeModalVoucher?.code) {
                   handleCopyVoucherCode(codeModalVoucher.code);
