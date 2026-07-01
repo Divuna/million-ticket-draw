@@ -129,14 +129,20 @@ const Login: React.FC = () => {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-b from-background via-background to-[hsl(222_40%_8%)] p-4">
+    <div
+      className="min-h-screen flex items-center justify-center p-4"
+      style={{
+        background:
+          'linear-gradient(180deg, #ffffff 0%, #ffffff 50%, #f8f1e7 66%, #e1d5c6 78%, #b9afa3 91%, #8f8a82 100%)',
+      }}
+    >
       <div className="w-full max-w-md">
         <img
           src={logo}
           alt="OneMil logo"
           className="h-16 w-auto mx-auto mb-4 object-contain onemil-logo-animated"
         />
-        <Card className="w-full voucher-card-glow rounded-[20px] bg-gradient-to-b from-[hsl(220_30%_12%)] via-[hsl(220_28%_9%)] to-[hsl(222_35%_7%)] border-[2px] border-[rgba(255,138,0,0.15)] shadow-[0_4px_24px_hsl(222_50%_3%/0.6)]">
+        <Card className="w-full voucher-card-glow rounded-[20px] bg-gradient-to-b from-[hsl(220_30%_12%)] via-[hsl(220_28%_9%)] to-[hsl(222_35%_7%)] border-[2px] border-[rgba(255,181,71,0.22)] shadow-[0_28px_64px_rgba(104,78,48,0.34),0_10px_28px_rgba(255,181,71,0.10),inset_0_1px_0_rgba(255,181,71,0.07)]">
         <CardHeader>
           <CardTitle className="text-heading-gold">Přihlášení</CardTitle>
           <CardDescription>Přihlaste se ke svému účtu OneMil</CardDescription>
