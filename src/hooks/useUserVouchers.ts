@@ -19,6 +19,10 @@ interface UserVoucher {
     name: string;
     image_url: string;
     banner_url: string | null;
+    short_description: string | null;
+    usage_description: string | null;
+    terms_text: string | null;
+    how_to_use_text: string | null;
   } | null;
   code: string | null;
 }
@@ -70,14 +74,23 @@ export const useUserVouchers = () => {
       // for a freshly purchased, non-expired voucher.
       const voucherMap = new Map<
         string,
-        { id: string; name: string; image_url: string; banner_url: string | null }
+        {
+          id: string;
+          name: string;
+          image_url: string;
+          banner_url: string | null;
+          short_description: string | null;
+          usage_description: string | null;
+          terms_text: string | null;
+          how_to_use_text: string | null;
+        }
       >();
 
       if (rows.length > 0) {
         const voucherIds = [...new Set(rows.map((r) => r.voucher_id))];
         const { data: vData } = await supabase
           .from("vouchers")
-          .select("id, name, image_url, banner_url")
+          .select("id, name, image_url, banner_url, short_description, usage_description, terms_text, how_to_use_text")
           .in("id", voucherIds);
 
         for (const v of vData || []) {
@@ -142,7 +155,16 @@ export const useUserVouchers = () => {
   const optimisticAddFavorite = useCallback(
     (
       voucherId: string,
-      voucherData: { id: string; name: string; image_url: string; banner_url: string | null } | null,
+      voucherData: {
+        id: string;
+        name: string;
+        image_url: string;
+        banner_url: string | null;
+        short_description: string | null;
+        usage_description: string | null;
+        terms_text: string | null;
+        how_to_use_text: string | null;
+      } | null,
     ) => {
       const tempId = `fav-${Date.now()}`;
 

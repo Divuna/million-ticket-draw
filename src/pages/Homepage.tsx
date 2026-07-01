@@ -89,6 +89,10 @@ const Homepage = () => {
     redeemed_count: number;
     start_date: string | null;
     end_date: string | null;
+    short_description?: string | null;
+    usage_description?: string | null;
+    terms_text?: string | null;
+    how_to_use_text?: string | null;
   } | null>(null);
 
   // Fetch contests from database

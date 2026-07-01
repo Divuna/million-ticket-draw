@@ -29,6 +29,10 @@ interface VoucherForm {
   maxQuantity: number | null;
   startDate: Date | undefined;
   endDate: Date | undefined;
+  shortDescription: string;
+  usageDescription: string;
+  termsText: string;
+  howToUseText: string;
 }
 
 interface Voucher {
@@ -40,6 +44,10 @@ interface Voucher {
   redeemed_count: number;
   start_date: string | null;
   end_date: string | null;
+  short_description: string | null;
+  usage_description: string | null;
+  terms_text: string | null;
+  how_to_use_text: string | null;
   created_at: string | null;
   updated_at: string | null;
   is_public: boolean;
@@ -182,6 +190,15 @@ function getSupabaseErrorMessage(error: unknown): string {
  * the filter, status badge and summary cards in this file, extracted so the
  * section tabs (Aktivní / Naplánované / Archiv) classify identically.
  */
+function normalizeOptionalText(value: string): string | null {
+  const trimmed = value.trim();
+  return trimmed === '' ? null : trimmed;
+}
+
+function normalizeNullableText(value: unknown): string | null {
+  return typeof value === 'string' ? value : null;
+}
+
 type VoucherStatus = 'active' | 'scheduled' | 'hidden' | 'expired' | 'exhausted';
 function getVoucherStatus(voucher: Voucher): VoucherStatus {
   const now = new Date();
@@ -240,6 +257,10 @@ function normalizeVoucherRow(row: Record<string, unknown> | null | undefined): V
   const start_date = typeof sd === 'string' ? sd : null;
   const ed = row.end_date;
   const end_date = typeof ed === 'string' ? ed : null;
+  const short_description = normalizeNullableText(row.short_description);
+  const usage_description = normalizeNullableText(row.usage_description);
+  const terms_text = normalizeNullableText(row.terms_text);
+  const how_to_use_text = normalizeNullableText(row.how_to_use_text);
   return {
     id,
     name,
@@ -249,6 +270,10 @@ function normalizeVoucherRow(row: Record<string, unknown> | null | undefined): V
     redeemed_count,
     start_date,
     end_date,
+    short_description,
+    usage_description,
+    terms_text,
+    how_to_use_text,
     created_at,
     updated_at,
     is_public: Boolean(row.is_public),
@@ -289,6 +314,10 @@ const AdminVouchers: React.FC = () => {
     maxQuantity: null,
     startDate: undefined,
     endDate: undefined,
+    shortDescription: '',
+    usageDescription: '',
+    termsText: '',
+    howToUseText: '',
   });
 
   useEffect(() => {
@@ -594,6 +623,10 @@ const AdminVouchers: React.FC = () => {
           redeemed_count: 0,
           start_date: voucherForm.startDate?.toISOString(),
           end_date: voucherForm.endDate?.toISOString(),
+          short_description: normalizeOptionalText(voucherForm.shortDescription),
+          usage_description: normalizeOptionalText(voucherForm.usageDescription),
+          terms_text: normalizeOptionalText(voucherForm.termsText),
+          how_to_use_text: normalizeOptionalText(voucherForm.howToUseText),
           user_id: null,
         })
         .select()
@@ -634,6 +667,10 @@ const AdminVouchers: React.FC = () => {
       maxQuantity: null,
       startDate: undefined,
       endDate: undefined,
+      shortDescription: '',
+      usageDescription: '',
+      termsText: '',
+      howToUseText: '',
     });
     resetWizardState();
   };
@@ -650,6 +687,10 @@ const AdminVouchers: React.FC = () => {
           : null,
       startDate: parseDateForForm(voucher.start_date),
       endDate: parseDateForForm(voucher.end_date),
+      shortDescription: voucher.short_description ?? '',
+      usageDescription: voucher.usage_description ?? '',
+      termsText: voucher.terms_text ?? '',
+      howToUseText: voucher.how_to_use_text ?? '',
     });
     setShowEditDialog(true);
   };
@@ -684,6 +725,10 @@ const AdminVouchers: React.FC = () => {
           max_quantity: voucherForm.maxQuantity,
           start_date: voucherForm.startDate?.toISOString(),
           end_date: voucherForm.endDate?.toISOString(),
+          short_description: normalizeOptionalText(voucherForm.shortDescription),
+          usage_description: normalizeOptionalText(voucherForm.usageDescription),
+          terms_text: normalizeOptionalText(voucherForm.termsText),
+          how_to_use_text: normalizeOptionalText(voucherForm.howToUseText),
         })
         .eq('id', String(editingVoucher.id))
         .select()
@@ -1211,6 +1256,59 @@ const AdminVouchers: React.FC = () => {
 
         {voucherWizardStep === 'detail' && (
           <div className="space-y-4">
+            <div className="grid grid-cols-1 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor={`${mode}-short-description`}>Krátký popis</Label>
+                <Textarea
+                  id={`${mode}-short-description`}
+                  value={voucherForm.shortDescription}
+                  onChange={(event) =>
+                    setVoucherForm({ ...voucherForm, shortDescription: event.target.value })
+                  }
+                  placeholder="Krátký text pro detail voucheru"
+                  className="min-h-[90px]"
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor={`${mode}-usage-description`}>Popis nabídky / použití</Label>
+                <Textarea
+                  id={`${mode}-usage-description`}
+                  value={voucherForm.usageDescription}
+                  onChange={(event) =>
+                    setVoucherForm({ ...voucherForm, usageDescription: event.target.value })
+                  }
+                  placeholder="Co voucher obsahuje a k čemu slouží"
+                  className="min-h-[110px]"
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor={`${mode}-terms-text`}>Podmínky</Label>
+                <Textarea
+                  id={`${mode}-terms-text`}
+                  value={voucherForm.termsText}
+                  onChange={(event) =>
+                    setVoucherForm({ ...voucherForm, termsText: event.target.value })
+                  }
+                  placeholder="Podmínky použití dodané partnerem"
+                  className="min-h-[110px]"
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor={`${mode}-how-to-use-text`}>Návod k použití</Label>
+                <Textarea
+                  id={`${mode}-how-to-use-text`}
+                  value={voucherForm.howToUseText}
+                  onChange={(event) =>
+                    setVoucherForm({ ...voucherForm, howToUseText: event.target.value })
+                  }
+                  placeholder="Jak má uživatel kód použít u partnera"
+                  className="min-h-[110px]"
+                />
+              </div>
+            </div>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div className="space-y-2">
                 <Label>Datum začátku</Label>

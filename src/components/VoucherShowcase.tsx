@@ -1,6 +1,6 @@
 import React from 'react';
 import { format } from 'date-fns';
-import { ChevronRight, Clock, Image as ImageIcon, Ticket } from 'lucide-react';
+import { ChevronRight, Image as ImageIcon, Ticket } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
@@ -24,12 +24,24 @@ export interface VoucherShowcaseVoucher {
   redeemed_count: number;
   start_date: string | null;
   end_date: string | null;
+  short_description?: string | null;
+  usage_description?: string | null;
+  terms_text?: string | null;
+  how_to_use_text?: string | null;
 }
 
 export interface VoucherDetailText {
-  description: string;
-  terms: string;
-  instructions: string;
+  shortDescription: string;
+  usageDescription: string;
+  termsText: string;
+  howToUseText: string;
+}
+
+const EMPTY_DETAIL_TEXT = 'Detail zatím není vyplněný.';
+
+function getAdminText(value: string | null | undefined, fallback = EMPTY_DETAIL_TEXT): string {
+  const trimmed = value?.trim();
+  return trimmed ? trimmed : fallback;
 }
 
 export function formatVoucherDate(iso: string | null | undefined): string | null {
@@ -51,16 +63,11 @@ export function getVoucherValidityLabel(voucher: Pick<VoucherShowcaseVoucher, 'e
 }
 
 export function buildVoucherDetailText(voucher: VoucherShowcaseVoucher): VoucherDetailText {
-  const validity = getVoucherValidityLabel(voucher);
-
   return {
-    description:
-      'Grafická partnerská nabídka připravená adminem OneMil. Hlavní sdělení, značka i vizuál jsou součástí banneru.',
-    terms: validity
-      ? `Voucher je dostupný v období ${validity.replace('Platí do: ', 'do ')} a další podmínky se řídí informacemi partnera uvedenými u nabídky.`
-      : 'Voucher se řídí podmínkami partnera uvedenými u nabídky a informacemi v banneru.',
-    instructions:
-      'Po kliknutí na Koupit za 5 MioCoinů se voucher přesune do sekce Zakoupené. Kód se pak zobrazí samostatně a lze ho opakovaně ukázat partnerovi.',
+    shortDescription: getAdminText(voucher.short_description),
+    usageDescription: getAdminText(voucher.usage_description),
+    termsText: getAdminText(voucher.terms_text, 'Podmínky zatím nejsou vyplněné.'),
+    howToUseText: getAdminText(voucher.how_to_use_text, 'Návod k použití zatím není vyplněný.'),
   };
 }
 
@@ -202,8 +209,6 @@ export const VoucherDetailDialog: React.FC<VoucherDetailDialogProps> = ({
   purchaseLabel = 'Koupit za 5 MioCoinů',
 }) => {
   const detailText = voucher ? buildVoucherDetailText(voucher) : null;
-  const remainingLabel = voucher ? getVoucherRemainingLabel(voucher) : null;
-  const validityLabel = voucher ? getVoucherValidityLabel(voucher) : null;
   const bannerUrl = voucher?.banner_url || voucher?.image_url || null;
 
   return (
@@ -224,25 +229,13 @@ export const VoucherDetailDialog: React.FC<VoucherDetailDialogProps> = ({
                 </div>
               )}
               <div className="absolute inset-0 bg-gradient-to-t from-[rgba(0,0,0,0.82)] via-[rgba(0,0,0,0.18)] to-transparent" />
-              <div className="absolute inset-x-0 bottom-0 flex flex-wrap gap-2 p-4">
-                {remainingLabel && (
-                  <Badge className="rounded-full border border-white/15 bg-[rgba(10,12,18,0.72)] px-3 py-1 text-xs font-medium text-white backdrop-blur-sm">
-                    {remainingLabel}
-                  </Badge>
-                )}
-                {validityLabel && (
-                  <Badge className="rounded-full border border-white/15 bg-[rgba(10,12,18,0.72)] px-3 py-1 text-xs font-medium text-white backdrop-blur-sm">
-                    {validityLabel}
-                  </Badge>
-                )}
-              </div>
             </div>
 
             <div className="space-y-5 p-6">
               <DialogHeader className="space-y-2 text-left">
                 <DialogTitle className="text-2xl font-bold text-white">{voucher.name}</DialogTitle>
                 <DialogDescription className="text-sm text-white/70">
-                  Kouzlo voucheru je v grafice. Podrobnosti jsou shrnuté níže, kód získáte po koupi.
+                  Detail nabídky vyplňuje administrátor OneMil.
                 </DialogDescription>
               </DialogHeader>
 
@@ -250,20 +243,17 @@ export const VoucherDetailDialog: React.FC<VoucherDetailDialogProps> = ({
                 <section className="rounded-2xl border border-white/10 bg-white/[0.03] p-4">
                   <div className="mb-2 flex items-center gap-2 text-sm font-semibold text-white">
                     <Ticket className="h-4 w-4 text-[#FFB547]" />
-                    Popis
+                    Krátký popis
                   </div>
-                  <p className="text-sm leading-6 text-white/75">{detailText?.description}</p>
+                  <p className="whitespace-pre-line text-sm leading-6 text-white/75">{detailText?.shortDescription}</p>
                 </section>
 
                 <section className="rounded-2xl border border-white/10 bg-white/[0.03] p-4">
                   <div className="mb-2 flex items-center gap-2 text-sm font-semibold text-white">
-                    <Clock className="h-4 w-4 text-[#FFB547]" />
-                    Platnost a kusy
+                    <Ticket className="h-4 w-4 text-[#FFB547]" />
+                    Popis použití
                   </div>
-                  <div className="space-y-2 text-sm text-white/75">
-                    <div>{validityLabel ?? 'Platnost není omezena datumem.'}</div>
-                    <div>{remainingLabel ?? 'Kusů je neomezeně.'}</div>
-                  </div>
+                  <p className="whitespace-pre-line text-sm leading-6 text-white/75">{detailText?.usageDescription}</p>
                 </section>
 
                 <section className="rounded-2xl border border-white/10 bg-white/[0.03] p-4">
@@ -271,7 +261,7 @@ export const VoucherDetailDialog: React.FC<VoucherDetailDialogProps> = ({
                     <Ticket className="h-4 w-4 text-[#FFB547]" />
                     Podmínky použití
                   </div>
-                  <p className="text-sm leading-6 text-white/75">{detailText?.terms}</p>
+                  <p className="whitespace-pre-line text-sm leading-6 text-white/75">{detailText?.termsText}</p>
                 </section>
 
                 <section className="rounded-2xl border border-white/10 bg-white/[0.03] p-4">
@@ -279,7 +269,7 @@ export const VoucherDetailDialog: React.FC<VoucherDetailDialogProps> = ({
                     <ChevronRight className="h-4 w-4 text-[#FFB547]" />
                     Návod k použití
                   </div>
-                  <p className="text-sm leading-6 text-white/75">{detailText?.instructions}</p>
+                  <p className="whitespace-pre-line text-sm leading-6 text-white/75">{detailText?.howToUseText}</p>
                 </section>
               </div>
 
