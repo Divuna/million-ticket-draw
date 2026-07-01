@@ -403,7 +403,7 @@ const Homepage = () => {
   };
 
   return (
-    <div className="min-h-screen bg-background dark pb-20">
+    <div className="homepage-light-page min-h-screen bg-background pb-20">
       <Header />
 
       {/* Hero banner — full viewport width, outside container */}

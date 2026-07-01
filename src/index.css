@@ -359,23 +359,38 @@
     0 10px 24px rgba(255, 138, 0, 0.12);
 }
 
-body:has(.games-light-page) {
+body:has(.games-light-page),
+body:has(.homepage-light-page),
+body:has(.vouchers-light-page),
+body:has(.wins-light-page) {
   background: #ffffff;
 }
 
 body:has(.games-light-page)::before,
-body:has(.games-light-page)::after {
+body:has(.games-light-page)::after,
+body:has(.homepage-light-page)::before,
+body:has(.homepage-light-page)::after,
+body:has(.vouchers-light-page)::before,
+body:has(.vouchers-light-page)::after,
+body:has(.wins-light-page)::before,
+body:has(.wins-light-page)::after {
   background: none;
 }
 
-.public-customer-theme.customer-layout:has(.games-light-page) {
+.public-customer-theme.customer-layout:has(.games-light-page),
+.public-customer-theme.customer-layout:has(.homepage-light-page),
+.public-customer-theme.customer-layout:has(.vouchers-light-page),
+.public-customer-theme.customer-layout:has(.wins-light-page) {
   min-height: 100dvh;
   background:
     radial-gradient(circle at 50% 0%, rgba(255, 138, 0, 0.08), transparent 34rem),
     linear-gradient(180deg, #ffffff 0%, #f7f8fb 100%);
 }
 
-.public-customer-theme .games-light-page {
+.public-customer-theme .games-light-page,
+.public-customer-theme .homepage-light-page,
+.public-customer-theme .vouchers-light-page,
+.public-customer-theme .wins-light-page {
   color: #111827;
   background:
     radial-gradient(circle at 50% 0%, rgba(255, 138, 0, 0.07), transparent 32rem),
@@ -384,6 +399,131 @@ body:has(.games-light-page)::after {
 
 .public-customer-theme .homepage-light-content {
   color: #111827;
+}
+
+.public-customer-theme .customer-light-hero-panel {
+  background: #ffffff;
+  border: 1px solid rgba(15, 23, 42, 0.1);
+  box-shadow: 0 14px 38px rgba(15, 23, 42, 0.08);
+}
+
+.public-customer-theme .customer-light-tabs {
+  background: rgba(255, 255, 255, 0.9);
+  border: 1px solid rgba(15, 23, 42, 0.1);
+  box-shadow: 0 10px 28px rgba(15, 23, 42, 0.06);
+}
+
+.public-customer-theme .customer-light-tabs [data-state="active"] {
+  color: #111827;
+  background: linear-gradient(135deg, #ff8a00 0%, #ffb547 100%);
+  box-shadow: 0 8px 20px rgba(255, 138, 0, 0.16);
+}
+
+.public-customer-theme .customer-light-tabs button:not([data-state="active"]) {
+  color: #475569;
+}
+
+.public-customer-theme .vouchers-light-page .voucher-card-glow,
+.public-customer-theme .homepage-light-page .voucher-card-glow,
+.public-customer-theme .homepage-light-page .coming-soon-card-glow {
+  background: #ffffff;
+  border-color: rgba(15, 23, 42, 0.12);
+  box-shadow: 0 14px 34px rgba(15, 23, 42, 0.08);
+}
+
+.public-customer-theme .vouchers-light-page .voucher-card-glow::before,
+.public-customer-theme .homepage-light-page .voucher-card-glow::before,
+.public-customer-theme .homepage-light-page .coming-soon-card-glow::before {
+  display: none;
+}
+
+.public-customer-theme .vouchers-light-page .voucher-card-glow::after,
+.public-customer-theme .homepage-light-page .voucher-card-glow::after,
+.public-customer-theme .homepage-light-page .coming-soon-card-glow::after {
+  box-shadow: inset 0 0 0 1px rgba(255, 138, 0, 0.08);
+}
+
+.public-customer-theme .vouchers-light-page .text-heading-gold,
+.public-customer-theme .wins-light-page .text-heading-gold {
+  background: none;
+  color: #f97316;
+  -webkit-text-fill-color: currentColor;
+}
+
+.public-customer-theme .vouchers-light-page .bg-card\/60 {
+  background-color: rgba(255, 255, 255, 0.9);
+}
+
+.public-customer-theme .vouchers-light-page .bg-muted\/20,
+.public-customer-theme .vouchers-light-page .bg-muted\/15,
+.public-customer-theme .wins-light-page .bg-muted\/20,
+.public-customer-theme .wins-light-page .bg-muted\/40 {
+  background-color: rgba(226, 232, 240, 0.75);
+}
+
+.public-customer-theme .voucher-detail-light-dialog,
+.public-customer-theme .voucher-code-dialog {
+  background: #ffffff;
+  border: 1px solid rgba(15, 23, 42, 0.12);
+  color: #111827;
+}
+
+.public-customer-theme .voucher-detail-light-dialog .text-white,
+.public-customer-theme .voucher-code-dialog .text-white {
+  color: #111827;
+}
+
+.public-customer-theme .voucher-detail-light-dialog .text-white\/70,
+.public-customer-theme .voucher-detail-light-dialog .text-white\/75,
+.public-customer-theme .voucher-detail-light-dialog .text-white\/55,
+.public-customer-theme .voucher-code-dialog .text-white\/75 {
+  color: #475569;
+}
+
+.public-customer-theme .voucher-detail-light-dialog section,
+.public-customer-theme .voucher-code-dialog .rounded-xl {
+  background: #f8fafc;
+  border-color: rgba(15, 23, 42, 0.1);
+}
+
+.public-customer-theme .wins-dark-particles,
+.public-customer-theme .wins-dark-shimmer {
+  display: none;
+}
+
+.public-customer-theme .wins-light-filter-panel {
+  background: #ffffff;
+  border: 1px solid rgba(15, 23, 42, 0.1);
+  box-shadow: 0 14px 34px rgba(15, 23, 42, 0.08);
+}
+
+.public-customer-theme .wins-light-page button[class*="bg-[hsl(220"],
+.public-customer-theme .wins-light-page div[class*="bg-[hsl(220"] {
+  background-color: #ffffff;
+  border-color: rgba(15, 23, 42, 0.12);
+  color: #334155;
+}
+
+.public-customer-theme .wins-light-page .text-gray-400,
+.public-customer-theme .wins-light-page .text-gray-300,
+.public-customer-theme .wins-light-page .text-gray-500 {
+  color: #64748b;
+}
+
+.public-customer-theme .wins-light-page .bg-card,
+.public-customer-theme .wins-light-page [class*="bg-card"] {
+  background-color: #ffffff;
+}
+
+.public-customer-theme .wins-light-page .border-border\/50,
+.public-customer-theme .wins-light-page [class*="border-[hsl(220"] {
+  border-color: rgba(15, 23, 42, 0.12);
+}
+
+.public-customer-theme .wins-light-page .wins-light-empty-panel {
+  background: #ffffff !important;
+  border: 1px solid rgba(15, 23, 42, 0.1) !important;
+  box-shadow: 0 14px 34px rgba(15, 23, 42, 0.08) !important;
 }
 
 .public-customer-theme .homepage-light-content .text-heading-gold {
