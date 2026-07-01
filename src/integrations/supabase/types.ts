@@ -3002,6 +3002,10 @@ export type Database = {
           rejected_at: string | null
           reward_base_czk: number
           reward_mc: number
+          reward_trigger_status: string
+          shoptet_customer_delivery: string
+          shoptet_export_secret_name: string | null
+          shoptet_import_enabled: boolean
           status: Database["public"]["Enums"]["partner_status"]
           suspended_at: string | null
           terms_accepted_at: string | null
@@ -3039,6 +3043,10 @@ export type Database = {
           rejected_at?: string | null
           reward_base_czk?: number
           reward_mc?: number
+          reward_trigger_status?: string
+          shoptet_customer_delivery?: string
+          shoptet_export_secret_name?: string | null
+          shoptet_import_enabled?: boolean
           status?: Database["public"]["Enums"]["partner_status"]
           suspended_at?: string | null
           terms_accepted_at?: string | null
@@ -3076,6 +3084,10 @@ export type Database = {
           rejected_at?: string | null
           reward_base_czk?: number
           reward_mc?: number
+          reward_trigger_status?: string
+          shoptet_customer_delivery?: string
+          shoptet_export_secret_name?: string | null
+          shoptet_import_enabled?: boolean
           status?: Database["public"]["Enums"]["partner_status"]
           suspended_at?: string | null
           terms_accepted_at?: string | null
@@ -3525,6 +3537,188 @@ export type Database = {
         }
         Relationships: []
       }
+      shoptet_connection_requests: {
+        Row: {
+          created_at: string
+          id: string
+          partner_id: string
+          partner_note: string | null
+          rejection_reason: string | null
+          reviewed_at: string | null
+          reviewed_by: string | null
+          reward_czk: number
+          reward_mc: number
+          shop_name: string
+          status: string
+          submitted_at: string | null
+          trigger_status: string
+          updated_at: string
+          url_received: boolean
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          partner_id: string
+          partner_note?: string | null
+          rejection_reason?: string | null
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          reward_czk: number
+          reward_mc: number
+          shop_name: string
+          status?: string
+          submitted_at?: string | null
+          trigger_status?: string
+          updated_at?: string
+          url_received?: boolean
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          partner_id?: string
+          partner_note?: string | null
+          rejection_reason?: string | null
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          reward_czk?: number
+          reward_mc?: number
+          shop_name?: string
+          status?: string
+          submitted_at?: string | null
+          trigger_status?: string
+          updated_at?: string
+          url_received?: boolean
+        }
+        Relationships: [
+          {
+            foreignKeyName: "shoptet_connection_requests_partner_id_fkey"
+            columns: ["partner_id"]
+            isOneToOne: false
+            referencedRelation: "partners"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "shoptet_connection_requests_partner_id_fkey"
+            columns: ["partner_id"]
+            isOneToOne: false
+            referencedRelation: "public_partners"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      shoptet_import_row_log: {
+        Row: {
+          action: string
+          created_at: string
+          external_order_id: string | null
+          id: string
+          message: string | null
+          result: string | null
+          run_id: string
+        }
+        Insert: {
+          action: string
+          created_at?: string
+          external_order_id?: string | null
+          id?: string
+          message?: string | null
+          result?: string | null
+          run_id: string
+        }
+        Update: {
+          action?: string
+          created_at?: string
+          external_order_id?: string | null
+          id?: string
+          message?: string | null
+          result?: string | null
+          run_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "shoptet_import_row_log_run_id_fkey"
+            columns: ["run_id"]
+            isOneToOne: false
+            referencedRelation: "shoptet_import_runs"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      shoptet_import_runs: {
+        Row: {
+          error_summary: string | null
+          finished_at: string | null
+          id: string
+          mode: string
+          partner_id: string | null
+          rows_created: number
+          rows_failed: number
+          rows_invalid: number
+          rows_skipped_dup: number
+          rows_status_updated: number
+          rows_total: number
+          rows_valid: number
+          rows_would_create: number
+          rows_would_status_update: number
+          started_at: string
+          status: string
+          trigger: string
+        }
+        Insert: {
+          error_summary?: string | null
+          finished_at?: string | null
+          id?: string
+          mode?: string
+          partner_id?: string | null
+          rows_created?: number
+          rows_failed?: number
+          rows_invalid?: number
+          rows_skipped_dup?: number
+          rows_status_updated?: number
+          rows_total?: number
+          rows_valid?: number
+          rows_would_create?: number
+          rows_would_status_update?: number
+          started_at?: string
+          status?: string
+          trigger?: string
+        }
+        Update: {
+          error_summary?: string | null
+          finished_at?: string | null
+          id?: string
+          mode?: string
+          partner_id?: string | null
+          rows_created?: number
+          rows_failed?: number
+          rows_invalid?: number
+          rows_skipped_dup?: number
+          rows_status_updated?: number
+          rows_total?: number
+          rows_valid?: number
+          rows_would_create?: number
+          rows_would_status_update?: number
+          started_at?: string
+          status?: string
+          trigger?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "shoptet_import_runs_partner_id_fkey"
+            columns: ["partner_id"]
+            isOneToOne: false
+            referencedRelation: "partners"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "shoptet_import_runs_partner_id_fkey"
+            columns: ["partner_id"]
+            isOneToOne: false
+            referencedRelation: "public_partners"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       tickets: {
         Row: {
           contest_id: string
@@ -3891,17 +4085,17 @@ export type Database = {
         }
         Relationships: [
           {
-            foreignKeyName: "user_vouchers_voucher_code_id_fkey"
-            columns: ["voucher_code_id"]
-            isOneToOne: true
-            referencedRelation: "voucher_codes"
-            referencedColumns: ["id"]
-          },
-          {
             foreignKeyName: "user_vouchers_user_id_fkey"
             columns: ["user_id"]
             isOneToOne: false
             referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "user_vouchers_voucher_code_id_fkey"
+            columns: ["voucher_code_id"]
+            isOneToOne: false
+            referencedRelation: "voucher_codes"
             referencedColumns: ["id"]
           },
           {
@@ -4006,13 +4200,6 @@ export type Database = {
         }
         Relationships: [
           {
-            foreignKeyName: "voucher_code_batches_created_by_fkey"
-            columns: ["created_by"]
-            isOneToOne: false
-            referencedRelation: "users"
-            referencedColumns: ["id"]
-          },
-          {
             foreignKeyName: "voucher_code_batches_voucher_id_fkey"
             columns: ["voucher_id"]
             isOneToOne: false
@@ -4079,13 +4266,6 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
-            foreignKeyName: "voucher_codes_created_by_fkey"
-            columns: ["created_by"]
-            isOneToOne: false
-            referencedRelation: "users"
-            referencedColumns: ["id"]
-          },
-          {
             foreignKeyName: "voucher_codes_issued_to_user_id_fkey"
             columns: ["issued_to_user_id"]
             isOneToOne: false
@@ -4097,13 +4277,6 @@ export type Database = {
             columns: ["issued_user_voucher_id"]
             isOneToOne: true
             referencedRelation: "user_vouchers"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "voucher_codes_voided_by_fkey"
-            columns: ["voided_by"]
-            isOneToOne: false
-            referencedRelation: "users"
             referencedColumns: ["id"]
           },
           {
@@ -5372,6 +5545,10 @@ export type Database = {
         Args: { p_amount: number; p_user_id: string }
         Returns: number
       }
+      delete_shoptet_pending_url: {
+        Args: { p_request_id: string }
+        Returns: undefined
+      }
       enqueue_partner_invoice_email:
         | { Args: { p_invoice_id: string }; Returns: undefined }
         | {
@@ -5646,6 +5823,10 @@ export type Database = {
           won_count: number
         }[]
       }
+      get_shoptet_export_url: {
+        Args: { p_partner_id: string }
+        Returns: string
+      }
       get_user_role: {
         Args: { _user_id: string }
         Returns: Database["public"]["Enums"]["app_role"]
@@ -5761,6 +5942,10 @@ export type Database = {
       process_event_queue_miocoin: { Args: never; Returns: undefined }
       process_push_retries: { Args: never; Returns: undefined }
       process_referral_inactivity: { Args: never; Returns: number }
+      promote_shoptet_pending_url: {
+        Args: { p_partner_id: string; p_request_id: string }
+        Returns: string
+      }
       proxy_post_to_onesignal: {
         Args: {
           event_name: string
@@ -5853,6 +6038,7 @@ export type Database = {
         Returns: undefined
       }
       run_pipeline_alerts: { Args: never; Returns: undefined }
+      run_shoptet_cron_imports: { Args: never; Returns: Json }
       safe_send_message: {
         Args: { p_content: string; p_sender: string; p_user_id: string }
         Returns: undefined
@@ -5876,11 +6062,19 @@ export type Database = {
         }
         Returns: string
       }
+      set_shoptet_export_secret: {
+        Args: { p_partner_id: string; p_url: string }
+        Returns: string
+      }
       set_user_role: {
         Args: { p_role: string; p_user_id: string }
         Returns: undefined
       }
       setup_crud_test_data: { Args: { p_user_email?: string }; Returns: Json }
+      store_shoptet_pending_url: {
+        Args: { p_request_id: string; p_url: string }
+        Returns: string
+      }
       sync_partner_offer_activations: { Args: never; Returns: Json }
       test_admin_crud_operations: { Args: never; Returns: Json }
       test_admin_security_rls: { Args: never; Returns: Json }
@@ -6009,6 +6203,7 @@ export type Database = {
           partner_id: string
         }[]
       }
+      verify_shoptet_cron_token: { Args: { p_token: string }; Returns: boolean }
     }
     Enums: {
       app_role: "admin" | "superadmin" | "user"
