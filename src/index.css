@@ -362,6 +362,7 @@
 body:has(.games-light-page),
 body:has(.homepage-light-page),
 body:has(.vouchers-light-page),
+body:has(.winners-light-page),
 body:has(.wins-light-page) {
   background: #ffffff;
 }
@@ -372,6 +373,8 @@ body:has(.homepage-light-page)::before,
 body:has(.homepage-light-page)::after,
 body:has(.vouchers-light-page)::before,
 body:has(.vouchers-light-page)::after,
+body:has(.winners-light-page)::before,
+body:has(.winners-light-page)::after,
 body:has(.wins-light-page)::before,
 body:has(.wins-light-page)::after {
   background: none;
@@ -380,6 +383,7 @@ body:has(.wins-light-page)::after {
 .public-customer-theme.customer-layout:has(.games-light-page),
 .public-customer-theme.customer-layout:has(.homepage-light-page),
 .public-customer-theme.customer-layout:has(.vouchers-light-page),
+.public-customer-theme.customer-layout:has(.winners-light-page),
 .public-customer-theme.customer-layout:has(.wins-light-page) {
   min-height: 100dvh;
   background:
@@ -390,6 +394,7 @@ body:has(.wins-light-page)::after {
 .public-customer-theme .games-light-page,
 .public-customer-theme .homepage-light-page,
 .public-customer-theme .vouchers-light-page,
+.public-customer-theme .winners-light-page,
 .public-customer-theme .wins-light-page {
   color: #111827;
   background:
@@ -398,6 +403,10 @@ body:has(.wins-light-page)::after {
 }
 
 body:has(.homepage-light-page) {
+  background: #fbfaf7;
+}
+
+body:has(.winners-light-page) {
   background: #fbfaf7;
 }
 
@@ -432,7 +441,43 @@ body:has(.homepage-light-page) {
     );
 }
 
+.public-customer-theme.customer-layout:has(.winners-light-page) {
+  background:
+    radial-gradient(circle at 12% 8%, rgba(255, 181, 71, 0.10), transparent 28rem),
+    radial-gradient(circle at 86% 16%, rgba(255, 138, 0, 0.06), transparent 24rem),
+    radial-gradient(ellipse at 48% 64%, rgba(86, 93, 105, 0.07), transparent 34rem),
+    linear-gradient(
+      180deg,
+      #ffffff 0%,
+      #fbf7ef 20%,
+      #ffffff 42%,
+      #faf5ea 64%,
+      #ffffff 82%,
+      #f5efe4 100%
+    );
+}
+
+.public-customer-theme .winners-light-page {
+  background:
+    radial-gradient(circle at 16% 8%, rgba(255, 181, 71, 0.08), transparent 26rem),
+    radial-gradient(circle at 82% 18%, rgba(255, 138, 0, 0.05), transparent 22rem),
+    radial-gradient(ellipse at 50% 66%, rgba(86, 93, 105, 0.06), transparent 32rem),
+    linear-gradient(
+      180deg,
+      #ffffff 0%,
+      #fbf7ef 20%,
+      #ffffff 42%,
+      #faf5ea 64%,
+      #ffffff 82%,
+      #f5efe4 100%
+    );
+}
+
 .public-customer-theme .homepage-light-content {
+  color: #111827;
+}
+
+.public-customer-theme .winners-light-content {
   color: #111827;
 }
 
@@ -442,12 +487,21 @@ body:has(.homepage-light-page) {
   -webkit-text-fill-color: currentColor;
 }
 
+.public-customer-theme .winners-light-content .text-heading-gold {
+  background: none;
+  color: #f97316;
+  -webkit-text-fill-color: currentColor;
+}
+
 .public-customer-theme .homepage-light-content .text-text-silver,
-.public-customer-theme .homepage-light-content .text-content-silver {
+.public-customer-theme .homepage-light-content .text-content-silver,
+.public-customer-theme .winners-light-content .text-text-silver,
+.public-customer-theme .winners-light-content .text-content-silver {
   color: #334155;
 }
 
-.public-customer-theme .homepage-light-content .text-muted-foreground {
+.public-customer-theme .homepage-light-content .text-muted-foreground,
+.public-customer-theme .winners-light-content .text-muted-foreground {
   color: #64748b;
 }
 
@@ -508,7 +562,23 @@ body:has(.homepage-light-page) {
   border-radius: 1.25rem;
 }
 
+.public-customer-theme .winners-light-content .winners-light-panel {
+  background: linear-gradient(180deg, #ffffff 0%, #fbf6ea 100%);
+  border: 1px solid rgba(200, 155, 80, 0.20);
+  box-shadow:
+    0 26px 60px -24px rgba(180, 130, 60, 0.26),
+    0 8px 18px -10px rgba(180, 130, 60, 0.14),
+    inset 0 1px 0 rgba(255, 255, 255, 0.9);
+  border-radius: 1.25rem;
+}
+
 .public-customer-theme .homepage-light-content .homepage-latest-winners-panel .animate-pulse {
+  background: #f7f1e4 !important;
+  border-color: rgba(200, 155, 80, 0.18) !important;
+}
+
+.public-customer-theme .winners-light-content .winners-light-skeleton,
+.public-customer-theme .winners-light-content .winners-light-skeleton .animate-pulse {
   background: #f7f1e4 !important;
   border-color: rgba(200, 155, 80, 0.18) !important;
 }
