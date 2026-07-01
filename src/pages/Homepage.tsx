@@ -1048,6 +1048,7 @@ const Homepage = () => {
                     voucher={voucher}
                     remainingLabel={typeof getRemainingCount(voucher) === 'number' ? `Zbývá: ${getRemainingCount(voucher)}` : null}
                     onDetail={() => setSelectedVoucher(voucher)}
+                    showInfoBadges={false}
                     className="h-48 w-full aspect-auto"
                   />
                 </div>
