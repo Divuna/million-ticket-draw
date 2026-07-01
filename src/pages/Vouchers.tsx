@@ -334,7 +334,7 @@ const Vouchers: React.FC = () => {
               >
                 Vouchery
               </h1>
-              <p className="text-sm text-gray-400 mt-1">SbĂ­rejte a uplatĹujte exkluzivnĂ­ vouchery</p>
+              <p className="text-sm text-gray-400 mt-1">{'Sb\u00edrejte a uplat\u0148ujte exkluzivn\u00ed vouchery'}</p>
             </div>
           </div>
         </div>
@@ -343,12 +343,12 @@ const Vouchers: React.FC = () => {
           <TabsList className="grid w-full grid-cols-3 max-w-lg mx-auto bg-card/60 border border-border/40 backdrop-blur-sm rounded-xl p-1">
             <TabsTrigger value="available" className="flex items-center gap-1 text-xs sm:text-sm data-[state=active]:bg-secondary/20 data-[state=active]:text-secondary rounded-lg transition-all">
               <OneMilTicketIcon size={16} className="w-4 h-4" />
-              <span className="hidden sm:inline">DostupnĂ©</span>
+              <span className="hidden sm:inline">{'Dostupn\u00e9'}</span>
               <span className="sm:hidden">Dost.</span>
             </TabsTrigger>
             <TabsTrigger value="favorites" className="flex items-center gap-1 text-xs sm:text-sm data-[state=active]:bg-secondary/20 data-[state=active]:text-secondary rounded-lg transition-all">
               <OneMilHeartIcon size={16} className="w-4 h-4" />
-              <span className="hidden sm:inline">OblĂ­benĂ©</span>
+              <span className="hidden sm:inline">{'Obl\u00edben\u00e9'}</span>
               <span className="sm:hidden">Obl.</span>
               {favoriteVouchers.length > 0 && (
                 <Badge variant="secondary" className="ml-1 text-xs">{favoriteVouchers.length}</Badge>
@@ -356,7 +356,7 @@ const Vouchers: React.FC = () => {
             </TabsTrigger>
             <TabsTrigger value="purchased" className="flex items-center gap-1 text-xs sm:text-sm data-[state=active]:bg-secondary/20 data-[state=active]:text-secondary rounded-lg transition-all">
               <OneMilCartIcon size={16} className="w-4 h-4" />
-              <span className="hidden sm:inline">ZakoupenĂ©</span>
+              <span className="hidden sm:inline">{'Zakoupen\u00e9'}</span>
               <span className="sm:hidden">Zak.</span>
               {purchasedVouchers.length > 0 && (
                 <Badge variant="secondary" className="ml-1 text-xs">{purchasedVouchers.length}</Badge>
@@ -383,31 +383,15 @@ const Vouchers: React.FC = () => {
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                 {truelyAvailableVouchers.map((voucher) => {
                   const remaining = getRemainingCount(voucher);
-                  const isPurchasing = purchasingId === voucher.id;
-                  const isTogglingFavorite = togglingFavoriteId === voucher.id;
 
                   return (
-                    <div key={voucher.id} className="relative">
-                      <button
-                        onClick={(e) => handleFavoriteClick(e, voucher.id)}
-                        disabled={isTogglingFavorite}
-                        className="absolute left-4 top-4 z-20 rounded-full border border-[rgba(255,138,0,0.3)] bg-[hsl(220_30%_8%/0.8)] p-2 backdrop-blur-sm transition-all duration-200 hover:bg-[hsl(220_30%_12%)] disabled:opacity-50"
-                        aria-label="Přidat do oblíbených"
-                      >
-                        {isTogglingFavorite ? (
-                          <Loader2 className="h-5 w-5 animate-spin text-[#FF8A00]" />
-                        ) : (
-                          <OneMilHeartIcon size={20} className="h-5 w-5 text-muted-foreground transition-colors hover:text-destructive" />
-                        )}
-                      </button>
-
-                      <VoucherShowcaseCard
-                        voucher={voucher}
-                        remainingLabel={typeof remaining === 'number' ? `Zbývá: ${remaining}` : null}
-                        onDetail={() => setSelectedVoucher(voucher)}
-                        className="h-[21rem]"
-                      />
-                    </div>
+                    <VoucherShowcaseCard
+                      key={voucher.id}
+                      voucher={voucher}
+                      remainingLabel={typeof remaining === 'number' ? `Zbývá: ${remaining}` : null}
+                      onDetail={() => setSelectedVoucher(voucher)}
+                      className="w-full"
+                    />
                   );
                 })}
               </div>
