@@ -18,11 +18,16 @@ Voucher systém je po PR #120–#127 ve stavu částečné implementace podle `d
 - **PR #127:** opraveny rozbité české texty na homepage a `/vouchers`.
 - **PR #129:** veřejná voucher karta má opravený horizontální poměr v `src/components/VoucherShowcase.tsx`.
 - **PR #130:** homepage voucher karta má stejnou velikost jako soutěžní karta (`w-80 h-48`) v `src/pages/Homepage.tsx`.
+- **PR #132:** opraveny zakoupené voucher karty na `/vouchers` do full-banner stylu a doplněno srdíčko pro oblíbené.
+- **PR #133:** sjednocené full-banner karty ve všech záložkách `/vouchers` (`Dostupné`, `Oblíbené`, `Zakoupené`).
 
 **Stav a omezení:**
 - Veřejné `/vouchers`, admin, DB základ a kódová evidence jsou připravené po fázích, ale nákup voucheru a vydání skutečného unikátního kódu přes nový inventář ještě není cílově zapojené.
+- Na `/vouchers` mají záložky `Dostupné`, `Oblíbené`, `Zakoupené` stejný full-banner vzhled; bublinky s datem/počtem jsou odstraněné.
+- V zakoupených voucherech se unikátní kód nezobrazuje rovnou na kartě, ale až v modalu po kliknutí na `Zobrazit kód`.
 - Čeština po PR #127 zůstává opravená.
 - Po Lovable Publish bylo ověřeno, že homepage voucher karta je v pořádku.
+- Po Lovable Publish bylo ověřeno, že `/vouchers` funguje.
 - Produkce nebyla přímo dotčena těmito UI/dokumentačními opravami.
 - Neměnit wallet, Stripe, ticket systém ani soutěže při dalších voucher krocích.
 

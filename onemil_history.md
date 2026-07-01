@@ -1,5 +1,9 @@
 # OneMil — DEVELOPMENT HISTORY (CHRONOLOGICAL ONLY)
 
+**Timestamp (Europe/Prague): 2026-07-01** (`/vouchers` full-banner tabs documented)
+
+- **2026-07-01** — **`/vouchers` page fixes completed and documented.** PR #132 fixed purchased voucher cards to full-banner style and added the favorite heart flow. PR #133 unified full-banner cards across `Dostupné`, `Oblíbené`, and `Zakoupené`; purchased voucher codes are no longer shown directly on cards and open only in the `Zobrazit kód` modal; date/count bubbles were removed from `/vouchers`. After Lovable Publish, `/vouchers` was verified as working. Production was not directly touched.
+
 **Timestamp (Europe/Prague): 2026-07-01** (Voucher card public sizing fixes documented)
 
 - **2026-07-01** — **Voucher card sizing fixes completed and documented.** PR #129 fixed the public voucher card horizontal ratio in `src/components/VoucherShowcase.tsx`. PR #130 made the homepage voucher card match the contest card size (`w-80 h-48`) in `src/pages/Homepage.tsx`. Czech texts remain fixed after PR #127. After Lovable Publish, the homepage voucher card was verified as OK. Production was not directly touched.
