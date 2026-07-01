@@ -52,21 +52,10 @@ export const LoggedOutScreen = () => {
   };
 
   return (
-    <div
-      className="min-h-screen relative overflow-hidden pb-24"
-      style={{
-        background:
-          'linear-gradient(180deg, #ffffff 0%, #fbf6ea 55%, #f6efdf 100%)',
-      }}
-    >
+    <div className="customer-auth-shell min-h-screen relative overflow-hidden pb-24">
       {/* Soft champagne ambient glow */}
-      <div
-        className="absolute inset-0 pointer-events-none"
-        style={{
-          background:
-            'radial-gradient(ellipse 70% 45% at 50% 12%, rgba(255,181,71,0.10) 0%, transparent 70%), radial-gradient(ellipse 60% 40% at 50% 95%, rgba(200,155,80,0.10) 0%, transparent 70%)',
-        }}
-      />
+      <div className="customer-auth-ambient absolute inset-0 pointer-events-none" />
+      <div className="customer-auth-grain absolute inset-0 pointer-events-none" />
 
 
       {/* Floating partner logos — each approved partner appears exactly once */}
@@ -85,9 +74,9 @@ export const LoggedOutScreen = () => {
               zIndex: 1,
               borderRadius: '10px',
               padding: '8px 14px',
-              background: 'rgba(255,255,255,0.85)',
+              background: 'rgba(66,55,43,0.36)',
               boxShadow:
-                '0 2px 14px rgba(180,130,60,0.14), inset 0 1px 0 rgba(255,255,255,0.9), 0 0 0 1px rgba(200,155,80,0.18)',
+                '0 10px 28px rgba(103,70,33,0.18), inset 0 1px 0 rgba(255,244,226,0.16), 0 0 0 1px rgba(190,132,58,0.14)',
               animation: `${anim} ${duration}s ease-in-out infinite`,
               animationDelay: `${delay}s`,
             }}
@@ -100,7 +89,7 @@ export const LoggedOutScreen = () => {
               style={{
                 height: '72px',
                 maxWidth: '160px',
-                opacity: 0.82,
+                opacity: 0.68,
                 filter: 'none',
               }}
             />
@@ -113,35 +102,22 @@ export const LoggedOutScreen = () => {
 
       {/* Centered card */}
       <div className="relative z-10 flex flex-col items-center justify-center min-h-[calc(100vh-64px)] px-5 py-12">
-        <div
-          className="w-full max-w-md flex flex-col items-center gap-8 rounded-2xl p-8 md:p-10"
-          style={{
-            background: 'hsl(220 40% 7%)',
-            border: '1px solid rgba(255,138,0,0.15)',
-            boxShadow:
-              '0 4px 32px rgba(0,0,0,0.5), inset 0 1px 0 rgba(255,181,71,0.06)',
-          }}
-        >
-          {/* Logo — dark pill backdrop + layered amber glow for contrast */}
+        <div className="w-full max-w-md">
+          <img
+            src={logoOnemil}
+            alt="OneMil"
+            className="customer-auth-logo h-16 w-auto mx-auto mb-4 object-contain onemil-logo-animated"
+          />
+
           <div
-            className="flex items-center justify-center rounded-2xl px-8 py-5"
+            className="customer-auth-card w-full flex flex-col items-center gap-8 rounded-[20px] p-8 md:p-10"
             style={{
-              background: 'radial-gradient(ellipse 90% 80% at 50% 50%, rgba(255,138,0,0.07) 0%, rgba(10,11,15,0.55) 60%, rgba(10,11,15,0.80) 100%)',
+              background: 'linear-gradient(180deg, rgba(48,43,39,0.96) 0%, rgba(33,31,29,0.98) 100%)',
+              border: '2px solid rgba(255,181,71,0.18)',
               boxShadow:
-                '0 0 0 1px rgba(255,138,0,0.10), 0 0 24px 4px rgba(255,138,0,0.08), inset 0 1px 0 rgba(255,181,71,0.08)',
+                '0 34px 90px rgba(112,75,32,0.34), 0 14px 34px rgba(54,42,31,0.22), inset 0 1px 0 rgba(255,244,226,0.08)',
             }}
           >
-            <img
-              src={logoOnemil}
-              alt="OneMil"
-              className="h-20 md:h-24 w-auto object-contain"
-              style={{
-                filter:
-                  'drop-shadow(0 0 8px rgba(255,138,0,0.55)) drop-shadow(0 0 22px rgba(255,181,71,0.30)) drop-shadow(0 2px 4px rgba(0,0,0,0.60))',
-              }}
-            />
-          </div>
-
           {/* Divider line */}
           <div
             className="w-16 h-px"
@@ -156,7 +132,7 @@ export const LoggedOutScreen = () => {
             className="text-2xl md:text-3xl font-bold text-center leading-tight"
             style={{
               fontFamily: "'Poppins', system-ui, sans-serif",
-              background: 'linear-gradient(90deg, #E7EBF0 0%, #FFB547 55%, #FF8A00 100%)',
+              background: 'linear-gradient(90deg, #FFF7EA 0%, #FFB547 55%, #FF8A00 100%)',
               WebkitBackgroundClip: 'text',
               WebkitTextFillColor: 'transparent',
               backgroundClip: 'text',
@@ -170,7 +146,7 @@ export const LoggedOutScreen = () => {
             className="text-center text-sm md:text-base leading-relaxed"
             style={{
               fontFamily: "'Inter', system-ui, sans-serif",
-              color: '#8E98A6',
+              color: '#D7CEC2',
               maxWidth: '320px',
             }}
           >
@@ -191,6 +167,7 @@ export const LoggedOutScreen = () => {
           >
             Přihlásit se
           </Button>
+          </div>
         </div>
       </div>
     </div>
