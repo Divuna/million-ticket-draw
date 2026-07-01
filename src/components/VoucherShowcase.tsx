@@ -72,6 +72,7 @@ interface VoucherShowcaseCardProps {
   favoriteActive?: boolean;
   favoriteDisabled?: boolean;
   favoriteAriaLabel?: string;
+  showInfoBadges?: boolean;
   className?: string;
 }
 
@@ -83,10 +84,12 @@ export const VoucherShowcaseCard: React.FC<VoucherShowcaseCardProps> = ({
   favoriteActive = false,
   favoriteDisabled = false,
   favoriteAriaLabel,
+  showInfoBadges = true,
   className,
 }) => {
   const validityLabel = getVoucherValidityLabel(voucher);
-  const remaining = remainingLabel ?? getVoucherRemainingLabel(voucher);
+  const remaining = showInfoBadges ? (remainingLabel ?? getVoucherRemainingLabel(voucher)) : null;
+  const shownValidityLabel = showInfoBadges ? validityLabel : null;
   const hasBanner = Boolean(voucher.banner_url || voucher.image_url);
 
   return (
@@ -153,9 +156,9 @@ export const VoucherShowcaseCard: React.FC<VoucherShowcaseCardProps> = ({
                 {remaining}
               </Badge>
             )}
-            {validityLabel && (
+            {shownValidityLabel && (
               <Badge className="rounded-full border border-white/15 bg-[rgba(10,12,18,0.72)] px-3 py-1 text-[11px] font-medium text-white shadow-[0_4px_20px_rgba(0,0,0,0.25)] backdrop-blur-sm">
-                {validityLabel}
+                {shownValidityLabel}
               </Badge>
             )}
           </div>
