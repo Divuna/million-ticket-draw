@@ -398,21 +398,38 @@ body:has(.wins-light-page)::after {
 }
 
 body:has(.homepage-light-page) {
-  background: #ffffff;
+  background: #fbfaf7;
 }
 
+/* Layered premium light theme: white ↔ champagne ↔ white bands */
 .public-customer-theme.customer-layout:has(.homepage-light-page) {
   background:
-    radial-gradient(circle at 16% 8%, rgba(255, 181, 71, 0.06), transparent 26rem),
-    radial-gradient(circle at 88% 16%, rgba(255, 138, 0, 0.04), transparent 22rem),
-    linear-gradient(180deg, #ffffff 0%, #fafbfc 60%, #f6f7f9 100%);
+    radial-gradient(circle at 14% 6%, rgba(255, 181, 71, 0.10), transparent 28rem),
+    radial-gradient(circle at 88% 14%, rgba(255, 138, 0, 0.06), transparent 24rem),
+    linear-gradient(
+      180deg,
+      #ffffff 0%,
+      #fbf7ef 22%,
+      #ffffff 44%,
+      #faf5ea 66%,
+      #ffffff 84%,
+      #f7f1e4 100%
+    );
 }
 
 .public-customer-theme .homepage-light-page {
   background:
-    radial-gradient(circle at 18% 6%, rgba(255, 181, 71, 0.05), transparent 24rem),
-    radial-gradient(circle at 82% 16%, rgba(255, 138, 0, 0.035), transparent 20rem),
-    linear-gradient(180deg, #ffffff 0%, #fafbfc 60%, #f6f7f9 100%);
+    radial-gradient(circle at 18% 6%, rgba(255, 181, 71, 0.08), transparent 26rem),
+    radial-gradient(circle at 82% 18%, rgba(255, 138, 0, 0.05), transparent 22rem),
+    linear-gradient(
+      180deg,
+      #ffffff 0%,
+      #fbf7ef 22%,
+      #ffffff 44%,
+      #faf5ea 66%,
+      #ffffff 84%,
+      #f7f1e4 100%
+    );
 }
 
 .public-customer-theme .homepage-light-content {
@@ -434,27 +451,40 @@ body:has(.homepage-light-page) {
   color: #64748b;
 }
 
+/* Cards: white with warm champagne shadow + thin gold-tinted border */
 .public-customer-theme .homepage-light-content .homepage-light-panel {
-  background: #ffffff;
-  border: 1px solid rgba(15, 23, 42, 0.06);
-  box-shadow: 0 14px 34px rgba(180, 130, 60, 0.07), 0 2px 6px rgba(15, 23, 42, 0.04), inset 0 1px 0 rgba(255, 255, 255, 0.9);
+  background: linear-gradient(180deg, #ffffff 0%, #fdfaf4 100%);
+  border: 1px solid rgba(200, 155, 80, 0.16);
+  box-shadow:
+    0 20px 44px -18px rgba(180, 130, 60, 0.22),
+    0 6px 14px -6px rgba(180, 130, 60, 0.12),
+    0 1px 0 rgba(255, 255, 255, 0.9) inset;
+  border-radius: 1rem;
 }
 
 .public-customer-theme .homepage-light-content .homepage-light-tile {
-  background: #ffffff;
-  border-color: rgba(15, 23, 42, 0.06);
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.9), 0 8px 20px rgba(180, 130, 60, 0.05);
+  background: linear-gradient(180deg, #ffffff 0%, #fdf9f1 100%);
+  border: 1px solid rgba(200, 155, 80, 0.14);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.9),
+    0 10px 24px -12px rgba(180, 130, 60, 0.18);
 }
 
 .public-customer-theme .homepage-light-content .homepage-light-logo-card {
   background: #ffffff;
-  border: 1px solid rgba(15, 23, 42, 0.06);
-  box-shadow: 0 10px 24px rgba(180, 130, 60, 0.06), 0 2px 4px rgba(15, 23, 42, 0.03);
+  border: 1px solid rgba(200, 155, 80, 0.16);
+  box-shadow:
+    0 12px 28px -14px rgba(180, 130, 60, 0.18),
+    0 2px 4px rgba(15, 23, 42, 0.03);
+  transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease;
 }
 
 .public-customer-theme .homepage-light-content .homepage-light-logo-card:hover {
-  border-color: rgba(255, 138, 0, 0.34);
-  box-shadow: 0 14px 30px rgba(255, 138, 0, 0.10);
+  border-color: rgba(255, 138, 0, 0.42);
+  box-shadow:
+    0 18px 36px -14px rgba(255, 138, 0, 0.22),
+    0 0 0 1px rgba(255, 181, 71, 0.18);
+  transform: translateY(-1px);
 }
 
 .public-customer-theme .homepage-light-content .homepage-light-panel h3,
@@ -464,25 +494,46 @@ body:has(.homepage-light-page) {
 
 .public-customer-theme .homepage-light-content .homepage-light-panel .bg-muted\/20,
 .public-customer-theme .homepage-light-content .homepage-light-panel .bg-muted\/40 {
-  background-color: #f6f7f9;
+  background-color: #faf5ea;
 }
 
+/* Latest winners: champagne-tinted white with warm glow */
 .public-customer-theme .homepage-light-content .homepage-latest-winners-panel {
-  background: #ffffff;
-  border-color: rgba(15, 23, 42, 0.06);
-  box-shadow: 0 18px 42px rgba(180, 130, 60, 0.08), 0 2px 6px rgba(15, 23, 42, 0.04), inset 0 1px 0 rgba(255, 255, 255, 0.9);
+  background: linear-gradient(180deg, #ffffff 0%, #fbf6ea 100%);
+  border: 1px solid rgba(200, 155, 80, 0.20);
+  box-shadow:
+    0 26px 60px -24px rgba(180, 130, 60, 0.26),
+    0 8px 18px -10px rgba(180, 130, 60, 0.14),
+    inset 0 1px 0 rgba(255, 255, 255, 0.9);
+  border-radius: 1.25rem;
 }
 
 .public-customer-theme .homepage-light-content .homepage-latest-winners-panel .animate-pulse {
-  background: #f6f7f9 !important;
-  border-color: rgba(15, 23, 42, 0.06) !important;
+  background: #f7f1e4 !important;
+  border-color: rgba(200, 155, 80, 0.18) !important;
 }
 
+/* Thin champagne accent line utility */
+.public-customer-theme .homepage-light-content hr,
+.public-customer-theme .homepage-light-content .homepage-light-divider {
+  border: none;
+  height: 1px;
+  background: linear-gradient(
+    90deg,
+    transparent 0%,
+    rgba(200, 155, 80, 0.28) 20%,
+    rgba(255, 138, 0, 0.32) 50%,
+    rgba(200, 155, 80, 0.28) 80%,
+    transparent 100%
+  );
+}
+
+/* Footer: light champagne wash, not pure white */
 .public-customer-theme footer {
-  background: linear-gradient(180deg, #ffffff 0%, #fafbfc 100%) !important;
-  border-top: 1px solid rgba(15, 23, 42, 0.08);
+  background: linear-gradient(180deg, #ffffff 0%, #fbf6ea 100%) !important;
+  border-top: 1px solid rgba(200, 155, 80, 0.22);
   color: #1f2937;
-  box-shadow: 0 -1px 0 rgba(180, 130, 60, 0.06);
+  box-shadow: 0 -1px 0 rgba(200, 155, 80, 0.14), 0 -18px 40px -24px rgba(180, 130, 60, 0.14);
 }
 
 .public-customer-theme footer h4 {
@@ -492,7 +543,7 @@ body:has(.homepage-light-page) {
 .public-customer-theme footer .text-muted-foreground,
 .public-customer-theme footer a.text-muted-foreground,
 .public-customer-theme footer div.text-muted-foreground {
-  color: #64748b;
+  color: #6b6355;
 }
 
 .public-customer-theme footer a:hover,
@@ -501,7 +552,7 @@ body:has(.homepage-light-page) {
 }
 
 .public-customer-theme footer .border-border\/40 {
-  border-color: rgba(15, 23, 42, 0.08);
+  border-color: rgba(200, 155, 80, 0.22);
 }
 
 /* Luxury Glow Effects */
