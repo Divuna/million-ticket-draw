@@ -4,6 +4,24 @@
 
 ChatGPT / AI asistent musí sám aktivně používat dostupné GitHub a Supabase konektory, kdykoli úkol vyžaduje kontext repozitáře nebo databáze. Neptat se Pavla, ať spouští SQL, stahuje GitHub soubory nebo ručně dodává data, pokud k nim má asistent přímý přístup. U destruktivních produkčních změn si nejdřív vyžádat výslovné schválení.
 
+## VOUCHER SYSTEM — AKTUÁLNÍ STAV (01. 07. 2026)
+
+Voucher systém je po PR #120–#127 ve stavu částečné implementace podle `docs/vouchers/VOUCHER_SYSTEM_DESIGN.md`.
+
+**Dokončeno:**
+- **PR #120:** vznikl `docs/vouchers/VOUCHER_SYSTEM_DESIGN.md` jako zdroj pravdy pro cílový model voucherů.
+- **PR #121:** připraven DB základ voucher kódů (`voucher_codes`, `voucher_code_batches`, vazba z `user_vouchers` na vydaný kód). Produkční Supabase má voucher codes migraci aplikovanou.
+- **PR #122:** doplněna admin správa voucher kódů: přehled, generování OneMil kódů, import partner kódů, export a zneplatnění kódu.
+- **PR #123:** admin modal Nový/Upravit voucher přepracován na průvodce tvorbou/editací voucheru se sekcemi Základ, Grafika, Detail, Kódy, Kontrola.
+- **PR #124:** grafika voucheru zjednodušena na jeden upload `Banner voucheru`, ukládaný do `banner_url` i `image_url`.
+- **PR #125/#126:** veřejné voucher zobrazení na homepage a `/vouchers` převedeno na bannerové karty s detailem.
+- **PR #127:** opraveny rozbité české texty na homepage a `/vouchers`.
+
+**Stav a omezení:**
+- Veřejné `/vouchers`, admin, DB základ a kódová evidence jsou připravené po fázích, ale nákup voucheru a vydání skutečného unikátního kódu přes nový inventář ještě není cílově zapojené.
+- Neměnit wallet, Stripe, ticket systém ani soutěže při dalších voucher krocích.
+- Další doporučený krok: opravit velikost/poměr veřejné voucher karty, aby odpovídala cílovému bannerovému formátu bez změny DB nebo nákupu.
+
 ## STRIPE PAY01–PAY04 — STAGING TEST MODE OVĚŘENO ✅ (30. 06. 2026)
 
 Celý Stripe TEST checkout flow ověřen end-to-end na stagingu `dxmowysntemfqfnanxua` přes lokální frontend `http://localhost:8090`. Produkce `xkzhjldrojjlrkezorey` nedotčena, žádná reálná platba.
