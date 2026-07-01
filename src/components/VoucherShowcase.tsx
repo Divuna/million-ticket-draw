@@ -12,7 +12,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
-import { OneMilVoucherIcon } from '@/components/icons/OneMilIcons';
+import { OneMilHeartIcon, OneMilVoucherIcon } from '@/components/icons/OneMilIcons';
 import { cn } from '@/lib/utils';
 
 export interface VoucherShowcaseVoucher {
@@ -68,6 +68,10 @@ interface VoucherShowcaseCardProps {
   voucher: VoucherShowcaseVoucher;
   remainingLabel?: string | null;
   onDetail: () => void;
+  onFavoriteToggle?: (event: React.MouseEvent<HTMLButtonElement>) => void;
+  favoriteActive?: boolean;
+  favoriteDisabled?: boolean;
+  favoriteAriaLabel?: string;
   className?: string;
 }
 
@@ -75,6 +79,10 @@ export const VoucherShowcaseCard: React.FC<VoucherShowcaseCardProps> = ({
   voucher,
   remainingLabel,
   onDetail,
+  onFavoriteToggle,
+  favoriteActive = false,
+  favoriteDisabled = false,
+  favoriteAriaLabel,
   className,
 }) => {
   const validityLabel = getVoucherValidityLabel(voucher);
@@ -119,7 +127,26 @@ export const VoucherShowcaseCard: React.FC<VoucherShowcaseCardProps> = ({
       />
 
       <div className="relative z-[3] flex h-full flex-col p-4 sm:p-5">
-        <div className="flex items-start justify-end gap-2">
+        <div className="flex items-start justify-between gap-2">
+          {onFavoriteToggle ? (
+            <button
+              type="button"
+              onClick={onFavoriteToggle}
+              disabled={favoriteDisabled}
+              className="rounded-full border border-white/15 bg-[rgba(10,12,18,0.72)] p-2 text-white shadow-[0_4px_20px_rgba(0,0,0,0.25)] backdrop-blur-sm transition-all duration-200 hover:bg-[rgba(10,12,18,0.9)] disabled:cursor-not-allowed disabled:opacity-50"
+              aria-label={favoriteAriaLabel ?? (favoriteActive ? 'Odebrat z oblíbených' : 'Přidat do oblíbených')}
+            >
+              <OneMilHeartIcon
+                size={20}
+                className={cn(
+                  'h-5 w-5 transition-colors',
+                  favoriteActive ? 'fill-destructive text-destructive' : 'text-white/80',
+                )}
+              />
+            </button>
+          ) : (
+            <div />
+          )}
           <div className="flex flex-wrap justify-end gap-2">
             {remaining && (
               <Badge className="rounded-full border border-white/15 bg-[rgba(10,12,18,0.72)] px-3 py-1 text-[11px] font-medium text-white shadow-[0_4px_20px_rgba(0,0,0,0.25)] backdrop-blur-sm">
