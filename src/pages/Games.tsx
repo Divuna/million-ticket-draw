@@ -1,7 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Header } from '@/components/Header';
-import { LoggedOutScreen } from '@/components/LoggedOutScreen';
 import { Button } from '@/components/ui/button';
 import { TicketResultModal } from '@/components/TicketResultModal';
 import { ContestCard } from '@/components/ContestCard';
@@ -404,12 +403,36 @@ const Index = () => {
   };
 
   if (!user) {
-    return <LoggedOutScreen />;
+    return (
+      <div className="games-light-page min-h-screen bg-background pb-24">
+        <Header />
+        <main className="container mx-auto flex min-h-[calc(100vh-88px)] items-center justify-center px-4 py-10">
+          <section className="relative w-full max-w-xl overflow-hidden rounded-2xl border border-slate-200 bg-white p-8 text-center shadow-[0_18px_44px_rgba(15,23,42,0.08)] md:p-10">
+            <div className="absolute inset-x-0 top-0 h-1 bg-gradient-to-r from-[#FF8A00] via-[#FFB547] to-[#FF8A00]" />
+            <div className="mx-auto mb-6 flex h-16 w-16 items-center justify-center rounded-2xl bg-gradient-to-br from-[#FF8A00] to-[#FFB547] shadow-[0_10px_24px_rgba(255,138,0,0.18)]">
+              <OneMilTrophyIcon size={34} className="h-8 w-8 text-black" />
+            </div>
+            <h1 className="mb-3 text-2xl font-bold text-slate-950 md:text-3xl" style={{ fontFamily: 'var(--om-font-heading)' }}>
+              Soutěže čekají po přihlášení
+            </h1>
+            <p className="mx-auto mb-7 max-w-md text-sm leading-6 text-slate-600 md:text-base">
+              Přihlaste se a otevřete si dostupné soutěže, oblíbené položky i další tikety v pořadí.
+            </p>
+            <Button
+              className="h-12 rounded-xl bg-primary px-8 text-base font-bold text-primary-foreground shadow-[0_10px_24px_rgba(255,138,0,0.18)] hover:brightness-110"
+              onClick={() => navigate('/login?redirect=/games')}
+            >
+              Přihlásit se
+            </Button>
+          </section>
+        </main>
+      </div>
+    );
   }
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-background">
+      <div className="games-light-page min-h-screen bg-background">
         <Header />
         <div className="container mx-auto px-4 py-8">
           <div className="text-center text-muted-foreground">Načítání soutěží...</div>
@@ -419,13 +442,11 @@ const Index = () => {
   }
 
   return (
-    <div className="min-h-screen bg-background pb-20">
+    <div className="games-light-page min-h-screen bg-background pb-20">
       <Header />
       <div className="container mx-auto px-4 py-8 space-y-8">
         {/* Premium Header Card */}
-        <div
-          className="relative overflow-hidden rounded-2xl border border-slate-200 bg-white p-6 shadow-[0_14px_38px_rgba(15,23,42,0.08)]"
-        >
+        <div className="relative overflow-hidden rounded-2xl border border-slate-200 bg-white p-6 shadow-[0_14px_38px_rgba(15,23,42,0.08)]">
           <div
             className="absolute inset-0 opacity-10 pointer-events-none"
             style={{
@@ -480,7 +501,16 @@ const Index = () => {
         </div>
         
         {/* Contests Grid - matching homepage card styling */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        <section className="rounded-2xl border border-slate-200 bg-white/80 p-4 shadow-[0_14px_38px_rgba(15,23,42,0.06)] md:p-5">
+          <div className="mb-4 flex items-center justify-between gap-3">
+            <div>
+              <h2 className="text-xl font-bold text-slate-950 md:text-2xl" style={{ fontFamily: 'var(--om-font-heading)' }}>
+                Dostupné soutěže
+              </h2>
+              <p className="text-sm text-slate-600">Vyberte soutěž a pokračujte tlačítkem na kartě.</p>
+            </div>
+          </div>
+          <div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3">
           {contests.map((contest) => (
             <ContestCard
               key={contest.id}
@@ -500,10 +530,11 @@ const Index = () => {
               className="customer-games-contest-card"
             />
           ))}
-        </div>
+          </div>
+        </section>
 
         {contests.length === 0 && (
-          <div className="text-center py-16 space-y-4">
+          <div className="rounded-2xl border border-slate-200 bg-white py-16 text-center shadow-[0_14px_38px_rgba(15,23,42,0.06)] space-y-4">
             <OneMilTrophyIcon size={64} className="w-16 h-16 mx-auto text-[rgba(255,138,0,0.45)]" />
             <h3 className="text-xl font-bold text-slate-900" style={{ fontFamily: 'var(--om-font-heading)' }}>Žádné soutěže</h3>
             <p className="text-sm text-muted-foreground">Momentálně nejsou dostupné žádné soutěže.</p>

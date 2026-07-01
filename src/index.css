@@ -359,6 +359,29 @@
     0 10px 24px rgba(255, 138, 0, 0.12);
 }
 
+body:has(.games-light-page) {
+  background: #ffffff;
+}
+
+body:has(.games-light-page)::before,
+body:has(.games-light-page)::after {
+  background: none;
+}
+
+.public-customer-theme.customer-layout:has(.games-light-page) {
+  min-height: 100dvh;
+  background:
+    radial-gradient(circle at 50% 0%, rgba(255, 138, 0, 0.08), transparent 34rem),
+    linear-gradient(180deg, #ffffff 0%, #f7f8fb 100%);
+}
+
+.public-customer-theme .games-light-page {
+  color: #111827;
+  background:
+    radial-gradient(circle at 50% 0%, rgba(255, 138, 0, 0.07), transparent 32rem),
+    linear-gradient(180deg, #ffffff 0%, #f7f8fb 100%);
+}
+
 .public-customer-theme .homepage-light-content {
   color: #111827;
 }

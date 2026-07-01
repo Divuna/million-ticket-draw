@@ -113,6 +113,14 @@
   border-color: rgba(255, 138, 0, 0.35);
 }
 
+.public-customer-theme .customer-games-contest-card .contest-card-favorite-button svg {
+  color: #475569;
+}
+
+.public-customer-theme .customer-games-contest-card .contest-card-favorite-button svg.fill-\[hsl\(0_85\%_60\%\)\] {
+  color: hsl(0 85% 60%);
+}
+
 .public-customer-theme .customer-games-contest-card .contest-card-title {
   color: #111827;
   text-shadow: none;
@@ -136,6 +144,14 @@
 
 .public-customer-theme .customer-games-contest-card .contest-card-primary-cta {
   box-shadow: 0 8px 20px rgba(255, 138, 0, 0.18);
+}
+
+.public-customer-theme .customer-games-contest-card .contest-card-primary-cta:disabled {
+  color: #64748b;
+  background: #f1f5f9;
+  border-color: rgba(15, 23, 42, 0.1);
+  box-shadow: none;
+  opacity: 1;
 }
 
 /* Voucher card subtle inner glow — muted champagne version */
