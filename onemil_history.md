@@ -1,5 +1,9 @@
 # OneMil — DEVELOPMENT HISTORY (CHRONOLOGICAL ONLY)
 
+**Timestamp (Europe/Prague): 2026-07-01** (Voucher system state after PR #120-#127 documented)
+
+- **2026-07-01** — **Voucher system state documented after PR #120-#127.** PR #120 created `docs/vouchers/VOUCHER_SYSTEM_DESIGN.md`; PR #121 added the DB foundation for voucher codes and the production Supabase voucher codes migration is applied; PR #122 added admin code management; PR #123 added the admin voucher creation/edit wizard; PR #124 simplified voucher graphics to one banner upload; PR #125/#126 added public voucher display; PR #127 fixed broken Czech public texts. Current next step recorded: fix the public voucher card size/aspect ratio. Documentation only; no app code, DB, migrations, UI, wallet, Stripe, contests, tickets, or production data changed.
+
 **Timestamp (Europe/Prague): 2026-06-30 17:05:00 +02:00** (Staging Stripe TEST hotový — poznámka k e2e wallet)
 
 - **2026-06-30** — **Stripe staging TEST hotový.** Po opakovaných TEST checkout testech vzniklo na stagingu `dxmowysntemfqfnanxua` 7 completed plateb pro `e2e@onemil.cz` (každá 310 MC, `cs_test_`), wallet e2e nyní **7130.00** (4960 + 7×310, vše připsáno přes webhook). Redirect na Lovable preview je očekávaný (staging `PUBLIC_APP_URL` vrácen na Lovable; webhook/kredit běží server-side nezávisle na redirectu — není to produkční problém). Staging e2e wallet navýšení je **čistě testovací — nečistit bez samostatného schválení Pavla.** Produkce nedotčena (133 plateb, poslední 07:18 = incident).
