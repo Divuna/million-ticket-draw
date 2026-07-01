@@ -129,16 +129,14 @@ const Login: React.FC = () => {
   };
 
   return (
-    <div className="customer-auth-shell min-h-screen flex items-center justify-center p-4">
-      <div className="customer-auth-ambient absolute inset-0 pointer-events-none" />
-      <div className="customer-auth-grain absolute inset-0 pointer-events-none" />
-      <div className="relative z-10 w-full max-w-md">
+    <div className="min-h-screen flex items-center justify-center bg-gradient-to-b from-background via-background to-[hsl(222_40%_8%)] p-4">
+      <div className="w-full max-w-md">
         <img
           src={logo}
           alt="OneMil logo"
-          className="customer-auth-logo h-16 w-auto mx-auto mb-4 object-contain onemil-logo-animated"
+          className="h-16 w-auto mx-auto mb-4 object-contain onemil-logo-animated"
         />
-        <Card className="customer-auth-card w-full voucher-card-glow rounded-[20px] bg-gradient-to-b from-[rgba(48,43,39,0.96)] to-[rgba(33,31,29,0.98)] border-[2px] border-[rgba(255,181,71,0.18)] shadow-[0_34px_90px_rgba(112,75,32,0.34),0_14px_34px_rgba(54,42,31,0.22),inset_0_1px_0_rgba(255,244,226,0.08)]">
+        <Card className="w-full voucher-card-glow rounded-[20px] bg-gradient-to-b from-[hsl(220_30%_12%)] via-[hsl(220_28%_9%)] to-[hsl(222_35%_7%)] border-[2px] border-[rgba(255,138,0,0.15)] shadow-[0_4px_24px_hsl(222_50%_3%/0.6)]">
         <CardHeader>
           <CardTitle className="text-heading-gold">Přihlášení</CardTitle>
           <CardDescription>Přihlaste se ke svému účtu OneMil</CardDescription>
