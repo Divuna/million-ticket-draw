@@ -63,6 +63,81 @@
     inset 0 1px 0 0 rgba(255, 181, 71, 0.20);
 }
 
+.public-customer-theme .customer-games-contest-card.contest-card-glow {
+  background: #ffffff;
+  border: 1px solid rgba(15, 23, 42, 0.1);
+  box-shadow: 0 14px 34px rgba(15, 23, 42, 0.08);
+}
+
+.public-customer-theme .customer-games-contest-card.contest-card-glow::before {
+  display: none;
+}
+
+.public-customer-theme .customer-games-contest-card.contest-card-glow::after,
+.public-customer-theme .customer-games-contest-card.contest-card-glow:hover::after {
+  box-shadow: inset 0 0 0 1px rgba(255, 138, 0, 0.08);
+}
+
+.public-customer-theme .customer-games-contest-card:hover {
+  border-color: rgba(255, 138, 0, 0.35);
+  box-shadow: 0 18px 40px rgba(15, 23, 42, 0.1), 0 8px 20px rgba(255, 138, 0, 0.08);
+}
+
+.public-customer-theme .customer-games-contest-card .contest-card-image-fallback {
+  background: linear-gradient(180deg, #f8fafc 0%, #eef2f7 100%);
+}
+
+.public-customer-theme .customer-games-contest-card .contest-card-readability-overlay {
+  background: linear-gradient(
+    to bottom,
+    rgba(255, 255, 255, 0.02) 0%,
+    rgba(255, 255, 255, 0.12) 42%,
+    rgba(255, 255, 255, 0.92) 100%
+  ) !important;
+}
+
+.public-customer-theme .customer-games-contest-card .contest-card-favorite-button,
+.public-customer-theme .customer-games-contest-card .contest-card-secondary-cta,
+.public-customer-theme .customer-games-contest-card .contest-card-login-cta {
+  color: #111827;
+  background: rgba(255, 255, 255, 0.88);
+  border: 1px solid rgba(15, 23, 42, 0.12);
+  box-shadow: 0 8px 20px rgba(15, 23, 42, 0.08);
+}
+
+.public-customer-theme .customer-games-contest-card .contest-card-favorite-button:hover,
+.public-customer-theme .customer-games-contest-card .contest-card-secondary-cta:hover,
+.public-customer-theme .customer-games-contest-card .contest-card-login-cta:hover {
+  color: #111827;
+  background: #ffffff;
+  border-color: rgba(255, 138, 0, 0.35);
+}
+
+.public-customer-theme .customer-games-contest-card .contest-card-title {
+  color: #111827;
+  text-shadow: none;
+}
+
+.public-customer-theme .customer-games-contest-card .contest-card-meta {
+  color: #475569;
+  text-shadow: none;
+}
+
+.public-customer-theme .customer-games-contest-card .contest-card-shortage {
+  color: #c2410c;
+  text-shadow: none;
+}
+
+.public-customer-theme .customer-games-contest-card .contest-card-status-badge {
+  color: #334155;
+  background: rgba(248, 250, 252, 0.94);
+  border: 1px solid rgba(15, 23, 42, 0.12);
+}
+
+.public-customer-theme .customer-games-contest-card .contest-card-primary-cta {
+  box-shadow: 0 8px 20px rgba(255, 138, 0, 0.18);
+}
+
 /* Voucher card subtle inner glow — muted champagne version */
 .voucher-card-glow {
   position: relative;

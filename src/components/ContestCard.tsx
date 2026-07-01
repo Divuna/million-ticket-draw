@@ -135,6 +135,7 @@ export const ContestCard: React.FC<ContestCardProps> = ({
     <div 
       className={`
         contest-card-glow
+        customer-contest-card
         relative overflow-hidden
         rounded-[20px]
         border-[3px] border-[rgba(255,138,0,0.45)]
@@ -156,7 +157,7 @@ export const ContestCard: React.FC<ContestCardProps> = ({
             }}
           />
         ) : (
-          <div className="w-full h-full bg-gradient-to-b from-[#101722] to-[#0A0B0F] flex items-center justify-center">
+          <div className="contest-card-image-fallback w-full h-full bg-gradient-to-b from-[#101722] to-[#0A0B0F] flex items-center justify-center">
             <img
               src={trophyIcon}
               alt="OneMil"
@@ -169,7 +170,7 @@ export const ContestCard: React.FC<ContestCardProps> = ({
       
       {/* Layer 2: Subtle bottom gradient for text readability */}
       <div 
-        className="absolute inset-0 pointer-events-none"
+        className="contest-card-readability-overlay absolute inset-0 pointer-events-none"
         style={{
           background: 'linear-gradient(to bottom, transparent 40%, rgba(0,0,0,0.25) 65%, rgba(0,0,0,0.65) 100%)'
         }}
@@ -183,7 +184,7 @@ export const ContestCard: React.FC<ContestCardProps> = ({
           {user && (onToggleFavorite || onRemoveFavorite) ? (
             <button
               onClick={handleFavoriteClick}
-              className="
+              className="contest-card-favorite-button
                 p-2 rounded-full 
                 bg-[rgba(0,0,0,0.25)]
                 backdrop-blur-sm
@@ -213,7 +214,7 @@ export const ContestCard: React.FC<ContestCardProps> = ({
           {/* Status badge - only show for non-active states */}
           {contest.status !== 'active' && (
             <Badge 
-              className={`
+              className={`contest-card-status-badge
                 px-4 py-1.5 rounded-full text-sm font-medium
                 ${contest.status === 'closed' 
                   ? 'bg-[rgba(60,60,60,0.85)] text-white/90' 
@@ -231,7 +232,7 @@ export const ContestCard: React.FC<ContestCardProps> = ({
           {/* Title */}
           {!hideTitleAndCount && (
             <h3
-              className="font-bold text-xl text-[#E7EBF0] drop-shadow-md line-clamp-2 tracking-[-0.02em]"
+              className="contest-card-title font-bold text-xl text-[#E7EBF0] drop-shadow-md line-clamp-2 tracking-[-0.02em]"
               style={{ fontFamily: 'var(--om-font-heading)' }}
             >
               {contest.title}
@@ -239,13 +240,13 @@ export const ContestCard: React.FC<ContestCardProps> = ({
           )}
 
           {!hideTitleAndCount && showTotalOnlyLine && (
-            <p className="text-[10px] md:text-xs text-white/90 drop-shadow-md leading-tight">
+            <p className="contest-card-meta text-[10px] md:text-xs text-white/90 drop-shadow-md leading-tight">
               Celkem {ticketsTotal.toLocaleString("cs-CZ")} ticketů
             </p>
           )}
           {!hideTitleAndCount && showProgress && (
             <div className="space-y-0.5">
-              <p className="text-[10px] md:text-xs text-white/90 drop-shadow-md leading-tight">
+              <p className="contest-card-meta text-[10px] md:text-xs text-white/90 drop-shadow-md leading-tight">
                 {soldForBar.toLocaleString("cs-CZ")} / {ticketsTotal.toLocaleString("cs-CZ")} ticketů
               </p>
               <div className="w-full h-1 rounded-full overflow-hidden bg-white/20">
@@ -263,14 +264,14 @@ export const ContestCard: React.FC<ContestCardProps> = ({
           {user && (
             <div className="flex flex-col gap-1.5">
               {insufficientFunds && (
-                <p className="text-[11px] md:text-xs text-amber-300/95 drop-shadow-md leading-tight px-0.5">
+                <p className="contest-card-shortage text-[11px] md:text-xs text-amber-300/95 drop-shadow-md leading-tight px-0.5">
                   Chybí ti {shortageCoins.toLocaleString('cs-CZ')} MioCoinů
                 </p>
               )}
               <div className="flex items-stretch gap-2">
               {/* Gold outlined pill CTA — purchase or top-up */}
               <button
-                className="
+                className="contest-card-primary-cta
                   flex-1 flex items-center justify-center gap-2
                   h-11 px-5
                   whitespace-nowrap
@@ -307,7 +308,7 @@ export const ContestCard: React.FC<ContestCardProps> = ({
               </button>
               {/* Detail button */}
               <button
-                className="
+                className="contest-card-secondary-cta
                   h-11 px-4
                   bg-[rgba(0,0,0,0.35)]
                   backdrop-blur-sm
@@ -330,7 +331,7 @@ export const ContestCard: React.FC<ContestCardProps> = ({
           {/* Login prompt for non-logged-in users */}
           {!user && (
             <button
-              className="
+              className="contest-card-login-cta
                 w-full py-3 px-5
                 bg-[rgba(0,0,0,0.35)]
                 backdrop-blur-sm
