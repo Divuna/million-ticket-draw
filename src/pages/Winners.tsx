@@ -13,11 +13,11 @@ const Winners = () => {
   const { data: winners, isLoading } = useLatestWinners(50);
 
   return (
-    <div className="min-h-screen bg-background pb-20">
+    <div className="winners-light-page min-h-screen bg-background pb-24">
       <Header />
       
-      <div className="container mx-auto px-4 py-8">
-        <div className="space-y-6">
+      <div className="winners-light-content relative z-10 container mx-auto max-w-6xl px-4 py-8 md:py-10">
+        <section className="winners-light-panel space-y-6 p-5 md:p-6">
           {/* Header */}
           <div className="space-y-2">
             <h1 className="text-3xl md:text-4xl font-bold text-heading-gold flex items-center gap-3">
@@ -30,11 +30,11 @@ const Winners = () => {
           </div>
 
           {/* Winners List */}
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
             {isLoading ? (
               // Loading skeleton
-              Array.from({ length: 9 }).map((_, index) => (
-                <div key={index} className="rounded-xl overflow-hidden bg-card/60 border border-border/50 p-4">
+              Array.from({ length: 8 }).map((_, index) => (
+                <div key={index} className="winners-light-skeleton rounded-xl overflow-hidden border p-4">
                   <div className="flex gap-4">
                     <Skeleton className="w-16 h-16 rounded-full" />
                     <div className="flex-1 space-y-2">
@@ -59,6 +59,7 @@ const Winners = () => {
                   cardStyleImageUrl={WINNER_BG_ROTATION[index % WINNER_BG_ROTATION.length]}
                   userAvatarUrl={winner.user_avatar_url}
                   ticketNumber={winner.ticket_number}
+                  variant="champagne"
                 />
               ))
             ) : (
@@ -70,7 +71,7 @@ const Winners = () => {
               </div>
             )}
           </div>
-        </div>
+        </section>
       </div>
     </div>
   );
