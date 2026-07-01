@@ -213,7 +213,7 @@ export const VoucherDetailDialog: React.FC<VoucherDetailDialogProps> = ({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto border-[rgba(255,138,0,0.35)] bg-gradient-to-b from-[hsl(220_30%_8%)] to-[hsl(220_35%_5%)] p-0">
+      <DialogContent className="voucher-detail-light-dialog max-w-4xl max-h-[90vh] overflow-y-auto border-[rgba(255,138,0,0.35)] bg-gradient-to-b from-[hsl(220_30%_8%)] to-[hsl(220_35%_5%)] p-0">
         {voucher && (
           <>
             <div className="relative h-56 overflow-hidden rounded-t-[20px]">

@@ -289,19 +289,12 @@ const Vouchers: React.FC = () => {
   const selectedVoucherIsPurchased = selectedVoucher ? isPurchasedVoucher(selectedVoucher.id) : false;
 
   return (
-    <div className="min-h-screen bg-background dark pb-20">
+    <div className="vouchers-light-page min-h-screen bg-background pb-20">
       <Header />
       
       <div className="container mx-auto px-4 py-8 space-y-8">
         {/* Premium Header Card */}
-        <div
-          className="relative overflow-hidden rounded-2xl p-6"
-          style={{
-            background: 'linear-gradient(135deg, hsl(220, 25%, 8%) 0%, hsl(220, 30%, 12%) 50%, hsl(220, 25%, 8%) 100%)',
-            border: '1px solid rgba(255,138,0,0.2)',
-            boxShadow: '0 8px 32px rgba(0,0,0,0.4), inset 0 1px 0 rgba(255,138,0,0.1)',
-          }}
-        >
+        <div className="customer-light-hero-panel relative overflow-hidden rounded-2xl p-6">
           <div
             className="absolute inset-0 opacity-10 pointer-events-none"
             style={{
@@ -338,7 +331,7 @@ const Vouchers: React.FC = () => {
         </div>
 
         <Tabs defaultValue={defaultTab} className="space-y-6">
-          <TabsList className="grid w-full grid-cols-3 max-w-lg mx-auto bg-card/60 border border-border/40 backdrop-blur-sm rounded-xl p-1">
+          <TabsList className="customer-light-tabs grid w-full grid-cols-3 max-w-lg mx-auto bg-card/60 border border-border/40 backdrop-blur-sm rounded-xl p-1">
             <TabsTrigger value="available" className="flex items-center gap-1 text-xs sm:text-sm data-[state=active]:bg-secondary/20 data-[state=active]:text-secondary rounded-lg transition-all">
               <OneMilTicketIcon size={16} className="w-4 h-4" />
               <span className="hidden sm:inline">Dostupné</span>
@@ -562,7 +555,7 @@ const Vouchers: React.FC = () => {
 
       {/* Voucher code modal: showing the code does not change DB state. */}
       <Dialog open={!!codeModalVoucher} onOpenChange={(open) => !open && setCodeModalVoucher(null)}>
-        <DialogContent className="sm:max-w-md border-[rgba(255,138,0,0.35)] bg-gradient-to-b from-[hsl(220_30%_8%)] to-[hsl(220_35%_5%)]">
+        <DialogContent className="voucher-code-dialog sm:max-w-md border-[rgba(255,138,0,0.35)] bg-gradient-to-b from-[hsl(220_30%_8%)] to-[hsl(220_35%_5%)]">
           <DialogHeader>
             <DialogTitle className="text-heading-gold">Zobrazit kód</DialogTitle>
             <DialogDescription>
