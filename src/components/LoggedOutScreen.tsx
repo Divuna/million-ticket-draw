@@ -54,34 +54,20 @@ export const LoggedOutScreen = () => {
   return (
     <div
       className="min-h-screen relative overflow-hidden pb-24"
-      style={{ background: 'linear-gradient(160deg, hsl(220,30%,5%) 0%, hsl(220,25%,7%) 50%, hsl(220,30%,5%) 100%)' }}
+      style={{
+        background:
+          'linear-gradient(180deg, #ffffff 0%, #fbf6ea 55%, #f6efdf 100%)',
+      }}
     >
-      {/* Subtle ambient glow */}
+      {/* Soft champagne ambient glow */}
       <div
         className="absolute inset-0 pointer-events-none"
         style={{
           background:
-            'radial-gradient(ellipse 60% 40% at 50% 15%, rgba(255,138,0,0.06) 0%, transparent 70%)',
+            'radial-gradient(ellipse 70% 45% at 50% 12%, rgba(255,181,71,0.10) 0%, transparent 70%), radial-gradient(ellipse 60% 40% at 50% 95%, rgba(200,155,80,0.10) 0%, transparent 70%)',
         }}
       />
 
-      {/* Starfield noise */}
-      <div
-        className="absolute inset-0 pointer-events-none"
-        style={{
-          background: `
-            radial-gradient(1.5px 1.5px at 12% 18%, rgba(255,181,71,0.10) 50%, transparent 100%),
-            radial-gradient(1px 1px at 28% 44%, rgba(255,138,0,0.08) 50%, transparent 100%),
-            radial-gradient(1.5px 1.5px at 50% 12%, rgba(255,181,71,0.11) 50%, transparent 100%),
-            radial-gradient(1px 1px at 72% 55%, rgba(255,138,0,0.08) 50%, transparent 100%),
-            radial-gradient(1.5px 1.5px at 88% 28%, rgba(255,181,71,0.10) 50%, transparent 100%),
-            radial-gradient(1px 1px at 35% 78%, rgba(255,138,0,0.07) 50%, transparent 100%),
-            radial-gradient(1px 1px at 65% 82%, rgba(255,181,71,0.09) 50%, transparent 100%),
-            radial-gradient(1.5px 1.5px at 8% 62%, rgba(255,138,0,0.08) 50%, transparent 100%),
-            radial-gradient(1px 1px at 92% 70%, rgba(255,181,71,0.09) 50%, transparent 100%)
-          `,
-        }}
-      />
 
       {/* Floating partner logos — each approved partner appears exactly once */}
       {partners.map((partner, i) => {
@@ -99,8 +85,9 @@ export const LoggedOutScreen = () => {
               zIndex: 1,
               borderRadius: '10px',
               padding: '8px 14px',
-              background: 'rgba(10,11,15,0.50)',
-              boxShadow: '0 2px 14px rgba(0,0,0,0.45), inset 0 1px 0 rgba(255,181,71,0.07), 0 0 0 1px rgba(255,138,0,0.09)',
+              background: 'rgba(255,255,255,0.85)',
+              boxShadow:
+                '0 2px 14px rgba(180,130,60,0.14), inset 0 1px 0 rgba(255,255,255,0.9), 0 0 0 1px rgba(200,155,80,0.18)',
               animation: `${anim} ${duration}s ease-in-out infinite`,
               animationDelay: `${delay}s`,
             }}
@@ -113,10 +100,11 @@ export const LoggedOutScreen = () => {
               style={{
                 height: '72px',
                 maxWidth: '160px',
-                opacity: 0.62,
+                opacity: 0.82,
                 filter: 'none',
               }}
             />
+
           </div>
         );
       })}
