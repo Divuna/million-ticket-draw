@@ -875,20 +875,16 @@ const Homepage = () => {
           <div className="flex items-center justify-between">
             <h3 className="text-2xl font-bold text-heading-gold flex items-center gap-2">
               <Ticket className="w-6 h-6" />
-              ProbĂ­hajĂ­cĂ­ SoutÄ›Ĺľe
+              {'Prob\u00edhaj\u00edc\u00ed Sout\u011b\u017ee'}
             </h3>
             <div className="flex items-center gap-2">
               <ChevronRight className="w-5 h-5 text-muted-foreground" />
               {/* Role indicator */}
               {isAdmin && (
-                <div className="px-2 py-1 bg-[rgba(255,138,0,0.08)] border border-[rgba(255,138,0,0.3)] rounded text-xs text-[#FF8A00]">
-                  Pouze ÄŤtenĂ­
-                </div>
+                <div className="px-2 py-1 bg-[rgba(255,138,0,0.08)] border border-[rgba(255,138,0,0.3)] rounded text-xs text-[#FF8A00]">{'Pouze \u010dten\u00ed'}</div>
               )}
               {!user && (
-                <div className="px-2 py-1 bg-[rgba(255,138,0,0.1)] border border-[rgba(255,138,0,0.3)] rounded text-xs text-[#FFB547]">
-                  PĹ™ihlĂˇsit pro interakci
-                </div>
+                <div className="px-2 py-1 bg-[rgba(255,138,0,0.1)] border border-[rgba(255,138,0,0.3)] rounded text-xs text-[#FFB547]">{'P\u0159ihl\u00e1sit pro interakci'}</div>
               )}
             </div>
           </div>
@@ -945,9 +941,7 @@ const Homepage = () => {
                     </CardTitle>
                   </CardHeader>
                   <CardContent>
-                    <div className="text-sm text-muted-foreground">
-                      MomentĂˇlnÄ› nejsou k dispozici ĹľĂˇdnĂ© aktivnĂ­ soutÄ›Ĺľe
-                    </div>
+                    <div className="text-sm text-muted-foreground">{'Moment?ln? nejsou k dispozici ??dn? ve?ejn? vouchery.'}</div>
                   </CardContent>
                 </Card>
               </div>
@@ -1003,7 +997,7 @@ const Homepage = () => {
           <div className="flex items-center justify-between">
             <h3 className="text-2xl font-bold text-heading-gold flex items-center gap-2">
               <OneMilVoucherIcon size={24} className="w-6 h-6" />
-              DostupnĂ© vouchery
+              {'Dostupn\u00e9 vouchery'}
             </h3>
             <div className="flex items-center gap-2">
               {user && (
@@ -1042,21 +1036,19 @@ const Homepage = () => {
               <div className="flex-none w-80">
                 <Card className="relative overflow-hidden rounded-2xl border border-primary/15 bg-card/40 h-full">
                   <CardContent className="p-6 space-y-2 text-center">
-                    <h3 className="text-xl font-bold text-primary">Ĺ˝ĂˇdnĂ© dostupnĂ© vouchery</h3>
-                    <div className="text-sm text-muted-foreground">
-                      MomentĂˇlnÄ› nejsou k dispozici ĹľĂˇdnĂ© veĹ™ejnĂ© vouchery.
-                    </div>
+                    <h3 className="text-xl font-bold text-primary">{'\u017d\u00e1dn\u00e9 dostupn\u00e9 vouchery'}</h3>
+                    <div className="text-sm text-muted-foreground">{'Moment\u00e1ln\u011b nejsou k dispozici \u017e\u00e1dn\u00e9 ve\u0159ejn\u00e9 vouchery.'}</div>
                   </CardContent>
                 </Card>
               </div>
             ) : (
               homepageVouchers.map((voucher) => (
-                <div key={voucher.id} className="flex-none w-80">
+                <div key={voucher.id} className="flex-none w-[32rem] max-w-[85vw]">
                   <VoucherShowcaseCard
                     voucher={voucher}
                     remainingLabel={typeof getRemainingCount(voucher) === 'number' ? `Zbývá: ${getRemainingCount(voucher)}` : null}
                     onDetail={() => setSelectedVoucher(voucher)}
-                    className="h-[21rem]"
+                    className="w-full"
                   />
                 </div>
               ))
@@ -1329,31 +1321,29 @@ const Homepage = () => {
               <YouTubeEmbed url={videoUrl} className="rounded-xl" />
 
               <div className="text-center space-y-6">
-                <h4 className="text-xl sm:text-2xl font-semibold text-foreground leading-snug">
-                  Jak hra funguje, co se vyhrĂˇvĂˇ a jak probĂ­hĂˇ nĂˇkup voucherĹŻ
-                </h4>
+                <h4 className="text-xl sm:text-2xl font-semibold text-foreground leading-snug">{'Jak hra funguje, co se vyhr?v? a jak prob?h? n?kup voucher?'}</h4>
                 <div className="space-y-4 max-w-2xl mx-auto text-left">
                   <div className="text-base leading-relaxed">
-                    <p className="text-foreground font-medium">đź›’ Nakupujete u partnerskĂ˝ch e-shopĹŻ</p>
-                    <p className="text-muted-foreground mt-1">Za nĂˇkup u zapojenĂ˝ch e-shopĹŻ mĹŻĹľete zĂ­skat digitĂˇlnĂ­ kredity MioCoiny jako marketingovou odmÄ›nu.</p>
+                    <p className="text-foreground font-medium">{'Nakupujete u partnersk?ch e-shop?'}</p>
+                    <p className="text-muted-foreground mt-1">{'Za n?kup u zapojen?ch e-shop? m??ete z?skat digit?ln? kredity MioCoiny jako marketingovou odm?nu.'}</p>
                   </div>
                   <div className="text-base leading-relaxed">
-                    <p className="text-foreground font-medium">đź’Ž ZĂ­skĂˇvĂˇte MioCoiny za nĂˇkup</p>
-                    <p className="text-muted-foreground mt-1">PoÄŤet MioCoinĹŻ se odvĂ­jĂ­ od hodnoty nĂˇkupu nebo konkrĂ©tnĂ­ch produktĹŻ â€“ vĹľdy podle pravidel danĂ©ho e-shopu.</p>
+                    <p className="text-foreground font-medium">{'Z?sk?v?te MioCoiny za n?kup'}</p>
+                    <p className="text-muted-foreground mt-1">{'Po?et MioCoin? se odv?j? od hodnoty n?kupu nebo konkr?tn?ch produkt? ? v?dy podle pravidel dan?ho e-shopu.'}</p>
                   </div>
                   <div className="text-base leading-relaxed">
-                    <p className="text-foreground font-medium">đźŽź MioCoiny vyuĹľijete k ĂşÄŤasti v soutÄ›ĹľĂ­ch</p>
-                    <p className="text-muted-foreground mt-1">MioCoiny slouĹľĂ­ vĂ˝hradnÄ› k ĂşÄŤasti ve spotĹ™ebitelskĂ˝ch soutÄ›ĹľĂ­ch o vÄ›cnĂ© ceny v aplikaci OneMil.</p>
+                    <p className="text-foreground font-medium">{'MioCoiny vyu?ijete k ??asti v sout???ch'}</p>
+                    <p className="text-muted-foreground mt-1">{'MioCoiny slou?? v?hradn? k ??asti ve spot?ebitelsk?ch sout???ch o v?cn? ceny v aplikaci OneMil.'}</p>
                   </div>
                   <div className="text-base leading-relaxed">
-                    <p className="text-foreground font-medium">đźŹ† Hrajete o luxusnĂ­ vÄ›cnĂ© ceny</p>
-                    <p className="text-muted-foreground mt-1">SoutÄ›Ĺľe probĂ­hajĂ­ o ceny jako auta, dovolenĂ©, elektroniku nebo jinĂ© hodnotnĂ© vÄ›cnĂ© vĂ˝hry.</p>
+                    <p className="text-foreground font-medium">{'Hrajete o luxusn? v?cn? ceny'}</p>
+                    <p className="text-muted-foreground mt-1">{'Sout??e prob?haj? o ceny jako auta, dovolen?, elektroniku nebo jin? hodnotn? v?cn? v?hry.'}</p>
                   </div>
                 </div>
                 <div className="text-xs text-muted-foreground/70 max-w-2xl mx-auto pt-2 space-y-0.5">
-                  <p>MioCoiny nejsou penĂ­ze a nelze je vybrat.</p>
-                  <p>SoutÄ›Ĺľe majĂ­ pĹ™edem urÄŤenĂ© vĂ˝hernĂ­ pozice.</p>
-                  <p>VĂ˝hry jsou vĂ˝hradnÄ› vÄ›cnĂ©.</p>
+                  <p>{'MioCoiny nejsou pen?ze a nelze je vybrat.'}</p>
+                  <p>{'Sout??e maj? p?edem ur?en? v?hern? pozice.'}</p>
+                  <p>{'V?hry jsou v?hradn? v?cn?.'}</p>
                 </div>
               </div>
             </div>
