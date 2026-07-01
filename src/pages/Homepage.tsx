@@ -516,11 +516,11 @@ const Homepage = () => {
       </section>
 
       {/* Page content — constrained container */}
-      <div className="container mx-auto px-4 py-8 space-y-8">
+      <div className="homepage-light-content container mx-auto px-4 py-8 space-y-8">
         {/* Coin Top-up Section */}
         <section className="w-full overflow-x-hidden grid grid-cols-1 lg:grid-cols-2 gap-4">
           {/* Left Column - Dobijte si MioCoiny */}
-          <Card className="rounded-xl overflow-hidden bg-[hsl(220_45%_6%)] border border-[rgba(255,138,0,0.2)] shadow-[0_4px_16px_hsl(222_50%_3%/0.5)] h-full">
+          <Card className="homepage-light-panel rounded-xl overflow-hidden bg-[hsl(220_45%_6%)] border border-[rgba(255,138,0,0.2)] shadow-[0_4px_16px_hsl(222_50%_3%/0.5)] h-full">
             <CardContent className="p-5 h-full flex flex-col">
               <div className="space-y-4 flex-1 flex flex-col">
                 <div className="space-y-2">
@@ -534,7 +534,7 @@ const Homepage = () => {
                 {/* Coin Packages Grid */}
                 <div className="grid grid-cols-2 md:grid-cols-4 gap-3 flex-1">
                   {/* Package 50 Kč → 50 MC */}
-                  <div className="rounded-xl w-full min-h-[160px] bg-[hsl(220_45%_6%)] border-2 border-package-blue/30 flex flex-col shadow-[inset_0_1px_12px_hsl(var(--package-blue)/0.08)] overflow-hidden">
+                  <div className="homepage-light-tile rounded-xl w-full min-h-[160px] bg-[hsl(220_45%_6%)] border-2 border-package-blue/30 flex flex-col shadow-[inset_0_1px_12px_hsl(var(--package-blue)/0.08)] overflow-hidden">
                     {/* Top area: image or fallback text */}
                     <div className="flex-1 min-h-0 flex flex-col items-center justify-center overflow-hidden">
                       {placementBanners.miocoin_50?.image_url ? (
@@ -567,7 +567,7 @@ const Homepage = () => {
                   {/* Package 300 Kč → 310 MC (+10 Bonus) */}
                   <div className="relative z-20 overflow-visible h-full">
                     <Badge className="absolute -top-2 -right-2 bg-package-gold/90 text-black text-xs font-medium z-50 pointer-events-none">+10 Bonus</Badge>
-                    <div className="rounded-xl w-full h-full min-h-[160px] bg-[hsl(220_45%_6%)] border-2 border-package-gold/30 flex flex-col shadow-[inset_0_1px_12px_hsl(var(--package-gold)/0.08)] overflow-hidden">
+                    <div className="homepage-light-tile rounded-xl w-full h-full min-h-[160px] bg-[hsl(220_45%_6%)] border-2 border-package-gold/30 flex flex-col shadow-[inset_0_1px_12px_hsl(var(--package-gold)/0.08)] overflow-hidden">
                       {/* Top area: image or fallback text */}
                       <div className="flex-1 min-h-0 flex flex-col items-center justify-center overflow-hidden">
                         {placementBanners.miocoin_310?.image_url ? (
@@ -601,7 +601,7 @@ const Homepage = () => {
                   {/* Package 500 Kč → 525 MC (+25 Bonus) */}
                   <div className="relative z-20 overflow-visible h-full">
                     <Badge className="absolute -top-2 -right-2 bg-package-purple/90 text-white text-xs font-medium z-50 pointer-events-none">+25 Bonus</Badge>
-                    <div className="rounded-xl w-full h-full min-h-[160px] bg-[hsl(220_45%_6%)] border-2 border-package-purple/30 flex flex-col shadow-[inset_0_1px_12px_hsl(var(--package-purple)/0.08)] overflow-hidden">
+                    <div className="homepage-light-tile rounded-xl w-full h-full min-h-[160px] bg-[hsl(220_45%_6%)] border-2 border-package-purple/30 flex flex-col shadow-[inset_0_1px_12px_hsl(var(--package-purple)/0.08)] overflow-hidden">
                       {/* Top area: image or fallback text */}
                       <div className="flex-1 min-h-0 flex flex-col items-center justify-center overflow-hidden">
                         {placementBanners.miocoin_525?.image_url ? (
@@ -635,7 +635,7 @@ const Homepage = () => {
                   {/* Package 1200 Kč → 1280 MC (+80 Bonus) */}
                   <div className="relative z-20 overflow-visible h-full">
                     <Badge className="absolute -top-2 -right-2 bg-package-green/90 text-white text-xs font-medium z-50 pointer-events-none">+80 Bonus</Badge>
-                    <div className="rounded-xl w-full h-full min-h-[160px] bg-[hsl(220_45%_6%)] border-2 border-package-green/30 flex flex-col shadow-[inset_0_1px_12px_hsl(var(--package-green)/0.08)] overflow-hidden">
+                    <div className="homepage-light-tile rounded-xl w-full h-full min-h-[160px] bg-[hsl(220_45%_6%)] border-2 border-package-green/30 flex flex-col shadow-[inset_0_1px_12px_hsl(var(--package-green)/0.08)] overflow-hidden">
                       {/* Top area: image or fallback text */}
                       <div className="flex-1 min-h-0 flex flex-col items-center justify-center overflow-hidden">
                         {placementBanners.miocoin_1280?.image_url ? (
@@ -671,7 +671,7 @@ const Homepage = () => {
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mt-3">
                   {/* Box 1: Probíhající soutěže */}
                   <div
-                    className="rounded-xl p-4 min-h-[88px] md:min-h-[96px] bg-[hsl(220_45%_6%)] border-2 border-[rgba(255,138,0,0.3)] cursor-pointer hover:border-[rgba(255,138,0,0.5)] transition-all duration-200 flex flex-col items-center justify-center text-center shadow-[inset_0_1px_12px_rgba(255,138,0,0.05)] relative overflow-hidden"
+                    className="homepage-light-tile rounded-xl p-4 min-h-[88px] md:min-h-[96px] bg-[hsl(220_45%_6%)] border-2 border-[rgba(255,138,0,0.3)] cursor-pointer hover:border-[rgba(255,138,0,0.5)] transition-all duration-200 flex flex-col items-center justify-center text-center shadow-[inset_0_1px_12px_rgba(255,138,0,0.05)] relative overflow-hidden"
                     onClick={() => navigate("/games")}
                   >
                     {placementBanners.probihajici_souteze?.image_url && (
@@ -691,7 +691,7 @@ const Homepage = () => {
 
                   {/* Box 2: Koupit voucher se slevou */}
                   <div
-                    className="rounded-xl p-4 min-h-[88px] md:min-h-[96px] bg-[hsl(220_45%_6%)] border-2 border-rose-400/30 cursor-pointer hover:border-rose-400/50 transition-all duration-200 flex flex-col items-center justify-center text-center shadow-[inset_0_1px_12px_hsl(350_60%_50%/0.06)] relative overflow-hidden"
+                    className="homepage-light-tile rounded-xl p-4 min-h-[88px] md:min-h-[96px] bg-[hsl(220_45%_6%)] border-2 border-rose-400/30 cursor-pointer hover:border-rose-400/50 transition-all duration-200 flex flex-col items-center justify-center text-center shadow-[inset_0_1px_12px_hsl(350_60%_50%/0.06)] relative overflow-hidden"
                     onClick={() => navigate("/vouchers")}
                   >
                     {placementBanners.koupit_voucher?.image_url && (
@@ -714,7 +714,7 @@ const Homepage = () => {
           </Card>
 
           {/* Right Column - Poslední výherci */}
-          <Card className="rounded-xl overflow-hidden bg-[hsl(220_45%_6%)] border border-[rgba(255,138,0,0.2)] shadow-[0_4px_16px_hsl(222_50%_3%/0.5)] h-full relative">
+          <Card className="homepage-light-panel rounded-xl overflow-hidden bg-[hsl(220_45%_6%)] border border-[rgba(255,138,0,0.2)] shadow-[0_4px_16px_hsl(222_50%_3%/0.5)] h-full relative">
             <CardContent className="p-5 h-full flex flex-col relative z-10">
               <div className="space-y-4 flex-1 flex flex-col">
                 <div className="space-y-2">
@@ -729,7 +729,7 @@ const Homepage = () => {
                   {winnersLoading ? (
                     // Loading placeholders
                     Array.from({ length: 3 }).map((_, index) => (
-                      <div key={index} className="rounded-xl h-[112px] animate-pulse" style={{ background: 'hsl(220 45% 6%)', border: '1px solid rgba(255,138,0,0.15)' }} />
+                      <div key={index} className="rounded-xl h-[112px] animate-pulse" style={{ background: '#f1f5f9', border: '1px solid rgba(15,23,42,0.08)' }} />
                     ))
                   ) : !latestWinners || latestWinners.length === 0 ? (
                     <div className="text-center py-12 space-y-3">
@@ -936,7 +936,7 @@ const Homepage = () => {
             ) : contests.length === 0 ? (
               // No contests message
               <div className="flex-none w-72">
-                <Card className="coupon-card border-[rgba(255,138,0,0.4)] bg-gradient-to-b from-[hsl(220_35%_8%)] to-[hsl(220_30%_5%)] relative overflow-hidden h-full">
+                <Card className="homepage-light-panel coupon-card border-[rgba(255,138,0,0.4)] bg-gradient-to-b from-[hsl(220_35%_8%)] to-[hsl(220_30%_5%)] relative overflow-hidden h-full">
                   <div className="absolute left-0 top-1/2 transform -translate-y-1/2 w-4 h-4 bg-background rounded-full -translate-x-2" />
                   <div className="absolute right-0 top-1/2 transform -translate-y-1/2 w-4 h-4 bg-background rounded-full translate-x-2" />
                   <CardHeader className="pb-2">
@@ -1026,7 +1026,7 @@ const Homepage = () => {
             {vouchersLoading ? (
               // Loading placeholder
               <div className="flex-none w-80">
-                <Card className="relative overflow-hidden rounded-2xl border border-primary/15 bg-card/40 h-full">
+                <Card className="homepage-light-panel relative overflow-hidden rounded-2xl border border-primary/15 bg-card/40 h-full">
                   <CardContent className="p-6 space-y-4">
                     <div className="h-6 bg-muted rounded animate-pulse mb-2" />
                     <div className="h-4 bg-muted/70 rounded animate-pulse w-24" />
@@ -1038,7 +1038,7 @@ const Homepage = () => {
             ) : homepageVouchers.length === 0 ? (
               // No vouchers message
               <div className="flex-none w-80">
-                <Card className="relative overflow-hidden rounded-2xl border border-primary/15 bg-card/40 h-full">
+                <Card className="homepage-light-panel relative overflow-hidden rounded-2xl border border-primary/15 bg-card/40 h-full">
                   <CardContent className="p-6 space-y-2 text-center">
                     <h3 className="text-xl font-bold text-primary">Žádné dostupné vouchery</h3>
                     <div className="text-sm text-muted-foreground">Momentálně nejsou k dispozici žádné veřejné vouchery.</div>
@@ -1113,7 +1113,7 @@ const Homepage = () => {
               partners.map((partner) => (
                 <div
                   key={partner.id}
-                  className="voucher-card-glow aspect-square bg-gradient-to-b from-[hsl(220_35%_8%)] via-[hsl(220_30%_6%)] to-[hsl(220_25%_4%)] border-[3px] border-[rgba(255,138,0,0.35)] rounded-[20px] overflow-hidden cursor-pointer transition-all duration-300 hover:border-[rgba(255,138,0,0.55)] hover:shadow-[0_0_12px_rgba(255,138,0,0.2)] hover:scale-[1.02] shadow-[0_4px_16px_hsl(222_50%_3%/0.5)] group"
+                  className="homepage-light-logo-card voucher-card-glow aspect-square bg-gradient-to-b from-[hsl(220_35%_8%)] via-[hsl(220_30%_6%)] to-[hsl(220_25%_4%)] border-[3px] border-[rgba(255,138,0,0.35)] rounded-[20px] overflow-hidden cursor-pointer transition-all duration-300 hover:border-[rgba(255,138,0,0.55)] hover:shadow-[0_0_12px_rgba(255,138,0,0.2)] hover:scale-[1.02] shadow-[0_4px_16px_hsl(222_50%_3%/0.5)] group"
                   onClick={() => window.open(partner.website_url, "_blank")}
                 >
                   <div className="w-full h-full p-5 flex items-center justify-center relative">
@@ -1182,7 +1182,7 @@ const Homepage = () => {
             {comingSoonLoading ? (
               // Loading placeholder
               Array.from({ length: 3 }).map((_, index) => (
-                <Card key={index} className="coming-soon-card-glow relative overflow-hidden rounded-[20px] bg-gradient-to-b from-[hsl(220_35%_8%)] via-[hsl(220_30%_6%)] to-[hsl(220_25%_4%)] border-[2px] border-[rgba(255,138,0,0.4)] shadow-[0_4px_16px_hsl(222_50%_3%/0.5)] transition-transform duration-300 hover:scale-[1.02]">
+                <Card key={index} className="homepage-light-panel coming-soon-card-glow relative overflow-hidden rounded-[20px] bg-gradient-to-b from-[hsl(220_35%_8%)] via-[hsl(220_30%_6%)] to-[hsl(220_25%_4%)] border-[2px] border-[rgba(255,138,0,0.4)] shadow-[0_4px_16px_hsl(222_50%_3%/0.5)] transition-transform duration-300 hover:scale-[1.02]">
                   <CardContent className="p-0">
                     <div className="aspect-video rounded-lg overflow-hidden bg-muted/20 animate-pulse" />
                   </CardContent>
@@ -1191,7 +1191,7 @@ const Homepage = () => {
             ) : comingSoonBanners.length === 0 ? (
               // Placeholder cards when empty
               Array.from({ length: 3 }).map((_, index) => (
-                <Card key={index} className="coming-soon-card-glow relative overflow-hidden rounded-[20px] bg-gradient-to-b from-[hsl(220_35%_8%)] via-[hsl(220_30%_6%)] to-[hsl(220_25%_4%)] border-[2px] border-[rgba(255,138,0,0.4)] shadow-[0_4px_16px_hsl(222_50%_3%/0.5)] transition-transform duration-300 hover:scale-[1.02]">
+                <Card key={index} className="homepage-light-panel coming-soon-card-glow relative overflow-hidden rounded-[20px] bg-gradient-to-b from-[hsl(220_35%_8%)] via-[hsl(220_30%_6%)] to-[hsl(220_25%_4%)] border-[2px] border-[rgba(255,138,0,0.4)] shadow-[0_4px_16px_hsl(222_50%_3%/0.5)] transition-transform duration-300 hover:scale-[1.02]">
                   <CardContent className="p-0">
                     <div className="aspect-video rounded-lg overflow-hidden bg-muted/20 flex items-center justify-center">
                       <div className="text-center text-muted-foreground">
@@ -1203,7 +1203,7 @@ const Homepage = () => {
               ))
             ) : (
               comingSoonBanners.map((banner) => (
-                <Card key={banner.id} className="coming-soon-card-glow relative overflow-hidden rounded-[20px] bg-gradient-to-b from-[hsl(220_35%_8%)] via-[hsl(220_30%_6%)] to-[hsl(220_25%_4%)] border-[2px] border-[rgba(255,138,0,0.4)] shadow-[0_4px_16px_hsl(222_50%_3%/0.5)] transition-transform duration-300 hover:scale-[1.02]">
+                <Card key={banner.id} className="homepage-light-panel coming-soon-card-glow relative overflow-hidden rounded-[20px] bg-gradient-to-b from-[hsl(220_35%_8%)] via-[hsl(220_30%_6%)] to-[hsl(220_25%_4%)] border-[2px] border-[rgba(255,138,0,0.4)] shadow-[0_4px_16px_hsl(222_50%_3%/0.5)] transition-transform duration-300 hover:scale-[1.02]">
                   <CardContent className="p-0">
                     <div className="relative aspect-video rounded-lg overflow-hidden bg-muted/40">
                       <img

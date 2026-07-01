@@ -359,6 +359,58 @@
     0 10px 24px rgba(255, 138, 0, 0.12);
 }
 
+.public-customer-theme .homepage-light-content {
+  color: #111827;
+}
+
+.public-customer-theme .homepage-light-content .text-heading-gold {
+  background: none;
+  color: #f97316;
+  -webkit-text-fill-color: currentColor;
+}
+
+.public-customer-theme .homepage-light-content .text-text-silver,
+.public-customer-theme .homepage-light-content .text-content-silver {
+  color: #334155;
+}
+
+.public-customer-theme .homepage-light-content .text-muted-foreground {
+  color: #64748b;
+}
+
+.public-customer-theme .homepage-light-content .homepage-light-panel {
+  background: #ffffff;
+  border: 1px solid rgba(15, 23, 42, 0.1);
+  box-shadow: 0 14px 38px rgba(15, 23, 42, 0.08);
+}
+
+.public-customer-theme .homepage-light-content .homepage-light-tile {
+  background: #f8fafc;
+  border-color: rgba(255, 138, 0, 0.22);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.8), 0 8px 22px rgba(15, 23, 42, 0.05);
+}
+
+.public-customer-theme .homepage-light-content .homepage-light-logo-card {
+  background: #ffffff;
+  border: 1px solid rgba(15, 23, 42, 0.1);
+  box-shadow: 0 12px 28px rgba(15, 23, 42, 0.08);
+}
+
+.public-customer-theme .homepage-light-content .homepage-light-logo-card:hover {
+  border-color: rgba(255, 138, 0, 0.38);
+  box-shadow: 0 16px 34px rgba(255, 138, 0, 0.12);
+}
+
+.public-customer-theme .homepage-light-content .homepage-light-panel h3,
+.public-customer-theme .homepage-light-content .homepage-light-panel h4 {
+  color: #111827;
+}
+
+.public-customer-theme .homepage-light-content .homepage-light-panel .bg-muted\/20,
+.public-customer-theme .homepage-light-content .homepage-light-panel .bg-muted\/40 {
+  background-color: rgba(226, 232, 240, 0.75);
+}
+
 /* Luxury Glow Effects */
 @layer utilities {
   .glow-blue {
