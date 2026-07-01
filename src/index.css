@@ -135,6 +135,33 @@
     --glow-red: 0 0 20px hsl(var(--neon-red) / 0.4), 0 0 40px hsl(var(--neon-red) / 0.2);
     --mystery-shadow: 0 0 32px hsl(var(--neon-blue) / 0.2), inset 0 0 24px hsl(var(--background) / 0.15);
   }
+
+  .public-customer-theme {
+    --background: 0 0% 100%;
+    --foreground: 222 30% 9%;
+    --card: 0 0% 100%;
+    --card-foreground: 222 30% 9%;
+    --popover: 0 0% 100%;
+    --popover-foreground: 222 30% 9%;
+    --primary: 33 100% 50%;
+    --primary-foreground: 0 0% 7%;
+    --secondary: 33 100% 50%;
+    --secondary-foreground: 0 0% 7%;
+    --muted: 220 18% 96%;
+    --muted-foreground: 220 9% 42%;
+    --accent: 33 100% 50%;
+    --accent-foreground: 0 0% 7%;
+    --border: 220 14% 90%;
+    --input: 220 14% 90%;
+    --ring: 33 100% 50%;
+    --heading-gold: 33 100% 50%;
+    --text-silver: 222 30% 12%;
+    --text-muted-gray: 220 9% 42%;
+    color: hsl(var(--foreground));
+    background:
+      radial-gradient(circle at 50% 0%, rgba(255, 138, 0, 0.08), transparent 34rem),
+      linear-gradient(180deg, #ffffff 0%, #f7f8fb 100%);
+  }
 }
 
 @layer base {
@@ -266,6 +293,70 @@
       overscroll-behavior: contain;
     }
   }
+}
+
+.public-customer-theme .public-customer-header {
+  background: rgba(255, 255, 255, 0.88);
+  border-bottom: 1px solid rgba(15, 23, 42, 0.08);
+  box-shadow: 0 8px 30px rgba(15, 23, 42, 0.06);
+}
+
+.public-customer-theme .public-customer-header-link {
+  color: #111827;
+}
+
+.public-customer-theme .public-customer-header-link:hover {
+  color: #ff8a00;
+  background: rgba(255, 138, 0, 0.08);
+}
+
+.public-customer-theme .public-customer-header-outline {
+  color: #111827;
+  background: #ffffff;
+  border-color: rgba(15, 23, 42, 0.14);
+}
+
+.public-customer-theme .public-customer-header-outline:hover {
+  color: #111827;
+  border-color: rgba(255, 138, 0, 0.4);
+  background: rgba(255, 138, 0, 0.08);
+}
+
+.public-customer-theme .public-customer-header-primary {
+  color: #111111;
+  background: linear-gradient(135deg, #ff8a00 0%, #ffb547 100%);
+  border: 0;
+  box-shadow: 0 8px 20px rgba(255, 138, 0, 0.18);
+}
+
+.public-customer-theme .public-customer-header-primary:hover {
+  filter: brightness(1.03);
+}
+
+.public-customer-theme .public-customer-bottom-nav {
+  background: rgba(255, 255, 255, 0.94);
+  border-top: 1px solid rgba(15, 23, 42, 0.08);
+  box-shadow: 0 -8px 28px rgba(15, 23, 42, 0.08);
+  backdrop-filter: blur(18px);
+}
+
+.public-customer-theme .public-customer-bottom-nav-item {
+  color: rgba(17, 24, 39, 0.62);
+}
+
+.public-customer-theme .public-customer-bottom-nav-item:hover {
+  color: #111827;
+  background: rgba(255, 138, 0, 0.08);
+}
+
+.public-customer-theme .public-customer-bottom-nav-item[aria-current="page"] {
+  color: #111827;
+  background: rgba(255, 138, 0, 0.12);
+  --tw-ring-color: rgba(255, 138, 0, 0.32);
+  --tw-ring-offset-color: #ffffff;
+  box-shadow:
+    0 0 0 1px rgba(255, 138, 0, 0.28),
+    0 10px 24px rgba(255, 138, 0, 0.12);
 }
 
 /* Luxury Glow Effects */

@@ -574,12 +574,27 @@ function AppContent() {
     return <BottomNavigation />;
   };
 
+  const isPublicCustomerThemeRoute =
+    !location.pathname.startsWith('/admin') &&
+    !location.pathname.startsWith('/partner') &&
+    !location.pathname.startsWith('/affiliate') &&
+    !location.pathname.startsWith('/influencer');
+
+  const layoutClassName = [
+    isPartnerAccount ? 'partner-layout' : 'customer-layout',
+    !isPartnerAccount && !isAffiliateAccount && isPublicCustomerThemeRoute
+      ? 'public-customer-theme'
+      : '',
+  ]
+    .filter(Boolean)
+    .join(' ');
+
   return (
     <DateOfBirthGuard>
       <GlobalMusicPlayer />
       <GlobalWinnersRealtimeFeed />
       {/* Main app layout wrapper - applies different UI based on accountType */}
-      <div className={isPartnerAccount ? 'partner-layout' : 'customer-layout'}>
+      <div className={layoutClassName}>
         {/* Partner header - only visible for partner accounts on partner routes */}
         {renderPartnerHeader()}
         
