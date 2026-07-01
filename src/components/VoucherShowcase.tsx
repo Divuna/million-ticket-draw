@@ -85,7 +85,7 @@ export const VoucherShowcaseCard: React.FC<VoucherShowcaseCardProps> = ({
     <Card
       className={cn(
         'voucher-card-glow relative overflow-hidden rounded-[20px] border-[3px] border-[rgba(255,138,0,0.35)] shadow-[0_4px_20px_hsl(220_50%_3%/0.6)] transition-all duration-300 hover:border-[rgba(255,138,0,0.55)] hover:shadow-[0_0_16px_rgba(255,138,0,0.2)] hover:scale-[1.02]',
-        'aspect-[16/9] min-h-[17rem] cursor-pointer',
+        'aspect-[16/9] min-h-0 cursor-pointer',
         className,
       )}
       onClick={onDetail}
