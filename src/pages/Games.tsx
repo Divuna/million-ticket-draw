@@ -409,7 +409,7 @@ const Index = () => {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-background dark">
+      <div className="min-h-screen bg-background">
         <Header />
         <div className="container mx-auto px-4 py-8">
           <div className="text-center text-muted-foreground">Načítání soutěží...</div>
@@ -419,17 +419,12 @@ const Index = () => {
   }
 
   return (
-    <div className="min-h-screen bg-background dark pb-20">
+    <div className="min-h-screen bg-background pb-20">
       <Header />
       <div className="container mx-auto px-4 py-8 space-y-8">
         {/* Premium Header Card */}
         <div
-          className="relative overflow-hidden rounded-2xl p-6"
-          style={{
-            background: 'linear-gradient(135deg, hsl(220, 25%, 8%) 0%, hsl(220, 30%, 12%) 50%, hsl(220, 25%, 8%) 100%)',
-            border: '1px solid rgba(255,138,0,0.2)',
-            boxShadow: '0 8px 32px rgba(0,0,0,0.4), inset 0 1px 0 rgba(255,138,0,0.1)',
-          }}
+          className="relative overflow-hidden rounded-2xl border border-slate-200 bg-white p-6 shadow-[0_14px_38px_rgba(15,23,42,0.08)]"
         >
           <div
             className="absolute inset-0 opacity-10 pointer-events-none"
@@ -463,7 +458,7 @@ const Index = () => {
                 >
                   Soutěže
                 </h1>
-                <p className="text-sm text-gray-400 mt-1">Vyberte si soutěž a otevřete další tiket v pořadí.</p>
+                <p className="text-sm text-slate-600 mt-1">Vyberte si soutěž a otevřete další tiket v pořadí.</p>
               </div>
             </div>
             {(() => {
@@ -473,7 +468,7 @@ const Index = () => {
               );
               return (
                 <Button
-                  className="bg-primary hover:brightness-110 text-primary-foreground font-bold px-4 py-2 md:px-6 md:py-3 rounded-xl shadow-[0_0_12px_hsl(var(--primary)/0.35)] transition-all duration-200 shrink-0"
+                  className="bg-primary hover:brightness-110 text-primary-foreground font-bold px-4 py-2 md:px-6 md:py-3 rounded-xl shadow-[0_8px_20px_rgba(255,138,0,0.18)] transition-all duration-200 shrink-0"
                   onClick={() => navigate('/favorite-games')}
                 >
                   <OneMilHeartIcon size={20} className="w-5 h-5 mr-2" />
@@ -502,6 +497,7 @@ const Index = () => {
               ticketsTotal={progressMap[contest.id]?.tickets_total ?? 1_000_000}
               walletBalance={walletBalance}
               hideTitleAndCount
+              className="customer-games-contest-card"
             />
           ))}
         </div>
@@ -509,7 +505,7 @@ const Index = () => {
         {contests.length === 0 && (
           <div className="text-center py-16 space-y-4">
             <OneMilTrophyIcon size={64} className="w-16 h-16 mx-auto text-[rgba(255,138,0,0.45)]" />
-            <h3 className="text-xl font-bold text-[#E7EBF0]" style={{ fontFamily: 'var(--om-font-heading)' }}>Žádné soutěže</h3>
+            <h3 className="text-xl font-bold text-slate-900" style={{ fontFamily: 'var(--om-font-heading)' }}>Žádné soutěže</h3>
             <p className="text-sm text-muted-foreground">Momentálně nejsou dostupné žádné soutěže.</p>
           </div>
         )}
