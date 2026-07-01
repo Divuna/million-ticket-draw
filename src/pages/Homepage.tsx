@@ -714,7 +714,7 @@ const Homepage = () => {
           </Card>
 
           {/* Right Column - Poslední výherci */}
-          <Card className="homepage-light-panel rounded-xl overflow-hidden bg-[hsl(220_45%_6%)] border border-[rgba(255,138,0,0.2)] shadow-[0_4px_16px_hsl(222_50%_3%/0.5)] h-full relative">
+          <Card className="homepage-light-panel homepage-latest-winners-panel rounded-xl overflow-hidden bg-[hsl(220_45%_6%)] border border-[rgba(255,138,0,0.2)] shadow-[0_4px_16px_hsl(222_50%_3%/0.5)] h-full relative">
             <CardContent className="p-5 h-full flex flex-col relative z-10">
               <div className="space-y-4 flex-1 flex flex-col">
                 <div className="space-y-2">
@@ -753,6 +753,7 @@ const Homepage = () => {
                           cardStyleImageUrl={WINNER_BG_ROTATION[index % WINNER_BG_ROTATION.length]}
                           userAvatarUrl={winner.user_avatar_url}
                           ticketNumber={winner.ticket_number}
+                          variant="champagne"
                         />
                       ))
                   )}
