@@ -56,6 +56,10 @@ const Vouchers: React.FC = () => {
     redeemed_count: number;
     start_date: string | null;
     end_date: string | null;
+    short_description?: string | null;
+    usage_description?: string | null;
+    terms_text?: string | null;
+    how_to_use_text?: string | null;
   } | null>(null);
 
   // Separate user vouchers into favorites (redeemed=false) and purchased (redeemed=true)
@@ -71,6 +75,10 @@ const Vouchers: React.FC = () => {
     redeemed_count: 0,
     start_date: null,
     end_date: null,
+    short_description: userVoucher.voucher?.short_description ?? null,
+    usage_description: userVoucher.voucher?.usage_description ?? null,
+    terms_text: userVoucher.voucher?.terms_text ?? null,
+    how_to_use_text: userVoucher.voucher?.how_to_use_text ?? null,
   });
 
   const isFavoriteVoucher = (voucherId: string) => {
@@ -118,7 +126,11 @@ const Vouchers: React.FC = () => {
         id: voucherData.id,
         name: voucherData.name,
         image_url: voucherData.image_url || '',
-        banner_url: voucherData.banner_url
+        banner_url: voucherData.banner_url,
+        short_description: voucherData.short_description,
+        usage_description: voucherData.usage_description,
+        terms_text: voucherData.terms_text,
+        how_to_use_text: voucherData.how_to_use_text,
       });
     }
 

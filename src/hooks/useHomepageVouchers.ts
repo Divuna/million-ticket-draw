@@ -10,6 +10,10 @@ interface HomepageVoucher {
   redeemed_count: number;
   start_date: string | null;
   end_date: string | null;
+  short_description: string | null;
+  usage_description: string | null;
+  terms_text: string | null;
+  how_to_use_text: string | null;
   user_id: string | null;
   is_public: boolean;
 }
@@ -26,7 +30,7 @@ export const useHomepageVouchers = () => {
       const { data, error } = await supabase
         .from("vouchers")
         .select(
-          "id, name, image_url, banner_url, max_quantity, redeemed_count, start_date, end_date, user_id, is_public",
+          "id, name, image_url, banner_url, max_quantity, redeemed_count, start_date, end_date, short_description, usage_description, terms_text, how_to_use_text, user_id, is_public",
         )
         .eq("is_public", true) // show public vouchers for everyone
         .order("created_at", { ascending: false });

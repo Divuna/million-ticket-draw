@@ -4120,6 +4120,7 @@ export type Database = {
           banner_url: string | null
           created_at: string
           end_date: string | null
+          how_to_use_text: string | null
           id: string
           image_url: string
           is_public: boolean
@@ -4127,14 +4128,18 @@ export type Database = {
           name: string
           redeem_price_vouchers: number
           redeemed_count: number
+          short_description: string | null
           start_date: string | null
+          terms_text: string | null
           updated_at: string | null
+          usage_description: string | null
           user_id: string | null
         }
         Insert: {
           banner_url?: string | null
           created_at?: string
           end_date?: string | null
+          how_to_use_text?: string | null
           id?: string
           image_url: string
           is_public?: boolean
@@ -4142,14 +4147,18 @@ export type Database = {
           name?: string
           redeem_price_vouchers?: number
           redeemed_count?: number
+          short_description?: string | null
           start_date?: string | null
+          terms_text?: string | null
           updated_at?: string | null
+          usage_description?: string | null
           user_id?: string | null
         }
         Update: {
           banner_url?: string | null
           created_at?: string
           end_date?: string | null
+          how_to_use_text?: string | null
           id?: string
           image_url?: string
           is_public?: boolean
@@ -4157,8 +4166,11 @@ export type Database = {
           name?: string
           redeem_price_vouchers?: number
           redeemed_count?: number
+          short_description?: string | null
           start_date?: string | null
+          terms_text?: string | null
           updated_at?: string | null
+          usage_description?: string | null
           user_id?: string | null
         }
         Relationships: [
