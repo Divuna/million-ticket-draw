@@ -404,32 +404,9 @@ const Index = () => {
   };
 
   if (!user) {
-    return (
-      <div className="games-light-page min-h-screen bg-background pb-24">
-        <Header />
-        <main className="container mx-auto flex min-h-[calc(100vh-88px)] items-center justify-center px-4 py-10">
-          <section className="relative w-full max-w-xl overflow-hidden rounded-2xl border border-slate-200 bg-white p-8 text-center shadow-[0_18px_44px_rgba(15,23,42,0.08)] md:p-10">
-            <div className="absolute inset-x-0 top-0 h-1 bg-gradient-to-r from-[#FF8A00] via-[#FFB547] to-[#FF8A00]" />
-            <div className="mx-auto mb-6 flex h-16 w-16 items-center justify-center rounded-2xl bg-gradient-to-br from-[#FF8A00] to-[#FFB547] shadow-[0_10px_24px_rgba(255,138,0,0.18)]">
-              <OneMilTrophyIcon size={34} className="h-8 w-8 text-black" />
-            </div>
-            <h1 className="mb-3 text-2xl font-bold text-slate-950 md:text-3xl" style={{ fontFamily: 'var(--om-font-heading)' }}>
-              Soutěže čekají po přihlášení
-            </h1>
-            <p className="mx-auto mb-7 max-w-md text-sm leading-6 text-slate-600 md:text-base">
-              Přihlaste se a otevřete si dostupné soutěže, oblíbené položky i další tikety v pořadí.
-            </p>
-            <Button
-              className="h-12 rounded-xl bg-primary px-8 text-base font-bold text-primary-foreground shadow-[0_10px_24px_rgba(255,138,0,0.18)] hover:brightness-110"
-              onClick={() => navigate('/login?redirect=/games')}
-            >
-              Přihlásit se
-            </Button>
-          </section>
-        </main>
-      </div>
-    );
+    return <LoggedOutScreen />;
   }
+
 
   if (loading) {
     return (
