@@ -1043,12 +1043,12 @@ const Homepage = () => {
               </div>
             ) : (
               homepageVouchers.map((voucher) => (
-                <div key={voucher.id} className="flex-none w-[32rem] max-w-[85vw]">
+                <div key={voucher.id} className="flex-shrink-0 w-80">
                   <VoucherShowcaseCard
                     voucher={voucher}
                     remainingLabel={typeof getRemainingCount(voucher) === 'number' ? `Zbývá: ${getRemainingCount(voucher)}` : null}
                     onDetail={() => setSelectedVoucher(voucher)}
-                    className="w-full"
+                    className="h-48 w-full aspect-auto"
                   />
                 </div>
               ))
