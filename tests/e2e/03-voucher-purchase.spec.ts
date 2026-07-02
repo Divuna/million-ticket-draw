@@ -23,30 +23,33 @@ test.describe('Voucher Purchase', () => {
     await expect(page.getByRole('tab', { name: /Zakoupené|Zak\./i })).toBeVisible();
   });
 
-  test('voucher buy button visible or empty-state shown', async ({ page }) => {
+  test('voucher detail button visible on available card', async ({ page }) => {
     await page.goto('/vouchers');
 
-    const buyButton = page.getByRole('button', { name: /KOUPIT ZA 5 MC/i }).first();
-    const emptyState = page.getByRole('heading', { name: 'Žádné dostupné vouchery' });
+    await expect(page.getByRole('heading', { name: 'Vouchery' })).toBeVisible({ timeout: 10_000 });
 
-    // Wait up to 15 s for either state: role loading (2 Supabase queries) +
-    // voucher loading (1 Supabase query) can exceed 3 s on a cold CI connection.
-    await expect(buyButton.or(emptyState)).toBeVisible({ timeout: 15_000 });
+    // New voucher UI is full-banner first. Purchase is no longer rendered on the card;
+    // the card exposes Detail and the purchase CTA is inside the detail modal.
+    const detailButton = page.getByRole('button', { name: /Detail/i }).first();
+    await expect(detailButton).toBeVisible({ timeout: 15_000 });
   });
 
-  test('clicking buy button produces success or error feedback', async ({ page }) => {
+  test('clicking detail purchase button produces success or error feedback', async ({ page }) => {
     await page.goto('/vouchers');
-    await page.waitForTimeout(3_000);
+    await expect(page.getByRole('heading', { name: 'Vouchery' })).toBeVisible({ timeout: 10_000 });
 
-    const buyButton = page.getByRole('button', { name: /KOUPIT ZA 5 MC/i }).first();
+    const detailButton = page.getByRole('button', { name: /Detail/i }).first();
+    await expect(detailButton).toBeVisible({ timeout: 15_000 });
+    await detailButton.click();
 
-    if (!(await buyButton.isVisible())) {
-      test.skip(true, 'No available vouchers in DB – skipping purchase attempt');
-    }
+    const dialog = page.getByRole('dialog');
+    await expect(dialog).toBeVisible({ timeout: 10_000 });
 
+    const buyButton = dialog.getByRole('button', { name: /Koupit za\s+5\s+MioCoin/i });
+    await expect(buyButton).toBeVisible({ timeout: 10_000 });
     await buyButton.click();
 
-    // Sonner toasts render as li[data-sonner-toast] or with role=status
+    // Sonner toasts render as li[data-sonner-toast] or with role=status/alert.
     const toast = page
       .locator('[data-sonner-toast]')
       .or(page.locator('[role="status"]'))
