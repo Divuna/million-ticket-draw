@@ -100,10 +100,11 @@ export const WinCard: React.FC<WinCardProps> = ({ win, onClick, className = '', 
   };
 
   const imageUrl = getImageUrl();
+  const isMioCoinImage = !isMainPrize && imageUrl === MIOCOIN_IMAGE_URL;
 
   return (
     <div 
-      className={`group relative rounded-xl overflow-hidden cursor-pointer transition-all duration-300 
+      className={`customer-win-card group relative rounded-xl overflow-hidden cursor-pointer transition-all duration-300
         bg-card border
         ${isMainPrize 
           ? 'border-amber-400/30 hover:border-amber-400/60 hover:shadow-lg hover:shadow-amber-500/10' 
@@ -118,12 +119,16 @@ export const WinCard: React.FC<WinCardProps> = ({ win, onClick, className = '', 
       }}
     >
       {/* Image section - 70% */}
-      <div className="relative h-56 overflow-hidden bg-muted">
+      <div className={`customer-win-card-media relative h-56 overflow-hidden bg-muted ${isMioCoinImage ? 'customer-win-card-media-mio' : ''}`}>
         {imageUrl ? (
           <img
             src={imageUrl}
             alt={win.contest?.title || 'Výhra'}
-            className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
+            className={`customer-win-card-image w-full h-full transition-transform duration-500 ${
+              isMioCoinImage
+                ? 'object-contain p-8 sm:p-9 group-hover:scale-[1.02]'
+                : 'object-cover group-hover:scale-105'
+            }`}
             loading="lazy"
             onError={(e) => {
               if (win.type === 'bonus' && e.currentTarget.src !== MIOCOIN_IMAGE_URL) {
@@ -146,6 +151,10 @@ export const WinCard: React.FC<WinCardProps> = ({ win, onClick, className = '', 
         {/* Subtle bottom fade for main prizes only */}
         {isMainPrize && (
           <div className="absolute bottom-0 left-0 right-0 h-12 bg-gradient-to-t from-black/20 to-transparent pointer-events-none" />
+        )}
+
+        {isMioCoinImage && (
+          <div className="customer-win-card-mio-glow absolute inset-0 pointer-events-none" />
         )}
 
         {/* Status badge - top right */}
