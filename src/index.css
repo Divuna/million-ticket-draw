@@ -549,6 +549,86 @@ body:has(.winners-light-page) {
     0 10px 24px -12px rgba(180, 130, 60, 0.18);
 }
 
+.public-customer-theme .homepage-light-content .homepage-miocoin-panel {
+  background:
+    radial-gradient(circle at 18% 0%, rgba(255, 181, 71, 0.14), transparent 18rem),
+    radial-gradient(circle at 92% 16%, rgba(226, 99, 5, 0.08), transparent 16rem),
+    linear-gradient(180deg, #ffffff 0%, #fffaf2 48%, #fbf3e6 100%) !important;
+  border: 1px solid rgba(200, 155, 80, 0.22) !important;
+  box-shadow:
+    0 28px 64px -28px rgba(180, 130, 60, 0.30),
+    0 10px 24px -16px rgba(15, 23, 42, 0.16),
+    inset 0 1px 0 rgba(255, 255, 255, 0.96) !important;
+}
+
+.public-customer-theme .homepage-light-content .homepage-miocoin-header {
+  padding-bottom: 1rem;
+  border-bottom: 1px solid rgba(200, 155, 80, 0.16);
+}
+
+.public-customer-theme .homepage-light-content .homepage-miocoin-package {
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.96) 0%, rgba(255, 250, 242, 0.96) 58%, rgba(248, 239, 224, 0.96) 100%) !important;
+  border: 1px solid rgba(200, 155, 80, 0.20) !important;
+  box-shadow:
+    0 18px 34px -22px rgba(120, 73, 24, 0.38),
+    inset 0 1px 0 rgba(255, 255, 255, 0.94) !important;
+  transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease;
+}
+
+.public-customer-theme .homepage-light-content .homepage-miocoin-package:hover {
+  transform: translateY(-2px);
+  border-color: rgba(226, 99, 5, 0.34) !important;
+  box-shadow:
+    0 22px 40px -24px rgba(226, 99, 5, 0.30),
+    0 8px 18px -18px rgba(15, 23, 42, 0.18),
+    inset 0 1px 0 rgba(255, 255, 255, 0.96) !important;
+}
+
+.public-customer-theme .homepage-light-content .homepage-miocoin-package img {
+  filter: saturate(0.94) contrast(0.98);
+}
+
+.public-customer-theme .homepage-light-content .homepage-miocoin-button {
+  color: #fffaf2 !important;
+  background: linear-gradient(135deg, #d95700 0%, #ee7a08 48%, #b85b05 100%) !important;
+  border: 1px solid rgba(184, 91, 5, 0.22) !important;
+  box-shadow:
+    0 12px 22px -16px rgba(226, 99, 5, 0.62),
+    inset 0 1px 0 rgba(255, 255, 255, 0.22) !important;
+}
+
+.public-customer-theme .homepage-light-content .homepage-miocoin-button:hover {
+  filter: brightness(1.03);
+  box-shadow:
+    0 16px 28px -18px rgba(226, 99, 5, 0.72),
+    inset 0 1px 0 rgba(255, 255, 255, 0.28) !important;
+}
+
+.public-customer-theme .homepage-light-content .homepage-miocoin-bonus {
+  color: #7c3b06 !important;
+  background: rgba(255, 250, 242, 0.94) !important;
+  border: 1px solid rgba(226, 99, 5, 0.22) !important;
+  box-shadow: 0 10px 22px -16px rgba(120, 73, 24, 0.42);
+  backdrop-filter: blur(10px);
+}
+
+.public-customer-theme .homepage-light-content .homepage-miocoin-link-tile {
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.95) 0%, rgba(255, 248, 237, 0.95) 100%) !important;
+  border: 1px solid rgba(200, 155, 80, 0.22) !important;
+  box-shadow:
+    0 14px 30px -22px rgba(120, 73, 24, 0.30),
+    inset 0 1px 0 rgba(255, 255, 255, 0.94) !important;
+}
+
+.public-customer-theme .homepage-light-content .homepage-miocoin-link-tile:hover {
+  border-color: rgba(226, 99, 5, 0.34) !important;
+  box-shadow:
+    0 18px 34px -22px rgba(226, 99, 5, 0.24),
+    inset 0 1px 0 rgba(255, 255, 255, 0.96) !important;
+}
+
 .public-customer-theme .homepage-light-content .homepage-light-logo-card {
   background: #ffffff;
   border: 1px solid rgba(200, 155, 80, 0.16);
