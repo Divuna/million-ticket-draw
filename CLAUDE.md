@@ -1,5 +1,9 @@
 # CLAUDE.md
 
+## PRACOVNÍ PRAVIDLO — VEŘEJNÝ ZÁKAZNICKÝ UI STYL (02. 07. 2026)
+
+Veřejná zákaznická část OneMil používá po PR #140–#155 light/champagne premium styl: světlý/champagne podklad, bílé nebo champagne karty, tmavý čitelný text, jemné šedobéžové okraje, měkké teplé stíny a oranžové/amber CTA. Další vizuální úpravy veřejných zákaznických stránek (`/`, `/games`, `/vouchers`, `/wins`, `/winners`, `/profile`, `/messages`, `/login` a logged-out stavy) mají navazovat na `public-customer-theme`. Admin, partner portál a affiliate/influencer část do tohoto stylu nepřevádět bez samostatného schválení.
+
 ## PRACOVNÍ PRAVIDLO — AKTIVNÍ POUŽÍVÁNÍ GITHUB / SUPABASE KONEKTORŮ (30. 06. 2026)
 
 ChatGPT / AI asistent musí **sám aktivně používat dostupné GitHub a Supabase konektory**, kdykoli úkol vyžaduje kontext repozitáře nebo databáze. **Neptat se Pavla, ať spouští SQL, stahuje GitHub soubory nebo ručně dodává data, pokud k nim má asistent přímý přístup.** U **destruktivních produkčních změn** si nejdřív vyžádat výslovné schválení.
