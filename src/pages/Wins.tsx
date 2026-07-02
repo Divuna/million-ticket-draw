@@ -436,15 +436,7 @@ const Wins: React.FC = () => {
               </div>
 
               <div>
-                <h1
-                  className="text-3xl font-bold tracking-tight"
-                  style={{
-                    background: 'linear-gradient(135deg, #FFB547 0%, #FF8A00 50%, #FFB547 100%)',
-                    WebkitBackgroundClip: 'text',
-                    WebkitTextFillColor: 'transparent',
-                    backgroundClip: 'text',
-                  }}
-                >
+                <h1 className="customer-premium-orange-heading text-3xl font-bold tracking-tight">
                   Moje výhry
                 </h1>
                 <p className="text-gray-400 mt-1">Přehled všech vašich výher</p>
@@ -642,15 +634,7 @@ const Wins: React.FC = () => {
                 >
                   <OneMilWinIcon size={48} className="w-12 h-12 text-[#FF8A00]/30" />
                 </div>
-                <h3
-                  className="text-2xl font-bold mb-3"
-                  style={{
-                    background: 'linear-gradient(135deg, #FFB547 0%, #FF8A00 100%)',
-                    WebkitBackgroundClip: 'text',
-                    WebkitTextFillColor: 'transparent',
-                    backgroundClip: 'text',
-                  }}
-                >
+                <h3 className="customer-premium-orange-heading text-2xl font-bold mb-3">
                   Zatím nemáte žádné výhry
                 </h3>
                 <p className="text-gray-400 text-lg">Kupte si tikety v soutěžích a vyhrajte skvělé ceny!</p>

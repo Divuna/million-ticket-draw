@@ -20,7 +20,7 @@ const Winners = () => {
         <section className="winners-light-panel space-y-6 p-5 md:p-6">
           {/* Header */}
           <div className="space-y-2">
-            <h1 className="text-3xl md:text-4xl font-bold text-heading-gold flex items-center gap-3">
+            <h1 className="customer-premium-orange-heading text-3xl md:text-4xl font-bold text-heading-gold flex items-center gap-3">
               <OneMilTrophyIcon size={32} className="w-8 h-8" />
               Poslední výherci
             </h1>

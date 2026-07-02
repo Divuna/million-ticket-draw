@@ -487,7 +487,10 @@ body:has(.winners-light-page) {
   -webkit-text-fill-color: currentColor;
 }
 
-.public-customer-theme .homepage-light-content .homepage-premium-orange-heading {
+.public-customer-theme .homepage-light-content .homepage-premium-orange-heading,
+.public-customer-theme .homepage-light-content .customer-premium-orange-heading,
+.public-customer-theme .winners-light-content .customer-premium-orange-heading,
+.public-customer-theme .customer-premium-orange-heading {
   color: #e26305;
   background: linear-gradient(115deg, #e45f00 0%, #f27f0c 42%, #b85b05 100%);
   background-clip: text;
@@ -500,7 +503,10 @@ body:has(.winners-light-page) {
     0 10px 22px rgba(226, 99, 5, 0.13);
 }
 
-.public-customer-theme .homepage-light-content .homepage-premium-orange-heading svg {
+.public-customer-theme .homepage-light-content .homepage-premium-orange-heading svg,
+.public-customer-theme .homepage-light-content .customer-premium-orange-heading svg,
+.public-customer-theme .winners-light-content .customer-premium-orange-heading svg,
+.public-customer-theme .customer-premium-orange-heading svg {
   filter:
     drop-shadow(0 1px 0 rgba(255, 255, 255, 0.48))
     drop-shadow(0 8px 14px rgba(226, 99, 5, 0.15));

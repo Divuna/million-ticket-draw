@@ -162,7 +162,7 @@ export default function ResetPassword() {
                 <div className="w-12 h-12 rounded-full bg-primary/10 flex items-center justify-center mb-2">
                   <Mail className="w-6 h-6 text-primary" />
                 </div>
-                <CardTitle className="text-heading-gold">Obnovení hesla</CardTitle>
+                <CardTitle className="customer-premium-orange-heading text-heading-gold">Obnovení hesla</CardTitle>
                 <CardDescription>
                   Zadejte e-mail k vašemu účtu. Pošleme vám odkaz pro nastavení nového hesla.
                 </CardDescription>
@@ -212,7 +212,7 @@ export default function ResetPassword() {
                 <div className="w-12 h-12 rounded-full bg-green-500/10 flex items-center justify-center mb-2">
                   <CheckCircle2 className="w-6 h-6 text-green-500" />
                 </div>
-                <CardTitle className="text-heading-gold">Zkontrolujte e-mail</CardTitle>
+                <CardTitle className="customer-premium-orange-heading text-heading-gold">Zkontrolujte e-mail</CardTitle>
                 <CardDescription>
                   Pokud u nás máte účet, poslali jsme vám odkaz pro nastavení nového hesla.
                 </CardDescription>
@@ -231,7 +231,7 @@ export default function ResetPassword() {
                 <div className="w-12 h-12 rounded-full bg-primary/10 flex items-center justify-center mb-2">
                   <KeyRound className="w-6 h-6 text-primary" />
                 </div>
-                <CardTitle className="text-heading-gold">Nastavte nové heslo</CardTitle>
+                <CardTitle className="customer-premium-orange-heading text-heading-gold">Nastavte nové heslo</CardTitle>
                 <CardDescription>
                   Zvolte nové heslo pro svůj zákaznický účet OneMil.
                 </CardDescription>

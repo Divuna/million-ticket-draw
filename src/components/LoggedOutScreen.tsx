@@ -153,14 +153,8 @@ export const LoggedOutScreen = () => {
 
           {/* Heading */}
           <h2
-            className="text-2xl md:text-3xl font-bold text-center leading-tight"
-            style={{
-              fontFamily: "'Poppins', system-ui, sans-serif",
-              background: 'linear-gradient(90deg, #E7EBF0 0%, #FFB547 55%, #FF8A00 100%)',
-              WebkitBackgroundClip: 'text',
-              WebkitTextFillColor: 'transparent',
-              backgroundClip: 'text',
-            }}
+            className="customer-premium-orange-heading text-2xl md:text-3xl font-bold text-center leading-tight"
+            style={{ fontFamily: "'Poppins', system-ui, sans-serif" }}
           >
             Děkujeme
           </h2>

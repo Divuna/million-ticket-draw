@@ -1125,7 +1125,7 @@ export default function ContestDetail() {
       {(contest.rules_pdf_url || (contest.rules && contest.rules.trim())) && (
         <section className="relative z-10 px-4 py-12 max-w-4xl mx-auto">
           <div className="rounded-2xl border border-white/10 bg-black/40 backdrop-blur-sm p-6 md:p-8">
-            <h2 className="text-2xl md:text-3xl font-bold mb-4 text-heading-gold">
+            <h2 className="customer-premium-orange-heading text-2xl md:text-3xl font-bold mb-4 text-heading-gold">
               Pravidla soutěže
             </h2>
             {contest.rules_pdf_url && (

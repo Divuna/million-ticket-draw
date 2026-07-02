@@ -716,12 +716,8 @@ const Profile: React.FC = () => {
             {/* Name + subtitle */}
             <div>
               <h1
-                className="text-2xl md:text-3xl font-bold tracking-tight"
-                style={{
-                  fontFamily: 'var(--om-font-heading)',
-                  background: 'linear-gradient(135deg, #FFB547 0%, #FF8A00 50%, #FFB547 100%)',
-                  WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', backgroundClip: 'text',
-                }}
+                className="customer-premium-orange-heading text-2xl md:text-3xl font-bold tracking-tight"
+                style={{ fontFamily: 'var(--om-font-heading)' }}
               >
                 {profile.nickname || profile.first_name || 'Můj profil'}
               </h1>

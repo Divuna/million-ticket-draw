@@ -144,7 +144,7 @@ const Login: React.FC = () => {
         />
         <Card className="w-full voucher-card-glow rounded-[20px] bg-gradient-to-b from-[hsl(220_30%_12%)] via-[hsl(220_28%_9%)] to-[hsl(222_35%_7%)] border-[2px] border-[rgba(255,181,71,0.22)] shadow-[0_28px_64px_rgba(104,78,48,0.34),0_10px_28px_rgba(255,181,71,0.10),inset_0_1px_0_rgba(255,181,71,0.07)]">
         <CardHeader>
-          <CardTitle className="text-heading-gold">Přihlášení</CardTitle>
+          <CardTitle className="customer-premium-orange-heading text-heading-gold">Přihlášení</CardTitle>
           <CardDescription>Přihlaste se ke svému účtu OneMil</CardDescription>
         </CardHeader>
 
