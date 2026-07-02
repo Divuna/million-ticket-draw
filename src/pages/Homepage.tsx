@@ -524,7 +524,7 @@ const Homepage = () => {
             <CardContent className="p-5 h-full flex flex-col">
               <div className="space-y-4 flex-1 flex flex-col">
                 <div className="space-y-2">
-                  <h2 className="text-xl md:text-2xl font-bold text-heading-gold flex items-center gap-2">
+                  <h2 className="homepage-premium-orange-heading text-xl md:text-2xl font-bold text-heading-gold flex items-center gap-2">
                     <OneMilMioCoinIcon size={24} className="w-6 h-6 md:w-7 md:h-7" />
                     Dobijte si MioCoiny
                   </h2>
@@ -718,7 +718,7 @@ const Homepage = () => {
             <CardContent className="p-5 h-full flex flex-col relative z-10">
               <div className="space-y-4 flex-1 flex flex-col">
                 <div className="space-y-2">
-                  <h2 className="text-xl md:text-2xl font-bold text-heading-gold flex items-center gap-2">
+                  <h2 className="homepage-premium-orange-heading text-xl md:text-2xl font-bold text-heading-gold flex items-center gap-2">
                     <OneMilTrophyIcon size={24} className="w-6 h-6 md:w-7 md:h-7" />
                     Poslední výherci
                   </h2>
