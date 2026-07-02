@@ -314,15 +314,7 @@ const Vouchers: React.FC = () => {
               <OneMilVoucherIcon size={36} className="w-7 h-7 md:w-9 md:h-9 text-black" />
             </div>
             <div>
-              <h1
-                className="text-2xl md:text-3xl font-bold tracking-tight"
-                style={{
-                  background: 'linear-gradient(135deg, #FFB547 0%, #FF8A00 50%, #FFB547 100%)',
-                  WebkitBackgroundClip: 'text',
-                  WebkitTextFillColor: 'transparent',
-                  backgroundClip: 'text',
-                }}
-              >
+              <h1 className="customer-premium-orange-heading text-2xl md:text-3xl font-bold tracking-tight">
                 Vouchery
               </h1>
               <p className="text-sm text-gray-400 mt-1">Sbírejte a uplatňujte exkluzivní vouchery</p>
@@ -408,7 +400,7 @@ const Vouchers: React.FC = () => {
               <Card className="voucher-card-glow relative overflow-hidden rounded-[20px] bg-gradient-to-b from-[hsl(220_35%_8%)] via-[hsl(220_30%_6%)] to-[hsl(220_25%_4%)] border-[3px] border-[rgba(255,138,0,0.3)]">
                 <CardContent className="p-8 space-y-3 text-center">
                   <OneMilHeartIcon size={48} className="w-12 h-12 mx-auto text-secondary/50" />
-                  <h3 className="text-xl font-bold text-heading-gold">Zatím nemáte žádné oblíbené vouchery</h3>
+                  <h3 className="customer-premium-orange-heading text-xl font-bold text-heading-gold">Zatím nemáte žádné oblíbené vouchery</h3>
                   <p className="text-sm text-muted-foreground">
                     Kliknutím na srdíčko přidáte voucher do oblíbených
                   </p>
@@ -457,7 +449,7 @@ const Vouchers: React.FC = () => {
               <Card className="voucher-card-glow relative overflow-hidden rounded-[20px] bg-gradient-to-b from-[hsl(220_35%_8%)] via-[hsl(220_30%_6%)] to-[hsl(220_25%_4%)] border-[3px] border-[rgba(255,138,0,0.3)]">
                 <CardContent className="p-8 space-y-3 text-center">
                   <OneMilCartIcon size={48} className="w-12 h-12 mx-auto text-secondary/50" />
-                  <h3 className="text-xl font-bold text-heading-gold">Zatím nemáte žádné zakoupené vouchery</h3>
+                  <h3 className="customer-premium-orange-heading text-xl font-bold text-heading-gold">Zatím nemáte žádné zakoupené vouchery</h3>
                   <p className="text-sm text-muted-foreground">
                     Zakupte si voucher v sekci "Dostupné" nebo "Oblíbené"
                   </p>

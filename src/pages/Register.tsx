@@ -211,7 +211,7 @@ const Register: React.FC = () => {
         />
         <Card className="w-full voucher-card-glow rounded-[20px] bg-gradient-to-b from-[hsl(220_30%_12%)] via-[hsl(220_28%_9%)] to-[hsl(222_35%_7%)] border-[2px] border-[rgba(255,138,0,0.15)] shadow-[0_4px_24px_hsl(222_50%_3%/0.6)]">
         <CardHeader>
-          <CardTitle className="text-heading-gold">Registrace</CardTitle>
+          <CardTitle className="customer-premium-orange-heading text-heading-gold">Registrace</CardTitle>
           <CardDescription>
             Vytvořte si nový účet OneMil
           </CardDescription>

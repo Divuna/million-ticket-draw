@@ -802,14 +802,8 @@ const Homepage = () => {
             <div className="flex items-center justify-center gap-2 mb-2">
               <OneMilGiftIcon size={18} className="w-[18px] h-[18px] shrink-0" color="#FFB547" />
               <h3
-                className="text-base md:text-lg font-bold tracking-tight"
-                style={{
-                  fontFamily: 'var(--om-font-heading)',
-                  background: 'linear-gradient(135deg, #FFB547 0%, #FF8A00 50%, #FFB547 100%)',
-                  WebkitBackgroundClip: 'text',
-                  WebkitTextFillColor: 'transparent',
-                  backgroundClip: 'text',
-                }}
+                className="customer-premium-orange-heading text-base md:text-lg font-bold tracking-tight"
+                style={{ fontFamily: 'var(--om-font-heading)' }}
               >
                 MioCoiny jako odměna za nákupy
               </h3>
@@ -878,7 +872,7 @@ const Homepage = () => {
         {/* Ongoing Contests Carousel */}
         <section className="space-y-6">
           <div className="flex items-center justify-between">
-            <h3 className="text-2xl font-bold text-heading-gold flex items-center gap-2">
+            <h3 className="customer-premium-orange-heading text-2xl font-bold text-heading-gold flex items-center gap-2">
               <Ticket className="w-6 h-6" />
               Probíhající Soutěže
             </h3>
@@ -1000,7 +994,7 @@ const Homepage = () => {
         {/* Available Vouchers Section - Visible to everyone */}
         <section className="space-y-6">
           <div className="flex items-center justify-between">
-            <h3 className="text-2xl font-bold text-heading-gold flex items-center gap-2">
+            <h3 className="customer-premium-orange-heading text-2xl font-bold text-heading-gold flex items-center gap-2">
               <OneMilVoucherIcon size={24} className="w-6 h-6" />
               Dostupné vouchery
             </h3>
@@ -1093,7 +1087,7 @@ const Homepage = () => {
         {/* Partners Section */}
         <section className="space-y-6">
           <div className="flex items-center justify-between">
-            <h3 className="text-2xl font-bold text-heading-gold flex items-center gap-2">
+            <h3 className="customer-premium-orange-heading text-2xl font-bold text-heading-gold flex items-center gap-2">
               <Handshake className="w-6 h-6" />
               Naši partneři, kde můžete získat MioCoiny za nákup
             </h3>
@@ -1174,7 +1168,7 @@ const Homepage = () => {
         {/* Coming Soon Section */}
         <section className="space-y-6">
           <div className="flex items-center justify-between">
-            <h3 className="text-2xl font-bold text-heading-gold flex items-center gap-2">
+            <h3 className="customer-premium-orange-heading text-2xl font-bold text-heading-gold flex items-center gap-2">
               Připravujeme
             </h3>
           </div>
@@ -1318,7 +1312,7 @@ const Homepage = () => {
         {!videoLoading && videoUrl && isVideoActive && (
           <section className="space-y-6 mt-16">
             <div className="flex items-center justify-between">
-              <h3 className="text-2xl font-bold text-heading-gold flex items-center gap-2">
+              <h3 className="customer-premium-orange-heading text-2xl font-bold text-heading-gold flex items-center gap-2">
                 🎬 Jak to funguje
               </h3>
             </div>

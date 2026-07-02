@@ -1013,15 +1013,7 @@ export default function MessagesPage() {
               </div>
 
               <div className="flex-1">
-                <h1
-                  className="text-2xl md:text-3xl font-bold tracking-tight"
-                  style={{
-                    background: 'linear-gradient(135deg, #FFB547 0%, #FF8A00 50%, #FFB547 100%)',
-                    WebkitBackgroundClip: 'text',
-                    WebkitTextFillColor: 'transparent',
-                    backgroundClip: 'text',
-                  }}
-                >
+                <h1 className="customer-premium-orange-heading text-2xl md:text-3xl font-bold tracking-tight">
                   Zprávy
                 </h1>
                 <p className="text-sm text-gray-400 mt-1">
