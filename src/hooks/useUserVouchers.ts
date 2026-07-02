@@ -27,6 +27,27 @@ interface UserVoucher {
   code: string | null;
 }
 
+const VOUCHER_SELECT_FULL =
+  "id, name, image_url, banner_url, short_description, usage_description, terms_text, how_to_use_text";
+
+const VOUCHER_SELECT_BASE = "id, name, image_url, banner_url";
+
+const isOptionalVoucherTextColumnError = (error: unknown) => {
+  const message = typeof error === "object" && error && "message" in error
+    ? String((error as { message?: unknown }).message ?? "")
+    : "";
+
+  return /short_description|usage_description|terms_text|how_to_use_text/i.test(message);
+};
+
+const withVoucherTextFallback = (voucher: any) => ({
+  ...voucher,
+  short_description: voucher.short_description ?? null,
+  usage_description: voucher.usage_description ?? null,
+  terms_text: voucher.terms_text ?? null,
+  how_to_use_text: voucher.how_to_use_text ?? null,
+});
+
 export const useUserVouchers = () => {
   const { user } = useAuth();
   const [vouchers, setVouchers] = useState<UserVoucher[]>([]);
@@ -88,13 +109,25 @@ export const useUserVouchers = () => {
 
       if (rows.length > 0) {
         const voucherIds = [...new Set(rows.map((r) => r.voucher_id))];
-        const { data: vData } = await supabase
+        let { data: vData, error: vError } = await supabase
           .from("vouchers")
-          .select("id, name, image_url, banner_url, short_description, usage_description, terms_text, how_to_use_text")
+          .select(VOUCHER_SELECT_FULL)
           .in("id", voucherIds);
 
+        if (vError && isOptionalVoucherTextColumnError(vError)) {
+          const fallback = await supabase
+            .from("vouchers")
+            .select(VOUCHER_SELECT_BASE)
+            .in("id", voucherIds);
+
+          vData = fallback.data;
+          vError = fallback.error;
+        }
+
+        if (vError) throw vError;
+
         for (const v of vData || []) {
-          voucherMap.set(v.id, v);
+          voucherMap.set(v.id, withVoucherTextFallback(v));
         }
       }
 

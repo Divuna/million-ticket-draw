@@ -24,7 +24,7 @@ test.describe('Voucher Code - Purchased Voucher Detail', () => {
 
     const spec11Card = page
       .locator('.voucher-card-glow')
-      .filter({ hasText: 'E2E Spec11 Voucher' })
+      .filter({ has: page.locator('img[alt*="E2E Spec11 Voucher"]') })
       .first();
 
     const emptyHeading = page.getByRole('heading', { name: 'Zatím nemáte žádné zakoupené vouchery' });
@@ -32,7 +32,7 @@ test.describe('Voucher Code - Purchased Voucher Detail', () => {
     await expect(async () => {
       const hasSpec11 = (await page
         .locator('.voucher-card-glow')
-        .filter({ hasText: 'E2E Spec11 Voucher' })
+        .filter({ has: page.locator('img[alt*="E2E Spec11 Voucher"]') })
         .count()) > 0;
       const hasEmpty = await emptyHeading.isVisible();
       if (!hasSpec11 && !hasEmpty) {
@@ -57,9 +57,8 @@ test.describe('Voucher Code - Purchased Voucher Detail', () => {
     const missingCodeMessage = dialog.getByText('Kód zatím není dostupný');
     const copyButton = dialog.getByRole('button', { name: 'Zkopírovat kód' });
 
-    if (await missingCodeMessage.isVisible()) {
-      test.skip(true, 'Seeded purchased voucher has no voucher_code_id; modal shows missing-code state correctly.');
-    }
+    await expect(missingCodeMessage, 'Seeded purchased voucher must have a real voucher code').toHaveCount(0);
+    await expect(dialog.getByText(/^E2E11-/)).toBeVisible();
 
     await expect(copyButton).toBeVisible();
     await expect(copyButton).toBeEnabled();

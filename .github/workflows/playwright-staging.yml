@@ -107,6 +107,19 @@ jobs:
         # vouchers appear as "available" again on /vouchers (the UI filters out
         # vouchers already in the user's collection via useUserVouchers).
         run: |
+          curl -s -X PATCH \
+            "${SUPABASE_URL}/rest/v1/voucher_codes?issued_to_user_id=eq.7822a82e-f1d3-45ee-827b-679640ce6b65&code=like.E2E%25" \
+            -H "apikey: ${SERVICE_ROLE_KEY}" \
+            -H "Authorization: Bearer ${SERVICE_ROLE_KEY}" \
+            -H "Content-Type: application/json" \
+            -H "Prefer: return=minimal" \
+            -d '{
+              "status": "available",
+              "issued_to_user_id": null,
+              "issued_user_voucher_id": null,
+              "issued_at": null
+            }'
+
           curl -s -X DELETE \
             "${SUPABASE_URL}/rest/v1/user_vouchers?user_id=eq.7822a82e-f1d3-45ee-827b-679640ce6b65" \
             -H "apikey: ${SERVICE_ROLE_KEY}" \
@@ -143,6 +156,25 @@ jobs:
             echo "WARNING: spec03 voucher seed failed. Response: $RESPONSE" >&2
           else
             echo "Seeded E2E Spec03 voucher: $VOUCHER_ID"
+            CODE_RESPONSE=$(curl -s -X POST \
+              "${SUPABASE_URL}/rest/v1/voucher_codes" \
+              -H "apikey: ${SERVICE_ROLE_KEY}" \
+              -H "Authorization: Bearer ${SERVICE_ROLE_KEY}" \
+              -H "Content-Type: application/json" \
+              -H "Prefer: return=representation" \
+              -d "[
+                {
+                  \"voucher_id\": \"${VOUCHER_ID}\",
+                  \"code\": \"E2E03-${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}-A\",
+                  \"status\": \"available\"
+                },
+                {
+                  \"voucher_id\": \"${VOUCHER_ID}\",
+                  \"code\": \"E2E03-${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}-B\",
+                  \"status\": \"available\"
+                }
+              ]")
+            echo "Seed spec03 voucher codes response: $CODE_RESPONSE"
           fi
         env:
           SUPABASE_URL: ${{ secrets.STAGING_VITE_SUPABASE_URL }}
@@ -178,6 +210,25 @@ jobs:
             echo "WARNING: spec10 voucher seed failed — spec 10 may fail. Response: $RESPONSE" >&2
           else
             echo "Seeded E2E Spec10 voucher: $VOUCHER_ID"
+            CODE_RESPONSE=$(curl -s -X POST \
+              "${SUPABASE_URL}/rest/v1/voucher_codes" \
+              -H "apikey: ${SERVICE_ROLE_KEY}" \
+              -H "Authorization: Bearer ${SERVICE_ROLE_KEY}" \
+              -H "Content-Type: application/json" \
+              -H "Prefer: return=representation" \
+              -d "[
+                {
+                  \"voucher_id\": \"${VOUCHER_ID}\",
+                  \"code\": \"E2E10-${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}-A\",
+                  \"status\": \"available\"
+                },
+                {
+                  \"voucher_id\": \"${VOUCHER_ID}\",
+                  \"code\": \"E2E10-${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}-B\",
+                  \"status\": \"available\"
+                }
+              ]")
+            echo "Seed spec10 voucher codes response: $CODE_RESPONSE"
           fi
         env:
           SUPABASE_URL: ${{ secrets.STAGING_VITE_SUPABASE_URL }}
@@ -212,6 +263,24 @@ jobs:
             exit 1
           fi
 
+          CODE_RESPONSE=$(curl -s -X POST \
+            "${SUPABASE_URL}/rest/v1/voucher_codes" \
+            -H "apikey: ${SERVICE_ROLE_KEY}" \
+            -H "Authorization: Bearer ${SERVICE_ROLE_KEY}" \
+            -H "Content-Type: application/json" \
+            -H "Prefer: return=representation" \
+            -d "{
+              \"voucher_id\": \"${VOUCHER_ID}\",
+              \"code\": \"E2E11-${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}\",
+              \"status\": \"available\"
+            }")
+          echo "Seed spec11 voucher code response: $CODE_RESPONSE"
+          CODE_ID=$(echo "$CODE_RESPONSE" | jq -r 'if type == "array" then .[0].id else .id // null end' 2>/dev/null || echo "null")
+          if [ -z "$CODE_ID" ] || [ "$CODE_ID" = "null" ]; then
+            echo "ERROR: spec11 voucher_code seed failed. Response: $CODE_RESPONSE" >&2
+            exit 1
+          fi
+
           USER_VOUCHER_RESPONSE=$(curl -s -X POST \
             "${SUPABASE_URL}/rest/v1/user_vouchers" \
             -H "apikey: ${SERVICE_ROLE_KEY}" \
@@ -221,7 +290,8 @@ jobs:
             -d "{
               \"user_id\": \"7822a82e-f1d3-45ee-827b-679640ce6b65\",
               \"voucher_id\": \"${VOUCHER_ID}\",
-              \"redeemed\": true
+              \"redeemed\": true,
+              \"voucher_code_id\": \"${CODE_ID}\"
             }")
           echo "Seed spec11 user_voucher response: $USER_VOUCHER_RESPONSE"
           USER_VOUCHER_ID=$(echo "$USER_VOUCHER_RESPONSE" | jq -r 'if type == "array" then .[0].id else null end' 2>/dev/null || echo "null")
@@ -230,7 +300,22 @@ jobs:
             exit 1
           fi
 
-          echo "Seeded E2E Spec11 purchased voucher: voucher=${VOUCHER_ID}, user_voucher=${USER_VOUCHER_ID}"
+          ISSUED_AT=$(date -u +"%Y-%m-%dT%H:%M:%SZ")
+          ISSUE_RESPONSE=$(curl -s -X PATCH \
+            "${SUPABASE_URL}/rest/v1/voucher_codes?id=eq.${CODE_ID}" \
+            -H "apikey: ${SERVICE_ROLE_KEY}" \
+            -H "Authorization: Bearer ${SERVICE_ROLE_KEY}" \
+            -H "Content-Type: application/json" \
+            -H "Prefer: return=representation" \
+            -d "{
+              \"status\": \"issued\",
+              \"issued_to_user_id\": \"7822a82e-f1d3-45ee-827b-679640ce6b65\",
+              \"issued_user_voucher_id\": \"${USER_VOUCHER_ID}\",
+              \"issued_at\": \"${ISSUED_AT}\"
+            }")
+          echo "Seed spec11 issued voucher code response: $ISSUE_RESPONSE"
+
+          echo "Seeded E2E Spec11 purchased voucher: voucher=${VOUCHER_ID}, user_voucher=${USER_VOUCHER_ID}, code=${CODE_ID}"
         env:
           SUPABASE_URL: ${{ secrets.STAGING_VITE_SUPABASE_URL }}
           SERVICE_ROLE_KEY: ${{ secrets.STAGING_SUPABASE_SERVICE_ROLE_KEY }}
