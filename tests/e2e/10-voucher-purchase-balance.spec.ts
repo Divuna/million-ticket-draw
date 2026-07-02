@@ -144,7 +144,7 @@ test.describe('Voucher Purchase — Wallet Balance Decrease', () => {
 
     const purchasedSpec10Card = page
       .locator('.voucher-card-glow')
-      .filter({ hasText: 'E2E Spec10 Voucher' })
+      .filter({ has: page.locator('img[alt*="E2E Spec10 Voucher"]') })
       .first();
 
     await expect(

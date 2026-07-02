@@ -18,6 +18,28 @@ interface HomepageVoucher {
   is_public: boolean;
 }
 
+const VOUCHER_SELECT_FULL =
+  "id, name, image_url, banner_url, max_quantity, redeemed_count, start_date, end_date, short_description, usage_description, terms_text, how_to_use_text, user_id, is_public";
+
+const VOUCHER_SELECT_BASE =
+  "id, name, image_url, banner_url, max_quantity, redeemed_count, start_date, end_date, user_id, is_public";
+
+const isOptionalVoucherTextColumnError = (error: unknown) => {
+  const message = typeof error === "object" && error && "message" in error
+    ? String((error as { message?: unknown }).message ?? "")
+    : "";
+
+  return /short_description|usage_description|terms_text|how_to_use_text/i.test(message);
+};
+
+const withVoucherTextFallback = (voucher: any): HomepageVoucher => ({
+  ...voucher,
+  short_description: voucher.short_description ?? null,
+  usage_description: voucher.usage_description ?? null,
+  terms_text: voucher.terms_text ?? null,
+  how_to_use_text: voucher.how_to_use_text ?? null,
+});
+
 export const useHomepageVouchers = () => {
   const [vouchers, setVouchers] = useState<HomepageVoucher[]>([]);
   const [loading, setLoading] = useState(true);
@@ -26,21 +48,32 @@ export const useHomepageVouchers = () => {
     try {
       setLoading(true);
 
-      // Fetch ALL public vouchers visible to everyone (including anon)
-      const { data, error } = await supabase
+      // Fetch ALL public vouchers visible to everyone (including anon).
+      // Some staging environments can briefly lag behind optional text-column
+      // migrations; fall back to the stable base columns instead of blanking UI.
+      let { data, error } = await supabase
         .from("vouchers")
-        .select(
-          "id, name, image_url, banner_url, max_quantity, redeemed_count, start_date, end_date, short_description, usage_description, terms_text, how_to_use_text, user_id, is_public",
-        )
+        .select(VOUCHER_SELECT_FULL)
         .eq("is_public", true) // show public vouchers for everyone
         .order("created_at", { ascending: false });
+
+      if (error && isOptionalVoucherTextColumnError(error)) {
+        const fallback = await supabase
+          .from("vouchers")
+          .select(VOUCHER_SELECT_BASE)
+          .eq("is_public", true)
+          .order("created_at", { ascending: false });
+
+        data = fallback.data;
+        error = fallback.error;
+      }
 
       if (error) throw error;
 
       const now = new Date();
 
       // Filter active vouchers (date range)
-      const activeVouchers = (data || []).filter((voucher) => {
+      const activeVouchers = (data || []).map(withVoucherTextFallback).filter((voucher) => {
         const startDate = voucher.start_date ? new Date(voucher.start_date) : null;
         const endDate = voucher.end_date ? new Date(voucher.end_date) : null;
 
