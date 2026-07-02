@@ -1,5 +1,28 @@
 ﻿# OneMil – aktuální stav projektu
 
+## VEŘEJNÝ ZÁKAZNICKÝ UI STYL — LIGHT / CHAMPAGNE PREMIUM (02. 07. 2026)
+
+Veřejná zákaznická část OneMil je po PR #140–#155 převedená do světlého light/champagne premium stylu s oranžovými/amber akcenty. Platí pro běžné zákaznické obrazovky v přihlášeném i nepřihlášeném stavu: homepage `/`, `/games`, detail soutěže navazující na zákaznické karty, `/vouchers`, `/wins`, `/winners`, `/profile`, `/messages`, `/login` a sdílené zákaznické logged-out stavy.
+
+**Dokončeno:**
+- **PR #140:** přidán route-scoped wrapper `public-customer-theme`; světlý styl se aplikuje jen na veřejné zákaznické routy, ne na `/admin`, `/partner`, `/affiliate`, `/influencer`. Upraven veřejný Header a BottomNavigation.
+- **PR #141:** homepage obsah pod hero bannerem začal přechod do světlého zákaznického stylu.
+- **PR #142/#143:** `/games` a soutěžní karty převedeny do světlého vzhledu; PR #143 dokončilo zbytky tmavého pozadí, sekce `Připravujeme`, okolí karet a prázdné stavy.
+- **PR #144:** doplněn světlý vzhled zákaznické homepage, `/vouchers` a `/wins`; odstraněny velké černé plochy v těchto zákaznických částech.
+- **PR #145:** homepage doladěna do jemnějšího champagne/beige premium stylu; zesvětlen footer a sekce `Poslední výherci`, přidány teplejší stíny a champagne podklad.
+- **PR #146/#147:** experimentální champagne vzhled odhlášených stavů z PR #146 byl vrácen PR #147. Aktuální stav po PR #147 navazuje jen na bezpečné předchozí light/champagne úpravy.
+- **PR #148:** odhlášený profil/login vzhled vrácen k požadované kompozici: bílý horní prostor, centrální karta, výrazné spodní stínování, ale v teplejší champagne/béžové tonalitě místo tvrdé černé.
+- **PR #149:** stejný odhlášený podklad/stínování aplikováno na zákaznické logged-out stavy `/messages`, `/wins`, `/games`, `/vouchers`.
+- **PR #150:** stránka `/winners` sjednocena s homepage: světlý champagne podklad, nepravidelné jemné kouřové stínování a karty výher sladěné se sekcí `Poslední výherci`.
+- **PR #151–#153:** sjednocen premium orange heading styl. PR #151 přidal prémiový gradient/glow pro homepage nadpisy `Dobijte si MioCoiny` a `Poslední výherci`, PR #152 ho lehce ztmavil, PR #153 rozšířil stejný styl na podobné hlavní oranžové zákaznické nadpisy napříč veřejnou částí.
+- **PR #154:** sekce `Dobijte si MioCoiny` na homepage dostala prémiovější champagne panel, světlejší karty balíčků, jemnější bonus štítky a decentnější amber CTA tlačítka `Dobít`. Texty, ceny, bonusy a nákupní funkce zůstaly beze změny.
+- **PR #155:** karta výhry na `/wins` je graficky sladěná s light/champagne systémem; MioCoin bonusový obrázek se renderuje celý (`object-contain`) místo oříznutého zvětšení.
+
+**Pravidla a rozsah:**
+- Tyto PR byly pouze vizuální/customer UI změny. Neměnily databázi, migrace, Supabase funkce, platby, Stripe, wallet, soutěžní logiku, tickety, voucher logiku ani admin/partner/affiliate/influencer business logiku.
+- Nové vizuální úpravy zákaznické části mají navazovat na `public-customer-theme`, light/champagne podklad, bílé/champagne karty, jemné šedobéžové okraje, měkké teplé stíny a oranžové/amber CTA.
+- Admin, partner portál, affiliate/influencer část a interní provozní UI zůstávají mimo tento zákaznický vizuální systém, pokud Pavel výslovně neschválí samostatný redesign.
+
 ## PRACOVNÍ PRAVIDLO — AKTIVNÍ POUŽÍVÁNÍ GITHUB / SUPABASE KONEKTORŮ (30. 06. 2026)
 
 ChatGPT / AI asistent musí sám aktivně používat dostupné GitHub a Supabase konektory, kdykoli úkol vyžaduje kontext repozitáře nebo databáze. Neptat se Pavla, ať spouští SQL, stahuje GitHub soubory nebo ručně dodává data, pokud k nim má asistent přímý přístup. U destruktivních produkčních změn si nejdřív vyžádat výslovné schválení.
