@@ -488,22 +488,22 @@ body:has(.winners-light-page) {
 }
 
 .public-customer-theme .homepage-light-content .homepage-premium-orange-heading {
-  color: #f97316;
-  background: linear-gradient(115deg, #ff7a00 0%, #ff9f1a 42%, #d97706 100%);
+  color: #e26305;
+  background: linear-gradient(115deg, #e45f00 0%, #f27f0c 42%, #b85b05 100%);
   background-clip: text;
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
   letter-spacing: 0;
   font-weight: 800;
   text-shadow:
-    0 1px 0 rgba(255, 255, 255, 0.55),
-    0 10px 22px rgba(255, 138, 0, 0.16);
+    0 1px 0 rgba(255, 255, 255, 0.38),
+    0 10px 22px rgba(226, 99, 5, 0.13);
 }
 
 .public-customer-theme .homepage-light-content .homepage-premium-orange-heading svg {
   filter:
-    drop-shadow(0 1px 0 rgba(255, 255, 255, 0.65))
-    drop-shadow(0 8px 14px rgba(255, 138, 0, 0.18));
+    drop-shadow(0 1px 0 rgba(255, 255, 255, 0.48))
+    drop-shadow(0 8px 14px rgba(226, 99, 5, 0.15));
 }
 
 .public-customer-theme .winners-light-content .text-heading-gold {
