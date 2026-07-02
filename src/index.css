@@ -730,6 +730,53 @@ body:has(.winners-light-page) {
   border-color: rgba(200, 155, 80, 0.22);
 }
 
+.public-customer-theme .wins-light-page .customer-win-card {
+  background: linear-gradient(180deg, #ffffff 0%, #fffaf2 100%);
+  border-color: rgba(200, 155, 80, 0.18);
+  box-shadow:
+    0 22px 48px -28px rgba(120, 73, 24, 0.28),
+    0 8px 18px -18px rgba(15, 23, 42, 0.18),
+    inset 0 1px 0 rgba(255, 255, 255, 0.95);
+}
+
+.public-customer-theme .wins-light-page .customer-win-card:hover {
+  border-color: rgba(226, 99, 5, 0.26);
+  box-shadow:
+    0 26px 54px -30px rgba(226, 99, 5, 0.28),
+    0 10px 22px -20px rgba(15, 23, 42, 0.18),
+    inset 0 1px 0 rgba(255, 255, 255, 0.96);
+}
+
+.public-customer-theme .wins-light-page .customer-win-card-media {
+  background:
+    radial-gradient(circle at 18% 18%, rgba(255, 181, 71, 0.16), transparent 12rem),
+    radial-gradient(circle at 82% 22%, rgba(86, 93, 105, 0.08), transparent 14rem),
+    linear-gradient(135deg, #fffaf2 0%, #f3eee6 52%, #ffffff 100%);
+}
+
+.public-customer-theme .wins-light-page .customer-win-card-media-mio {
+  isolation: isolate;
+  background:
+    radial-gradient(circle at 48% 50%, rgba(255, 181, 71, 0.28), transparent 7rem),
+    radial-gradient(circle at 50% 58%, rgba(86, 93, 105, 0.10), transparent 12rem),
+    linear-gradient(135deg, #fffaf2 0%, #f0ebe3 52%, #ffffff 100%);
+}
+
+.public-customer-theme .wins-light-page .customer-win-card-media-mio .customer-win-card-image {
+  position: relative;
+  z-index: 1;
+  filter:
+    drop-shadow(0 18px 24px rgba(15, 23, 42, 0.18))
+    drop-shadow(0 0 18px rgba(255, 181, 71, 0.16));
+}
+
+.public-customer-theme .wins-light-page .customer-win-card-mio-glow {
+  z-index: 0;
+  background:
+    radial-gradient(circle at 50% 48%, rgba(255, 255, 255, 0.38), transparent 5.5rem),
+    linear-gradient(90deg, transparent 0%, rgba(255, 181, 71, 0.12) 50%, transparent 100%);
+}
+
 /* Luxury Glow Effects */
 @layer utilities {
   .glow-blue {
