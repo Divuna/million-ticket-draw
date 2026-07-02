@@ -520,10 +520,10 @@ const Homepage = () => {
         {/* Coin Top-up Section */}
         <section className="w-full overflow-x-hidden grid grid-cols-1 lg:grid-cols-2 gap-4">
           {/* Left Column - Dobijte si MioCoiny */}
-          <Card className="homepage-light-panel rounded-xl overflow-hidden bg-[hsl(220_45%_6%)] border border-[rgba(255,138,0,0.2)] shadow-[0_4px_16px_hsl(222_50%_3%/0.5)] h-full">
-            <CardContent className="p-5 h-full flex flex-col">
+          <Card className="homepage-light-panel homepage-miocoin-panel rounded-xl overflow-hidden bg-[hsl(220_45%_6%)] border border-[rgba(255,138,0,0.2)] shadow-[0_4px_16px_hsl(222_50%_3%/0.5)] h-full">
+            <CardContent className="p-5 md:p-6 h-full flex flex-col">
               <div className="space-y-4 flex-1 flex flex-col">
-                <div className="space-y-2">
+                <div className="space-y-2 homepage-miocoin-header">
                   <h2 className="homepage-premium-orange-heading text-xl md:text-2xl font-bold text-heading-gold flex items-center gap-2">
                     <OneMilMioCoinIcon size={24} className="w-6 h-6 md:w-7 md:h-7" />
                     Dobijte si MioCoiny
@@ -532,9 +532,9 @@ const Homepage = () => {
                 </div>
 
                 {/* Coin Packages Grid */}
-                <div className="grid grid-cols-2 md:grid-cols-4 gap-3 flex-1">
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-3 md:gap-4 flex-1">
                   {/* Package 50 Kč → 50 MC */}
-                  <div className="homepage-light-tile rounded-xl w-full min-h-[160px] bg-[hsl(220_45%_6%)] border-2 border-package-blue/30 flex flex-col shadow-[inset_0_1px_12px_hsl(var(--package-blue)/0.08)] overflow-hidden">
+                  <div className="homepage-light-tile homepage-miocoin-package rounded-xl w-full min-h-[160px] bg-[hsl(220_45%_6%)] border-2 border-package-blue/30 flex flex-col shadow-[inset_0_1px_12px_hsl(var(--package-blue)/0.08)] overflow-hidden">
                     {/* Top area: image or fallback text */}
                     <div className="flex-1 min-h-0 flex flex-col items-center justify-center overflow-hidden">
                       {placementBanners.miocoin_50?.image_url ? (
@@ -555,7 +555,7 @@ const Homepage = () => {
                     <div className="flex-shrink-0 px-3 pb-3 pt-2">
                       <Button
                         size="sm"
-                        className="w-full bg-package-blue text-black font-bold shadow-[0_0_10px_hsl(var(--package-blue)/0.3)] hover:brightness-110 transition-all duration-200"
+                        className="homepage-miocoin-button w-full bg-package-blue text-black font-bold shadow-[0_0_10px_hsl(var(--package-blue)/0.3)] hover:brightness-110 transition-all duration-200"
                         onClick={() => handleCoinPurchase(50, 50)}
                         disabled={topUpLoading}
                       >
@@ -566,8 +566,8 @@ const Homepage = () => {
 
                   {/* Package 300 Kč → 310 MC (+10 Bonus) */}
                   <div className="relative z-20 overflow-visible h-full">
-                    <Badge className="absolute -top-2 -right-2 bg-package-gold/90 text-black text-xs font-medium z-50 pointer-events-none">+10 Bonus</Badge>
-                    <div className="homepage-light-tile rounded-xl w-full h-full min-h-[160px] bg-[hsl(220_45%_6%)] border-2 border-package-gold/30 flex flex-col shadow-[inset_0_1px_12px_hsl(var(--package-gold)/0.08)] overflow-hidden">
+                    <Badge className="homepage-miocoin-bonus absolute -top-2 -right-2 bg-package-gold/90 text-black text-xs font-medium z-50 pointer-events-none">+10 Bonus</Badge>
+                    <div className="homepage-light-tile homepage-miocoin-package rounded-xl w-full h-full min-h-[160px] bg-[hsl(220_45%_6%)] border-2 border-package-gold/30 flex flex-col shadow-[inset_0_1px_12px_hsl(var(--package-gold)/0.08)] overflow-hidden">
                       {/* Top area: image or fallback text */}
                       <div className="flex-1 min-h-0 flex flex-col items-center justify-center overflow-hidden">
                         {placementBanners.miocoin_310?.image_url ? (
@@ -588,7 +588,7 @@ const Homepage = () => {
                       <div className="flex-shrink-0 px-3 pb-3 pt-2">
                         <Button
                           size="sm"
-                          className="w-full bg-package-gold text-black font-bold shadow-[0_0_10px_hsl(var(--package-gold)/0.3)] hover:brightness-110 transition-all duration-200"
+                          className="homepage-miocoin-button w-full bg-package-gold text-black font-bold shadow-[0_0_10px_hsl(var(--package-gold)/0.3)] hover:brightness-110 transition-all duration-200"
                           onClick={() => handleCoinPurchase(300, 310)}
                           disabled={topUpLoading}
                         >
@@ -600,8 +600,8 @@ const Homepage = () => {
 
                   {/* Package 500 Kč → 525 MC (+25 Bonus) */}
                   <div className="relative z-20 overflow-visible h-full">
-                    <Badge className="absolute -top-2 -right-2 bg-package-purple/90 text-white text-xs font-medium z-50 pointer-events-none">+25 Bonus</Badge>
-                    <div className="homepage-light-tile rounded-xl w-full h-full min-h-[160px] bg-[hsl(220_45%_6%)] border-2 border-package-purple/30 flex flex-col shadow-[inset_0_1px_12px_hsl(var(--package-purple)/0.08)] overflow-hidden">
+                    <Badge className="homepage-miocoin-bonus absolute -top-2 -right-2 bg-package-purple/90 text-white text-xs font-medium z-50 pointer-events-none">+25 Bonus</Badge>
+                    <div className="homepage-light-tile homepage-miocoin-package rounded-xl w-full h-full min-h-[160px] bg-[hsl(220_45%_6%)] border-2 border-package-purple/30 flex flex-col shadow-[inset_0_1px_12px_hsl(var(--package-purple)/0.08)] overflow-hidden">
                       {/* Top area: image or fallback text */}
                       <div className="flex-1 min-h-0 flex flex-col items-center justify-center overflow-hidden">
                         {placementBanners.miocoin_525?.image_url ? (
@@ -622,7 +622,7 @@ const Homepage = () => {
                       <div className="flex-shrink-0 px-3 pb-3 pt-2">
                         <Button
                           size="sm"
-                          className="w-full bg-package-purple text-white font-bold shadow-[0_0_10px_hsl(var(--package-purple)/0.3)] hover:brightness-110 transition-all duration-200"
+                          className="homepage-miocoin-button w-full bg-package-purple text-white font-bold shadow-[0_0_10px_hsl(var(--package-purple)/0.3)] hover:brightness-110 transition-all duration-200"
                           onClick={() => handleCoinPurchase(500, 525)}
                           disabled={topUpLoading}
                         >
@@ -634,8 +634,8 @@ const Homepage = () => {
 
                   {/* Package 1200 Kč → 1280 MC (+80 Bonus) */}
                   <div className="relative z-20 overflow-visible h-full">
-                    <Badge className="absolute -top-2 -right-2 bg-package-green/90 text-white text-xs font-medium z-50 pointer-events-none">+80 Bonus</Badge>
-                    <div className="homepage-light-tile rounded-xl w-full h-full min-h-[160px] bg-[hsl(220_45%_6%)] border-2 border-package-green/30 flex flex-col shadow-[inset_0_1px_12px_hsl(var(--package-green)/0.08)] overflow-hidden">
+                    <Badge className="homepage-miocoin-bonus absolute -top-2 -right-2 bg-package-green/90 text-white text-xs font-medium z-50 pointer-events-none">+80 Bonus</Badge>
+                    <div className="homepage-light-tile homepage-miocoin-package rounded-xl w-full h-full min-h-[160px] bg-[hsl(220_45%_6%)] border-2 border-package-green/30 flex flex-col shadow-[inset_0_1px_12px_hsl(var(--package-green)/0.08)] overflow-hidden">
                       {/* Top area: image or fallback text */}
                       <div className="flex-1 min-h-0 flex flex-col items-center justify-center overflow-hidden">
                         {placementBanners.miocoin_1280?.image_url ? (
@@ -656,7 +656,7 @@ const Homepage = () => {
                       <div className="flex-shrink-0 px-3 pb-3 pt-2">
                         <Button
                           size="sm"
-                          className="w-full bg-package-green text-white font-bold shadow-[0_0_10px_hsl(var(--package-green)/0.3)] hover:brightness-110 transition-all duration-200"
+                          className="homepage-miocoin-button w-full bg-package-green text-white font-bold shadow-[0_0_10px_hsl(var(--package-green)/0.3)] hover:brightness-110 transition-all duration-200"
                           onClick={() => handleCoinPurchase(1200, 1280)}
                           disabled={topUpLoading}
                         >
@@ -671,7 +671,7 @@ const Homepage = () => {
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mt-3">
                   {/* Box 1: Probíhající soutěže */}
                   <div
-                    className="homepage-light-tile rounded-xl p-4 min-h-[88px] md:min-h-[96px] bg-[hsl(220_45%_6%)] border-2 border-[rgba(255,138,0,0.3)] cursor-pointer hover:border-[rgba(255,138,0,0.5)] transition-all duration-200 flex flex-col items-center justify-center text-center shadow-[inset_0_1px_12px_rgba(255,138,0,0.05)] relative overflow-hidden"
+                    className="homepage-light-tile homepage-miocoin-link-tile rounded-xl p-4 min-h-[88px] md:min-h-[96px] bg-[hsl(220_45%_6%)] border-2 border-[rgba(255,138,0,0.3)] cursor-pointer hover:border-[rgba(255,138,0,0.5)] transition-all duration-200 flex flex-col items-center justify-center text-center shadow-[inset_0_1px_12px_rgba(255,138,0,0.05)] relative overflow-hidden"
                     onClick={() => navigate("/games")}
                   >
                     {placementBanners.probihajici_souteze?.image_url && (
@@ -691,7 +691,7 @@ const Homepage = () => {
 
                   {/* Box 2: Koupit voucher se slevou */}
                   <div
-                    className="homepage-light-tile rounded-xl p-4 min-h-[88px] md:min-h-[96px] bg-[hsl(220_45%_6%)] border-2 border-rose-400/30 cursor-pointer hover:border-rose-400/50 transition-all duration-200 flex flex-col items-center justify-center text-center shadow-[inset_0_1px_12px_hsl(350_60%_50%/0.06)] relative overflow-hidden"
+                    className="homepage-light-tile homepage-miocoin-link-tile rounded-xl p-4 min-h-[88px] md:min-h-[96px] bg-[hsl(220_45%_6%)] border-2 border-rose-400/30 cursor-pointer hover:border-rose-400/50 transition-all duration-200 flex flex-col items-center justify-center text-center shadow-[inset_0_1px_12px_hsl(350_60%_50%/0.06)] relative overflow-hidden"
                     onClick={() => navigate("/vouchers")}
                   >
                     {placementBanners.koupit_voucher?.image_url && (
