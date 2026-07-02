@@ -5,7 +5,7 @@ import { Resend } from "npm:resend@2.0.0";
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Headers":
-    "authorization, x-client-info, apikey, content-type",
+    "authorization, x-client-info, apikey, content-type, x-internal-token",
 };
 
 interface Attachment {
@@ -23,6 +23,10 @@ function getResendClient(): Resend {
   return new Resend(apiKey);
 }
 
+function errorMessage(error: unknown): string {
+  return error instanceof Error ? error.message : String(error);
+}
+
 interface QueueEmailRecord {
   id: string;
   email: string;
@@ -34,6 +38,33 @@ interface QueueEmailRecord {
   attachment_filename?: string | null;
   attachment_content_type?: string | null;
   attachment_required?: boolean | null;
+}
+
+async function tokenDigest(value: string): Promise<string> {
+  const bytes = new TextEncoder().encode(value);
+  const hash = await crypto.subtle.digest("SHA-256", bytes);
+  return Array.from(new Uint8Array(hash))
+    .map((byte) => byte.toString(16).padStart(2, "0"))
+    .join("");
+}
+
+async function isAuthorizedRequest(req: Request): Promise<boolean> {
+  const expectedToken = Deno.env.get("INTERNAL_FUNCTION_TOKEN");
+  const providedToken = req.headers.get("x-internal-token");
+
+  if (!expectedToken || !providedToken) {
+    return false;
+  }
+
+  const [expectedDigest, providedDigest] = await Promise.all([
+    tokenDigest(expectedToken),
+    tokenDigest(providedToken),
+  ]);
+
+  return (
+    expectedToken.length === providedToken.length &&
+    expectedDigest === providedDigest
+  );
 }
 
 async function blobToAttachment(
@@ -120,6 +151,13 @@ const handler = async (req: Request): Promise<Response> => {
   }
 
   try {
+    if (!(await isAuthorizedRequest(req))) {
+      return new Response(
+        JSON.stringify({ error: "unauthorized" }),
+        { status: 401, headers: { "Content-Type": "application/json", ...corsHeaders } },
+      );
+    }
+
     let requestedEmailId: string | null = null;
     if (req.method === "POST") {
       try {
@@ -239,10 +277,10 @@ const handler = async (req: Request): Promise<Response> => {
         } else {
           results.sent++;
         }
-      } catch (sendError: any) {
+      } catch (sendError: unknown) {
         console.error(`Failed to send email to ${emailRecord.email}:`, sendError);
         results.failed++;
-        results.errors.push(`${emailRecord.email}: ${sendError.message}`);
+        results.errors.push(`${emailRecord.email}: ${errorMessage(sendError)}`);
 
         await supabaseClient
           .from("email_queue")
@@ -263,10 +301,10 @@ const handler = async (req: Request): Promise<Response> => {
       }),
       { status: 200, headers: { "Content-Type": "application/json", ...corsHeaders } },
     );
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error("Error processing email queue:", error);
     return new Response(
-      JSON.stringify({ error: error.message }),
+      JSON.stringify({ error: errorMessage(error) }),
       { status: 500, headers: { "Content-Type": "application/json", ...corsHeaders } },
     );
   }
