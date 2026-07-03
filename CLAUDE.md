@@ -8,8 +8,8 @@ Interní admin modul „Obchod / Leady" (outbound akvizice partnerských firem) 
 - PR #163 mergnut: `docs/SALES_LEADS_ADMIN_SPEC.md` = finální specifikace.
 - PR #164 mergnut: Fáze 1 DB migrace v main jako `supabase/migrations/20260703150000_sales_leads_module_phase1.sql`.
 - PR #165 mergnut: Fáze 2 frontend skeleton v main.
-- Migrace Fáze 1 aplikována **pouze na staging `dxmowysntemfqfnanxua`** (tabulky `sales_leads`, `sales_lead_activities`, `sales_lead_status_history`, `sales_lead_email_suppression` + RPC `sales_lead_set_status` ověřeny). **Produkce `xkzhjldrojjlrkezorey` nedotčena.**
-- **Nehotovo:** Lovable Publish neproběhl; produkční migrace neproběhla; Edge Functions, AI research, Resend a odesílání e-mailů zatím nejsou implementované (Fáze 3/4).
+- Migrace Fáze 1 aplikována na **staging `dxmowysntemfqfnanxua`** i **produkci `xkzhjldrojjlrkezorey`** (03. 07. 2026, schválení Pavla; přes `apply_migration`, ne `db push`; čistě aditivní, `{"success": true}`). Na obou projektech ověřeny tabulky `sales_leads`, `sales_lead_activities`, `sales_lead_status_history`, `sales_lead_email_suppression` + RPC `sales_lead_set_status`; RLS on, 0 řádků. Nebyly změněny wallets, payments, contests, tickets, winners, Stripe.
+- **Nehotovo:** Lovable Publish neproběhl (další krok = Publish + vizuální kontrola `/admin/sales-leads`); Edge Functions, AI research, Resend a odesílání e-mailů zatím nejsou implementované (Fáze 3/4).
 
 **Pravidla (neměnit bez samostatného schválení Pavla):**
 - Oprávnění `sales_leads.manage` je jednoúrovňové = plný přístup k modulu vč. přípravy, schválení a odeslání e-mailů. Žádné druhé schvalování superadminem. Superadmin jen přiděluje/odebírá klíč.
