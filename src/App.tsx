@@ -90,6 +90,7 @@ import AdminNotFound from "@/pages/AdminNotFound";
 import NotFound from "@/pages/NotFound";
 import CompanyLeadConfirm from "@/pages/CompanyLeadConfirm";
 import AdminCompanyLeads from "@/pages/AdminCompanyLeads";
+import AdminSalesLeads from "@/pages/AdminSalesLeads";
 import AdminAffiliateCommissions from "@/pages/AdminAffiliateCommissions";
 import AdminAffiliatePayouts from "@/pages/AdminAffiliatePayouts";
 import AdminAffiliatePayoutDetail from "@/pages/AdminAffiliatePayoutDetail";
@@ -635,6 +636,7 @@ function AppContent() {
             <Route path="/admin/tests" element={<RequireSuperadmin><AdminTests /></RequireSuperadmin>} />
             <Route path="/admin/partners" element={<RequireSuperadmin><AdminPartners /></RequireSuperadmin>} />
             <Route path="/admin/partner-offers" element={<RequirePermission permission="partner_offers.finance.manage"><AdminPartnerOffers /></RequirePermission>} />
+            <Route path="/admin/sales-leads" element={<RequirePermission permission="sales_leads.manage"><AdminSalesLeads /></RequirePermission>} />
             <Route path="/admin/messages" element={<RequirePermission permission="support.messages"><AdminMessages /></RequirePermission>} />
             <Route path="/admin/messages/:userId" element={<RequirePermission permission="support.messages"><AdminMessageThread /></RequirePermission>} />
             <Route path="/admin/audit-logs" element={<RequireSuperadmin><AdminAuditLogs /></RequireSuperadmin>} />
