@@ -1,6 +1,6 @@
 ﻿# OneMil – aktuální stav projektu
 
-## MODUL OBCHOD / LEADY — FÁZE 1 + 2 V MAIN, FÁZE 1 DB NA STAGINGU (03. 07. 2026)
+## MODUL OBCHOD / LEADY — FÁZE 1 + 2 V MAIN, FÁZE 1 DB NA STAGINGU I PRODUKCI (03. 07. 2026)
 
 Nový interní admin modul „Obchod / Leady" (outbound akvizice partnerských firem) je rozpracovaný podle `docs/SALES_LEADS_ADMIN_SPEC.md`. Aktuální stav:
 
@@ -13,11 +13,16 @@ Nový interní admin modul „Obchod / Leady" (outbound akvizice partnerských f
 - Migrace Fáze 1 byla aplikována **pouze na staging projekt `dxmowysntemfqfnanxua`** (schválení Pavla, přes `apply_migration`, ne `db push`).
 - Na stagingu existují tabulky `sales_leads`, `sales_lead_activities`, `sales_lead_status_history`, `sales_lead_email_suppression` (všechny s RLS on, 4 SELECT policies, 4 unikátní dedup indexy, normalizační trigger).
 - Na stagingu existuje RPC `sales_lead_set_status` (SECURITY DEFINER, anon EXECUTE odebrán, authenticated EXECUTE povolen).
-- **Produkce `xkzhjldrojjlrkezorey` nebyla dotčena** — migrace Fáze 1 na produkci zatím NEPROBĚHLA.
+
+**Produkční DB (Fáze 1) — APLIKOVÁNO (03. 07. 2026, schválení Pavla):**
+- Migrace `supabase/migrations/20260703150000_sales_leads_module_phase1.sql` byla aplikována na produkci **`xkzhjldrojjlrkezorey`** přes `apply_migration` (ne přes `db push`), výsledek **`{"success": true}`**.
+- Na produkci existují tabulky `sales_leads`, `sales_lead_activities`, `sales_lead_status_history`, `sales_lead_email_suppression`; RLS je zapnuté na všech 4 tabulkách (4 SELECT policies, 4 unikátní dedup indexy, normalizační trigger).
+- Na produkci existuje RPC `sales_lead_set_status` (SECURITY DEFINER, anon EXECUTE odebrán, authenticated EXECUTE povolen).
+- `sales_leads` má zatím **0 řádků**.
+- Změna byla **čistě aditivní** — nebyly změněny wallets, payments, contests, tickets, winners, Stripe ani existující soutěžní logika. **Staging `dxmowysntemfqfnanxua` nebyl touto akcí dotčen.**
 
 **Ještě NEHOTOVO / NEPROVEDENO:**
-- **Lovable Publish zatím neproběhl** — frontend Fáze 2 se v běžícím prostředí projeví až po publishi.
-- **Produkční migrace Fáze 1 zatím neproběhla.**
+- **Lovable Publish zatím neproběhl** — frontend Fáze 2 se v běžícím prostředí projeví až po publishi. Další krok je Lovable Publish + vizuální kontrola `/admin/sales-leads` (po produkční migraci by už neměla hlásit „Databáze leadů zatím není připravená").
 - **Edge Functions, AI research (`sales-lead-research`, `sales-lead-draft-email`), Resend napojení a odesílání e-mailů (`send-sales-lead-email`) zatím NEJSOU implementované** (to je Fáze 3 a 4 dle spec).
 
 ## VEŘEJNÝ ZÁKAZNICKÝ UI STYL — LIGHT / CHAMPAGNE PREMIUM (02. 07. 2026)
