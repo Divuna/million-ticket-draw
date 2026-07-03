@@ -169,6 +169,11 @@ test.describe.serial('62 - voucher availability follows voucher_codes', () => {
     expect(ctx.stockedVoucherId).toBeTruthy();
 
     await loginViaUI(page, CUSTOMER_EMAIL, PASSWORD);
+
+    await page.goto('/');
+    await expect(page.getByAltText(`${STOCKED_VOUCHER_NAME} banner`)).toBeVisible({ timeout: 15_000 });
+    await expect(page.getByAltText(`${EMPTY_VOUCHER_NAME} banner`)).toHaveCount(0);
+
     await page.goto('/vouchers');
 
     await expect(page.getByRole('heading', { name: 'Vouchery' })).toBeVisible({ timeout: 10_000 });
