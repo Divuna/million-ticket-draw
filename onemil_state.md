@@ -1,6 +1,6 @@
 ﻿# OneMil – aktuální stav projektu
 
-## MODUL OBCHOD / LEADY — FÁZE 1 + 2 V MAIN, FÁZE 1 DB NA STAGINGU I PRODUKCI (03. 07. 2026)
+## MODUL OBCHOD / LEADY — FÁZE 1 + 2 + 3A, DB BACKEND HOTOV NA STAGINGU I PRODUKCI (03. 07. 2026)
 
 Nový interní admin modul „Obchod / Leady" (outbound akvizice partnerských firem) je rozpracovaný podle `docs/SALES_LEADS_ADMIN_SPEC.md`. Aktuální stav:
 
@@ -8,6 +8,7 @@ Nový interní admin modul „Obchod / Leady" (outbound akvizice partnerských f
 - **PR #163** — `docs/SALES_LEADS_ADMIN_SPEC.md` = finální specifikace modulu Obchod / Leady (jednoúrovňové oprávnění `sales_leads.manage` = plný přístup vč. přípravy, schválení a odeslání e-mailů přes Resend; AI nikdy neodesílá e-mail sama; superadmin jen přiděluje/odebírá klíč).
 - **PR #164** — Fáze 1 DB migrace je v main jako `supabase/migrations/20260703150000_sales_leads_module_phase1.sql` (4 tabulky + RLS jen na nich + SECURITY DEFINER RPC `sales_lead_set_status` + dedup indexy).
 - **PR #165** — Fáze 2 frontend skeleton je v main (route `/admin/sales-leads` přes `RequirePermission("sales_leads.manage")`, klíč `sales_leads.manage` label „Obchodní leady", nav položka „Obchod", read-only stránka `AdminSalesLeads.tsx` — 8 záložek, souhrnné karty, tabulka, prázdný stav; žádné akce).
+- **PR #168** — Fáze 3A frontend + write RPC (aktivní „Přidat firmu", detail leadu v Sheetu, editace základních údajů, změna stavu jen na povolené cíle; write jde přes SECURITY DEFINER RPC `sales_lead_create` / `sales_lead_update_fields` / `sales_lead_set_status`). Migrace `supabase/migrations/20260703160000_sales_leads_write_rpcs.sql` v main.
 
 **Staging DB (Fáze 1):**
 - Migrace Fáze 1 byla aplikována **pouze na staging projekt `dxmowysntemfqfnanxua`** (schválení Pavla, přes `apply_migration`, ne `db push`).
@@ -21,9 +22,15 @@ Nový interní admin modul „Obchod / Leady" (outbound akvizice partnerských f
 - `sales_leads` má zatím **0 řádků**.
 - Změna byla **čistě aditivní** — nebyly změněny wallets, payments, contests, tickets, winners, Stripe ani existující soutěžní logika. **Staging `dxmowysntemfqfnanxua` nebyl touto akcí dotčen.**
 
+**Write RPC (Fáze 3A) — APLIKOVÁNO na staging i PRODUKCI (03. 07. 2026, schválení Pavla):**
+- Migrace `supabase/migrations/20260703160000_sales_leads_write_rpcs.sql` byla aplikována na **staging `dxmowysntemfqfnanxua`** i produkci **`xkzhjldrojjlrkezorey`** přes `apply_migration` (ne přes `db push`), výsledek **`{"success": true}`**.
+- Na produkci existují RPC `sales_lead_create` a `sales_lead_update_fields`; obě **SECURITY DEFINER**, **anon EXECUTE odebrán**, **authenticated EXECUTE povolen**. `sales_lead_set_status` stále existuje. `sales_leads` má na produkci **0 řádků**.
+- Změna byla **čistě aditivní** (2 nové RPC). **Staging nebyl touto produkční akcí dotčen.** Testovací lead `TEST OneMil Sales Lead F3A` (`ce2a421d-e881-401d-b137-8e36e76fb680`) vznikl při staging E2E testu a **zůstal pouze na stagingu** — produkce testovacího leada nemá.
+- **DB backend Fáze 1 + 3A je nyní hotový na stagingu i produkci** (4 tabulky + 3 write/status RPC).
+
 **Ještě NEHOTOVO / NEPROVEDENO:**
-- **Lovable Publish zatím neproběhl** — frontend Fáze 2 se v běžícím prostředí projeví až po publishi. Další krok je Lovable Publish + vizuální kontrola `/admin/sales-leads` (po produkční migraci by už neměla hlásit „Databáze leadů zatím není připravená").
-- **Edge Functions, AI research (`sales-lead-research`, `sales-lead-draft-email`), Resend napojení a odesílání e-mailů (`send-sales-lead-email`) zatím NEJSOU implementované** (to je Fáze 3 a 4 dle spec).
+- **Lovable Publish zatím neproběhl** — frontend Fáze 2/3A se v běžícím prostředí projeví až po publishi. Další krok je **Lovable Publish + vizuální kontrola `/admin/sales-leads`** (přidání firmy / editace / změna stavu už jsou na produkci backendově podpořené).
+- **Edge Functions, AI research (`sales-lead-research`, `sales-lead-draft-email`), Resend napojení a odesílání e-mailů (`send-sales-lead-email`) zatím NEJSOU implementované** (to je Fáze 3 e-mail a Fáze 4 dle spec).
 
 ## VEŘEJNÝ ZÁKAZNICKÝ UI STYL — LIGHT / CHAMPAGNE PREMIUM (02. 07. 2026)
 
