@@ -5,7 +5,7 @@ import { Resend } from "npm:resend@2.0.0";
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Headers":
-    "authorization, x-client-info, apikey, content-type",
+    "authorization, x-client-info, apikey, content-type, x-internal-token",
 };
 
 interface Attachment {
@@ -23,6 +23,10 @@ function getResendClient(): Resend {
   return new Resend(apiKey);
 }
 
+function errorMessage(error: unknown): string {
+  return error instanceof Error ? error.message : String(error);
+}
+
 interface QueueEmailRecord {
   id: string;
   email: string;
@@ -34,6 +38,75 @@ interface QueueEmailRecord {
   attachment_filename?: string | null;
   attachment_content_type?: string | null;
   attachment_required?: boolean | null;
+}
+
+type AuthFailure = { status: number; error: string };
+
+async function tokenDigest(value: string): Promise<string> {
+  const bytes = new TextEncoder().encode(value);
+  const hash = await crypto.subtle.digest("SHA-256", bytes);
+  return Array.from(new Uint8Array(hash))
+    .map((byte) => byte.toString(16).padStart(2, "0"))
+    .join("");
+}
+
+async function isInternalTokenAuthorized(req: Request): Promise<boolean> {
+  const expectedToken = Deno.env.get("INTERNAL_FUNCTION_TOKEN");
+  const providedToken = req.headers.get("x-internal-token");
+
+  if (!expectedToken || !providedToken) {
+    return false;
+  }
+
+  const [expectedDigest, providedDigest] = await Promise.all([
+    tokenDigest(expectedToken),
+    tokenDigest(providedToken),
+  ]);
+
+  return (
+    expectedToken.length === providedToken.length &&
+    expectedDigest === providedDigest
+  );
+}
+
+async function authorizeRequest(req: Request): Promise<AuthFailure | null> {
+  if (await isInternalTokenAuthorized(req)) {
+    return null;
+  }
+
+  const authHeader = req.headers.get("authorization") ?? "";
+  const bearerToken = authHeader.replace(/^Bearer\s+/i, "").trim();
+  if (!bearerToken) {
+    return { status: 401, error: "missing_authorization" };
+  }
+
+  const supabaseUrl = Deno.env.get("SUPABASE_URL") ?? "";
+  const serviceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "";
+  if (serviceKey && bearerToken === serviceKey) {
+    return null;
+  }
+  if (!supabaseUrl || !serviceKey) {
+    return { status: 500, error: "missing_service_configuration" };
+  }
+
+  const adminClient = createClient(supabaseUrl, serviceKey);
+  const { data: userData, error: userError } = await adminClient.auth.getUser(bearerToken);
+  if (userError || !userData?.user) {
+    return { status: 401, error: "invalid_authorization_token" };
+  }
+
+  const { data: roleRow } = await adminClient
+    .from("user_roles")
+    .select("role")
+    .eq("user_id", userData.user.id)
+    .in("role", ["admin", "superadmin"])
+    .maybeSingle();
+
+  if (!roleRow) {
+    return { status: 403, error: "access_denied_admin_only" };
+  }
+
+  return null;
 }
 
 async function blobToAttachment(
@@ -120,6 +193,14 @@ const handler = async (req: Request): Promise<Response> => {
   }
 
   try {
+    const authFailure = await authorizeRequest(req);
+    if (authFailure) {
+      return new Response(
+        JSON.stringify({ error: authFailure.error }),
+        { status: authFailure.status, headers: { "Content-Type": "application/json", ...corsHeaders } },
+      );
+    }
+
     let requestedEmailId: string | null = null;
     if (req.method === "POST") {
       try {
@@ -239,10 +320,10 @@ const handler = async (req: Request): Promise<Response> => {
         } else {
           results.sent++;
         }
-      } catch (sendError: any) {
+      } catch (sendError: unknown) {
         console.error(`Failed to send email to ${emailRecord.email}:`, sendError);
         results.failed++;
-        results.errors.push(`${emailRecord.email}: ${sendError.message}`);
+        results.errors.push(`${emailRecord.email}: ${errorMessage(sendError)}`);
 
         await supabaseClient
           .from("email_queue")
@@ -263,10 +344,10 @@ const handler = async (req: Request): Promise<Response> => {
       }),
       { status: 200, headers: { "Content-Type": "application/json", ...corsHeaders } },
     );
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error("Error processing email queue:", error);
     return new Response(
-      JSON.stringify({ error: error.message }),
+      JSON.stringify({ error: errorMessage(error) }),
       { status: 500, headers: { "Content-Type": "application/json", ...corsHeaders } },
     );
   }
