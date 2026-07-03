@@ -20,7 +20,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { Loader2, Pencil, X } from 'lucide-react';
+import { Loader2, Pencil, X, Sparkles, Mail, Save } from 'lucide-react';
 import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
 import { useUserRole } from '@/hooks/useUserRole';
@@ -52,11 +52,15 @@ interface ActivityRow {
 const DETAIL_COLUMNS =
   'id, company_name, industry, city, status, contact_email, updated_at, assigned_admin_id, ' +
   'ico, dic, website, company_size, contact_person, contact_role, contact_phone, email_source, ' +
-  'email_verified_by_admin, do_not_contact, do_not_contact_reason, notes, created_at';
+  'email_verified_by_admin, do_not_contact, do_not_contact_reason, notes, created_at, ' +
+  'ai_research_summary, ai_research_at, draft_email_subject, draft_email_body, draft_prepared_by';
 
 const ACTIVITY_LABELS: Record<string, string> = {
   lead_created: 'Lead založen',
   field_updated: 'Údaje upraveny',
+  ai_research: 'AI rešerše firmy',
+  draft_created: 'AI návrh e-mailu',
+  draft_edited: 'Návrh e-mailu upraven',
   status_changed: 'Změna stavu',
   do_not_contact_set: 'Označeno „Nekontaktovat"',
   converted: 'Konvertován na partnera',
@@ -116,6 +120,12 @@ export function SalesLeadDetailSheet({ leadId, open, onOpenChange, onMutated }: 
   const [pendingStatus, setPendingStatus] = useState<string | null>(null);
   const [reason, setReason] = useState('');
   const [statusBusy, setStatusBusy] = useState(false);
+  // AI příprava (Fáze 3B).
+  const [researchBusy, setResearchBusy] = useState(false);
+  const [draftBusy, setDraftBusy] = useState(false);
+  const [draftSaving, setDraftSaving] = useState(false);
+  const [draftSubject, setDraftSubject] = useState('');
+  const [draftBody, setDraftBody] = useState('');
 
   const load = useCallback(async () => {
     if (!leadId) return;
@@ -131,7 +141,10 @@ export function SalesLeadDetailSheet({ leadId, open, onOpenChange, onMutated }: 
           .limit(50),
       ]);
       if (leadErr) throw new Error(leadErr.message);
-      setLead(leadData as SalesLeadDetail);
+      const detail = leadData as SalesLeadDetail;
+      setLead(detail);
+      setDraftSubject(detail.draft_email_subject ?? '');
+      setDraftBody(detail.draft_email_body ?? '');
       setActivities((actData ?? []) as ActivityRow[]);
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : 'Nepodařilo se načíst detail';
@@ -216,6 +229,87 @@ export function SalesLeadDetailSheet({ leadId, open, onOpenChange, onMutated }: 
     () => (lead ? allowedTargets(lead.status, isSuperAdmin) : []),
     [lead, isSuperAdmin],
   );
+
+  // ── AI příprava (Fáze 3B) — pouze návrhy, nic se neodesílá ────────────────
+  const runResearch = async () => {
+    if (!lead) return;
+    setResearchBusy(true);
+    try {
+      const { data, error } = await supabase.functions.invoke('sales-lead-research', {
+        body: { lead_id: lead.id },
+      });
+      if (error) throw new Error(error.message);
+      const res = (data ?? {}) as { success?: boolean; error?: string };
+      if (!res.success) {
+        toast.error(rpcErrorMessage(res.error));
+        return;
+      }
+      toast.success('Rešerše dokončena');
+      await load();
+      onMutated();
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : 'Rešerše se nezdařila';
+      toast.error(msg);
+    } finally {
+      setResearchBusy(false);
+    }
+  };
+
+  const prepareDraft = async () => {
+    if (!lead) return;
+    setDraftBusy(true);
+    try {
+      const { data, error } = await supabase.functions.invoke('sales-lead-draft-email', {
+        body: { lead_id: lead.id },
+      });
+      if (error) throw new Error(error.message);
+      const res = (data ?? {}) as { success?: boolean; error?: string; subject?: string; body?: string };
+      if (!res.success) {
+        toast.error(rpcErrorMessage(res.error));
+        return;
+      }
+      setDraftSubject(res.subject ?? '');
+      setDraftBody(res.body ?? '');
+      toast.success('Návrh e-mailu připraven');
+      await load();
+      onMutated();
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : 'Příprava návrhu se nezdařila';
+      toast.error(msg);
+    } finally {
+      setDraftBusy(false);
+    }
+  };
+
+  const saveDraft = async () => {
+    if (!lead) return;
+    if (!draftSubject.trim() || !draftBody.trim()) {
+      toast.error('Předmět i tělo návrhu musí být vyplněné.');
+      return;
+    }
+    setDraftSaving(true);
+    try {
+      const { data, error } = await (supabase as any).rpc('sales_lead_save_draft', {
+        p_lead_id: lead.id,
+        p_subject: draftSubject.trim(),
+        p_body: draftBody.trim(),
+      });
+      if (error) throw new Error(error.message);
+      const res = (data ?? {}) as { success?: boolean; error?: string };
+      if (!res.success) {
+        toast.error(rpcErrorMessage(res.error));
+        return;
+      }
+      toast.success('Koncept uložen');
+      await load();
+      onMutated();
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : 'Uložení konceptu se nezdařilo';
+      toast.error(msg);
+    } finally {
+      setDraftSaving(false);
+    }
+  };
 
   const confirmStatusChange = async () => {
     if (!lead || !pendingStatus) return;
@@ -456,6 +550,84 @@ export function SalesLeadDetailSheet({ leadId, open, onOpenChange, onMutated }: 
                 </div>
               </div>
             )}
+
+            <Separator className="my-4" />
+
+            {/* AI příprava (Fáze 3B) — jen interní koncepty, nic se neodesílá */}
+            <div className="flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wide text-muted-foreground mb-2">
+              <Sparkles className="h-3.5 w-3.5" aria-hidden /> AI příprava
+            </div>
+            <p className="text-xs text-muted-foreground mb-3">
+              AI je jen asistent — výstupy ověřte. E-mail se odsud neodesílá; jde pouze o interní koncept.
+            </p>
+
+            {/* Rešerše */}
+            <div className="space-y-2">
+              <div className="flex items-center justify-between gap-2">
+                <span className="text-sm font-medium">Informace o firmě</span>
+                <Button variant="outline" size="sm" onClick={runResearch} disabled={researchBusy} className="gap-1.5">
+                  {researchBusy ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Sparkles className="h-3.5 w-3.5" />}
+                  Zjistit informace o firmě
+                </Button>
+              </div>
+              {lead.ai_research_summary ? (
+                <div className="rounded-lg border border-border/60 bg-muted/30 p-3">
+                  <p className="whitespace-pre-wrap text-sm">{lead.ai_research_summary}</p>
+                  <p className="mt-2 text-[11px] text-muted-foreground">
+                    Výstup AI — ověřte před použitím · {formatDateTime(lead.ai_research_at)}
+                  </p>
+                </div>
+              ) : (
+                <p className="text-sm text-muted-foreground">Zatím bez rešerše.</p>
+              )}
+            </div>
+
+            {/* Návrh e-mailu */}
+            <div className="mt-4 space-y-2">
+              <div className="flex items-center justify-between gap-2">
+                <span className="text-sm font-medium">Návrh oslovovacího e-mailu</span>
+                <Button variant="outline" size="sm" onClick={prepareDraft} disabled={draftBusy} className="gap-1.5">
+                  {draftBusy ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Mail className="h-3.5 w-3.5" />}
+                  Připravit návrh e-mailu
+                </Button>
+              </div>
+              {lead.draft_prepared_by && (
+                <p className="text-[11px] text-muted-foreground">
+                  Připravil: {lead.draft_prepared_by === 'ai' ? 'AI' : 'admin'}
+                </p>
+              )}
+              <div className="space-y-1">
+                <Label htmlFor="sl-draft-subject" className="text-xs">Předmět</Label>
+                <Input
+                  id="sl-draft-subject"
+                  value={draftSubject}
+                  onChange={(e) => setDraftSubject(e.target.value)}
+                  disabled={draftBusy || draftSaving}
+                  placeholder="Předmět e-mailu…"
+                />
+              </div>
+              <div className="space-y-1">
+                <Label htmlFor="sl-draft-body" className="text-xs">Tělo e-mailu (koncept)</Label>
+                <Textarea
+                  id="sl-draft-body"
+                  value={draftBody}
+                  onChange={(e) => setDraftBody(e.target.value)}
+                  disabled={draftBusy || draftSaving}
+                  rows={8}
+                  className="resize-none"
+                  placeholder="Tělo e-mailu — libovolně upravte…"
+                />
+              </div>
+              <div className="flex items-center justify-between gap-2">
+                <p className="text-[11px] text-muted-foreground">
+                  Odeslání není součástí této fáze — koncept se pouze ukládá.
+                </p>
+                <Button size="sm" onClick={saveDraft} disabled={draftSaving || draftBusy} className="gap-1.5">
+                  {draftSaving ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Save className="h-3.5 w-3.5" />}
+                  Uložit koncept
+                </Button>
+              </div>
+            </div>
 
             <Separator className="my-4" />
 

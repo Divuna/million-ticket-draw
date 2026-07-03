@@ -133,11 +133,18 @@ export interface SalesLeadDetail extends SalesLeadRow {
   do_not_contact_reason: string | null;
   notes: string | null;
   created_at: string | null;
+  // AI příprava (Fáze 3B) — jen interní koncepty, nic se neodesílá.
+  ai_research_summary: string | null;
+  ai_research_at: string | null;
+  draft_email_subject: string | null;
+  draft_email_body: string | null;
+  draft_prepared_by: string | null;
 }
 
-/** Mapování chybových kódů z RPC na české hlášky. */
+/** Mapování chybových kódů z RPC / Edge Function na české hlášky. */
 export const RPC_ERROR_MESSAGES: Record<string, string> = {
   access_denied: 'Nemáte oprávnění k této akci.',
+  access_denied_sales_leads_manage_only: 'Nemáte oprávnění „Obchodní leady".',
   company_name_required: 'Název firmy je povinný.',
   duplicate: 'Firma s tímto e-mailem, IČO nebo doménou už v evidenci existuje.',
   invalid_input: 'Neplatný vstup (zkontrolujte IČO — 8 číslic, a web — musí začínat https://).',
@@ -145,6 +152,11 @@ export const RPC_ERROR_MESSAGES: Record<string, string> = {
   status_unchanged: 'Stav se nezměnil.',
   transition_not_allowed: 'Tento přechod stavu není povolen.',
   reason_required: 'U této změny stavu je nutné uvést důvod.',
+  ai_not_configured: 'AI zatím není v tomto prostředí nakonfigurovaná.',
+  ai_request_failed: 'AI požadavek se nezdařil, zkuste to znovu.',
+  ai_empty_response: 'AI nevrátila žádný obsah, zkuste to znovu.',
+  ai_invalid_format: 'AI vrátila neočekávaný formát, zkuste to znovu.',
+  forbidden_wording_detected: 'Návrh obsahoval nepovolené výrazy a nebyl uložen.',
 };
 
 export const rpcErrorMessage = (code: string | undefined): string =>
