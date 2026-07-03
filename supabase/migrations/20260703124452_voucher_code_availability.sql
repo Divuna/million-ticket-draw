@@ -27,11 +27,53 @@ returns table (
   is_public boolean,
   available_code_count integer
 )
-language sql
+language plpgsql
 security definer
 set search_path to 'public'
 as $$
+declare
+  v_short_description_expr text;
+  v_usage_description_expr text;
+  v_terms_text_expr text;
+  v_how_to_use_text_expr text;
+begin
   select
+    case when exists (
+      select 1
+      from information_schema.columns
+      where table_schema = 'public'
+        and table_name = 'vouchers'
+        and column_name = 'short_description'
+    ) then 'v.short_description' else 'null::text' end,
+    case when exists (
+      select 1
+      from information_schema.columns
+      where table_schema = 'public'
+        and table_name = 'vouchers'
+        and column_name = 'usage_description'
+    ) then 'v.usage_description' else 'null::text' end,
+    case when exists (
+      select 1
+      from information_schema.columns
+      where table_schema = 'public'
+        and table_name = 'vouchers'
+        and column_name = 'terms_text'
+    ) then 'v.terms_text' else 'null::text' end,
+    case when exists (
+      select 1
+      from information_schema.columns
+      where table_schema = 'public'
+        and table_name = 'vouchers'
+        and column_name = 'how_to_use_text'
+    ) then 'v.how_to_use_text' else 'null::text' end
+  into
+    v_short_description_expr,
+    v_usage_description_expr,
+    v_terms_text_expr,
+    v_how_to_use_text_expr;
+
+  return query execute format($query$
+    select
     v.id,
     v.name,
     v.image_url,
@@ -40,10 +82,10 @@ as $$
     coalesce(v.redeemed_count, 0)::integer as redeemed_count,
     v.start_date,
     v.end_date,
-    v.short_description,
-    v.usage_description,
-    v.terms_text,
-    v.how_to_use_text,
+    %s as short_description,
+    %s as usage_description,
+    %s as terms_text,
+    %s as how_to_use_text,
     v.user_id,
     v.is_public,
     counts.available_code_count::integer
@@ -58,7 +100,14 @@ as $$
     and (v.start_date is null or v.start_date <= now())
     and (v.end_date is null or v.end_date >= now())
     and counts.available_code_count > 0
-  order by v.created_at desc;
+  order by v.created_at desc
+  $query$,
+    v_short_description_expr,
+    v_usage_description_expr,
+    v_terms_text_expr,
+    v_how_to_use_text_expr
+  );
+end;
 $$;
 
 revoke all on function public.get_public_available_vouchers() from public;
