@@ -89,6 +89,10 @@ async function callAiChat(messageId: string, headers: Record<string, string>) {
   return { status: response.status, body };
 }
 
+function responseDebug(call: { status: number; body: unknown }): string {
+  return JSON.stringify(call.body);
+}
+
 async function createApprovedPartner(): Promise<string> {
   const { data, error } = await adminClient()
     .from('partners')
@@ -165,7 +169,7 @@ test.describe.serial('61 - browser internal token removal auth coverage', () => 
     const ownerCall = await callAiChat(ownerMessageId, {
       Authorization: `Bearer ${ownerToken}`,
     });
-    expect(ownerCall.status).toBe(200);
+    expect(ownerCall.status, responseDebug(ownerCall)).toBe(200);
     expect(ownerCall.body?.success).toBe(true);
     expect(ownerCall.body?.reply_message_id).toBeTruthy();
 
@@ -173,14 +177,14 @@ test.describe.serial('61 - browser internal token removal auth coverage', () => 
     const intruderCall = await callAiChat(foreignMessageId, {
       Authorization: `Bearer ${intruderToken}`,
     });
-    expect(intruderCall.status).toBe(403);
+    expect(intruderCall.status, responseDebug(intruderCall)).toBe(403);
     expect(intruderCall.body).toEqual({ error: 'message_not_owned_by_user' });
 
     const internalMessageId = await insertUserMessage(ctx.chatOwnerId!);
     const internalCall = await callAiChat(internalMessageId, {
       'x-internal-token': INTERNAL_TOKEN,
     });
-    expect(internalCall.status).toBe(200);
+    expect(internalCall.status, responseDebug(internalCall)).toBe(200);
     expect(internalCall.body?.success).toBe(true);
     expect(internalCall.body?.reply_message_id).toBeTruthy();
   });
@@ -192,11 +196,11 @@ test.describe.serial('61 - browser internal token removal auth coverage', () => 
     const normalToken = await signIn(NORMAL_USER_EMAIL);
 
     const denied = await callAdminRotate(ctx.partnerId!, normalToken);
-    expect(denied.status).toBe(403);
+    expect(denied.status, responseDebug(denied)).toBe(403);
     expect(denied.body).toEqual({ success: false, error: 'insufficient_permissions' });
 
     const allowed = await callAdminRotate(ctx.partnerId!, adminToken);
-    expect(allowed.status).toBe(200);
+    expect(allowed.status, responseDebug(allowed)).toBe(200);
     expect(allowed.body?.success).toBe(true);
     expect(typeof allowed.body?.api_key).toBe('string');
     expect(allowed.body.api_key.length).toBeGreaterThan(20);
