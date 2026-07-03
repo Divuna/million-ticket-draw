@@ -1728,13 +1728,6 @@ serve(async (req) => {
   }
   const authContext = authResult.context
 
-  if (!openaiKey) {
-    return new Response(JSON.stringify({ error: "OPENAI_API_KEY missing" }), {
-      status: 500,
-      headers: { ...corsHeaders, "Content-Type": "application/json" },
-    })
-  }
-
   try {
     const body = (await req.json()) as { message_id?: string; ctaClicked?: unknown }
     if (body.ctaClicked === true) {
@@ -1811,6 +1804,13 @@ serve(async (req) => {
         })
       }
       return jsonSuccess(ins.id)
+    }
+
+    if (!openaiKey) {
+      return new Response(JSON.stringify({ error: "OPENAI_API_KEY missing" }), {
+        status: 500,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      })
     }
 
     // Intent debug (temporary)
