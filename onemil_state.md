@@ -28,8 +28,17 @@ Nový interní admin modul „Obchod / Leady" (outbound akvizice partnerských f
 - Změna byla **čistě aditivní** (2 nové RPC). **Staging nebyl touto produkční akcí dotčen.** Testovací lead `TEST OneMil Sales Lead F3A` (`ce2a421d-e881-401d-b137-8e36e76fb680`) vznikl při staging E2E testu a **zůstal pouze na stagingu** — produkce testovacího leada nemá.
 - **DB backend Fáze 1 + 3A je nyní hotový na stagingu i produkci** (4 tabulky + 3 write/status RPC).
 
+**Fáze 3A — PRODUKČNĚ OVĚŘENO V UI (03. 07. 2026):**
+- Po **Lovable Publish** produkční UI `/admin/sales-leads` **funguje**.
+- **Ruční přidání firmy funguje** — nový lead se založí přes `sales_lead_create`.
+- **Lead se zobrazí v seznamu** na `/admin/sales-leads`.
+- **Detail leadu funguje** (Sheet s údaji, historií a změnou stavu).
+- **Úprava údajů funguje** (`sales_lead_update_fields`).
+- **Historie kontaktu se zapisuje** (`sales_lead_activities`).
+- Testováno na produkčním leadu **`ikonic Point s.r.o`**.
+- **Fáze 3A je produkčně ověřená** (ruční přidání + detail + editace + historie).
+
 **Ještě NEHOTOVO / NEPROVEDENO:**
-- **Lovable Publish zatím neproběhl** — frontend Fáze 2/3A se v běžícím prostředí projeví až po publishi. Další krok je **Lovable Publish + vizuální kontrola `/admin/sales-leads`** (přidání firmy / editace / změna stavu už jsou na produkci backendově podpořené).
 - **Edge Functions, AI research (`sales-lead-research`, `sales-lead-draft-email`), Resend napojení a odesílání e-mailů (`send-sales-lead-email`) zatím NEJSOU implementované** (to je Fáze 3 e-mail a Fáze 4 dle spec).
 
 ## VEŘEJNÝ ZÁKAZNICKÝ UI STYL — LIGHT / CHAMPAGNE PREMIUM (02. 07. 2026)
