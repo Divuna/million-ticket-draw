@@ -33,6 +33,9 @@ verify_jwt = false
 [functions.run-audit]
 verify_jwt = false
 
+[functions.generate-audit-report]
+verify_jwt = true
+
 [functions.generate-contest-banner]
 verify_jwt = false
 

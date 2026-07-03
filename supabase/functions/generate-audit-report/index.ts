@@ -7,6 +7,41 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 }
 
+type AuthFailure = { status: number; error: string }
+
+async function authorizeRequest(req: Request): Promise<AuthFailure | null> {
+  const authHeader = req.headers.get('authorization') ?? ''
+  const jwtToken = authHeader.replace(/^Bearer\s+/i, '').trim()
+  if (!jwtToken) {
+    return { status: 401, error: 'missing_authorization' }
+  }
+
+  const supabaseUrl = Deno.env.get('SUPABASE_URL') ?? ''
+  const serviceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
+  if (!supabaseUrl || !serviceKey) {
+    return { status: 500, error: 'missing_service_configuration' }
+  }
+
+  const supabaseAdmin = createClient<Database>(supabaseUrl, serviceKey)
+  const { data: userData, error: userError } = await supabaseAdmin.auth.getUser(jwtToken)
+  if (userError || !userData?.user) {
+    return { status: 401, error: 'invalid_authorization_token' }
+  }
+
+  const { data: roleRow } = await supabaseAdmin
+    .from('user_roles')
+    .select('role')
+    .eq('user_id', userData.user.id)
+    .in('role', ['admin', 'superadmin'])
+    .maybeSingle()
+
+  if (!roleRow) {
+    return { status: 403, error: 'access_denied_admin_only' }
+  }
+
+  return null
+}
+
 serve(async (req) => {
   // Handle CORS preflight requests
   if (req.method === 'OPTIONS') {
@@ -14,9 +49,20 @@ serve(async (req) => {
   }
 
   try {
+    const authFailure = await authorizeRequest(req)
+    if (authFailure) {
+      return new Response(
+        JSON.stringify({ error: authFailure.error }),
+        {
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+          status: authFailure.status,
+        }
+      )
+    }
+
     const supabaseUrl = Deno.env.get('SUPABASE_URL')!
     const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
-    const supabase = createClient(supabaseUrl, supabaseServiceKey)
+    const supabase = createClient<Database>(supabaseUrl, supabaseServiceKey)
 
     console.log('Generating comprehensive OneMil/Sofinity audit report...');
 
@@ -231,7 +277,11 @@ serve(async (req) => {
     let nullUserIdCount = 0;
     let nullContestIdCount = 0;
     const duplicateChecks: Record<string, Set<string>> = {};
-    const timestampIssues: any[] = [];
+    const timestampIssues: Array<{
+      event_name: string
+      timestamp: string
+      issue: string
+    }> = [];
 
     eventStats?.forEach(event => {
       totalEvents++;
