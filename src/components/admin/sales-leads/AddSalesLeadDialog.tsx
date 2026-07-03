@@ -1,0 +1,277 @@
+import { useState } from 'react';
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+} from '@/components/ui/dialog';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Textarea } from '@/components/ui/textarea';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
+import { Loader2 } from 'lucide-react';
+import { toast } from 'sonner';
+import { supabase } from '@/integrations/supabase/client';
+import { INDUSTRY_OPTIONS, rpcErrorMessage } from './salesLeadsShared';
+
+interface Props {
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  onSuccess: () => void;
+}
+
+const EMPTY_FORM = {
+  company_name: '',
+  ico: '',
+  dic: '',
+  website: '',
+  industry: '',
+  city: '',
+  company_size: '',
+  contact_person: '',
+  contact_role: '',
+  contact_email: '',
+  contact_phone: '',
+  email_source: '',
+  notes: '',
+};
+
+type FormState = typeof EMPTY_FORM;
+
+/**
+ * Ruční založení leadu (Fáze 3A). Zapisuje výhradně přes SECURITY DEFINER RPC
+ * `sales_lead_create` — žádný přímý client INSERT (RLS nemá write policy).
+ * Neposílá e-maily, nevolá AI ani Resend.
+ */
+export function AddSalesLeadDialog({ open, onOpenChange, onSuccess }: Props) {
+  const [loading, setLoading] = useState(false);
+  const [form, setForm] = useState<FormState>(EMPTY_FORM);
+
+  const setField =
+    (field: keyof FormState) =>
+    (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) =>
+      setForm((prev) => ({ ...prev, [field]: e.target.value }));
+
+  const handleClose = () => {
+    if (!loading) onOpenChange(false);
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!form.company_name.trim()) {
+      toast.error('Zadejte název firmy');
+      return;
+    }
+    const website = form.website.trim();
+    const normalizedWebsite = website
+      ? /^https?:\/\//i.test(website)
+        ? website
+        : `https://${website}`
+      : '';
+
+    setLoading(true);
+    try {
+      const { data, error } = await (supabase as any).rpc('sales_lead_create', {
+        p_company_name: form.company_name.trim(),
+        p_ico: form.ico.trim() || null,
+        p_dic: form.dic.trim() || null,
+        p_website: normalizedWebsite || null,
+        p_industry: form.industry || null,
+        p_city: form.city.trim() || null,
+        p_company_size: form.company_size || null,
+        p_contact_person: form.contact_person.trim() || null,
+        p_contact_role: form.contact_role.trim() || null,
+        p_contact_email: form.contact_email.trim() || null,
+        p_contact_phone: form.contact_phone.trim() || null,
+        p_email_source: form.email_source.trim() || null,
+        p_notes: form.notes.trim() || null,
+      });
+
+      if (error) throw new Error(error.message);
+      const res = (data ?? {}) as { success?: boolean; error?: string };
+      if (!res.success) {
+        toast.error(rpcErrorMessage(res.error));
+        return;
+      }
+
+      toast.success('Firma přidána do evidence');
+      setForm(EMPTY_FORM);
+      onOpenChange(false);
+      onSuccess();
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : 'Nepodařilo se přidat firmu';
+      toast.error(msg);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return (
+    <Dialog open={open} onOpenChange={handleClose}>
+      <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
+        <DialogHeader>
+          <DialogTitle>Přidat firmu</DialogTitle>
+          <DialogDescription>
+            Ruční založení leadu. Firma se uloží do evidence ve stavu „Nový". Žádný e-mail se neodesílá.
+          </DialogDescription>
+        </DialogHeader>
+
+        <form onSubmit={handleSubmit} className="space-y-4 pt-2">
+          <div className="space-y-1">
+            <Label htmlFor="sl-company_name">
+              Název firmy <span className="text-destructive">*</span>
+            </Label>
+            <Input
+              id="sl-company_name"
+              value={form.company_name}
+              onChange={setField('company_name')}
+              placeholder="Acme s.r.o."
+              disabled={loading}
+              required
+              data-testid="sl-company-name"
+            />
+          </div>
+
+          <div className="grid grid-cols-2 gap-3">
+            <div className="space-y-1">
+              <Label htmlFor="sl-ico">IČO</Label>
+              <Input id="sl-ico" value={form.ico} onChange={setField('ico')} placeholder="12345678" disabled={loading} />
+            </div>
+            <div className="space-y-1">
+              <Label htmlFor="sl-dic">DIČ</Label>
+              <Input id="sl-dic" value={form.dic} onChange={setField('dic')} placeholder="CZ12345678" disabled={loading} />
+            </div>
+          </div>
+
+          <div className="grid grid-cols-2 gap-3">
+            <div className="space-y-1">
+              <Label htmlFor="sl-industry">Obor</Label>
+              <Select
+                value={form.industry}
+                onValueChange={(v) => setForm((p) => ({ ...p, industry: v }))}
+                disabled={loading}
+              >
+                <SelectTrigger id="sl-industry">
+                  <SelectValue placeholder="Vyberte obor" />
+                </SelectTrigger>
+                <SelectContent>
+                  {INDUSTRY_OPTIONS.map((o) => (
+                    <SelectItem key={o.value} value={o.value}>
+                      {o.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-1">
+              <Label htmlFor="sl-city">Město</Label>
+              <Input id="sl-city" value={form.city} onChange={setField('city')} placeholder="Praha" disabled={loading} />
+            </div>
+          </div>
+
+          <div className="space-y-1">
+            <Label htmlFor="sl-website">Web firmy</Label>
+            <Input
+              id="sl-website"
+              value={form.website}
+              onChange={setField('website')}
+              placeholder="https://acme.cz"
+              disabled={loading}
+            />
+          </div>
+
+          <div className="grid grid-cols-2 gap-3">
+            <div className="space-y-1">
+              <Label htmlFor="sl-contact_person">Kontaktní osoba</Label>
+              <Input
+                id="sl-contact_person"
+                value={form.contact_person}
+                onChange={setField('contact_person')}
+                placeholder="Jana Nováková"
+                disabled={loading}
+              />
+            </div>
+            <div className="space-y-1">
+              <Label htmlFor="sl-contact_role">Funkce</Label>
+              <Input
+                id="sl-contact_role"
+                value={form.contact_role}
+                onChange={setField('contact_role')}
+                placeholder="jednatel / marketing"
+                disabled={loading}
+              />
+            </div>
+          </div>
+
+          <div className="grid grid-cols-2 gap-3">
+            <div className="space-y-1">
+              <Label htmlFor="sl-contact_email">Kontaktní e-mail</Label>
+              <Input
+                id="sl-contact_email"
+                type="email"
+                value={form.contact_email}
+                onChange={setField('contact_email')}
+                placeholder="info@acme.cz"
+                disabled={loading}
+              />
+            </div>
+            <div className="space-y-1">
+              <Label htmlFor="sl-contact_phone">Telefon</Label>
+              <Input
+                id="sl-contact_phone"
+                type="tel"
+                value={form.contact_phone}
+                onChange={setField('contact_phone')}
+                placeholder="+420 600 100 200"
+                disabled={loading}
+              />
+            </div>
+          </div>
+
+          <div className="space-y-1">
+            <Label htmlFor="sl-email_source">Zdroj e-mailu</Label>
+            <Input
+              id="sl-email_source"
+              value={form.email_source}
+              onChange={setField('email_source')}
+              placeholder="web firmy / veřejný rejstřík / ručně"
+              disabled={loading}
+            />
+          </div>
+
+          <div className="space-y-1">
+            <Label htmlFor="sl-notes">Interní poznámka</Label>
+            <Textarea
+              id="sl-notes"
+              value={form.notes}
+              onChange={setField('notes')}
+              placeholder="Kontext o firmě, proč je vhodný partner…"
+              disabled={loading}
+              rows={3}
+              maxLength={2000}
+              className="resize-none"
+            />
+          </div>
+
+          <div className="flex justify-end gap-3 pt-2">
+            <Button type="button" variant="outline" onClick={handleClose} disabled={loading}>
+              Zrušit
+            </Button>
+            <Button type="submit" disabled={loading} className="gap-2" data-testid="sl-submit-btn">
+              {loading && <Loader2 className="w-4 h-4 animate-spin" />}
+              Přidat firmu
+            </Button>
+          </div>
+        </form>
+      </DialogContent>
+    </Dialog>
+  );
+}

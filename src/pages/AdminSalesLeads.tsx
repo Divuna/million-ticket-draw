@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
@@ -7,60 +7,30 @@ import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { supabase } from '@/integrations/supabase/client';
 import { Briefcase, Plus, Search, Info } from 'lucide-react';
+import {
+  STATUS_LABELS,
+  STATUS_BADGE_CLASS,
+  INDUSTRY_OPTIONS,
+  type SalesLeadRow,
+} from '@/components/admin/sales-leads/salesLeadsShared';
+import { AddSalesLeadDialog } from '@/components/admin/sales-leads/AddSalesLeadDialog';
+import { SalesLeadDetailSheet } from '@/components/admin/sales-leads/SalesLeadDetailSheet';
 
 /**
- * Admin modul „Obchod / Leady" — Fáze 2 (frontend základ).
- * Spec: docs/SALES_LEADS_ADMIN_SPEC.md (§1, §2).
+ * Admin modul „Obchod / Leady" — Fáze 3A (ruční přidání, detail, editace, změna stavu).
+ * Spec: docs/SALES_LEADS_ADMIN_SPEC.md (§1, §2, §5).
  *
- * Fáze 2 je read-only skeleton: záložky, souhrnné karty, tabulka a prázdný
- * stav. Žádné akce (create/edit/status/AI/e-mail) — ty přijdou ve Fázi 3/4.
- * Route je chráněná RequirePermission("sales_leads.manage") v App.tsx;
- * data navíc drží RLS (SELECT jen pro držitele oprávnění / superadmina).
+ * Route je chráněná RequirePermission("sales_leads.manage") v App.tsx; data
+ * navíc drží RLS (SELECT jen pro držitele oprávnění / superadmina). Veškerý
+ * zápis jde přes SECURITY DEFINER RPC (sales_lead_create / _update_fields /
+ * _set_status) — žádný přímý client INSERT/UPDATE. Žádné e-maily / AI / Resend.
  *
- * Tabulka sales_leads nemusí v prostředí existovat (migrace Fáze 1 se
- * aplikuje samostatně po schválení) — chyba SELECTu se řeší tichým prázdným
- * stavem s informační hláškou, stejný defenzivní vzor jako useAdminPermissions.
+ * Tabulka sales_leads nemusí v prostředí existovat (migrace se aplikuje
+ * samostatně) — chyba SELECTu se řeší tichým prázdným stavem s hláškou.
  */
 
-interface SalesLeadRow {
-  id: string;
-  company_name: string;
-  industry: string | null;
-  city: string | null;
-  status: string;
-  contact_email: string | null;
-  updated_at: string | null;
-  assigned_admin_id: string | null;
-}
-
-/** České labely stavů (§4). */
-const STATUS_LABELS: Record<string, string> = {
-  novy: 'Nový',
-  priprava: 'Příprava',
-  schvaleni_ceka: 'Čeká na schválení',
-  osloveno: 'Osloveno',
-  follow_up: 'Follow-up',
-  odpovedel: 'Odpověděl',
-  jednani: 'Jednání',
-  konvertovan: 'Konvertován',
-  odmitl: 'Odmítl',
-  nekontaktovat: 'Nekontaktovat',
-  archivovan: 'Archivován',
-};
-
-const STATUS_BADGE_CLASS: Record<string, string> = {
-  novy: 'bg-muted text-foreground',
-  priprava: 'bg-blue-500/15 text-blue-500 border-blue-500/30',
-  schvaleni_ceka: 'bg-amber-500/15 text-amber-500 border-amber-500/30',
-  osloveno: 'bg-primary/15 text-primary border-primary/30',
-  follow_up: 'bg-primary/15 text-primary border-primary/30',
-  odpovedel: 'bg-emerald-500/15 text-emerald-500 border-emerald-500/30',
-  jednani: 'bg-emerald-500/15 text-emerald-500 border-emerald-500/30',
-  konvertovan: 'bg-emerald-600/20 text-emerald-500 border-emerald-500/40',
-  odmitl: 'bg-destructive/15 text-destructive border-destructive/30',
-  nekontaktovat: 'bg-destructive/15 text-destructive border-destructive/30',
-  archivovan: 'bg-muted text-muted-foreground',
-};
+const INDUSTRY_LABEL = (v: string | null): string =>
+  (v && INDUSTRY_OPTIONS.find((o) => o.value === v)?.label) || v || '—';
 
 /** Záložky dle spec §2 — každá mapuje na množinu stavů. */
 const TABS: { id: string; label: string; statuses: string[] | null }[] = [
@@ -87,39 +57,40 @@ const AdminSalesLeads: React.FC = () => {
   const [tableMissing, setTableMissing] = useState(false);
   const [activeTab, setActiveTab] = useState('all');
   const [searchTerm, setSearchTerm] = useState('');
+  const [addOpen, setAddOpen] = useState(false);
+  const [detailId, setDetailId] = useState<string | null>(null);
+  const [detailOpen, setDetailOpen] = useState(false);
+
+  const load = useCallback(async () => {
+    setLoading(true);
+    try {
+      const { data, error } = await (supabase as any)
+        .from('sales_leads')
+        .select('id, company_name, industry, city, status, contact_email, updated_at, assigned_admin_id')
+        .order('updated_at', { ascending: false });
+      if (error) {
+        setTableMissing(true);
+        setLeads([]);
+      } else {
+        setTableMissing(false);
+        setLeads((data ?? []) as SalesLeadRow[]);
+      }
+    } catch {
+      setTableMissing(true);
+      setLeads([]);
+    } finally {
+      setLoading(false);
+    }
+  }, []);
 
   useEffect(() => {
-    let cancelled = false;
-    const load = async () => {
-      setLoading(true);
-      try {
-        // Typy klienta tabulku ještě neznají (migrace Fáze 1 čeká na apply).
-        const { data, error } = await (supabase as any)
-          .from('sales_leads')
-          .select('id, company_name, industry, city, status, contact_email, updated_at, assigned_admin_id')
-          .order('updated_at', { ascending: false });
-        if (cancelled) return;
-        if (error) {
-          setTableMissing(true);
-          setLeads([]);
-        } else {
-          setTableMissing(false);
-          setLeads((data ?? []) as SalesLeadRow[]);
-        }
-      } catch {
-        if (!cancelled) {
-          setTableMissing(true);
-          setLeads([]);
-        }
-      } finally {
-        if (!cancelled) setLoading(false);
-      }
-    };
     load();
-    return () => {
-      cancelled = true;
-    };
-  }, []);
+  }, [load]);
+
+  const openDetail = (id: string) => {
+    setDetailId(id);
+    setDetailOpen(true);
+  };
 
   const summary = useMemo(
     () => ({
@@ -173,8 +144,7 @@ const AdminSalesLeads: React.FC = () => {
             </p>
           </div>
         </div>
-        {/* Fáze 2: akce zatím neaktivní — vytvoření leadu přijde v další fázi. */}
-        <Button disabled title="Připravujeme — akce budou dostupné v další fázi">
+        <Button onClick={() => setAddOpen(true)} data-testid="sl-add-company-btn">
           <Plus className="h-4 w-4 mr-1.5" aria-hidden />
           Přidat firmu
         </Button>
@@ -252,7 +222,7 @@ const AdminSalesLeads: React.FC = () => {
                 {visibleLeads.map((lead) => (
                   <TableRow key={lead.id}>
                     <TableCell className="font-medium">{lead.company_name}</TableCell>
-                    <TableCell className="text-muted-foreground">{lead.industry ?? '—'}</TableCell>
+                    <TableCell className="text-muted-foreground">{INDUSTRY_LABEL(lead.industry)}</TableCell>
                     <TableCell className="text-muted-foreground">{lead.city ?? '—'}</TableCell>
                     <TableCell>
                       <Badge variant="outline" className={STATUS_BADGE_CLASS[lead.status] ?? ''}>
@@ -261,7 +231,7 @@ const AdminSalesLeads: React.FC = () => {
                     </TableCell>
                     <TableCell className="text-muted-foreground">{formatDate(lead.updated_at)}</TableCell>
                     <TableCell className="text-right">
-                      <Button variant="ghost" size="sm" disabled title="Detail přijde v další fázi">
+                      <Button variant="ghost" size="sm" onClick={() => openDetail(lead.id)}>
                         Detail
                       </Button>
                     </TableCell>
@@ -272,6 +242,14 @@ const AdminSalesLeads: React.FC = () => {
           )}
         </CardContent>
       </Card>
+
+      <AddSalesLeadDialog open={addOpen} onOpenChange={setAddOpen} onSuccess={load} />
+      <SalesLeadDetailSheet
+        leadId={detailId}
+        open={detailOpen}
+        onOpenChange={setDetailOpen}
+        onMutated={load}
+      />
     </div>
   );
 };
