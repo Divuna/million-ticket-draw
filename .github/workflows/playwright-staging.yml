@@ -668,7 +668,7 @@ jobs:
           E2E_AFFILIATE_PAYOUTS: ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.affiliate_payouts == 'true' && '1' || '0' }}
           VITE_SUPABASE_URL: ${{ secrets.STAGING_VITE_SUPABASE_URL }}
           VITE_SUPABASE_ANON_KEY: ${{ secrets.STAGING_VITE_SUPABASE_ANON_KEY }}
-          VITE_INTERNAL_FUNCTION_TOKEN: ${{ secrets.STAGING_VITE_INTERNAL_FUNCTION_TOKEN }}
+          INTERNAL_FUNCTION_TOKEN: ${{ secrets.STAGING_VITE_INTERNAL_FUNCTION_TOKEN }}
           E2E_SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.STAGING_SUPABASE_SERVICE_ROLE_KEY }}
           E2E_TEST_EMAIL: ${{ secrets.STAGING_E2E_TEST_EMAIL }}
           E2E_TEST_PASSWORD: ${{ secrets.STAGING_E2E_TEST_PASSWORD }}

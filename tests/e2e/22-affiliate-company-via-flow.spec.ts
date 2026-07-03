@@ -183,7 +183,7 @@ test.describe('Affiliate v2 company via flow', () => {
       const pendingResponse = await pendingResponsePromise;
       expect(
         pendingResponse.status(),
-        'get-pending-partner-registrations must accept the staging VITE_INTERNAL_FUNCTION_TOKEN',
+        'get-pending-partner-registrations must accept the staging admin JWT',
       ).toBe(200);
 
       const pendingCard = page.getByText(companyName).locator('xpath=ancestor::div[contains(@class,"rounded")][1]');

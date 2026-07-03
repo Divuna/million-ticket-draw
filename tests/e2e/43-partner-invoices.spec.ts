@@ -34,7 +34,7 @@ const STAGING_REF  = 'dxmowysntemfqfnanxua';
 const SUPABASE_URL = process.env.VITE_SUPABASE_URL ?? '';
 const SUPABASE_ANON = process.env.VITE_SUPABASE_ANON_KEY ?? '';
 const SERVICE_ROLE = process.env.E2E_SUPABASE_SERVICE_ROLE_KEY ?? '';
-const INTERNAL_TOKEN = process.env.VITE_INTERNAL_FUNCTION_TOKEN ?? '';
+const INTERNAL_TOKEN = process.env.INTERNAL_FUNCTION_TOKEN ?? '';
 const PDF_OVERVIEW_ENABLED = process.env.E2E_PARTNER_INVOICES === '1';
 
 const RUN_ID = Date.now();

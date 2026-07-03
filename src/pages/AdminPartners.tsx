@@ -9,7 +9,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { supabase, withEdgeInternalToken } from "@/integrations/supabase/client";
+import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import {
   Plus,
@@ -492,9 +492,9 @@ const AdminPartners = () => {
       }
 
       const response = await supabase.functions.invoke("approve-partner-registration", {
-        headers: withEdgeInternalToken({
+        headers: {
           Authorization: `Bearer ${sessionData.session.access_token}`,
-        }),
+        },
         body: {
           auth_user_id: registration.id,
           action: action,
@@ -596,9 +596,9 @@ const AdminPartners = () => {
 
     try {
       const res = await supabase.functions.invoke("rotate-partner-api-key", {
-        headers: withEdgeInternalToken({
+        headers: {
           Authorization: `Bearer ${sessionData.session.access_token}`,
-        }),
+        },
         body: {
           partner_id: selectedPartner.id,
         },

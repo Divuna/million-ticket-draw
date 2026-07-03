@@ -23,6 +23,41 @@ const BOB_WHATSAPP_FALLBACK_URL =
 
 // ai-chat must never trigger support-handoff or claim it forwarded anything.
 
+type AiChatAuthContext =
+  | { kind: "internal" }
+  | { kind: "user"; userId: string }
+
+async function authorizeAiChatRequest(
+  req: Request,
+  supabaseUrl: string,
+  serviceRoleKey: string,
+  internalToken: string,
+): Promise<
+  | { context: AiChatAuthContext; failure: null }
+  | { context: null; failure: { status: number; error: string } }
+> {
+  const providedInternal = req.headers.get("x-internal-token") ?? ""
+  if (internalToken && providedInternal && providedInternal === internalToken) {
+    return { context: { kind: "internal" }, failure: null }
+  }
+
+  const authHeader = req.headers.get("authorization") ?? ""
+  const token = authHeader.replace(/^Bearer\s+/i, "").trim()
+  if (!token) {
+    return { context: null, failure: { status: 401, error: "missing_authorization" } }
+  }
+
+  const admin = createClient(supabaseUrl, serviceRoleKey, {
+    auth: { persistSession: false, autoRefreshToken: false },
+  })
+  const { data: userData, error: userError } = await admin.auth.getUser(token)
+  if (userError || !userData?.user) {
+    return { context: null, failure: { status: 401, error: "invalid_authorization_token" } }
+  }
+
+  return { context: { kind: "user", userId: userData.user.id }, failure: null }
+}
+
 function bobSupportCtaPayload(text: string): BobAssistantPayload {
   const t = text.trim()
   const withHint = foldCs(t).includes("kontaktovat podporu")
@@ -1684,6 +1719,15 @@ serve(async (req) => {
     })
   }
 
+  const authResult = await authorizeAiChatRequest(req, supabaseUrl, serviceRoleKey, internalToken)
+  if (authResult.failure) {
+    return new Response(JSON.stringify({ error: authResult.failure.error }), {
+      status: authResult.failure.status,
+      headers: { ...corsHeaders, "Content-Type": "application/json" },
+    })
+  }
+  const authContext = authResult.context
+
   if (!openaiKey) {
     return new Response(JSON.stringify({ error: "OPENAI_API_KEY missing" }), {
       status: 500,
@@ -1693,7 +1737,7 @@ serve(async (req) => {
 
   try {
     const body = (await req.json()) as { message_id?: string; ctaClicked?: unknown }
-    if ((body as any)?.ctaClicked === true) {
+    if (body.ctaClicked === true) {
       // ai-chat must never trigger support-handoff; CTA click should call support-handoff directly.
       console.log("BLOCKED SUPPORT CALL")
     }
@@ -1725,6 +1769,13 @@ serve(async (req) => {
     if (userMsg.sender !== "user") {
       return new Response(JSON.stringify({ error: "Not a user message" }), {
         status: 400,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      })
+    }
+
+    if (authContext.kind === "user" && userMsg.user_id !== authContext.userId) {
+      return new Response(JSON.stringify({ error: "message_not_owned_by_user" }), {
+        status: 403,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       })
     }

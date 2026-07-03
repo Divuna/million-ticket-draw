@@ -13,13 +13,12 @@ const STAGING_REF = 'dxmowysntemfqfnanxua';
 const SUPABASE_URL = process.env.VITE_SUPABASE_URL ?? '';
 const SUPABASE_ANON = process.env.VITE_SUPABASE_ANON_KEY ?? '';
 const SERVICE_ROLE = process.env.E2E_SUPABASE_SERVICE_ROLE_KEY ?? '';
-const INTERNAL_TOKEN = process.env.VITE_INTERNAL_FUNCTION_TOKEN ?? '';
+const INTERNAL_TOKEN = process.env.INTERNAL_FUNCTION_TOKEN ?? '';
 
 const isStaging =
   SUPABASE_URL.includes(STAGING_REF) &&
   Boolean(SUPABASE_ANON) &&
-  Boolean(SERVICE_ROLE) &&
-  Boolean(INTERNAL_TOKEN);
+  Boolean(SERVICE_ROLE);
 
 const RUN_ID = Date.now();
 const PARTNER_EMAIL = `spec57-partner-${RUN_ID}@onemil.cz`;
@@ -95,7 +94,7 @@ async function callRotate(
   email: string,
   password: string,
   bodyPassword: string,
-  includeInternalToken = true,
+  includeInternalToken = false,
 ): Promise<{ status: number; body: any }> {
   const jwt = await signInJwt(email, password);
   const headers: Record<string, string> = {
@@ -103,7 +102,7 @@ async function callRotate(
     apikey: SUPABASE_ANON,
     'Content-Type': 'application/json',
   };
-  if (includeInternalToken) headers['x-internal-token'] = INTERNAL_TOKEN;
+  if (includeInternalToken && INTERNAL_TOKEN) headers['x-internal-token'] = INTERNAL_TOKEN;
 
   const response = await fetch(`${SUPABASE_URL}/functions/v1/partner-rotate-api-key`, {
     method: 'POST',
@@ -132,7 +131,7 @@ async function loginAsPartner(page: Page): Promise<void> {
 }
 
 test.describe.serial('57 - partner API key rotation', () => {
-  test.skip(!isStaging, 'staging-only: requires staging URL, anon key, service role, and internal token');
+  test.skip(!isStaging, 'staging-only: requires staging URL, anon key, and service role');
 
   test.beforeAll(async () => {
     ctx.partnerAuthUserId = await createAuthUser(PARTNER_EMAIL, PARTNER_PASSWORD);
@@ -173,9 +172,16 @@ test.describe.serial('57 - partner API key rotation', () => {
   });
 
   test('Edge Function returns structured safe errors for auth/config/partner states', async () => {
-    const missingToken = await callRotate(PARTNER_EMAIL, PARTNER_PASSWORD, PARTNER_PASSWORD, false);
-    expect(missingToken.status).toBe(401);
-    expect(missingToken.body).toEqual({ success: false, error: 'internal_token_invalid' });
+    const missingSession = await fetch(`${SUPABASE_URL}/functions/v1/partner-rotate-api-key`, {
+      method: 'POST',
+      headers: {
+        apikey: SUPABASE_ANON,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ password: PARTNER_PASSWORD }),
+    });
+    expect(missingSession.status).toBe(401);
+    expect(await missingSession.json()).toEqual({ success: false, error: 'missing_session' });
 
     const wrongPassword = await callRotate(PARTNER_EMAIL, PARTNER_PASSWORD, 'not-the-password');
     expect(wrongPassword.status).toBe(401);

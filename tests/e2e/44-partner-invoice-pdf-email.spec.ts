@@ -35,7 +35,7 @@ const SUPABASE_ANON = process.env.VITE_SUPABASE_ANON_KEY ?? '';
 const SERVICE_ROLE = process.env.E2E_SUPABASE_SERVICE_ROLE_KEY ?? '';
 const ADMIN_EMAIL  = (process.env.E2E_SUPERADMIN_EMAIL || process.env.E2E_ADMIN_EMAIL) ?? '';
 const ADMIN_PASSWORD = (process.env.E2E_SUPERADMIN_PASSWORD || process.env.E2E_ADMIN_PASSWORD) ?? '';
-const INTERNAL_TOKEN = process.env.VITE_INTERNAL_FUNCTION_TOKEN ?? '';
+const INTERNAL_TOKEN = process.env.INTERNAL_FUNCTION_TOKEN ?? '';
 
 const PDF_EF_URL   = `${SUPABASE_URL}/functions/v1/generate-partner-invoice-pdf`;
 const EMAIL_EF_URL = `${SUPABASE_URL}/functions/v1/send-partner-invoice-email`;

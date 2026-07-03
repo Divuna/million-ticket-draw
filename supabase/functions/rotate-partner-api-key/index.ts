@@ -26,11 +26,6 @@ Deno.serve(async (req) => {
     return new Response(null, { headers: corsHeaders });
   }
 
-  const internalToken = Deno.env.get("INTERNAL_FUNCTION_TOKEN");
-  if (req.headers.get("x-internal-token") !== internalToken) {
-    return jsonError("internal_token_invalid", 401);
-  }
-
   try {
     const authHeader = req.headers.get("Authorization");
     if (!authHeader) {
