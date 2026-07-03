@@ -16,13 +16,3 @@ export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
     fetch: createMonitoredFetch(supabaseUrl),
   },
 })
-
-/**
- * Edge functions that check INTERNAL_FUNCTION_TOKEN expect header `x-internal-token`.
- * Set VITE_INTERNAL_FUNCTION_TOKEN in .env to the same value as the Supabase secret INTERNAL_FUNCTION_TOKEN.
- */
-export function withEdgeInternalToken(headers: Record<string, string>): Record<string, string> {
-  const token = import.meta.env.VITE_INTERNAL_FUNCTION_TOKEN
-  if (!token) return headers
-  return { ...headers, 'x-internal-token': token }
-}

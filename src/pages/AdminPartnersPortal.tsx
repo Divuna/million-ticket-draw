@@ -9,7 +9,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Badge } from '@/components/ui/badge';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { supabase, withEdgeInternalToken } from '@/integrations/supabase/client';
+import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import { Loader2, Building2, CheckCircle, XCircle, Eye, Coins, FileText, Calendar, Key, Copy, Check, Receipt, Send, Download, UserPlus, Clock } from 'lucide-react';
 import { format, startOfMonth, endOfMonth } from 'date-fns';
@@ -209,9 +209,9 @@ const AdminPartnersPortal = () => {
       }
 
       const response = await supabase.functions.invoke('get-pending-partner-registrations', {
-        headers: withEdgeInternalToken({
+        headers: {
           Authorization: `Bearer ${sessionData.session.access_token}`,
-        }),
+        },
       });
 
       if (response.error) {
@@ -244,9 +244,9 @@ const AdminPartnersPortal = () => {
       }
 
       const response = await supabase.functions.invoke('approve-partner-registration', {
-        headers: withEdgeInternalToken({
+        headers: {
           Authorization: `Bearer ${sessionData.session.access_token}`,
-        }),
+        },
         body: {
           auth_user_id: registration.id,
           action: action,
@@ -611,7 +611,6 @@ const AdminPartnersPortal = () => {
     setGeneratingPdf(true);
     try {
       const { data, error } = await supabase.functions.invoke('generate-partner-invoice-pdf', {
-        headers: withEdgeInternalToken({}),
         body: { invoice_id: selectedInvoice.id },
       });
       if (error) throw error;
@@ -634,7 +633,6 @@ const AdminPartnersPortal = () => {
     setSendingEmail(true);
     try {
       const { data, error } = await supabase.functions.invoke('send-partner-invoice-email', {
-        headers: withEdgeInternalToken({}),
         body: { invoice_id: selectedInvoice.id },
       });
       if (error) throw error;

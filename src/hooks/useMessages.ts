@@ -1,5 +1,5 @@
 import { useCallback } from "react";
-import { supabase, withEdgeInternalToken } from "@/integrations/supabase/client";
+import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/hooks/use-toast";
 
 export interface ConversationMessage {
@@ -65,9 +65,9 @@ export const useMessages = () => {
 
       const { data: aiData, error: invokeErr } = await supabase.functions.invoke("ai-chat", {
         body: { message_id: userMessage.id },
-        headers: withEdgeInternalToken({
+        headers: {
           Authorization: `Bearer ${session.access_token}`
-        })
+        }
       })
 
       if (invokeErr) throw invokeErr;
