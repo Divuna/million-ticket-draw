@@ -5709,6 +5709,26 @@ export type Database = {
           value: number
         }[]
       }
+      get_public_available_vouchers: {
+        Args: never
+        Returns: {
+          available_code_count: number
+          banner_url: string | null
+          end_date: string | null
+          how_to_use_text: string | null
+          id: string
+          image_url: string | null
+          is_public: boolean
+          max_quantity: number | null
+          name: string
+          redeemed_count: number
+          short_description: string | null
+          start_date: string | null
+          terms_text: string | null
+          usage_description: string | null
+          user_id: string | null
+        }[]
+      }
       get_bob_enabled: { Args: never; Returns: boolean }
       get_contest_bonus_stats: {
         Args: { contest_id: string }

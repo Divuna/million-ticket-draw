@@ -28,6 +28,7 @@ export interface VoucherShowcaseVoucher {
   usage_description?: string | null;
   terms_text?: string | null;
   how_to_use_text?: string | null;
+  available_code_count?: number;
 }
 
 export interface VoucherDetailText {
@@ -51,7 +52,11 @@ export function formatVoucherDate(iso: string | null | undefined): string | null
   return format(date, 'd. M. yyyy');
 }
 
-export function getVoucherRemainingLabel(voucher: Pick<VoucherShowcaseVoucher, 'max_quantity' | 'redeemed_count'>): string | null {
+export function getVoucherRemainingLabel(voucher: Pick<VoucherShowcaseVoucher, 'max_quantity' | 'redeemed_count' | 'available_code_count'>): string | null {
+  if (typeof voucher.available_code_count === 'number') {
+    const remaining = Math.max(0, voucher.available_code_count);
+    return `Zbývá: ${remaining}`;
+  }
   if (voucher.max_quantity == null) return null;
   const remaining = Math.max(0, voucher.max_quantity - voucher.redeemed_count);
   return `Zbývá: ${remaining}`;
