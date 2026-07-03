@@ -1,5 +1,25 @@
 ﻿# OneMil – aktuální stav projektu
 
+## MODUL OBCHOD / LEADY — FÁZE 1 + 2 V MAIN, FÁZE 1 DB NA STAGINGU (03. 07. 2026)
+
+Nový interní admin modul „Obchod / Leady" (outbound akvizice partnerských firem) je rozpracovaný podle `docs/SALES_LEADS_ADMIN_SPEC.md`. Aktuální stav:
+
+**Mergnuto do `main`:**
+- **PR #163** — `docs/SALES_LEADS_ADMIN_SPEC.md` = finální specifikace modulu Obchod / Leady (jednoúrovňové oprávnění `sales_leads.manage` = plný přístup vč. přípravy, schválení a odeslání e-mailů přes Resend; AI nikdy neodesílá e-mail sama; superadmin jen přiděluje/odebírá klíč).
+- **PR #164** — Fáze 1 DB migrace je v main jako `supabase/migrations/20260703150000_sales_leads_module_phase1.sql` (4 tabulky + RLS jen na nich + SECURITY DEFINER RPC `sales_lead_set_status` + dedup indexy).
+- **PR #165** — Fáze 2 frontend skeleton je v main (route `/admin/sales-leads` přes `RequirePermission("sales_leads.manage")`, klíč `sales_leads.manage` label „Obchodní leady", nav položka „Obchod", read-only stránka `AdminSalesLeads.tsx` — 8 záložek, souhrnné karty, tabulka, prázdný stav; žádné akce).
+
+**Staging DB (Fáze 1):**
+- Migrace Fáze 1 byla aplikována **pouze na staging projekt `dxmowysntemfqfnanxua`** (schválení Pavla, přes `apply_migration`, ne `db push`).
+- Na stagingu existují tabulky `sales_leads`, `sales_lead_activities`, `sales_lead_status_history`, `sales_lead_email_suppression` (všechny s RLS on, 4 SELECT policies, 4 unikátní dedup indexy, normalizační trigger).
+- Na stagingu existuje RPC `sales_lead_set_status` (SECURITY DEFINER, anon EXECUTE odebrán, authenticated EXECUTE povolen).
+- **Produkce `xkzhjldrojjlrkezorey` nebyla dotčena** — migrace Fáze 1 na produkci zatím NEPROBĚHLA.
+
+**Ještě NEHOTOVO / NEPROVEDENO:**
+- **Lovable Publish zatím neproběhl** — frontend Fáze 2 se v běžícím prostředí projeví až po publishi.
+- **Produkční migrace Fáze 1 zatím neproběhla.**
+- **Edge Functions, AI research (`sales-lead-research`, `sales-lead-draft-email`), Resend napojení a odesílání e-mailů (`send-sales-lead-email`) zatím NEJSOU implementované** (to je Fáze 3 a 4 dle spec).
+
 ## VEŘEJNÝ ZÁKAZNICKÝ UI STYL — LIGHT / CHAMPAGNE PREMIUM (02. 07. 2026)
 
 Veřejná zákaznická část OneMil je po PR #140–#155 převedená do světlého light/champagne premium stylu s oranžovými/amber akcenty. Platí pro běžné zákaznické obrazovky v přihlášeném i nepřihlášeném stavu: homepage `/`, `/games`, detail soutěže navazující na zákaznické karty, `/vouchers`, `/wins`, `/winners`, `/profile`, `/messages`, `/login` a sdílené zákaznické logged-out stavy.

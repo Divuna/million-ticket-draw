@@ -1,5 +1,22 @@
 # CLAUDE.md
 
+## MODUL OBCHOD / LEADY — STAV A PRAVIDLA PRO POKRAČOVÁNÍ (03. 07. 2026)
+
+Interní admin modul „Obchod / Leady" (outbound akvizice partnerských firem) se řídí `docs/SALES_LEADS_ADMIN_SPEC.md`.
+
+**Stav:**
+- PR #163 mergnut: `docs/SALES_LEADS_ADMIN_SPEC.md` = finální specifikace.
+- PR #164 mergnut: Fáze 1 DB migrace v main jako `supabase/migrations/20260703150000_sales_leads_module_phase1.sql`.
+- PR #165 mergnut: Fáze 2 frontend skeleton v main.
+- Migrace Fáze 1 aplikována **pouze na staging `dxmowysntemfqfnanxua`** (tabulky `sales_leads`, `sales_lead_activities`, `sales_lead_status_history`, `sales_lead_email_suppression` + RPC `sales_lead_set_status` ověřeny). **Produkce `xkzhjldrojjlrkezorey` nedotčena.**
+- **Nehotovo:** Lovable Publish neproběhl; produkční migrace neproběhla; Edge Functions, AI research, Resend a odesílání e-mailů zatím nejsou implementované (Fáze 3/4).
+
+**Pravidla (neměnit bez samostatného schválení Pavla):**
+- Oprávnění `sales_leads.manage` je jednoúrovňové = plný přístup k modulu vč. přípravy, schválení a odeslání e-mailů. Žádné druhé schvalování superadminem. Superadmin jen přiděluje/odebírá klíč.
+- **AI nikdy neodesílá e-mail sama** — odeslání vždy potvrdí člověk s `sales_leads.manage`.
+- Produkční migrace Fáze 1, deploy Edge Functions a Lovable Publish jsou samostatné kroky, každý vyžaduje výslovné schválení Pavla.
+- Modul se nedotýká wallets, payments, contests, tickets, winners, `buy_ticket_atomic`, `email_queue`/`process-email-queue`, Stripe ani RLS jiných tabulek.
+
 ## PRACOVNÍ PRAVIDLO — VEŘEJNÝ ZÁKAZNICKÝ UI STYL (02. 07. 2026)
 
 Veřejná zákaznická část OneMil používá po PR #140–#155 light/champagne premium styl: světlý/champagne podklad, bílé nebo champagne karty, tmavý čitelný text, jemné šedobéžové okraje, měkké teplé stíny a oranžové/amber CTA. Další vizuální úpravy veřejných zákaznických stránek (`/`, `/games`, `/vouchers`, `/wins`, `/winners`, `/profile`, `/messages`, `/login` a logged-out stavy) mají navazovat na `public-customer-theme`. Admin, partner portál a affiliate/influencer část do tohoto stylu nepřevádět bez samostatného schválení.
