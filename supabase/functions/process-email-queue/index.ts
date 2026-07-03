@@ -40,6 +40,8 @@ interface QueueEmailRecord {
   attachment_required?: boolean | null;
 }
 
+type AuthFailure = { status: number; error: string };
+
 async function tokenDigest(value: string): Promise<string> {
   const bytes = new TextEncoder().encode(value);
   const hash = await crypto.subtle.digest("SHA-256", bytes);
@@ -48,7 +50,7 @@ async function tokenDigest(value: string): Promise<string> {
     .join("");
 }
 
-async function isAuthorizedRequest(req: Request): Promise<boolean> {
+async function isInternalTokenAuthorized(req: Request): Promise<boolean> {
   const expectedToken = Deno.env.get("INTERNAL_FUNCTION_TOKEN");
   const providedToken = req.headers.get("x-internal-token");
 
@@ -65,6 +67,46 @@ async function isAuthorizedRequest(req: Request): Promise<boolean> {
     expectedToken.length === providedToken.length &&
     expectedDigest === providedDigest
   );
+}
+
+async function authorizeRequest(req: Request): Promise<AuthFailure | null> {
+  if (await isInternalTokenAuthorized(req)) {
+    return null;
+  }
+
+  const authHeader = req.headers.get("authorization") ?? "";
+  const bearerToken = authHeader.replace(/^Bearer\s+/i, "").trim();
+  if (!bearerToken) {
+    return { status: 401, error: "missing_authorization" };
+  }
+
+  const supabaseUrl = Deno.env.get("SUPABASE_URL") ?? "";
+  const serviceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "";
+  if (serviceKey && bearerToken === serviceKey) {
+    return null;
+  }
+  if (!supabaseUrl || !serviceKey) {
+    return { status: 500, error: "missing_service_configuration" };
+  }
+
+  const adminClient = createClient(supabaseUrl, serviceKey);
+  const { data: userData, error: userError } = await adminClient.auth.getUser(bearerToken);
+  if (userError || !userData?.user) {
+    return { status: 401, error: "invalid_authorization_token" };
+  }
+
+  const { data: roleRow } = await adminClient
+    .from("user_roles")
+    .select("role")
+    .eq("user_id", userData.user.id)
+    .in("role", ["admin", "superadmin"])
+    .maybeSingle();
+
+  if (!roleRow) {
+    return { status: 403, error: "access_denied_admin_only" };
+  }
+
+  return null;
 }
 
 async function blobToAttachment(
@@ -151,10 +193,11 @@ const handler = async (req: Request): Promise<Response> => {
   }
 
   try {
-    if (!(await isAuthorizedRequest(req))) {
+    const authFailure = await authorizeRequest(req);
+    if (authFailure) {
       return new Response(
-        JSON.stringify({ error: "unauthorized" }),
-        { status: 401, headers: { "Content-Type": "application/json", ...corsHeaders } },
+        JSON.stringify({ error: authFailure.error }),
+        { status: authFailure.status, headers: { "Content-Type": "application/json", ...corsHeaders } },
       );
     }
 
