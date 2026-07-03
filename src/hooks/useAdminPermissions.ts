@@ -17,6 +17,7 @@ export const ADMIN_PERMISSION_KEYS = [
   'support.messages',
   'users.view.basic',
   'partner_offers.finance.manage',
+  'sales_leads.manage',
 ] as const;
 export type AdminPermissionKey = (typeof ADMIN_PERMISSION_KEYS)[number];
 
@@ -28,6 +29,7 @@ export const ADMIN_PERMISSION_LABELS: Record<AdminPermissionKey, string> = {
   'support.messages': 'Zprávy (podpora)',
   'users.view.basic': 'Uživatelé (základní)',
   'partner_offers.finance.manage': 'Partnerské nabídky (finance)',
+  'sales_leads.manage': 'Obchodní leady',
 };
 
 interface UseAdminPermissions {
@@ -101,6 +103,7 @@ export const ADMIN_ROUTE_PERMISSION: Record<string, AdminPermissionKey> = {
   '/admin/messages': 'support.messages',
   '/admin/users': 'users.view.basic',
   '/admin/partner-offers': 'partner_offers.finance.manage',
+  '/admin/sales-leads': 'sales_leads.manage',
 };
 
 /**
@@ -124,4 +127,6 @@ export const SUBADMIN_ENTRY_ROUTES: {
   { path: '/admin/users', permission: 'users.view.basic', label: 'Uživatelé' },
   // Phase 4 Slice A — Partner Offers (offer-only page; no invoices/portal).
   { path: '/admin/partner-offers', permission: 'partner_offers.finance.manage', label: 'Partnerské nabídky' },
+  // Sales Leads Phase 2 — modul Obchod / Leady (docs/SALES_LEADS_ADMIN_SPEC.md).
+  { path: '/admin/sales-leads', permission: 'sales_leads.manage', label: 'Obchod' },
 ];
