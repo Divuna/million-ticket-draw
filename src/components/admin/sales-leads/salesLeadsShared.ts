@@ -157,6 +157,13 @@ export const RPC_ERROR_MESSAGES: Record<string, string> = {
   ai_empty_response: 'AI nevrátila žádný obsah, zkuste to znovu.',
   ai_invalid_format: 'AI vrátila neočekávaný formát, zkuste to znovu.',
   forbidden_wording_detected: 'Návrh obsahoval nepovolené výrazy a nebyl uložen.',
+  // Fáze 3C — odeslání konceptu člověkem.
+  email_not_configured: 'Odesílání e-mailů zatím není v tomto prostředí nakonfigurované.',
+  no_draft: 'Lead nemá uložený návrh e-mailu — nejdřív připravte a uložte koncept.',
+  missing_contact_email: 'Lead nemá vyplněný kontaktní e-mail.',
+  do_not_contact: 'Lead je označený „Nekontaktovat" — e-mail nelze odeslat.',
+  suppressed: 'Tento e-mail / doména je na seznamu „Nekontaktovat".',
+  email_send_failed: 'Odeslání e-mailu se nezdařilo, zkuste to znovu.',
 };
 
 export const rpcErrorMessage = (code: string | undefined): string =>
