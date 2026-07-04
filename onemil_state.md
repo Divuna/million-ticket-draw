@@ -99,7 +99,13 @@ Nový interní admin modul „Obchod / Leady" (outbound akvizice partnerských f
 - **UI (v PR):** tlačítko **„Najít nové firmy"** na `/admin/sales-leads` (dialog: výběr skupiny + počet, max 10) → EF discover; výsledek ukazuje **kolik návrhů vzniklo / kolik přeskočeno**; po běhu se přepne na záložku **„Návrhy"**. Jasné hlášky: AI jen navrhuje, ze stavu `navrzeny` musí člověk ručně **„Schválit návrh"**.
 - **Ochrany:** žádný bulk send, žádné automatické odesílání, žádné auto-schválení, povinná lidská kontrola (`navrzeny → novy` jen ručně přes `sales_lead_set_status`), limit návrhů na běh.
 - **Ověření:** `npx tsc --noEmit` 0 chyb, `npm run build` ✅.
-- **NEPROVEDENO:** žádná migrace neaplikována (staging ani produkce), žádná EF nenasazena, žádný Lovable Publish, žádný e-mail, žádný testovací lead. Wallets, payments, contests, tickets, winners, Stripe ani `buy_ticket_atomic` nebyly dotčeny. **Odeslání e-mailu zůstává jen ruční přes člověka po potvrzení (Fáze 3C beze změny).**
+
+**Fáze 5A — ZPROVOZNĚNO POUZE NA STAGINGU (04. 07. 2026, schválení Pavla):**
+- **PR #183 mergnutý do `main`** (merge commit `8fd982abf6c6c464d08bd2d54dace630f663006c`). Fáze 5A aplikovaná **pouze na staging `dxmowysntemfqfnanxua`**.
+- Migrace `supabase/migrations/20260704140000_sales_leads_phase5a_propose_rpc.sql` aplikována přes **`apply_migration`** (ne `db push`), výsledek `{"success": true}`. RPC **`sales_lead_propose`** existuje (SECURITY DEFINER; anon/authenticated bez EXECUTE, jen `service_role`).
+- Edge Function **`sales-lead-discover`** nasazená na stagingu — **v1 ACTIVE** (`verify_jwt=false`, auth interně). No-auth smoke → `401`.
+- **Funkční test propose (STAGING ONLY):** test lead **`2fc9a556-3780-40dc-953f-d2899ddd0481`** vznikl ve stavu **`navrzeny`**, **`contact_email=null`**, **`email_verified_by_admin=false`**, zapsaná aktivita **`lead_discovered`**; **žádný e-mail se neposlal** (0 e-mailových aktivit). Discovery EF (OpenAI) nespuštěn — vyžaduje potvrzený `OPENAI_API_KEY` + admin JWT.
+- **Produkce `xkzhjldrojjlrkezorey` nebyla dotčena** (RPC ani EF na produkci neexistují). **Lovable Publish neproběhl.** Wallets, payments, contests, tickets, winners, Stripe ani `buy_ticket_atomic` nebyly dotčeny. Odeslání e-mailu zůstává jen ruční přes člověka po potvrzení (Fáze 3C beze změny).
 
 ## VEŘEJNÝ ZÁKAZNICKÝ UI STYL — LIGHT / CHAMPAGNE PREMIUM (02. 07. 2026)
 
