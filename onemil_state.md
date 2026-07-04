@@ -83,8 +83,14 @@ Nový interní admin modul „Obchod / Leady" (outbound akvizice partnerských f
 - Na obou projektech: RPC **`sales_lead_update_discovery`** existuje, je **`SECURITY DEFINER`**, **anon nemá EXECUTE**, **authenticated má EXECUTE**, guard **`sales_leads.manage`**.
 - Ověřeno na staging test leadu **`c48f2567-5daf-4ce0-ab6b-89192748eef8`**: RPC **mění** `lead_group`, `lead_quality`, `discovery_source`; **nemění** `discovery_meta`; **nemění** status; **neodesílá** e-mail. Na produkci NEbyl vytvořen testovací lead; produkční lead **`ikonic Point s.r.o` zůstal nedotčen** (produkce má 1 lead, 0× `navrzeny`).
 - **DB backend Fáze 4B je nyní na stagingu i produkci.**
-- **Živé produkční UI Fáze 4B čeká už jen na Lovable Publish** — samostatný ruční krok Pavla. Po Publish ověřit `/admin/sales-leads`: záložka **„Návrhy"**, sekce **„Zařazení"** (edit skupina/kvalita/zdroj, `discovery_meta` jen ke čtení), a že **e-mail stále odesílá jen člověk po potvrzovacím dialogu** (Fáze 3C, AI nikdy).
-- Nebyl EF deploy, nebyl Lovable Publish, žádný e-mail se neodeslal. Wallets, payments, contests, tickets, winners, Stripe ani `buy_ticket_atomic` nebyly dotčeny.
+
+**Fáze 4B — PRODUKČNĚ OVĚŘENO V UI PO LOVABLE PUBLISH (04. 07. 2026):**
+- **Lovable Publish proběhl ručně Pavlem** po PR #181. Produkční UI `/admin/sales-leads` už zobrazuje Fázi 4B.
+- **Ověřeno v produkčním UI:** záložka **„Návrhy"** je vidět; karta **„Návrhy"** je vidět; sloupec **„Skupina"** je vidět; detail leadu obsahuje sekci **„Zařazení"**; **editace zařazení funguje**; hodnota skupiny **`E-shopy`** se u leadu **`ikonic Point s.r.o`** uložila a zobrazuje v seznamu.
+- **E-mail zůstává ruční:** tlačítko **„Odeslat e-mail"** je oddělené a odesílá **jen člověk po potvrzovacím dialogu** (Fáze 3C). **AI nemá cestu k odeslání e-mailu.**
+- **Žádný testovací e-mail se neposlal, žádný EF deploy neproběhl, žádná další migrace neproběhla.** Wallets, payments, contests, tickets, winners, Stripe ani `buy_ticket_atomic` nebyly dotčeny.
+
+**Modul Obchod / Leady (Fáze 1 + 3A + 3B + 3C + 4A + 4B) je produkčně hotový a ověřený v UI.**
 
 ## VEŘEJNÝ ZÁKAZNICKÝ UI STYL — LIGHT / CHAMPAGNE PREMIUM (02. 07. 2026)
 
