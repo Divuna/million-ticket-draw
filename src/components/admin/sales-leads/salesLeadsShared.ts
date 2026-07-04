@@ -210,6 +210,8 @@ export const RPC_ERROR_MESSAGES: Record<string, string> = {
   do_not_contact: 'Lead je označený „Nekontaktovat" — e-mail nelze odeslat.',
   suppressed: 'Tento e-mail / doména je na seznamu „Nekontaktovat".',
   email_send_failed: 'Odeslání e-mailu se nezdařilo, zkuste to znovu.',
+  // Fáze 5A — automatické vyhledávání firem.
+  invalid_lead_group: 'Vyberte platnou skupinu firem.',
 };
 
 export const rpcErrorMessage = (code: string | undefined): string =>

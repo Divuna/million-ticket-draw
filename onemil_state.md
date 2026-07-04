@@ -92,6 +92,15 @@ Nový interní admin modul „Obchod / Leady" (outbound akvizice partnerských f
 
 **Modul Obchod / Leady (Fáze 1 + 3A + 3B + 3C + 4A + 4B) je produkčně hotový a ověřený v UI.**
 
+**Fáze 5A (automatické vyhledávání a navrhování firem) — PŘIPRAVENO JEN JAKO SOUBORY V PR (04. 07. 2026, neaplikováno/nenasazeno):**
+- Cíl: člověk ručně spustí discovery, AI navrhne firmy a uloží je jako **`navrzeny`**; **žádné automatické odesílání e-mailů, žádné auto-schválení, žádné přeskočení lidské kontroly.**
+- **Backend (migrace jako soubor, NEAPLIKOVÁNO):** `supabase/migrations/20260704140000_sales_leads_phase5a_propose_rpc.sql` — RPC `sales_lead_propose` (SECURITY DEFINER, EXECUTE **jen `service_role`**, anon/authenticated bez EXECUTE). Vkládá lead **vždy ve stavu `navrzeny`** (hardcoded, nikdy odesílací stav), s povinným `lead_group`/`lead_quality`/`discovery_source`/`discovery_meta`; **nikdy nevyplňuje `contact_email` jako ověřený** (`email_verified_by_admin=false`). Dedup + blokace: přeskočí duplicitní IČO/doménu (mimo archiv), existujícího partnera a doménu na suppression listu → `outcome='skipped'` s důvodem. Audit `lead_discovered`. Přidán activity typ `lead_discovered` do CHECK.
+- **Edge Function (soubor, NENASAZENO):** `supabase/functions/sales-lead-discover/index.ts` — auth JWT → `getUser` → `has_admin_permission('sales_leads.manage')`; volá OpenAI (jen návrh firem, žádné vymýšlené kontakty, žádné ceny/hazard wording), pak přes service-role RPC `sales_lead_propose`. **Tvrdý strop `MAX_PER_RUN=10`** návrhů na běh. **Nikdy neodesílá e-mail, nikdy nezapisuje do `email_queue`, nikdy nevytvoří odesílací stav.** Bez `OPENAI_API_KEY` → řízené `503 ai_not_configured`. `config.toml` má záznam (`verify_jwt=false`).
+- **UI (v PR):** tlačítko **„Najít nové firmy"** na `/admin/sales-leads` (dialog: výběr skupiny + počet, max 10) → EF discover; výsledek ukazuje **kolik návrhů vzniklo / kolik přeskočeno**; po běhu se přepne na záložku **„Návrhy"**. Jasné hlášky: AI jen navrhuje, ze stavu `navrzeny` musí člověk ručně **„Schválit návrh"**.
+- **Ochrany:** žádný bulk send, žádné automatické odesílání, žádné auto-schválení, povinná lidská kontrola (`navrzeny → novy` jen ručně přes `sales_lead_set_status`), limit návrhů na běh.
+- **Ověření:** `npx tsc --noEmit` 0 chyb, `npm run build` ✅.
+- **NEPROVEDENO:** žádná migrace neaplikována (staging ani produkce), žádná EF nenasazena, žádný Lovable Publish, žádný e-mail, žádný testovací lead. Wallets, payments, contests, tickets, winners, Stripe ani `buy_ticket_atomic` nebyly dotčeny. **Odeslání e-mailu zůstává jen ruční přes člověka po potvrzení (Fáze 3C beze změny).**
+
 ## VEŘEJNÝ ZÁKAZNICKÝ UI STYL — LIGHT / CHAMPAGNE PREMIUM (02. 07. 2026)
 
 Veřejná zákaznická část OneMil je po PR #140–#155 převedená do světlého light/champagne premium stylu s oranžovými/amber akcenty. Platí pro běžné zákaznické obrazovky v přihlášeném i nepřihlášeném stavu: homepage `/`, `/games`, detail soutěže navazující na zákaznické karty, `/vouchers`, `/wins`, `/winners`, `/profile`, `/messages`, `/login` a sdílené zákaznické logged-out stavy.

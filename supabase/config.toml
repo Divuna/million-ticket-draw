@@ -12,6 +12,10 @@ verify_jwt = false
 [functions.send-sales-lead-email]
 verify_jwt = false
 
+# Fáze 5A — automatické NAVRŽENÍ firem (jen `navrzeny`, nikdy odeslání e-mailu).
+[functions.sales-lead-discover]
+verify_jwt = false
+
 [functions.sofinity-player-sync]
 verify_jwt = true
 
