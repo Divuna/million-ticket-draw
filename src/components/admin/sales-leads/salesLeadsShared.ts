@@ -6,6 +6,7 @@
 // nepovolené akce — autoritativní kontrola zůstává v RPC.
 
 export type SalesLeadStatus =
+  | 'navrzeny'
   | 'novy'
   | 'priprava'
   | 'schvaleni_ceka'
@@ -19,11 +20,13 @@ export type SalesLeadStatus =
   | 'archivovan';
 
 export const SALES_LEAD_STATUSES: SalesLeadStatus[] = [
+  'navrzeny',
   'novy', 'priprava', 'schvaleni_ceka', 'osloveno', 'follow_up',
   'odpovedel', 'jednani', 'konvertovan', 'odmitl', 'nekontaktovat', 'archivovan',
 ];
 
 export const STATUS_LABELS: Record<string, string> = {
+  navrzeny: 'Navržený',
   novy: 'Nový',
   priprava: 'Příprava',
   schvaleni_ceka: 'Čeká na schválení',
@@ -38,6 +41,7 @@ export const STATUS_LABELS: Record<string, string> = {
 };
 
 export const STATUS_BADGE_CLASS: Record<string, string> = {
+  navrzeny: 'bg-purple-500/15 text-purple-500 border-purple-500/30',
   novy: 'bg-muted text-foreground',
   priprava: 'bg-blue-500/15 text-blue-500 border-blue-500/30',
   schvaleni_ceka: 'bg-amber-500/15 text-amber-500 border-amber-500/30',
@@ -61,6 +65,39 @@ export const INDUSTRY_OPTIONS: { value: string; label: string }[] = [
   { value: 'jine', label: 'Jiné' },
 ];
 
+/** Marketingové skupiny leadů (§17.2). Musí odpovídat CHECK constraintu v DB. */
+export const LEAD_GROUP_OPTIONS: { value: string; label: string }[] = [
+  { value: 'e-shopy', label: 'E-shopy' },
+  { value: 'auto-moto', label: 'Auto / moto' },
+  { value: 'luxusni-zbozi', label: 'Luxusní zboží' },
+  { value: 'sport', label: 'Sport' },
+  { value: 'cestovani', label: 'Cestování' },
+  { value: 'gastronomie', label: 'Gastronomie' },
+  { value: 'lokalni-sluzby', label: 'Lokální služby' },
+  { value: 'jine', label: 'Jiné' },
+];
+
+export const leadGroupLabel = (v: string | null | undefined): string =>
+  (v && LEAD_GROUP_OPTIONS.find((o) => o.value === v)?.label) || v || '—';
+
+/** Zdroj nalezení leadu (§17.6). Musí odpovídat CHECK constraintu v DB. */
+export const DISCOVERY_SOURCE_OPTIONS: { value: string; label: string }[] = [
+  { value: 'ai_navrh', label: 'AI návrh' },
+  { value: 'verejny_rejstrik', label: 'Veřejný rejstřík' },
+  { value: 'shoptet_katalog', label: 'Shoptet katalog' },
+  { value: 'web_katalog', label: 'Web katalog' },
+  { value: 'doporuceni', label: 'Doporučení' },
+  { value: 'rucne', label: 'Ručně' },
+];
+
+/** Kvalita leadu 0–3 (§17.5). */
+export const LEAD_QUALITY_LABELS: Record<number, string> = {
+  0: 'Neohodnoceno',
+  1: 'Nízká',
+  2: 'Střední',
+  3: 'Vysoká',
+};
+
 /**
  * 1:1 zrcadlo CASE větví v RPC sales_lead_set_status (pořadí větví je závazné).
  * Vrací true, pokud je přechod current → target povolen.
@@ -75,6 +112,9 @@ export function isTransitionAllowed(
   if (current === 'nekontaktovat') return isSuperAdmin && (target === 'priprava' || target === 'archivovan');
   if (target === 'archivovan') return current !== 'konvertovan';
   if (current === 'konvertovan') return false;
+  // Fáze 4B: navržený lead smí JEN do novy (lidské schválení). Do odesílacích
+  // stavů se rovnou přejít nedá — jen novy/nekontaktovat/archivovan.
+  if (current === 'navrzeny') return target === 'novy';
   if (current === 'odmitl') return target === 'priprava';
   if (current === 'novy') return target === 'priprava';
   if (current === 'priprava') return target === 'schvaleni_ceka';
@@ -116,6 +156,8 @@ export interface SalesLeadRow {
   contact_email: string | null;
   updated_at: string | null;
   assigned_admin_id: string | null;
+  // Fáze 4B — marketingová skupina (návrhy leadů).
+  lead_group: string | null;
 }
 
 /** Plný detail leadu (editovatelná pole + audit meta). */
@@ -139,6 +181,10 @@ export interface SalesLeadDetail extends SalesLeadRow {
   draft_email_subject: string | null;
   draft_email_body: string | null;
   draft_prepared_by: string | null;
+  // Zařazení / discovery (Fáze 4B).
+  lead_quality: number | null;
+  discovery_source: string | null;
+  discovery_meta: Record<string, unknown> | null;
 }
 
 /** Mapování chybových kódů z RPC / Edge Function na české hlášky. */

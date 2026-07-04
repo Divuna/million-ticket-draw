@@ -38,6 +38,10 @@ import {
   INDUSTRY_OPTIONS,
   STATUS_LABELS,
   STATUS_BADGE_CLASS,
+  LEAD_GROUP_OPTIONS,
+  DISCOVERY_SOURCE_OPTIONS,
+  LEAD_QUALITY_LABELS,
+  leadGroupLabel,
   allowedTargets,
   isReasonRequired,
   rpcErrorMessage,
@@ -63,7 +67,8 @@ const DETAIL_COLUMNS =
   'id, company_name, industry, city, status, contact_email, updated_at, assigned_admin_id, ' +
   'ico, dic, website, company_size, contact_person, contact_role, contact_phone, email_source, ' +
   'email_verified_by_admin, do_not_contact, do_not_contact_reason, notes, created_at, ' +
-  'ai_research_summary, ai_research_at, draft_email_subject, draft_email_body, draft_prepared_by';
+  'ai_research_summary, ai_research_at, draft_email_subject, draft_email_body, draft_prepared_by, ' +
+  'lead_group, lead_quality, discovery_source, discovery_meta';
 
 const ACTIVITY_LABELS: Record<string, string> = {
   lead_created: 'Lead založen',
@@ -140,6 +145,12 @@ export function SalesLeadDetailSheet({ leadId, open, onOpenChange, onMutated }: 
   // Odeslání konceptu člověkem (Fáze 3C).
   const [sendConfirmOpen, setSendConfirmOpen] = useState(false);
   const [sending, setSending] = useState(false);
+  // Zařazení / discovery (Fáze 4B).
+  const [clsEditing, setClsEditing] = useState(false);
+  const [clsSaving, setClsSaving] = useState(false);
+  const [clsGroup, setClsGroup] = useState('');
+  const [clsQuality, setClsQuality] = useState('0');
+  const [clsSource, setClsSource] = useState('');
 
   const load = useCallback(async () => {
     if (!leadId) return;
@@ -159,6 +170,10 @@ export function SalesLeadDetailSheet({ leadId, open, onOpenChange, onMutated }: 
       setLead(detail);
       setDraftSubject(detail.draft_email_subject ?? '');
       setDraftBody(detail.draft_email_body ?? '');
+      setClsGroup(detail.lead_group ?? '');
+      setClsQuality(String(detail.lead_quality ?? 0));
+      setClsSource(detail.discovery_source ?? '');
+      setClsEditing(false);
       setActivities((actData ?? []) as ActivityRow[]);
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : 'Nepodařilo se načíst detail';
@@ -325,6 +340,35 @@ export function SalesLeadDetailSheet({ leadId, open, onOpenChange, onMutated }: 
     }
   };
 
+  // ── Zařazení / discovery (Fáze 4B) — ruční úprava přes SECURITY DEFINER RPC ─
+  const saveClassification = async () => {
+    if (!lead) return;
+    setClsSaving(true);
+    try {
+      const { data, error } = await (supabase as any).rpc('sales_lead_update_discovery', {
+        p_lead_id: lead.id,
+        p_lead_group: clsGroup || null,
+        p_lead_quality: Number(clsQuality),
+        p_discovery_source: clsSource || null,
+      });
+      if (error) throw new Error(error.message);
+      const res = (data ?? {}) as { success?: boolean; error?: string };
+      if (!res.success) {
+        toast.error(rpcErrorMessage(res.error));
+        return;
+      }
+      toast.success('Zařazení uloženo');
+      setClsEditing(false);
+      await load();
+      onMutated();
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : 'Uložení zařazení se nezdařilo';
+      toast.error(msg);
+    } finally {
+      setClsSaving(false);
+    }
+  };
+
   // ── Odeslání konceptu ČLOVĚKEM (Fáze 3C) — nikdy ne AI ────────────────────
   // Odešle výhradně uložený koncept z leadu přes EF send-sales-lead-email.
   // Tlačítko je aktivní jen když je koncept uložený, je vyplněný contact_email
@@ -462,22 +506,118 @@ export function SalesLeadDetailSheet({ leadId, open, onOpenChange, onMutated }: 
                 </div>
               ) : (
                 <div className="flex flex-wrap gap-2">
-                  {targets.map((t) => (
-                    <Button
-                      key={t}
-                      variant="outline"
-                      size="sm"
-                      onClick={() => { setPendingStatus(t); setReason(''); }}
-                    >
-                      {STATUS_LABELS[t]}
-                    </Button>
-                  ))}
+                  {targets.map((t) => {
+                    // U navrženého leadu jsou akce popsané jako rozhodnutí člověka.
+                    const label =
+                      lead.status === 'navrzeny' && t === 'novy'
+                        ? 'Schválit návrh'
+                        : STATUS_LABELS[t];
+                    return (
+                      <Button
+                        key={t}
+                        variant={lead.status === 'navrzeny' && t === 'novy' ? 'default' : 'outline'}
+                        size="sm"
+                        onClick={() => { setPendingStatus(t); setReason(''); }}
+                      >
+                        {label}
+                      </Button>
+                    );
+                  })}
                 </div>
+              )}
+              {lead.status === 'navrzeny' && (
+                <p className="text-[11px] text-muted-foreground">
+                  Navržený lead: rozhodněte ručně — <strong>Schválit návrh</strong> (→ Nový),
+                  <strong> Nekontaktovat</strong> nebo <strong>Archivován</strong>. Do oslovování ani
+                  odesílání e-mailu se z návrhu nedostanete přímo — nejdřív musí projít schválením.
+                </p>
               )}
               {lead.do_not_contact && lead.do_not_contact_reason && (
                 <p className="text-xs text-destructive">Nekontaktovat: {lead.do_not_contact_reason}</p>
               )}
             </div>
+
+            <Separator className="my-4" />
+
+            {/* Zařazení / discovery (Fáze 4B) */}
+            <div className="flex items-center justify-between">
+              <div className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Zařazení</div>
+              {!clsEditing ? (
+                <Button variant="ghost" size="sm" onClick={() => setClsEditing(true)} className="gap-1.5">
+                  <Pencil className="h-3.5 w-3.5" /> Upravit
+                </Button>
+              ) : (
+                <Button variant="ghost" size="sm" onClick={() => setClsEditing(false)} disabled={clsSaving} className="gap-1.5">
+                  <X className="h-3.5 w-3.5" /> Zrušit
+                </Button>
+              )}
+            </div>
+
+            {!clsEditing ? (
+              <div className="mt-2 divide-y divide-border/40">
+                <ReadRow label="Skupina" value={leadGroupLabel(lead.lead_group)} />
+                <ReadRow label="Kvalita" value={LEAD_QUALITY_LABELS[lead.lead_quality ?? 0] ?? String(lead.lead_quality ?? 0)} />
+                <ReadRow
+                  label="Zdroj nalezení"
+                  value={DISCOVERY_SOURCE_OPTIONS.find((o) => o.value === lead.discovery_source)?.label ?? lead.discovery_source}
+                />
+              </div>
+            ) : (
+              <div className="mt-2 space-y-3">
+                <div className="space-y-1">
+                  <Label htmlFor="cls-group">Skupina</Label>
+                  <Select value={clsGroup} onValueChange={setClsGroup} disabled={clsSaving}>
+                    <SelectTrigger id="cls-group"><SelectValue placeholder="Vyberte skupinu" /></SelectTrigger>
+                    <SelectContent>
+                      {LEAD_GROUP_OPTIONS.map((o) => (
+                        <SelectItem key={o.value} value={o.value}>{o.label}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="space-y-1">
+                    <Label htmlFor="cls-quality">Kvalita</Label>
+                    <Select value={clsQuality} onValueChange={setClsQuality} disabled={clsSaving}>
+                      <SelectTrigger id="cls-quality"><SelectValue /></SelectTrigger>
+                      <SelectContent>
+                        {[0, 1, 2, 3].map((q) => (
+                          <SelectItem key={q} value={String(q)}>{q} — {LEAD_QUALITY_LABELS[q]}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="space-y-1">
+                    <Label htmlFor="cls-source">Zdroj nalezení</Label>
+                    <Select value={clsSource} onValueChange={setClsSource} disabled={clsSaving}>
+                      <SelectTrigger id="cls-source"><SelectValue placeholder="Vyberte zdroj" /></SelectTrigger>
+                      <SelectContent>
+                        {DISCOVERY_SOURCE_OPTIONS.map((o) => (
+                          <SelectItem key={o.value} value={o.value}>{o.label}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
+                <div className="flex justify-end gap-2 pt-1">
+                  <Button variant="outline" size="sm" onClick={() => setClsEditing(false)} disabled={clsSaving}>Zrušit</Button>
+                  <Button size="sm" onClick={saveClassification} disabled={clsSaving} className="gap-1.5">
+                    {clsSaving ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Save className="h-3.5 w-3.5" />}
+                    Uložit zařazení
+                  </Button>
+                </div>
+              </div>
+            )}
+
+            {/* discovery_meta — jen čitelný technický kontext, ne hlavní pole */}
+            {lead.discovery_meta && Object.keys(lead.discovery_meta).length > 0 && (
+              <details className="mt-3 rounded-lg border border-border/50 bg-muted/20 p-2">
+                <summary className="cursor-pointer text-xs text-muted-foreground">Technický kontext nalezení (discovery_meta)</summary>
+                <pre className="mt-2 max-h-40 overflow-auto whitespace-pre-wrap break-words text-[11px] text-muted-foreground">
+                  {JSON.stringify(lead.discovery_meta, null, 2)}
+                </pre>
+              </details>
+            )}
 
             <Separator className="my-4" />
 
