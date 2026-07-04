@@ -77,12 +77,14 @@ Nový interní admin modul „Obchod / Leady" (outbound akvizice partnerských f
 - **Nebyl EF deploy, nebyl Lovable Publish, žádný e-mail se neodeslal.** Wallets, payments, contests, tickets, winners, Stripe ani `buy_ticket_atomic` nebyly dotčeny.
 - **AI stále nemá cestu ke schválení ani odeslání; odeslání e-mailu zůstává jen ruční přes člověka** (`sales_lead_set_status` EXECUTE jen `authenticated` s guardem `sales_leads.manage`, anon revoked).
 
-**Fáze 4B (UI navržených leadů + RPC editace zařazení) — UI v main, RPC APLIKOVÁNO POUZE NA STAGINGU (04. 07. 2026, schválení Pavla):**
+**Fáze 4B (UI navržených leadů + RPC editace zařazení) — UI v main, RPC APLIKOVÁNO NA STAGINGU I PRODUKCI (04. 07. 2026, schválení Pavla):**
 - **PR #179 mergnutý do `main`** (merge commit `d3c4fa3ff30aa4bd7c0152a7adf5fff674f1743d`). **Fáze 4B UI je v main** — záložka „Návrhy" (stav `navrzeny`), sloupec/skupina `lead_group`, sekce „Zařazení" v detailu (edit `lead_group`/`lead_quality`/`discovery_source`, `discovery_meta` read-only), akce Schválit/Nekontaktovat/Archivovat přes `sales_lead_set_status`.
-- Migrace `supabase/migrations/20260704130000_sales_leads_phase4b_discovery_update_rpc.sql` aplikována **pouze na staging `dxmowysntemfqfnanxua`** přes `apply_migration` (ne `db push`), výsledek **`{"success": true}`**.
-- Na stagingu: RPC **`sales_lead_update_discovery`** existuje, je **`SECURITY DEFINER`**, **anon nemá EXECUTE**, **authenticated má EXECUTE**, guard **`sales_leads.manage`**.
-- Ověřeno na staging test leadu **`c48f2567-5daf-4ce0-ab6b-89192748eef8`** (existuje): RPC **mění** `lead_group`, `lead_quality`, `discovery_source`; **nemění** `discovery_meta`; **nemění** status; **neodesílá** e-mail.
-- **Produkce `xkzhjldrojjlrkezorey` nebyla dotčena a tuto RPC migraci zatím nemá.** Nebyl EF deploy, nebyl Lovable Publish, žádný e-mail se neodeslal. Wallets, payments, contests, tickets, winners, Stripe ani `buy_ticket_atomic` nebyly dotčeny.
+- Migrace `supabase/migrations/20260704130000_sales_leads_phase4b_discovery_update_rpc.sql` aplikována na **staging `dxmowysntemfqfnanxua`** i **produkci `xkzhjldrojjlrkezorey`** přes `apply_migration` (ne `db push`), výsledek **`{"success": true}`**.
+- Na obou projektech: RPC **`sales_lead_update_discovery`** existuje, je **`SECURITY DEFINER`**, **anon nemá EXECUTE**, **authenticated má EXECUTE**, guard **`sales_leads.manage`**.
+- Ověřeno na staging test leadu **`c48f2567-5daf-4ce0-ab6b-89192748eef8`**: RPC **mění** `lead_group`, `lead_quality`, `discovery_source`; **nemění** `discovery_meta`; **nemění** status; **neodesílá** e-mail. Na produkci NEbyl vytvořen testovací lead; produkční lead **`ikonic Point s.r.o` zůstal nedotčen** (produkce má 1 lead, 0× `navrzeny`).
+- **DB backend Fáze 4B je nyní na stagingu i produkci.**
+- **Živé produkční UI Fáze 4B čeká už jen na Lovable Publish** — samostatný ruční krok Pavla. Po Publish ověřit `/admin/sales-leads`: záložka **„Návrhy"**, sekce **„Zařazení"** (edit skupina/kvalita/zdroj, `discovery_meta` jen ke čtení), a že **e-mail stále odesílá jen člověk po potvrzovacím dialogu** (Fáze 3C, AI nikdy).
+- Nebyl EF deploy, nebyl Lovable Publish, žádný e-mail se neodeslal. Wallets, payments, contests, tickets, winners, Stripe ani `buy_ticket_atomic` nebyly dotčeny.
 
 ## VEŘEJNÝ ZÁKAZNICKÝ UI STYL — LIGHT / CHAMPAGNE PREMIUM (02. 07. 2026)
 
