@@ -398,3 +398,152 @@ kdokoli s oprávněním `sales_leads.manage`.**
 - **Fáze 4 (AI):** EF `sales-lead-research` + `sales-lead-draft-email`.
 - Každá fáze: staging-first, E2E spec, produkce jen s výslovným
   schválením Pavla + backup.
+
+> **Pozn. k terminologii:** původní bod „Fáze 4 (AI)" výše popisoval AI
+> research/draft, které byly nakonec dodány ve **Fázi 3B** (produkčně hotové).
+> „**Fáze 4**" v §17 níže je **nová, samostatná** vrstva: automatické
+> navrhování a třídění nových firemních leadů. Nepřečíslovávat hotové fáze.
+
+---
+
+## 17. Fáze 4 (NÁVRH) — automatické vyhledávání a třídění nových leadů
+
+**Status: DOKUMENTAČNÍ NÁVRH. Neimplementováno. Žádná migrace, žádný kód,
+žádný deploy.** Fáze 4 rozšiřuje modul o vrstvu, která umí **navrhnout** nové
+firmy k oslovení, **zařadit je do skupin**, **dohledat veřejné kontakty** a
+**připravit lead do kontroly člověkem**. Navazuje na hotové Fáze 1–3C.
+
+### 17.0 Neporušitelný princip
+- **AI smí pouze navrhnout** firmu, provést rešerši a připravit koncept.
+- **AI NIKDY sama neposílá e-mail** a **NIKDY sama nepovyšuje** lead do
+  oslovovacího stavu. Každý navržený lead prochází **ruční kontrolou a
+  schválením člověkem** s `sales_leads.manage`, než se s ním dál pracuje.
+- Odeslání e-mailu zůstává výhradně ruční přes člověka (Fáze 3C) — Fáze 4
+  na tom nic nemění.
+
+### 17.1 Nový stav a workflow napojení
+- Nový vstupní stav **`navrzeny`** (AI/automat navrhl firmu, čeká na lidskou
+  kontrolu). Zařadí se **před** stávající `novy`.
+- Povolené přechody (rozšíření §4, vynucené v RPC `sales_lead_set_status`):
+  - `navrzeny → novy` — člověk lead **schválil** k dalšímu zpracování.
+  - `navrzeny → nekontaktovat` — člověk lead **zamítl** (blocklist, s důvodem).
+  - `navrzeny → archivovan` — člověk lead **odložil** (nevhodný, ne blocklist).
+- **Z `navrzeny` NELZE** přejít rovnou do `schvaleni_ceka`/`osloveno` —
+  lidská kontrola je povinná brána. AI nemá přístup k `sales_lead_set_status`.
+
+### 17.2 Skupiny leadů (kategorie / segmenty)
+- Nový sloupec `sales_leads.lead_group text` (číselník, nezávislý na `industry`).
+  `industry` zůstává detailní obor firmy; `lead_group` je hrubá marketingová
+  skupina pro cílení a filtrování.
+- Výchozí číselník skupin (rozšiřitelný, needitovat bez schválení):
+  - `e-shopy` — internetové obchody obecně
+  - `auto-moto` — autodíly, pneu, moto, autoservisy, příslušenství
+  - `luxusni-zbozi` — hodinky, šperky, prémiová móda, doplňky
+  - `sport` — sportovní vybavení, fitness, outdoor
+  - `cestovani` — cestovky, ubytování, zážitky, doplňky na cesty
+  - `gastronomie` — restaurace, kavárny, delikatesy, nápoje
+  - `lokalni-sluzby` — kadeřnictví, wellness, řemesla, lokální provozovny
+  - `jine` — mimo výše uvedené
+- Skupina je **návrh AI**, ale **potvrzuje/mění ji člověk** při kontrole.
+- UI: nová záložka/filtr „Skupina" na `/admin/sales-leads` a select v detailu.
+
+### 17.3 Ukládané údaje o firmě (rozšíření §3)
+Fáze 4 využívá stávající pole a přidává:
+- `lead_group` — marketingová skupina (§17.2).
+- `lead_quality` smallint — hodnocení kvality leadu 0–3 (§17.5).
+- `discovery_source` text — odkud firma pochází (§17.6): např.
+  `ai_navrh`, `verejny_rejstrik`, `shoptet_katalog`, `web_katalog`,
+  `doporuceni`, `rucne`.
+- `discovery_meta jsonb` — strukturovaný kontext nálezu (název zdroje, URL
+  katalogu, timestamp, model, skóre), **bez** tajemství a **bez** neveřejných
+  osobních dat.
+- Kontakty (`contact_email`, `contact_phone`) plní člověk / AI research jen
+  z **veřejně dostupných** zdrojů; **AI je nikdy nevyplní automaticky do
+  odesílacích polí** — zůstávají „neověřené", dokud je člověk nepotvrdí
+  (`email_verified_by_admin`, §3).
+- Žádné nové osobní údaje nad rámec veřejného firemního kontaktu.
+
+### 17.4 Kontrola duplicity (rozšíření §9)
+- Automat/AI **před vytvořením** `navrzeny` leadu ověří dedup přes stávající
+  unikátní indexy (`lower(contact_email)`, `ico`, `website_domain`, mimo
+  `archivovan`) — shodu **nevytvoří znovu**, jen ji zaznamená do
+  `discovery_meta` existujícího leadu (activity `field_updated`/nová activity
+  `rediscovered`).
+- Křížová kontrola proti `partners` (už je partner) a proti
+  `sales_lead_email_suppression` (blocklist) — shoda ⇒ lead se **nenavrhne**.
+- Dedup indexy záměrně nevynechávají `nekontaktovat` — jednou zamítnutá firma
+  se znovu nenavrhne.
+
+### 17.5 Kvalita leadu (`lead_quality`)
+- Škála 0–3: `0` neohodnoceno · `1` nízká · `2` střední · `3` vysoká.
+- **AI navrhne skóre** (heuristika: existuje veřejný e-shop, velikost/aktivita,
+  soulad se skupinou, dostupnost veřejného kontaktu) → uloží do `lead_quality`
+  a zdůvodnění do `discovery_meta`.
+- **Člověk skóre potvrdí/přepíše** při kontrole. Skóre je jen pomůcka pro
+  třídění a prioritizaci, nikdy neautomatizuje oslovení.
+- UI: badge kvality v seznamu + filtr; řazení podle kvality.
+
+### 17.6 Zdroj informace (`discovery_source` + `discovery_meta`)
+- Každý navržený lead **musí** mít vyplněný `discovery_source` a co nejúplnější
+  `discovery_meta` (odkud, kdy, čím) — kvůli auditovatelnosti a GDPR hygieně.
+- Ukládají se jen **veřejné** zdroje. Žádné scraping-em získané neveřejné
+  osobní údaje, žádné nakoupené databáze bez právního základu (rozhodne Pavel).
+- Zdroj se zapisuje i do `sales_lead_activities` (nová activity `lead_discovered`).
+
+### 17.7 Zabránění nechtěnému oslovování (rozšíření §10, §12)
+- Automat/AI **nikdy** nevytvoří lead ve stavu, ze kterého by šlo odeslat
+  e-mail — vždy jen `navrzeny`.
+- Před návrhem se kontroluje **suppression list** i stav `nekontaktovat`/
+  `odmitl`/existující partner ⇒ firma se nenavrhne.
+- Limity návrhu (nové `settings`, konfiguruje Pavel): max počet nových návrhů
+  za den, max na skupinu — proti zahlcení fronty ke kontrole.
+- Cooldown/limit **odeslání** zůstává beze změny (Fáze 3, člověk).
+
+### 17.8 Lidské schválení návrhu (povinná brána)
+- Nová záložka **„Návrhy"** na `/admin/sales-leads` (leady ve stavu `navrzeny`).
+- Člověk u návrhu: zkontroluje údaje, skupinu, kvalitu, zdroj a veřejný kontakt,
+  pak **Schválit** (`navrzeny → novy`) / **Zamítnout** (`→ nekontaktovat`) /
+  **Odložit** (`→ archivovan`). Vše přes existující `sales_lead_set_status`
+  (rozšířené přechody) s auditem do `sales_lead_status_history`.
+- Teprve schválený lead (`novy`+) může projít standardním flow Fáze 3
+  (research → koncept → **ruční odeslání člověkem**).
+
+### 17.9 Rozdělení odpovědnosti AI vs. člověk (shrnutí)
+| Krok | AI smí | Člověk |
+|---|---|---|
+| Navrhnout firmu (`navrzeny`) | ✅ | kontroluje |
+| Zařadit do skupiny / skóre kvality | ✅ návrh | potvrzuje/mění |
+| Dohledat veřejný kontakt (research) | ✅ návrh | ověřuje |
+| Připravit koncept e-mailu | ✅ návrh | upravuje |
+| Schválit lead k oslovení | ❌ | ✅ jediný |
+| **Odeslat e-mail** | ❌ **nikdy** | ✅ jen ručně po dialogu |
+
+### 17.10 Navržené technické jednotky (NEIMPLEMENTOVAT bez schválení)
+- **DB (migrace jako soubor):** sloupce `lead_group`, `lead_quality`,
+  `discovery_source`, `discovery_meta` na `sales_leads`; nový stav `navrzeny`
+  do CHECK + do `sales_lead_set_status` přechodů; nové activity typy
+  `lead_discovered`, `rediscovered`; volitelně číselník skupin v `settings`.
+- **RPC (SECURITY DEFINER, guard `sales_leads.manage`/service_role):**
+  `sales_lead_propose(...)` — vytvoří `navrzeny` lead s dedup + suppression
+  guardem; nikdy nevytvoří odesílatelný stav.
+- **Edge Function `sales-lead-discover` (návrh):** automat/cron nebo ruční
+  spuštění člověkem; hledá veřejné firmy dle skupiny, dedupuje, volá
+  `sales_lead_propose`. **Nikdy neposílá e-mail, nikdy nemění stav mimo
+  `navrzeny`, nikdy nevyplňuje odesílací kontakt jako ověřený.**
+- **Frontend:** záložka „Návrhy", filtry skupina/kvalita, schvalovací akce
+  v detailu (reuse `sales_lead_set_status`).
+- Znovupoužít Fázi 3B research/draft a Fázi 3C ruční odeslání beze změny.
+
+### 17.11 Otevřená rozhodnutí pro Pavla (před implementací)
+1. Zdroje dat pro `sales-lead-discover` (které veřejné katalogy/rejstříky;
+   právní základ; žádné nakoupené DB bez souhlasu).
+2. Denní limity návrhů celkem i na skupinu.
+3. Finální číselník skupin (potvrdit/rozšířit §17.2).
+4. Zda `sales-lead-discover` běží na cron, nebo jen na ruční spuštění člověkem.
+5. GDPR rámec pro ukládání veřejných kontaktů + `discovery_meta`
+   (konzultace s právníkem v rámci pre-launch legal review).
+
+**Fázování Fáze 4:** F4-DB (sloupce + stav + RPC, migrace jako soubor) →
+F4-UI (záložka Návrhy + schvalování) → F4-Discover (EF, nejdřív ruční
+spuštění, staging-first). Každý krok samostatné schválení Pavla, staging-first,
+produkce až po backupu. **Odeslání e-mailu se nemění — vždy jen člověk.**
