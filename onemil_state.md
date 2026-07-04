@@ -38,8 +38,17 @@ Nový interní admin modul „Obchod / Leady" (outbound akvizice partnerských f
 - Testováno na produkčním leadu **`ikonic Point s.r.o`**.
 - **Fáze 3A je produkčně ověřená** (ruční přidání + detail + editace + historie).
 
+**Fáze 3B (AI příprava) — NASAZENO A PRODUKČNĚ OVĚŘENO (03. 07. 2026, schválení Pavla):**
+- RPC migrace `supabase/migrations/20260703170000_sales_leads_draft_rpc.sql` aplikována na produkci **`xkzhjldrojjlrkezorey`** přes `apply_migration` (ne `db push`); RPC `sales_lead_save_draft` (SECURITY DEFINER, anon EXECUTE odebrán, authenticated povolen, guard `sales_leads.manage`, zapisuje `draft_edited`).
+- Edge Functions **`sales-lead-research`** a **`sales-lead-draft-email`** nasazeny na produkci — obě **ACTIVE** (v1, `verify_jwt=false`, auth interně).
+- Produkční **`OPENAI_API_KEY` je nastavený** (hodnota se nikde neuvádí).
+- **Produkční UI `/admin/sales-leads` ověřeno na leadu `ikonic Point s.r.o`:** AI rešerše firmy funguje, AI návrh e-mailu funguje, ruční uložení konceptu funguje.
+- **Historie kontaktu zapisuje** `AI rešerše firmy`, `AI návrh e-mailu`, `Návrh e-mailu upraven`.
+- **Žádný e-mail se neodeslal, Resend není použitý** — existuje pouze interní koncept uložený do leadu.
+- **Staging nebyl produkčním nasazením dotčen.** Wallets, payments, contests, tickets, winners, Stripe ani `buy_ticket_atomic` nebyly dotčeny.
+
 **Ještě NEHOTOVO / NEPROVEDENO:**
-- **Edge Functions, AI research (`sales-lead-research`, `sales-lead-draft-email`), Resend napojení a odesílání e-mailů (`send-sales-lead-email`) zatím NEJSOU implementované** (to je Fáze 3 e-mail a Fáze 4 dle spec).
+- **Odesílání e-mailu je samostatná další fáze** — vždy ho potvrdí **člověk** s `sales_leads.manage`, **nikdy ne AI** (EF `send-sales-lead-email` + Resend zatím NEexistují; Fáze 3 e-mail / Fáze 4 dle spec).
 
 ## VEŘEJNÝ ZÁKAZNICKÝ UI STYL — LIGHT / CHAMPAGNE PREMIUM (02. 07. 2026)
 
