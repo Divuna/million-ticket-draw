@@ -58,6 +58,11 @@ Nový interní admin modul „Obchod / Leady" (outbound akvizice partnerských f
 
 **Modul Obchod / Leady — backend + UI Fáze 1 + 3A + 3B + 3C jsou produkčně hotové a ověřené.**
 
+**Fáze 4 (návrh) — DOKUMENTAČNÍ NÁVRH (04. 07. 2026, neimplementováno):**
+- Přidán návrh Fáze 4 do `docs/SALES_LEADS_ADMIN_SPEC.md` §17: **automatické vyhledávání a třídění nových firemních leadů**. Systém umí navrhnout firmy, zařadit je do skupin, dohledat veřejné kontakty a připravit lead do lidské kontroly — **AI nikdy sama neposílá e-mail ani nepovyšuje lead do oslovovacího stavu**.
+- Návrh zavádí nový vstupní stav `navrzeny` (lidské schválení je povinná brána: `navrzeny → novy/nekontaktovat/archivovan`), skupiny leadů (`e-shopy`, `auto-moto`, `luxusni-zbozi`, `sport`, `cestovani`, `gastronomie`, `lokalni-sluzby`, `jine`), `lead_quality` (0–3), `discovery_source` + `discovery_meta`, dedup + suppression guard při návrhu, a navržené jednotky `sales_lead_propose` RPC + EF `sales-lead-discover` (jen jako budoucí návrh).
+- **Odeslání e-mailu zůstává vždy jen ruční přes člověka (Fáze 3C).** Žádná implementace, žádná migrace, žádný kód, žádný deploy — jen dokumentace. Otevřená rozhodnutí pro Pavla: zdroje dat + GDPR základ, denní limity návrhů, finální číselník skupin, cron vs. ruční spuštění discovery.
+
 ## VEŘEJNÝ ZÁKAZNICKÝ UI STYL — LIGHT / CHAMPAGNE PREMIUM (02. 07. 2026)
 
 Veřejná zákaznická část OneMil je po PR #140–#155 převedená do světlého light/champagne premium stylu s oranžovými/amber akcenty. Platí pro běžné zákaznické obrazovky v přihlášeném i nepřihlášeném stavu: homepage `/`, `/games`, detail soutěže navazující na zákaznické karty, `/vouchers`, `/wins`, `/winners`, `/profile`, `/messages`, `/login` a sdílené zákaznické logged-out stavy.
