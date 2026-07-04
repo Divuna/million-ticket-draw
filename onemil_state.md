@@ -69,7 +69,13 @@ Nový interní admin modul „Obchod / Leady" (outbound akvizice partnerských f
 - **`sales_lead_set_status` blokuje `navrzeny → schvaleni_ceka`** (`transition_not_allowed`) a **povoluje `navrzeny → novy`** (lidské schválení). Ověřeno staging testem.
 - **Testovací staging lead: `c48f2567-5daf-4ce0-ab6b-89192748eef8`** — pouze na stagingu, označený **`STAGING ONLY`** (po testu ve stavu `novy`).
 - Žádný e-mail se neodeslal, nebyl EF deploy, nebyl Lovable Publish. Wallets, payments, contests, tickets, winners, Stripe ani `buy_ticket_atomic` nebyly dotčeny.
-- **Produkční aplikace Fáze 4A čeká na samostatné schválení Pavla.**
+
+**Fáze 4A — APLIKOVÁNO NA PRODUKCI (04. 07. 2026, schválení Pavla):**
+- Migrace `supabase/migrations/20260704120000_sales_leads_phase4a_proposed_leads.sql` aplikována na produkci **`xkzhjldrojjlrkezorey`** přes `apply_migration` (ne `db push`), výsledek **`{"success": true}`**. **DB základ Fáze 4A je nyní na stagingu i produkci.**
+- Produkce má nové sloupce **`lead_group`**, **`lead_quality`**, **`discovery_source`**, **`discovery_meta`**; existuje index **`idx_sales_leads_lead_group`**; `status` povoluje `navrzeny`; `sales_lead_set_status` blokuje `navrzeny → schvaleni_ceka` a povoluje `navrzeny → novy`.
+- Produkce má **1 existující lead** a **0 leadů ve stavu `navrzeny`**; **reálný produkční lead zůstal nedotčen** (`lead_quality` default 0). **Žádný produkční testovací lead nebyl vytvořen.**
+- **Nebyl EF deploy, nebyl Lovable Publish, žádný e-mail se neodeslal.** Wallets, payments, contests, tickets, winners, Stripe ani `buy_ticket_atomic` nebyly dotčeny.
+- **AI stále nemá cestu ke schválení ani odeslání; odeslání e-mailu zůstává jen ruční přes člověka** (`sales_lead_set_status` EXECUTE jen `authenticated` s guardem `sales_leads.manage`, anon revoked).
 
 ## VEŘEJNÝ ZÁKAZNICKÝ UI STYL — LIGHT / CHAMPAGNE PREMIUM (02. 07. 2026)
 
