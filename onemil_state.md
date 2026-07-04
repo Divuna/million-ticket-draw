@@ -47,8 +47,16 @@ Nový interní admin modul „Obchod / Leady" (outbound akvizice partnerských f
 - **Žádný e-mail se neodeslal, Resend není použitý** — existuje pouze interní koncept uložený do leadu.
 - **Staging nebyl produkčním nasazením dotčen.** Wallets, payments, contests, tickets, winners, Stripe ani `buy_ticket_atomic` nebyly dotčeny.
 
-**Ještě NEHOTOVO / NEPROVEDENO:**
-- **Odesílání e-mailu je samostatná další fáze** — vždy ho potvrdí **člověk** s `sales_leads.manage`, **nikdy ne AI** (EF `send-sales-lead-email` + Resend zatím NEexistují; Fáze 3 e-mail / Fáze 4 dle spec).
+**Fáze 3C (odeslání e-mailu člověkem) — NASAZENO A PRODUKČNĚ OVĚŘENO (04. 07. 2026, schválení Pavla):**
+- Edge Function **`send-sales-lead-email`** nasazena na produkci **`xkzhjldrojjlrkezorey`** — **ACTIVE** (v1, `verify_jwt=false`, auth interně přes JWT + `has_admin_permission('sales_leads.manage')`). Produkční **`RESEND_API_KEY`** je nastavený projektový secret (hodnota se nikde neuvádí).
+- **Lovable Publish Fáze 3C proběhl.** Produkční UI `/admin/sales-leads` obsahuje tlačítko **`Odeslat e-mail`** v detailu leadu; tlačítko je dostupné **jen u uloženého konceptu s vyplněným kontaktním e-mailem** (a leadu bez `do_not_contact`); jinak disabled.
+- **Potvrzovací dialog funguje** a jasně uvádí, že **e-mail odesílá člověk, ne AI**.
+- **První e-mail byl odeslán člověkem** přes produkční EF `send-sales-lead-email` (spuštěno kliknutím v UI po potvrzení).
+- **Historie kontaktu zapisuje `E-mail odeslán`** (`sales_lead_activities`, `activity_type=email_sent`, `direction=outbound`, `sent_by=human`).
+- **AI nemá žádnou cestu k odeslání e-mailu** — odeslání spustí výhradně člověk s `sales_leads.manage` po potvrzovacím dialogu; EF ověřuje všechny bariéry server-side.
+- **Staging nebyl dotčen.** Nebyl SQL ani migrace. Wallets, payments, contests, tickets, winners, Stripe ani `buy_ticket_atomic` nebyly dotčeny.
+
+**Modul Obchod / Leady — backend + UI Fáze 1 + 3A + 3B + 3C jsou produkčně hotové a ověřené.**
 
 ## VEŘEJNÝ ZÁKAZNICKÝ UI STYL — LIGHT / CHAMPAGNE PREMIUM (02. 07. 2026)
 
