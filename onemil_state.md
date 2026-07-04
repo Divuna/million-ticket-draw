@@ -63,6 +63,14 @@ Nový interní admin modul „Obchod / Leady" (outbound akvizice partnerských f
 - Návrh zavádí nový vstupní stav `navrzeny` (lidské schválení je povinná brána: `navrzeny → novy/nekontaktovat/archivovan`), skupiny leadů (`e-shopy`, `auto-moto`, `luxusni-zbozi`, `sport`, `cestovani`, `gastronomie`, `lokalni-sluzby`, `jine`), `lead_quality` (0–3), `discovery_source` + `discovery_meta`, dedup + suppression guard při návrhu, a navržené jednotky `sales_lead_propose` RPC + EF `sales-lead-discover` (jen jako budoucí návrh).
 - **Odeslání e-mailu zůstává vždy jen ruční přes člověka (Fáze 3C).** Žádná implementace, žádná migrace, žádný kód, žádný deploy — jen dokumentace. Otevřená rozhodnutí pro Pavla: zdroje dat + GDPR základ, denní limity návrhů, finální číselník skupin, cron vs. ruční spuštění discovery.
 
+**Fáze 4A (DB základ navržených leadů) — APLIKOVÁNO A OVĚŘENO POUZE NA STAGINGU (04. 07. 2026, schválení Pavla):**
+- Migrace `supabase/migrations/20260704120000_sales_leads_phase4a_proposed_leads.sql` byla aplikována **pouze na staging `dxmowysntemfqfnanxua`** přes `apply_migration` (ne `db push`), výsledek **`{"success": true}`**. **Produkce `xkzhjldrojjlrkezorey` nebyla dotčena.**
+- Na stagingu: `sales_leads.status` povoluje **`navrzeny`**; existují sloupce **`lead_group`**, **`lead_quality`**, **`discovery_source`**, **`discovery_meta`**; existují CHECK kontroly (`lead_group`/`lead_quality`/`discovery_source`) a index **`idx_sales_leads_lead_group`**.
+- **`sales_lead_set_status` blokuje `navrzeny → schvaleni_ceka`** (`transition_not_allowed`) a **povoluje `navrzeny → novy`** (lidské schválení). Ověřeno staging testem.
+- **Testovací staging lead: `c48f2567-5daf-4ce0-ab6b-89192748eef8`** — pouze na stagingu, označený **`STAGING ONLY`** (po testu ve stavu `novy`).
+- Žádný e-mail se neodeslal, nebyl EF deploy, nebyl Lovable Publish. Wallets, payments, contests, tickets, winners, Stripe ani `buy_ticket_atomic` nebyly dotčeny.
+- **Produkční aplikace Fáze 4A čeká na samostatné schválení Pavla.**
+
 ## VEŘEJNÝ ZÁKAZNICKÝ UI STYL — LIGHT / CHAMPAGNE PREMIUM (02. 07. 2026)
 
 Veřejná zákaznická část OneMil je po PR #140–#155 převedená do světlého light/champagne premium stylu s oranžovými/amber akcenty. Platí pro běžné zákaznické obrazovky v přihlášeném i nepřihlášeném stavu: homepage `/`, `/games`, detail soutěže navazující na zákaznické karty, `/vouchers`, `/wins`, `/winners`, `/profile`, `/messages`, `/login` a sdílené zákaznické logged-out stavy.
