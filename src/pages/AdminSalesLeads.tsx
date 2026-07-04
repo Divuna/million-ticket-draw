@@ -11,6 +11,7 @@ import {
   STATUS_LABELS,
   STATUS_BADGE_CLASS,
   INDUSTRY_OPTIONS,
+  leadGroupLabel,
   type SalesLeadRow,
 } from '@/components/admin/sales-leads/salesLeadsShared';
 import { AddSalesLeadDialog } from '@/components/admin/sales-leads/AddSalesLeadDialog';
@@ -35,6 +36,8 @@ const INDUSTRY_LABEL = (v: string | null): string =>
 /** Záložky dle spec §2 — každá mapuje na množinu stavů. */
 const TABS: { id: string; label: string; statuses: string[] | null }[] = [
   { id: 'all', label: 'Vše', statuses: null },
+  // Fáze 4B — navržené leady ke kontrole člověkem.
+  { id: 'proposed', label: 'Návrhy', statuses: ['navrzeny'] },
   { id: 'new', label: 'Nové', statuses: ['novy'] },
   { id: 'prep', label: 'Příprava', statuses: ['priprava', 'schvaleni_ceka'] },
   { id: 'contacted', label: 'Osloveno', statuses: ['osloveno', 'follow_up'] },
@@ -66,7 +69,7 @@ const AdminSalesLeads: React.FC = () => {
     try {
       const { data, error } = await (supabase as any)
         .from('sales_leads')
-        .select('id, company_name, industry, city, status, contact_email, updated_at, assigned_admin_id')
+        .select('id, company_name, industry, city, status, contact_email, updated_at, assigned_admin_id, lead_group')
         .order('updated_at', { ascending: false });
       if (error) {
         setTableMissing(true);
@@ -95,6 +98,7 @@ const AdminSalesLeads: React.FC = () => {
   const summary = useMemo(
     () => ({
       total: leads.length,
+      proposed: leads.filter((l) => l.status === 'navrzeny').length,
       toContact: leads.filter((l) => ['novy', 'priprava'].includes(l.status)).length,
       awaitingApproval: leads.filter((l) => l.status === 'schvaleni_ceka').length,
       contacted: leads.filter((l) => ['osloveno', 'follow_up'].includes(l.status)).length,
@@ -121,6 +125,7 @@ const AdminSalesLeads: React.FC = () => {
 
   const summaryCards: { label: string; value: number }[] = [
     { label: 'Celkem leadů', value: summary.total },
+    { label: 'Návrhy', value: summary.proposed },
     { label: 'K oslovení', value: summary.toContact },
     { label: 'Čeká na schválení', value: summary.awaitingApproval },
     { label: 'Osloveno', value: summary.contacted },
@@ -161,7 +166,7 @@ const AdminSalesLeads: React.FC = () => {
       )}
 
       {/* Souhrnné karty */}
-      <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-7 gap-3">
+      <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-8 gap-3">
         {summaryCards.map((c) => (
           <Card key={c.label} className="bg-card/60">
             <CardContent className="p-3">
@@ -211,6 +216,7 @@ const AdminSalesLeads: React.FC = () => {
               <TableHeader>
                 <TableRow>
                   <TableHead>Název firmy</TableHead>
+                  <TableHead>Skupina</TableHead>
                   <TableHead>Obor</TableHead>
                   <TableHead>Město</TableHead>
                   <TableHead>Stav</TableHead>
@@ -222,6 +228,7 @@ const AdminSalesLeads: React.FC = () => {
                 {visibleLeads.map((lead) => (
                   <TableRow key={lead.id}>
                     <TableCell className="font-medium">{lead.company_name}</TableCell>
+                    <TableCell className="text-muted-foreground">{leadGroupLabel(lead.lead_group)}</TableCell>
                     <TableCell className="text-muted-foreground">{INDUSTRY_LABEL(lead.industry)}</TableCell>
                     <TableCell className="text-muted-foreground">{lead.city ?? '—'}</TableCell>
                     <TableCell>
