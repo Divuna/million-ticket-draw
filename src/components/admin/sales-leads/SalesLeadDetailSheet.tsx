@@ -20,7 +20,17 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { Loader2, Pencil, X, Sparkles, Mail, Save } from 'lucide-react';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
+import { Loader2, Pencil, X, Sparkles, Mail, Save, Send } from 'lucide-react';
 import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
 import { useUserRole } from '@/hooks/useUserRole';
@@ -61,6 +71,7 @@ const ACTIVITY_LABELS: Record<string, string> = {
   ai_research: 'AI rešerše firmy',
   draft_created: 'AI návrh e-mailu',
   draft_edited: 'Návrh e-mailu upraven',
+  email_sent: 'E-mail odeslán',
   status_changed: 'Změna stavu',
   do_not_contact_set: 'Označeno „Nekontaktovat"',
   converted: 'Konvertován na partnera',
@@ -126,6 +137,9 @@ export function SalesLeadDetailSheet({ leadId, open, onOpenChange, onMutated }: 
   const [draftSaving, setDraftSaving] = useState(false);
   const [draftSubject, setDraftSubject] = useState('');
   const [draftBody, setDraftBody] = useState('');
+  // Odeslání konceptu člověkem (Fáze 3C).
+  const [sendConfirmOpen, setSendConfirmOpen] = useState(false);
+  const [sending, setSending] = useState(false);
 
   const load = useCallback(async () => {
     if (!leadId) return;
@@ -308,6 +322,40 @@ export function SalesLeadDetailSheet({ leadId, open, onOpenChange, onMutated }: 
       toast.error(msg);
     } finally {
       setDraftSaving(false);
+    }
+  };
+
+  // ── Odeslání konceptu ČLOVĚKEM (Fáze 3C) — nikdy ne AI ────────────────────
+  // Odešle výhradně uložený koncept z leadu přes EF send-sales-lead-email.
+  // Tlačítko je aktivní jen když je koncept uložený, je vyplněný contact_email
+  // a lead není do_not_contact. EF navíc všechny bariéry ověřuje server-side.
+  const draftSaved = !!(lead?.draft_email_subject && lead?.draft_email_body);
+  const hasContactEmail = !!lead?.contact_email;
+  const isDoNotContact = !!lead?.do_not_contact;
+  const canSend = draftSaved && hasContactEmail && !isDoNotContact;
+
+  const sendEmail = async () => {
+    if (!lead) return;
+    setSending(true);
+    try {
+      const { data, error } = await supabase.functions.invoke('send-sales-lead-email', {
+        body: { lead_id: lead.id },
+      });
+      if (error) throw new Error(error.message);
+      const res = (data ?? {}) as { success?: boolean; error?: string };
+      if (!res.success) {
+        toast.error(rpcErrorMessage(res.error));
+        return;
+      }
+      toast.success('E-mail odeslán');
+      setSendConfirmOpen(false);
+      await load();
+      onMutated();
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : 'Odeslání e-mailu se nezdařilo';
+      toast.error(msg);
+    } finally {
+      setSending(false);
     }
   };
 
@@ -618,15 +666,34 @@ export function SalesLeadDetailSheet({ leadId, open, onOpenChange, onMutated }: 
                   placeholder="Tělo e-mailu — libovolně upravte…"
                 />
               </div>
-              <div className="flex items-center justify-between gap-2">
-                <p className="text-[11px] text-muted-foreground">
-                  Odeslání není součástí této fáze — koncept se pouze ukládá.
-                </p>
-                <Button size="sm" onClick={saveDraft} disabled={draftSaving || draftBusy} className="gap-1.5">
+              <div className="flex items-center justify-end gap-2">
+                <Button size="sm" variant="outline" onClick={saveDraft} disabled={draftSaving || draftBusy || sending} className="gap-1.5">
                   {draftSaving ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Save className="h-3.5 w-3.5" />}
                   Uložit koncept
                 </Button>
+                <Button
+                  size="sm"
+                  onClick={() => setSendConfirmOpen(true)}
+                  disabled={!canSend || sending || draftSaving || draftBusy}
+                  className="gap-1.5"
+                  title={
+                    !draftSaved
+                      ? 'Nejdřív uložte koncept'
+                      : !hasContactEmail
+                      ? 'Lead nemá kontaktní e-mail'
+                      : isDoNotContact
+                      ? 'Lead je označený Nekontaktovat'
+                      : 'Odeslat uložený koncept na kontaktní e-mail'
+                  }
+                >
+                  {sending ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Send className="h-3.5 w-3.5" />}
+                  Odeslat e-mail
+                </Button>
               </div>
+              <p className="text-[11px] text-muted-foreground">
+                E-mail odesíláte <strong>vy (člověk)</strong>, ne AI. Odešle se přesně uložený koncept výše na
+                kontaktní e-mail leadu. Neuloží-li se koncept nebo chybí kontaktní e-mail, odeslání je zablokované.
+              </p>
             </div>
 
             <Separator className="my-4" />
@@ -651,6 +718,39 @@ export function SalesLeadDetailSheet({ leadId, open, onOpenChange, onMutated }: 
           </>
         )}
       </SheetContent>
+
+      {/* Potvrzení odeslání — jasné, že odesílá člověk, ne AI */}
+      <AlertDialog open={sendConfirmOpen} onOpenChange={(o) => !sending && setSendConfirmOpen(o)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Odeslat e-mail firmě?</AlertDialogTitle>
+            <AlertDialogDescription asChild>
+              <div className="space-y-2 text-sm">
+                <p>
+                  Odešle se uložený koncept e-mailu na{' '}
+                  <strong>{lead?.contact_email ?? '—'}</strong>
+                  {lead?.company_name ? <> (firma {lead.company_name})</> : null}.
+                </p>
+                <p className="text-muted-foreground">
+                  E-mail odesíláte <strong>vy jako člověk</strong> s oprávněním „Obchodní leady". AI e-mail nikdy
+                  neodesílá. Odeslání proběhne přesně podle konceptu výše, nic se nepřegeneruje.
+                </p>
+              </div>
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={sending}>Zrušit</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={(e) => { e.preventDefault(); sendEmail(); }}
+              disabled={sending}
+              className="gap-1.5"
+            >
+              {sending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
+              Odeslat e-mail
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </Sheet>
   );
 }

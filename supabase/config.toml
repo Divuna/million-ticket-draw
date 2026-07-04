@@ -1,11 +1,15 @@
 project_id = "xkzhjldrojjlrkezorey"
 
 # Sales Leads (modul Obchod / Leady) — auth řeší funkce interně přes JWT +
-# has_admin_permission('sales_leads.manage'). NEODESÍLAJÍ e-maily.
+# has_admin_permission('sales_leads.manage'). research/draft-email NEODESÍLAJÍ
+# e-maily; send-sales-lead-email odesílá uložený koncept jen na lidský klik.
 [functions.sales-lead-research]
 verify_jwt = false
 
 [functions.sales-lead-draft-email]
+verify_jwt = false
+
+[functions.send-sales-lead-email]
 verify_jwt = false
 
 [functions.sofinity-player-sync]
