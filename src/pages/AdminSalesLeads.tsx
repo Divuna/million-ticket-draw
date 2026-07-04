@@ -6,7 +6,7 @@ import { Button } from '@/components/ui/button';
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { supabase } from '@/integrations/supabase/client';
-import { Briefcase, Plus, Search, Info } from 'lucide-react';
+import { Briefcase, Plus, Search, Info, Sparkles } from 'lucide-react';
 import {
   STATUS_LABELS,
   STATUS_BADGE_CLASS,
@@ -16,6 +16,7 @@ import {
 } from '@/components/admin/sales-leads/salesLeadsShared';
 import { AddSalesLeadDialog } from '@/components/admin/sales-leads/AddSalesLeadDialog';
 import { SalesLeadDetailSheet } from '@/components/admin/sales-leads/SalesLeadDetailSheet';
+import { DiscoverLeadsDialog } from '@/components/admin/sales-leads/DiscoverLeadsDialog';
 
 /**
  * Admin modul „Obchod / Leady" — Fáze 3A (ruční přidání, detail, editace, změna stavu).
@@ -61,6 +62,7 @@ const AdminSalesLeads: React.FC = () => {
   const [activeTab, setActiveTab] = useState('all');
   const [searchTerm, setSearchTerm] = useState('');
   const [addOpen, setAddOpen] = useState(false);
+  const [discoverOpen, setDiscoverOpen] = useState(false);
   const [detailId, setDetailId] = useState<string | null>(null);
   const [detailOpen, setDetailOpen] = useState(false);
 
@@ -149,10 +151,16 @@ const AdminSalesLeads: React.FC = () => {
             </p>
           </div>
         </div>
-        <Button onClick={() => setAddOpen(true)} data-testid="sl-add-company-btn">
-          <Plus className="h-4 w-4 mr-1.5" aria-hidden />
-          Přidat firmu
-        </Button>
+        <div className="flex flex-wrap gap-2">
+          <Button variant="outline" onClick={() => setDiscoverOpen(true)} data-testid="sl-discover-btn">
+            <Sparkles className="h-4 w-4 mr-1.5" aria-hidden />
+            Najít nové firmy
+          </Button>
+          <Button onClick={() => setAddOpen(true)} data-testid="sl-add-company-btn">
+            <Plus className="h-4 w-4 mr-1.5" aria-hidden />
+            Přidat firmu
+          </Button>
+        </div>
       </div>
 
       {tableMissing && (
@@ -251,6 +259,11 @@ const AdminSalesLeads: React.FC = () => {
       </Card>
 
       <AddSalesLeadDialog open={addOpen} onOpenChange={setAddOpen} onSuccess={load} />
+      <DiscoverLeadsDialog
+        open={discoverOpen}
+        onOpenChange={setDiscoverOpen}
+        onSuccess={() => { setActiveTab('proposed'); load(); }}
+      />
       <SalesLeadDetailSheet
         leadId={detailId}
         open={detailOpen}
