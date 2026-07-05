@@ -1,5 +1,19 @@
 ﻿# OneMil – aktuální stav projektu
 
+## MODUL OBCHOD / LEADY — FÁZE 5D ZPROVOZNĚNA NA PRODUKCI (05. 07. 2026, schválení Pavla)
+
+PR #191 i PR #192 mergnuty do `main`. EF `sales-lead-discover` nasazena na **produkci
+`xkzhjldrojjlrkezorey`** jako **v3 ACTIVE**. Žádná nová DB migrace — Fáze 5D je pouze úprava EF.
+
+- **Ověření bezpečnosti (produkce):** EF bez auth headeru → `401 missing_authorization_header`.
+  Fáze 5D na produkci ověřuje navržený e-mail stažením zdrojové stránky před uložením leadu —
+  AI tvrzení samo o sobě nestačí.
+- **Produkční počet leadů se deployem nezměnil: 11 před → 11 po.**
+- **Žádný discovery test na produkci nebyl spuštěn; žádný produkční test lead nevznikl; žádný
+  e-mail nebyl odeslán.**
+- **Staging `dxmowysntemfqfnanxua` nebyl touto akcí změněn.** Lovable Publish neproběhl;
+  wallets/payments/contests/tickets/winners/Stripe/`buy_ticket_atomic` nedotčeny.
+
 ## MODUL OBCHOD / LEADY — FÁZE 5D ZPROVOZNĚNA POUZE NA STAGINGU (05. 07. 2026, schválení Pavla)
 
 PR #191 mergnut do `main` (merge commit `2a2578557007cc3428470a12a9981f339690ac64`). EF
