@@ -3,10 +3,22 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
+import { Checkbox } from '@/components/ui/checkbox';
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
 import { supabase } from '@/integrations/supabase/client';
-import { Briefcase, Plus, Search, Info, Sparkles } from 'lucide-react';
+import { toast } from 'sonner';
+import { Briefcase, Plus, Search, Info, Sparkles, Trash2 } from 'lucide-react';
 import {
   STATUS_LABELS,
   STATUS_BADGE_CLASS,
@@ -19,13 +31,17 @@ import { SalesLeadDetailSheet } from '@/components/admin/sales-leads/SalesLeadDe
 import { DiscoverLeadsDialog } from '@/components/admin/sales-leads/DiscoverLeadsDialog';
 
 /**
- * Admin modul „Obchod / Leady" — Fáze 3A (ruční přidání, detail, editace, změna stavu).
- * Spec: docs/SALES_LEADS_ADMIN_SPEC.md (§1, §2, §5).
+ * Admin modul „Obchod / Leady" — Fáze 3A (ruční přidání, detail, editace, změna stavu)
+ * + Fáze 6 (jednotlivé i hromadné mazání leadů).
+ * Spec: docs/SALES_LEADS_ADMIN_SPEC.md (§1, §2, §5, §17.11).
  *
  * Route je chráněná RequirePermission("sales_leads.manage") v App.tsx; data
  * navíc drží RLS (SELECT jen pro držitele oprávnění / superadmina). Veškerý
  * zápis jde přes SECURITY DEFINER RPC (sales_lead_create / _update_fields /
- * _set_status) — žádný přímý client INSERT/UPDATE. Žádné e-maily / AI / Resend.
+ * _set_status / _delete / _delete_bulk) — žádný přímý client INSERT/UPDATE/
+ * DELETE. Žádné e-maily / AI / Resend. Mazání se týká jen `sales_leads`
+ * (a jejích cascade-navázaných aktivit/historie) — nikdy wallets/payments/
+ * contests/tickets/winners/Stripe/buy_ticket_atomic.
  *
  * Tabulka sales_leads nemusí v prostředí existovat (migrace se aplikuje
  * samostatně) — chyba SELECTu se řeší tichým prázdným stavem s hláškou.
@@ -65,6 +81,10 @@ const AdminSalesLeads: React.FC = () => {
   const [discoverOpen, setDiscoverOpen] = useState(false);
   const [detailId, setDetailId] = useState<string | null>(null);
   const [detailOpen, setDetailOpen] = useState(false);
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  const [deleteOneId, setDeleteOneId] = useState<string | null>(null);
+  const [bulkDeleteOpen, setBulkDeleteOpen] = useState(false);
+  const [deleting, setDeleting] = useState(false);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -97,6 +117,67 @@ const AdminSalesLeads: React.FC = () => {
     setDetailOpen(true);
   };
 
+  const toggleSelected = (id: string, checked: boolean) => {
+    setSelectedIds((prev) => {
+      const next = new Set(prev);
+      if (checked) next.add(id);
+      else next.delete(id);
+      return next;
+    });
+  };
+
+  const confirmDeleteOne = async () => {
+    if (!deleteOneId) return;
+    setDeleting(true);
+    try {
+      const { data, error } = await (supabase as any).rpc('sales_lead_delete', {
+        p_lead_id: deleteOneId,
+      });
+      if (error) throw new Error(error.message);
+      const res = (data ?? {}) as { success?: boolean; error?: string };
+      if (!res.success) {
+        toast.error(res.error === 'access_denied' ? 'Nemáte oprávnění smazat lead.' : 'Lead se nepodařilo smazat.');
+        return;
+      }
+      toast.success('Lead byl smazán.');
+      setSelectedIds((prev) => {
+        const next = new Set(prev);
+        next.delete(deleteOneId);
+        return next;
+      });
+      await load();
+    } catch (err: unknown) {
+      toast.error(err instanceof Error ? err.message : 'Lead se nepodařilo smazat.');
+    } finally {
+      setDeleting(false);
+      setDeleteOneId(null);
+    }
+  };
+
+  const confirmDeleteBulk = async () => {
+    if (selectedIds.size === 0) return;
+    setDeleting(true);
+    try {
+      const { data, error } = await (supabase as any).rpc('sales_lead_delete_bulk', {
+        p_lead_ids: Array.from(selectedIds),
+      });
+      if (error) throw new Error(error.message);
+      const res = (data ?? {}) as { success?: boolean; error?: string; deleted_count?: number };
+      if (!res.success) {
+        toast.error(res.error === 'access_denied' ? 'Nemáte oprávnění mazat leady.' : 'Leady se nepodařilo smazat.');
+        return;
+      }
+      toast.success(`Smazáno leadů: ${res.deleted_count ?? 0}.`);
+      setSelectedIds(new Set());
+      await load();
+    } catch (err: unknown) {
+      toast.error(err instanceof Error ? err.message : 'Leady se nepodařilo smazat.');
+    } finally {
+      setDeleting(false);
+      setBulkDeleteOpen(false);
+    }
+  };
+
   const summary = useMemo(
     () => ({
       total: leads.length,
@@ -124,6 +205,21 @@ const AdminSalesLeads: React.FC = () => {
       );
     });
   }, [leads, activeTab, searchTerm]);
+
+  const allVisibleSelected = visibleLeads.length > 0 && visibleLeads.every((l) => selectedIds.has(l.id));
+  const someVisibleSelected = visibleLeads.some((l) => selectedIds.has(l.id));
+
+  const toggleSelectAllVisible = (checked: boolean) => {
+    setSelectedIds((prev) => {
+      const next = new Set(prev);
+      if (checked) {
+        visibleLeads.forEach((l) => next.add(l.id));
+      } else {
+        visibleLeads.forEach((l) => next.delete(l.id));
+      }
+      return next;
+    });
+  };
 
   const summaryCards: { label: string; value: number }[] = [
     { label: 'Celkem leadů', value: summary.total },
@@ -209,6 +305,22 @@ const AdminSalesLeads: React.FC = () => {
               ))}
             </TabsList>
           </Tabs>
+          {selectedIds.size > 0 && (
+            <div className="flex items-center justify-between gap-3 rounded-lg border border-destructive/30 bg-destructive/5 px-3 py-2">
+              <span className="text-sm text-muted-foreground">
+                Vybráno leadů: <strong className="text-foreground">{selectedIds.size}</strong>
+              </span>
+              <Button
+                variant="destructive"
+                size="sm"
+                onClick={() => setBulkDeleteOpen(true)}
+                data-testid="sl-bulk-delete-btn"
+              >
+                <Trash2 className="h-4 w-4 mr-1.5" aria-hidden />
+                Smazat vybrané ({selectedIds.size})
+              </Button>
+            </div>
+          )}
         </CardHeader>
         <CardContent>
           {loading ? (
@@ -223,6 +335,13 @@ const AdminSalesLeads: React.FC = () => {
             <Table>
               <TableHeader>
                 <TableRow>
+                  <TableHead className="w-10">
+                    <Checkbox
+                      checked={allVisibleSelected ? true : someVisibleSelected ? 'indeterminate' : false}
+                      onCheckedChange={(checked) => toggleSelectAllVisible(checked === true)}
+                      aria-label="Vybrat vše"
+                    />
+                  </TableHead>
                   <TableHead>Název firmy</TableHead>
                   <TableHead>Skupina</TableHead>
                   <TableHead>Obor</TableHead>
@@ -235,6 +354,13 @@ const AdminSalesLeads: React.FC = () => {
               <TableBody>
                 {visibleLeads.map((lead) => (
                   <TableRow key={lead.id}>
+                    <TableCell>
+                      <Checkbox
+                        checked={selectedIds.has(lead.id)}
+                        onCheckedChange={(checked) => toggleSelected(lead.id, checked === true)}
+                        aria-label={`Vybrat ${lead.company_name}`}
+                      />
+                    </TableCell>
                     <TableCell className="font-medium">{lead.company_name}</TableCell>
                     <TableCell className="text-muted-foreground">{leadGroupLabel(lead.lead_group)}</TableCell>
                     <TableCell className="text-muted-foreground">{INDUSTRY_LABEL(lead.industry)}</TableCell>
@@ -246,9 +372,20 @@ const AdminSalesLeads: React.FC = () => {
                     </TableCell>
                     <TableCell className="text-muted-foreground">{formatDate(lead.updated_at)}</TableCell>
                     <TableCell className="text-right">
-                      <Button variant="ghost" size="sm" onClick={() => openDetail(lead.id)}>
-                        Detail
-                      </Button>
+                      <div className="flex justify-end gap-1">
+                        <Button variant="ghost" size="sm" onClick={() => openDetail(lead.id)}>
+                          Detail
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="text-destructive hover:text-destructive"
+                          onClick={() => setDeleteOneId(lead.id)}
+                          data-testid="sl-delete-one-btn"
+                        >
+                          <Trash2 className="h-4 w-4" aria-hidden />
+                        </Button>
+                      </div>
                     </TableCell>
                   </TableRow>
                 ))}
@@ -270,6 +407,41 @@ const AdminSalesLeads: React.FC = () => {
         onOpenChange={setDetailOpen}
         onMutated={load}
       />
+
+      <AlertDialog open={!!deleteOneId} onOpenChange={(o) => !o && setDeleteOneId(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Smazat lead?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Tato akce trvale smaže lead včetně navázaných aktivit a historie stavů. Nelze vrátit zpět.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={deleting}>Zrušit</AlertDialogCancel>
+            <AlertDialogAction disabled={deleting} onClick={confirmDeleteOne} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
+              Smazat
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      <AlertDialog open={bulkDeleteOpen} onOpenChange={setBulkDeleteOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Smazat vybrané leady?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Tato akce trvale smaže {selectedIds.size} vybraných leadů včetně navázaných aktivit
+              a historie stavů. Nelze vrátit zpět.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={deleting}>Zrušit</AlertDialogCancel>
+            <AlertDialogAction disabled={deleting} onClick={confirmDeleteBulk} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
+              Smazat ({selectedIds.size})
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 };

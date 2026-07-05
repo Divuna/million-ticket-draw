@@ -1,5 +1,48 @@
 ﻿# OneMil – aktuální stav projektu
 
+## MODUL OBCHOD / LEADY — FÁZE 6 PŘIPRAVENA JEN JAKO SOUBORY V PR (06. 07. 2026, neaplikováno/nenasazeno)
+
+Cíl: discovery nemá zahazovat firmy jen proto, že nenašlo e-mail — má vždy uložit použitelné
+firmy ze zvoleného segmentu a e-mail uložit jen tehdy, když ho bezpečně najde. Přidáno i bezpečné
+mazání leadů (jednotlivě i hromadně).
+
+- **`sales-lead-discover` (EF, úprava beze změny signatur RPC):** AI navrhne firmy podle
+  segmentu; **každá firma s vyplněným názvem se vždy uloží** jako lead ve stavu `navrzeny`. Pokud
+  crawler (Fáze 5D/5E logika beze změny) najde veřejný e-mail na webu firmy, uloží se přes
+  `sales_lead_propose_with_contact` (existující RPC) s `proposed_contact_email` +
+  `proposed_contact_status='neovereny'`. Pokud e-mail nenajde, lead se **i tak vytvoří** přes
+  `sales_lead_propose` (existující RPC) bez navrženého kontaktu. `contact_email` zůstává vždy
+  `NULL`, `email_verified_by_admin=false`. Jediný důvod nevytvoření leadu je dedup/blokace na
+  úrovni RPC (partner/suppression/duplicitní IČO/doména) — nikdy chybějící e-mail. Žádná nová DB
+  migrace pro tuto část chování. Odpověď EF: `created`, `created_with_email`,
+  `created_without_email`, `skipped`, `errored` (nahrazuje dřívější
+  `skipped_missing_email`/`skipped_email_not_found_on_website`, které už neznamenají přeskočení).
+- **UI `DiscoverLeadsDialog.tsx`:** text už netvrdí, že se uloží jen firmy s dohledaným e-mailem;
+  výsledek běhu ukazuje vzniklo firem celkem / s navrženým e-mailem / bez e-mailu (k ručnímu
+  doplnění) / přeskočeno / chyby.
+- **Mazání leadů (nová funkcionalita, migrace jako soubor, NEAPLIKOVÁNO):**
+  `supabase/migrations/20260705100000_sales_leads_phase6_delete_rpc.sql` přidává RPC
+  `sales_lead_delete(p_lead_id uuid)` a `sales_lead_delete_bulk(p_lead_ids uuid[])` — SECURITY
+  DEFINER, `SET search_path=public`, guard `has_admin_permission('sales_leads.manage') OR
+  is_superadmin()`, EXECUTE jen `authenticated` (anon revoked). Mažou výhradně z `sales_leads`;
+  navázané `sales_lead_activities`/`sales_lead_status_history` se smažou automaticky přes
+  existující `ON DELETE CASCADE` z Fáze 1 — žádná další úklidová logika, žádný zásah mimo modul
+  Obchod / Leady.
+- **Admin UI `/admin/sales-leads` (`AdminSalesLeads.tsx`):** checkbox per-řádek + „vybrat vše"
+  v hlavičce tabulky; tlačítko smazat (ikona koše) u jednotlivého leadu; hromadná akční lišta
+  „Smazat vybrané (N)" viditelná při neprázdném výběru. Obě akce vyžadují potvrzovací dialog
+  (shadcn `AlertDialog`) před voláním RPC.
+- **Bezpečnost:** žádné posílání e-mailů, žádné auto-schválení kontaktu, žádné mazání mimo
+  `sales_leads` (a jejích cascade-navázaných tabulek), žádné produkční mazání provedeno.
+- **Dokumentace aktualizována:** `docs/SALES_LEADS_ADMIN_SPEC.md` (nová §17.8.5), `CLAUDE.md`,
+  `onemil_state.md`, `onemil_history.md`.
+- **Testy:** `npx tsc --noEmit` 0 chyb; `npm run build` ✅ (exit 0, jen pre-existující
+  bundle-size/CSS warningy, žádná nová chyba).
+- **Nic nenasazeno.** Žádné SQL/migrace spuštěno, žádný EF deploy, žádný Lovable Publish, žádný
+  e-mail odeslán, žádná data smazána, žádný zásah do produkce ani stagingu. Nedotčeno:
+  wallets/payments/contests/tickets/winners/Stripe/`buy_ticket_atomic`/`email_queue`/
+  `process-email-queue`.
+
 ## MODUL OBCHOD / LEADY — FÁZE 5E ZPROVOZNĚNA NA PRODUKCI (05. 07. 2026, schválení Pavla)
 
 PR #194 i PR #195 mergnuty do `main`. EF `sales-lead-discover` nasazena na **produkci
