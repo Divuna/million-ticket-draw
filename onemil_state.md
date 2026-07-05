@@ -1,5 +1,24 @@
 ﻿# OneMil – aktuální stav projektu
 
+## MODUL OBCHOD / LEADY — FÁZE 5D ZPROVOZNĚNA POUZE NA STAGINGU (05. 07. 2026, schválení Pavla)
+
+PR #191 mergnut do `main` (merge commit `2a2578557007cc3428470a12a9981f339690ac64`). EF
+`sales-lead-discover` nasazena na **staging `dxmowysntemfqfnanxua`** jako **v3 ACTIVE**. Žádná
+nová DB migrace — Fáze 5D je pouze úprava EF, RPC z Fáze 5C beze změny.
+
+- **Ověření bezpečnosti:** EF bez auth headeru → `401`. Fáze 5D ověřuje navržený e-mail
+  stažením zdrojové stránky před uložením leadu — AI tvrzení samo o sobě nestačí.
+- **Test bez existujícího e-mailu na stránce (STAGING ONLY):** e-mail, který na zdrojové
+  stránce není, skončí jako `outcome:"skipped", reason:"email_not_found_on_source_page"`;
+  **žádný lead se nevytvoří** (RPC se vůbec nezavolá).
+- **Test s nebezpečnou URL:** skončí jako `outcome:"skipped", reason:"invalid_email_source_url"`.
+- **Test s existujícím e-mailem (STAGING ONLY): prošel.** Vznikl pouze staging test lead
+  `TEST OneMil Sales Lead F5D STAGING ONLY` — `status='navrzeny'`, `contact_email=NULL`,
+  `email_verified_by_admin=false`, `proposed_contact_status='neovereny'`; aktivita
+  `lead_discovered` 1×, `contact_proposed` 1×, aktivita `email_sent` **0×**.
+- **Produkce `xkzhjldrojjlrkezorey` nedotčena; Lovable Publish neproběhl; žádný e-mail
+  nebyl odeslán.**
+
 ## MODUL OBCHOD / LEADY — FÁZE 5D PŘIPRAVENA JEN JAKO PR (05. 07. 2026, neaplikováno/nenasazeno)
 
 Oprava mezery z Fáze 5C: AI tvrzení „e-mail je na téhle URL" samo o sobě nestačilo — AI si mohla
