@@ -41,6 +41,7 @@ import {
   LEAD_GROUP_OPTIONS,
   DISCOVERY_SOURCE_OPTIONS,
   LEAD_QUALITY_LABELS,
+  PROPOSED_CONTACT_STATUS_LABELS,
   leadGroupLabel,
   allowedTargets,
   isReasonRequired,
@@ -68,7 +69,9 @@ const DETAIL_COLUMNS =
   'ico, dic, website, company_size, contact_person, contact_role, contact_phone, email_source, ' +
   'email_verified_by_admin, do_not_contact, do_not_contact_reason, notes, created_at, ' +
   'ai_research_summary, ai_research_at, draft_email_subject, draft_email_body, draft_prepared_by, ' +
-  'lead_group, lead_quality, discovery_source, discovery_meta';
+  'lead_group, lead_quality, discovery_source, discovery_meta, ' +
+  'proposed_contact_email, proposed_contact_source_url, proposed_contact_at, ' +
+  'proposed_contact_by, proposed_contact_status';
 
 const ACTIVITY_LABELS: Record<string, string> = {
   lead_created: 'Lead založen',
@@ -81,6 +84,10 @@ const ACTIVITY_LABELS: Record<string, string> = {
   do_not_contact_set: 'Označeno „Nekontaktovat"',
   converted: 'Konvertován na partnera',
   note_added: 'Přidána poznámka',
+  lead_discovered: 'Firma automaticky navržena',
+  contact_proposed: 'Navržen kontaktní e-mail',
+  contact_approved: 'Kontaktní e-mail schválen',
+  contact_rejected: 'Návrh kontaktu zamítnut',
 };
 
 const formatDateTime = (iso: string | null): string => {
@@ -151,6 +158,9 @@ export function SalesLeadDetailSheet({ leadId, open, onOpenChange, onMutated }: 
   const [clsGroup, setClsGroup] = useState('');
   const [clsQuality, setClsQuality] = useState('0');
   const [clsSource, setClsSource] = useState('');
+  // Dohledání / schválení kontaktu (Fáze 5B).
+  const [enrichBusy, setEnrichBusy] = useState(false);
+  const [contactReviewBusy, setContactReviewBusy] = useState(false);
 
   const load = useCallback(async () => {
     if (!leadId) return;
@@ -366,6 +376,65 @@ export function SalesLeadDetailSheet({ leadId, open, onOpenChange, onMutated }: 
       toast.error(msg);
     } finally {
       setClsSaving(false);
+    }
+  };
+
+  // ── Dohledání veřejného kontaktu (Fáze 5B) — AI nevymýšlí, jen návrh ──────
+  // EF sales-lead-enrich-contact najde VEŘEJNÝ e-mail a uloží ho jen jako
+  // NEOVĚŘENÝ návrh (proposed_contact_*). Odesílací contact_email zůstává beze
+  // změny — vyplní ho teprve člověk schválením níže.
+  const runEnrich = async () => {
+    if (!lead) return;
+    setEnrichBusy(true);
+    try {
+      const { data, error } = await supabase.functions.invoke('sales-lead-enrich-contact', {
+        body: { lead_id: lead.id },
+      });
+      if (error) throw new Error(error.message);
+      const res = (data ?? {}) as { success?: boolean; error?: string; found?: boolean };
+      if (!res.success) {
+        toast.error(rpcErrorMessage(res.error));
+        return;
+      }
+      if (res.found === false) {
+        toast.info('Veřejný e-mail se nepodařilo dohledat. AI nic nevymýšlí.');
+        return;
+      }
+      toast.success('Návrh e-mailu uložen — schvalte ho ručně níže.');
+      await load();
+      onMutated();
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : 'Dohledání kontaktu se nezdařilo';
+      toast.error(msg);
+    } finally {
+      setEnrichBusy(false);
+    }
+  };
+
+  // Schválení / zamítnutí návrhu kontaktu ČLOVĚKEM. Teprve schválení vyplní
+  // odesílací contact_email + email_verified_by_admin=true (RPC to hlídá).
+  const reviewContact = async (decision: 'approve' | 'reject') => {
+    if (!lead) return;
+    setContactReviewBusy(true);
+    try {
+      const { data, error } = await (supabase as any).rpc('sales_lead_review_contact', {
+        p_lead_id: lead.id,
+        p_decision: decision,
+      });
+      if (error) throw new Error(error.message);
+      const res = (data ?? {}) as { success?: boolean; error?: string };
+      if (!res.success) {
+        toast.error(rpcErrorMessage(res.error));
+        return;
+      }
+      toast.success(decision === 'approve' ? 'E-mail schválen a nastaven jako kontakt.' : 'Návrh e-mailu zamítnut.');
+      await load();
+      onMutated();
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : 'Akce se nezdařila';
+      toast.error(msg);
+    } finally {
+      setContactReviewBusy(false);
     }
   };
 
@@ -736,6 +805,87 @@ export function SalesLeadDetailSheet({ leadId, open, onOpenChange, onMutated }: 
                     Uložit
                   </Button>
                 </div>
+              </div>
+            )}
+
+            <Separator className="my-4" />
+
+            {/* Kontakt firmy — dohledání veřejného e-mailu (Fáze 5B) */}
+            <div className="flex items-center justify-between gap-2 mb-2">
+              <div className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Kontaktní e-mail</div>
+              <Button variant="outline" size="sm" onClick={runEnrich} disabled={enrichBusy} className="gap-1.5">
+                {enrichBusy ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Sparkles className="h-3.5 w-3.5" />}
+                Dohledat e-mail
+              </Button>
+            </div>
+            <p className="text-xs text-muted-foreground mb-3">
+              AI dohledá jen <strong>veřejně uvedený</strong> firemní e-mail a uloží ho jako <strong>neověřený návrh</strong>.
+              E-mail se nikdy nevymýšlí. Odesílací kontakt se vyplní teprve po vašem ručním schválení.
+            </p>
+
+            {lead.proposed_contact_status === 'neovereny' && lead.proposed_contact_email ? (
+              <div className="rounded-lg border border-amber-500/40 bg-amber-500/10 p-3 space-y-2">
+                <div className="flex items-center gap-2">
+                  <Badge variant="outline" className="bg-amber-500/15 text-amber-600 border-amber-500/30">
+                    {PROPOSED_CONTACT_STATUS_LABELS.neovereny}
+                  </Badge>
+                  {lead.proposed_contact_by && (
+                    <span className="text-[11px] text-muted-foreground">
+                      Navrhl: {lead.proposed_contact_by === 'ai' ? 'AI' : 'admin'} · {formatDateTime(lead.proposed_contact_at)}
+                    </span>
+                  )}
+                </div>
+                <div className="text-sm break-all"><strong>{lead.proposed_contact_email}</strong></div>
+                {lead.proposed_contact_source_url && (
+                  <div className="text-xs text-muted-foreground break-all">
+                    Zdroj:{' '}
+                    <a
+                      href={lead.proposed_contact_source_url}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="underline underline-offset-2 hover:text-foreground"
+                    >
+                      {lead.proposed_contact_source_url}
+                    </a>
+                  </div>
+                )}
+                <p className="text-[11px] text-muted-foreground">
+                  Ověřte, že e-mail patří firmě. Schválením se vyplní odesílací kontakt a označí jako ověřený člověkem.
+                </p>
+                <div className="flex justify-end gap-2">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => reviewContact('reject')}
+                    disabled={contactReviewBusy}
+                    className="gap-1.5"
+                  >
+                    {contactReviewBusy ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <X className="h-3.5 w-3.5" />}
+                    Zamítnout e-mail
+                  </Button>
+                  <Button
+                    size="sm"
+                    onClick={() => reviewContact('approve')}
+                    disabled={contactReviewBusy}
+                    className="gap-1.5"
+                  >
+                    {contactReviewBusy ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Save className="h-3.5 w-3.5" />}
+                    Schválit e-mail
+                  </Button>
+                </div>
+              </div>
+            ) : (
+              <div className="text-sm text-muted-foreground">
+                {lead.contact_email ? (
+                  <>
+                    Kontaktní e-mail: <strong className="text-foreground break-all">{lead.contact_email}</strong>
+                    {lead.email_verified_by_admin ? ' · ověřeno člověkem' : ' · neověřeno'}
+                  </>
+                ) : lead.proposed_contact_status === 'zamitnuty' ? (
+                  'Poslední návrh e-mailu byl zamítnut. Můžete zkusit dohledat znovu.'
+                ) : (
+                  'Zatím žádný kontaktní e-mail. Použijte „Dohledat e-mail" nebo vyplňte ručně v Údajích firmy.'
+                )}
               </div>
             )}
 

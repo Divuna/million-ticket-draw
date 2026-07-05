@@ -1,5 +1,37 @@
 ﻿# OneMil – aktuální stav projektu
 
+## MODUL OBCHOD / LEADY — FÁZE 5B PŘIPRAVENA JEN JAKO PR (05. 07. 2026, neaplikováno/nenasazeno)
+
+Bezpečné dohledání kontaktu u navržených leadů. **Vše jen jako soubory ve větvi
+`feat/sales-leads-phase5b-contact-enrich` / PR — nic neaplikováno, nenasazeno,
+nepublikováno. Produkce `xkzhjldrojjlrkezorey` i staging `dxmowysntemfqfnanxua`
+nedotčeny. Žádný e-mail neodeslán. Žádná produkční data vytvořena/smazána.**
+
+- **Migrace `supabase/migrations/20260704150000_sales_leads_phase5b_contact_enrichment.sql`:**
+  sloupce `proposed_contact_email`, `proposed_contact_source_url`,
+  `proposed_contact_at`, `proposed_contact_by` (`ai`/`admin`),
+  `proposed_contact_status` (`neovereny`/`overeny`/`zamitnuty`) + CHECK; nové
+  activity typy `contact_proposed`/`contact_approved`/`contact_rejected`.
+  - RPC `sales_lead_propose_contact` (SECURITY DEFINER, EXECUTE jen `service_role`):
+    uloží NEOVĚŘENÝ návrh; **nikdy** nemění `contact_email`/`email_verified_by_admin`
+    ani stav leadu; **nikdy** neodesílá; loguje `contact_proposed`.
+  - RPC `sales_lead_review_contact` (SECURITY DEFINER, `authenticated` + guard
+    `sales_leads.manage`): `approve` → teprve TEĎ vyplní `contact_email` +
+    `email_verified_by_admin=true` (dedup unique → `duplicate`); `reject` →
+    `zamitnuty`, `contact_email` beze změny. Nikdy neodesílá, nikdy nemění stav.
+- **EF `supabase/functions/sales-lead-enrich-contact/index.ts`** (config.toml
+  `verify_jwt=false`, auth interně JWT + `has_admin_permission('sales_leads.manage')`):
+  OpenAI dohledá jen VEŘEJNÝ e-mail + zdrojovou URL; při nejistotě/bez zdroje
+  `found:false` a NIC neuloží (AI nehádá); jinak zapíše přes
+  `sales_lead_propose_contact`. **Nikdy neodesílá e-mail, nikdy nepřepíše
+  odesílací contact_email.**
+- **UI `SalesLeadDetailSheet.tsx`:** sekce „Kontaktní e-mail" — „Dohledat e-mail",
+  panel „Navržený e-mail" + klikací zdroj + „Schválit e-mail"/„Zamítnout e-mail".
+  `salesLeadsShared.ts` rozšířen o typy/labely návrhu kontaktu + chybové hlášky.
+- Ověřeno: `npx tsc --noEmit` 0 chyb, `npm run build` ✅. **Aplikace migrace +
+  deploy EF + Lovable Publish = samostatné kroky, každý vyžaduje výslovné
+  schválení Pavla.** Odeslání e-mailu zůstává jen ruční přes člověka (Fáze 3C).
+
 ## MODUL OBCHOD / LEADY — FÁZE 1 + 2 + 3A, DB BACKEND HOTOV NA STAGINGU I PRODUKCI (03. 07. 2026)
 
 Nový interní admin modul „Obchod / Leady" (outbound akvizice partnerských firem) je rozpracovaný podle `docs/SALES_LEADS_ADMIN_SPEC.md`. Aktuální stav:

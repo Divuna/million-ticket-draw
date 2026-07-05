@@ -16,6 +16,11 @@ verify_jwt = false
 [functions.sales-lead-discover]
 verify_jwt = false
 
+# Fáze 5B — dohledání VEŘEJNÉHO kontaktu jako NEOVĚŘENÝ návrh (nikdy nepřepíše
+# odesílací contact_email; NIKDY neodesílá e-mail). AI e-mail nevymýšlí.
+[functions.sales-lead-enrich-contact]
+verify_jwt = false
+
 [functions.sofinity-player-sync]
 verify_jwt = true
 

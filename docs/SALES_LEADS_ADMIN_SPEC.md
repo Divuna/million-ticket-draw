@@ -508,6 +508,24 @@ Fáze 4 využívá stávající pole a přidává:
 - Teprve schválený lead (`novy`+) může projít standardním flow Fáze 3
   (research → koncept → **ruční odeslání člověkem**).
 
+#### 17.8.1 Fáze 5B — bezpečné dohledání kontaktu (implementováno jako soubory)
+- **Neověřený návrh kontaktu je oddělený od odesílacího `contact_email`.**
+  Sloupce na `sales_leads`: `proposed_contact_email`, `proposed_contact_source_url`
+  (URL, odkud byl e-mail nalezen), `proposed_contact_at`, `proposed_contact_by`
+  (`ai`/`admin`), `proposed_contact_status` (`neovereny`/`overeny`/`zamitnuty`).
+- **EF `sales-lead-enrich-contact`** (auth `sales_leads.manage`): AI dohledá jen
+  **veřejně uvedený** firemní e-mail + zdrojovou URL. Když si není jistá nebo
+  chybí zdroj → `found:false`, NIC neuloží. **AI e-mail nikdy nevymýšlí.**
+- **RPC `sales_lead_propose_contact`** (service_role): uloží návrh jako
+  `neovereny`. **Nikdy** nemění `contact_email`/`email_verified_by_admin` ani
+  stav leadu; loguje `contact_proposed`.
+- **RPC `sales_lead_review_contact`** (guard `sales_leads.manage`): člověk
+  **Schválí** → teprve TEĎ se vyplní `contact_email` + `email_verified_by_admin=true`
+  (activity `contact_approved`), nebo **Zamítne** (`contact_rejected`,
+  `contact_email` beze změny). Nikdy neodesílá e-mail, nikdy nemění stav leadu.
+- **UI (detail leadu):** sekce „Kontaktní e-mail" — „Dohledat e-mail", panel
+  „Navržený e-mail" + zdroj + „Schválit e-mail"/„Zamítnout e-mail".
+
 ### 17.9 Rozdělení odpovědnosti AI vs. člověk (shrnutí)
 | Krok | AI smí | Člověk |
 |---|---|---|
