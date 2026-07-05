@@ -636,6 +636,56 @@ Fáze 4 využívá stávající pole a přidává:
   (`skipped_email_not_found_on_website`), odděleně od počtu přeskočených
   kvůli chybějícímu webu/údaji (`skipped_missing_email`).
 
+#### 17.8.5 Fáze 6 — discovery vždy uloží použitelnou firmu, e-mail je jen bonus (připraveno jako soubory)
+- **Problém, který Fáze 6 opravuje:** Fáze 5D/5E přeskakovaly (nevytvořily
+  lead) u firmy, u které se e-mail nenašel na webu (`missing_public_email`
+  nebo `email_not_found_on_company_website`). To znamenalo, že discovery
+  zbytečně zahazoval jinak použitelné firmy jen kvůli chybějícímu e-mailu —
+  admin je pak musel dohledávat a přidávat ručně.
+- **Nové chování `sales-lead-discover`:** AI navrhne firmy podle zvoleného
+  segmentu. **Každá firma s vyplněným názvem je „použitelná" a vždy se uloží**
+  jako lead ve stavu `navrzeny` — bez ohledu na to, jestli se u ní podaří
+  dohledat e-mail:
+  - Pokud website existuje a crawler (Fáze 5D/5E logika beze změny) najde
+    veřejný e-mail na webu firmy, lead se vytvoří přes
+    `sales_lead_propose_with_contact` (Fáze 5C/5D/5E RPC beze změny) —
+    `proposed_contact_email`/`proposed_contact_source_url` vyplněné,
+    `proposed_contact_status='neovereny'`.
+  - Pokud website chybí, nebo crawler e-mail nenajde, lead se **i tak vytvoří**
+    přes `sales_lead_propose` (Fáze 5A RPC beze změny) — bez navrženého
+    kontaktu; e-mail lze doplnit ručně později (Fáze 5B ruční dohledání nebo
+    ruční editace v detailu leadu).
+  - `contact_email` zůstává vždy `NULL`, `email_verified_by_admin=false` —
+    v obou větvích, beze změny oproti předchozím fázím.
+  - Jediný důvod, proč lead vůbec nevznikne, je dedup/blokace na úrovni RPC
+    (existující partner, suppression, duplicitní IČO/doména — Fáze 5A/5C
+    beze změny) — **nikdy** jen proto, že se e-mail nenašel.
+  - Žádné auto-schválení, žádný auto-send, žádný Resend, žádný zápis do
+    `email_queue`. Žádná nová DB migrace pro tuto změnu chování — jen úprava
+    EF `sales-lead-discover` (existující RPC `sales_lead_propose` a
+    `sales_lead_propose_with_contact` se používají beze změny signatur).
+- **Odpověď EF rozšířena o `created_with_email` a `created_without_email`**
+  (součet dává `created`) — nahrazuje dřívější `skipped_missing_email` /
+  `skipped_email_not_found_on_website`, které už neznamenají přeskočení, ale
+  jen „bez navrženého e-mailu".
+- **UI (`DiscoverLeadsDialog.tsx`):** text už netvrdí, že se uloží jen firmy
+  s dohledaným e-mailem; výsledek běhu ukazuje: kolik firem vzniklo celkem,
+  kolik z nich má navržený e-mail, kolik je bez e-mailu k ručnímu doplnění.
+- **Mazání leadů (nová funkcionalita, ne oprava discovery):** aby šlo snadno
+  odstranit duplicitní/nepoužitelné návrhy vzniklé masovým always-save
+  chováním, přidány dvě nové SECURITY DEFINER RPC (migrace jako soubor,
+  **neaplikováno**): `sales_lead_delete(p_lead_id uuid)` a
+  `sales_lead_delete_bulk(p_lead_ids uuid[])`. Obě: guard
+  `has_admin_permission('sales_leads.manage') OR is_superadmin()`, EXECUTE
+  jen `authenticated` (anon nemá). Mažou výhradně z `sales_leads` — navázané
+  `sales_lead_activities` a `sales_lead_status_history` se smažou automaticky
+  přes existující `ON DELETE CASCADE` z Fáze 1 (žádná další úklidová logika).
+  Mazání nikdy neodesílá e-mail, neschvaluje kontakt ani neupravuje jiné
+  leady. Admin UI (`/admin/sales-leads`): checkbox u každého řádku + „vybrat
+  vše" v hlavičce tabulky, tlačítko smazat u jednotlivého leadu i hromadná
+  akční lišta „Smazat vybrané (N)" — obojí za potvrzovacím dialogem
+  (shadcn `AlertDialog`).
+
 ### 17.9 Rozdělení odpovědnosti AI vs. člověk (shrnutí)
 | Krok | AI smí | Člověk |
 |---|---|---|

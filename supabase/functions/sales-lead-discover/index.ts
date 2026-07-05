@@ -2,19 +2,34 @@ import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.57.4";
 
 // ============================================================================
-// sales-lead-discover — Fáze 5A + 5C + 5E: automatické NAVRŽENÍ nových
-// firemních leadů VČETNĚ veřejného kontaktního e-mailu, dohledaného vlastním
-// procházením webu firmy
-// Spec: docs/SALES_LEADS_ADMIN_SPEC.md §17 (§17.0, 17.1, 17.7, 17.8.2, 17.8.4, 17.10)
+// sales-lead-discover — Fáze 5A + 5C + 5E + 6: automatické NAVRŽENÍ nových
+// firemních leadů, s volitelným dohledáním veřejného kontaktního e-mailu
+// vlastním procházením webu firmy
+// Spec: docs/SALES_LEADS_ADMIN_SPEC.md §17 (§17.0, 17.1, 17.7, 17.8.2, 17.8.4, 17.11)
 //
 // ⚠️ Spouští VÝHRADNĚ člověk s oprávněním `sales_leads.manage` kliknutím v UI.
 //    AI smí POUZE navrhnout firmy a uložit je jako `navrzeny` (přes RPC
-//    sales_lead_propose_with_contact). AI NIKDY:
+//    sales_lead_propose / sales_lead_propose_with_contact). AI NIKDY:
 //      • nepřipraví finální odeslání,
 //      • neodešle e-mail / nezapíše do email_queue,
 //      • nevytvoří odesílatelný stav (jen `navrzeny`),
 //      • nevyplní ověřený odesílací kontakt (contact_email zůstává null).
 //    Každý návrh musí projít RUČNÍM lidským schválením (`navrzeny → novy`).
+//
+// Fáze 6 — discovery NEZAHAZUJE použitelné firmy jen kvůli chybějícímu
+// e-mailu (oprava Fáze 5D/5E, kde příliš přísné ověřování často nevytvořilo
+// žádný lead):
+//   • Každá firma s vyplněným názvem je „použitelná" a VŽDY se pokusí uložit
+//     jako lead ve stavu `navrzeny` — bez ohledu na to, jestli se e-mail najde.
+//   • Systém se STÁLE pokusí dohledat veřejný e-mail procházením webu firmy
+//     (homepage → kontakt/about odkazy → mailto/text — viz Fáze 5E níže).
+//     Pokud e-mail najde, uloží ho jako `proposed_contact_email` v JEDNÉ
+//     atomické operaci s vytvořením leadu (RPC `sales_lead_propose_with_contact`).
+//     Pokud e-mail NENAJDE, lead se STEJNĚ uloží — jen bez navrženého e-mailu
+//     (RPC `sales_lead_propose`) — k ručnímu doplnění člověkem.
+//   • Jediný důvod, proč lead nevznikne, je RPC-level dedup/blokace (duplicitní
+//     IČO/doména, firma už je partner, blokovaná doména/e-mail) — nikdy jen
+//     proto, že e-mail nebyl nalezen.
 //
 // Fáze 5E — SYSTÉM SÁM dohledá e-mail výhradně na WEBU FIRMY (nahrazuje
 // spoléhání na AI tvrzenou zdrojovou URL z Fáze 5C/5D):
@@ -26,10 +41,7 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2.57.4";
 //   • Firemní web bez protokolu (např. "moser.com", "www.vifsports.cz") se
 //     normalizuje na `https://…` (`normalizeCompanyWebsite`). Už platné
 //     `http://`/`https://` se zachová beze změny; neplatné/nebezpečné
-//     hodnoty se bezpečně přeskočí.
-//   • Firma BEZ `website` se PŘESKOČÍ jako `missing_public_email` — AI
-//     navržená `email_source_url` NIKDY nenahrazuje chybějící firemní web
-//     (nesmí to být "výmluva" na cizí doménu/katalog/sociální síť).
+//     hodnoty se bezpečně ignorují (firma se i tak uloží — jen bez e-mailu).
 //   • `email_source_url` (AI nápověda) se prochází JEN pokud je bezpečná A
 //     na STEJNÉ doméně jako `website` (dovoleno: přesně stejný host, nebo jen
 //     rozdíl v `www.` prefixu) — jinak se úplně ignoruje. Nikdy se neprochází
@@ -39,9 +51,6 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2.57.4";
 //     e-mail odpovídá některému skutečně nalezenému, použije se (kvůli
 //     provenance); jinak se použije první jiný veřejný e-mail nalezený na
 //     webu — AI návrh se NIKDY nepoužije bez nálezu na stránce.
-//   • Firma s webem, na kterém se e-mail nikde v limitu stránek nenajde, se
-//     PŘESKOČÍ s `outcome:"skipped", reason:"email_not_found_on_company_website"`
-//     — žádný lead nevznikne.
 //
 // Bezpečnost procházení (SSRF ochrana, sdílená s Fází 5D):
 //   • jen `http/https`; blokovány lokální/privátní/link-local adresy
@@ -571,14 +580,19 @@ serve(async (req: Request) => {
     // Nikdy víc než limit (a strop).
     companies = companies.slice(0, limit);
 
-    // ── 4. Uložení návrhů — POUZE firmy, u kterých SYSTÉM sám dohledá
-    // veřejný e-mail na jejich webu. AI e-mail/URL jsou jen nápověda.
+    // ── 4. Uložení návrhů — Fáze 6: KAŽDÁ použitelná firma (má název) se
+    // vždy pokusí uložit jako lead, bez ohledu na to, jestli se e-mail najde.
+    // E-mail se dohledá jen jako BONUS (Fáze 5E) — pokud se nenajde, lead se
+    // STEJNĚ uloží, jen bez proposed_contact_email. Jediný důvod, proč lead
+    // nevznikne, je RPC-level dedup/blokace (duplicitní IČO/doména, firma už
+    // je partner, blokovaná doména/e-mail) — nikdy jen kvůli chybějícímu
+    // e-mailu.
     let created = 0;
+    let createdWithEmail = 0;
+    let createdWithoutEmail = 0;
     let skipped = 0;
-    let skippedMissingEmail = 0;
-    let skippedEmailNotFoundOnWebsite = 0;
     let errored = 0;
-    const details: { company: string; outcome: string; reason?: string }[] = [];
+    const details: { company: string; outcome: string; reason?: string; has_email?: boolean }[] = [];
 
     for (const c of companies) {
       const name = typeof c.company_name === "string" ? c.company_name.trim() : "";
@@ -591,64 +605,84 @@ serve(async (req: Request) => {
       const aiSourceUrlRaw = typeof c.email_source_url === "string" ? c.email_source_url.trim() : "";
       const aiSourceUrl = aiSourceUrlRaw ? (normalizeCompanyWebsite(aiSourceUrlRaw) ?? "") : "";
 
-      // Firma BEZ platného webu se přeskočí — AI navržená email_source_url
-      // NIKDY nenahrazuje chybějící firemní web (nesmí to být "výmluva" na
-      // cizí doménu/katalog/sociální síť).
-      if (!website) {
-        skipped++;
-        skippedMissingEmail++;
-        details.push({ company: name, outcome: "skipped", reason: "missing_public_email" });
-        continue;
-      }
-
-      // ── Fáze 5E: AI e-mail/URL jsou jen nápověda — systém sám prochází
-      // homepage + kontakt/about odkazy + mailto odkazy VÝHRADNĚ na webu
-      // firmy a použije jen e-mail, který tam SKUTEČNĚ našel. ────────────
-      const crawl = await crawlCompanyWebsite(website, aiHintEmail, aiSourceUrl);
-      if (!crawl.found) {
-        skipped++;
-        skippedEmailNotFoundOnWebsite++;
-        details.push({ company: name, outcome: "skipped", reason: "email_not_found_on_company_website" });
-        continue;
-      }
+      // ── Fáze 5E (bonus, nikdy blokující): pokusit se dohledat e-mail
+      // procházením webu firmy — AI e-mail/URL jsou jen nápověda. Pokud web
+      // chybí nebo e-mail nenajde, `crawl.found` bude false a lead se i tak
+      // uloží (Fáze 6) — jen bez proposed_contact_email. ──────────────────
+      const crawl = website ? await crawlCompanyWebsite(website, aiHintEmail, aiSourceUrl) : { found: false as const };
 
       const qualityRaw = typeof c.lead_quality === "number" ? Math.floor(c.lead_quality) : 0;
       const quality = Math.min(3, Math.max(0, qualityRaw));
+      const discoveryMeta = {
+        model: AI_MODEL,
+        rationale: typeof c.rationale === "string" ? c.rationale : null,
+        run_at: new Date().toISOString(),
+        run_by: caller.id,
+      };
 
-      const { data: rpcData, error: rpcErr } = await supabaseAdmin.rpc("sales_lead_propose_with_contact", {
-        p_created_by: caller.id,
-        p_company_name: name,
-        p_lead_group: leadGroup,
-        p_discovery_source: "ai_navrh",
-        p_email: crawl.email,
-        p_email_source_url: crawl.sourceUrl,
-        p_discovery_meta: {
-          model: AI_MODEL,
-          rationale: typeof c.rationale === "string" ? c.rationale : null,
-          run_at: new Date().toISOString(),
-          run_by: caller.id,
-        },
-        p_website: website || null,
-        p_ico: typeof c.ico === "string" ? c.ico : null,
-        p_city: typeof c.city === "string" ? c.city : null,
-        p_industry: typeof c.industry === "string" ? c.industry : null,
-        p_lead_quality: quality,
-        p_proposed_by: "ai",
-      });
+      if (crawl.found) {
+        // Lead + navržený e-mail vzniknou atomicky v jednom kroku (Fáze 5C/5D).
+        const { data: rpcData, error: rpcErr } = await supabaseAdmin.rpc("sales_lead_propose_with_contact", {
+          p_created_by: caller.id,
+          p_company_name: name,
+          p_lead_group: leadGroup,
+          p_discovery_source: "ai_navrh",
+          p_email: crawl.email,
+          p_email_source_url: crawl.sourceUrl,
+          p_discovery_meta: discoveryMeta,
+          p_website: website,
+          p_ico: typeof c.ico === "string" ? c.ico : null,
+          p_city: typeof c.city === "string" ? c.city : null,
+          p_industry: typeof c.industry === "string" ? c.industry : null,
+          p_lead_quality: quality,
+          p_proposed_by: "ai",
+        });
 
-      if (rpcErr) { errored++; details.push({ company: name, outcome: "error", reason: "rpc_failed" }); continue; }
-      const res = (rpcData ?? {}) as { outcome?: string; reason?: string };
+        if (rpcErr) { errored++; details.push({ company: name, outcome: "error", reason: "rpc_failed" }); continue; }
+        const res = (rpcData ?? {}) as { outcome?: string; reason?: string };
 
-      if (res.outcome === "created") {
-        created++;
-        details.push({ company: name, outcome: "created" });
-      } else if (res.outcome === "skipped") {
-        skipped++;
-        if (res.reason === "missing_public_email") skippedMissingEmail++;
-        details.push({ company: name, outcome: "skipped", reason: res.reason });
+        if (res.outcome === "created") {
+          created++;
+          createdWithEmail++;
+          details.push({ company: name, outcome: "created", has_email: true });
+        } else if (res.outcome === "skipped") {
+          skipped++;
+          details.push({ company: name, outcome: "skipped", reason: res.reason });
+        } else {
+          errored++;
+          details.push({ company: name, outcome: "error", reason: res.reason });
+        }
       } else {
-        errored++;
-        details.push({ company: name, outcome: "error", reason: res.reason });
+        // Fáze 6: e-mail se nenašel (nebo firma nemá web) — lead se i tak
+        // uloží, jen bez proposed_contact_email. `sales_lead_propose`
+        // (Fáze 5A) nevyplňuje žádný kontakt — jen bezpečný základní návrh.
+        const { data: rpcData, error: rpcErr } = await supabaseAdmin.rpc("sales_lead_propose", {
+          p_created_by: caller.id,
+          p_company_name: name,
+          p_lead_group: leadGroup,
+          p_discovery_source: "ai_navrh",
+          p_lead_quality: quality,
+          p_discovery_meta: discoveryMeta,
+          p_website: website,
+          p_ico: typeof c.ico === "string" ? c.ico : null,
+          p_city: typeof c.city === "string" ? c.city : null,
+          p_industry: typeof c.industry === "string" ? c.industry : null,
+        });
+
+        if (rpcErr) { errored++; details.push({ company: name, outcome: "error", reason: "rpc_failed" }); continue; }
+        const res = (rpcData ?? {}) as { outcome?: string; reason?: string };
+
+        if (res.outcome === "created") {
+          created++;
+          createdWithoutEmail++;
+          details.push({ company: name, outcome: "created", has_email: false });
+        } else if (res.outcome === "skipped") {
+          skipped++;
+          details.push({ company: name, outcome: "skipped", reason: res.reason });
+        } else {
+          errored++;
+          details.push({ company: name, outcome: "error", reason: res.reason });
+        }
       }
     }
 
@@ -658,9 +692,9 @@ serve(async (req: Request) => {
       requested: limit,
       proposed_by_ai: companies.length,
       created,
+      created_with_email: createdWithEmail,
+      created_without_email: createdWithoutEmail,
       skipped,
-      skipped_missing_email: skippedMissingEmail,
-      skipped_email_not_found_on_website: skippedEmailNotFoundOnWebsite,
       errored,
       details,
     });
