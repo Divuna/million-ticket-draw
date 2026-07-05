@@ -1,5 +1,28 @@
 ﻿# OneMil – aktuální stav projektu
 
+## MODUL OBCHOD / LEADY — FÁZE 5C PŘIPRAVENA JEN JAKO PR (05. 07. 2026, neaplikováno/nenasazeno)
+
+„Najít nové firmy" musí najít firmu VČETNĚ veřejného kontaktního e-mailu — firmy bez veřejného
+e-mailu se nesmí ukládat jako lead. **Vše jen jako soubory v PR — nic nenasazeno. Produkce
+`xkzhjldrojjlrkezorey` i staging `dxmowysntemfqfnanxua` nedotčeny. Žádný e-mail neodeslán.
+Žádná produkční data vytvořena/smazána. Žádná nová DB migrace — plné reuse RPC z Fáze 5A/5B.**
+
+- **EF `supabase/functions/sales-lead-discover/index.ts`:** AI v jednom volání vrací i
+  `email`/`email_source_url`/`email_confidence` per firma (stejná přísná pravidla jako
+  `sales-lead-enrich-contact` — nikdy nevymýšlet, jen z veřejného webu). Firma **bez** platného
+  e-mailu + zdroje (chybí/neplatný formát/`confidence:"low"`) se PŘESKOČÍ **před** voláním
+  `sales_lead_propose` — žádný lead nevznikne; v odpovědi `outcome:"skipped",
+  reason:"missing_public_email"`. Firma **s** e-mailem: nejdřív vznikne lead (`navrzeny`),
+  poté se e-mail uloží jen jako neověřený návrh přes `sales_lead_propose_contact`
+  (`proposed_contact_email`/`_source_url`, `status='neovereny'`); `contact_email` a
+  `email_verified_by_admin` zůstávají beze změny (null/false) — schvaluje jen člověk.
+- **UI `DiscoverLeadsDialog.tsx`:** text „Uloží se jen firmy s dohledaným veřejným e-mailem.";
+  výsledek běhu ukazuje vytvořené firmy, celkem přeskočeno a zvlášť „z toho kvůli chybějícímu
+  veřejnému e-mailu" (`skipped_missing_email`).
+- Ověřeno: `npx tsc --noEmit` 0 chyb, `npm run build` ✅. Žádný auto/bulk send, žádné
+  auto-schválení e-mailu, žádné vyplnění `contact_email` bez člověka.
+- **Aplikace/deploy EF + Lovable Publish = samostatné kroky, vyžadují výslovné schválení Pavla.**
+
 ## MODUL OBCHOD / LEADY — FÁZE 5B ZPROVOZNĚNA NA PRODUKCI (05. 07. 2026, schválení Pavla)
 
 Migrace `20260704150000_sales_leads_phase5b_contact_enrichment.sql` aplikována na **produkci
