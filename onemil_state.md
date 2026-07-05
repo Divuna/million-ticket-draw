@@ -1,5 +1,23 @@
 ﻿# OneMil – aktuální stav projektu
 
+## MODUL OBCHOD / LEADY — FÁZE 5C ZPROVOZNĚNA NA PRODUKCI (05. 07. 2026, schválení Pavla)
+
+Fáze 5C byla nejdřív ověřená na stagingu `dxmowysntemfqfnanxua` (viz sekce níže), poté nasazena
+na **produkci `xkzhjldrojjlrkezorey`**. Migrace
+`20260704160000_sales_leads_phase5c_propose_with_contact_rpc.sql` aplikována na produkci přes
+`apply_migration` (`{"success": true}`); EF `sales-lead-discover` nasazená na produkci jako
+**v2 ACTIVE**.
+
+- **Ověření bezpečnosti (produkce):** RPC `sales_lead_propose_with_contact` existuje,
+  **SECURITY DEFINER**; EXECUTE má pouze `service_role`; `anon` a `authenticated` EXECUTE
+  nemají. EF bez auth headeru → `401 missing_authorization_header`. EF nikde neodkazuje na
+  `email_queue` ani Resend.
+- **Produkční data nezměněna:** počet leadů zůstal beze změny — **9 před → 9 po**. **Žádný
+  produkční testovací lead nebyl vytvořen; discovery test na produkci nebyl spuštěn; žádný
+  e-mail nebyl odeslán.**
+- **Staging `dxmowysntemfqfnanxua` nebyl touto produkční akcí dotčen.** Lovable Publish
+  neproběhl; wallets/payments/contests/tickets/winners/Stripe/`buy_ticket_atomic` nedotčeny.
+
 ## MODUL OBCHOD / LEADY — FÁZE 5C ZPROVOZNĚNA POUZE NA STAGINGU (05. 07. 2026, schválení Pavla)
 
 PR #188 mergnut do `main` (merge commit `672d1a3c7b5f9ea74273b126b04117930d84879a`). Migrace
