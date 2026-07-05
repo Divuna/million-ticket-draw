@@ -16,13 +16,24 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2.57.4";
 //      • nevyplní ověřený odesílací kontakt (contact_email zůstává null).
 //    Každý návrh musí projít RUČNÍM lidským schválením (`navrzeny → novy`).
 //
-// Fáze 5E — SYSTÉM SÁM dohledá e-mail na webu firmy (nahrazuje spoléhání na
-// AI tvrzenou zdrojovou URL z Fáze 5C/5D):
+// Fáze 5E — SYSTÉM SÁM dohledá e-mail výhradně na WEBU FIRMY (nahrazuje
+// spoléhání na AI tvrzenou zdrojovou URL z Fáze 5C/5D):
 //   • AI smí stále navrhnout firmu, web a VOLITELNĚ e-mail — ten se ale bere
-//     JEN JAKO NÁPOVĚDA, nikdy jako důkaz. Bez ohledu na to, co AI tvrdí,
-//     backend sám projde web firmy: homepage → odkazy typu kontakt/contact/
-//     kontakty/o-nas/o-spolecnosti/about/about-us/impressum → `mailto:` odkazy
-//     i prostý text stránky.
+//     JEN JAKO NÁPOVĚDA, nikdy jako důkaz. Backend prochází VÝHRADNĚ web
+//     firmy (`website`): homepage → odkazy typu kontakt/contact/kontakty/
+//     o-nas/o-spolecnosti/about/about-us/impressum → `mailto:` odkazy i
+//     prostý text stránky.
+//   • Firemní web bez protokolu (např. "moser.com", "www.vifsports.cz") se
+//     normalizuje na `https://…` (`normalizeCompanyWebsite`). Už platné
+//     `http://`/`https://` se zachová beze změny; neplatné/nebezpečné
+//     hodnoty se bezpečně přeskočí.
+//   • Firma BEZ `website` se PŘESKOČÍ jako `missing_public_email` — AI
+//     navržená `email_source_url` NIKDY nenahrazuje chybějící firemní web
+//     (nesmí to být "výmluva" na cizí doménu/katalog/sociální síť).
+//   • `email_source_url` (AI nápověda) se prochází JEN pokud je bezpečná A
+//     na STEJNÉ doméně jako `website` (dovoleno: přesně stejný host, nebo jen
+//     rozdíl v `www.` prefixu) — jinak se úplně ignoruje. Nikdy se neprochází
+//     cizí domény, katalogy ani sociální sítě jako "zdroj firmy".
 //   • Použije se jen e-mail, který byl SKUTEČNĚ nalezen ve staženém obsahu
 //     (viz `extractMailtoEmails`/`extractTextEmails`). Pokud AI navržený
 //     e-mail odpovídá některému skutečně nalezenému, použije se (kvůli
@@ -31,8 +42,6 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2.57.4";
 //   • Firma s webem, na kterém se e-mail nikde v limitu stránek nenajde, se
 //     PŘESKOČÍ s `outcome:"skipped", reason:"email_not_found_on_company_website"`
 //     — žádný lead nevznikne.
-//   • Firma bez webu i bez AI zdrojové URL (nic k procházení) se přeskočí
-//     jako `reason:"missing_public_email"` (stejné jako Fáze 5C).
 //
 // Bezpečnost procházení (SSRF ochrana, sdílená s Fází 5D):
 //   • jen `http/https`; blokovány lokální/privátní/link-local adresy
@@ -95,8 +104,10 @@ interface ProposedCompany {
   rationale?: unknown;
   email?: unknown;
   // Zachováno pro zpětnou kompatibilitu se staršími AI odpověďmi (Fáze 5C/5D);
-  // pokud je přítomné, použije se jen jako první kandidátní stránka k
-  // procházení, NIKDY jako důkaz e-mailu bez skutečného nálezu na stránce.
+  // použije se JEN jako volitelná nápověda na kandidátní stránku KE STEJNÉMU
+  // webu firmy (musí být na stejné doméně jako `website`) — nikdy jako
+  // náhrada za chybějící `website` a nikdy jako důkaz e-mailu bez
+  // skutečného nálezu na stránce.
   email_source_url?: unknown;
 }
 
@@ -162,6 +173,44 @@ function isSafePublicUrl(rawUrl: string): boolean {
   }
 
   return true;
+}
+
+/**
+ * Normalizuje firemní web na plnou `https://` (resp. zachovanou `http://`)
+ * URL. AI často vrací web bez protokolu ("moser.com", "www.vifsports.cz")
+ * nebo občas i v markdown formátu odkazu ("[www.moser.com](https://www.moser.com)")
+ * — v obou případech se z toho bezpečně udělá platná URL. Hodnoty, které
+ * nevypadají jako doména ani platná URL, se vrátí jako `null` (přeskočí se).
+ */
+function normalizeCompanyWebsite(raw: string): string | null {
+  let trimmed = raw.trim();
+  if (!trimmed) return null;
+
+  // AI občas zabalí web do markdown odkazu — vytáhnout jen samotnou URL.
+  const markdownMatch = trimmed.match(/^\[[^\]]*\]\((https?:\/\/[^)\s]+)\)$/i);
+  if (markdownMatch) {
+    trimmed = markdownMatch[1].trim();
+  }
+
+  if (/^https?:\/\//i.test(trimmed)) {
+    return isSafePublicUrl(trimmed) ? trimmed : null;
+  }
+
+  // Vypadá to jako doména (případně s cestou) bez protokolu? → doplnit https://.
+  const domainLike = /^[a-z0-9]([a-z0-9-]*[a-z0-9])?(\.[a-z0-9]([a-z0-9-]*[a-z0-9])?)+(\/[^\s]*)?$/i;
+  if (!domainLike.test(trimmed)) return null;
+
+  const candidate = `https://${trimmed}`;
+  return isSafePublicUrl(candidate) ? candidate : null;
+}
+
+function stripWwwPrefix(hostname: string): string {
+  return hostname.startsWith("www.") ? hostname.slice(4) : hostname;
+}
+
+/** Stejná firemní doména = přesně stejný host, nebo rozdíl jen v `www.` prefixu. */
+function isSameCompanyDomain(hostA: string, hostB: string): boolean {
+  return stripWwwPrefix(hostA) === stripWwwPrefix(hostB);
 }
 
 /**
@@ -257,7 +306,7 @@ function extractContactLikeLinks(html: string, baseUrl: string, originHost: stri
     } catch {
       continue;
     }
-    if (host !== originHost) continue; // zůstat jen na webu firmy
+    if (!isSameCompanyDomain(host, originHost)) continue; // zůstat jen na webu firmy
 
     links.push(absolute);
   }
@@ -339,10 +388,20 @@ type CrawlResult =
 
 /**
  * Fáze 5E — systém SÁM dohledá veřejný e-mail firmy procházením jejího webu.
- * `aiHintEmail` a `aiSourceUrl` jsou POUZE nápověda (z AI návrhu) — pokud je
- * poskytnutá zdrojová URL bezpečná, prohledá se jako první kandidát (ušetří
- * kolo), ale bez ohledu na to se vždy prochází i samotná homepage a z ní
- * nalezené kontakt/about odkazy (max `MAX_PAGES_PER_COMPANY` stránek celkem).
+ *
+ * `website` MUSÍ být platná, bezpečná, již normalizovaná URL firemního webu
+ * (viz `normalizeCompanyWebsite` — volající zajistí, že sem nikdy nepřijde
+ * prázdná hodnota ani cizí doména). Je to JEDINÝ zdroj pravdy pro to, čí web
+ * se prochází — nikdy se nenahrazuje AI navrženou URL.
+ *
+ * `aiHintEmail` a `aiSourceUrl` jsou POUZE nápověda z AI návrhu. `aiSourceUrl`
+ * se prochází jako kandidátní stránka JEN pokud je bezpečná A na STEJNÉ
+ * doméně jako `website` (přesně stejný host, nebo jen rozdíl v `www.`
+ * prefixu) — jinak se úplně ignoruje (nikdy se neprochází cizí doména,
+ * katalog ani sociální síť jako "zdroj firmy"). Bez ohledu na to se vždy
+ * prochází i samotná homepage a z ní nalezené kontakt/about odkazy (max
+ * `MAX_PAGES_PER_COMPANY` stránek celkem).
+ *
  * Použije se JEN e-mail skutečně nalezený v `mailto:` odkazu nebo textu
  * některé stažené stránky. AI navržený e-mail se preferuje jen pokud se
  * shoduje s takto skutečně nalezeným — jinak se uloží první jiný nalezený.
@@ -352,12 +411,11 @@ async function crawlCompanyWebsite(
   aiHintEmail: string,
   aiSourceUrl: string,
 ): Promise<CrawlResult> {
-  const seedUrl = website || aiSourceUrl;
-  if (!seedUrl || !isSafePublicUrl(seedUrl)) return { found: false };
+  if (!website || !isSafePublicUrl(website)) return { found: false };
 
   let originHost: string;
   try {
-    originHost = new URL(seedUrl).hostname.toLowerCase();
+    originHost = new URL(website).hostname.toLowerCase();
   } catch {
     return { found: false };
   }
@@ -371,8 +429,20 @@ async function crawlCompanyWebsite(
     }
   };
 
-  if (aiSourceUrl && aiSourceUrl !== seedUrl && isSafePublicUrl(aiSourceUrl)) pushUnique(aiSourceUrl);
-  pushUnique(seedUrl);
+  // AI nápověda (email_source_url) se prochází JEN na stejné doméně jako
+  // firemní web — jinak by šlo o "výmluvu" na cizí katalog/soc. síť.
+  if (aiSourceUrl && aiSourceUrl !== website && isSafePublicUrl(aiSourceUrl)) {
+    let hintHost = "";
+    try {
+      hintHost = new URL(aiSourceUrl).hostname.toLowerCase();
+    } catch {
+      hintHost = "";
+    }
+    if (hintHost && isSameCompanyDomain(hintHost, originHost)) {
+      pushUnique(aiSourceUrl);
+    }
+  }
+  pushUnique(website);
 
   const foundEmails = new Map<string, string>(); // email → stránka, kde byl nalezen
   let pagesFetched = 0;
@@ -391,9 +461,10 @@ async function crawlCompanyWebsite(
     }
     if (foundEmails.size > 0) break;
 
-    // Kandidátní kontakt/about odkazy hledáme jen na skutečné homepage
-    // (ne na AI-navržené zdrojové URL, která už sama může být kontakt stránka).
-    if (url === seedUrl) {
+    // Kandidátní kontakt/about odkazy hledáme jen na skutečné homepage webu
+    // firmy (ne na AI-navržené zdrojové URL, která už sama může být kontakt
+    // stránka).
+    if (url === website) {
       const links = extractContactLikeLinks(page.html, page.finalUrl, originHost);
       for (const link of links) {
         if (pagesFetched + queue.length < MAX_PAGES_PER_COMPANY) pushUnique(link);
@@ -513,13 +584,17 @@ serve(async (req: Request) => {
       const name = typeof c.company_name === "string" ? c.company_name.trim() : "";
       if (!name) { errored++; continue; }
 
-      const website = typeof c.website === "string" ? c.website.trim() : "";
+      const websiteRaw = typeof c.website === "string" ? c.website.trim() : "";
+      const website = websiteRaw ? normalizeCompanyWebsite(websiteRaw) : null;
       const aiEmailRaw = typeof c.email === "string" ? c.email.trim().toLowerCase() : "";
       const aiHintEmail = EMAIL_RE.test(aiEmailRaw) ? aiEmailRaw : "";
-      const aiSourceUrl = typeof c.email_source_url === "string" ? c.email_source_url.trim() : "";
+      const aiSourceUrlRaw = typeof c.email_source_url === "string" ? c.email_source_url.trim() : "";
+      const aiSourceUrl = aiSourceUrlRaw ? (normalizeCompanyWebsite(aiSourceUrlRaw) ?? "") : "";
 
-      // Bez webu a bez jakékoli AI navržené stránky není co procházet.
-      if (!website && !aiSourceUrl) {
+      // Firma BEZ platného webu se přeskočí — AI navržená email_source_url
+      // NIKDY nenahrazuje chybějící firemní web (nesmí to být "výmluva" na
+      // cizí doménu/katalog/sociální síť).
+      if (!website) {
         skipped++;
         skippedMissingEmail++;
         details.push({ company: name, outcome: "skipped", reason: "missing_public_email" });
@@ -527,8 +602,8 @@ serve(async (req: Request) => {
       }
 
       // ── Fáze 5E: AI e-mail/URL jsou jen nápověda — systém sám prochází
-      // homepage + kontakt/about odkazy + mailto odkazy a použije jen
-      // e-mail, který na webu SKUTEČNĚ našel. ──────────────────────────
+      // homepage + kontakt/about odkazy + mailto odkazy VÝHRADNĚ na webu
+      // firmy a použije jen e-mail, který tam SKUTEČNĚ našel. ────────────
       const crawl = await crawlCompanyWebsite(website, aiHintEmail, aiSourceUrl);
       if (!crawl.found) {
         skipped++;
