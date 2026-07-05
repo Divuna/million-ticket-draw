@@ -185,7 +185,20 @@ export interface SalesLeadDetail extends SalesLeadRow {
   lead_quality: number | null;
   discovery_source: string | null;
   discovery_meta: Record<string, unknown> | null;
+  // Neověřený návrh kontaktu (Fáze 5B) — odděleno od odesílacího contact_email.
+  proposed_contact_email: string | null;
+  proposed_contact_source_url: string | null;
+  proposed_contact_at: string | null;
+  proposed_contact_by: string | null;
+  proposed_contact_status: 'neovereny' | 'overeny' | 'zamitnuty' | null;
 }
+
+/** Popisky stavu návrhu kontaktu (Fáze 5B). */
+export const PROPOSED_CONTACT_STATUS_LABELS: Record<string, string> = {
+  neovereny: 'Neověřený návrh',
+  overeny: 'Ověřeno člověkem',
+  zamitnuty: 'Zamítnuto',
+};
 
 /** Mapování chybových kódů z RPC / Edge Function na české hlášky. */
 export const RPC_ERROR_MESSAGES: Record<string, string> = {
@@ -212,6 +225,13 @@ export const RPC_ERROR_MESSAGES: Record<string, string> = {
   email_send_failed: 'Odeslání e-mailu se nezdařilo, zkuste to znovu.',
   // Fáze 5A — automatické vyhledávání firem.
   invalid_lead_group: 'Vyberte platnou skupinu firem.',
+  // Fáze 5B — dohledání / schválení kontaktu.
+  invalid_email: 'Navržený e-mail nemá platný formát.',
+  source_url_required: 'Chybí zdrojová URL, odkud byl e-mail nalezen.',
+  no_pending_contact: 'Lead nemá neověřený návrh e-mailu ke schválení.',
+  invalid_decision: 'Neplatné rozhodnutí.',
+  propose_failed: 'Uložení návrhu kontaktu se nezdařilo.',
+  ai_bad_response: 'AI vrátila neočekávaný formát, zkuste to znovu.',
 };
 
 export const rpcErrorMessage = (code: string | undefined): string =>
