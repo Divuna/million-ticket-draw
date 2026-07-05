@@ -663,7 +663,7 @@ serve(async (req: Request) => {
           p_discovery_source: "ai_navrh",
           p_lead_quality: quality,
           p_discovery_meta: discoveryMeta,
-          p_website: website,
+          p_website: website || null,
           p_ico: typeof c.ico === "string" ? c.ico : null,
           p_city: typeof c.city === "string" ? c.city : null,
           p_industry: typeof c.industry === "string" ? c.industry : null,

@@ -2,8 +2,8 @@
 -- SALES LEADS — Fáze 6: bezpečné mazání leadů (jednotlivě i hromadně)
 -- Spec: docs/SALES_LEADS_ADMIN_SPEC.md §17 (§17.11)
 -- ============================================================================
--- ⛔ NEAPLIKOVÁNO. Zapsáno pouze jako soubor v repu. Aplikace na staging/
---    produkci vyžaduje výslovné schválení Pavla (přes apply_migration).
+-- Zapsáno jako soubor v repu. Aplikace na staging/produkci vyžaduje výslovné
+-- schválení Pavla (přes apply_migration).
 --
 -- Cíl: umožnit administrátorovi s oprávněním `sales_leads.manage` smazat lead
 -- (jednotlivě i hromadně) z modulu Obchod / Leady — např. duplicity, testovací
