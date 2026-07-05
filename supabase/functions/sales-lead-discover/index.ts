@@ -31,6 +31,28 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2.57.4";
 //     `email_verified_by_admin` zůstávají beze změny (null/false) — vyplní
 //     je teprve ČLOVĚK ručním „Schválit e-mail" v detailu leadu (Fáze 5B).
 //
+// Fáze 5D — TVRDÉ OVĚŘENÍ zdrojové stránky (oprava mezery z Fáze 5C):
+//   • AI TVRZENÍ, že e-mail našla na `email_source_url`, SAMO O SOBĚ NESTAČÍ —
+//     AI si to mohla vymyslet nebo se splést. Fáze 5C bez tohoto kroku
+//     důvěřovala tvrzení AI a mohla uložit lead s e-mailem, který na uvedené
+//     stránce vůbec nebyl.
+//   • Před voláním RPC EF sama STÁHNE `email_source_url` a ověří, že navržený
+//     e-mail se skutečně nachází v obsahu stránky (case-insensitive, tolerantní
+//     k HTML entitám a mezerám kolem `@`/`.` — viz `buildEmailSearchVariants`).
+//     Teprve po úspěšném ověření se lead uloží.
+//   • Fetch má krátký timeout (8 s), limit velikosti stažené stránky (2 MB) a
+//     povoluje jen `http/https`; odmítá lokální/privátní/link-local adresy
+//     (SSRF ochrana, `isSafePublicUrl`).
+//   • Redirecty se NEŘEŠÍ automaticky (`redirect: "follow"`) — každý hop se
+//     řeší ručně, max `MAX_REDIRECTS` (3), a KAŽDÁ cílová redirect URL se
+//     znovu ověří přes `isSafePublicUrl`, než se na ni funkce přesune. Vede-li
+//     redirect na nebezpečnou/neplatnou URL, ověření selže jako
+//     `invalid_email_source_url`.
+//   • Selže-li stažení stránky nebo e-mail na ní (v žádné z normalizovaných
+//     variant) není nalezen, lead se NEULOŽÍ — RPC se vůbec nezavolá
+//     (`outcome:"skipped"`, `reason:"email_not_found_on_source_page"`, resp.
+//     `"invalid_email_source_url"` pro nebezpečnou/neplatnou URL nebo redirect).
+//
 // Ochrany: limit počtu návrhů na běh; dedup + suppression + partner blokace
 // řeší RPC sales_lead_propose_with_contact server-side (bezpečná bariéra).
 //
@@ -92,6 +114,192 @@ interface ProposedCompany {
 // Stejná validace jako v sales-lead-enrich-contact — bez vymýšlení, jen
 // důvěryhodný formát + reálný zdroj.
 const EMAIL_RE = /^[^@\s]+@[^@\s]+\.[^@\s]+$/;
+
+// ── Fáze 5D — ověření zdrojové stránky ──────────────────────────────────────
+// AI tvrzení "e-mail je na téhle URL" NENÍ důkaz — musí se ověřit stažením
+// stránky a nalezením e-mailu v jejím obsahu. Bez tohoto kroku by mohl vzniknout
+// lead s e-mailem, který na uvedené stránce vůbec není.
+const SOURCE_FETCH_TIMEOUT_MS = 8000;
+const MAX_SOURCE_BODY_BYTES = 2_000_000; // 2 MB — obranný limit proti velkým stránkám
+const MAX_REDIRECTS = 3; // redirecty se řeší ručně — každý hop se znovu ověří (SSRF)
+
+type SourceVerificationResult =
+  | { ok: true }
+  | { ok: false; reason: "invalid_email_source_url" | "email_not_found_on_source_page" };
+
+/**
+ * Bezpečnostní kontrola URL před fetchem (SSRF ochrana):
+ *  - jen http/https,
+ *  - žádné lokální/privátní/loopback/link-local adresy nebo hostnames,
+ *  - žádné credentials v URL, žádný neobvyklý port scheme.
+ * Volá se pro PŮVODNÍ URL i pro KAŽDÝ redirect hop zvlášť — nikdy se nesmí
+ * důvěřovat výslednému místu, kam redirect vede, bez opětovné kontroly.
+ */
+function isSafePublicUrl(rawUrl: string): boolean {
+  let parsed: URL;
+  try {
+    parsed = new URL(rawUrl);
+  } catch {
+    return false;
+  }
+  if (parsed.protocol !== "http:" && parsed.protocol !== "https:") return false;
+  if (parsed.username || parsed.password) return false;
+
+  const hostname = parsed.hostname.toLowerCase();
+  if (!hostname) return false;
+  if (hostname === "localhost" || hostname.endsWith(".localhost")) return false;
+  if (hostname === "0.0.0.0") return false;
+
+  // IPv4 literal — blokovat private/loopback/link-local/reserved rozsahy.
+  const ipv4 = hostname.match(/^(\d{1,3})\.(\d{1,3})\.(\d{1,3})\.(\d{1,3})$/);
+  if (ipv4) {
+    const [a, b] = [Number(ipv4[1]), Number(ipv4[2])];
+    if (a === 127) return false; // loopback
+    if (a === 10) return false; // private
+    if (a === 172 && b >= 16 && b <= 31) return false; // private
+    if (a === 192 && b === 168) return false; // private
+    if (a === 169 && b === 254) return false; // link-local
+    if (a === 0) return false;
+  }
+
+  // IPv6 loopback/link-local literal (hostname bývá v hranatých závorkách odstraněný URL parserem).
+  if (hostname === "::1" || hostname.startsWith("fe80:") || hostname.startsWith("fc") || hostname.startsWith("fd")) {
+    return false;
+  }
+
+  return true;
+}
+
+/**
+ * Připraví DVĚ normalizované varianty stažené stránky pro hledání e-mailu:
+ *  1) "loose" — HTML entity dekódované, tagy odstraněné, mezery sjednocené,
+ *     lowercase. Najde e-mail zapsaný normálně v běžném textu.
+ *  2) "compact" — navíc odstraní VŠECHNY mezery kolem `@` a `.` (a mezi nimi),
+ *     takže obfuskovaný zápis typu "info @ firma . cz" se porovná jako
+ *     "info@firma.cz". Bez této varianty by běžná typografická mezera kolem
+ *     zavináče (časté v ochraně proti spam-botům) test shody nechtěně shodila.
+ */
+function buildEmailSearchVariants(html: string): { loose: string; compact: string } {
+  const loose = html
+    .replace(/&amp;/gi, "&")
+    .replace(/&#64;|&commat;/gi, "@")
+    .replace(/&#46;|&period;/gi, ".")
+    .replace(/&nbsp;/gi, " ")
+    .replace(/<[^>]*>/g, " ") // odstranit HTML tagy, ale zachovat text kolem
+    .replace(/\s+/g, " ")
+    .toLowerCase();
+
+  // Compact: odstranit mezery bezprostředně kolem @ a . (v obou směrech,
+  // opakovaně — "info  @  firma . cz" → "info@firma.cz").
+  let compact = loose;
+  let prevLength: number;
+  do {
+    prevLength = compact.length;
+    compact = compact.replace(/\s+@/g, "@").replace(/@\s+/g, "@").replace(/\s+\./g, ".").replace(/\.\s+/g, ".");
+  } while (compact.length !== prevLength);
+
+  return { loose, compact };
+}
+
+/** Porovná e-mail proti oběma normalizovaným variantám stránky (case-insensitive). */
+function pageContainsEmail(variants: { loose: string; compact: string }, email: string): boolean {
+  const normalizedEmail = email.trim().toLowerCase();
+  return variants.loose.includes(normalizedEmail) || variants.compact.includes(normalizedEmail);
+}
+
+/** Přečte tělo odpovědi jako text, s obranným limitem velikosti (MAX_SOURCE_BODY_BYTES). */
+async function readBodyWithLimit(res: Response): Promise<string> {
+  const reader = res.body?.getReader();
+  if (!reader) return await res.text();
+
+  const decoder = new TextDecoder();
+  let html = "";
+  let received = 0;
+  while (received < MAX_SOURCE_BODY_BYTES) {
+    const { done, value } = await reader.read();
+    if (done) break;
+    received += value.byteLength;
+    html += decoder.decode(value, { stream: true });
+  }
+  try { await reader.cancel(); } catch { /* best-effort */ }
+  return html;
+}
+
+/**
+ * Stáhne `sourceUrl` a ověří, že `email` je skutečně obsažen na stránce.
+ *
+ * Redirecty se NENECHÁVAJÍ řešit automaticky (`redirect: "follow"` by mohlo
+ * skončit na jiné, neověřené adrese) — řeší se ručně (`redirect: "manual"`),
+ * max `MAX_REDIRECTS` hopů, a KAŽDÁ cílová redirect URL se znovu projde přes
+ * `isSafePublicUrl` (SSRF ochrana i pro místo, kam redirect skutečně vede).
+ * Pokud redirect vede na nebezpečnou/neplatnou URL, vrací se
+ * `invalid_email_source_url`.
+ *
+ * Porovnání e-mailu je case-insensitive a tolerantní k HTML entitám i
+ * mezerám kolem `@`/`.` (viz `buildEmailSearchVariants`), ale e-mail se
+ * nikdy nehádá — musí být skutečně nalezen v obsahu stažené stránky.
+ */
+async function verifyEmailOnSourcePage(
+  email: string,
+  sourceUrl: string,
+): Promise<SourceVerificationResult> {
+  let currentUrl = sourceUrl;
+  if (!isSafePublicUrl(currentUrl)) {
+    return { ok: false, reason: "invalid_email_source_url" };
+  }
+
+  for (let hop = 0; hop <= MAX_REDIRECTS; hop++) {
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), SOURCE_FETCH_TIMEOUT_MS);
+    let res: Response;
+    try {
+      res = await fetch(currentUrl, {
+        method: "GET",
+        redirect: "manual",
+        signal: controller.signal,
+        headers: { "User-Agent": "OneMilSalesLeadVerifier/1.0" },
+      });
+    } catch {
+      // Fetch selhal (timeout, DNS, síť, …) → lead se neuloží.
+      return { ok: false, reason: "email_not_found_on_source_page" };
+    } finally {
+      clearTimeout(timer);
+    }
+
+    // Manuální redirect: fetch vrátí "opaqueredirect" (type) nebo status 3xx
+    // s Location headerem — v obou případech je nutné cíl znovu ověřit.
+    const isRedirectStatus = res.status >= 300 && res.status < 400;
+    if (res.type === "opaqueredirect" || isRedirectStatus) {
+      const location = res.headers.get("location");
+      if (!location) return { ok: false, reason: "invalid_email_source_url" };
+      let nextUrl: string;
+      try {
+        nextUrl = new URL(location, currentUrl).toString();
+      } catch {
+        return { ok: false, reason: "invalid_email_source_url" };
+      }
+      if (!isSafePublicUrl(nextUrl)) {
+        return { ok: false, reason: "invalid_email_source_url" };
+      }
+      if (hop === MAX_REDIRECTS) {
+        return { ok: false, reason: "invalid_email_source_url" };
+      }
+      currentUrl = nextUrl;
+      continue;
+    }
+
+    if (!res.ok) return { ok: false, reason: "email_not_found_on_source_page" };
+
+    const html = await readBodyWithLimit(res);
+    const variants = buildEmailSearchVariants(html);
+    if (pageContainsEmail(variants, email)) {
+      return { ok: true };
+    }
+    return { ok: false, reason: "email_not_found_on_source_page" };
+  }
+
+  return { ok: false, reason: "invalid_email_source_url" };
+}
 
 serve(async (req: Request) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders });
@@ -208,6 +416,18 @@ serve(async (req: Request) => {
         skipped++;
         skippedMissingEmail++;
         details.push({ company: name, outcome: "skipped", reason: "missing_public_email" });
+        continue;
+      }
+
+      // ── Fáze 5D: AI TVRZENÍ nestačí — sami stáhneme zdrojovou stránku a
+      // ověříme, že navržený e-mail v jejím obsahu skutečně je. Bez tohoto
+      // kroku by AI mohla uvést URL, na které e-mail vůbec není. ──────────
+      // Poznámka: neprošlé ověření se nezapočítává do skippedMissingEmail —
+      // e-mail sice byl navržen, ale neprošel ověřením obsahu stránky.
+      const verification = await verifyEmailOnSourcePage(email, emailSourceUrl);
+      if (!verification.ok) {
+        skipped++;
+        details.push({ company: name, outcome: "skipped", reason: verification.reason });
         continue;
       }
 

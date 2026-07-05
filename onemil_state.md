@@ -1,5 +1,33 @@
 ﻿# OneMil – aktuální stav projektu
 
+## MODUL OBCHOD / LEADY — FÁZE 5D PŘIPRAVENA JEN JAKO PR (05. 07. 2026, neaplikováno/nenasazeno)
+
+Oprava mezery z Fáze 5C: AI tvrzení „e-mail je na téhle URL" samo o sobě nestačilo — AI si mohla
+zdrojovou URL vymyslet nebo se splést, a lead by mohl vzniknout s e-mailem, který na uvedené
+stránce vůbec nebyl. **Vše jen jako soubory v PR — nic nenasazeno. Produkce
+`xkzhjldrojjlrkezorey` i staging `dxmowysntemfqfnanxua` nedotčeny. Žádný e-mail neodeslán. Žádná
+produkční data vytvořena/smazána. Žádná nová DB migrace.**
+
+- **EF `supabase/functions/sales-lead-discover/index.ts`:** PŘED voláním RPC
+  `sales_lead_propose_with_contact` EF sama STÁHNE `email_source_url` a ověří, že navržený
+  e-mail se skutečně nachází v obsahu stránky. Teprve po úspěšném ověření se lead uloží.
+- **Bezpečnost stahování (SSRF ochrana):** jen `http/https`; žádné přihlašovací údaje v URL;
+  odmítnuty loopback/private/link-local adresy (`127.x`, `10.x`, `172.16–31.x`, `192.168.x`,
+  `169.254.x`, `localhost`, `0.0.0.0`, IPv6 loopback/link-local); timeout 8 s; limit velikosti
+  stažené stránky 2 MB.
+- **Porovnání e-mailu:** case-insensitive; HTML entity (`&amp;`, `&#64;`, `&#46;`, `&nbsp;`) a
+  HTML tagy se normalizují/odstraní před porovnáním, aby prošel běžný text — e-mail se ale
+  nesmí jen uhodnout, musí být skutečně nalezen.
+- **Nové výsledky bez vytvoření leadu:** `outcome:"skipped", reason:"invalid_email_source_url"`
+  (URL není bezpečná/platná) a `outcome:"skipped", reason:"email_not_found_on_source_page"`
+  (stažení selhalo NEBO e-mail na stránce není). `reason:"missing_public_email"` (Fáze 5C)
+  zůstává beze změny.
+- Zachovává vše z Fáze 5B/5C: žádný auto-send, žádný Resend, žádný zápis do `email_queue`,
+  žádné auto-schválení; `contact_email` zůstává NULL, `email_verified_by_admin=false`; ukládá
+  se jen `proposed_contact_email`; člověk musí i tak ručně kliknout „Schválit e-mail".
+- Ověřeno: `npx tsc --noEmit` 0 chyb, `npm run build` ✅.
+- **Deploy EF + Lovable Publish = samostatné kroky, vyžadují výslovné schválení Pavla.**
+
 ## MODUL OBCHOD / LEADY — FÁZE 5C ZPROVOZNĚNA NA PRODUKCI (05. 07. 2026, schválení Pavla)
 
 Fáze 5C byla nejdřív ověřená na stagingu `dxmowysntemfqfnanxua` (viz sekce níže), poté nasazena
