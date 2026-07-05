@@ -533,14 +533,24 @@ Fáze 4 využívá stávající pole a přidává:
   dle stejných přísných pravidel jako `sales-lead-enrich-contact` (nikdy
   nevymýšlet, jen z veřejného webu/kontaktní stránky firmy).
 - **Firma BEZ platného e-mailu + zdroje** (chybí, neplatný formát, nebo
-  `email_confidence:"low"`): `sales_lead_propose` se pro ni **vůbec nezavolá**
-  — žádný lead nevznikne. Výsledek se zapíše jen do odpovědi EF jako
+  `email_confidence:"low"`): RPC se pro ni **vůbec nezavolá** — žádný lead
+  nevznikne. Výsledek se zapíše jen do odpovědi EF jako
   `outcome:"skipped", reason:"missing_public_email"`.
-- **Firma S veřejným e-mailem:** nejdřív vznikne lead (`sales_lead_propose`,
-  stav `navrzeny`), poté se e-mail uloží **jen jako neověřený návrh** přes
-  `sales_lead_propose_contact` (Fáze 5B) — `proposed_contact_email`/
-  `_source_url`, `proposed_contact_status='neovereny'`. `contact_email`
-  a `email_verified_by_admin` zůstávají beze změny (null/false).
+- **Firma S veřejným e-mailem — ATOMICKÁ operace (oprava kritické chyby):**
+  lead (`navrzeny`) i navržený e-mail se vytvoří **v jednom volání** RPC
+  `sales_lead_propose_with_contact` (jeden INSERT se sloupci
+  `proposed_contact_email`/`_source_url`/`proposed_contact_status='neovereny'`
+  vyplněnými rovnou). **Původní návrh dvou oddělených kroků
+  (`sales_lead_propose` → `sales_lead_propose_contact`) byl opraven** — kdyby
+  druhý krok selhal, zůstal by lead bez navrženého e-mailu, což porušuje
+  pravidlo „kontakty bez e-mailu se vůbec nemají ukládat". Nová RPC to
+  vylučuje: pokud validace e-mailu selže, INSERT se vůbec neprovede a lead
+  nevznikne; pokud projde, INSERT vloží lead i návrh e-mailu najednou.
+  `contact_email` a `email_verified_by_admin` zůstávají beze změny (null/false).
+  Zachovává dedup (IČO/doména), partner blokaci a suppression z Fáze 5A.
+  Původní `sales_lead_propose` (bez kontaktu) a `sales_lead_propose_contact`
+  (samostatné doplnění návrhu) zůstávají beze změny — jen `sales-lead-discover`
+  je přepnutá na volání pouze nové atomické RPC.
 - **Člověk musí i tak ručně kliknout „Schválit e-mail"** v detailu leadu
   (Fáze 5B) — automatický discovery e-mail nikdy sám neschvaluje ani
   nevyplňuje odesílací kontakt.
@@ -548,7 +558,9 @@ Fáze 4 využívá stávající pole a přidává:
   s dohledaným veřejným e-mailem."; výsledek běhu ukazuje počet vytvořených
   firem, celkový počet přeskočených a zvlášť počet přeskočených kvůli
   chybějícímu veřejnému e-mailu (`skipped_missing_email`).
-- Žádná nová DB migrace — Fáze 5C plně reuse existující RPC z Fáze 5A/5B.
+- **Migrace `20260704160000_sales_leads_phase5c_propose_with_contact_rpc.sql`**
+  přidává jen novou RPC `sales_lead_propose_with_contact` (EXECUTE jen
+  `service_role`); nemění schéma tabulek ani stávající RPC z Fáze 5A/5B.
 
 ### 17.9 Rozdělení odpovědnosti AI vs. člověk (shrnutí)
 | Krok | AI smí | Člověk |

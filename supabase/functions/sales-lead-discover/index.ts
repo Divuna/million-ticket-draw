@@ -8,7 +8,7 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2.57.4";
 //
 // ⚠️ Spouští VÝHRADNĚ člověk s oprávněním `sales_leads.manage` kliknutím v UI.
 //    AI smí POUZE navrhnout firmy a uložit je jako `navrzeny` (přes RPC
-//    sales_lead_propose). AI NIKDY:
+//    sales_lead_propose_with_contact). AI NIKDY:
 //      • nepřipraví finální odeslání,
 //      • neodešle e-mail / nezapíše do email_queue,
 //      • nevytvoří odesílatelný stav (jen `navrzeny`),
@@ -20,17 +20,19 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2.57.4";
 //     zdrojovou URL (stejná pravidla jako `sales-lead-enrich-contact` —
 //     NIKDY nevymýšlet, jen z veřejného webu/kontaktní stránky).
 //   • Firma BEZ platného veřejného e-mailu + zdroje se PŘESKOČÍ —
-//     `sales_lead_propose` se pro ni vůbec nezavolá, žádný lead nevznikne;
-//     v odpovědi je jen `outcome:"skipped", reason:"missing_public_email"`.
-//   • Firma S veřejným e-mailem: nejdřív vznikne lead (`sales_lead_propose`,
-//     stav `navrzeny`), poté se e-mail uloží jako NEOVĚŘENÝ návrh přes
-//     `sales_lead_propose_contact` (`proposed_contact_email`/`_source_url`,
-//     `proposed_contact_status='neovereny'`). `contact_email` a
+//     RPC se pro ni vůbec nezavolá, žádný lead nevznikne; v odpovědi je jen
+//     `outcome:"skipped", reason:"missing_public_email"`.
+//   • Firma S veřejným e-mailem: lead (`navrzeny`) i navržený e-mail
+//     (`proposed_contact_email`/`_source_url`, `proposed_contact_status='neovereny'`)
+//     se vytvoří v JEDNÉ atomické operaci přes RPC `sales_lead_propose_with_contact`
+//     — nikdy ve dvou oddělených krocích. Díky tomu nemůže nastat stav „lead
+//     existuje, ale bez navrženého e-mailu": pokud e-mail neprojde validací,
+//     INSERT se vůbec neprovede a žádný lead nevznikne. `contact_email` a
 //     `email_verified_by_admin` zůstávají beze změny (null/false) — vyplní
 //     je teprve ČLOVĚK ručním „Schválit e-mail" v detailu leadu (Fáze 5B).
 //
 // Ochrany: limit počtu návrhů na běh; dedup + suppression + partner blokace
-// řeší RPC sales_lead_propose server-side (bezpečná bariéra).
+// řeší RPC sales_lead_propose_with_contact server-side (bezpečná bariéra).
 //
 // Auth: JWT → getUser → has_admin_permission('sales_leads.manage').
 // Vytváření přes service_role RPC (obchází RLS, ale jen `navrzeny`).
@@ -183,7 +185,10 @@ serve(async (req: Request) => {
 
     // ── 4. Uložení návrhů — POUZE firmy s veřejně dohledaným e-mailem ────────
     // Firma bez platného veřejného e-mailu + zdrojové URL se PŘESKOČÍ dřív,
-    // než se vůbec zavolá sales_lead_propose — žádný lead pro ni nevznikne.
+    // než se vůbec zavolá RPC — žádný lead pro ni nevznikne. Firma s e-mailem
+    // se uloží přes ATOMICKOU RPC sales_lead_propose_with_contact, která
+    // vytvoří lead i navržený e-mail v JEDNOM INSERTu (nemůže nastat stav
+    // „lead existuje, ale bez navrženého e-mailu").
     let created = 0;
     let skipped = 0;
     let skippedMissingEmail = 0;
@@ -195,6 +200,7 @@ serve(async (req: Request) => {
       if (!name) { errored++; continue; }
 
       // ── Bariéra: bez veřejného e-mailu + zdroje se lead vůbec nevytvoří ──
+      // (i tak ji ověří ještě jednou uvnitř RPC — obranná kontrola navíc.)
       const email = typeof c.email === "string" ? c.email.trim().toLowerCase() : "";
       const emailSourceUrl = typeof c.email_source_url === "string" ? c.email_source_url.trim() : "";
       const emailValid = email.length > 0 && EMAIL_RE.test(email);
@@ -208,12 +214,13 @@ serve(async (req: Request) => {
       const qualityRaw = typeof c.lead_quality === "number" ? Math.floor(c.lead_quality) : 0;
       const quality = Math.min(3, Math.max(0, qualityRaw));
 
-      const { data: rpcData, error: rpcErr } = await supabaseAdmin.rpc("sales_lead_propose", {
+      const { data: rpcData, error: rpcErr } = await supabaseAdmin.rpc("sales_lead_propose_with_contact", {
         p_created_by: caller.id,
         p_company_name: name,
         p_lead_group: leadGroup,
         p_discovery_source: "ai_navrh",
-        p_lead_quality: quality,
+        p_email: email,
+        p_email_source_url: emailSourceUrl,
         p_discovery_meta: {
           model: AI_MODEL,
           rationale: typeof c.rationale === "string" ? c.rationale : null,
@@ -224,34 +231,19 @@ serve(async (req: Request) => {
         p_ico: typeof c.ico === "string" ? c.ico : null,
         p_city: typeof c.city === "string" ? c.city : null,
         p_industry: typeof c.industry === "string" ? c.industry : null,
+        p_lead_quality: quality,
+        p_proposed_by: "ai",
       });
 
       if (rpcErr) { errored++; details.push({ company: name, outcome: "error", reason: "rpc_failed" }); continue; }
-      const res = (rpcData ?? {}) as { outcome?: string; reason?: string; lead_id?: string };
+      const res = (rpcData ?? {}) as { outcome?: string; reason?: string };
 
       if (res.outcome === "created") {
         created++;
-        // Lead vznikl → e-mail se uloží jen jako NEOVĚŘENÝ návrh (Fáze 5B).
-        // contact_email a email_verified_by_admin zůstávají beze změny (null/false)
-        // — vyplní je teprve člověk ručním „Schválit e-mail" v detailu leadu.
-        if (res.lead_id) {
-          const { data: contactRes, error: contactErr } = await supabaseAdmin.rpc(
-            "sales_lead_propose_contact",
-            {
-              p_lead_id: res.lead_id,
-              p_created_by: caller.id,
-              p_email: email,
-              p_source_url: emailSourceUrl,
-              p_proposed_by: "ai",
-            },
-          );
-          const contactOk = !contactErr && (contactRes as { success?: boolean } | null)?.success === true;
-          details.push({ company: name, outcome: "created", reason: contactOk ? undefined : "contact_propose_failed" });
-        } else {
-          details.push({ company: name, outcome: "created" });
-        }
+        details.push({ company: name, outcome: "created" });
       } else if (res.outcome === "skipped") {
         skipped++;
+        if (res.reason === "missing_public_email") skippedMissingEmail++;
         details.push({ company: name, outcome: "skipped", reason: res.reason });
       } else {
         errored++;
