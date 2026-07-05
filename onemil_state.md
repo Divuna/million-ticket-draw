@@ -1,5 +1,34 @@
 ﻿# OneMil – aktuální stav projektu
 
+## MODUL OBCHOD / LEADY — FÁZE 5E PŘIPRAVENA JEN JAKO PR (05. 07. 2026, neaplikováno/nenasazeno)
+
+Fáze 5D správně blokuje vymyšlené e-maily, ale spoléhala na to, že AI dodá i přesnou
+`email_source_url`, což AI neumí spolehlivě — discovery proto často nevytvořil žádný lead, i
+když firma měla veřejný e-mail dostupný na svém webu. **Vše jen jako soubory v PR — nic
+nenasazeno. Produkce `xkzhjldrojjlrkezorey` i staging `dxmowysntemfqfnanxua` nedotčeny. Žádný
+e-mail neodeslán. Žádná produkční data vytvořena/smazána. Žádná nová DB migrace.**
+
+- **EF `supabase/functions/sales-lead-discover/index.ts`:** AI smí stále navrhnout firmu, web
+  a VOLITELNĚ odhad e-mailu — bere se ale jen jako **nápověda**, nikdy jako důkaz. Backend sám
+  pro každou firmu s webem projde homepage → odkazy typu kontakt/contact/kontakty/o-nas/
+  o-spolecnosti/about/about-us/impressum (jen stejná doména) → `mailto:` odkazy i prostý text
+  stránek. Použije se jen e-mail SKUTEČNĚ nalezený na stažené stránce; AI odhad se použije jen
+  pokud odpovídá nalezenému (kvůli provenanci), jinak se použije první jiný nalezený.
+- **Nový výsledek:** `outcome:"skipped", reason:"email_not_found_on_company_website"` — e-mail
+  se v limitu prohledaných stránek na webu firmy nenašel, lead nevznikne. `reason:
+  "missing_public_email"` zůstává pro firmu bez webu i bez AI navržené stránky.
+- **Bezpečnost procházení (sdílená s Fází 5D):** jen `http/https`; blokovány loopback/private/
+  link-local adresy pro každou navštívenou i redirect URL; redirecty ručně, max 3 hopy; timeout
+  8 s; limit stránky 2 MB; **max 5 stažených stránek na jednu firmu**.
+- Zachovává vše z Fáze 5B/5C/5D: žádný auto-send, žádný Resend, žádný zápis do `email_queue`,
+  žádné auto-schválení; `contact_email` zůstává NULL, `email_verified_by_admin=false`; ukládá
+  se jen `proposed_contact_email`; člověk musí i tak ručně kliknout „Schválit e-mail".
+- **UI `DiscoverLeadsDialog.tsx`:** výsledek běhu nově ukazuje i počet firem přeskočených kvůli
+  nenalezenému e-mailu na webu (`skipped_email_not_found_on_website`), odděleně od chybějícího
+  webu/údaje (`skipped_missing_email`).
+- Ověřeno: `npx tsc --noEmit` 0 chyb, `npm run build` ✅.
+- **Deploy EF + Lovable Publish = samostatné kroky, vyžadují výslovné schválení Pavla.**
+
 ## MODUL OBCHOD / LEADY — FÁZE 5D ZPROVOZNĚNA NA PRODUKCI (05. 07. 2026, schválení Pavla)
 
 PR #191 i PR #192 mergnuty do `main`. EF `sales-lead-discover` nasazena na **produkci

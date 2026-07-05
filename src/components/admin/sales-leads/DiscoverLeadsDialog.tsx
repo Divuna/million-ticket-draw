@@ -34,17 +34,20 @@ interface DiscoverResult {
   created: number;
   skipped: number;
   skipped_missing_email: number;
+  skipped_email_not_found_on_website: number;
   errored: number;
 }
 
 /**
- * Fáze 5A + 5C — ruční spuštění automatického vyhledávání firem VČETNĚ
+ * Fáze 5A + 5C + 5E — ruční spuštění automatického vyhledávání firem VČETNĚ
  * veřejného kontaktního e-mailu. Člověk vybere skupinu + počet a klikne
- * „Najít nové firmy". EF `sales-lead-discover` navrhne firmy, dohledá jejich
- * veřejný e-mail + zdroj a uloží jako `navrzeny` POUZE firmy, u kterých se
- * veřejný e-mail podařilo dohledat — u ostatních lead vůbec nevznikne. E-mail
- * se ukládá jen jako neověřený návrh; nic se neodesílá a schválení e-mailu
- * musí člověk provést ručně v detailu leadu.
+ * „Najít nové firmy". EF `sales-lead-discover` navrhne firmy a SÁM projde
+ * jejich web (homepage + kontakt/about odkazy + mailto odkazy), aby dohledal
+ * veřejný e-mail — AI odhad e-mailu je jen nápověda, nikdy důkaz. Uloží se
+ * jako `navrzeny` POUZE firmy, u kterých se e-mail skutečně našel na webu —
+ * u ostatních lead vůbec nevznikne. E-mail se ukládá jen jako neověřený
+ * návrh; nic se neodesílá a schválení e-mailu musí člověk provést ručně
+ * v detailu leadu.
  */
 export function DiscoverLeadsDialog({ open, onOpenChange, onSuccess }: Props) {
   const [loading, setLoading] = useState(false);
@@ -74,7 +77,8 @@ export function DiscoverLeadsDialog({ open, onOpenChange, onSuccess }: Props) {
       const res = (data ?? {}) as {
         success?: boolean; error?: string;
         lead_group?: string; created?: number; skipped?: number;
-        skipped_missing_email?: number; errored?: number;
+        skipped_missing_email?: number; skipped_email_not_found_on_website?: number;
+        errored?: number;
       };
       if (!res.success) {
         toast.error(rpcErrorMessage(res.error));
@@ -85,6 +89,7 @@ export function DiscoverLeadsDialog({ open, onOpenChange, onSuccess }: Props) {
         created: res.created ?? 0,
         skipped: res.skipped ?? 0,
         skipped_missing_email: res.skipped_missing_email ?? 0,
+        skipped_email_not_found_on_website: res.skipped_email_not_found_on_website ?? 0,
         errored: res.errored ?? 0,
       };
       setResult(summary);
@@ -139,10 +144,11 @@ export function DiscoverLeadsDialog({ open, onOpenChange, onSuccess }: Props) {
             <Info className="h-3.5 w-3.5 mt-0.5 shrink-0" aria-hidden />
             <span>
               <strong className="text-foreground">Uloží se jen firmy s dohledaným veřejným e-mailem.</strong>{' '}
-              AI e-mail nikdy nevymýšlí — pokud ho nenajde na veřejném webu firmy, lead se vůbec
-              nevytvoří. Nalezený e-mail je vždy jen neověřený návrh; nic se neposílá a schválení
-              e-mailu musíte provést ručně v detailu leadu. Duplicity, partneři a blokované domény
-              se také přeskočí.
+              Systém sám projde web firmy (homepage, kontakt/o nás stránky, mailto odkazy) — AI
+              odhad e-mailu je jen nápověda, nikdy důkaz. Pokud se e-mail na webu nenajde, lead se
+              vůbec nevytvoří. Nalezený e-mail je vždy jen neověřený návrh; nic se neposílá a
+              schválení e-mailu musíte provést ručně v detailu leadu. Duplicity, partneři a
+              blokované domény se také přeskočí.
             </span>
           </div>
 
@@ -152,7 +158,8 @@ export function DiscoverLeadsDialog({ open, onOpenChange, onSuccess }: Props) {
               <ul className="space-y-0.5 text-muted-foreground">
                 <li>Vytvořeno firem (s dohledaným e-mailem): <strong className="text-foreground">{result.created}</strong></li>
                 <li>Přeskočeno celkem: <strong className="text-foreground">{result.skipped}</strong></li>
-                <li>— z toho kvůli chybějícímu veřejnému e-mailu: <strong className="text-foreground">{result.skipped_missing_email}</strong></li>
+                <li>— z toho kvůli chybějícímu webu/údaji: <strong className="text-foreground">{result.skipped_missing_email}</strong></li>
+                <li>— z toho kvůli nenalezenému e-mailu na webu firmy: <strong className="text-foreground">{result.skipped_email_not_found_on_website}</strong></li>
                 {result.errored > 0 && <li>Chyby: <strong className="text-foreground">{result.errored}</strong></li>}
               </ul>
               <p className="mt-2 text-[11px] text-muted-foreground">
