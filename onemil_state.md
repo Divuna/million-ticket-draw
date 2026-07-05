@@ -1,5 +1,29 @@
 ﻿# OneMil – aktuální stav projektu
 
+## MODUL OBCHOD / LEADY — FÁZE 5C ZPROVOZNĚNA POUZE NA STAGINGU (05. 07. 2026, schválení Pavla)
+
+PR #188 mergnut do `main` (merge commit `672d1a3c7b5f9ea74273b126b04117930d84879a`). Migrace
+`20260704160000_sales_leads_phase5c_propose_with_contact_rpc.sql` aplikována na **staging
+`dxmowysntemfqfnanxua`** přes `apply_migration` (`{"success": true}`); EF `sales-lead-discover`
+nasazená na stagingu jako **v2 ACTIVE**.
+
+- **Ověření bezpečnosti:** RPC `sales_lead_propose_with_contact` existuje, **SECURITY DEFINER**;
+  EXECUTE má pouze `service_role`; `anon` a `authenticated` EXECUTE nemají. EF bez auth headeru
+  → `401 missing_authorization_header`. EF nikde neodkazuje na `email_queue` ani Resend
+  (statická kontrola zdroje).
+- **Test bez e-mailu (STAGING ONLY, přímé volání RPC s `p_email=NULL`, `p_email_source_url=NULL`):**
+  výsledek `outcome='skipped', reason='missing_public_email'`; **žádný lead nevznikl** (postcheck
+  0 řádků).
+- **Test s e-mailem (STAGING ONLY):** vznikl staging test lead
+  `TEST OneMil Sales Lead F5C STAGING ONLY` (id `b267e3d0-df0b-462c-acb5-026168c33b01`) —
+  `status='navrzeny'`, `contact_email=NULL`, `email_verified_by_admin=false`,
+  `proposed_contact_email='info@test-onemil-f5c-staging.cz'`,
+  `proposed_contact_source_url='https://test-onemil-f5c-staging.cz/kontakt'`,
+  `proposed_contact_status='neovereny'`. Aktivita `lead_discovered` 1×, aktivita
+  `contact_proposed` 1×, aktivita `email_sent` **neexistuje**. **Žádný e-mail nebyl odeslán.**
+- **Produkce `xkzhjldrojjlrkezorey` nedotčena; Lovable Publish neproběhl;**
+  wallets/payments/contests/tickets/winners/Stripe/`buy_ticket_atomic` nedotčeny.
+
 ## MODUL OBCHOD / LEADY — FÁZE 5C PŘIPRAVENA JEN JAKO PR (05. 07. 2026, neaplikováno/nenasazeno)
 
 „Najít nové firmy" musí najít firmu VČETNĚ veřejného kontaktního e-mailu — firmy bez veřejného
