@@ -1,5 +1,29 @@
 ﻿# OneMil – aktuální stav projektu
 
+## MODUL OBCHOD / LEADY — FÁZE 5E ZPROVOZNĚNA POUZE NA STAGINGU (05. 07. 2026, schválení Pavla)
+
+PR #194 mergnut do `main` (merge commit `abe026f68c01f5d31e59e25a93bf323ddf06252b`). EF
+`sales-lead-discover` nasazena na **staging `dxmowysntemfqfnanxua`** jako **v4 ACTIVE**. Žádná
+nová DB migrace — Fáze 5E je pouze úprava EF, RPC z Fáze 5C beze změny.
+
+- **Ověření bezpečnosti:** EF bez auth headeru → `401 missing_authorization_header`. Fáze 5E
+  sama prochází web firmy a hledá veřejný e-mail — AI e-mail/URL jsou jen nápověda, nikdy důkaz.
+- **Normalizace webu:** web bez protokolu (např. `moser.com`, `www.vifsports.cz`) se
+  normalizuje na `https://…`.
+- **Doménová bariéra:** crawler zůstává jen na stejné doméně jako firemní web; AI navržená
+  `email_source_url` z **cizí domény** se ignoruje.
+- **Nenalezený e-mail:** pokud crawler e-mail na webu firmy nenajde, vrací
+  `outcome:"skipped", reason:"email_not_found_on_company_website"` — lead nevznikne.
+- **Test s existujícím e-mailem (STAGING ONLY): prošel.** Vznikl pouze staging test lead
+  `TEST OneMil Sales Lead F5E STAGING ONLY` — `status='navrzeny'`, `contact_email=NULL`,
+  `email_verified_by_admin=false`, `proposed_contact_email='security@mozilla.org'`,
+  `proposed_contact_source_url='https://www.mozilla.org/.well-known/security.txt'`,
+  `proposed_contact_status='neovereny'`; aktivita `lead_discovered` 1×, `contact_proposed` 1×,
+  aktivita `email_sent` **0×**.
+- **Produkce `xkzhjldrojjlrkezorey` nedotčena; Lovable Publish neproběhl; žádný e-mail
+  nebyl odeslán;** wallets/payments/contests/tickets/winners/Stripe/`buy_ticket_atomic`
+  nedotčeny.
+
 ## MODUL OBCHOD / LEADY — FÁZE 5E PŘIPRAVENA JEN JAKO PR (05. 07. 2026, neaplikováno/nenasazeno)
 
 Fáze 5D správně blokuje vymyšlené e-maily, ale spoléhala na to, že AI dodá i přesnou
