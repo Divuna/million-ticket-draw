@@ -562,6 +562,41 @@ Fáze 4 využívá stávající pole a přidává:
   přidává jen novou RPC `sales_lead_propose_with_contact` (EXECUTE jen
   `service_role`); nemění schéma tabulek ani stávající RPC z Fáze 5A/5B.
 
+#### 17.8.3 Fáze 5D — tvrdé ověření zdrojové stránky (oprava mezery z Fáze 5C, implementováno jako soubory)
+- **Problém, který Fáze 5D opravuje:** Fáze 5C vyžadovala, aby AI u každé
+  firmy vrátila `email` + `email_source_url`, ale **jen důvěřovala tvrzení
+  AI**, že e-mail na uvedené URL skutečně je. AI si mohla zdrojovou URL
+  vymyslet nebo se v ní splést — lead by tak mohl vzniknout s e-mailem,
+  který na uvedené stránce vůbec nebyl.
+- **Řešení:** EF `sales-lead-discover` PŘED voláním RPC
+  `sales_lead_propose_with_contact` sama STÁHNE `email_source_url` a ověří,
+  že navržený e-mail se skutečně nachází v obsahu stránky. Teprve po
+  úspěšném ověření se lead uloží.
+- **Bezpečnost stahování (SSRF ochrana):** povoleny jen `http://`/`https://`;
+  odmítnuty URL s přihlašovacími údaji; odmítnuty loopback/private/link-local
+  adresy (`127.x`, `10.x`, `172.16–31.x`, `192.168.x`, `169.254.x`,
+  `localhost`, `0.0.0.0`, IPv6 loopback/link-local); krátký timeout (8 s);
+  limit velikosti stažené stránky (2 MB) proti zahlcení.
+- **Porovnání e-mailu:** case-insensitive; HTML entity (`&amp;`, `&#64;`,
+  `&#46;`, `&nbsp;`) a HTML tagy se před porovnáním odstraní/normalizují,
+  aby prošel i běžně formátovaný text — ale e-mail nesmí být uhodnutý,
+  jen skutečně nalezený v obsahu stránky.
+- **Nové výsledky (bez vytvoření leadu):**
+  - `outcome:"skipped", reason:"invalid_email_source_url"` — URL není
+    bezpečná/platná (nedodrží `http/https`, míří na lokální/privátní adresu,
+    nebo je nesyntakticky validní).
+  - `outcome:"skipped", reason:"email_not_found_on_source_page"` — stažení
+    stránky selhalo (timeout, síť, non-2xx) NEBO e-mail v obsahu stránky
+    není.
+  - `outcome:"skipped", reason:"missing_public_email"` zůstává beze změny
+    pro případ, že AI e-mail/zdroj vůbec nevrátila (Fáze 5C).
+- **Beze změny:** žádný auto-send, žádný Resend, žádný zápis do
+  `email_queue`, žádné auto-schválení; `contact_email` zůstává NULL,
+  `email_verified_by_admin=false`; ukládá se jen `proposed_contact_email` +
+  `proposed_contact_source_url` jako neověřený návrh; člověk musí i tak
+  ručně kliknout „Schválit e-mail" (Fáze 5B). Žádná nová DB migrace — jen
+  úprava EF `sales-lead-discover`.
+
 ### 17.9 Rozdělení odpovědnosti AI vs. člověk (shrnutí)
 | Krok | AI smí | Člověk |
 |---|---|---|
