@@ -597,6 +597,45 @@ Fáze 4 využívá stávající pole a přidává:
   ručně kliknout „Schválit e-mail" (Fáze 5B). Žádná nová DB migrace — jen
   úprava EF `sales-lead-discover`.
 
+#### 17.8.4 Fáze 5E — systém sám dohledá e-mail na webu firmy (implementováno jako soubory)
+- **Problém, který Fáze 5E opravuje:** Fáze 5D správně blokuje vymyšlené
+  e-maily, ale spoléhala na to, že AI dodá i přesnou `email_source_url`. AI
+  to spolehlivě neumí — výsledkem bylo, že discovery často nevytvořil vůbec
+  žádný lead, i když firma měla veřejný e-mail dostupný na svém webu.
+- **Řešení:** `sales-lead-discover` už nespoléhá na AI navrženou zdrojovou
+  URL. AI smí stále navrhnout firmu, web a VOLITELNĚ odhad e-mailu — ten se
+  ale bere jen jako **nápověda**, nikdy jako důkaz. Backend sám pro každou
+  firmu s webem projde:
+  1. homepage,
+  2. odkazy na stránce obsahující klíčová slova kontakt/contact/kontakty/
+     o-nas/o-spolecnosti/about/about-us/impressum (jen v rámci stejné domény
+     jako web firmy),
+  3. `mailto:` odkazy i prostý text stažených stránek.
+- **Použije se jen e-mail, který byl skutečně nalezen** v `mailto:` odkazu
+  nebo textu některé stažené stránky. Pokud AI navržený e-mail odpovídá
+  některému skutečně nalezenému, použije se (kvůli provenanci); jinak se
+  použije první JINÝ veřejný e-mail nalezený na webu — AI odhad se nikdy
+  nepoužije bez skutečného nálezu na stránce.
+- **Nový výsledek (bez vytvoření leadu):**
+  `outcome:"skipped", reason:"email_not_found_on_company_website"` — e-mail
+  se v limitu prohledaných stránek na webu firmy nenašel.
+  `reason:"missing_public_email"` zůstává pro firmu bez webu i bez jakékoli
+  AI navržené stránky (není co procházet).
+- **Bezpečnost procházení (sdílená s Fází 5D):** jen `http/https`; blokovány
+  loopback/private/link-local adresy (ověřeno pro KAŽDOU navštívenou i
+  redirect URL); redirecty řešené ručně, max 3 hopy, každý cíl znovu ověřen;
+  timeout 8 s na stránku; limit velikosti stažené stránky 2 MB; **max 5
+  stažených stránek na jednu firmu** (`MAX_PAGES_PER_COMPANY`).
+- **Beze změny:** žádný auto-send, žádný Resend, žádný zápis do
+  `email_queue`, žádné auto-schválení; `contact_email` zůstává NULL,
+  `email_verified_by_admin=false`; ukládá se jen `proposed_contact_email`
+  jako neověřený návrh; člověk musí i tak ručně kliknout „Schválit e-mail"
+  (Fáze 5B). Žádná nová DB migrace — jen úprava EF `sales-lead-discover`.
+- **UI (`DiscoverLeadsDialog.tsx`):** výsledek běhu nově ukazuje i počet
+  firem přeskočených kvůli nenalezenému e-mailu na webu
+  (`skipped_email_not_found_on_website`), odděleně od počtu přeskočených
+  kvůli chybějícímu webu/údaji (`skipped_missing_email`).
+
 ### 17.9 Rozdělení odpovědnosti AI vs. člověk (shrnutí)
 | Krok | AI smí | Člověk |
 |---|---|---|

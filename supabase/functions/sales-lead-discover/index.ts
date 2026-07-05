@@ -2,9 +2,10 @@ import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.57.4";
 
 // ============================================================================
-// sales-lead-discover — Fáze 5A + 5C: automatické NAVRŽENÍ nových firemních
-// leadů VČETNĚ veřejného kontaktního e-mailu
-// Spec: docs/SALES_LEADS_ADMIN_SPEC.md §17 (§17.0, 17.1, 17.7, 17.8.2, 17.10)
+// sales-lead-discover — Fáze 5A + 5C + 5E: automatické NAVRŽENÍ nových
+// firemních leadů VČETNĚ veřejného kontaktního e-mailu, dohledaného vlastním
+// procházením webu firmy
+// Spec: docs/SALES_LEADS_ADMIN_SPEC.md §17 (§17.0, 17.1, 17.7, 17.8.2, 17.8.4, 17.10)
 //
 // ⚠️ Spouští VÝHRADNĚ člověk s oprávněním `sales_leads.manage` kliknutím v UI.
 //    AI smí POUZE navrhnout firmy a uložit je jako `navrzeny` (přes RPC
@@ -15,43 +16,40 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2.57.4";
 //      • nevyplní ověřený odesílací kontakt (contact_email zůstává null).
 //    Každý návrh musí projít RUČNÍM lidským schválením (`navrzeny → novy`).
 //
-// Fáze 5C — tvrdá bariéra „bez veřejného e-mailu se lead nevytvoří":
-//   • AI musí u každé firmy vrátit i veřejně dohledaný kontaktní e-mail +
-//     zdrojovou URL (stejná pravidla jako `sales-lead-enrich-contact` —
-//     NIKDY nevymýšlet, jen z veřejného webu/kontaktní stránky).
-//   • Firma BEZ platného veřejného e-mailu + zdroje se PŘESKOČÍ —
-//     RPC se pro ni vůbec nezavolá, žádný lead nevznikne; v odpovědi je jen
-//     `outcome:"skipped", reason:"missing_public_email"`.
-//   • Firma S veřejným e-mailem: lead (`navrzeny`) i navržený e-mail
-//     (`proposed_contact_email`/`_source_url`, `proposed_contact_status='neovereny'`)
-//     se vytvoří v JEDNÉ atomické operaci přes RPC `sales_lead_propose_with_contact`
-//     — nikdy ve dvou oddělených krocích. Díky tomu nemůže nastat stav „lead
-//     existuje, ale bez navrženého e-mailu": pokud e-mail neprojde validací,
-//     INSERT se vůbec neprovede a žádný lead nevznikne. `contact_email` a
-//     `email_verified_by_admin` zůstávají beze změny (null/false) — vyplní
-//     je teprve ČLOVĚK ručním „Schválit e-mail" v detailu leadu (Fáze 5B).
+// Fáze 5E — SYSTÉM SÁM dohledá e-mail výhradně na WEBU FIRMY (nahrazuje
+// spoléhání na AI tvrzenou zdrojovou URL z Fáze 5C/5D):
+//   • AI smí stále navrhnout firmu, web a VOLITELNĚ e-mail — ten se ale bere
+//     JEN JAKO NÁPOVĚDA, nikdy jako důkaz. Backend prochází VÝHRADNĚ web
+//     firmy (`website`): homepage → odkazy typu kontakt/contact/kontakty/
+//     o-nas/o-spolecnosti/about/about-us/impressum → `mailto:` odkazy i
+//     prostý text stránky.
+//   • Firemní web bez protokolu (např. "moser.com", "www.vifsports.cz") se
+//     normalizuje na `https://…` (`normalizeCompanyWebsite`). Už platné
+//     `http://`/`https://` se zachová beze změny; neplatné/nebezpečné
+//     hodnoty se bezpečně přeskočí.
+//   • Firma BEZ `website` se PŘESKOČÍ jako `missing_public_email` — AI
+//     navržená `email_source_url` NIKDY nenahrazuje chybějící firemní web
+//     (nesmí to být "výmluva" na cizí doménu/katalog/sociální síť).
+//   • `email_source_url` (AI nápověda) se prochází JEN pokud je bezpečná A
+//     na STEJNÉ doméně jako `website` (dovoleno: přesně stejný host, nebo jen
+//     rozdíl v `www.` prefixu) — jinak se úplně ignoruje. Nikdy se neprochází
+//     cizí domény, katalogy ani sociální sítě jako "zdroj firmy".
+//   • Použije se jen e-mail, který byl SKUTEČNĚ nalezen ve staženém obsahu
+//     (viz `extractMailtoEmails`/`extractTextEmails`). Pokud AI navržený
+//     e-mail odpovídá některému skutečně nalezenému, použije se (kvůli
+//     provenance); jinak se použije první jiný veřejný e-mail nalezený na
+//     webu — AI návrh se NIKDY nepoužije bez nálezu na stránce.
+//   • Firma s webem, na kterém se e-mail nikde v limitu stránek nenajde, se
+//     PŘESKOČÍ s `outcome:"skipped", reason:"email_not_found_on_company_website"`
+//     — žádný lead nevznikne.
 //
-// Fáze 5D — TVRDÉ OVĚŘENÍ zdrojové stránky (oprava mezery z Fáze 5C):
-//   • AI TVRZENÍ, že e-mail našla na `email_source_url`, SAMO O SOBĚ NESTAČÍ —
-//     AI si to mohla vymyslet nebo se splést. Fáze 5C bez tohoto kroku
-//     důvěřovala tvrzení AI a mohla uložit lead s e-mailem, který na uvedené
-//     stránce vůbec nebyl.
-//   • Před voláním RPC EF sama STÁHNE `email_source_url` a ověří, že navržený
-//     e-mail se skutečně nachází v obsahu stránky (case-insensitive, tolerantní
-//     k HTML entitám a mezerám kolem `@`/`.` — viz `buildEmailSearchVariants`).
-//     Teprve po úspěšném ověření se lead uloží.
-//   • Fetch má krátký timeout (8 s), limit velikosti stažené stránky (2 MB) a
-//     povoluje jen `http/https`; odmítá lokální/privátní/link-local adresy
-//     (SSRF ochrana, `isSafePublicUrl`).
-//   • Redirecty se NEŘEŠÍ automaticky (`redirect: "follow"`) — každý hop se
-//     řeší ručně, max `MAX_REDIRECTS` (3), a KAŽDÁ cílová redirect URL se
-//     znovu ověří přes `isSafePublicUrl`, než se na ni funkce přesune. Vede-li
-//     redirect na nebezpečnou/neplatnou URL, ověření selže jako
-//     `invalid_email_source_url`.
-//   • Selže-li stažení stránky nebo e-mail na ní (v žádné z normalizovaných
-//     variant) není nalezen, lead se NEULOŽÍ — RPC se vůbec nezavolá
-//     (`outcome:"skipped"`, `reason:"email_not_found_on_source_page"`, resp.
-//     `"invalid_email_source_url"` pro nebezpečnou/neplatnou URL nebo redirect).
+// Bezpečnost procházení (SSRF ochrana, sdílená s Fází 5D):
+//   • jen `http/https`; blokovány lokální/privátní/link-local adresy
+//     (`isSafePublicUrl`, volá se pro KAŽDOU navštívenou i redirect URL);
+//   • redirecty ŘEŠENÉ RUČNĚ (`redirect: "manual"`), max `MAX_REDIRECTS` (3)
+//     hopů, každý cíl znovu ověřen;
+//   • timeout na stránku (8 s), limit velikosti stažené stránky (2 MB);
+//   • max `MAX_PAGES_PER_COMPANY` (5) stažených stránek na jednu firmu.
 //
 // Ochrany: limit počtu návrhů na běh; dedup + suppression + partner blokace
 // řeší RPC sales_lead_propose_with_contact server-side (bezpečná bariéra).
@@ -76,20 +74,18 @@ const ALLOWED_GROUPS = new Set([
   "cestovani", "gastronomie", "lokalni-sluzby", "jine",
 ]);
 
-const DISCOVER_SYSTEM_PROMPT = `Jsi rešeršní asistent OneMil. Navrhni reálné české firmy vhodné k oslovení do věrnostního programu OneMil pro danou skupinu, VČETNĚ jejich veřejně dohledatelného kontaktního e-mailu.
+const DISCOVER_SYSTEM_PROMPT = `Jsi rešeršní asistent OneMil. Navrhni reálné české firmy vhodné k oslovení do věrnostního programu OneMil pro danou skupinu.
 
 PŘÍSNÉ ZÁKAZY (nikdy neporušit):
-- NIKDY NEVYMÝŠLEJ e-mail. Nehádej podle vzoru (např. "info@domena"). Pokud veřejný e-mail firmy neznáš z jejího oficiálního webu nebo veřejné kontaktní stránky, vrať email = null a email_source_url = null.
-- Uveď e-mail POUZE pokud je skutečně veřejně uveden na oficiálním webu firmy nebo její veřejné kontaktní stránce, a uveď přesnou zdrojovou URL (email_source_url), kde je uveden.
-- Nevracej e-maily z katalogů třetích stran, sociálních sítí ani odhady.
-- Nevymýšlej ani telefony ani jména osob. Vracej jen název firmy, veřejný web, případně IČO a město, pokud je veřejně známé; jinak vynech.
+- NIKDY NEVYMÝŠLEJ e-mail, telefon ani jméno osoby. Vracej jen název firmy, veřejný web, případně IČO a město, pokud je veřejně známé; jinak vynech.
+- Pokud e-mail firmy neznáš jistě z veřejného webu, vrať email = null — nehádej, backend si e-mail dohledá sám na webu firmy.
 - NETVRDÍ partnerství ani dohodu s OneMil.
 - NESLIBUJ žádné ceny ani podmínky.
 - NEPOUŽÍVEJ slova casino, hazard, sázka, loterie, jackpot.
 
 Výstup: vrať POUZE validní JSON objekt {"companies": [...]}. Každá položka:
-{"company_name": string, "website": string|null, "ico": string|null, "city": string|null, "industry": string|null, "lead_quality": 0|1|2|3, "rationale": string, "email": string|null, "email_source_url": string|null, "email_confidence": "high"|"low"}
-lead_quality = odhad vhodnosti (0 neznámé … 3 vysoká). rationale = krátké zdůvodnění (neveřejné, interní). email/email_source_url vyplň JEN pokud sis jistý (confidence "high") a máš zdroj; jinak null/null/"low". Vše je neověřený návrh k ruční kontrole člověkem.`;
+{"company_name": string, "website": string|null, "ico": string|null, "city": string|null, "industry": string|null, "lead_quality": 0|1|2|3, "rationale": string, "email": string|null}
+lead_quality = odhad vhodnosti (0 neznámé … 3 vysoká). rationale = krátké zdůvodnění (neveřejné, interní). "email" je JEN VOLITELNÁ NÁPOVĚDA, pokud si jsi jistý — backend si e-mail vždy sám ověří/dohledá na webu firmy, tvůj odhad se nikdy nepoužije bez skutečného nálezu na stránce. Vše je neověřený návrh k ruční kontrole člověkem.`;
 
 function jsonResponse(body: Record<string, unknown>, status = 200): Response {
   return new Response(JSON.stringify(body), {
@@ -107,33 +103,44 @@ interface ProposedCompany {
   lead_quality?: unknown;
   rationale?: unknown;
   email?: unknown;
+  // Zachováno pro zpětnou kompatibilitu se staršími AI odpověďmi (Fáze 5C/5D);
+  // použije se JEN jako volitelná nápověda na kandidátní stránku KE STEJNÉMU
+  // webu firmy (musí být na stejné doméně jako `website`) — nikdy jako
+  // náhrada za chybějící `website` a nikdy jako důkaz e-mailu bez
+  // skutečného nálezu na stránce.
   email_source_url?: unknown;
-  email_confidence?: unknown;
 }
 
-// Stejná validace jako v sales-lead-enrich-contact — bez vymýšlení, jen
-// důvěryhodný formát + reálný zdroj.
+// Bezpečná validace formátu e-mailu — bez vymýšlení, jen důvěryhodný formát.
 const EMAIL_RE = /^[^@\s]+@[^@\s]+\.[^@\s]+$/;
+// Obecné hledání kandidátních e-mailů v normalizovaném textu stránky.
+const FIND_EMAIL_RE = /[a-z0-9._%+-]+@[a-z0-9.-]+\.[a-z]{2,}/g;
 
-// ── Fáze 5D — ověření zdrojové stránky ──────────────────────────────────────
-// AI tvrzení "e-mail je na téhle URL" NENÍ důkaz — musí se ověřit stažením
-// stránky a nalezením e-mailu v jejím obsahu. Bez tohoto kroku by mohl vzniknout
-// lead s e-mailem, který na uvedené stránce vůbec není.
+// ── Sdílená bezpečnostní/síťová vrstva (Fáze 5D + 5E) ───────────────────────
 const SOURCE_FETCH_TIMEOUT_MS = 8000;
 const MAX_SOURCE_BODY_BYTES = 2_000_000; // 2 MB — obranný limit proti velkým stránkám
-const MAX_REDIRECTS = 3; // redirecty se řeší ručně — každý hop se znovu ověří (SSRF)
+const MAX_REDIRECTS = 3;                 // redirecty se řeší ručně — každý hop se znovu ověří (SSRF)
+const MAX_PAGES_PER_COMPANY = 5;         // tvrdý strop stažených stránek na jednu firmu (Fáze 5E)
 
-type SourceVerificationResult =
-  | { ok: true }
-  | { ok: false; reason: "invalid_email_source_url" | "email_not_found_on_source_page" };
+const CONTACT_LINK_KEYWORDS = [
+  "kontakt", "contact", "kontakty", "o-nas", "o-spolecnosti", "about", "about-us", "impressum",
+];
+
+// Domény, které se v praxi objevují jako placeholdery/šablony/trackery, nikdy
+// jako skutečný firemní kontakt — filtrují false-positive nálezy z textu.
+const PLACEHOLDER_EMAIL_DOMAINS = new Set([
+  "example.com", "example.org", "example.net", "domain.com", "yourdomain.com",
+  "yoursite.com", "email.com", "test.com", "w3.org", "schema.org", "sentry.io",
+  "wixpress.com", "godaddy.com", "placeholder.com",
+]);
 
 /**
  * Bezpečnostní kontrola URL před fetchem (SSRF ochrana):
  *  - jen http/https,
  *  - žádné lokální/privátní/loopback/link-local adresy nebo hostnames,
- *  - žádné credentials v URL, žádný neobvyklý port scheme.
- * Volá se pro PŮVODNÍ URL i pro KAŽDÝ redirect hop zvlášť — nikdy se nesmí
- * důvěřovat výslednému místu, kam redirect vede, bez opětovné kontroly.
+ *  - žádné credentials v URL.
+ * Volá se pro KAŽDOU navštívenou URL i pro KAŽDÝ redirect hop zvlášť — nikdy
+ * se nesmí důvěřovat výslednému místu bez opětovné kontroly.
  */
 function isSafePublicUrl(rawUrl: string): boolean {
   let parsed: URL;
@@ -150,7 +157,6 @@ function isSafePublicUrl(rawUrl: string): boolean {
   if (hostname === "localhost" || hostname.endsWith(".localhost")) return false;
   if (hostname === "0.0.0.0") return false;
 
-  // IPv4 literal — blokovat private/loopback/link-local/reserved rozsahy.
   const ipv4 = hostname.match(/^(\d{1,3})\.(\d{1,3})\.(\d{1,3})\.(\d{1,3})$/);
   if (ipv4) {
     const [a, b] = [Number(ipv4[1]), Number(ipv4[2])];
@@ -162,7 +168,6 @@ function isSafePublicUrl(rawUrl: string): boolean {
     if (a === 0) return false;
   }
 
-  // IPv6 loopback/link-local literal (hostname bývá v hranatých závorkách odstraněný URL parserem).
   if (hostname === "::1" || hostname.startsWith("fe80:") || hostname.startsWith("fc") || hostname.startsWith("fd")) {
     return false;
   }
@@ -171,13 +176,50 @@ function isSafePublicUrl(rawUrl: string): boolean {
 }
 
 /**
+ * Normalizuje firemní web na plnou `https://` (resp. zachovanou `http://`)
+ * URL. AI často vrací web bez protokolu ("moser.com", "www.vifsports.cz")
+ * nebo občas i v markdown formátu odkazu ("[www.moser.com](https://www.moser.com)")
+ * — v obou případech se z toho bezpečně udělá platná URL. Hodnoty, které
+ * nevypadají jako doména ani platná URL, se vrátí jako `null` (přeskočí se).
+ */
+function normalizeCompanyWebsite(raw: string): string | null {
+  let trimmed = raw.trim();
+  if (!trimmed) return null;
+
+  // AI občas zabalí web do markdown odkazu — vytáhnout jen samotnou URL.
+  const markdownMatch = trimmed.match(/^\[[^\]]*\]\((https?:\/\/[^)\s]+)\)$/i);
+  if (markdownMatch) {
+    trimmed = markdownMatch[1].trim();
+  }
+
+  if (/^https?:\/\//i.test(trimmed)) {
+    return isSafePublicUrl(trimmed) ? trimmed : null;
+  }
+
+  // Vypadá to jako doména (případně s cestou) bez protokolu? → doplnit https://.
+  const domainLike = /^[a-z0-9]([a-z0-9-]*[a-z0-9])?(\.[a-z0-9]([a-z0-9-]*[a-z0-9])?)+(\/[^\s]*)?$/i;
+  if (!domainLike.test(trimmed)) return null;
+
+  const candidate = `https://${trimmed}`;
+  return isSafePublicUrl(candidate) ? candidate : null;
+}
+
+function stripWwwPrefix(hostname: string): string {
+  return hostname.startsWith("www.") ? hostname.slice(4) : hostname;
+}
+
+/** Stejná firemní doména = přesně stejný host, nebo rozdíl jen v `www.` prefixu. */
+function isSameCompanyDomain(hostA: string, hostB: string): boolean {
+  return stripWwwPrefix(hostA) === stripWwwPrefix(hostB);
+}
+
+/**
  * Připraví DVĚ normalizované varianty stažené stránky pro hledání e-mailu:
  *  1) "loose" — HTML entity dekódované, tagy odstraněné, mezery sjednocené,
  *     lowercase. Najde e-mail zapsaný normálně v běžném textu.
  *  2) "compact" — navíc odstraní VŠECHNY mezery kolem `@` a `.` (a mezi nimi),
  *     takže obfuskovaný zápis typu "info @ firma . cz" se porovná jako
- *     "info@firma.cz". Bez této varianty by běžná typografická mezera kolem
- *     zavináče (časté v ochraně proti spam-botům) test shody nechtěně shodila.
+ *     "info@firma.cz".
  */
 function buildEmailSearchVariants(html: string): { loose: string; compact: string } {
   const loose = html
@@ -189,8 +231,6 @@ function buildEmailSearchVariants(html: string): { loose: string; compact: strin
     .replace(/\s+/g, " ")
     .toLowerCase();
 
-  // Compact: odstranit mezery bezprostředně kolem @ a . (v obou směrech,
-  // opakovaně — "info  @  firma . cz" → "info@firma.cz").
   let compact = loose;
   let prevLength: number;
   do {
@@ -201,10 +241,76 @@ function buildEmailSearchVariants(html: string): { loose: string; compact: strin
   return { loose, compact };
 }
 
-/** Porovná e-mail proti oběma normalizovaným variantám stránky (case-insensitive). */
-function pageContainsEmail(variants: { loose: string; compact: string }, email: string): boolean {
-  const normalizedEmail = email.trim().toLowerCase();
-  return variants.loose.includes(normalizedEmail) || variants.compact.includes(normalizedEmail);
+function isLikelyPlaceholderEmail(email: string): boolean {
+  const domain = email.split("@")[1] ?? "";
+  return PLACEHOLDER_EMAIL_DOMAINS.has(domain);
+}
+
+/** Vytáhne e-maily z `mailto:` odkazů v SUROVÉM HTML (před odstraněním tagů). */
+function extractMailtoEmails(html: string): string[] {
+  const emails: string[] = [];
+  const re = /mailto:([^"'?&>\s]+)/gi;
+  let m: RegExpExecArray | null;
+  while ((m = re.exec(html))) {
+    let addr = m[1];
+    try { addr = decodeURIComponent(addr); } catch { /* keep raw */ }
+    addr = addr.trim().toLowerCase();
+    if (EMAIL_RE.test(addr) && !isLikelyPlaceholderEmail(addr)) emails.push(addr);
+  }
+  return emails;
+}
+
+/** Vytáhne e-maily z normalizovaného textu stránky (obě varianty — loose i compact). */
+function extractTextEmails(variants: { loose: string; compact: string }): string[] {
+  const emails: string[] = [];
+  for (const text of [variants.loose, variants.compact]) {
+    FIND_EMAIL_RE.lastIndex = 0;
+    let m: RegExpExecArray | null;
+    while ((m = FIND_EMAIL_RE.exec(text))) {
+      const addr = m[0];
+      if (EMAIL_RE.test(addr) && !isLikelyPlaceholderEmail(addr) && !emails.includes(addr)) {
+        emails.push(addr);
+      }
+    }
+  }
+  return emails;
+}
+
+/**
+ * Najde odkazy typu kontakt/contact/kontakty/o-nas/o-spolecnosti/about/
+ * about-us/impressum na stránce — jen v rámci STEJNÉHO hostitele jako
+ * `originHost` (nesledujeme jinam mimo web firmy) a jen bezpečné URL.
+ */
+function extractContactLikeLinks(html: string, baseUrl: string, originHost: string): string[] {
+  const links: string[] = [];
+  const re = /<a\b[^>]*href\s*=\s*["']([^"'#][^"']*)["'][^>]*>([\s\S]*?)<\/a>/gi;
+  let m: RegExpExecArray | null;
+  while ((m = re.exec(html))) {
+    const hrefRaw = m[1];
+    const text = m[2].replace(/<[^>]*>/g, " ").toLowerCase();
+    const hrefLower = hrefRaw.toLowerCase();
+    const matchesKeyword = CONTACT_LINK_KEYWORDS.some((k) => hrefLower.includes(k) || text.includes(k));
+    if (!matchesKeyword) continue;
+
+    let absolute: string;
+    try {
+      absolute = new URL(hrefRaw, baseUrl).toString();
+    } catch {
+      continue;
+    }
+    if (!isSafePublicUrl(absolute)) continue;
+
+    let host: string;
+    try {
+      host = new URL(absolute).hostname.toLowerCase();
+    } catch {
+      continue;
+    }
+    if (!isSameCompanyDomain(host, originHost)) continue; // zůstat jen na webu firmy
+
+    links.push(absolute);
+  }
+  return Array.from(new Set(links));
 }
 
 /** Přečte tělo odpovědi jako text, s obranným limitem velikosti (MAX_SOURCE_BODY_BYTES). */
@@ -226,27 +332,14 @@ async function readBodyWithLimit(res: Response): Promise<string> {
 }
 
 /**
- * Stáhne `sourceUrl` a ověří, že `email` je skutečně obsažen na stránce.
- *
- * Redirecty se NENECHÁVAJÍ řešit automaticky (`redirect: "follow"` by mohlo
- * skončit na jiné, neověřené adrese) — řeší se ručně (`redirect: "manual"`),
- * max `MAX_REDIRECTS` hopů, a KAŽDÁ cílová redirect URL se znovu projde přes
- * `isSafePublicUrl` (SSRF ochrana i pro místo, kam redirect skutečně vede).
- * Pokud redirect vede na nebezpečnou/neplatnou URL, vrací se
- * `invalid_email_source_url`.
- *
- * Porovnání e-mailu je case-insensitive a tolerantní k HTML entitám i
- * mezerám kolem `@`/`.` (viz `buildEmailSearchVariants`), ale e-mail se
- * nikdy nehádá — musí být skutečně nalezen v obsahu stažené stránky.
+ * Bezpečně stáhne jednu stránku. Redirecty se řeší RUČNĚ (`redirect: "manual"`),
+ * max `MAX_REDIRECTS` hopů, každý cíl znovu ověřen přes `isSafePublicUrl`.
+ * Vrací `null` při jakémkoli selhání (timeout, síť, nebezpečná/neplatná URL,
+ * non-2xx odpověď, vyčerpaný limit redirectů).
  */
-async function verifyEmailOnSourcePage(
-  email: string,
-  sourceUrl: string,
-): Promise<SourceVerificationResult> {
-  let currentUrl = sourceUrl;
-  if (!isSafePublicUrl(currentUrl)) {
-    return { ok: false, reason: "invalid_email_source_url" };
-  }
+async function fetchSafePage(url: string): Promise<{ finalUrl: string; html: string } | null> {
+  let currentUrl = url;
+  if (!isSafePublicUrl(currentUrl)) return null;
 
   for (let hop = 0; hop <= MAX_REDIRECTS; hop++) {
     const controller = new AbortController();
@@ -260,45 +353,132 @@ async function verifyEmailOnSourcePage(
         headers: { "User-Agent": "OneMilSalesLeadVerifier/1.0" },
       });
     } catch {
-      // Fetch selhal (timeout, DNS, síť, …) → lead se neuloží.
-      return { ok: false, reason: "email_not_found_on_source_page" };
+      return null;
     } finally {
       clearTimeout(timer);
     }
 
-    // Manuální redirect: fetch vrátí "opaqueredirect" (type) nebo status 3xx
-    // s Location headerem — v obou případech je nutné cíl znovu ověřit.
     const isRedirectStatus = res.status >= 300 && res.status < 400;
     if (res.type === "opaqueredirect" || isRedirectStatus) {
       const location = res.headers.get("location");
-      if (!location) return { ok: false, reason: "invalid_email_source_url" };
+      if (!location) return null;
       let nextUrl: string;
       try {
         nextUrl = new URL(location, currentUrl).toString();
       } catch {
-        return { ok: false, reason: "invalid_email_source_url" };
+        return null;
       }
-      if (!isSafePublicUrl(nextUrl)) {
-        return { ok: false, reason: "invalid_email_source_url" };
-      }
-      if (hop === MAX_REDIRECTS) {
-        return { ok: false, reason: "invalid_email_source_url" };
-      }
+      if (!isSafePublicUrl(nextUrl)) return null;
+      if (hop === MAX_REDIRECTS) return null;
       currentUrl = nextUrl;
       continue;
     }
 
-    if (!res.ok) return { ok: false, reason: "email_not_found_on_source_page" };
-
+    if (!res.ok) return null;
     const html = await readBodyWithLimit(res);
-    const variants = buildEmailSearchVariants(html);
-    if (pageContainsEmail(variants, email)) {
-      return { ok: true };
-    }
-    return { ok: false, reason: "email_not_found_on_source_page" };
+    return { finalUrl: currentUrl, html };
   }
 
-  return { ok: false, reason: "invalid_email_source_url" };
+  return null;
+}
+
+type CrawlResult =
+  | { found: true; email: string; sourceUrl: string }
+  | { found: false };
+
+/**
+ * Fáze 5E — systém SÁM dohledá veřejný e-mail firmy procházením jejího webu.
+ *
+ * `website` MUSÍ být platná, bezpečná, již normalizovaná URL firemního webu
+ * (viz `normalizeCompanyWebsite` — volající zajistí, že sem nikdy nepřijde
+ * prázdná hodnota ani cizí doména). Je to JEDINÝ zdroj pravdy pro to, čí web
+ * se prochází — nikdy se nenahrazuje AI navrženou URL.
+ *
+ * `aiHintEmail` a `aiSourceUrl` jsou POUZE nápověda z AI návrhu. `aiSourceUrl`
+ * se prochází jako kandidátní stránka JEN pokud je bezpečná A na STEJNÉ
+ * doméně jako `website` (přesně stejný host, nebo jen rozdíl v `www.`
+ * prefixu) — jinak se úplně ignoruje (nikdy se neprochází cizí doména,
+ * katalog ani sociální síť jako "zdroj firmy"). Bez ohledu na to se vždy
+ * prochází i samotná homepage a z ní nalezené kontakt/about odkazy (max
+ * `MAX_PAGES_PER_COMPANY` stránek celkem).
+ *
+ * Použije se JEN e-mail skutečně nalezený v `mailto:` odkazu nebo textu
+ * některé stažené stránky. AI navržený e-mail se preferuje jen pokud se
+ * shoduje s takto skutečně nalezeným — jinak se uloží první jiný nalezený.
+ */
+async function crawlCompanyWebsite(
+  website: string,
+  aiHintEmail: string,
+  aiSourceUrl: string,
+): Promise<CrawlResult> {
+  if (!website || !isSafePublicUrl(website)) return { found: false };
+
+  let originHost: string;
+  try {
+    originHost = new URL(website).hostname.toLowerCase();
+  } catch {
+    return { found: false };
+  }
+
+  const seen = new Set<string>();
+  const queue: string[] = [];
+  const pushUnique = (u: string) => {
+    if (!seen.has(u)) {
+      seen.add(u);
+      queue.push(u);
+    }
+  };
+
+  // AI nápověda (email_source_url) se prochází JEN na stejné doméně jako
+  // firemní web — jinak by šlo o "výmluvu" na cizí katalog/soc. síť.
+  if (aiSourceUrl && aiSourceUrl !== website && isSafePublicUrl(aiSourceUrl)) {
+    let hintHost = "";
+    try {
+      hintHost = new URL(aiSourceUrl).hostname.toLowerCase();
+    } catch {
+      hintHost = "";
+    }
+    if (hintHost && isSameCompanyDomain(hintHost, originHost)) {
+      pushUnique(aiSourceUrl);
+    }
+  }
+  pushUnique(website);
+
+  const foundEmails = new Map<string, string>(); // email → stránka, kde byl nalezen
+  let pagesFetched = 0;
+
+  while (queue.length > 0 && pagesFetched < MAX_PAGES_PER_COMPANY) {
+    const url = queue.shift()!;
+    const page = await fetchSafePage(url);
+    pagesFetched++;
+    if (!page) continue;
+
+    const mailtoEmails = extractMailtoEmails(page.html);
+    const variants = buildEmailSearchVariants(page.html);
+    const textEmails = extractTextEmails(variants);
+    for (const email of [...mailtoEmails, ...textEmails]) {
+      if (!foundEmails.has(email)) foundEmails.set(email, page.finalUrl);
+    }
+    if (foundEmails.size > 0) break;
+
+    // Kandidátní kontakt/about odkazy hledáme jen na skutečné homepage webu
+    // firmy (ne na AI-navržené zdrojové URL, která už sama může být kontakt
+    // stránka).
+    if (url === website) {
+      const links = extractContactLikeLinks(page.html, page.finalUrl, originHost);
+      for (const link of links) {
+        if (pagesFetched + queue.length < MAX_PAGES_PER_COMPANY) pushUnique(link);
+      }
+    }
+  }
+
+  if (foundEmails.size === 0) return { found: false };
+
+  if (aiHintEmail && foundEmails.has(aiHintEmail)) {
+    return { found: true, email: aiHintEmail, sourceUrl: foundEmails.get(aiHintEmail)! };
+  }
+  const first = foundEmails.entries().next().value as [string, string];
+  return { found: true, email: first[0], sourceUrl: first[1] };
 }
 
 serve(async (req: Request) => {
@@ -391,15 +571,12 @@ serve(async (req: Request) => {
     // Nikdy víc než limit (a strop).
     companies = companies.slice(0, limit);
 
-    // ── 4. Uložení návrhů — POUZE firmy s veřejně dohledaným e-mailem ────────
-    // Firma bez platného veřejného e-mailu + zdrojové URL se PŘESKOČÍ dřív,
-    // než se vůbec zavolá RPC — žádný lead pro ni nevznikne. Firma s e-mailem
-    // se uloží přes ATOMICKOU RPC sales_lead_propose_with_contact, která
-    // vytvoří lead i navržený e-mail v JEDNOM INSERTu (nemůže nastat stav
-    // „lead existuje, ale bez navrženého e-mailu").
+    // ── 4. Uložení návrhů — POUZE firmy, u kterých SYSTÉM sám dohledá
+    // veřejný e-mail na jejich webu. AI e-mail/URL jsou jen nápověda.
     let created = 0;
     let skipped = 0;
     let skippedMissingEmail = 0;
+    let skippedEmailNotFoundOnWebsite = 0;
     let errored = 0;
     const details: { company: string; outcome: string; reason?: string }[] = [];
 
@@ -407,27 +584,31 @@ serve(async (req: Request) => {
       const name = typeof c.company_name === "string" ? c.company_name.trim() : "";
       if (!name) { errored++; continue; }
 
-      // ── Bariéra: bez veřejného e-mailu + zdroje se lead vůbec nevytvoří ──
-      // (i tak ji ověří ještě jednou uvnitř RPC — obranná kontrola navíc.)
-      const email = typeof c.email === "string" ? c.email.trim().toLowerCase() : "";
-      const emailSourceUrl = typeof c.email_source_url === "string" ? c.email_source_url.trim() : "";
-      const emailValid = email.length > 0 && EMAIL_RE.test(email);
-      if (!emailValid || emailSourceUrl.length === 0 || c.email_confidence === "low") {
+      const websiteRaw = typeof c.website === "string" ? c.website.trim() : "";
+      const website = websiteRaw ? normalizeCompanyWebsite(websiteRaw) : null;
+      const aiEmailRaw = typeof c.email === "string" ? c.email.trim().toLowerCase() : "";
+      const aiHintEmail = EMAIL_RE.test(aiEmailRaw) ? aiEmailRaw : "";
+      const aiSourceUrlRaw = typeof c.email_source_url === "string" ? c.email_source_url.trim() : "";
+      const aiSourceUrl = aiSourceUrlRaw ? (normalizeCompanyWebsite(aiSourceUrlRaw) ?? "") : "";
+
+      // Firma BEZ platného webu se přeskočí — AI navržená email_source_url
+      // NIKDY nenahrazuje chybějící firemní web (nesmí to být "výmluva" na
+      // cizí doménu/katalog/sociální síť).
+      if (!website) {
         skipped++;
         skippedMissingEmail++;
         details.push({ company: name, outcome: "skipped", reason: "missing_public_email" });
         continue;
       }
 
-      // ── Fáze 5D: AI TVRZENÍ nestačí — sami stáhneme zdrojovou stránku a
-      // ověříme, že navržený e-mail v jejím obsahu skutečně je. Bez tohoto
-      // kroku by AI mohla uvést URL, na které e-mail vůbec není. ──────────
-      // Poznámka: neprošlé ověření se nezapočítává do skippedMissingEmail —
-      // e-mail sice byl navržen, ale neprošel ověřením obsahu stránky.
-      const verification = await verifyEmailOnSourcePage(email, emailSourceUrl);
-      if (!verification.ok) {
+      // ── Fáze 5E: AI e-mail/URL jsou jen nápověda — systém sám prochází
+      // homepage + kontakt/about odkazy + mailto odkazy VÝHRADNĚ na webu
+      // firmy a použije jen e-mail, který tam SKUTEČNĚ našel. ────────────
+      const crawl = await crawlCompanyWebsite(website, aiHintEmail, aiSourceUrl);
+      if (!crawl.found) {
         skipped++;
-        details.push({ company: name, outcome: "skipped", reason: verification.reason });
+        skippedEmailNotFoundOnWebsite++;
+        details.push({ company: name, outcome: "skipped", reason: "email_not_found_on_company_website" });
         continue;
       }
 
@@ -439,15 +620,15 @@ serve(async (req: Request) => {
         p_company_name: name,
         p_lead_group: leadGroup,
         p_discovery_source: "ai_navrh",
-        p_email: email,
-        p_email_source_url: emailSourceUrl,
+        p_email: crawl.email,
+        p_email_source_url: crawl.sourceUrl,
         p_discovery_meta: {
           model: AI_MODEL,
           rationale: typeof c.rationale === "string" ? c.rationale : null,
           run_at: new Date().toISOString(),
           run_by: caller.id,
         },
-        p_website: typeof c.website === "string" ? c.website : null,
+        p_website: website || null,
         p_ico: typeof c.ico === "string" ? c.ico : null,
         p_city: typeof c.city === "string" ? c.city : null,
         p_industry: typeof c.industry === "string" ? c.industry : null,
@@ -479,6 +660,7 @@ serve(async (req: Request) => {
       created,
       skipped,
       skipped_missing_email: skippedMissingEmail,
+      skipped_email_not_found_on_website: skippedEmailNotFoundOnWebsite,
       errored,
       details,
     });
