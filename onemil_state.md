@@ -1,5 +1,26 @@
 ﻿# OneMil – aktuální stav projektu
 
+## MODUL OBCHOD / LEADY — FÁZE 5B ZPROVOZNĚNA NA PRODUKCI (05. 07. 2026, schválení Pavla)
+
+Migrace `20260704150000_sales_leads_phase5b_contact_enrichment.sql` aplikována na **produkci
+`xkzhjldrojjlrkezorey`** přes `apply_migration` (`{"success": true}`); EF
+`sales-lead-enrich-contact` nasazená na produkci, **v1 ACTIVE** (`verify_jwt=false`, autorizace
+řešená uvnitř funkce přes JWT + `has_admin_permission('sales_leads.manage')`).
+
+- **Ověření bezpečnosti (produkce):** sloupce `proposed_contact_email`/`proposed_contact_source_url`/
+  `proposed_contact_at`/`proposed_contact_by`/`proposed_contact_status` existují;
+  `sales_lead_propose_contact` (EXECUTE jen `service_role`, anon/authenticated bez EXECUTE);
+  `sales_lead_review_contact` (EXECUTE `authenticated`, guard `sales_leads.manage`, `anon` bez
+  EXECUTE); EF bez auth headeru → `401 missing_authorization_header`; EF nikde neodkazuje na
+  `email_queue` ani Resend.
+- **Produkční data nezměněna:** počet leadů zůstal beze změny — 6 celkem, 5 ve stavu `navrzeny`
+  (precheck = postcheck). **Žádný produkční testovací lead nebyl vytvořen; enrichment test na
+  produkci nebyl spuštěn; žádný e-mail nebyl odeslán.**
+- **Staging `dxmowysntemfqfnanxua` nebyl touto akcí dotčen.** Lovable Publish neproběhl;
+  wallets/payments/contests/tickets/winners/Stripe/`buy_ticket_atomic` nedotčeny.
+- **`OPENAI_API_KEY` na produkci nešlo programově ověřit** přes dostupné nástroje (MCP nečte
+  hodnoty secrets); hodnota nebyla nikam vypsaná.
+
 ## MODUL OBCHOD / LEADY — FÁZE 5B ZPROVOZNĚNA POUZE NA STAGINGU (05. 07. 2026, schválení Pavla)
 
 PR #185 mergnut do `main` (merge commit `b542d5cbce47bbc9c609ec9217a83bddb111f67c`). Migrace
