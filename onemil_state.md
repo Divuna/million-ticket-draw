@@ -1,5 +1,28 @@
 ﻿# OneMil – aktuální stav projektu
 
+## MODUL OBCHOD / LEADY — FÁZE 5B ZPROVOZNĚNA POUZE NA STAGINGU (05. 07. 2026, schválení Pavla)
+
+PR #185 mergnut do `main` (merge commit `b542d5cbce47bbc9c609ec9217a83bddb111f67c`). Migrace
+`20260704150000_sales_leads_phase5b_contact_enrichment.sql` aplikována na **staging
+`dxmowysntemfqfnanxua`** přes `apply_migration` (`{"success": true}`); EF
+`sales-lead-enrich-contact` nasazená na stagingu, **v1 ACTIVE** (`verify_jwt=false`).
+
+- **Ověření bezpečnosti:** sloupce `proposed_contact_email`/`proposed_contact_source_url`/
+  `proposed_contact_at`/`proposed_contact_by`/`proposed_contact_status` existují;
+  `sales_lead_propose_contact` (SECURITY DEFINER; anon/authenticated bez EXECUTE, jen
+  `service_role`); `sales_lead_review_contact` (SECURITY DEFINER; `authenticated` EXECUTE +
+  guard `sales_leads.manage`, `anon` bez EXECUTE); EF bez auth headeru → `401`; EF nikde
+  neodkazuje na `email_queue` ani Resend (statická kontrola zdroje).
+- **Funkční test (STAGING ONLY):** test lead z Fáze 5A `2fc9a556-3780-40dc-953f-d2899ddd0481`
+  — `sales_lead_propose_contact` uložil návrh. Postcheck: `status` zůstal `navrzeny`,
+  `contact_email=null`, `email_verified_by_admin=false`, `proposed_contact_email` a
+  `proposed_contact_source_url` uloženy, `proposed_contact_status='neovereny'`, aktivita
+  `contact_proposed` zapsaná. **Žádný e-mail nebyl odeslán.**
+- **Schválení e-mailu (`sales_lead_review_contact` approve) nebylo testováno** — nebyl k
+  dispozici admin JWT (test bez JWT kontextu ověřil jen guard: `access_denied`, žádná mutace).
+- **Produkce `xkzhjldrojjlrkezorey` nedotčena; Lovable Publish neproběhl;**
+  wallets/payments/contests/tickets/winners/Stripe/`buy_ticket_atomic` nedotčeny.
+
 ## MODUL OBCHOD / LEADY — FÁZE 5B PŘIPRAVENA JEN JAKO PR (05. 07. 2026, neaplikováno/nenasazeno)
 
 Bezpečné dohledání kontaktu u navržených leadů. **Vše jen jako soubory ve větvi
