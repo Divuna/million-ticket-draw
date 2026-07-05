@@ -1,5 +1,35 @@
 ﻿# OneMil – aktuální stav projektu
 
+## MODUL OBCHOD / LEADY — FÁZE 6 ZPROVOZNĚNA POUZE NA STAGINGU (06. 07. 2026, schválení Pavla)
+
+PR #197 mergnut do `main` (merge commit `087a84785b3cc77a30c95da84bb85268d2a59b9a`). Aplikováno
+POUZE na **staging `dxmowysntemfqfnanxua`**. Produkce `xkzhjldrojjlrkezorey` NEDOTČENA, Lovable
+Publish neproběhl.
+
+- **Migrace:** `20260705100000_sales_leads_phase6_delete_rpc.sql` aplikována na staging přes
+  `apply_migration` — `{"success": true}`.
+- **RPC ověřeny:** `sales_lead_delete(uuid)` a `sales_lead_delete_bulk(uuid[])` existují; obě
+  `SECURITY DEFINER`; `anon_exec=false`; `authenticated_exec=true`.
+- **EF `sales-lead-discover` nasazena na staging jako v5 ACTIVE.** Bez auth headeru → `401
+  missing_authorization_header`.
+- **Test discovery bez e-mailu (`sales_lead_propose`):** lead vznikl se `status='navrzeny'`,
+  `contact_email=NULL`, `email_verified_by_admin=false`, bez `proposed_contact_email`.
+- **Test discovery s nalezeným e-mailem (`sales_lead_propose_with_contact`):** lead vznikl
+  s `proposed_contact_email` vyplněným, `proposed_contact_status='neovereny'`, `contact_email`
+  stále `NULL`.
+- **Test jednotlivého mazání:** test lead `TEST OneMil Sales Lead F6 DELETE STAGING ONLY`
+  (+ 1 activity + 1 status-history řádek) smazán přes `sales_lead_delete` — po smazání 0 řádků
+  v `sales_leads`, `sales_lead_activities` i `sales_lead_status_history` (cascade z Fáze 1
+  fungovala beze změny).
+- **Test hromadného mazání:** 2 test leady `TEST OneMil Sales Lead F6 BULK STAGING ONLY A/B`
+  smazány přes `sales_lead_delete_bulk` — `deleted_count=2`, oba id v `deleted_ids`, 0 zbývajících.
+- **Úklid:** všechny F6 test leady (vč. leadů z discovery testů) byly po ověření smazány přes
+  stejné F6 delete RPC — na stagingu nezůstal žádný testovací lead Fáze 6.
+- **Žádný e-mail nebyl odeslán.** `email_queue` za dobu testu zůstala 0.
+- **Produkce `xkzhjldrojjlrkezorey` nebyla dotčena** (žádný SQL/migrace/EF deploy na produkci);
+  Lovable Publish neproběhl; wallets/payments/contests/tickets/winners/Stripe/`buy_ticket_atomic`
+  nedotčeny.
+
 ## MODUL OBCHOD / LEADY — FÁZE 6 PŘIPRAVENA JEN JAKO SOUBORY V PR (06. 07. 2026, neaplikováno/nenasazeno)
 
 Cíl: discovery nemá zahazovat firmy jen proto, že nenašlo e-mail — má vždy uložit použitelné
