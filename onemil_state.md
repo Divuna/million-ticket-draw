@@ -1,5 +1,25 @@
 ﻿# OneMil – aktuální stav projektu
 
+## MODUL OBCHOD / LEADY — FÁZE 6 JE LIVE NA PRODUKCI (06. 07. 2026, schválení Pavla)
+
+Fáze 6 (discovery vždy uloží použitelnou firmu + bezpečné mazání leadů) je nasazená na
+**produkci `xkzhjldrojjlrkezorey`**. Nasazení proběhlo po předchozím ověření na stagingu
+`dxmowysntemfqfnanxua` (viz sekce níže).
+
+- **Migrace:** `20260705100000_sales_leads_phase6_delete_rpc.sql` aplikována na produkci přes
+  `apply_migration` — `{"success": true}`.
+- **RPC ověřeny na produkci:** `sales_lead_delete(uuid)` a `sales_lead_delete_bulk(uuid[])`
+  existují; obě `SECURITY DEFINER`; `anon_exec=false`; `authenticated_exec=true`.
+- **EF `sales-lead-discover` nasazena na produkci jako v5 ACTIVE** (v4 byla Fáze 5E). Bez auth
+  headeru → `401 missing_authorization_header`.
+- **Produkční počet leadů beze změny: 15 před → 15 po.** Žádný produkční testovací lead
+  nevznikl.
+- **Žádný discovery test na produkci nebyl spuštěn** (jen 401-boundary smoke bez JWT). Žádný
+  e-mail nebyl odeslán.
+- **Lovable Publish neproběhl.**
+- Nedotčeno: wallets, payments, contests, tickets, winners, Stripe, `buy_ticket_atomic`,
+  `email_queue`/`process-email-queue`.
+
 ## MODUL OBCHOD / LEADY — FÁZE 6 ZPROVOZNĚNA POUZE NA STAGINGU (06. 07. 2026, schválení Pavla)
 
 PR #197 mergnut do `main` (merge commit `087a84785b3cc77a30c95da84bb85268d2a59b9a`). Aplikováno
