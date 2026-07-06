@@ -2,8 +2,8 @@
 -- SALES LEADS — Oprava po Fázi 6: propsání „Osloveno" + přesná poslední aktivita
 -- Spec: docs/SALES_LEADS_ADMIN_SPEC.md §18
 -- ============================================================================
--- ⛔ NEAPLIKOVÁNO. Zapsáno pouze jako soubor v repu. Aplikace na staging/
---    produkci vyžaduje výslovné schválení Pavla (přes apply_migration).
+-- Zapsáno jako soubor v repu. Aplikace na staging/produkci vyžaduje výslovné
+-- schválení Pavla (přes apply_migration).
 --
 -- Problém: ruční odeslání e-mailu (Fáze 3C, EF `send-sales-lead-email`) zapisuje
 -- aktivitu `email_sent`, ale NIKDY neposouvá `sales_leads.status` na `osloveno`.
