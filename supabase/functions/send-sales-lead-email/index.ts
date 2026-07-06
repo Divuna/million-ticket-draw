@@ -20,6 +20,12 @@ import { Resend } from "npm:resend@2.0.0";
 // Po úspěšném odeslání zapíše do historie kontaktu activity 'email_sent'
 // se snapshotem předmětu (ne AI). Odesílatel je b2b@onemil.cz.
 //
+// Oprava po Fázi 6 (§18 spec): po zápisu 'email_sent' volá service-role-only
+// RPC `sales_lead_mark_emailed`, která leada ve stavu 'schvaleni_ceka' posune
+// na 'osloveno' (jinak stav beze změny — nikdy nevrací zpět, nikdy nepřeskakuje
+// stavy). Volání je best-effort: pokud selže, úspěšně odeslaný e-mail se
+// NEVRACÍ zpět, jen se nepropíše stav (odesílání zůstává zdrojem pravdy).
+//
 // Auth: JWT → getUser → has_admin_permission('sales_leads.manage').
 // Zápis přes service_role (obchází RLS). Nedotýká se wallets/payments/contests/
 // tickets/winners/Stripe/buy_ticket_atomic.
@@ -157,8 +163,20 @@ serve(async (req: Request) => {
       body_snapshot: textBody,
       email_message_id: (emailResponse.data as { id?: string } | null)?.id ?? null,
       performed_by: caller.id,
-      metadata: { sent_by: "human", from: REPLY_TO },
+      metadata: { sent_by: "human", from: REPLY_TO, to: recipient },
     });
+
+    // ── 7. Best-effort propsání stavu (§18 spec) ─────────────────────────────
+    // E-mail byl už úspěšně odeslán a zapsán — pokud tento krok selže,
+    // odpověď zůstává success:true, jen se nepropíše stav leadu.
+    try {
+      await supabaseAdmin.rpc("sales_lead_mark_emailed", {
+        p_lead_id: leadId,
+        p_performed_by: caller.id,
+      });
+    } catch {
+      // best-effort — neblokuje úspěšné odeslání e-mailu
+    }
 
     return jsonResponse({ success: true, lead_id: leadId, sent_to: recipient });
   } catch (_err) {
