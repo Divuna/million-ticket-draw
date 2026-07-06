@@ -725,3 +725,74 @@ Fáze 4 využívá stávající pole a přidává:
 F4-UI (záložka Návrhy + schvalování) → F4-Discover (EF, nejdřív ruční
 spuštění, staging-first). Každý krok samostatné schválení Pavla, staging-first,
 produkce až po backupu. **Odeslání e-mailu se nemění — vždy jen člověk.**
+
+## 18. Oprava po Fázi 6 — propsání stavu „Osloveno" + přesná poslední aktivita (06. 07. 2026)
+
+### 18.1 Zjištěný problém (read-only audit)
+Po ruční kontrole produkční administrace `/admin/sales-leads` byly potvrzeny tři nezávislé
+mezery, všechny na frontend/DB write-cestě, žádná nesouvisí s bezpečností ani s Fází 6 samotnou:
+
+1. **EF `send-sales-lead-email` (Fáze 3C) nikdy nepřepíná stav leadu.** Po úspěšném odeslání
+   zapisuje pouze aktivitu `email_sent` (`sales_lead_activities`) — sloupec `sales_leads.status`
+   zůstává beze změny. Horní karta „Osloveno" v `AdminSalesLeads.tsx` počítá
+   `leads.filter(l => ['osloveno','follow_up'].includes(l.status)).length` — pokud admin po
+   odeslání e-mailu ručně nezmění stav v detailu leadu (samostatná akce, oddělená od tlačítka
+   „Odeslat e-mail"), karta zůstává 0, přestože e-maily reálně odešly. Tlačítko „Odeslat e-mail"
+   v `SalesLeadDetailSheet.tsx` je navíc gated jen na `draftSaved && hasContactEmail &&
+   !isDoNotContact` — nevyžaduje, aby lead byl ve stavu `schvaleni_ceka`, takže odeslání a změna
+   stavu jsou dvě zcela oddělené, ničím nesvázané akce.
+2. **Sloupec „Poslední aktivita" v seznamu leadů čte `sales_leads.updated_at`**, který se mění
+   jen při přímém `UPDATE sales_leads` (např. editace polí, `sales_lead_set_status`). Vložení
+   nového řádku do `sales_lead_activities` (odeslání e-mailu, poznámka, AI rešerše…) tento sloupec
+   NEaktualizuje — proto „poslední aktivita" u leadu mohla ukazovat starý časový údaj i těsně po
+   reálné akci.
+3. **Příjem odpovědí od firem není nikde napojen.** Status `odpovedel` a aktivita
+   `reply_received` existují ve schématu `sales_leads`/`sales_lead_activities` od Fáze 1 (CHECK
+   constrainty je povolují), ale v celém repozitáři (`supabase/functions/**`) neexistuje ŽÁDNÝ
+   webhook, cron ani jiný mechanismus, který by příchozí e-mail od firmy zachytil a zapsal.
+   Jediná cesta k `odpovedel` je RUČNÍ — admin musí sám v detailu leadu (`SalesLeadDetailSheet`)
+   změnit stav přes `sales_lead_set_status` poté, co odpověď uvidí ve své e-mailové schránce
+   (`b2b@onemil.cz` — Reply-To nastavený v `send-sales-lead-email`).
+
+**Klasifikace:** bod 1 a 2 = DB + backend chyba (chybějící propojení mezi „odeslání e-mailu" a
+„stav leadu" / „poslední aktivita"), oprava možná bezpečně a bez rizika pro jiné moduly. Bod 3 =
+**chybějící funkcionalita** (žádný inbound e-mail mechanismus nikdy nebyl navržen ani schválen) —
+NEIMPLEMENTOVÁNO v tomto kroku, viz §18.3.
+
+### 18.2 Oprava (soubory, neaplikováno/nenasazeno)
+- **Migrace (nová, neaplikovaná):** přidává trigger `trg_sales_lead_activities_touch_lead`
+  (`AFTER INSERT ON sales_lead_activities` → `UPDATE sales_leads SET updated_at = now()`), takže
+  „Poslední aktivita" v seznamu i detailu vždy odpovídá skutečně poslední aktivitě libovolného
+  typu (e-mail, poznámka, AI rešerše, změna stavu…), ne jen přímé editaci polí. Dále přidává
+  RPC `sales_lead_mark_emailed(p_lead_id uuid, p_performed_by uuid)` — SECURITY DEFINER, EXECUTE
+  jen `service_role` (žádný klient/UI ji nesmí volat přímo): pokud je lead ve stavu
+  `schvaleni_ceka`, posune ho na `osloveno` přesně stejným způsobem jako `sales_lead_set_status`
+  (zápis do `sales_lead_status_history` + aktivita `status_changed`, metadata
+  `{auto:true, trigger:'email_sent'}`); pokud lead už je dál v pipeline nebo v jiném stavu, NIC
+  nemění (žádný návrat zpět, žádné přeskočení stavu, žádná změna `do_not_contact`).
+- **EF `send-sales-lead-email`:** po úspěšném odeslání a zápisu aktivity `email_sent` (beze
+  změny) nově zavolá `sales_lead_mark_emailed` přes service-role klienta — best-effort (pokud by
+  tento krok selhal, úspěšné odeslání e-mailu se NEVRACÍ zpět, jen se nepropíše stav). Aktivita
+  `email_sent` navíc do `metadata` ukládá `to: <příjemce>` (dřív se ukládal jen `sent_by`/`from`)
+  pro přesnou historickou stopu, komu byl e-mail v danou chvíli odeslán.
+- **Frontend `SalesLeadDetailSheet.tsx`:** historie kontaktu nově zobrazuje u položky
+  „E-mail odeslán" i příjemce a předmět (z `metadata.to` a `subject`, které EF již ukládala/nyní
+  ukládá); doplněny chybějící popisky aktivit `reply_received`/`email_failed`/`call_logged`
+  (existovaly v DB CHECK constraintu od Fáze 1, ale v UI se zobrazovaly jako syrový kód).
+- **Beze změny:** žádná úprava přechodových pravidel `sales_lead_set_status`, žádná úprava
+  bezpečnostního modelu, žádný zásah do `wallets`/`payments`/`contests`/`tickets`/`winners`/
+  Stripe/`buy_ticket_atomic`/`email_queue`.
+
+### 18.3 Co chybí a NENÍ řešeno (příjem odpovědí)
+Napojení příchozích odpovědí firem vyžaduje **novou, samostatně schválenou funkcionalitu**, ne
+opravu bugu:
+- Inbound e-mail mechanismus (např. Resend inbound webhook nebo jiná schránka), který by uměl
+  přijatý e-mail spárovat s konkrétním leadem (typicky podle `contact_email` odesílatele nebo
+  `In-Reply-To`/`References` hlaviček na `email_message_id` uloženém u aktivity `email_sent`).
+- Nová Edge Function (public, bez JWT — příchozí webhook), s ověřením podpisu/tokenu od
+  poskytovatele e-mailu, která by zapsala aktivitu `reply_received` a volala
+  `sales_lead_set_status`/obdobnou automatizovanou RPC pro přechod na `odpovedel`.
+- Rozhodnutí o zdroji dat (Resend inbound routing, samostatná schránka, IMAP polling…), GDPR
+  dopad ukládání obsahu příchozích e-mailů, a bezpečnostní model (kdo/co smí zapsat odpověď).
+Do té doby zůstává příjem odpovědí **výhradně ruční** — admin uvidí odpověď ve své schránce
+(`b2b@onemil.cz`) a stav na `odpovedel` musí přepnout sám v detailu leadu.

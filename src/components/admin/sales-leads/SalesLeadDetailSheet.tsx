@@ -61,6 +61,7 @@ interface ActivityRow {
   id: string;
   activity_type: string;
   created_at: string | null;
+  subject: string | null;
   metadata: Record<string, unknown> | null;
 }
 
@@ -88,6 +89,12 @@ const ACTIVITY_LABELS: Record<string, string> = {
   contact_proposed: 'Navržen kontaktní e-mail',
   contact_approved: 'Kontaktní e-mail schválen',
   contact_rejected: 'Návrh kontaktu zamítnut',
+  // Existují v DB CHECK constraintu od Fáze 1; doplněno po auditu §18, aby se
+  // nezobrazoval syrový kód, pokud tyto aktivity vzniknou (reply_received
+  // zatím vzniká jen ručně — automatický příjem odpovědí není napojen).
+  email_failed: 'Odeslání e-mailu selhalo',
+  reply_received: 'Odpověď přijata',
+  call_logged: 'Zaznamenán hovor',
 };
 
 const formatDateTime = (iso: string | null): string => {
@@ -170,7 +177,7 @@ export function SalesLeadDetailSheet({ leadId, open, onOpenChange, onMutated }: 
         (supabase as any).from('sales_leads').select(DETAIL_COLUMNS).eq('id', leadId).single(),
         (supabase as any)
           .from('sales_lead_activities')
-          .select('id, activity_type, created_at, metadata')
+          .select('id, activity_type, created_at, subject, metadata')
           .eq('lead_id', leadId)
           .order('created_at', { ascending: false })
           .limit(50),
@@ -446,6 +453,8 @@ export function SalesLeadDetailSheet({ leadId, open, onOpenChange, onMutated }: 
   const hasContactEmail = !!lead?.contact_email;
   const isDoNotContact = !!lead?.do_not_contact;
   const canSend = draftSaved && hasContactEmail && !isDoNotContact;
+  // activities je řazeno created_at DESC → první email_sent je ten poslední.
+  const lastEmailSent = activities.find((a) => a.activity_type === 'email_sent') ?? null;
 
   const sendEmail = async () => {
     if (!lead) return;
@@ -984,6 +993,14 @@ export function SalesLeadDetailSheet({ leadId, open, onOpenChange, onMutated }: 
                 E-mail odesíláte <strong>vy (člověk)</strong>, ne AI. Odešle se přesně uložený koncept výše na
                 kontaktní e-mail leadu. Neuloží-li se koncept nebo chybí kontaktní e-mail, odeslání je zablokované.
               </p>
+              {lastEmailSent && (
+                <p className="text-[11px] text-muted-foreground">
+                  Poslední e-mail odeslán: <strong className="text-foreground">{formatDateTime(lastEmailSent.created_at)}</strong>
+                  {typeof lastEmailSent.metadata?.to === 'string' ? (
+                    <> na <strong className="text-foreground">{lastEmailSent.metadata?.to as string}</strong></>
+                  ) : null}
+                </p>
+              )}
             </div>
 
             <Separator className="my-4" />
@@ -994,15 +1011,27 @@ export function SalesLeadDetailSheet({ leadId, open, onOpenChange, onMutated }: 
               <p className="text-sm text-muted-foreground">Zatím žádná aktivita.</p>
             ) : (
               <ul className="space-y-2">
-                {activities.map((a) => (
-                  <li key={a.id} className="flex items-start gap-2 text-sm">
-                    <span className="mt-1.5 h-1.5 w-1.5 shrink-0 rounded-full bg-primary/60" aria-hidden />
-                    <div>
-                      <div className="font-medium">{ACTIVITY_LABELS[a.activity_type] ?? a.activity_type}</div>
-                      <div className="text-xs text-muted-foreground">{formatDateTime(a.created_at)}</div>
-                    </div>
-                  </li>
-                ))}
+                {activities.map((a) => {
+                  const recipient = a.activity_type === 'email_sent' && typeof a.metadata?.to === 'string'
+                    ? (a.metadata?.to as string)
+                    : null;
+                  return (
+                    <li key={a.id} className="flex items-start gap-2 text-sm">
+                      <span className="mt-1.5 h-1.5 w-1.5 shrink-0 rounded-full bg-primary/60" aria-hidden />
+                      <div>
+                        <div className="font-medium">{ACTIVITY_LABELS[a.activity_type] ?? a.activity_type}</div>
+                        {a.activity_type === 'email_sent' && (recipient || a.subject) && (
+                          <div className="text-xs text-muted-foreground">
+                            {recipient ? <>Komu: {recipient}</> : null}
+                            {recipient && a.subject ? ' · ' : null}
+                            {a.subject ? <>Předmět: {a.subject}</> : null}
+                          </div>
+                        )}
+                        <div className="text-xs text-muted-foreground">{formatDateTime(a.created_at)}</div>
+                      </div>
+                    </li>
+                  );
+                })}
               </ul>
             )}
           </>
