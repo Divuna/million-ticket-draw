@@ -2,17 +2,20 @@
 
 ## VIZUÁLNÍ SMĚR PRO E-MAILY A OBCHODNÍ ŠABLONY — AKTUALIZOVÁNO (07. 07. 2026)
 
-Aktuální veřejný web OneMil a obchodní e-mailové šablony se mají ladit podle aktuálního vzhledu webu `onemil.cz`, ne podle staré čistě tmavé/zlaté šablony.
+Aktuální veřejný web OneMil používá **světlé premium/champagne provedení**, ne původní tmavou dark-only grafiku.
 
-Pro e-mailové HTML šablony, B2B grafiku a obchodní rozesílky platí:
-- vycházet z aktuálního webu OneMil a brand kitu,
-- zachovat prémiový, důvěryhodný a moderní vzhled,
-- používat Poppins pro nadpisy a Inter pro běžný text,
-- používat oranžovou jako hlavní akcent / CTA (`#FF8A00`, `#FFB547`),
-- nepoužívat casino/hazard/jackpot/žetony/ruletu ani podobný vizuál nebo slovník,
-- nevracet se ke staré e-mailové šabloně, která působila jako samostatný dark-only návrh bez návaznosti na aktuální web.
+Podle aktuálního screenshotu webu platí pro další HTML e-maily, B2B grafiku a obchodní rozesílky:
+- základ je světlé ivory/champagne pozadí, jemné šedobéžové přechody a hodně vzduchu,
+- karty jsou bílé až krémové, s jemným okrajem a měkkým stínem,
+- hlavní akcent je oranžová / amber (`#FF8A00`, `#FFB547`), hlavně pro CTA, nadpisy a aktivní prvky,
+- text je tmavý antracit / šedomodrý, ne čistě bílý na černé,
+- vizuál používá jemné linky, světlý luxusní prostor, MioCoin obrázky a champagne/oranžové detaily,
+- mobilní spodní navigace je světlá, aktivní stav je oranžově orámovaný,
+- header je světlý s logem OneMil vlevo a tlačítky Přihlásit / Registrovat vpravo,
+- kategorie nahoře používají tenké linky a oranžové ikonky,
+- nepoužívat casino/hazard/jackpot/žetony/ruletu ani podobný vizuál nebo slovník.
 
-Poznámka: před tvorbou další HTML e-mailové šablony vždy znovu vizuálně ověřit aktuální web `onemil.cz`, protože web už má nový grafický směr oproti starším dokumentům.
+Důležité pravidlo: další e-mailové HTML šablony se mají vizuálně podobat aktuálnímu světlému webu `onemil.cz`, ne staré tmavé šabloně. Pokud se bude dělat nový e-mail, musí působit jako součást stejného světlého OneMil UI.
 
 ## MODUL OBCHOD / LEADY — OPRAVA PO FÁZI 6 PŘIPRAVENA JEN JAKO SOUBORY V PR (06. 07. 2026, neaplikováno/nenasazeno)
 
