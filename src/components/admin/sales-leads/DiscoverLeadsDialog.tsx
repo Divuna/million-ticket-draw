@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import {
   Dialog,
   DialogContent,
@@ -7,6 +7,7 @@ import {
   DialogDescription,
 } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import {
   Select,
@@ -15,10 +16,10 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { Loader2, Search, Info } from 'lucide-react';
+import { Loader2, Search, Info, Plus } from 'lucide-react';
 import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
-import { LEAD_GROUP_OPTIONS, rpcErrorMessage } from './salesLeadsShared';
+import { LEAD_GROUP_OPTIONS, rpcErrorMessage, type LeadGroupOption } from './salesLeadsShared';
 
 interface Props {
   open: boolean;
@@ -53,13 +54,74 @@ interface DiscoverResult {
 export function DiscoverLeadsDialog({ open, onOpenChange, onSuccess }: Props) {
   const [loading, setLoading] = useState(false);
   const [group, setGroup] = useState('');
+  const [groups, setGroups] = useState<LeadGroupOption[]>(LEAD_GROUP_OPTIONS);
+  const [loadingGroups, setLoadingGroups] = useState(false);
+  const [newGroupLabel, setNewGroupLabel] = useState('');
+  const [addingGroup, setAddingGroup] = useState(false);
   const [limit, setLimit] = useState('5');
   const [result, setResult] = useState<DiscoverResult | null>(null);
 
+  const loadGroups = async () => {
+    setLoadingGroups(true);
+    try {
+      const { data, error } = await (supabase as any)
+        .from('sales_lead_groups')
+        .select('slug, label')
+        .eq('is_active', true)
+        .order('sort_order', { ascending: true })
+        .order('label', { ascending: true });
+      if (error) {
+        setGroups(LEAD_GROUP_OPTIONS);
+        return;
+      }
+      const next = (data ?? [])
+        .map((row: { slug?: string; label?: string }) => ({ value: row.slug ?? '', label: row.label ?? '' }))
+        .filter((row: LeadGroupOption) => row.value && row.label);
+      setGroups(next.length > 0 ? next : LEAD_GROUP_OPTIONS);
+    } catch {
+      setGroups(LEAD_GROUP_OPTIONS);
+    } finally {
+      setLoadingGroups(false);
+    }
+  };
+
+  useEffect(() => {
+    if (open) void loadGroups();
+  }, [open]);
+
   const handleClose = () => {
-    if (!loading) {
+    if (!loading && !addingGroup) {
       setResult(null);
+      setNewGroupLabel('');
       onOpenChange(false);
+    }
+  };
+
+  const addGroup = async () => {
+    const label = newGroupLabel.trim();
+    if (label.length < 2) {
+      toast.error('Zadejte název skupiny.');
+      return;
+    }
+    setAddingGroup(true);
+    try {
+      const { data, error } = await (supabase as any).rpc('sales_lead_group_create', {
+        p_label: label,
+      });
+      if (error) throw new Error(error.message);
+      const res = (data ?? {}) as { success?: boolean; error?: string; slug?: string; label?: string };
+      if (!res.success) {
+        toast.error(rpcErrorMessage(res.error));
+        return;
+      }
+      toast.success(`Skupina „${res.label ?? label}“ byla přidána.`);
+      setNewGroupLabel('');
+      await loadGroups();
+      if (res.slug) setGroup(res.slug);
+    } catch (err: unknown) {
+      toast.error(err instanceof Error ? err.message : 'Skupinu se nepodařilo přidat.');
+    } finally {
+      setAddingGroup(false);
     }
   };
 
@@ -118,14 +180,35 @@ export function DiscoverLeadsDialog({ open, onOpenChange, onSuccess }: Props) {
         <div className="space-y-4 pt-2">
           <div className="space-y-1">
             <Label htmlFor="disc-group">Skupina firem</Label>
-            <Select value={group} onValueChange={setGroup} disabled={loading}>
-              <SelectTrigger id="disc-group"><SelectValue placeholder="Vyberte skupinu" /></SelectTrigger>
+            <Select value={group} onValueChange={setGroup} disabled={loading || loadingGroups}>
+              <SelectTrigger id="disc-group"><SelectValue placeholder={loadingGroups ? 'Načítám skupiny…' : 'Vyberte skupinu'} /></SelectTrigger>
               <SelectContent>
-                {LEAD_GROUP_OPTIONS.map((o) => (
+                {groups.map((o) => (
                   <SelectItem key={o.value} value={o.value}>{o.label}</SelectItem>
                 ))}
               </SelectContent>
             </Select>
+          </div>
+
+          <div className="rounded-lg border border-border/60 p-3 space-y-2">
+            <Label htmlFor="disc-new-group" className="text-xs text-muted-foreground">
+              Přidat vlastní skupinu pro další hledání
+            </Label>
+            <div className="flex gap-2">
+              <Input
+                id="disc-new-group"
+                value={newGroupLabel}
+                onChange={(e) => setNewGroupLabel(e.target.value)}
+                placeholder="Např. Reklamní agentury"
+                disabled={loading || addingGroup}
+              />
+              <Button type="button" variant="outline" onClick={addGroup} disabled={loading || addingGroup || !newGroupLabel.trim()}>
+                {addingGroup ? <Loader2 className="h-4 w-4 animate-spin" /> : <Plus className="h-4 w-4" />}
+              </Button>
+            </div>
+            <p className="text-[11px] text-muted-foreground">
+              Skupina se uloží do číselníku a zůstane dostupná pro další hledání.
+            </p>
           </div>
 
           <div className="space-y-1">
@@ -172,10 +255,10 @@ export function DiscoverLeadsDialog({ open, onOpenChange, onSuccess }: Props) {
           )}
 
           <div className="flex justify-end gap-3 pt-1">
-            <Button type="button" variant="outline" onClick={handleClose} disabled={loading}>
+            <Button type="button" variant="outline" onClick={handleClose} disabled={loading || addingGroup}>
               {result ? 'Zavřít' : 'Zrušit'}
             </Button>
-            <Button onClick={run} disabled={loading || !group} className="gap-2" data-testid="sl-discover-run">
+            <Button onClick={run} disabled={loading || addingGroup || !group} className="gap-2" data-testid="sl-discover-run">
               {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Search className="h-4 w-4" />}
               Najít nové firmy
             </Button>
