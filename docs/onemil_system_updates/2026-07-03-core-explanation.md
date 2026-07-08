@@ -1,6 +1,6 @@
 # Schválená aktualizace: Celkové vysvětlení OneMil
 
-Tento text je schválená nová verze sekce `## 3. Jednoduché vysvětlení OneMil` pro soubor `ONEMIL_SYSTEM_KNOWLEDGE_BASE.md`.
+Tento text je schválená nová verze sekce `## 3. Jednoduché vysvětlení OneMil` pro soubor `POPIS_ONEMIL.md`.
 
 ---
 
