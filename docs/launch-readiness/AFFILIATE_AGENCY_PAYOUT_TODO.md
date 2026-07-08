@@ -47,6 +47,216 @@ Nejdřív vytvořit konkrétní návrh, který Pavel schválí. Návrh musí odp
    - nepoužívat formulace, že výplaty už ostré běží,
    - používat pouze bezpečnou formulaci: „připravujeme provizní model / první partnerskou vlnu / technické zázemí je připravené, ostré výplaty budou po schválení pravidel“.
 
+## TODO: Úprava affiliate / provizní části OneMil
+
+Současný affiliate systém se nemá rušit ani odebírat.
+
+Cílem je pouze doplnit a zpřehlednit provizní část tak, aby byla jasná pro influencery, UGC partnery, běžné doporučující lidi, firmy, agentury a obchodníky.
+
+### 1. Přepracovat registraci affiliate / provizního účtu
+
+Současná stránka „Registrace Affiliate partnera“ je příliš zaměřená na influencery.
+
+Obsahuje pole jako Instagram, TikTok, YouTube, Facebook, velikost publika a kategorie obsahu, což nedává smysl pro firmu, agenturu ani obchodníka.
+
+Registrace se musí nejdřív zeptat, jaký typ účtu chce člověk nebo firma založit:
+
+1. **Influencer účet**  
+   Pro ty, kteří chtějí doporučovat OneMil hráčům / soutěžícím.
+
+2. **Firemní účet**  
+   Pro ty, kteří chtějí přivádět nebo zakládat firemní spolupráce.
+
+#### Influencer účet — registrace
+
+Influencer účet slouží pro ty, kteří přivádějí hráče / soutěžící do OneMil.
+
+Formulář může obsahovat:
+
+- jméno / název / přezdívku,
+- e-mail,
+- telefon,
+- hlavní kanál / web / profil,
+- Instagram,
+- TikTok,
+- YouTube,
+- Facebook,
+- velikost publika / dosah,
+- kategorie obsahu,
+- heslo.
+
+V dalším kroku se pouze eviduje typ:
+
+- influencer,
+- UGC partner,
+- běžný doporučující člověk.
+
+Všichni mají stejné prostředí. Rozlišení slouží hlavně pro marketing, komunikaci a další práci s nimi.
+
+#### Firemní účet — registrace
+
+Firemní účet slouží pro ty, kteří přivádějí nebo zakládají firemní spolupráce v OneMil.
+
+Formulář nemá vyžadovat influencer údaje jako Instagram, TikTok, YouTube, velikost publika nebo kategorii obsahu.
+
+Formulář má obsahovat hlavně:
+
+- název firmy / agentury / obchodníka,
+- e-mail,
+- telefon,
+- web,
+- IČO, pokud existuje,
+- typ účtu: firma / agentura / obchodník,
+- heslo.
+
+Všichni mají stejné prostředí. Rozlišení slouží hlavně pro obchodní řízení, marketing a vyhodnocení spolupráce.
+
+### 2. Rozdělit affiliate / provizní část na dvě větve
+
+Affiliate / provizní část má mít dvě hlavní větve:
+
+1. Influencer účet
+2. Firemní účet
+
+Nejde o rušení současného systému. Jde o přehlednější rozdělení toho, kdo co v systému dělá.
+
+### 3. Influencer účet
+
+Influencer účet je pro lidi, kteří přivádějí hráče / soutěžící do OneMil.
+
+Patří sem:
+
+- influencer,
+- UGC partner,
+- běžný člověk, který chce doporučovat OneMil.
+
+Všichni v této větvi mají stejné prostředí.
+
+Rozlišení influencer / UGC partner / běžný doporučující člověk se eviduje hlavně kvůli marketingu, komunikaci a dalšímu řízení spolupráce.
+
+Influencer účet má zobrazovat hlavně:
+
+- doporučovací kód / odkaz,
+- přivedené hráče / soutěžící,
+- provize z dobíjení těchto hráčů,
+- výplatní profil.
+
+Princip:
+
+Influencer / UGC partner / doporučující člověk přivede hráče nebo soutěžícího do OneMil.
+
+Tento hráč se registruje, používá aplikaci a později si může dobíjet MioCoiny.
+
+Z dobíjení tohoto hráče vzniká provize pro influencer účet.
+
+### 4. Firemní účet
+
+Firemní účet je pro ty, kteří přivádějí nebo zakládají firemní spolupráce v OneMil.
+
+Patří sem:
+
+- firma,
+- agentura,
+- obchodník.
+
+Všichni v této větvi mají stejné prostředí.
+
+Rozlišení firma / agentura / obchodník se eviduje hlavně kvůli obchodnímu řízení, marketingu a vyhodnocení spolupráce.
+
+Firemní účet má zobrazovat hlavně:
+
+- založené / přivedené firmy,
+- provize z fakturace firem,
+- provize z dobíjení zákazníků firem,
+- nastavení příjemců provizí,
+- výplatní profil.
+
+### 5. Pravidlo pro firemní účet
+
+Kdo firemní spolupráci založí nebo přivede, ten nastavuje provize u této firmy.
+
+Příklad:
+
+- když firmu přivede agentura, nastavuje provize agentura,
+- když firmu přivede obchodník, nastavuje provize obchodník,
+- když se firma založí sama, nastavuje si provize firma.
+
+### 6. Dvě provizní větve u každé firmy
+
+U každé založené nebo přivedené firmy musí být možné nastavit dva samostatné příjemce provize:
+
+1. příjemce provize z fakturace firmy vůči OneMil,
+2. příjemce provize z dobíjení zákazníků této firmy.
+
+Provize z fakturace firmy znamená provizi z toho, co firma platí OneMil.
+
+Provize z dobíjení zákazníků firmy znamená provizi z toho, když si zákazníci této firmy později sami dobíjejí MioCoiny.
+
+Každá z těchto dvou provizí má vždy jen jednoho příjemce.
+
+Provize se nikdy nedělí mezi více výplatních účtů.
+
+### 7. Možní příjemci provize u firmy
+
+Příjemcem provize může být:
+
+- firma,
+- agentura,
+- obchodník,
+- konkrétní člověk z firmy,
+- jiný schválený příjemce,
+- nikdo.
+
+U každé provizní větve se vždy vybere pouze jeden příjemce.
+
+Příklad:
+
+- provize z fakturace firmy → agentura,
+- provize z dobíjení zákazníků firmy → člověk z firmy.
+
+Nebo:
+
+- provize z fakturace firmy → obchodník,
+- provize z dobíjení zákazníků firmy → firma.
+
+Nebo:
+
+- provize z fakturace firmy → firma,
+- provize z dobíjení zákazníků firmy → firma.
+
+### 8. Výplatní profil
+
+Každý příjemce provize musí mít vlastní výplatní profil.
+
+Výplatní profil se nemusí řešit hned v prvním registračním formuláři.
+
+Může být doplněný později v nastavení účtu nebo před první výplatou.
+
+Výplatní profil má obsahovat:
+
+- jméno / název příjemce,
+- e-mail,
+- číslo účtu,
+- banku,
+- IČO / DIČ, pokud jde o firmu nebo podnikatele,
+- informaci, zda je příjemce plátce DPH.
+
+Bez schváleného výplatního profilu se provize nesmí připravit k výplatě.
+
+### 9. Admin schválení
+
+Před výplatou musí být provize schválená adminem.
+
+Admin musí vidět:
+
+- komu provize patří,
+- z čeho provize vznikla,
+- za jaké období vznikla,
+- na jaký výplatní profil se má vyplatit,
+- jestli jde o provizi z dobíjení hráčů,
+- jestli jde o provizi z fakturace firmy,
+- nebo jestli jde o provizi z dobíjení zákazníků firmy.
+
 ## Bezpečnostní pravidlo
 
 Dokud Pavel neschválí konkrétní návrh affiliate provizí pro agentury, nesmí se:
@@ -57,3 +267,9 @@ Dokud Pavel neschválí konkrétní návrh affiliate provizí pro agentury, nesm
 - měnit pravidla výplat.
 
 Jakákoli změna týkající se provizí, výplat, peněz, fakturace nebo produkční databáze vyžaduje výslovné Pavlovo schválení.
+
+Bez výslovného schválení Pavla se také nesmí:
+
+- rušit současný affiliate systém,
+- odebírat existující affiliate funkce,
+- dělit jednu provizi mezi více výplatních účtů.
