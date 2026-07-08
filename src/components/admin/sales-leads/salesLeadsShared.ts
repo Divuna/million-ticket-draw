@@ -65,8 +65,13 @@ export const INDUSTRY_OPTIONS: { value: string; label: string }[] = [
   { value: 'jine', label: 'Jiné' },
 ];
 
-/** Marketingové skupiny leadů (§17.2). Musí odpovídat CHECK constraintu v DB. */
-export const LEAD_GROUP_OPTIONS: { value: string; label: string }[] = [
+export type LeadGroupOption = { value: string; label: string };
+
+/**
+ * Fallback pro prostředí, kde ještě není aplikovaná tabulka sales_lead_groups.
+ * Primární zdroj má být DB číselník, aby si admin mohl přidávat vlastní skupiny.
+ */
+export const LEAD_GROUP_OPTIONS: LeadGroupOption[] = [
   { value: 'e-shopy', label: 'E-shopy' },
   { value: 'auto-moto', label: 'Auto / moto' },
   { value: 'luxusni-zbozi', label: 'Luxusní zboží' },
@@ -207,6 +212,8 @@ export const RPC_ERROR_MESSAGES: Record<string, string> = {
   company_name_required: 'Název firmy je povinný.',
   duplicate: 'Firma s tímto e-mailem, IČO nebo doménou už v evidenci existuje.',
   invalid_input: 'Neplatný vstup (zkontrolujte IČO — 8 číslic, a web — musí začínat https://).',
+  invalid_label: 'Název skupiny není platný.',
+  invalid_lead_group: 'Vybraná skupina firem není platná nebo je vypnutá.',
   lead_not_found: 'Lead nebyl nalezen.',
   status_unchanged: 'Stav se nezměnil.',
   transition_not_allowed: 'Tento přechod stavu není povolen.',
@@ -218,21 +225,12 @@ export const RPC_ERROR_MESSAGES: Record<string, string> = {
   forbidden_wording_detected: 'Návrh obsahoval nepovolené výrazy a nebyl uložen.',
   // Fáze 3C — odeslání konceptu člověkem.
   email_not_configured: 'Odesílání e-mailů zatím není v tomto prostředí nakonfigurované.',
-  no_draft: 'Lead nemá uložený návrh e-mailu — nejdřív připravte a uložte koncept.',
-  missing_contact_email: 'Lead nemá vyplněný kontaktní e-mail.',
-  do_not_contact: 'Lead je označený „Nekontaktovat" — e-mail nelze odeslat.',
-  suppressed: 'Tento e-mail / doména je na seznamu „Nekontaktovat".',
-  email_send_failed: 'Odeslání e-mailu se nezdařilo, zkuste to znovu.',
-  // Fáze 5A — automatické vyhledávání firem.
-  invalid_lead_group: 'Vyberte platnou skupinu firem.',
-  // Fáze 5B — dohledání / schválení kontaktu.
-  invalid_email: 'Navržený e-mail nemá platný formát.',
-  source_url_required: 'Chybí zdrojová URL, odkud byl e-mail nalezen.',
-  no_pending_contact: 'Lead nemá neověřený návrh e-mailu ke schválení.',
-  invalid_decision: 'Neplatné rozhodnutí.',
-  propose_failed: 'Uložení návrhu kontaktu se nezdařilo.',
-  ai_bad_response: 'AI vrátila neočekávaný formát, zkuste to znovu.',
+  missing_contact_email: 'Chybí ověřený e-mail kontaktu.',
+  draft_missing: 'Chybí připravený koncept e-mailu.',
+  email_send_failed: 'E-mail se nepodařilo odeslat.',
 };
 
-export const rpcErrorMessage = (code: string | undefined): string =>
-  (code && RPC_ERROR_MESSAGES[code]) || 'Operace se nezdařila.';
+export function rpcErrorMessage(code: string | undefined): string {
+  if (!code) return 'Akce se nepodařila.';
+  return RPC_ERROR_MESSAGES[code] ?? code;
+}
