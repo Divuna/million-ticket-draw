@@ -257,6 +257,16 @@ Admin musí vidět:
 - jestli jde o provizi z fakturace firmy,
 - nebo jestli jde o provizi z dobíjení zákazníků firmy.
 
+### 10. Ochrana proti převzetí firmy
+
+Při založení nebo přivedení firmy přes Firemní účet musí systém ověřit, zda už firma není evidovaná podle e-mailu, IČO nebo existujícího partner účtu.
+
+Pokud firma už existuje nebo má aktivní lead, nesmí ji jiný Firemní účet znovu založit ani převzít.
+
+Pokud už má firma přiřazeného affiliate / provizního vlastníka, nesmí se automaticky přepsat na jiný účet.
+
+Duplicitní nebo sporné případy musí řešit admin.
+
 ## Bezpečnostní pravidlo
 
 Dokud Pavel neschválí konkrétní návrh affiliate provizí pro agentury, nesmí se:
