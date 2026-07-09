@@ -12,6 +12,12 @@ verify_jwt = false
 [functions.send-sales-lead-email]
 verify_jwt = false
 
+# Příjem PŘÍCHOZÍCH odpovědí firem (reply+LEAD_ID@reply.onemil.cz). Autorizace =
+# ověření podpisu webhooku (SALES_LEAD_INBOUND_WEBHOOK_SECRET) uvnitř funkce.
+# Nikdy neodesílá e-mail; jen zapíše `reply_received` a posune stav na `odpovedel`.
+[functions.sales-lead-inbound]
+verify_jwt = false
+
 # Fáze 5A — automatické NAVRŽENÍ firem (jen `navrzeny`, nikdy odeslání e-mailu).
 [functions.sales-lead-discover]
 verify_jwt = false

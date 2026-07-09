@@ -38,7 +38,11 @@ const corsHeaders = {
 };
 
 const FROM_ADDRESS = "OneMil <b2b@onemil.cz>";
+// Fallback reply-to (odesílatelská schránka). Reálné odpovědi směrujeme na
+// per-lead adresu `reply+<lead_id>@reply.onemil.cz` (viz REPLY_INBOUND_DOMAIN),
+// aby je EF `sales-lead-inbound` deterministicky spárovala s leadem.
 const REPLY_TO = "b2b@onemil.cz";
+const REPLY_INBOUND_DOMAIN = "reply.onemil.cz";
 
 function jsonResponse(body: Record<string, unknown>, status = 200): Response {
   return new Response(JSON.stringify(body), {
@@ -141,11 +145,15 @@ serve(async (req: Request) => {
     const textBody = String(lead.draft_email_body);
     const htmlBody = `<div style="white-space:pre-wrap;font-family:Arial,sans-serif;font-size:14px;line-height:1.5">${escapeHtml(textBody)}</div>`;
 
+    // Per-lead reply-to — odpovědi firmy dorazí na adresu s tokenem leadu,
+    // kterou EF `sales-lead-inbound` deterministicky spáruje s tímto leadem.
+    const replyTo = `reply+${lead.id}@${REPLY_INBOUND_DOMAIN}`;
+
     const resend = new Resend(resendApiKey);
     const emailResponse = await resend.emails.send({
       from: FROM_ADDRESS,
       to: [recipient],
-      reply_to: REPLY_TO,
+      reply_to: replyTo,
       subject,
       text: textBody,
       html: htmlBody,
@@ -163,7 +171,7 @@ serve(async (req: Request) => {
       body_snapshot: textBody,
       email_message_id: (emailResponse.data as { id?: string } | null)?.id ?? null,
       performed_by: caller.id,
-      metadata: { sent_by: "human", from: REPLY_TO, to: recipient },
+      metadata: { sent_by: "human", from: REPLY_TO, reply_to: replyTo, to: recipient },
     });
 
     // ── 7. Best-effort propsání stavu (§18 spec) ─────────────────────────────
