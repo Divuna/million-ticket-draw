@@ -84,3 +84,26 @@ $$;
 
 REVOKE EXECUTE ON FUNCTION public.sales_lead_mark_replied(uuid, uuid) FROM PUBLIC, anon, authenticated;
 GRANT  EXECUTE ON FUNCTION public.sales_lead_mark_replied(uuid, uuid) TO service_role;
+
+-- ── DB-level dedup pro příchozí odpovědi ────────────────────────────────────
+-- EF `sales-lead-inbound` sice dělá pre-insert kontrolu, ale při souběžném retry
+-- téhož webhooku by dvě volání mohla obě projít kontrolou a vložit duplicitní
+-- `reply_received`. Tento PARCIÁLNÍ unikátní index je tvrdá pojistka na úrovni DB.
+--
+-- Bezpečnost / rozsah (záměrně úzký):
+--   • Platí VÝHRADNĚ pro `activity_type = 'reply_received'` — jiné typy aktivit
+--     (email_sent, ai_research, status_changed, note_added, …) NEjsou omezeny;
+--     u nich smí `email_message_id` klidně kolidovat i být duplicitní.
+--   • Platí jen když `email_message_id IS NOT NULL` — inbound bez Message-ID
+--     (fallback) index neomezuje, nikdy nezablokuje legitimní zápis.
+--   • Append-only tabulka `sales_lead_activities` se nijak nemění (žádný sloupec,
+--     žádná data), jen přibývá index.
+--
+-- Nesahá na wallets/payments/contests/tickets/winners/Stripe/`buy_ticket_atomic`/
+-- `email_queue` — týká se jen modulu Obchod / Leady.
+--
+-- Rollback:
+--   DROP INDEX IF EXISTS public.uq_sales_lead_activities_inbound_reply;
+CREATE UNIQUE INDEX IF NOT EXISTS uq_sales_lead_activities_inbound_reply
+  ON public.sales_lead_activities (lead_id, email_message_id)
+  WHERE activity_type = 'reply_received' AND email_message_id IS NOT NULL;

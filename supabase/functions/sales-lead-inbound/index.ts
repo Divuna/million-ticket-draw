@@ -211,7 +211,14 @@ serve(async (req: Request) => {
     performed_by: null,
     metadata: { from: fromAddr, to: `reply+${leadId}@reply.onemil.cz` },
   });
-  if (insertErr) return jsonResponse({ success: false, error: "activity_insert_failed" }, 500);
+  if (insertErr) {
+    // Souběžný retry téhož webhooku → DB-level unikátní index (Postgres 23505).
+    // Aktivita už existuje z paralelního volání → není to chyba, jen duplicita.
+    if (insertErr.code === "23505") {
+      return jsonResponse({ success: true, duplicate: true, lead_id: leadId });
+    }
+    return jsonResponse({ success: false, error: "activity_insert_failed" }, 500);
+  }
 
   // ── 6. Best-effort posun stavu na `odpovedel` ────────────────────────────
   // Odpověď je už zapsaná — pokud posun stavu selže, přijetí NEVRACÍME zpět.
