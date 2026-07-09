@@ -796,3 +796,22 @@ opravu bugu:
   dopad ukládání obsahu příchozích e-mailů, a bezpečnostní model (kdo/co smí zapsat odpověď).
 Do té doby zůstává příjem odpovědí **výhradně ruční** — admin uvidí odpověď ve své schránce
 (`b2b@onemil.cz`) a stav na `odpovedel` musí přepnout sám v detailu leadu.
+
+### 18.4 Oprava po PR #200 — mark_emailed posune do „Osloveno" i z raných stavů (06. 07. 2026)
+Po nasazení §18.2 (PR #200) se na produkci ukázalo, že oprava byla příliš úzká. Tlačítko
+„Odeslat e-mail" v detailu leadu **není vázané na stav `schvaleni_ceka`** — člověk může odeslat
+uložený koncept i u leadu ve stavu `novy` nebo `priprava` (stačí koncept + kontaktní e-mail,
+lead není `do_not_contact`). Původní `sales_lead_mark_emailed` ale posouvala do `osloveno`
+POUZE lead ve stavu `schvaleni_ceka`. Reálně odeslaný produkční lead `ICONIC POINT` (ve stavu
+`novy`) tak zůstal `novy` — měl aktivitu `email_sent`, ale horní karta „Osloveno" (počítá
+`status IN ('osloveno','follow_up')`) ho nezapočítala.
+
+**Oprava (nová migrace, neaplikovaná):** `sales_lead_mark_emailed` posune lead na `osloveno`
+z **kteréhokoli raného stavu první oslovovací fáze** — `novy`, `priprava`, `schvaleni_ceka`.
+Pokud je lead už dál v pipeline (`osloveno`/`follow_up`/`odpovedel`/`jednani`/`konvertovan`)
+nebo v jiném/blokovaném stavu (`navrzeny`/`odmitl`/`nekontaktovat`/`archivovan`), **NEDĚLÁ nic**
+— nikdy nevrací lead zpět ani nepřeskakuje stavy. Zachovává zápis do
+`sales_lead_status_history` i aktivitu `status_changed` (metadata `{auto:true,
+trigger:'email_sent'}`). Grant zůstává `service_role`-only. Trigger
+`trg_sales_lead_activities_touch_lead` i EF `send-sales-lead-email` (která RPC volá best-effort
+po odeslání) beze změny — rozšiřuje se jen množina zdrojových stavů uvnitř RPC.
