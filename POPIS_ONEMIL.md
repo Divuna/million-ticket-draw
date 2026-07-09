@@ -31,7 +31,7 @@ Každý AI asistent, který pracuje na OneMil, má před důležitým úkolem na
 
 Doporučené pořadí čtení:
 
-1. `ONEMIL_SYSTEM_KNOWLEDGE_BASE.md` — celkový přehled systému.
+1. `POPIS_ONEMIL.md` — celkový přehled systému.
 2. `onemil_state.md` — aktuální stav a otevřené věci.
 3. `CLAUDE.md` — pracovní pravidla a bezpečnostní omezení.
 4. `ONEMIL_BUSINESS_CONTEXT.md` — detailní obchodní model.
@@ -45,7 +45,7 @@ OneMil je česká prémiová odměnová a soutěžní platforma.
 
 Firmám a e-shopům umožňuje odměňovat zákazníky MioCoiny, kupony, vouchery a speciálními nabídkami. Zákazník tyto odměny použije v aplikaci OneMil na soutěže, vouchery nebo další výhody.
 
-Pro zákazníka je OneMil aplikace, kde může získat a používat MioCoiny, zapojovat se do soutěží o prémiové věcné ceny, využívat vouchery a přijímat nabídky od partnerů.
+Pro zákazníka je OneMil aplikace, kde může získat a používat MioCoiny, zapojovat se do soutěží o prémiové ceny, využívat vouchery a přijímat nabídky od partnerů.
 
 Pro partnera je OneMil marketingový a věrnostní systém, který pomáhá motivovat zákazníky k nákupu, návratu, registraci a další aktivitě.
 
@@ -357,6 +357,93 @@ Smysl:
 - provize se počítají podle schváleného modelu,
 - payouty mají mít auditní stopu,
 - obchodníci nemají mít možnost měnit systémová data mimo svůj rozsah.
+
+---
+
+## 19A. Provizní model: influenceři, firmy a agentury
+
+OneMil používá jeden společný provizní systém pro influencery, UGC partnery, obchodníky, reklamní agentury, firmy a schválené osoby z firem.
+
+Každý příjemce provize má vlastní výplatní profil. Výplatní profil obsahuje název příjemce, e-mail, číslo účtu, banku a případně IČO, DIČ a informaci, zda je příjemce plátce DPH.
+
+Provize se vždy vyplácí konkrétnímu schválenému příjemci, ne pouze obecně firmě nebo agentuře.
+
+### Influencer / UGC partner
+
+Influencer nebo UGC partner má vlastní kód nebo odkaz.
+
+Když se přes tento kód zaregistruje zákazník a později si v OneMil dobije MioCoiny, provize z tohoto dobíjení připadá influencerovi nebo UGC partnerovi podle nastavení jeho účtu.
+
+Influencer vidí pouze svoje přivedené uživatele, svůj kód, svoje provize a svůj výplatní profil.
+
+Možnosti pro přivádění firem vidí pouze tehdy, pokud má schválený režim pro přivádění firem.
+
+### Firma / partner
+
+Firma má vlastní partner účet oddělený od agentury, influencera i běžného zákazníka.
+
+Ve svém partner účtu si firma nastavuje, kolik MioCoinů dává zákazníkům za nákup, návštěvu, registraci nebo jinou akci.
+
+Když zákazník přijde přes e-mail, kód nebo odměnu dané firmy, systém ho přiřadí ke konkrétní firmě.
+
+Pokud si tento zákazník později dobije MioCoiny, může z jeho dobíjení vznikat zákaznická provize firmy.
+
+Příjemcem této zákaznické provize může být:
+
+- samotná firma,
+- agentura, která firmu přivedla,
+- konkrétní člověk z firmy,
+- jiný schválený příjemce,
+- nikdo.
+
+### Agentura / obchodník
+
+Agentura nebo obchodník může do OneMil přivádět firmy.
+
+Firma přivedená agenturou má vždy vlastní samostatný partner účet. Agentura nemá automaticky přístup do účtu firmy.
+
+Agentura může získat přístup ke správě partner účtu firmy pouze tehdy, pokud jí firma tento přístup výslovně povolí.
+
+U každé firmy jsou samostatně nastavené dvě provizní větve:
+
+1. provize z fakturace firmy,
+2. provize z dobíjení zákazníků této firmy.
+
+Provize z fakturace firmy vzniká z placených faktur firmy vůči OneMil. Typicky připadá agentuře nebo obchodníkovi, který firmu přivedl.
+
+Provize z dobíjení zákazníků firmy vzniká z budoucích dobití MioCoinů zákazníků, kteří přišli přes e-mail, kód nebo odměnu této firmy.
+
+Příjemce provize z dobíjení zákazníků firmy může být nastaven samostatně. Může to být agentura, samotná firma, konkrétní člověk z firmy, jiný schválený příjemce nebo nikdo.
+
+### Přístupy a viditelnost
+
+Každý typ účtu vidí pouze možnosti odpovídající jeho spolupráci.
+
+Běžný zákazník vidí pouze zákaznickou část OneMil.
+
+Influencer vidí svůj kód, přivedené uživatele, provize z dobíjení a výplatní profil.
+
+Firma vidí svůj partner účet, nastavení MioCoin odměn, aktivace zákazníků, fakturaci a svoje schválené provizní nastavení.
+
+Agentura vidí firmy, které přivedla, svoje provize a pouze ty partner účty firem, ke kterým jí firma výslovně povolila přístup.
+
+Admin vidí celý provizní, partnerský a zákaznický systém.
+
+### Výplaty
+
+Provize se evidují v jednom společném provizním systému.
+
+Provize mohou vznikat z:
+
+- dobíjení zákazníků přivedených influencerem nebo UGC partnerem,
+- dobíjení zákazníků přivedených přes firmu,
+- fakturace firem přivedených agenturou nebo obchodníkem.
+
+Před výplatou musí být provize schválena.
+
+Schválené provize se seskupují podle výplatního profilu příjemce. Systém z nich připraví výplatní dávku a bankovní příkaz.
+
+Po zaplacení se provize označí jako zaplacené.
 
 ---
 

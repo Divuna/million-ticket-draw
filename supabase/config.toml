@@ -1,5 +1,26 @@
 project_id = "xkzhjldrojjlrkezorey"
 
+# Sales Leads (modul Obchod / Leady) — auth řeší funkce interně přes JWT +
+# has_admin_permission('sales_leads.manage'). research/draft-email NEODESÍLAJÍ
+# e-maily; send-sales-lead-email odesílá uložený koncept jen na lidský klik.
+[functions.sales-lead-research]
+verify_jwt = false
+
+[functions.sales-lead-draft-email]
+verify_jwt = false
+
+[functions.send-sales-lead-email]
+verify_jwt = false
+
+# Fáze 5A — automatické NAVRŽENÍ firem (jen `navrzeny`, nikdy odeslání e-mailu).
+[functions.sales-lead-discover]
+verify_jwt = false
+
+# Fáze 5B — dohledání VEŘEJNÉHO kontaktu jako NEOVĚŘENÝ návrh (nikdy nepřepíše
+# odesílací contact_email; NIKDY neodesílá e-mail). AI e-mail nevymýšlí.
+[functions.sales-lead-enrich-contact]
+verify_jwt = false
+
 [functions.sofinity-player-sync]
 verify_jwt = true
 

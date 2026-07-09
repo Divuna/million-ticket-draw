@@ -40,6 +40,7 @@ const NAV_PERMISSION_BY_PATH: Record<string, string> = {
   "/admin/content": "content.manage",
   "/admin/banners": "banners.manage",
   "/admin/notifications": "notifications.manage",
+  "/admin/sales-leads": "sales_leads.manage",
 };
 
 /** Non-superadmin: an item is visible only if it maps to a permission they hold. */
