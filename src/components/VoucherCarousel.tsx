@@ -1,50 +1,16 @@
-import React, { useState, useEffect } from 'react';
+import React from 'react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
+import { useHomepageVouchers } from '@/hooks/useHomepageVouchers';
 import { toast } from 'sonner';
 import './ContestCard.css';
 
-interface Voucher {
-  id: string;
-  name: string;
-  image_url: string | null;
-  banner_url: string | null;
-  max_quantity: number | null;
-  redeemed_count: number;
-  start_date: string | null;
-  end_date: string | null;
-  created_at: string;
-}
-
 export const VoucherCarousel: React.FC = () => {
   const { user } = useAuth();
-  const [vouchers, setVouchers] = useState<Voucher[]>([]);
-  const [loading, setLoading] = useState(true);
-
-  useEffect(() => {
-    fetchVouchers();
-  }, []);
-
-  const fetchVouchers = async () => {
-    try {
-      setLoading(true);
-      const { data, error } = await supabase
-        .from('vouchers')
-        .select('id, name, image_url, banner_url, max_quantity, redeemed_count, start_date, end_date, created_at')
-        .order('created_at', { ascending: false });
-
-      if (error) throw error;
-      setVouchers(data || []);
-    } catch (error: any) {
-      console.error('Error fetching vouchers:', error);
-      toast.error('Chyba při načítání voucherů');
-    } finally {
-      setLoading(false);
-    }
-  };
+  const { vouchers: availableVouchers, loading, getRemainingCount, isVoucherAvailable, refetch } = useHomepageVouchers();
 
   const redeemVoucher = async (voucherId: string) => {
     if (!user) return;
@@ -67,39 +33,12 @@ export const VoucherCarousel: React.FC = () => {
       }
 
       toast.success('Voucher byl úspěšně uplatněn!');
-      fetchVouchers();
-    } catch (error: any) {
+      refetch();
+    } catch (error: unknown) {
       console.error('Error redeeming voucher:', error);
       toast.error('Chyba při uplatnění voucheru');
     }
   };
-
-  const getRemainingCount = (voucher: Voucher) => {
-    if (!voucher.max_quantity) return 'Neomezeně';
-    const remaining = voucher.max_quantity - voucher.redeemed_count;
-    return remaining > 0 ? remaining : 0;
-  };
-
-  const isVoucherAvailable = (voucher: Voucher) => {
-    const now = new Date();
-    const startDate = voucher.start_date ? new Date(voucher.start_date) : null;
-    const endDate = voucher.end_date ? new Date(voucher.end_date) : null;
-    
-    // Check date validity
-    if (startDate && now < startDate) return false;
-    if (endDate && now > endDate) return false;
-    
-    // Check quantity availability
-    if (voucher.max_quantity && voucher.redeemed_count >= voucher.max_quantity) return false;
-    
-    return true;
-  };
-
-  // Filter vouchers: show unlimited vouchers always, limited ones only if available
-  const availableVouchers = vouchers.filter(voucher => {
-    if (!voucher.max_quantity) return true; // Unlimited vouchers always shown
-    return voucher.redeemed_count < voucher.max_quantity; // Limited vouchers only if remaining
-  });
 
   if (loading) {
     return (
@@ -121,7 +60,7 @@ export const VoucherCarousel: React.FC = () => {
   return (
     <div className="space-y-6">
       <h2 className="text-3xl font-bold hero-title text-center">Vaše Vouchery</h2>
-      
+
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 px-4">
         {availableVouchers.map((voucher) => (
           <div key={voucher.id}>
