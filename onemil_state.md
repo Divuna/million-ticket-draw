@@ -1,5 +1,30 @@
 # OneMil – aktuální stav projektu
 
+## MODUL OBCHOD / LEADY — INBOUND OPRAVEN NA RESEND RECEIVING API (10. 07. 2026)
+
+Původní návrh (`reply.onemil.cz` + vlastní MX) je **nahrazen**: používáme **bezplatnou Resend
+receiving doménu `ulduuzoul.resend.app`**, placenou custom doménu nechceme. Důsledek: **žádný DNS/MX
+zásah** — kořenové `onemil.cz` i schránka `b2b@onemil.cz` v Active24 zůstávají nedotčené.
+
+- `send-sales-lead-email`: `reply_to = reply+<lead_id>@ulduuzoul.resend.app` (`from` dál `b2b@onemil.cz`).
+- Webhook `email.received` nese **jen metadata, ne tělo**. `sales-lead-inbound` proto z `data.email_id`
+  načte celý e-mail přes `resend.emails.receiving.get()` a uloží `text` (fallback `html`), subject,
+  odesílatele a `message_id`. SDK povýšeno na `npm:resend@6.17.2` (`2.0.0` receiving nemá).
+- Lead ID se dál čte z adresy příjemce `reply+<uuid>@ulduuzoul.resend.app`.
+- Dedup se vyhodnocuje **před** voláním Resendu (replay webhooku nestojí API request); tvrdá pojistka
+  zůstává unikátní index `uq_sales_lead_activities_inbound_reply`.
+- Ověření podpisu webhooku (Svix) i posun na `odpovedel` beze změny. Funkce nikdy neodesílá e-mail.
+- **Oddělené Resend klíče (least privilege, neslučovat):**
+  - `RESEND_API_KEY` = `sending_access` — čtou ho jen odesílací funkce
+    (`send-sales-lead-email`, `process-email-queue`, `send-partner-invoice-email`, `send-support-email`).
+  - `RESEND_RECEIVING_API_KEY` = `full_access` — čte ho **jen** `sales-lead-inbound`.
+  Důvod: `GET /emails/receiving/{id}` je read operace; `sending_access` klíč ji neumí
+  („can only send emails"). Na stagingu to shodilo webhook na **502** ve třech Svix retry,
+  aniž by vznikla jakákoli aktivita nebo duplicita.
+- Při selhání Receiving API vrací funkce interní kód `receiving_api_access_failed` (502) a bezpečně
+  zaloguje jen `lead_id`, `email_id`, `resend_error_name`, `resend_error_message`, `resend_status_code`.
+  **Nikdy neloguje API klíč, hlavičky ani obsah e-mailu.** Chybí-li secret → `receiving_api_not_configured` (503).
+
 ## MODUL OBCHOD / LEADY — AUTOMATICKÉ PŘÍCHOZÍ ODPOVĚDI (PR, neaplikováno/nenasazeno) (09. 07. 2026)
 
 Karta „Odpovědělo" se dosud nezvedala sama, protože příjem odpovědí od firem nebyl nikde napojen
