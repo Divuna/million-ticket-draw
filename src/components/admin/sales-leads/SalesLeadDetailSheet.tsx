@@ -68,6 +68,8 @@ interface ActivityRow {
   subject: string | null;
   /** Plný snapshot těla e-mailu. Zobrazuje se zkráceně, v DB se NIKDY neořezává. */
   body_snapshot: string | null;
+  /** U `reply_received`: NULL = nepřečteno, vyplněno = přečteno. */
+  read_at: string | null;
   metadata: Record<string, unknown> | null;
 }
 
@@ -153,6 +155,8 @@ const EmailActivityItem = ({
   const [showQuoted, setShowQuoted] = useState(false);
 
   const isInbound = activity.direction === 'inbound';
+  // Nepřečtená příchozí odpověď — zvýrazní se a označí štítkem „Nové".
+  const isUnread = activity.activity_type === 'reply_received' && !activity.read_at;
   const counterparty =
     (isInbound ? activity.metadata?.from : activity.metadata?.to) ?? null;
 
@@ -165,7 +169,9 @@ const EmailActivityItem = ({
     <li className="flex">
       <div
         className={
-          isInbound
+          isUnread
+            ? 'w-full rounded-lg border-2 border-destructive/60 bg-destructive/5 p-3'
+            : isInbound
             ? 'w-full rounded-lg border border-primary/30 bg-primary/5 p-3'
             : 'w-full rounded-lg border border-border bg-muted/30 p-3'
         }
@@ -183,6 +189,11 @@ const EmailActivityItem = ({
           >
             {isInbound ? 'Příchozí' : 'Odchozí'}
           </span>
+          {isUnread && (
+            <span className="rounded-full bg-destructive px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-destructive-foreground">
+              Nové
+            </span>
+          )}
         </div>
 
         {typeof counterparty === 'string' && counterparty.length > 0 && (
@@ -371,7 +382,7 @@ export function SalesLeadDetailSheet({ leadId, open, onOpenChange, onMutated }: 
         (supabase as any).from('sales_leads').select(DETAIL_COLUMNS).eq('id', leadId).single(),
         (supabase as any)
           .from('sales_lead_activities')
-          .select('id, activity_type, direction, created_at, subject, body_snapshot, metadata')
+          .select('id, activity_type, direction, created_at, subject, body_snapshot, read_at, metadata')
           .eq('lead_id', leadId)
           .order('created_at', { ascending: false })
           .limit(50),
@@ -395,6 +406,24 @@ export function SalesLeadDetailSheet({ leadId, open, onOpenChange, onMutated }: 
     }
   }, [leadId]);
 
+  // Po otevření detailu označí nepřečtené odpovědi jako přečtené. Záměrně
+  // NEnačítá znovu aktivity — zvýraznění „Nové" tak zůstane vidět v otevřeném
+  // detailu, ale globální počet (nav badge, karta, seznam) klesne ihned.
+  // Nikdy nemění stav leadu (`jednani`/`odpovedel` beze změny).
+  const markRepliesRead = useCallback(async () => {
+    if (!leadId) return;
+    try {
+      const { data } = await (supabase as any).rpc('sales_lead_mark_replies_read', { p_lead_id: leadId });
+      const res = (data ?? {}) as { success?: boolean; marked_count?: number };
+      if (res.success && (res.marked_count ?? 0) > 0) {
+        window.dispatchEvent(new Event('sales-leads-unread-changed'));
+        onMutated();
+      }
+    } catch {
+      // best-effort — zvýraznění zůstává, upozornění se aktualizuje při dalším načtení
+    }
+  }, [leadId, onMutated]);
+
   useEffect(() => {
     if (open && leadId) {
       setEditing(false);
@@ -403,9 +432,12 @@ export function SalesLeadDetailSheet({ leadId, open, onOpenChange, onMutated }: 
       setDuplicateConflicts([]);
       setOverrideReason('');
       setReplyToActivity(null);
-      load();
+      void (async () => {
+        await load();
+        await markRepliesRead();
+      })();
     }
-  }, [open, leadId, load]);
+  }, [open, leadId, load, markRepliesRead]);
 
   const startEdit = () => {
     if (lead) {
