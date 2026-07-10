@@ -47,7 +47,9 @@ import {
   isReasonRequired,
   rpcErrorMessage,
   type SalesLeadDetail,
+  type DuplicateConflict,
 } from './salesLeadsShared';
+import { DuplicateConflictAlert } from './DuplicateConflictAlert';
 
 interface Props {
   leadId: string | null;
@@ -87,7 +89,7 @@ const ACTIVITY_LABELS: Record<string, string> = {
   email_sent: 'E-mail odeslán',
   status_changed: 'Změna stavu',
   do_not_contact_set: 'Označeno „Nekontaktovat"',
-  converted: 'Konvertován na partnera',
+  converted: 'Spolupráce potvrzena',
   note_added: 'Přidána poznámka',
   lead_discovered: 'Firma automaticky navržena',
   contact_proposed: 'Navržen kontaktní e-mail',
@@ -101,6 +103,7 @@ const ACTIVITY_LABELS: Record<string, string> = {
   // se v historii nikdy nezobrazil syrový kód, kdyby takový řádek vznikl.
   email_failed: 'Odeslání e-mailu selhalo',
   call_logged: 'Zaznamenán hovor',
+  duplicate_override_confirmed: 'Potvrzena výjimka duplicity',
 };
 
 /** Typy aktivit, které představují e-mailovou zprávu (mají směr, předmět a tělo). */
@@ -136,7 +139,7 @@ const formatDateTime = (iso: string | null): string => {
  * Odchozí (`outbound`) a příchozí (`inbound`) se liší barvou i orientací.
  * Dlouhý text i citovaná část původního vlákna jsou sbalené.
  */
-const EmailActivityItem = ({ activity }: { activity: ActivityRow }) => {
+const EmailActivityItem = ({ activity, onReply }: { activity: ActivityRow; onReply?: (activity: ActivityRow) => void }) => {
   const [showFullBody, setShowFullBody] = useState(false);
   const [showQuoted, setShowQuoted] = useState(false);
 
@@ -216,6 +219,11 @@ const EmailActivityItem = ({ activity }: { activity: ActivityRow }) => {
         )}
 
         <div className="mt-1 text-xs text-muted-foreground">{formatDateTime(activity.created_at)}</div>
+        {isInbound && onReply && (
+          <Button type="button" variant="outline" size="sm" className="mt-2" onClick={() => onReply(activity)}>
+            Odpovědět
+          </Button>
+        )}
       </div>
     </li>
   );
@@ -285,6 +293,12 @@ export function SalesLeadDetailSheet({ leadId, open, onOpenChange, onMutated }: 
   // Dohledání / schválení kontaktu (Fáze 5B).
   const [enrichBusy, setEnrichBusy] = useState(false);
   const [contactReviewBusy, setContactReviewBusy] = useState(false);
+  const [duplicateConflicts, setDuplicateConflicts] = useState<DuplicateConflict[]>([]);
+  const [overrideReason, setOverrideReason] = useState('');
+  const [replyToActivity, setReplyToActivity] = useState<ActivityRow | null>(null);
+  const [replySubject, setReplySubject] = useState('');
+  const [replyBody, setReplyBody] = useState('');
+  const [replySending, setReplySending] = useState(false);
 
   const load = useCallback(async () => {
     if (!leadId) return;
@@ -323,6 +337,9 @@ export function SalesLeadDetailSheet({ leadId, open, onOpenChange, onMutated }: 
       setEditing(false);
       setPendingStatus(null);
       setReason('');
+      setDuplicateConflicts([]);
+      setOverrideReason('');
+      setReplyToActivity(null);
       load();
     }
   }, [open, leadId, load]);
@@ -336,10 +353,21 @@ export function SalesLeadDetailSheet({ leadId, open, onOpenChange, onMutated }: 
 
   const setField =
     (field: keyof EditForm) =>
-    (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) =>
+    (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
+      if (field === 'contact_email') { setDuplicateConflicts([]); setOverrideReason(''); }
       setForm((prev) => (prev ? { ...prev, [field]: e.target.value } : prev));
+    };
 
-  const saveEdit = async () => {
+  const previewDuplicate = async () => {
+    if (!lead || !form?.contact_email.trim().includes('@')) return;
+    const { data } = await (supabase as any).rpc('sales_lead_check_duplicate', {
+      p_contact_email: form.contact_email.trim(), p_exclude_lead_id: lead.id,
+    });
+    const res = (data ?? {}) as { success?: boolean; conflicts?: DuplicateConflict[] };
+    if (res.success) setDuplicateConflicts(res.conflicts ?? []);
+  };
+
+  const saveEdit = async (confirmOverride = false) => {
     if (!lead || !form) return;
     if (!form.company_name.trim()) {
       toast.error('Název firmy je povinný');
@@ -369,15 +397,22 @@ export function SalesLeadDetailSheet({ leadId, open, onOpenChange, onMutated }: 
         p_email_source: form.email_source.trim() || null,
         p_email_verified_by_admin: form.email_verified_by_admin,
         p_notes: form.notes.trim() || null,
+        p_duplicate_override: confirmOverride,
+        p_duplicate_override_reason: confirmOverride ? overrideReason.trim() : null,
       });
       if (error) throw new Error(error.message);
-      const res = (data ?? {}) as { success?: boolean; error?: string };
+      const res = (data ?? {}) as { success?: boolean; error?: string; conflicts?: DuplicateConflict[] };
       if (!res.success) {
+        if (res.error === 'duplicate_conflict' || res.error === 'duplicate_override_reason_required') {
+          setDuplicateConflicts(res.conflicts ?? []);
+        }
         toast.error(rpcErrorMessage(res.error));
         return;
       }
       toast.success('Údaje uloženy');
       setEditing(false);
+      setDuplicateConflicts([]);
+      setOverrideReason('');
       await load();
       onMutated();
     } catch (err: unknown) {
@@ -386,6 +421,42 @@ export function SalesLeadDetailSheet({ leadId, open, onOpenChange, onMutated }: 
     } finally {
       setSaving(false);
     }
+  };
+
+  const confirmEditOverride = async () => {
+    if (overrideReason.trim().length < 3) {
+      toast.error('Uveďte důvod výjimky alespoň 3 znaky.');
+      return;
+    }
+    await saveEdit(true);
+  };
+
+  const startReply = (activity: ActivityRow) => {
+    setReplyToActivity(activity);
+    setReplySubject(activity.subject?.toLowerCase().startsWith('re:') ? activity.subject : `Re: ${activity.subject ?? ''}`);
+    setReplyBody('');
+  };
+
+  const sendReply = async () => {
+    if (!lead || !replyToActivity || !replySubject.trim() || !replyBody.trim()) {
+      toast.error('Vyplňte předmět i text odpovědi.');
+      return;
+    }
+    setReplySending(true);
+    try {
+      const { data, error } = await supabase.functions.invoke('send-sales-lead-reply', {
+        body: { lead_id: lead.id, reply_to_activity_id: replyToActivity.id, subject: replySubject.trim(), body: replyBody.trim() },
+      });
+      if (error) throw new Error(error.message);
+      const res = (data ?? {}) as { success?: boolean; error?: string; warning?: string };
+      if (!res.success) { toast.error(rpcErrorMessage(res.error)); return; }
+      if (res.warning) toast.warning(rpcErrorMessage(res.warning));
+      else toast.success('Odpověď byla odeslána.');
+      setReplyToActivity(null); setReplyBody(''); setReplySubject('');
+      await load(); onMutated();
+    } catch (err: unknown) {
+      toast.error(err instanceof Error ? err.message : 'Odpověď se nepodařilo odeslat.');
+    } finally { setReplySending(false); }
   };
 
   const targets = useMemo(
@@ -901,7 +972,8 @@ export function SalesLeadDetailSheet({ leadId, open, onOpenChange, onMutated }: 
                 <div className="grid grid-cols-2 gap-3">
                   <div className="space-y-1">
                     <Label htmlFor="e-contact_email">E-mail</Label>
-                    <Input id="e-contact_email" type="email" value={form.contact_email} onChange={setField('contact_email')} disabled={saving} />
+                    <Input id="e-contact_email" type="email" value={form.contact_email} onChange={setField('contact_email')}
+                      onBlur={previewDuplicate} disabled={saving} />
                   </div>
                   <div className="space-y-1">
                     <Label htmlFor="e-contact_phone">Telefon</Label>
@@ -924,11 +996,14 @@ export function SalesLeadDetailSheet({ leadId, open, onOpenChange, onMutated }: 
                   <Label htmlFor="e-notes">Interní poznámka</Label>
                   <Textarea id="e-notes" value={form.notes} onChange={setField('notes')} rows={3} className="resize-none" disabled={saving} maxLength={2000} />
                 </div>
+                <DuplicateConflictAlert conflicts={duplicateConflicts} reason={overrideReason}
+                  onReasonChange={setOverrideReason} disabled={saving} />
                 <div className="flex justify-end gap-2 pt-1">
                   <Button variant="outline" onClick={() => setEditing(false)} disabled={saving}>Zrušit</Button>
-                  <Button onClick={saveEdit} disabled={saving} className="gap-1.5">
+                  <Button onClick={duplicateConflicts.length > 0 ? confirmEditOverride : () => saveEdit(false)}
+                    variant={duplicateConflicts.length > 0 ? 'destructive' : 'default'} disabled={saving} className="gap-1.5">
                     {saving && <Loader2 className="h-4 w-4 animate-spin" />}
-                    Uložit
+                    {duplicateConflicts.length > 0 ? 'Potvrdit výjimku a pokračovat' : 'Uložit'}
                   </Button>
                 </div>
               </div>
@@ -1131,19 +1206,50 @@ export function SalesLeadDetailSheet({ leadId, open, onOpenChange, onMutated }: 
                 {activities.map((a) =>
                   EMAIL_ACTIVITY_TYPES.has(a.activity_type) ? (
                     // E-mailová zpráva — plné vlákno (odesílatel/příjemce, předmět, text).
-                    <EmailActivityItem key={a.id} activity={a} />
+                    <EmailActivityItem key={a.id} activity={a} onReply={startReply} />
                   ) : (
                     // Systémová aktivita — tenký řádek mezi zprávami.
-                    <li key={a.id} className="flex items-start gap-2 text-sm">
+                    <li key={a.id} className={a.activity_type === 'duplicate_override_confirmed'
+                      ? 'rounded-lg border border-destructive/40 bg-destructive/10 p-3 text-sm'
+                      : 'flex items-start gap-2 text-sm'}>
                       <span className="mt-1.5 h-1.5 w-1.5 shrink-0 rounded-full bg-primary/60" aria-hidden />
                       <div>
                         <div className="font-medium">{ACTIVITY_LABELS[a.activity_type] ?? a.activity_type}</div>
+                        {a.activity_type === 'duplicate_override_confirmed' && (
+                          <div className="mt-1 space-y-1 text-xs">
+                            <div>Důvod: {String(a.metadata?.reason ?? '—')}</div>
+                            {Array.isArray(a.metadata?.conflicts) && (a.metadata?.conflicts as DuplicateConflict[]).map((c) => (
+                              <div key={`${c.lead_id}-${c.match_type}`}>
+                                Původní lead: <strong>{c.company_name}</strong> · {c.contact_email ?? '—'} · první oslovení {formatDateTime(c.first_contacted_at)}
+                              </div>
+                            ))}
+                          </div>
+                        )}
                         <div className="text-xs text-muted-foreground">{formatDateTime(a.created_at)}</div>
                       </div>
                     </li>
                   ),
                 )}
               </ul>
+            )}
+            {replyToActivity && (
+              <div className="mt-4 space-y-3 rounded-lg border border-primary/30 bg-primary/5 p-4">
+                <div className="flex items-center justify-between gap-2">
+                  <div className="font-medium">Odpověď na e-mail z {formatDateTime(replyToActivity.created_at)}</div>
+                  <Button variant="ghost" size="sm" onClick={() => setReplyToActivity(null)} disabled={replySending}>Zrušit</Button>
+                </div>
+                <div className="space-y-1"><Label htmlFor="reply-subject">Předmět</Label>
+                  <Input id="reply-subject" value={replySubject} onChange={(e) => setReplySubject(e.target.value)} disabled={replySending} maxLength={300} />
+                </div>
+                <div className="space-y-1"><Label htmlFor="reply-body">Text odpovědi</Label>
+                  <Textarea id="reply-body" value={replyBody} onChange={(e) => setReplyBody(e.target.value)} disabled={replySending} rows={6} maxLength={20000} />
+                </div>
+                <div className="flex justify-end">
+                  <Button onClick={sendReply} disabled={replySending || !replySubject.trim() || !replyBody.trim()} className="gap-1.5">
+                    {replySending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />} Odeslat odpověď
+                  </Button>
+                </div>
+              </div>
             )}
           </>
         )}

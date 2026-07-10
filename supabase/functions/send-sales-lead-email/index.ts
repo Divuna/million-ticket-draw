@@ -135,6 +135,20 @@ serve(async (req: Request) => {
       return jsonResponse({ success: false, error: "suppressed" }, 403);
     }
 
+    // Autoritativní kontrola duplicit těsně před odesláním. Frontend ji nemůže
+    // obejít: bez auditované výjimky pro všechny aktuální shody se nic neodešle.
+    const { data: duplicateGuard, error: duplicateGuardError } = await supabaseAdmin.rpc(
+      "sales_lead_email_send_guard",
+      { p_lead_id: leadId },
+    );
+    if (duplicateGuardError) {
+      return jsonResponse({ success: false, error: "duplicate_guard_failed" }, 500);
+    }
+    const guard = duplicateGuard as { success?: boolean; error?: string } | null;
+    if (!guard?.success) {
+      return jsonResponse({ success: false, error: guard?.error ?? "duplicate_override_required" }, 409);
+    }
+
     // ── 5. Resend ────────────────────────────────────────────────────────────
     const resendApiKey = Deno.env.get("RESEND_API_KEY");
     if (!resendApiKey) {

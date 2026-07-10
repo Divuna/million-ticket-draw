@@ -61,8 +61,9 @@ const TABS: { id: string; label: string; statuses: string[] | null }[] = [
   // `odpovedel` a `jednani` jsou oddělené fáze — nesmí se počítat dvakrát.
   { id: 'replied', label: 'Odpovědělo', statuses: ['odpovedel'] },
   { id: 'talks', label: 'Jednání', statuses: ['jednani'] },
-  { id: 'converted', label: 'Konvertováno', statuses: ['konvertovan'] },
-  { id: 'blocked', label: 'Nekontaktovat', statuses: ['nekontaktovat', 'odmitl'] },
+  { id: 'converted', label: 'Spolupráce', statuses: ['konvertovan'] },
+  { id: 'not-converted', label: 'Bez spolupráce', statuses: ['odmitl'] },
+  { id: 'blocked', label: 'Nekontaktovat', statuses: ['nekontaktovat'] },
   { id: 'archive', label: 'Archiv', statuses: ['archivovan'] },
 ];
 
@@ -224,7 +225,8 @@ const AdminSalesLeads: React.FC = () => {
       replied: leads.filter((l) => l.status === 'odpovedel').length,
       talks: leads.filter((l) => l.status === 'jednani').length,
       converted: leads.filter((l) => l.status === 'konvertovan').length,
-      blocked: leads.filter((l) => ['nekontaktovat', 'odmitl'].includes(l.status)).length,
+      notConverted: leads.filter((l) => l.status === 'odmitl').length,
+      blocked: leads.filter((l) => l.status === 'nekontaktovat').length,
     }),
     [leads],
   );
@@ -266,7 +268,8 @@ const AdminSalesLeads: React.FC = () => {
     { label: 'Osloveno', value: summary.contacted },
     { label: 'Odpovědělo', value: summary.replied },
     { label: 'Jednání', value: summary.talks },
-    { label: 'Konvertováno', value: summary.converted },
+    { label: 'Spolupráce', value: summary.converted },
+    { label: 'Bez spolupráce', value: summary.notConverted },
     { label: 'Nekontaktovat', value: summary.blocked },
   ];
 

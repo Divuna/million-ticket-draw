@@ -34,8 +34,8 @@ export const STATUS_LABELS: Record<string, string> = {
   follow_up: 'Follow-up',
   odpovedel: 'Odpověděl',
   jednani: 'Jednání',
-  konvertovan: 'Konvertován',
-  odmitl: 'Odmítl',
+  konvertovan: 'Spolupráce',
+  odmitl: 'Bez spolupráce',
   nekontaktovat: 'Nekontaktovat',
   archivovan: 'Archivován',
 };
@@ -165,6 +165,16 @@ export interface SalesLeadRow {
   lead_group: string | null;
 }
 
+export interface DuplicateConflict {
+  lead_id: string;
+  company_name: string;
+  contact_email: string | null;
+  status: string;
+  match_type: 'exact_email' | 'email_domain';
+  matched_value: string;
+  first_contacted_at: string | null;
+}
+
 /** Plný detail leadu (editovatelná pole + audit meta). */
 export interface SalesLeadDetail extends SalesLeadRow {
   ico: string | null;
@@ -211,6 +221,9 @@ export const RPC_ERROR_MESSAGES: Record<string, string> = {
   access_denied_sales_leads_manage_only: 'Nemáte oprávnění „Obchodní leady".',
   company_name_required: 'Název firmy je povinný.',
   duplicate: 'Firma s tímto e-mailem, IČO nebo doménou už v evidenci existuje.',
+  duplicate_conflict: 'Kontaktní e-mail se shoduje s existujícím leadem.',
+  duplicate_override_required: 'Před odesláním je nutné potvrdit výjimku duplicity.',
+  duplicate_override_reason_required: 'Pro potvrzení výjimky uveďte důvod (alespoň 3 znaky).',
   invalid_input: 'Neplatný vstup (zkontrolujte IČO — 8 číslic, a web — musí začínat https://).',
   invalid_label: 'Název skupiny není platný.',
   invalid_lead_group: 'Vybraná skupina firem není platná nebo je vypnutá.',
@@ -228,6 +241,11 @@ export const RPC_ERROR_MESSAGES: Record<string, string> = {
   missing_contact_email: 'Chybí ověřený e-mail kontaktu.',
   draft_missing: 'Chybí připravený koncept e-mailu.',
   email_send_failed: 'E-mail se nepodařilo odeslat.',
+  suppressed: 'Tato adresa nebo doména je na seznamu Nekontaktovat.',
+  do_not_contact: 'Lead je označený jako Nekontaktovat.',
+  duplicate_guard_failed: 'Serverovou kontrolu duplicit se nepodařilo dokončit. Nic nebylo odesláno.',
+  reply_target_not_found: 'Původní přijatá zpráva nebyla nalezena.',
+  history_write_failed_after_send: 'Odpověď byla odeslána, ale zápis historie se nezdařil. Neodesílejte ji znovu.',
 };
 
 export function rpcErrorMessage(code: string | undefined): string {
