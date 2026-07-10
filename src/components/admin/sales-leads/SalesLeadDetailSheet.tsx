@@ -60,8 +60,12 @@ interface Props {
 interface ActivityRow {
   id: string;
   activity_type: string;
+  /** 'outbound' | 'inbound' | 'internal' — rozlišuje směr e-mailové komunikace. */
+  direction: string | null;
   created_at: string | null;
   subject: string | null;
+  /** Plný snapshot těla e-mailu. Zobrazuje se zkráceně, v DB se NIKDY neořezává. */
+  body_snapshot: string | null;
   metadata: Record<string, unknown> | null;
 }
 
@@ -89,19 +93,132 @@ const ACTIVITY_LABELS: Record<string, string> = {
   contact_proposed: 'Navržen kontaktní e-mail',
   contact_approved: 'Kontaktní e-mail schválen',
   contact_rejected: 'Návrh kontaktu zamítnut',
-  // Existují v DB CHECK constraintu od Fáze 1; doplněno po auditu §18, aby se
-  // nezobrazoval syrový kód, pokud tyto aktivity vzniknou (reply_received
-  // zatím vzniká jen ručně — automatický příjem odpovědí není napojen).
-  email_failed: 'Odeslání e-mailu selhalo',
+  // Příchozí odpovědi firem zapisuje EF `sales-lead-inbound` (Resend Receiving
+  // API) a stav posouvá RPC `sales_lead_mark_replied`.
   reply_received: 'Odpověď přijata',
+  // NEIMPLEMENTOVÁNO: tyto typy jsou povolené v DB CHECK constraintu od Fáze 1,
+  // ale žádná cesta v aplikaci je zatím nezakládá. Popisky tu jsou proto, aby
+  // se v historii nikdy nezobrazil syrový kód, kdyby takový řádek vznikl.
+  email_failed: 'Odeslání e-mailu selhalo',
   call_logged: 'Zaznamenán hovor',
 };
+
+/** Typy aktivit, které představují e-mailovou zprávu (mají směr, předmět a tělo). */
+const EMAIL_ACTIVITY_TYPES = new Set(['email_sent', 'reply_received']);
+
+/**
+ * Rozdělí tělo e-mailu na vlastní text a citovanou část původního vlákna.
+ * Detekce je konzervativní: hledá první řádek začínající `>` (klasický quote
+ * marker, který používá Gmail i většina klientů). Pokud žádný není, vrátí
+ * celé tělo jako `main`. NIKDY nemění data v DB — jde čistě o zobrazení.
+ */
+const splitQuotedReply = (body: string): { main: string; quoted: string | null } => {
+  const lines = body.split('\n');
+  const firstQuoted = lines.findIndex((l) => l.trimStart().startsWith('>'));
+  if (firstQuoted === -1) return { main: body, quoted: null };
+  const main = lines.slice(0, firstQuoted).join('\n').replace(/\s+$/, '');
+  const quoted = lines.slice(firstQuoted).join('\n');
+  return { main: main.length > 0 ? main : body, quoted: main.length > 0 ? quoted : null };
+};
+
+/** Nad tuto délku se hlavní text sbalí a nabídne „Zobrazit celý e-mail“. */
+const BODY_PREVIEW_CHARS = 320;
 
 const formatDateTime = (iso: string | null): string => {
   if (!iso) return '—';
   const d = new Date(iso);
   if (Number.isNaN(d.getTime())) return '—';
   return d.toLocaleString('cs-CZ', { day: 'numeric', month: 'numeric', year: 'numeric', hour: '2-digit', minute: '2-digit' });
+};
+
+/**
+ * Jedna e-mailová zpráva ve vlákně historie kontaktu.
+ * Odchozí (`outbound`) a příchozí (`inbound`) se liší barvou i orientací.
+ * Dlouhý text i citovaná část původního vlákna jsou sbalené.
+ */
+const EmailActivityItem = ({ activity }: { activity: ActivityRow }) => {
+  const [showFullBody, setShowFullBody] = useState(false);
+  const [showQuoted, setShowQuoted] = useState(false);
+
+  const isInbound = activity.direction === 'inbound';
+  const counterparty =
+    (isInbound ? activity.metadata?.from : activity.metadata?.to) ?? null;
+
+  const body = activity.body_snapshot ?? '';
+  const { main, quoted } = splitQuotedReply(body);
+  const isLong = main.length > BODY_PREVIEW_CHARS;
+  const visibleMain = isLong && !showFullBody ? `${main.slice(0, BODY_PREVIEW_CHARS).trimEnd()}…` : main;
+
+  return (
+    <li className="flex">
+      <div
+        className={
+          isInbound
+            ? 'w-full rounded-lg border border-primary/30 bg-primary/5 p-3'
+            : 'w-full rounded-lg border border-border bg-muted/30 p-3'
+        }
+      >
+        <div className="flex flex-wrap items-center gap-2">
+          <span className="text-sm font-medium">
+            {ACTIVITY_LABELS[activity.activity_type] ?? activity.activity_type}
+          </span>
+          <span
+            className={
+              isInbound
+                ? 'rounded-full bg-primary/15 px-2 py-0.5 text-[10px] font-medium uppercase tracking-wide text-primary'
+                : 'rounded-full bg-muted px-2 py-0.5 text-[10px] font-medium uppercase tracking-wide text-muted-foreground'
+            }
+          >
+            {isInbound ? 'Příchozí' : 'Odchozí'}
+          </span>
+        </div>
+
+        {typeof counterparty === 'string' && counterparty.length > 0 && (
+          <div className="mt-0.5 text-xs text-muted-foreground">
+            {isInbound ? 'Od' : 'Komu'}: {counterparty}
+          </div>
+        )}
+        {activity.subject && (
+          <div className="text-xs text-muted-foreground">Předmět: {activity.subject}</div>
+        )}
+
+        {body.length > 0 ? (
+          <div className="mt-2 whitespace-pre-wrap break-words rounded border border-border/60 bg-background/60 p-2 text-sm">
+            {visibleMain}
+            {isLong && (
+              <button
+                type="button"
+                onClick={() => setShowFullBody((v) => !v)}
+                className="mt-1 block text-xs font-medium text-primary hover:underline"
+              >
+                {showFullBody ? 'Zobrazit méně' : 'Zobrazit celý e-mail'}
+              </button>
+            )}
+            {quoted && (
+              <>
+                <button
+                  type="button"
+                  onClick={() => setShowQuoted((v) => !v)}
+                  className="mt-1 block text-xs font-medium text-muted-foreground hover:underline"
+                >
+                  {showQuoted ? 'Skrýt citovanou část' : 'Zobrazit citovanou část'}
+                </button>
+                {showQuoted && (
+                  <div className="mt-1 border-l-2 border-border pl-2 text-xs text-muted-foreground">
+                    {quoted}
+                  </div>
+                )}
+              </>
+            )}
+          </div>
+        ) : (
+          <div className="mt-2 text-xs italic text-muted-foreground">Text zprávy není k dispozici.</div>
+        )}
+
+        <div className="mt-1 text-xs text-muted-foreground">{formatDateTime(activity.created_at)}</div>
+      </div>
+    </li>
+  );
 };
 
 type EditForm = {
@@ -177,7 +294,7 @@ export function SalesLeadDetailSheet({ leadId, open, onOpenChange, onMutated }: 
         (supabase as any).from('sales_leads').select(DETAIL_COLUMNS).eq('id', leadId).single(),
         (supabase as any)
           .from('sales_lead_activities')
-          .select('id, activity_type, created_at, subject, metadata')
+          .select('id, activity_type, direction, created_at, subject, body_snapshot, metadata')
           .eq('lead_id', leadId)
           .order('created_at', { ascending: false })
           .limit(50),
@@ -1011,27 +1128,21 @@ export function SalesLeadDetailSheet({ leadId, open, onOpenChange, onMutated }: 
               <p className="text-sm text-muted-foreground">Zatím žádná aktivita.</p>
             ) : (
               <ul className="space-y-2">
-                {activities.map((a) => {
-                  const recipient = a.activity_type === 'email_sent' && typeof a.metadata?.to === 'string'
-                    ? (a.metadata?.to as string)
-                    : null;
-                  return (
+                {activities.map((a) =>
+                  EMAIL_ACTIVITY_TYPES.has(a.activity_type) ? (
+                    // E-mailová zpráva — plné vlákno (odesílatel/příjemce, předmět, text).
+                    <EmailActivityItem key={a.id} activity={a} />
+                  ) : (
+                    // Systémová aktivita — tenký řádek mezi zprávami.
                     <li key={a.id} className="flex items-start gap-2 text-sm">
                       <span className="mt-1.5 h-1.5 w-1.5 shrink-0 rounded-full bg-primary/60" aria-hidden />
                       <div>
                         <div className="font-medium">{ACTIVITY_LABELS[a.activity_type] ?? a.activity_type}</div>
-                        {a.activity_type === 'email_sent' && (recipient || a.subject) && (
-                          <div className="text-xs text-muted-foreground">
-                            {recipient ? <>Komu: {recipient}</> : null}
-                            {recipient && a.subject ? ' · ' : null}
-                            {a.subject ? <>Předmět: {a.subject}</> : null}
-                          </div>
-                        )}
                         <div className="text-xs text-muted-foreground">{formatDateTime(a.created_at)}</div>
                       </div>
                     </li>
-                  );
-                })}
+                  ),
+                )}
               </ul>
             )}
           </>
