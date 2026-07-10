@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import {
   Sheet,
   SheetContent,
@@ -139,7 +139,16 @@ const formatDateTime = (iso: string | null): string => {
  * Odchozí (`outbound`) a příchozí (`inbound`) se liší barvou i orientací.
  * Dlouhý text i citovaná část původního vlákna jsou sbalené.
  */
-const EmailActivityItem = ({ activity, onReply }: { activity: ActivityRow; onReply?: (activity: ActivityRow) => void }) => {
+const EmailActivityItem = ({
+  activity,
+  onReply,
+  replyForm,
+}: {
+  activity: ActivityRow;
+  onReply?: (activity: ActivityRow) => void;
+  /** Formulář odpovědi — renderuje se přímo pod TOUTO zprávou, jen když je otevřený. */
+  replyForm?: ReactNode;
+}) => {
   const [showFullBody, setShowFullBody] = useState(false);
   const [showQuoted, setShowQuoted] = useState(false);
 
@@ -219,13 +228,67 @@ const EmailActivityItem = ({ activity, onReply }: { activity: ActivityRow; onRep
         )}
 
         <div className="mt-1 text-xs text-muted-foreground">{formatDateTime(activity.created_at)}</div>
-        {isInbound && onReply && (
+        {/* Tlačítko „Odpovědět" jen když formulář NENÍ otevřený u této zprávy. */}
+        {isInbound && onReply && !replyForm && (
           <Button type="button" variant="outline" size="sm" className="mt-2" onClick={() => onReply(activity)}>
             Odpovědět
           </Button>
         )}
+        {/* Formulář odpovědi — přímo pod zprávou, na kterou uživatel klikl. */}
+        {replyForm}
       </div>
     </li>
+  );
+};
+
+/**
+ * Formulář odpovědi zobrazený inline pod vybranou příchozí zprávou.
+ * Po otevření sám odscrolluje do zorného pole. Odesílání i serverovou ochranu
+ * (EF `send-sales-lead-reply`) řídí rodič přes `onSend` — zde se nemění.
+ */
+const InlineReplyForm = ({
+  subject,
+  body,
+  onSubjectChange,
+  onBodyChange,
+  onSend,
+  onCancel,
+  sending,
+  repliedToAt,
+}: {
+  subject: string;
+  body: string;
+  onSubjectChange: (v: string) => void;
+  onBodyChange: (v: string) => void;
+  onSend: () => void;
+  onCancel: () => void;
+  sending: boolean;
+  repliedToAt: string | null;
+}) => {
+  const ref = useRef<HTMLDivElement | null>(null);
+  useEffect(() => {
+    ref.current?.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+  }, []);
+  return (
+    <div ref={ref} className="mt-3 space-y-3 rounded-lg border border-primary/40 bg-background p-3">
+      <div className="flex items-center justify-between gap-2">
+        <div className="text-sm font-medium">Odpověď na e-mail z {formatDateTime(repliedToAt)}</div>
+        <Button variant="ghost" size="sm" onClick={onCancel} disabled={sending}>Zrušit</Button>
+      </div>
+      <div className="space-y-1">
+        <Label htmlFor="reply-subject">Předmět</Label>
+        <Input id="reply-subject" value={subject} onChange={(e) => onSubjectChange(e.target.value)} disabled={sending} maxLength={300} />
+      </div>
+      <div className="space-y-1">
+        <Label htmlFor="reply-body">Text odpovědi</Label>
+        <Textarea id="reply-body" value={body} onChange={(e) => onBodyChange(e.target.value)} disabled={sending} rows={6} maxLength={20000} />
+      </div>
+      <div className="flex justify-end">
+        <Button onClick={onSend} disabled={sending || !subject.trim() || !body.trim()} className="gap-1.5">
+          {sending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />} Odeslat odpověď
+        </Button>
+      </div>
+    </div>
   );
 };
 
@@ -1206,7 +1269,25 @@ export function SalesLeadDetailSheet({ leadId, open, onOpenChange, onMutated }: 
                 {activities.map((a) =>
                   EMAIL_ACTIVITY_TYPES.has(a.activity_type) ? (
                     // E-mailová zpráva — plné vlákno (odesílatel/příjemce, předmět, text).
-                    <EmailActivityItem key={a.id} activity={a} onReply={startReply} />
+                    <EmailActivityItem
+                      key={a.id}
+                      activity={a}
+                      onReply={startReply}
+                      replyForm={
+                        replyToActivity?.id === a.id ? (
+                          <InlineReplyForm
+                            subject={replySubject}
+                            body={replyBody}
+                            onSubjectChange={setReplySubject}
+                            onBodyChange={setReplyBody}
+                            onSend={sendReply}
+                            onCancel={() => setReplyToActivity(null)}
+                            sending={replySending}
+                            repliedToAt={replyToActivity.created_at}
+                          />
+                        ) : undefined
+                      }
+                    />
                   ) : (
                     // Systémová aktivita — tenký řádek mezi zprávami.
                     <li key={a.id} className={a.activity_type === 'duplicate_override_confirmed'
@@ -1231,25 +1312,6 @@ export function SalesLeadDetailSheet({ leadId, open, onOpenChange, onMutated }: 
                   ),
                 )}
               </ul>
-            )}
-            {replyToActivity && (
-              <div className="mt-4 space-y-3 rounded-lg border border-primary/30 bg-primary/5 p-4">
-                <div className="flex items-center justify-between gap-2">
-                  <div className="font-medium">Odpověď na e-mail z {formatDateTime(replyToActivity.created_at)}</div>
-                  <Button variant="ghost" size="sm" onClick={() => setReplyToActivity(null)} disabled={replySending}>Zrušit</Button>
-                </div>
-                <div className="space-y-1"><Label htmlFor="reply-subject">Předmět</Label>
-                  <Input id="reply-subject" value={replySubject} onChange={(e) => setReplySubject(e.target.value)} disabled={replySending} maxLength={300} />
-                </div>
-                <div className="space-y-1"><Label htmlFor="reply-body">Text odpovědi</Label>
-                  <Textarea id="reply-body" value={replyBody} onChange={(e) => setReplyBody(e.target.value)} disabled={replySending} rows={6} maxLength={20000} />
-                </div>
-                <div className="flex justify-end">
-                  <Button onClick={sendReply} disabled={replySending || !replySubject.trim() || !replyBody.trim()} className="gap-1.5">
-                    {replySending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />} Odeslat odpověď
-                  </Button>
-                </div>
-              </div>
             )}
           </>
         )}
