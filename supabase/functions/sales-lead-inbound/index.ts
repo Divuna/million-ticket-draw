@@ -1,26 +1,37 @@
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.57.4";
+import { Resend } from "npm:resend@6.17.2";
 
 // ============================================================================
 // sales-lead-inbound — příjem PŘÍCHOZÍCH odpovědí firem na sales lead e-maily.
 // Spec: docs/SALES_LEADS_ADMIN_SPEC.md §18 (příjem odpovědí)
 //
-// Odpovědi chodí na adresu `reply+LEAD_ID@reply.onemil.cz` (dynamický reply_to
-// nastavuje EF `send-sales-lead-email`). Resend inbound POSTuje sem parsovanou
-// zprávu. Tato funkce:
-//   1) ověří podpis webhooku (Svix schéma, secret SALES_LEAD_INBOUND_WEBHOOK_SECRET),
+// Odpovědi chodí na `reply+LEAD_ID@ulduuzoul.resend.app` (bezplatná Resend
+// receiving doména; per-lead reply_to nastavuje EF `send-sales-lead-email`).
+// Resend pošle webhook `email.received`, který obsahuje JEN METADATA — nikoli
+// tělo zprávy. Tělo se musí dotáhnout z Receiving API přes `data.email_id`.
+//
+// Tok:
+//   1) ověří podpis webhooku (Svix, secret SALES_LEAD_INBOUND_WEBHOOK_SECRET),
 //   2) vytáhne LEAD_ID z adresy příjemce (`reply+<uuid>@…`),
-//   3) dedup proti opakovanému doručení téhož webhooku (email_message_id),
-//   4) zapíše aktivitu `reply_received` (inbound: subject, odesílatel, text),
-//   5) zavolá service-role RPC `sales_lead_mark_replied` (posun na `odpovedel`
+//   3) dedup proti opakovanému doručení téhož webhooku (message_id / email_id),
+//   4) přes RESEND_API_KEY načte celý e-mail: resend.emails.receiving.get(email_id),
+//   5) zapíše aktivitu `reply_received` (text, fallback html, subject, from),
+//   6) zavolá service-role RPC `sales_lead_mark_replied` (posun na `odpovedel`
 //      jen z raných/oslovovacích stavů; jinak stav beze změny).
 //
-// AI NIKDY neodesílá e-mail — tato funkce jen PŘIJÍMÁ odpovědi a nikdy nic
-// neodesílá. Zápis přes service_role (obchází RLS). Nedotýká se wallets/
-// payments/contests/tickets/winners/Stripe/buy_ticket_atomic/email_queue.
+// Dedup se vyhodnocuje PŘED voláním Resendu, takže replay webhooku nestojí
+// žádný API request. Tvrdá pojistka je unikátní index na
+// (lead_id, email_message_id) WHERE activity_type='reply_received'.
+//
+// Tato funkce NIKDY neodesílá e-mail — pouze přijímá a čte. Zápis přes
+// service_role (obchází RLS). Nedotýká se wallets/payments/contests/tickets/
+// winners/Stripe/buy_ticket_atomic/email_queue.
 //
 // config.toml: verify_jwt = false (autorizace = ověření podpisu webhooku uvnitř).
 // ============================================================================
+
+const REPLY_INBOUND_DOMAIN = "ulduuzoul.resend.app";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -72,7 +83,6 @@ async function verifySvixSignature(
   const sig = await crypto.subtle.sign("HMAC", key, new TextEncoder().encode(signedContent));
   const expected = btoa(String.fromCharCode(...new Uint8Array(sig)));
 
-  // Kterákoli z podepsaných verzí smí sedět.
   for (const part of svixSignature.split(" ")) {
     const [, value] = part.split(",");
     if (value && timingSafeEqual(value, expected)) return true;
@@ -90,7 +100,7 @@ function extractLeadId(candidates: string[]): string | null {
   return null;
 }
 
-// Normalizuje pole příjemců z různých tvarů Resend payloadu na plain stringy.
+// Normalizuje pole adres z různých tvarů Resend payloadu na plain stringy.
 function toAddressList(v: unknown): string[] {
   if (!v) return [];
   const arr = Array.isArray(v) ? v : [v];
@@ -104,6 +114,10 @@ function toAddressList(v: unknown): string[] {
       return "";
     })
     .filter(Boolean);
+}
+
+function asString(v: unknown): string | null {
+  return typeof v === "string" && v.length > 0 ? v : null;
 }
 
 serve(async (req: Request) => {
@@ -132,40 +146,31 @@ serve(async (req: Request) => {
     return jsonResponse({ success: false, error: "invalid_json" }, 400);
   }
 
-  // Resend obaluje užitečná data do `data`; podpoříme i plochý tvar.
+  // Jiné typy událostí (email.sent, email.bounced, …) nás nezajímají.
+  const eventType = asString(payload.type);
+  if (eventType && eventType !== "email.received") {
+    return jsonResponse({ success: true, ignored: true, reason: "unsupported_event_type" });
+  }
+
   const data = (payload.data ?? payload) as Record<string, unknown>;
 
-  // ── 2. LEAD_ID z adresy příjemce ─────────────────────────────────────────
+  const emailId = asString(data.email_id);
+  if (!emailId) {
+    // Webhook přijmeme (ať Resend neretryuje), ale nemáme co načíst.
+    return jsonResponse({ success: true, ignored: true, reason: "missing_email_id" });
+  }
+
+  // ── 2. LEAD_ID z adresy příjemce (webhook metadata už `to` obsahují) ─────
   const recipients = [
     ...toAddressList(data.to),
-    ...toAddressList(data.recipient),
-    ...toAddressList((data as Record<string, unknown>).cc),
+    ...toAddressList(data.received_for),
+    ...toAddressList(data.cc),
   ];
   const leadId = extractLeadId(recipients);
   if (!leadId) {
     // Není to odpověď na lead (žádná reply+<uuid> adresa) — přijmeme, ignorujeme.
     return jsonResponse({ success: true, ignored: true, reason: "no_lead_token" });
   }
-
-  const fromList = toAddressList(data.from);
-  const fromAddr = (fromList[0] ?? "").trim();
-  const subject = typeof data.subject === "string" ? data.subject : null;
-  const textBody =
-    typeof data.text === "string"
-      ? data.text
-      : typeof data.html === "string"
-      ? data.html
-      : null;
-
-  // Vlastní Message-ID příchozí zprávy (dedup). Fallback na svix-id webhooku.
-  const headersObj = (data.headers ?? {}) as Record<string, unknown>;
-  const inboundMessageId =
-    (typeof (data as Record<string, unknown>).message_id === "string"
-      ? ((data as Record<string, unknown>).message_id as string)
-      : null) ??
-    (typeof headersObj["message-id"] === "string" ? (headersObj["message-id"] as string) : null) ??
-    (typeof headersObj["Message-ID"] === "string" ? (headersObj["Message-ID"] as string) : null) ??
-    req.headers.get("svix-id");
 
   const supabaseAdmin = createClient(
     Deno.env.get("SUPABASE_URL") ?? "",
@@ -185,42 +190,72 @@ serve(async (req: Request) => {
     return jsonResponse({ success: true, ignored: true, reason: "lead_not_found" });
   }
 
-  // ── 4. Dedup proti opakovanému webhooku ──────────────────────────────────
-  if (inboundMessageId) {
-    const { data: existing } = await supabaseAdmin
-      .from("sales_lead_activities")
-      .select("id")
-      .eq("lead_id", leadId)
-      .eq("activity_type", "reply_received")
-      .eq("email_message_id", inboundMessageId)
-      .limit(1)
-      .maybeSingle();
-    if (existing) {
-      return jsonResponse({ success: true, duplicate: true, lead_id: leadId });
-    }
+  // ── 4. Dedup PŘED voláním Resendu (replay webhooku nestojí API request) ──
+  // Stejný klíč se použije i při INSERTu, aby seděl s unikátním indexem.
+  const dedupKey = asString(data.message_id) ?? emailId;
+  const { data: existing } = await supabaseAdmin
+    .from("sales_lead_activities")
+    .select("id")
+    .eq("lead_id", leadId)
+    .eq("activity_type", "reply_received")
+    .eq("email_message_id", dedupKey)
+    .limit(1)
+    .maybeSingle();
+  if (existing) {
+    return jsonResponse({ success: true, duplicate: true, lead_id: leadId });
   }
 
-  // ── 5. Zápis aktivity reply_received ─────────────────────────────────────
+  // ── 5. Načtení celého e-mailu z Resend Receiving API ─────────────────────
+  // Webhook `email.received` neobsahuje tělo — jen metadata.
+  const resendApiKey = Deno.env.get("RESEND_API_KEY");
+  if (!resendApiKey) {
+    // Řízený stav — nic nezapisujeme, Resend webhook zopakuje.
+    return jsonResponse({ success: false, error: "email_fetch_not_configured" }, 503);
+  }
+
+  let received: Record<string, unknown>;
+  try {
+    const resend = new Resend(resendApiKey);
+    const res = await resend.emails.receiving.get(emailId);
+    if (res.error || !res.data) {
+      return jsonResponse({ success: false, error: "email_fetch_failed" }, 502);
+    }
+    received = res.data as unknown as Record<string, unknown>;
+  } catch {
+    return jsonResponse({ success: false, error: "email_fetch_failed" }, 502);
+  }
+
+  // Tělo: text, při jeho absenci fallback html.
+  const textBody = asString(received.text) ?? asString(received.html);
+  const subject = asString(received.subject) ?? asString(data.subject);
+  const fromAddr = (toAddressList(received.from)[0] ?? toAddressList(data.from)[0] ?? "").trim();
+  const rfcMessageId = asString(received.message_id);
+
+  // ── 6. Zápis aktivity reply_received ─────────────────────────────────────
   const { error: insertErr } = await supabaseAdmin.from("sales_lead_activities").insert({
     lead_id: leadId,
     activity_type: "reply_received",
     direction: "inbound",
     subject,
     body_snapshot: textBody,
-    email_message_id: inboundMessageId,
+    email_message_id: dedupKey,
     performed_by: null,
-    metadata: { from: fromAddr, to: `reply+${leadId}@reply.onemil.cz` },
+    metadata: {
+      from: fromAddr,
+      to: `reply+${leadId}@${REPLY_INBOUND_DOMAIN}`,
+      email_id: emailId,
+      message_id: rfcMessageId,
+    },
   });
   if (insertErr) {
     // Souběžný retry téhož webhooku → DB-level unikátní index (Postgres 23505).
-    // Aktivita už existuje z paralelního volání → není to chyba, jen duplicita.
     if (insertErr.code === "23505") {
       return jsonResponse({ success: true, duplicate: true, lead_id: leadId });
     }
     return jsonResponse({ success: false, error: "activity_insert_failed" }, 500);
   }
 
-  // ── 6. Best-effort posun stavu na `odpovedel` ────────────────────────────
+  // ── 7. Best-effort posun stavu na `odpovedel` ────────────────────────────
   // Odpověď je už zapsaná — pokud posun stavu selže, přijetí NEVRACÍME zpět.
   let statusChanged: unknown = null;
   try {

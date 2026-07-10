@@ -38,11 +38,12 @@ const corsHeaders = {
 };
 
 const FROM_ADDRESS = "OneMil <b2b@onemil.cz>";
-// Fallback reply-to (odesílatelská schránka). Reálné odpovědi směrujeme na
-// per-lead adresu `reply+<lead_id>@reply.onemil.cz` (viz REPLY_INBOUND_DOMAIN),
-// aby je EF `sales-lead-inbound` deterministicky spárovala s leadem.
+// Odesílatelská schránka (Active24). Zůstává beze změny.
 const REPLY_TO = "b2b@onemil.cz";
-const REPLY_INBOUND_DOMAIN = "reply.onemil.cz";
+// Bezplatná Resend receiving doména — odpovědi firem chodí na per-lead adresu
+// `reply+<lead_id>@ulduuzoul.resend.app`, kterou EF `sales-lead-inbound`
+// deterministicky spáruje s leadem. Custom (placenou) doménu nepoužíváme.
+const REPLY_INBOUND_DOMAIN = "ulduuzoul.resend.app";
 
 function jsonResponse(body: Record<string, unknown>, status = 200): Response {
   return new Response(JSON.stringify(body), {
