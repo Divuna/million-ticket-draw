@@ -88,24 +88,42 @@ const AdminSalesLeads: React.FC = () => {
   const [deleteOneId, setDeleteOneId] = useState<string | null>(null);
   const [bulkDeleteOpen, setBulkDeleteOpen] = useState(false);
   const [deleting, setDeleting] = useState(false);
+  // Nepřečtené příchozí odpovědi: množina leadů s ≥1 nepřečtenou + celkový počet.
+  const [unreadLeadIds, setUnreadLeadIds] = useState<Set<string>>(new Set());
+  const [unreadTotal, setUnreadTotal] = useState(0);
 
   const load = useCallback(async () => {
     setLoading(true);
     try {
-      const { data, error } = await (supabase as any)
-        .from('sales_leads')
-        .select('id, company_name, industry, city, status, contact_email, updated_at, assigned_admin_id, lead_group')
-        .order('updated_at', { ascending: false });
-      if (error) {
+      const [leadsRes, unreadRes] = await Promise.all([
+        (supabase as any)
+          .from('sales_leads')
+          .select('id, company_name, industry, city, status, contact_email, updated_at, assigned_admin_id, lead_group')
+          .order('updated_at', { ascending: false }),
+        // Nepřečtené odpovědi napříč všemi leady (RLS pustí jen držitele oprávnění).
+        (supabase as any)
+          .from('sales_lead_activities')
+          .select('lead_id')
+          .eq('activity_type', 'reply_received')
+          .is('read_at', null),
+      ]);
+      if (leadsRes.error) {
         setTableMissing(true);
         setLeads([]);
       } else {
         setTableMissing(false);
-        setLeads((data ?? []) as SalesLeadRow[]);
+        setLeads((leadsRes.data ?? []) as SalesLeadRow[]);
       }
+      // Nepřečtené jsou best-effort — chyba (např. chybějící sloupec před migrací)
+      // jen znamená „žádná upozornění", nikdy nerozbije seznam.
+      const unreadRows = (unreadRes.error ? [] : unreadRes.data ?? []) as { lead_id: string }[];
+      setUnreadLeadIds(new Set(unreadRows.map((r) => r.lead_id)));
+      setUnreadTotal(unreadRows.length);
     } catch {
       setTableMissing(true);
       setLeads([]);
+      setUnreadLeadIds(new Set());
+      setUnreadTotal(0);
     } finally {
       setLoading(false);
     }
@@ -122,11 +140,15 @@ const AdminSalesLeads: React.FC = () => {
     const refetchIfVisible = () => {
       if (document.visibilityState === 'visible') void load();
     };
+    // Ihned po označení odpovědí jako přečtených (z detailu) obnovíme počty.
+    const refetchNow = () => void load();
     window.addEventListener('focus', refetchIfVisible);
     document.addEventListener('visibilitychange', refetchIfVisible);
+    window.addEventListener('sales-leads-unread-changed', refetchNow);
     return () => {
       window.removeEventListener('focus', refetchIfVisible);
       document.removeEventListener('visibilitychange', refetchIfVisible);
+      window.removeEventListener('sales-leads-unread-changed', refetchNow);
     };
   }, [load]);
 
@@ -260,13 +282,13 @@ const AdminSalesLeads: React.FC = () => {
     });
   };
 
-  const summaryCards: { label: string; value: number }[] = [
+  const summaryCards: { label: string; value: number; unread?: number }[] = [
     { label: 'Celkem leadů', value: summary.total },
     { label: 'Návrhy', value: summary.proposed },
     { label: 'K oslovení', value: summary.toContact },
     { label: 'Čeká na schválení', value: summary.awaitingApproval },
     { label: 'Osloveno', value: summary.contacted },
-    { label: 'Odpovědělo', value: summary.replied },
+    { label: 'Odpovědělo', value: summary.replied, unread: unreadTotal },
     { label: 'Jednání', value: summary.talks },
     { label: 'Spolupráce', value: summary.converted },
     { label: 'Bez spolupráce', value: summary.notConverted },
@@ -316,7 +338,17 @@ const AdminSalesLeads: React.FC = () => {
           <Card key={c.label} className="bg-card/60">
             <CardContent className="p-3">
               <div className="text-[11px] uppercase tracking-wide text-muted-foreground">{c.label}</div>
-              <div className="text-xl font-bold">{loading ? '…' : c.value}</div>
+              <div className="flex items-baseline gap-2">
+                <div className="text-xl font-bold">{loading ? '…' : c.value}</div>
+                {!loading && (c.unread ?? 0) > 0 && (
+                  <span
+                    className="min-w-[1.25rem] rounded-full bg-destructive px-1.5 py-0.5 text-center text-[11px] font-bold text-destructive-foreground"
+                    title={`${c.unread} nepřečtených odpovědí`}
+                  >
+                    {(c.unread ?? 0) > 99 ? '99+' : c.unread}
+                  </span>
+                )}
+              </div>
             </CardContent>
           </Card>
         ))}
@@ -402,7 +434,19 @@ const AdminSalesLeads: React.FC = () => {
                         aria-label={`Vybrat ${lead.company_name}`}
                       />
                     </TableCell>
-                    <TableCell className="font-medium">{lead.company_name}</TableCell>
+                    <TableCell className="font-medium">
+                      {unreadLeadIds.has(lead.id) ? (
+                        <span className="flex items-center gap-2">
+                          <span
+                            className="h-2 w-2 shrink-0 rounded-full bg-destructive"
+                            aria-label="Nová nepřečtená odpověď"
+                          />
+                          <span className="font-bold">{lead.company_name}</span>
+                        </span>
+                      ) : (
+                        lead.company_name
+                      )}
+                    </TableCell>
                     <TableCell className="text-muted-foreground">{leadGroupLabel(lead.lead_group)}</TableCell>
                     <TableCell className="text-muted-foreground">{INDUSTRY_LABEL(lead.industry)}</TableCell>
                     <TableCell className="text-muted-foreground">{lead.city ?? '—'}</TableCell>

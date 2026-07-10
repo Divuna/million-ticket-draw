@@ -108,6 +108,7 @@ export const AdminContextSubNav: React.FC = () => {
   const { pendingCount: pendingOffersCount } = usePendingOffersCount();
   const [pendingPartnerRegistrationsCount, setPendingPartnerRegistrationsCount] = useState(0);
   const [pendingCompanyLeadsCount, setPendingCompanyLeadsCount] = useState(0);
+  const [unreadSalesRepliesCount, setUnreadSalesRepliesCount] = useState(0);
 
   const activeSection = getAdminSectionFromPath(location.pathname, location.search);
   const meta = ADMIN_SECTION_META[activeSection];
@@ -175,6 +176,32 @@ export const AdminContextSubNav: React.FC = () => {
     };
   }, []);
 
+  // Počet nepřečtených příchozích odpovědí zákazníků (modul Obchod / Leady).
+  // Poll 60 s + okamžitá aktualizace po přečtení v detailu (custom event).
+  useEffect(() => {
+    let cancelled = false;
+    const loadUnreadSalesReplies = async () => {
+      try {
+        const { count, error } = await supabase
+          .from("sales_lead_activities")
+          .select("id", { count: "exact", head: true })
+          .eq("activity_type", "reply_received")
+          .is("read_at", null);
+        if (!cancelled && !error) setUnreadSalesRepliesCount(count ?? 0);
+      } catch {
+        // best-effort — silent fail (např. chybějící sloupec před migrací)
+      }
+    };
+    loadUnreadSalesReplies();
+    const interval = setInterval(loadUnreadSalesReplies, 60_000);
+    window.addEventListener("sales-leads-unread-changed", loadUnreadSalesReplies);
+    return () => {
+      cancelled = true;
+      clearInterval(interval);
+      window.removeEventListener("sales-leads-unread-changed", loadUnreadSalesReplies);
+    };
+  }, []);
+
   const renderMenuSections = (sections: AdminContextMenuSection[], menuKey: string) =>
     sections.map((sec, si) => (
       <React.Fragment key={`${menuKey}-sec-${si}`}>
@@ -190,6 +217,7 @@ export const AdminContextSubNav: React.FC = () => {
           const to = subNavItemTo(item);
           const isOfferItem = item.path === "/admin/partner-offers";
           const showOfferDot = isOfferItem && pendingOffersCount > 0;
+          const showUnreadDot = item.path === "/admin/sales-leads" && unreadSalesRepliesCount > 0;
           return (
             <DropdownMenuItem
               key={adminSubNavItemKey(item, ii)}
@@ -202,6 +230,11 @@ export const AdminContextSubNav: React.FC = () => {
                 {showOfferDot && (
                   <span className="ml-2 min-w-[1.25rem] h-5 flex items-center justify-center rounded-full bg-destructive text-[10px] font-bold text-destructive-foreground px-1">
                     {pendingOffersCount > 99 ? "99+" : pendingOffersCount}
+                  </span>
+                )}
+                {showUnreadDot && (
+                  <span className="ml-2 min-w-[1.25rem] h-5 flex items-center justify-center rounded-full bg-destructive text-[10px] font-bold text-destructive-foreground px-1">
+                    {unreadSalesRepliesCount > 99 ? "99+" : unreadSalesRepliesCount}
                   </span>
                 )}
               </Link>
@@ -225,6 +258,8 @@ export const AdminContextSubNav: React.FC = () => {
         item.path === "/admin/partners" && pendingPartnerRegistrationsCount > 0;
       const showPendingCompanyLeadsBadge =
         item.path === "/admin/company-leads" && pendingCompanyLeadsCount > 0;
+      const showUnreadSalesRepliesBadge =
+        item.path === "/admin/sales-leads" && unreadSalesRepliesCount > 0;
       const to = subNavItemTo(item);
       const end = !item.matchPrefix;
       return (
@@ -253,6 +288,11 @@ export const AdminContextSubNav: React.FC = () => {
           {showPendingCompanyLeadsBadge && (
             <span className="absolute -top-1 -right-1 min-w-[1.125rem] h-[1.125rem] flex items-center justify-center rounded-full bg-destructive text-[10px] font-bold text-destructive-foreground px-0.5">
               {pendingCompanyLeadsCount > 99 ? "99+" : pendingCompanyLeadsCount}
+            </span>
+          )}
+          {showUnreadSalesRepliesBadge && (
+            <span className="absolute -top-1 -right-1 min-w-[1.125rem] h-[1.125rem] flex items-center justify-center rounded-full bg-destructive text-[10px] font-bold text-destructive-foreground px-0.5">
+              {unreadSalesRepliesCount > 99 ? "99+" : unreadSalesRepliesCount}
             </span>
           )}
         </NavLink>
