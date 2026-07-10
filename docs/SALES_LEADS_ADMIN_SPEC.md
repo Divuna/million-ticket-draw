@@ -60,7 +60,7 @@ odkaz `converted_partner_id`.
   1. Hlavička: nadpis „Obchod / Leady", tlačítko `+ Přidat firmu`,
      tlačítko `Import CSV` (volitelná fáze 2).
   2. Souhrnné karty: Celkem leadů · K oslovení · Čeká na schválení e-mailu ·
-     Osloveno · Odpovědělo · Konvertováno · Nekontaktovat.
+     Osloveno · Odpovědělo · Spolupráce · Bez spolupráce · Nekontaktovat.
   3. Záložky (viz §2) + vyhledávání (název, IČO, e-mail, doména) + filtry
      (stav, obor, zdroj, přiřazený admin, datum posledního kontaktu).
   4. Tabulka leadů: Název firmy · Obor · Město · Stav (badge) · Poslední
@@ -79,8 +79,9 @@ odkaz `converted_partner_id`.
 | **Příprava** | `priprava`, `schvaleni_ceka` | probíhá research / návrh e-mailu čeká na schválení |
 | **Osloveno** | `osloveno`, `follow_up` | e-mail odeslán, čeká se na reakci |
 | **Jednání** | `odpovedel`, `jednani` | firma reagovala, probíhá komunikace |
-| **Konvertováno** | `konvertovan` | firma se stala partnerem |
-| **Nekontaktovat** | `nekontaktovat`, `odmitl` | blocklist + odmítnutí |
+| **Spolupráce** | `konvertovan` | firma se stala partnerem |
+| **Bez spolupráce** | `odmitl` | firma spolupráci odmítla / jednání skončilo bez spolupráce |
+| **Nekontaktovat** | `nekontaktovat` | samostatná blokace dalšího kontaktování |
 | **Archiv** | `archivovan` | neaktivní / mrtvé leady |
 
 ---

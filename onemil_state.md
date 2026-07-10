@@ -98,6 +98,10 @@ Důležité pravidlo: další e-mailové HTML šablony se mají vizuálně podob
 
 ## MODUL OBCHOD / LEADY — OPRAVA PO FÁZI 6 PŘIPRAVENA JEN JAKO SOUBORY V PR (06. 07. 2026, neaplikováno/nenasazeno)
 
+## MODUL OBCHOD / LEADY — ODPOVĚDI + DUPLICITNÍ E-MAILY (10. 07. 2026, POUZE PR)
+
+Na samostatné větvi je připravena neaplikovaná migrace `20260710180000_sales_leads_replies_duplicate_overrides.sql`, serverová kontrola přesného e-mailu a firemní e-mailové domény, auditovaná admin výjimka s důvodem a nová Edge Function `send-sales-lead-reply`. Veřejné služby (Gmail, Seznam, Outlook, Hotmail, Centrum a další seedované domény) se jako doménová duplicita nevyhodnocují; přesná adresa se kontroluje vždy. Odeslání oslovovacího e-mailu i odpovědi má serverový guard. UI zobrazuje původní lead, první oslovení a historii výjimky. `konvertovan` = „Spolupráce", `odmitl` = „Bez spolupráce", `nekontaktovat` beze změny. Nic neaplikováno, nenasazeno ani neodesláno; staging a produkce nedotčeny.
+
 Read-only audit produkční administrace `/admin/sales-leads` (po zprovoznění Fáze 6) potvrdil
 hlášený problém: po ručním odeslání e-mailu se stav leadu nepropisoval na „Osloveno" a horní
 karta zůstávala 0.

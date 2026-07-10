@@ -20,7 +20,8 @@ import {
 import { Loader2 } from 'lucide-react';
 import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
-import { INDUSTRY_OPTIONS, rpcErrorMessage } from './salesLeadsShared';
+import { INDUSTRY_OPTIONS, rpcErrorMessage, type DuplicateConflict } from './salesLeadsShared';
+import { DuplicateConflictAlert } from './DuplicateConflictAlert';
 
 interface Props {
   open: boolean;
@@ -54,18 +55,31 @@ type FormState = typeof EMPTY_FORM;
 export function AddSalesLeadDialog({ open, onOpenChange, onSuccess }: Props) {
   const [loading, setLoading] = useState(false);
   const [form, setForm] = useState<FormState>(EMPTY_FORM);
+  const [duplicateConflicts, setDuplicateConflicts] = useState<DuplicateConflict[]>([]);
+  const [overrideReason, setOverrideReason] = useState('');
 
   const setField =
     (field: keyof FormState) =>
-    (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) =>
+    (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
+      if (field === 'contact_email') { setDuplicateConflicts([]); setOverrideReason(''); }
       setForm((prev) => ({ ...prev, [field]: e.target.value }));
+    };
+
+  const previewDuplicate = async () => {
+    const email = form.contact_email.trim();
+    if (!email.includes('@')) return;
+    const { data } = await (supabase as any).rpc('sales_lead_check_duplicate', {
+      p_contact_email: email, p_exclude_lead_id: null,
+    });
+    const res = (data ?? {}) as { success?: boolean; conflicts?: DuplicateConflict[] };
+    if (res.success) setDuplicateConflicts(res.conflicts ?? []);
+  };
 
   const handleClose = () => {
     if (!loading) onOpenChange(false);
   };
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const submit = async (confirmOverride: boolean) => {
     if (!form.company_name.trim()) {
       toast.error('Zadejte název firmy');
       return;
@@ -93,17 +107,24 @@ export function AddSalesLeadDialog({ open, onOpenChange, onSuccess }: Props) {
         p_contact_phone: form.contact_phone.trim() || null,
         p_email_source: form.email_source.trim() || null,
         p_notes: form.notes.trim() || null,
+        p_duplicate_override: confirmOverride,
+        p_duplicate_override_reason: confirmOverride ? overrideReason.trim() : null,
       });
 
       if (error) throw new Error(error.message);
-      const res = (data ?? {}) as { success?: boolean; error?: string };
+      const res = (data ?? {}) as { success?: boolean; error?: string; conflicts?: DuplicateConflict[] };
       if (!res.success) {
+        if (res.error === 'duplicate_conflict' || res.error === 'duplicate_override_reason_required') {
+          setDuplicateConflicts(res.conflicts ?? []);
+        }
         toast.error(rpcErrorMessage(res.error));
         return;
       }
 
       toast.success('Firma přidána do evidence');
       setForm(EMPTY_FORM);
+      setDuplicateConflicts([]);
+      setOverrideReason('');
       onOpenChange(false);
       onSuccess();
     } catch (err: unknown) {
@@ -112,6 +133,19 @@ export function AddSalesLeadDialog({ open, onOpenChange, onSuccess }: Props) {
     } finally {
       setLoading(false);
     }
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    await submit(false);
+  };
+
+  const confirmDuplicateOverride = async () => {
+    if (overrideReason.trim().length < 3) {
+      toast.error('Uveďte důvod výjimky alespoň 3 znaky.');
+      return;
+    }
+    await submit(true);
   };
 
   return (
@@ -139,6 +173,9 @@ export function AddSalesLeadDialog({ open, onOpenChange, onSuccess }: Props) {
               data-testid="sl-company-name"
             />
           </div>
+
+          <DuplicateConflictAlert conflicts={duplicateConflicts} reason={overrideReason}
+            onReasonChange={setOverrideReason} disabled={loading} />
 
           <div className="grid grid-cols-2 gap-3">
             <div className="space-y-1">
@@ -219,6 +256,7 @@ export function AddSalesLeadDialog({ open, onOpenChange, onSuccess }: Props) {
                 type="email"
                 value={form.contact_email}
                 onChange={setField('contact_email')}
+                onBlur={previewDuplicate}
                 placeholder="info@acme.cz"
                 disabled={loading}
               />
@@ -265,9 +303,11 @@ export function AddSalesLeadDialog({ open, onOpenChange, onSuccess }: Props) {
             <Button type="button" variant="outline" onClick={handleClose} disabled={loading}>
               Zrušit
             </Button>
-            <Button type="submit" disabled={loading} className="gap-2" data-testid="sl-submit-btn">
+            <Button type={duplicateConflicts.length > 0 ? 'button' : 'submit'} disabled={loading}
+              onClick={duplicateConflicts.length > 0 ? confirmDuplicateOverride : undefined}
+              variant={duplicateConflicts.length > 0 ? 'destructive' : 'default'} className="gap-2" data-testid="sl-submit-btn">
               {loading && <Loader2 className="w-4 h-4 animate-spin" />}
-              Přidat firmu
+              {duplicateConflicts.length > 0 ? 'Potvrdit výjimku a pokračovat' : 'Přidat firmu'}
             </Button>
           </div>
         </form>
