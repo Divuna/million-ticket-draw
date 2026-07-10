@@ -15,7 +15,8 @@ import { Resend } from "npm:resend@6.17.2";
 //   1) ověří podpis webhooku (Svix, secret SALES_LEAD_INBOUND_WEBHOOK_SECRET),
 //   2) vytáhne LEAD_ID z adresy příjemce (`reply+<uuid>@…`),
 //   3) dedup proti opakovanému doručení téhož webhooku (message_id / email_id),
-//   4) přes RESEND_API_KEY načte celý e-mail: resend.emails.receiving.get(email_id),
+//   4) přes RESEND_RECEIVING_API_KEY načte celý e-mail:
+//      resend.emails.receiving.get(email_id),
 //   5) zapíše aktivitu `reply_received` (text, fallback html, subject, from),
 //   6) zavolá service-role RPC `sales_lead_mark_replied` (posun na `odpovedel`
 //      jen z raných/oslovovacích stavů; jinak stav beze změny).
@@ -23,6 +24,13 @@ import { Resend } from "npm:resend@6.17.2";
 // Dedup se vyhodnocuje PŘED voláním Resendu, takže replay webhooku nestojí
 // žádný API request. Tvrdá pojistka je unikátní index na
 // (lead_id, email_message_id) WHERE activity_type='reply_received'.
+//
+// Klíče jsou ZÁMĚRNĚ oddělené (least privilege):
+//   • RESEND_API_KEY            = sending_access — jen odesílací funkce
+//     (`send-sales-lead-email`, `process-email-queue`, …). Tato funkce ho nečte.
+//   • RESEND_RECEIVING_API_KEY  = full_access    — jen tato funkce; čtení
+//     přijatého e-mailu (`GET /emails/receiving/{id}`) je read operace, kterou
+//     sending_access klíč neumí.
 //
 // Tato funkce NIKDY neodesílá e-mail — pouze přijímá a čte. Zápis přes
 // service_role (obchází RLS). Nedotýká se wallets/payments/contests/tickets/
@@ -120,6 +128,36 @@ function asString(v: unknown): string | null {
   return typeof v === "string" && v.length > 0 ? v : null;
 }
 
+// Bezpečné logování selhání Receiving API.
+// Loguje POUZE identifikátory a chybový kód/status/zprávu z Resendu.
+// NIKDY nesmí zalogovat API klíč, hlavičky, tělo e-mailu ani celý payload —
+// proto se z chyby vytahují jen vyjmenovaná skalární pole.
+function logReceivingFailure(emailId: string, leadId: string, err: unknown): void {
+  let name: string | null = null;
+  let message: string | null = null;
+  let statusCode: number | null = null;
+
+  if (err && typeof err === "object") {
+    const e = err as Record<string, unknown>;
+    name = asString(e.name);
+    message = asString(e.message);
+    if (typeof e.statusCode === "number") statusCode = e.statusCode;
+  } else if (typeof err === "string") {
+    message = err;
+  }
+
+  console.error(
+    "sales-lead-inbound receiving_api_access_failed",
+    JSON.stringify({
+      lead_id: leadId,
+      email_id: emailId,
+      resend_error_name: name,
+      resend_error_message: message,
+      resend_status_code: statusCode,
+    }),
+  );
+}
+
 serve(async (req: Request) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders });
   if (req.method !== "POST") return jsonResponse({ success: false, error: "method_not_allowed" }, 405);
@@ -207,22 +245,31 @@ serve(async (req: Request) => {
 
   // ── 5. Načtení celého e-mailu z Resend Receiving API ─────────────────────
   // Webhook `email.received` neobsahuje tělo — jen metadata.
-  const resendApiKey = Deno.env.get("RESEND_API_KEY");
-  if (!resendApiKey) {
+  //
+  // ⚠️ Čtení přijatého e-mailu (`GET /emails/receiving/{id}`) vyžaduje Resend
+  // klíč s oprávněním `full_access`. Odesílací klíč `RESEND_API_KEY` je záměrně
+  // `sending_access` (least privilege) a tuto operaci NEUMÍ. Proto má inbound
+  // vlastní secret `RESEND_RECEIVING_API_KEY` — nikdy nesahat na `RESEND_API_KEY`.
+  const receivingApiKey = Deno.env.get("RESEND_RECEIVING_API_KEY");
+  if (!receivingApiKey) {
     // Řízený stav — nic nezapisujeme, Resend webhook zopakuje.
-    return jsonResponse({ success: false, error: "email_fetch_not_configured" }, 503);
+    return jsonResponse({ success: false, error: "receiving_api_not_configured" }, 503);
   }
 
   let received: Record<string, unknown>;
   try {
-    const resend = new Resend(resendApiKey);
+    const resend = new Resend(receivingApiKey);
     const res = await resend.emails.receiving.get(emailId);
     if (res.error || !res.data) {
-      return jsonResponse({ success: false, error: "email_fetch_failed" }, 502);
+      // Bezpečné logování: jen název/zpráva chyby a status. NIKDY API klíč,
+      // hlavičky, tělo e-mailu ani obsah odpovědi.
+      logReceivingFailure(emailId, leadId, res.error);
+      return jsonResponse({ success: false, error: "receiving_api_access_failed" }, 502);
     }
     received = res.data as unknown as Record<string, unknown>;
-  } catch {
-    return jsonResponse({ success: false, error: "email_fetch_failed" }, 502);
+  } catch (err) {
+    logReceivingFailure(emailId, leadId, err);
+    return jsonResponse({ success: false, error: "receiving_api_access_failed" }, 502);
   }
 
   // Tělo: text, při jeho absenci fallback html.
