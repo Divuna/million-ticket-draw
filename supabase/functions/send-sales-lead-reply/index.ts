@@ -53,8 +53,13 @@ serve(async (req) => {
     const key = Deno.env.get("RESEND_API_KEY");
     if (!key) return json({ success: false, error: "email_not_configured" }, 503);
     const messageId = typeof incoming.metadata?.message_id === "string" ? incoming.metadata.message_id : null;
+    // Per-lead Reply-To — zákazníkova další odpověď musí dorazit sem, aby ji
+    // Resend inbound spároval s leadem. POZOR: Resend SDK v6 očekává `replyTo`
+    // (camelCase), NE `reply_to`. Se `reply_to` v6 pole tiše ignoruje a odchozí
+    // e-mail nemá Reply-To hlavičku → další odpověď se ztratí (šla by na from).
+    const replyTo = `reply+${leadId}@ulduuzoul.resend.app`;
     const response = await new Resend(key).emails.send({
-      from: "OneMil <b2b@onemil.cz>", to: [recipient], reply_to: `reply+${leadId}@ulduuzoul.resend.app`,
+      from: "OneMil <b2b@onemil.cz>", to: [recipient], replyTo,
       subject, text: body, html: `<div style="white-space:pre-wrap;font-family:Arial,sans-serif;font-size:14px;line-height:1.5">${escapeHtml(body)}</div>`,
       ...(messageId ? { headers: { "In-Reply-To": messageId, "References": messageId } } : {}),
     });
@@ -62,7 +67,7 @@ serve(async (req) => {
     const { error: historyError } = await admin.from("sales_lead_activities").insert({
       lead_id: leadId, activity_type: "email_sent", direction: "outbound", subject, body_snapshot: body,
       email_message_id: response.data?.id ?? null, performed_by: caller.id,
-      metadata: { sent_by: "human_reply", from: "b2b@onemil.cz", to: recipient, reply_to_activity_id: activityId },
+      metadata: { sent_by: "human_reply", from: "b2b@onemil.cz", reply_to: replyTo, to: recipient, reply_to_activity_id: activityId },
     });
     // E-mail už byl odeslán. Nevracíme chybu vhodnou k retry, aby člověk
     // nevytvořil duplicitní odpověď; warning je explicitní pro následný audit.
