@@ -58,7 +58,9 @@ const TABS: { id: string; label: string; statuses: string[] | null }[] = [
   { id: 'new', label: 'Nové', statuses: ['novy'] },
   { id: 'prep', label: 'Příprava', statuses: ['priprava', 'schvaleni_ceka'] },
   { id: 'contacted', label: 'Osloveno', statuses: ['osloveno', 'follow_up'] },
-  { id: 'talks', label: 'Jednání', statuses: ['odpovedel', 'jednani'] },
+  // `odpovedel` a `jednani` jsou oddělené fáze — nesmí se počítat dvakrát.
+  { id: 'replied', label: 'Odpovědělo', statuses: ['odpovedel'] },
+  { id: 'talks', label: 'Jednání', statuses: ['jednani'] },
   { id: 'converted', label: 'Konvertováno', statuses: ['konvertovan'] },
   { id: 'blocked', label: 'Nekontaktovat', statuses: ['nekontaktovat', 'odmitl'] },
   { id: 'archive', label: 'Archiv', statuses: ['archivovan'] },
@@ -111,6 +113,39 @@ const AdminSalesLeads: React.FC = () => {
   useEffect(() => {
     load();
   }, [load]);
+
+  // Obnovení bez pollingu: stav leadu mění i věci mimo tuto stránku (příchozí
+  // odpověď firmy přes `sales-lead-inbound`, jiná záložka prohlížeče). Místo
+  // periodického dotazování načteme data znovu, když se okno vrátí do popředí.
+  useEffect(() => {
+    const refetchIfVisible = () => {
+      if (document.visibilityState === 'visible') void load();
+    };
+    window.addEventListener('focus', refetchIfVisible);
+    document.addEventListener('visibilitychange', refetchIfVisible);
+    return () => {
+      window.removeEventListener('focus', refetchIfVisible);
+      document.removeEventListener('visibilitychange', refetchIfVisible);
+    };
+  }, [load]);
+
+  /** Přepnutí záložky — počty i seznam se osvěží proti aktuálnímu stavu DB. */
+  const handleTabChange = useCallback(
+    (tab: string) => {
+      setActiveTab(tab);
+      void load();
+    },
+    [load],
+  );
+
+  /** Zavření detailu — v detailu se mohl změnit stav, koncept i historie. */
+  const handleDetailOpenChange = useCallback(
+    (nextOpen: boolean) => {
+      setDetailOpen(nextOpen);
+      if (!nextOpen) void load();
+    },
+    [load],
+  );
 
   const openDetail = (id: string) => {
     setDetailId(id);
@@ -185,7 +220,9 @@ const AdminSalesLeads: React.FC = () => {
       toContact: leads.filter((l) => ['novy', 'priprava'].includes(l.status)).length,
       awaitingApproval: leads.filter((l) => l.status === 'schvaleni_ceka').length,
       contacted: leads.filter((l) => ['osloveno', 'follow_up'].includes(l.status)).length,
-      replied: leads.filter((l) => ['odpovedel', 'jednani'].includes(l.status)).length,
+      // `odpovedel` = firma odpověděla; `jednani` = už se s ní jedná. Oddělené karty.
+      replied: leads.filter((l) => l.status === 'odpovedel').length,
+      talks: leads.filter((l) => l.status === 'jednani').length,
       converted: leads.filter((l) => l.status === 'konvertovan').length,
       blocked: leads.filter((l) => ['nekontaktovat', 'odmitl'].includes(l.status)).length,
     }),
@@ -228,6 +265,7 @@ const AdminSalesLeads: React.FC = () => {
     { label: 'Čeká na schválení', value: summary.awaitingApproval },
     { label: 'Osloveno', value: summary.contacted },
     { label: 'Odpovědělo', value: summary.replied },
+    { label: 'Jednání', value: summary.talks },
     { label: 'Konvertováno', value: summary.converted },
     { label: 'Nekontaktovat', value: summary.blocked },
   ];
@@ -296,7 +334,7 @@ const AdminSalesLeads: React.FC = () => {
               />
             </div>
           </div>
-          <Tabs value={activeTab} onValueChange={setActiveTab}>
+          <Tabs value={activeTab} onValueChange={handleTabChange}>
             <TabsList className="h-auto flex-wrap justify-start">
               {TABS.map((t) => (
                 <TabsTrigger key={t.id} value={t.id} className="text-xs">
@@ -404,7 +442,7 @@ const AdminSalesLeads: React.FC = () => {
       <SalesLeadDetailSheet
         leadId={detailId}
         open={detailOpen}
-        onOpenChange={setDetailOpen}
+        onOpenChange={handleDetailOpenChange}
         onMutated={load}
       />
 
