@@ -1,5 +1,58 @@
 # OneMil – aktuální stav projektu
 
+## MODUL OBCHOD / LEADY — ODPOVĚDI + NEPŘEČTENÉ + REPLY-TO FIX PRODUKČNĚ LIVE (11. 07. 2026)
+
+**Autoritativní aktuální stav modulu Obchod / Leady po PR #206–#209. Odpovídání z detailu leadu,
+ukládání celého e-mailového vlákna a upozornění na nepřečtené odpovědi jsou LIVE na produkci
+`xkzhjldrojjlrkezorey`. Nahrazuje starší zápisy níže, které tyto věci označovaly jako „POUZE PR" /
+„neaplikováno/nenasazeno" — ty jsou překonané.**
+
+- **Odpovídání přímo z detailu leadu je na produkci.** V historii kontaktu je u příchozí zprávy
+  tlačítko „Odpovědět"; formulář (předmět, text, „Odeslat odpověď", „Zrušit") se zobrazí inline
+  přímo pod vybranou zprávou a sám odscrolluje do pohledu (PR #207). Odesílá EF `send-sales-lead-reply`.
+- **Do historie se ukládají příchozí i odchozí e-maily.** `email_sent` (odchozí) i `reply_received`
+  (příchozí) mají `direction`, `subject` a `body_snapshot`; detail je zobrazuje jako vlákno
+  (odesílatel/příjemce, předmět, text, čas), odchozí vs příchozí odlišené, dlouhý text i citovaná
+  část sbalené (PR #205).
+- **Reply-To chyba Resend SDK v6 opravena; produkční `send-sales-lead-reply` běží ve verzi 3.**
+  SDK v6 `emails.send()` očekává `replyTo` (camelCase), ne `reply_to` (PR #208). Odchozí odpověď
+  nyní má správnou Reply-To hlavičku `reply+<lead_id>@ulduuzoul.resend.app` a `reply_to` se zapisuje
+  i do metadat aktivity `email_sent`.
+- **Další odpovědi zákazníka se správně vracejí do stejného leadu** — přes per-lead Reply-To je chytne
+  `sales-lead-inbound`, dotáhne tělo přes Resend Receiving API a uloží jako `reply_received`. Inbound
+  negatuje na stav leadu; příjem funguje i pro `jednani`/`odpovedel` (stav se přijetím nemění).
+- **Názvy stavů v UI:** `konvertovan` = „Spolupráce", `odmitl` = „Bez spolupráce". `odpovedel` a
+  `jednani` jsou oddělené karty/taby („Odpovědělo" vs „Jednání"), nepočítají se dvakrát.
+- **Kontrola duplicit e-mailu i firemní domény s auditovanou výjimkou** funguje: server ověřuje
+  přesnou adresu vždy; veřejné domény (Gmail, Seznam, Outlook, Hotmail, Centrum a další seedované) se
+  jako doménová duplicita nevyhodnocují. Odeslání oslovení i odpovědi má serverový guard
+  `sales_lead_email_send_guard`; výjimka vyžaduje důvod a je auditovaná.
+- **Nepřečtené odpovědi evidované přes `read_at` + `read_by`** na `sales_lead_activities` (PR #209).
+  `read_at IS NULL` = nepřečteno; nová `reply_received` je nepřečtená automaticky (inbound `read_at`
+  nenastavuje).
+- **V administraci se zobrazuje počet nových odpovědí, červená tečka a zvýraznění zprávy:** nav
+  položka „Obchod" má červený badge s počtem nepřečtených, karta „Odpovědělo" červený počet, lead
+  s nepřečtenou odpovědí má v tabulce červenou tečku + tučný název, nepřečtená zpráva v detailu je
+  zvýrazněná se štítkem „Nové". Počty se aktualizují ihned (custom event `sales-leads-unread-changed`
+  + refetch při návratu okna do popředí), bez ručního obnovení.
+- **Po otevření detailu se odpověď označí jako přečtená** přes RPC `sales_lead_mark_replies_read(uuid)`
+  (SECURITY DEFINER, guard `sales_leads.manage`/superadmin, `anon` bez EXECUTE). RPC mění jen
+  `sales_lead_activities`, **nikdy stav leadu**.
+- **Migrace `20260711100000_sales_leads_activity_read_state.sql` je aplikována na stagingu
+  `dxmowysntemfqfnanxua` i produkci `xkzhjldrojjlrkezorey`** (přes `apply_migration`, `{"success":true}`).
+  Ověřeno na obou: sloupce `read_at`/`read_by`, parciální index `idx_sales_lead_activities_unread_reply`,
+  RPC guard (superadmin OK, běžný uživatel i anon `access_denied`), backfill existujících odpovědí na
+  přečtené, checksumy stavů leadů i seznamu aktivit beze změny (jen backfill `read_at`).
+- **Frontend publikován (Lovable Publish) a funkce ověřena na produkci** (potvrzení Pavla).
+- **Produkční Edge Function `admin-create-test-user` byla ODSTRANĚNA** z produkce (endpoint → 404) a
+  smazána z repu (PR #204). **Nesmí být znovu nasazena** — neměla autorizaci a přes service role
+  zapisovala do wallets/payments/vouchers.
+
+**Pravidla (neměnit bez samostatného schválení Pavla):** `send-sales-lead-reply` musí u `emails.send()`
+používat `replyTo` (SDK v6), nikdy `reply_to`; `sales_lead_mark_replies_read` nesmí měnit stav leadu;
+`admin-create-test-user` neobnovovat bez řádného admin guardu; oddělené Resend klíče (`RESEND_API_KEY`
+sending-only vs `RESEND_RECEIVING_API_KEY` full-access) neslučovat.
+
 ## MODUL OBCHOD / LEADY — INBOUND OPRAVEN NA RESEND RECEIVING API (10. 07. 2026)
 
 Původní návrh (`reply.onemil.cz` + vlastní MX) je **nahrazen**: používáme **bezplatnou Resend
@@ -25,7 +78,12 @@ zásah** — kořenové `onemil.cz` i schránka `b2b@onemil.cz` v Active24 zůst
   zaloguje jen `lead_id`, `email_id`, `resend_error_name`, `resend_error_message`, `resend_status_code`.
   **Nikdy neloguje API klíč, hlavičky ani obsah e-mailu.** Chybí-li secret → `receiving_api_not_configured` (503).
 
-## MODUL OBCHOD / LEADY — AUTOMATICKÉ PŘÍCHOZÍ ODPOVĚDI (PR, neaplikováno/nenasazeno) (09. 07. 2026)
+## MODUL OBCHOD / LEADY — AUTOMATICKÉ PŘÍCHOZÍ ODPOVĚDI (09. 07. 2026) — ⚠️ PŘEKONÁNO, VIZ NAHOŘE
+
+> **PŘEKONÁNO (11. 07. 2026):** níže uvedený návrh počítal s doménou `reply.onemil.cz` + vlastním MX.
+> Reálné produkční řešení používá bezplatnou Resend receiving doménu `ulduuzoul.resend.app` (bez DNS
+> zásahu) a je **LIVE na produkci** — viz autoritativní sekce na začátku souboru. Text níže je
+> historický a už neplatí doslovně.
 
 Karta „Odpovědělo" se dosud nezvedala sama, protože příjem odpovědí od firem nebyl nikde napojen
 (`reply_received` existoval jen jako povolená hodnota v CHECK constraintu, nikde se nevytvářel).
@@ -98,9 +156,16 @@ Důležité pravidlo: další e-mailové HTML šablony se mají vizuálně podob
 
 ## MODUL OBCHOD / LEADY — OPRAVA PO FÁZI 6 PŘIPRAVENA JEN JAKO SOUBORY V PR (06. 07. 2026, neaplikováno/nenasazeno)
 
-## MODUL OBCHOD / LEADY — ODPOVĚDI + DUPLICITNÍ E-MAILY (10. 07. 2026, POUZE PR)
+## MODUL OBCHOD / LEADY — ODPOVĚDI + DUPLICITNÍ E-MAILY (10. 07. 2026) — ✅ NASAZENO (viz sekce nahoře)
 
-Na samostatné větvi je připravena neaplikovaná migrace `20260710180000_sales_leads_replies_duplicate_overrides.sql`, serverová kontrola přesného e-mailu a firemní e-mailové domény, auditovaná admin výjimka s důvodem a nová Edge Function `send-sales-lead-reply`. Veřejné služby (Gmail, Seznam, Outlook, Hotmail, Centrum a další seedované domény) se jako doménová duplicita nevyhodnocují; přesná adresa se kontroluje vždy. Odeslání oslovovacího e-mailu i odpovědi má serverový guard. UI zobrazuje původní lead, první oslovení a historii výjimky. `konvertovan` = „Spolupráce", `odmitl` = „Bez spolupráce", `nekontaktovat` beze změny. Nic neaplikováno, nenasazeno ani neodesláno; staging a produkce nedotčeny.
+Migrace `20260710180000_sales_leads_replies_duplicate_overrides.sql`, serverová kontrola přesného
+e-mailu a firemní e-mailové domény, auditovaná admin výjimka s důvodem a Edge Function
+`send-sales-lead-reply` — **aplikováno/nasazeno** (odpovídání z detailu leadu je LIVE na produkci; viz
+autoritativní sekce na začátku souboru; Reply-To fix v `send-sales-lead-reply` v3, PR #208). Veřejné
+služby (Gmail, Seznam, Outlook, Hotmail, Centrum a další seedované domény) se jako doménová duplicita
+nevyhodnocují; přesná adresa se kontroluje vždy. Odeslání oslovovacího e-mailu i odpovědi má serverový
+guard `sales_lead_email_send_guard`. UI zobrazuje původní lead, první oslovení a historii výjimky.
+`konvertovan` = „Spolupráce", `odmitl` = „Bez spolupráce", `nekontaktovat` beze změny.
 
 Read-only audit produkční administrace `/admin/sales-leads` (po zprovoznění Fáze 6) potvrdil
 hlášený problém: po ručním odeslání e-mailu se stav leadu nepropisoval na „Osloveno" a horní
