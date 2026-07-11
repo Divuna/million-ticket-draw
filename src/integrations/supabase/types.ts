@@ -3519,6 +3519,408 @@ export type Database = {
         }
         Relationships: []
       }
+      sales_lead_activities: {
+        Row: {
+          activity_status: string
+          activity_type: string
+          body_snapshot: string | null
+          cancelled_at: string | null
+          cancelled_by: string | null
+          completed_at: string | null
+          completed_by: string | null
+          created_at: string
+          direction: string | null
+          email_message_id: string | null
+          id: string
+          lead_id: string
+          metadata: Json
+          performed_by: string | null
+          read_at: string | null
+          read_by: string | null
+          scheduled_for: string | null
+          subject: string | null
+        }
+        Insert: {
+          activity_status?: string
+          activity_type: string
+          body_snapshot?: string | null
+          cancelled_at?: string | null
+          cancelled_by?: string | null
+          completed_at?: string | null
+          completed_by?: string | null
+          created_at?: string
+          direction?: string | null
+          email_message_id?: string | null
+          id?: string
+          lead_id: string
+          metadata?: Json
+          performed_by?: string | null
+          read_at?: string | null
+          read_by?: string | null
+          scheduled_for?: string | null
+          subject?: string | null
+        }
+        Update: {
+          activity_status?: string
+          activity_type?: string
+          body_snapshot?: string | null
+          cancelled_at?: string | null
+          cancelled_by?: string | null
+          completed_at?: string | null
+          completed_by?: string | null
+          created_at?: string
+          direction?: string | null
+          email_message_id?: string | null
+          id?: string
+          lead_id?: string
+          metadata?: Json
+          performed_by?: string | null
+          read_at?: string | null
+          read_by?: string | null
+          scheduled_for?: string | null
+          subject?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "sales_lead_activities_lead_id_fkey"
+            columns: ["lead_id"]
+            isOneToOne: false
+            referencedRelation: "sales_leads"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      sales_lead_duplicate_overrides: {
+        Row: {
+          confirmed_by: string
+          created_at: string
+          id: string
+          lead_id: string
+          match_type: string
+          matched_lead_id: string
+          matched_value: string
+          reason: string
+        }
+        Insert: {
+          confirmed_by: string
+          created_at?: string
+          id?: string
+          lead_id: string
+          match_type: string
+          matched_lead_id: string
+          matched_value: string
+          reason: string
+        }
+        Update: {
+          confirmed_by?: string
+          created_at?: string
+          id?: string
+          lead_id?: string
+          match_type?: string
+          matched_lead_id?: string
+          matched_value?: string
+          reason?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "sales_lead_duplicate_overrides_lead_id_fkey"
+            columns: ["lead_id"]
+            isOneToOne: false
+            referencedRelation: "sales_leads"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "sales_lead_duplicate_overrides_matched_lead_id_fkey"
+            columns: ["matched_lead_id"]
+            isOneToOne: false
+            referencedRelation: "sales_leads"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      sales_lead_email_suppression: {
+        Row: {
+          created_at: string
+          created_by: string | null
+          email_pattern: string
+          id: string
+          reason: string
+        }
+        Insert: {
+          created_at?: string
+          created_by?: string | null
+          email_pattern: string
+          id?: string
+          reason: string
+        }
+        Update: {
+          created_at?: string
+          created_by?: string | null
+          email_pattern?: string
+          id?: string
+          reason?: string
+        }
+        Relationships: []
+      }
+      sales_lead_public_email_domains: {
+        Row: {
+          created_at: string
+          domain: string
+        }
+        Insert: {
+          created_at?: string
+          domain: string
+        }
+        Update: {
+          created_at?: string
+          domain?: string
+        }
+        Relationships: []
+      }
+      sales_lead_status_history: {
+        Row: {
+          changed_by: string | null
+          created_at: string
+          id: string
+          lead_id: string
+          new_status: string
+          old_status: string
+          reason: string | null
+        }
+        Insert: {
+          changed_by?: string | null
+          created_at?: string
+          id?: string
+          lead_id: string
+          new_status: string
+          old_status: string
+          reason?: string | null
+        }
+        Update: {
+          changed_by?: string | null
+          created_at?: string
+          id?: string
+          lead_id?: string
+          new_status?: string
+          old_status?: string
+          reason?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "sales_lead_status_history_lead_id_fkey"
+            columns: ["lead_id"]
+            isOneToOne: false
+            referencedRelation: "sales_leads"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      sales_lead_tasks: {
+        Row: {
+          assigned_admin_id: string
+          completed_at: string | null
+          completed_by: string | null
+          created_at: string
+          created_by: string
+          due_at: string
+          id: string
+          lead_id: string
+          note: string | null
+          status: string
+          title: string
+          updated_at: string
+        }
+        Insert: {
+          assigned_admin_id: string
+          completed_at?: string | null
+          completed_by?: string | null
+          created_at?: string
+          created_by: string
+          due_at: string
+          id?: string
+          lead_id: string
+          note?: string | null
+          status?: string
+          title: string
+          updated_at?: string
+        }
+        Update: {
+          assigned_admin_id?: string
+          completed_at?: string | null
+          completed_by?: string | null
+          created_at?: string
+          created_by?: string
+          due_at?: string
+          id?: string
+          lead_id?: string
+          note?: string | null
+          status?: string
+          title?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "sales_lead_tasks_lead_id_fkey"
+            columns: ["lead_id"]
+            isOneToOne: false
+            referencedRelation: "sales_leads"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      sales_leads: {
+        Row: {
+          ai_research_at: string | null
+          ai_research_summary: string | null
+          assigned_admin_id: string | null
+          city: string | null
+          company_name: string
+          company_size: string | null
+          contact_email: string | null
+          contact_person: string | null
+          contact_phone: string | null
+          contact_role: string | null
+          converted_partner_id: string | null
+          created_at: string
+          created_by: string
+          dic: string | null
+          discovery_meta: Json
+          discovery_source: string | null
+          do_not_contact: boolean
+          do_not_contact_reason: string | null
+          draft_approved_at: string | null
+          draft_approved_by: string | null
+          draft_email_body: string | null
+          draft_email_subject: string | null
+          draft_prepared_by: string | null
+          email_source: string | null
+          email_verified_by_admin: boolean
+          ico: string | null
+          id: string
+          industry: string | null
+          lead_group: string | null
+          lead_quality: number
+          next_action_at: string | null
+          notes: string | null
+          priority: number
+          proposed_contact_at: string | null
+          proposed_contact_by: string | null
+          proposed_contact_email: string | null
+          proposed_contact_source_url: string | null
+          proposed_contact_status: string | null
+          source: string
+          status: string
+          updated_at: string
+          website: string | null
+          website_domain: string | null
+        }
+        Insert: {
+          ai_research_at?: string | null
+          ai_research_summary?: string | null
+          assigned_admin_id?: string | null
+          city?: string | null
+          company_name: string
+          company_size?: string | null
+          contact_email?: string | null
+          contact_person?: string | null
+          contact_phone?: string | null
+          contact_role?: string | null
+          converted_partner_id?: string | null
+          created_at?: string
+          created_by: string
+          dic?: string | null
+          discovery_meta?: Json
+          discovery_source?: string | null
+          do_not_contact?: boolean
+          do_not_contact_reason?: string | null
+          draft_approved_at?: string | null
+          draft_approved_by?: string | null
+          draft_email_body?: string | null
+          draft_email_subject?: string | null
+          draft_prepared_by?: string | null
+          email_source?: string | null
+          email_verified_by_admin?: boolean
+          ico?: string | null
+          id?: string
+          industry?: string | null
+          lead_group?: string | null
+          lead_quality?: number
+          next_action_at?: string | null
+          notes?: string | null
+          priority?: number
+          proposed_contact_at?: string | null
+          proposed_contact_by?: string | null
+          proposed_contact_email?: string | null
+          proposed_contact_source_url?: string | null
+          proposed_contact_status?: string | null
+          source?: string
+          status?: string
+          updated_at?: string
+          website?: string | null
+          website_domain?: string | null
+        }
+        Update: {
+          ai_research_at?: string | null
+          ai_research_summary?: string | null
+          assigned_admin_id?: string | null
+          city?: string | null
+          company_name?: string
+          company_size?: string | null
+          contact_email?: string | null
+          contact_person?: string | null
+          contact_phone?: string | null
+          contact_role?: string | null
+          converted_partner_id?: string | null
+          created_at?: string
+          created_by?: string
+          dic?: string | null
+          discovery_meta?: Json
+          discovery_source?: string | null
+          do_not_contact?: boolean
+          do_not_contact_reason?: string | null
+          draft_approved_at?: string | null
+          draft_approved_by?: string | null
+          draft_email_body?: string | null
+          draft_email_subject?: string | null
+          draft_prepared_by?: string | null
+          email_source?: string | null
+          email_verified_by_admin?: boolean
+          ico?: string | null
+          id?: string
+          industry?: string | null
+          lead_group?: string | null
+          lead_quality?: number
+          next_action_at?: string | null
+          notes?: string | null
+          priority?: number
+          proposed_contact_at?: string | null
+          proposed_contact_by?: string | null
+          proposed_contact_email?: string | null
+          proposed_contact_source_url?: string | null
+          proposed_contact_status?: string | null
+          source?: string
+          status?: string
+          updated_at?: string
+          website?: string | null
+          website_domain?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "sales_leads_converted_partner_id_fkey"
+            columns: ["converted_partner_id"]
+            isOneToOne: false
+            referencedRelation: "partners"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "sales_leads_converted_partner_id_fkey"
+            columns: ["converted_partner_id"]
+            isOneToOne: false
+            referencedRelation: "public_partners"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       settings: {
         Row: {
           key: string
@@ -5709,26 +6111,6 @@ export type Database = {
           value: number
         }[]
       }
-      get_public_available_vouchers: {
-        Args: never
-        Returns: {
-          available_code_count: number
-          banner_url: string | null
-          end_date: string | null
-          how_to_use_text: string | null
-          id: string
-          image_url: string | null
-          is_public: boolean
-          max_quantity: number | null
-          name: string
-          redeemed_count: number
-          short_description: string | null
-          start_date: string | null
-          terms_text: string | null
-          usage_description: string | null
-          user_id: string | null
-        }[]
-      }
       get_bob_enabled: { Args: never; Returns: boolean }
       get_contest_bonus_stats: {
         Args: { contest_id: string }
@@ -5841,6 +6223,26 @@ export type Database = {
           summary_text: string
           total_prizes: number
           won_count: number
+        }[]
+      }
+      get_public_available_vouchers: {
+        Args: never
+        Returns: {
+          available_code_count: number
+          banner_url: string
+          end_date: string
+          how_to_use_text: string
+          id: string
+          image_url: string
+          is_public: boolean
+          max_quantity: number
+          name: string
+          redeemed_count: number
+          short_description: string
+          start_date: string
+          terms_text: string
+          usage_description: string
+          user_id: string
         }[]
       }
       get_shoptet_export_url: {
@@ -6062,6 +6464,190 @@ export type Database = {
       safe_send_message: {
         Args: { p_content: string; p_sender: string; p_user_id: string }
         Returns: undefined
+      }
+      sales_lead_check_duplicate: {
+        Args: { p_contact_email: string; p_exclude_lead_id?: string }
+        Returns: Json
+      }
+      sales_lead_create: {
+        Args: {
+          p_city?: string
+          p_company_name: string
+          p_company_size?: string
+          p_contact_email?: string
+          p_contact_person?: string
+          p_contact_phone?: string
+          p_contact_role?: string
+          p_dic?: string
+          p_duplicate_override?: boolean
+          p_duplicate_override_reason?: string
+          p_email_source?: string
+          p_ico?: string
+          p_industry?: string
+          p_notes?: string
+          p_website?: string
+        }
+        Returns: Json
+      }
+      sales_lead_delete: { Args: { p_lead_id: string }; Returns: Json }
+      sales_lead_delete_bulk: { Args: { p_lead_ids: string[] }; Returns: Json }
+      sales_lead_duplicate_matches: {
+        Args: { p_contact_email: string; p_exclude_lead_id?: string }
+        Returns: Json
+      }
+      sales_lead_email_send_guard: {
+        Args: { p_lead_id: string }
+        Returns: Json
+      }
+      sales_lead_log_activity: {
+        Args: {
+          p_happened_at: string
+          p_kind: string
+          p_lead_id: string
+          p_next_step?: string
+          p_note?: string
+          p_result: string
+        }
+        Returns: Json
+      }
+      sales_lead_mark_emailed: {
+        Args: { p_lead_id: string; p_performed_by: string }
+        Returns: Json
+      }
+      sales_lead_mark_replied: {
+        Args: { p_lead_id: string; p_performed_by?: string }
+        Returns: Json
+      }
+      sales_lead_mark_replies_read: {
+        Args: { p_lead_id: string }
+        Returns: Json
+      }
+      sales_lead_overview: {
+        Args: { p_from?: string; p_to?: string }
+        Returns: Json
+      }
+      sales_lead_propose: {
+        Args: {
+          p_city?: string
+          p_company_name: string
+          p_created_by: string
+          p_discovery_meta?: Json
+          p_discovery_source: string
+          p_ico?: string
+          p_industry?: string
+          p_lead_group: string
+          p_lead_quality?: number
+          p_website?: string
+        }
+        Returns: Json
+      }
+      sales_lead_propose_contact: {
+        Args: {
+          p_created_by: string
+          p_email: string
+          p_lead_id: string
+          p_proposed_by?: string
+          p_source_url: string
+        }
+        Returns: Json
+      }
+      sales_lead_propose_with_contact: {
+        Args: {
+          p_city?: string
+          p_company_name: string
+          p_created_by: string
+          p_discovery_meta?: Json
+          p_discovery_source: string
+          p_email: string
+          p_email_source_url: string
+          p_ico?: string
+          p_industry?: string
+          p_lead_group: string
+          p_lead_quality?: number
+          p_proposed_by?: string
+          p_website?: string
+        }
+        Returns: Json
+      }
+      sales_lead_record_duplicate_overrides: {
+        Args: {
+          p_caller: string
+          p_lead_id: string
+          p_matches: Json
+          p_reason: string
+        }
+        Returns: undefined
+      }
+      sales_lead_review_contact: {
+        Args: { p_decision: string; p_lead_id: string }
+        Returns: Json
+      }
+      sales_lead_save_draft: {
+        Args: { p_body: string; p_lead_id: string; p_subject: string }
+        Returns: Json
+      }
+      sales_lead_scheduled_activity_set_status: {
+        Args: { p_activity_id: string; p_status: string }
+        Returns: Json
+      }
+      sales_lead_scheduled_activity_update: {
+        Args: {
+          p_activity_id: string
+          p_next_step?: string
+          p_note?: string
+          p_result: string
+          p_scheduled_for: string
+        }
+        Returns: Json
+      }
+      sales_lead_set_status: {
+        Args: { p_lead_id: string; p_new_status: string; p_reason?: string }
+        Returns: Json
+      }
+      sales_lead_task_create: {
+        Args: {
+          p_assigned_admin_id: string
+          p_due_at: string
+          p_lead_id: string
+          p_note?: string
+          p_title: string
+        }
+        Returns: Json
+      }
+      sales_lead_task_set_status: {
+        Args: { p_status: string; p_task_id: string }
+        Returns: Json
+      }
+      sales_lead_update_discovery: {
+        Args: {
+          p_discovery_source?: string
+          p_lead_group: string
+          p_lead_id: string
+          p_lead_quality?: number
+        }
+        Returns: Json
+      }
+      sales_lead_update_fields: {
+        Args: {
+          p_city?: string
+          p_company_name: string
+          p_company_size?: string
+          p_contact_email?: string
+          p_contact_person?: string
+          p_contact_phone?: string
+          p_contact_role?: string
+          p_dic?: string
+          p_duplicate_override?: boolean
+          p_duplicate_override_reason?: string
+          p_email_source?: string
+          p_email_verified_by_admin?: boolean
+          p_ico?: string
+          p_industry?: string
+          p_lead_id: string
+          p_notes?: string
+          p_website?: string
+        }
+        Returns: Json
       }
       send_push_via_onesignal: {
         Args: {
