@@ -29,6 +29,7 @@ import {
 import { AddSalesLeadDialog } from '@/components/admin/sales-leads/AddSalesLeadDialog';
 import { SalesLeadDetailSheet } from '@/components/admin/sales-leads/SalesLeadDetailSheet';
 import { DiscoverLeadsDialog } from '@/components/admin/sales-leads/DiscoverLeadsDialog';
+import { SalesLeadOverview } from '@/components/admin/sales-leads/SalesLeadOverview';
 
 /**
  * Admin modul „Obchod / Leady" — Fáze 3A (ruční přidání, detail, editace, změna stavu)
@@ -91,11 +92,12 @@ const AdminSalesLeads: React.FC = () => {
   // Nepřečtené příchozí odpovědi: množina leadů s ≥1 nepřečtenou + celkový počet.
   const [unreadLeadIds, setUnreadLeadIds] = useState<Set<string>>(new Set());
   const [unreadTotal, setUnreadTotal] = useState(0);
+  const [openTasks, setOpenTasks] = useState<{lead_id:string;due_at:string}[]>([]);
 
   const load = useCallback(async () => {
     setLoading(true);
     try {
-      const [leadsRes, unreadRes] = await Promise.all([
+      const [leadsRes, unreadRes, tasksRes] = await Promise.all([
         (supabase as any)
           .from('sales_leads')
           .select('id, company_name, industry, city, status, contact_email, updated_at, assigned_admin_id, lead_group')
@@ -106,6 +108,7 @@ const AdminSalesLeads: React.FC = () => {
           .select('lead_id')
           .eq('activity_type', 'reply_received')
           .is('read_at', null),
+        (supabase as any).from('sales_lead_tasks').select('lead_id,due_at').eq('status','ceka').order('due_at'),
       ]);
       if (leadsRes.error) {
         setTableMissing(true);
@@ -119,11 +122,13 @@ const AdminSalesLeads: React.FC = () => {
       const unreadRows = (unreadRes.error ? [] : unreadRes.data ?? []) as { lead_id: string }[];
       setUnreadLeadIds(new Set(unreadRows.map((r) => r.lead_id)));
       setUnreadTotal(unreadRows.length);
+      setOpenTasks((tasksRes.error ? [] : tasksRes.data ?? []) as {lead_id:string;due_at:string}[]);
     } catch {
       setTableMissing(true);
       setLeads([]);
       setUnreadLeadIds(new Set());
       setUnreadTotal(0);
+      setOpenTasks([]);
     } finally {
       setLoading(false);
     }
@@ -293,6 +298,7 @@ const AdminSalesLeads: React.FC = () => {
     { label: 'Spolupráce', value: summary.converted },
     { label: 'Bez spolupráce', value: summary.notConverted },
     { label: 'Nekontaktovat', value: summary.blocked },
+    { label: 'Nevyřízené úkoly', value: openTasks.length },
   ];
 
   return (
@@ -321,6 +327,10 @@ const AdminSalesLeads: React.FC = () => {
           </Button>
         </div>
       </div>
+
+      {openTasks.length > 0 && <Card><CardHeader><CardTitle className="text-base">Úkoly</CardTitle></CardHeader><CardContent className="grid gap-2 sm:grid-cols-3"><div className="rounded border border-destructive/40 p-3"><div className="text-xs text-muted-foreground">Po termínu</div><div className="text-xl font-bold text-destructive">{openTasks.filter(t=>new Date(t.due_at)<new Date()).length}</div></div><div className="rounded border p-3"><div className="text-xs text-muted-foreground">Na dnešek</div><div className="text-xl font-bold">{openTasks.filter(t=>new Date(t.due_at).toDateString()===new Date().toDateString()).length}</div></div><div className="rounded border p-3"><div className="text-xs text-muted-foreground">Nejbližší termín</div><div className="text-sm font-bold">{openTasks[0]?new Date(openTasks[0].due_at).toLocaleString('cs-CZ'):'—'}</div></div></CardContent></Card>}
+
+      <SalesLeadOverview />
 
       {tableMissing && (
         <div className="flex items-start gap-2.5 rounded-lg border border-amber-500/30 bg-amber-500/10 px-4 py-3 text-sm text-amber-600 dark:text-amber-400">
@@ -446,6 +456,7 @@ const AdminSalesLeads: React.FC = () => {
                       ) : (
                         lead.company_name
                       )}
+                      {openTasks.some(t=>t.lead_id===lead.id) && <Badge variant="outline" className={`ml-2 ${openTasks.some(t=>t.lead_id===lead.id&&new Date(t.due_at)<new Date())?'border-destructive text-destructive':''}`}>Úkol {openTasks.filter(t=>t.lead_id===lead.id).length}</Badge>}
                     </TableCell>
                     <TableCell className="text-muted-foreground">{leadGroupLabel(lead.lead_group)}</TableCell>
                     <TableCell className="text-muted-foreground">{INDUSTRY_LABEL(lead.industry)}</TableCell>
