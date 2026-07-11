@@ -3,7 +3,7 @@
 - Přidána nedestruktivní migrace `20260711120000_sales_leads_crm_completion.sql`.
 - Přidány interní aktivity, úkoly, follow-up a doručovací audit Resendu.
 - Testy: TypeScript 0 chyb, build OK, 20 kontraktních testů OK, stagingový DB tok OK a rollback čistý.
-- Staging nasazen; produkce bude aktualizována až po PR, merge a opakovaném ověření.
+- PR #211 squash mergnut (`ecbd550c846df6cc187677a6593b5f00dc09f34b`); staging i produkce nasazeny a ověřeny rollback testem. Žádný skutečný e-mail nebyl odeslán a žádná testovací data nezůstala.
 
 # OneMil — DEVELOPMENT HISTORY (CHRONOLOGICAL ONLY)
 
