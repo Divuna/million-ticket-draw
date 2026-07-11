@@ -16,6 +16,15 @@ test.describe('discover aktivně dohledá a ověří web, neukládá prázdné l
     expect(search).toContain('Nikdy si URL nevymýšlíš');
   });
 
+  test('web search má druhý pokus s jinou formulací dotazu', () => {
+    // dvě různě formulované varianty; firma se opustí až po druhém neúspěchu
+    expect(search).toContain('const prompts = [');
+    expect(search).toContain('Jaká je adresa vlastních webových stránek firmy');
+    expect(search).toContain('for (const prompt of prompts)');
+    expect(search).toContain('if (candidates.length > 0) return candidates;');
+    expect(search).toContain('async function searchOnce(');
+  });
+
   test('vyhledané weby jdou před AI odhady a stejně se ověří', () => {
     expect(discover).toContain('const candidates = [...searchCandidates, ...aiCandidates]');
     expect(discover).toContain('verifyCompanyWebsite({ companyName: name, ico: icoHint, candidates })');

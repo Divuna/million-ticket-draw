@@ -113,15 +113,34 @@ export async function findOfficialWebsiteCandidates(input: {
   const name = input.companyName.trim();
   if (!name || !input.openaiKey) return [];
 
-  const parts = [`Najdi OFICIÁLNÍ firemní web české firmy „${name}“`];
-  if (input.city) parts.push(`(město: ${input.city})`);
-  if (input.ico) parts.push(`(IČO: ${input.ico})`);
-  const prompt =
-    `${parts.join(" ")}. ` +
-    `Vrať POUZE reálnou URL homepage oficiálního webu firmy, každou na samostatném řádku. ` +
-    `NEVracej sociální sítě (Facebook, Instagram, LinkedIn), katalogy (Firmy.cz, Živéfirmy), ` +
-    `mapy ani Wikipedii. Pokud oficiální web neznáš jistě, nevracej nic.`;
+  const locator = [
+    input.city ? `(město: ${input.city})` : "",
+    input.ico ? `(IČO: ${input.ico})` : "",
+  ].filter(Boolean).join(" ");
 
+  // Dvě různě formulované varianty dotazu. Pokud první web search nic
+  // použitelného nevrátí, zkusíme druhé hledání s jinou formulací; teprve
+  // druhý neúspěch nechá firmu bez vyhledaného kandidáta.
+  const prompts = [
+    `Najdi OFICIÁLNÍ firemní web české firmy „${name}“ ${locator}. `.trim() +
+      ` Vrať POUZE reálnou URL homepage oficiálního webu firmy, každou na samostatném řádku. ` +
+      `NEVracej sociální sítě (Facebook, Instagram, LinkedIn), katalogy (Firmy.cz, Živéfirmy), ` +
+      `mapy ani Wikipedii. Pokud oficiální web neznáš jistě, nevracej nic.`,
+    `Jaká je adresa vlastních webových stránek firmy „${name}“ ${locator} v České republice? `.trim() +
+      ` Zajímá mě její vlastní firemní doména (např. https://nazevfirmy.cz nebo .com), ` +
+      `NE katalog, NE sociální síť, NE e-shopová platforma třetí strany. ` +
+      `Napiš jen samotné URL homepage, každé na samostatném řádku. Když web nenajdeš, nepiš nic.`,
+  ];
+
+  for (const prompt of prompts) {
+    const candidates = await searchOnce(prompt, input.openaiKey);
+    if (candidates.length > 0) return candidates;
+  }
+  return [];
+}
+
+/** Jeden web-search dotaz na OpenAI → seznam kandidátních homepage URL. */
+async function searchOnce(prompt: string, openaiKey: string): Promise<OfficialWebsiteCandidate[]> {
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), SEARCH_TIMEOUT_MS);
   let json: OpenAiSearchResponse;
@@ -129,7 +148,7 @@ export async function findOfficialWebsiteCandidates(input: {
     const res = await fetch("https://api.openai.com/v1/chat/completions", {
       method: "POST",
       headers: {
-        Authorization: `Bearer ${input.openaiKey}`,
+        Authorization: `Bearer ${openaiKey}`,
         "Content-Type": "application/json",
       },
       signal: controller.signal,
