@@ -50,6 +50,7 @@ import {
   type DuplicateConflict,
 } from './salesLeadsShared';
 import { DuplicateConflictAlert } from './DuplicateConflictAlert';
+import { LeadCrmPanel } from './LeadCrmPanel';
 
 interface Props {
   leadId: string | null;
@@ -106,6 +107,10 @@ const ACTIVITY_LABELS: Record<string, string> = {
   email_failed: 'Odeslání e-mailu selhalo',
   call_logged: 'Zaznamenán hovor',
   duplicate_override_confirmed: 'Potvrzena výjimka duplicity',
+  meeting_logged: 'Zaznamenána schůzka',
+  task_created: 'Úkol vytvořen', task_completed: 'Úkol dokončen', task_cancelled: 'Úkol zrušen',
+  email_delivered: 'E-mail doručen', email_delivery_delayed: 'Doručení e-mailu zpožděno',
+  email_bounced: 'E-mail se vrátil jako nedoručený', email_suppressed: 'E-mail byl potlačen',
 };
 
 /** Typy aktivit, které představují e-mailovou zprávu (mají směr, předmět a tělo). */
@@ -1291,6 +1296,8 @@ export function SalesLeadDetailSheet({ leadId, open, onOpenChange, onMutated }: 
             </div>
 
             <Separator className="my-4" />
+
+            <LeadCrmPanel leadId={lead.id} status={lead.status} emailApproved={lead.email_verified_by_admin} onChanged={() => { void load(); onMutated(); }} />
 
             {/* Historie */}
             <div className="text-xs font-semibold uppercase tracking-wide text-muted-foreground mb-2">Historie kontaktu</div>
