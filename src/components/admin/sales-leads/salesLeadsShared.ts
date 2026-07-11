@@ -180,6 +180,13 @@ export interface SalesLeadDetail extends SalesLeadRow {
   ico: string | null;
   dic: string | null;
   website: string | null;
+  website_verification_status: 'overeny' | 'neovereny';
+  website_verification_source: string | null;
+  website_confidence: number | null;
+  website_verified_at: string | null;
+  website_verification_evidence: Record<string, unknown> | null;
+  alternative_websites: Array<Record<string, unknown>> | null;
+  contact_data_provenance: Record<string, unknown> | null;
   company_size: string | null;
   contact_person: string | null;
   contact_role: string | null;

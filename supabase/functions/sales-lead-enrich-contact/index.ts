@@ -87,11 +87,14 @@ serve(async (req: Request) => {
     // ── 3. Load lead ─────────────────────────────────────────────────────────
     const { data: lead, error: leadErr } = await supabaseAdmin
       .from("sales_leads")
-      .select("id, company_name, website, ico, city, industry")
+      .select("id, company_name, website, ico, city, industry, website_verification_status")
       .eq("id", leadId)
       .maybeSingle();
     if (leadErr) return jsonResponse({ success: false, error: "lead_lookup_failed" }, 500);
     if (!lead) return jsonResponse({ success: false, error: "lead_not_found" }, 404);
+    if (!lead.website || lead.website_verification_status !== "overeny") {
+      return jsonResponse({ success: true, found: false, reason: "verified_website_required" });
+    }
 
     // ── 4. OpenAI — vrátí veřejný e-mail + zdroj, nebo null (nehádá) ─────────
     const openaiKey = Deno.env.get("OPENAI_API_KEY");
@@ -153,6 +156,30 @@ Dohledej veřejně uvedený kontaktní e-mail této firmy dle pravidel. Pokud ho
       return jsonResponse({ success: true, found: false });
     }
 
+    // AI je pouze navigace. Zdroj musí být na již ověřené firemní doméně a backend
+    // musí navržený e-mail skutečně najít ve staženém obsahu stránky.
+    let source: URL; let official: URL;
+    try { source = new URL(sourceUrl); official = new URL(lead.website); }
+    catch { return jsonResponse({ success: true, found: false, reason: "invalid_source_url" }); }
+    const host = (u: URL) => u.hostname.toLowerCase().replace(/^www\./, "");
+    if (!['https:', 'http:'].includes(source.protocol) || host(source) !== host(official)) {
+      return jsonResponse({ success: true, found: false, reason: "source_not_on_verified_website" });
+    }
+    const fetchController = new AbortController();
+    const fetchTimer = setTimeout(() => fetchController.abort(), 8_000);
+    let sourceBody = "";
+    try {
+      const page = await fetch(source.toString(), { signal: fetchController.signal, redirect: 'follow', headers: { 'User-Agent': 'OneMilContactVerifier/2.0' } });
+      if (page.status !== 200 || host(new URL(page.url)) !== host(official)) {
+        return jsonResponse({ success: true, found: false, reason: "source_fetch_failed" });
+      }
+      sourceBody = (await page.text()).toLowerCase().replace(/&#64;|&commat;/gi, '@').replace(/&#46;|&period;/gi, '.');
+    } catch { return jsonResponse({ success: true, found: false, reason: "source_fetch_failed" }); }
+    finally { clearTimeout(fetchTimer); }
+    if (!sourceBody.includes(email)) {
+      return jsonResponse({ success: true, found: false, reason: "email_not_found_on_verified_website" });
+    }
+
     // ── 6. Uložit jako NEOVĚŘENÝ návrh (nikdy nepřepíše contact_email) ───────
     const { data: proposeRes, error: proposeErr } = await supabaseAdmin.rpc(
       "sales_lead_propose_contact",
@@ -170,12 +197,21 @@ Dohledej veřejně uvedený kontaktní e-mail této firmy dle pravidel. Pokud ho
       return jsonResponse({ success: false, error: res?.error ?? "propose_failed" }, 400);
     }
 
+    const verifiedAt = new Date().toISOString();
+    await supabaseAdmin.from("sales_leads").update({
+      contact_data_provenance: {
+        email: { source: sourceUrl, confidence: 95, verified_at: verifiedAt },
+      },
+    }).eq("id", leadId);
+
     return jsonResponse({
       success: true,
       found: true,
       proposed_email: email,
       source_url: sourceUrl,
       status: "neovereny",
+      confidence: 95,
+      verified_at: verifiedAt,
     });
   } catch (_err) {
     return jsonResponse({ success: false, error: "internal_error" }, 500);

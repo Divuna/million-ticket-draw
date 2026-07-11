@@ -825,3 +825,14 @@ Schůzky, telefonáty a další kroky mají samostatný `scheduled_for` a stav `
 Modul obsahuje interní záznamy telefonátů, schůzek a poznámek, auditované úkoly, ručně potvrzovaný AI follow-up, Resend doručovací události a obchodní přehled podle období a odpovědného administrátora. Migrace: `20260711120000_sales_leads_crm_completion.sql`; funkce: `send-sales-lead-follow-up`, rozšířené `sales-lead-inbound` a `sales-lead-draft-email`.
 
 Follow-up je serverově povolen pouze pro `osloveno`/`follow_up`, schválený e-mail, bez odpovědi, bez blokace a suppression a po úspěšné kontrole duplicit. Nikdy se neodesílá automaticky. Existující inbound webhook ověřuje Svix podpis a zpracovává `email.delivered`, `email.delivery_delayed`, `email.bounced`, `email.failed` a `email.suppressed`; ukládá jen bezpečný technický audit bez klíčů a citlivých hlaviček.
+
+## Ověření oficiálního webu discovery (fail closed)
+
+- AI pouze navrhne firmu a kandidátní domény; nikdy není důkazem vlastnictví webu.
+- Při IČO se identita ověří detailem ARES. Bez IČO musí být hledání podle obchodního jména jednoznačné.
+- Kandidát musí vrátit HTTP 200 a HTML s reálným obsahem; parked, for-sale, expired a prázdné stránky se odmítají.
+- Obsah musí potvrdit IČO nebo obchodní jméno a současně obsahovat oficiální marker (kontakt, obchodní podmínky nebo copyright).
+- Bez pozitivního důkazu se ukládá `website=NULL`, `website_verification_status='neovereny'`. DB trigger toto vynucuje i při chybě Edge Function.
+- Ostatní kandidáti jsou v `alternative_websites` pouze pro audit a nikdy se nepoužijí k enrichmentu.
+- Zdroj, důvěra 0–100, čas ověření a technické důkazy jsou uložené odděleně. Stejná provenance se ukládá pro nalezený e-mail.
+- `sales-lead-enrich-contact` pracuje jen s ověřeným webem, vyžaduje stejnou doménu zdrojové URL a před uložením musí navržený e-mail fyzicky najít v obsahu stránky.

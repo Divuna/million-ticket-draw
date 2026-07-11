@@ -82,7 +82,7 @@ const DETAIL_COLUMNS =
   'ico, dic, website, company_size, contact_person, contact_role, contact_phone, email_source, ' +
   'email_verified_by_admin, do_not_contact, do_not_contact_reason, notes, created_at, ' +
   'ai_research_summary, ai_research_at, draft_email_subject, draft_email_body, draft_prepared_by, ' +
-  'lead_group, lead_quality, discovery_source, discovery_meta, ' +
+  'lead_group, lead_quality, discovery_source, discovery_meta, website_verification_status, website_verification_source, website_confidence, website_verified_at, website_verification_evidence, alternative_websites, contact_data_provenance, ' +
   'proposed_contact_email, proposed_contact_source_url, proposed_contact_at, ' +
   'proposed_contact_by, proposed_contact_status';
 
@@ -1016,6 +1016,10 @@ export function SalesLeadDetailSheet({ leadId, open, onOpenChange, onMutated }: 
                 <ReadRow label="IČO" value={lead.ico} />
                 <ReadRow label="DIČ" value={lead.dic} />
                 <ReadRow label="Web" value={lead.website} />
+                <ReadRow label="Stav webu" value={lead.website_verification_status === 'overeny' ? 'Ověřený' : 'Neověřený web'} />
+                <ReadRow label="Zdroj webu" value={lead.website_verification_source} />
+                <ReadRow label="Důvěra webu" value={lead.website_confidence == null ? null : `${lead.website_confidence} %`} />
+                <ReadRow label="Ověřeno" value={lead.website_verified_at ? formatDateTime(lead.website_verified_at) : null} />
                 <ReadRow label="Obor" value={INDUSTRY_OPTIONS.find((o) => o.value === lead.industry)?.label ?? lead.industry} />
                 <ReadRow label="Město" value={lead.city} />
                 <ReadRow label="Velikost" value={lead.company_size} />

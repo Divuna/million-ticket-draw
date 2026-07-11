@@ -1,5 +1,9 @@
 # OneMil – aktuální stav projektu
 
+## OBCHOD / LEADY — OVĚŘOVÁNÍ FIREMNÍCH WEBŮ (11. 07. 2026)
+
+Discovery ukládá web pouze po skutečném ověření: identita firmy se porovná s ARES (IČO nebo jednoznačný právní název), kandidátní web musí vrátit HTTP 200 a neprázdné HTML, nesmí být zaparkovaný/prodávaný/expirovaný a obsah musí potvrdit firmu. Bez důkazu vznikne lead s `website=NULL` a stavem `neovereny`. Kontaktní enrichment odmítne lead bez ověřeného webu a navržený e-mail znovu fyzicky hledá na zdrojové stránce stejné domény.
+
 ## OBCHOD / LEADY — NAPLÁNOVANÉ AKTIVITY (11. 07. 2026)
 
 Oprava odděluje čas vytvoření od termínu schůzky/telefonátu (`scheduled_for`), zachovává existující budoucí záznamy a přidává samostatnou sekci Naplánované aktivity. Budoucí položky jsou řazené podle termínu, zobrazují autora, účel, poznámku a další krok; lze je upravit, dokončit nebo zrušit bez mazání historie. Hlavní seznam ukazuje nejbližší plán. Český čas se zobrazuje explicitně přes `Europe/Prague`.

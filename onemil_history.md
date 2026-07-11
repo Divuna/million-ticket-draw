@@ -7,6 +7,8 @@
 
 # OneMil — DEVELOPMENT HISTORY (CHRONOLOGICAL ONLY)
 
+- **2026-07-11 — Fail-closed ověřování webů v Sales Leads discovery:** AI doména už není zdroj pravdy. Přidáno nezávislé ověření ARES + HTTP/HTML + identity firmy, detekce parked/for-sale/expired webů, audit zdroje/důvěry/času a alternativních domén, DB fail-closed trigger a blokace enrichmentu na neověřeném webu.
+
 - **2026-07-11 — Naplánované aktivity leadů:** opravena záměna času vytvoření a plánovaného termínu; přidán samostatný seznam budoucích schůzek, telefonátů a kroků, jejich úprava/dokončení/zrušení a nejbližší plán v hlavním seznamu.
 
 **Timestamp (Europe/Prague): 2026-07-11** (Sales Leads — odpovědi z detailu + nepřečtené + Reply-To fix, LIVE na produkci)

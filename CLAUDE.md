@@ -1,5 +1,7 @@
 # Sales Leads CRM invariants (11. 07. 2026)
 
+- Discovery web je fail-closed: AI pouze navrhuje kandidáty. `website` u `source='ai_vyhledavani'` smí být neprázdný jen po nezávislém ARES + HTTP/content ověření identity firmy. Alternativní domény jsou pouze auditní a kontakt se hledá výhradně na `website_verification_status='overeny'`.
+
 - Naplánovaný termín schůzky/telefonátu patří do `sales_lead_activities.scheduled_for`; `created_at` vždy znamená čas vytvoření záznamu. Dokončené a zrušené aktivity se nemažou.
 
 - Follow-up e-mail se nikdy neposílá automaticky; vždy jej ručně potvrdí admin s `sales_leads.manage`.
