@@ -818,6 +818,10 @@ trigger:'email_sent'}`). Grant zůstává `service_role`-only. Trigger
 po odeslání) beze změny — rozšiřuje se jen množina zdrojových stavů uvnitř RPC.
 # Produkční CRM dokončení (11. 07. 2026) — LIVE
 
+### Naplánované aktivity
+
+Schůzky, telefonáty a další kroky mají samostatný `scheduled_for` a stav `naplanovano` / `dokonceno` / `zruseno`. Budoucí aktivní položky se zobrazují odděleně od historie; dokončené, zrušené a minulé zůstávají v historii. Zobrazení používá české časové pásmo `Europe/Prague`.
+
 Modul obsahuje interní záznamy telefonátů, schůzek a poznámek, auditované úkoly, ručně potvrzovaný AI follow-up, Resend doručovací události a obchodní přehled podle období a odpovědného administrátora. Migrace: `20260711120000_sales_leads_crm_completion.sql`; funkce: `send-sales-lead-follow-up`, rozšířené `sales-lead-inbound` a `sales-lead-draft-email`.
 
 Follow-up je serverově povolen pouze pro `osloveno`/`follow_up`, schválený e-mail, bez odpovědi, bez blokace a suppression a po úspěšné kontrole duplicit. Nikdy se neodesílá automaticky. Existující inbound webhook ověřuje Svix podpis a zpracovává `email.delivered`, `email.delivery_delayed`, `email.bounced`, `email.failed` a `email.suppressed`; ukládá jen bezpečný technický audit bez klíčů a citlivých hlaviček.
