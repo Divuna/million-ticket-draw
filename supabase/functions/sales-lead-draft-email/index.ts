@@ -92,16 +92,29 @@ serve(async (req: Request) => {
       return jsonResponse({ success: false, error: "invalid_json" }, 400);
     }
     const leadId = typeof body.lead_id === "string" ? body.lead_id.trim() : null;
+    const mode = body.mode === "follow_up" ? "follow_up" : "initial";
     if (!leadId) return jsonResponse({ success: false, error: "lead_id_required" }, 400);
 
     // ── 3. Load lead + research ──────────────────────────────────────────────
     const { data: lead, error: leadErr } = await supabaseAdmin
       .from("sales_leads")
-      .select("id, company_name, website, city, industry, contact_person, ai_research_summary")
+      .select("id, company_name, website, city, industry, contact_person, ai_research_summary, status")
       .eq("id", leadId)
       .maybeSingle();
     if (leadErr) return jsonResponse({ success: false, error: "lead_lookup_failed" }, 500);
     if (!lead) return jsonResponse({ success: false, error: "lead_not_found" }, 404);
+    let previousSubject = "";
+    let previousBody = "";
+    if (mode === "follow_up") {
+      if (!['osloveno','follow_up'].includes(lead.status)) return jsonResponse({ success:false,error:'follow_up_not_allowed' },409);
+      const [{data:lastSent},{count:replyCount}] = await Promise.all([
+        supabaseAdmin.from('sales_lead_activities').select('subject,body_snapshot').eq('lead_id',leadId).eq('activity_type','email_sent').order('created_at',{ascending:false}).limit(1).maybeSingle(),
+        supabaseAdmin.from('sales_lead_activities').select('id',{count:'exact',head:true}).eq('lead_id',leadId).eq('activity_type','reply_received'),
+      ]);
+      if ((replyCount??0)>0) return jsonResponse({success:false,error:'lead_already_replied'},409);
+      if (!lastSent) return jsonResponse({success:false,error:'first_email_missing'},409);
+      previousSubject=lastSent.subject??''; previousBody=lastSent.body_snapshot??'';
+    }
 
     // ── 4. OpenAI ────────────────────────────────────────────────────────────
     const openaiKey = Deno.env.get("OPENAI_API_KEY");
@@ -114,6 +127,8 @@ Obor: ${lead.industry ?? "neuvedeno"}
 Město: ${lead.city ?? "neuvedeno"}
 Kontaktní osoba: ${lead.contact_person ?? "neuvedeno"}
 Rešerše: ${lead.ai_research_summary ?? "(zatím neprovedena)"}
+Režim: ${mode === 'follow_up' ? 'ručně potvrzený follow-up bez odpovědi firmy' : 'první oslovení'}
+${mode === 'follow_up' ? `Původní předmět: ${previousSubject}\nPůvodní e-mail: ${previousBody}\nNapiš stručné zdvořilé připomenutí, nevymýšlej nové skutečnosti.` : ''}
 
 Vrať JSON {"subject","body"} dle pravidel.`;
 
@@ -165,14 +180,14 @@ Vrať JSON {"subject","body"} dle pravidel.`;
     }
 
     // ── 6. Uložit KONCEPT (NIKDY neodesílá, NIKDY neenqueue do email_queue) ──
-    const { error: updErr } = await supabaseAdmin
+    const { error: updErr } = mode === 'initial' ? await supabaseAdmin
       .from("sales_leads")
       .update({
         draft_email_subject: subject,
         draft_email_body: emailBody,
         draft_prepared_by: "ai",
       })
-      .eq("id", leadId);
+      .eq("id", leadId) : { error: null };
     if (updErr) return jsonResponse({ success: false, error: "save_failed" }, 500);
 
     await supabaseAdmin.from("sales_lead_activities").insert({
@@ -180,7 +195,7 @@ Vrať JSON {"subject","body"} dle pravidel.`;
       activity_type: "draft_created",
       direction: "internal",
       performed_by: caller.id,
-      metadata: { model: AI_MODEL, prepared_by: "ai" },
+      metadata: { model: AI_MODEL, prepared_by: "ai", mode },
     });
 
     return jsonResponse({ success: true, subject, body: emailBody });
