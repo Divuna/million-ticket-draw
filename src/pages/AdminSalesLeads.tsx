@@ -93,11 +93,12 @@ const AdminSalesLeads: React.FC = () => {
   const [unreadLeadIds, setUnreadLeadIds] = useState<Set<string>>(new Set());
   const [unreadTotal, setUnreadTotal] = useState(0);
   const [openTasks, setOpenTasks] = useState<{lead_id:string;due_at:string}[]>([]);
+  const [plannedActivities, setPlannedActivities] = useState<{lead_id:string;scheduled_for:string;activity_type:string}[]>([]);
 
   const load = useCallback(async () => {
     setLoading(true);
     try {
-      const [leadsRes, unreadRes, tasksRes] = await Promise.all([
+      const [leadsRes, unreadRes, tasksRes, plannedRes] = await Promise.all([
         (supabase as any)
           .from('sales_leads')
           .select('id, company_name, industry, city, status, contact_email, updated_at, assigned_admin_id, lead_group')
@@ -109,6 +110,7 @@ const AdminSalesLeads: React.FC = () => {
           .eq('activity_type', 'reply_received')
           .is('read_at', null),
         (supabase as any).from('sales_lead_tasks').select('lead_id,due_at').eq('status','ceka').order('due_at'),
+        (supabase as any).from('sales_lead_activities').select('lead_id,scheduled_for,activity_type').eq('activity_status','naplanovano').not('scheduled_for','is',null).in('activity_type',['call_logged','meeting_logged','note_added']).order('scheduled_for'),
       ]);
       if (leadsRes.error) {
         setTableMissing(true);
@@ -123,12 +125,14 @@ const AdminSalesLeads: React.FC = () => {
       setUnreadLeadIds(new Set(unreadRows.map((r) => r.lead_id)));
       setUnreadTotal(unreadRows.length);
       setOpenTasks((tasksRes.error ? [] : tasksRes.data ?? []) as {lead_id:string;due_at:string}[]);
+      setPlannedActivities((plannedRes.error ? [] : plannedRes.data ?? []) as {lead_id:string;scheduled_for:string;activity_type:string}[]);
     } catch {
       setTableMissing(true);
       setLeads([]);
       setUnreadLeadIds(new Set());
       setUnreadTotal(0);
       setOpenTasks([]);
+      setPlannedActivities([]);
     } finally {
       setLoading(false);
     }
@@ -328,7 +332,7 @@ const AdminSalesLeads: React.FC = () => {
         </div>
       </div>
 
-      {openTasks.length > 0 && <Card><CardHeader><CardTitle className="text-base">Úkoly</CardTitle></CardHeader><CardContent className="grid gap-2 sm:grid-cols-3"><div className="rounded border border-destructive/40 p-3"><div className="text-xs text-muted-foreground">Po termínu</div><div className="text-xl font-bold text-destructive">{openTasks.filter(t=>new Date(t.due_at)<new Date()).length}</div></div><div className="rounded border p-3"><div className="text-xs text-muted-foreground">Na dnešek</div><div className="text-xl font-bold">{openTasks.filter(t=>new Date(t.due_at).toDateString()===new Date().toDateString()).length}</div></div><div className="rounded border p-3"><div className="text-xs text-muted-foreground">Nejbližší termín</div><div className="text-sm font-bold">{openTasks[0]?new Date(openTasks[0].due_at).toLocaleString('cs-CZ'):'—'}</div></div></CardContent></Card>}
+      {(openTasks.length+plannedActivities.length)>0 && <Card><CardHeader><CardTitle className="text-base">Naplánované aktivity a úkoly</CardTitle></CardHeader><CardContent className="grid gap-2 sm:grid-cols-3"><div className="rounded border border-destructive/40 p-3"><div className="text-xs text-muted-foreground">Po termínu</div><div className="text-xl font-bold text-destructive">{[...openTasks.map(t=>t.due_at),...plannedActivities.map(t=>t.scheduled_for)].filter(d=>new Date(d)<new Date()).length}</div></div><div className="rounded border p-3"><div className="text-xs text-muted-foreground">Dnes</div><div className="text-xl font-bold">{[...openTasks.map(t=>t.due_at),...plannedActivities.map(t=>t.scheduled_for)].filter(d=>new Date(d).toDateString()===new Date().toDateString()).length}</div></div><div className="rounded border p-3"><div className="text-xs text-muted-foreground">Nejbližší termín</div><div className="text-sm font-bold">{[...openTasks.map(t=>t.due_at),...plannedActivities.map(t=>t.scheduled_for)].sort()[0]?new Date([...openTasks.map(t=>t.due_at),...plannedActivities.map(t=>t.scheduled_for)].sort()[0]).toLocaleString('cs-CZ',{timeZone:'Europe/Prague'}):'—'}</div></div></CardContent></Card>}
 
       <SalesLeadOverview />
 
@@ -431,6 +435,7 @@ const AdminSalesLeads: React.FC = () => {
                   <TableHead>Město</TableHead>
                   <TableHead>Stav</TableHead>
                   <TableHead>Poslední aktivita</TableHead>
+                  <TableHead>Nejbližší plán</TableHead>
                   <TableHead className="text-right">Akce</TableHead>
                 </TableRow>
               </TableHeader>
@@ -467,6 +472,7 @@ const AdminSalesLeads: React.FC = () => {
                       </Badge>
                     </TableCell>
                     <TableCell className="text-muted-foreground">{formatDate(lead.updated_at)}</TableCell>
+                    <TableCell className="text-muted-foreground">{(()=>{const a=plannedActivities.find(x=>x.lead_id===lead.id);if(!a)return '—';const label=a.activity_type==='meeting_logged'?'Schůzka':a.activity_type==='call_logged'?'Telefonát':'Další krok';return `${label}: ${new Date(a.scheduled_for).toLocaleString('cs-CZ',{timeZone:'Europe/Prague'})}`;})()}</TableCell>
                     <TableCell className="text-right">
                       <div className="flex justify-end gap-1">
                         <Button variant="ghost" size="sm" onClick={() => openDetail(lead.id)}>
