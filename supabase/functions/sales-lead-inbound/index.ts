@@ -184,8 +184,33 @@ serve(async (req: Request) => {
     return jsonResponse({ success: false, error: "invalid_json" }, 400);
   }
 
-  // Jiné typy událostí (email.sent, email.bounced, …) nás nezajímají.
+  const supabaseAdmin = createClient(
+    Deno.env.get("SUPABASE_URL") ?? "",
+    Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "",
+    { auth: { persistSession: false } },
+  );
+
+  // Doručovací události od stejného, už nakonfigurovaného Resend webhooku.
+  // Původní email_sent snapshot zůstává beze změny; přidává se auditní aktivita.
   const eventType = asString(payload.type);
+  const deliveryTypes: Record<string,string> = {
+    "email.delivered":"email_delivered", "email.delivery_delayed":"email_delivery_delayed",
+    "email.bounced":"email_bounced", "email.failed":"email_failed", "email.suppressed":"email_suppressed",
+  };
+  if (eventType && deliveryTypes[eventType]) {
+    const eventData=(payload.data??{}) as Record<string,unknown>;
+    const outboundId=asString(eventData.email_id);
+    if (!outboundId) return jsonResponse({success:true,ignored:true,reason:"missing_email_id"});
+    const {data:sent}=await supabaseAdmin.from("sales_lead_activities").select("lead_id,subject,body_snapshot").eq("activity_type","email_sent").eq("email_message_id",outboundId).order("created_at",{ascending:false}).limit(1).maybeSingle();
+    if (!sent) return jsonResponse({success:true,ignored:true,reason:"email_not_linked"});
+    const eventKey=req.headers.get("svix-id")??`${eventType}:${outboundId}`;
+    const {data:seen}=await supabaseAdmin.from("sales_lead_activities").select("id").eq("activity_type",deliveryTypes[eventType]).eq("email_message_id",eventKey).maybeSingle();
+    if (seen) return jsonResponse({success:true,duplicate:true});
+    const {error}=await supabaseAdmin.from("sales_lead_activities").insert({lead_id:sent.lead_id,activity_type:deliveryTypes[eventType],direction:"internal",subject:sent.subject,body_snapshot:sent.body_snapshot,email_message_id:eventKey,metadata:{event_type:eventType,event_id:eventKey,email_id:outboundId,message_id:eventData.message_id??null,created_at:payload.created_at??null,to:eventData.to??null,from:eventData.from??null}});
+    if (error) return jsonResponse({success:false,error:"activity_insert_failed"},500);
+    if (["email.bounced","email.failed","email.suppressed"].includes(eventType)) await supabaseAdmin.from("sales_leads").update({next_action_at:null}).eq("id",sent.lead_id);
+    return jsonResponse({success:true,lead_id:sent.lead_id});
+  }
   if (eventType && eventType !== "email.received") {
     return jsonResponse({ success: true, ignored: true, reason: "unsupported_event_type" });
   }
@@ -209,12 +234,6 @@ serve(async (req: Request) => {
     // Není to odpověď na lead (žádná reply+<uuid> adresa) — přijmeme, ignorujeme.
     return jsonResponse({ success: true, ignored: true, reason: "no_lead_token" });
   }
-
-  const supabaseAdmin = createClient(
-    Deno.env.get("SUPABASE_URL") ?? "",
-    Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "",
-    { auth: { persistSession: false } },
-  );
 
   // ── 3. Ověření existence leadu ───────────────────────────────────────────
   const { data: lead, error: leadErr } = await supabaseAdmin
