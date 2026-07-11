@@ -828,6 +828,8 @@ Follow-up je serverově povolen pouze pro `osloveno`/`follow_up`, schválený e-
 
 ## Ověření oficiálního webu discovery (fail closed)
 
+Stav nasazení 11. 07. 2026: LIVE na stagingu i produkci; migrace `sales_leads_verified_company_websites`, produkční `sales-lead-discover` v11 a `sales-lead-enrich-contact` v7.
+
 - AI pouze navrhne firmu a kandidátní domény; nikdy není důkazem vlastnictví webu.
 - Při IČO se identita ověří detailem ARES. Bez IČO musí být hledání podle obchodního jména jednoznačné.
 - Kandidát musí vrátit HTTP 200 a HTML s reálným obsahem; parked, for-sale, expired a prázdné stránky se odmítají.
