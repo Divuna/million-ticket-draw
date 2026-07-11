@@ -160,3 +160,6 @@ verify_jwt = false
 verify_jwt = false
 [functions.send-sales-lead-reply]
 verify_jwt = false
+
+[functions.send-sales-lead-follow-up]
+verify_jwt = false

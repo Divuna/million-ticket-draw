@@ -1,3 +1,11 @@
+# Sales Leads CRM invariants (11. 07. 2026)
+
+- Follow-up e-mail se nikdy neposílá automaticky; vždy jej ručně potvrdí admin s `sales_leads.manage`.
+- Follow-up blokuje Nekontaktovat, neschválený/suppressed e-mail, chybějící auditovanou výjimku duplicity a jakoukoli přijatou odpověď.
+- Resend doručovací webhook ověřuje Svix podpis a nesmí ukládat API klíče ani citlivé hlavičky.
+- Dokončené a zrušené úkoly zůstávají v historii.
+- Stávající invarianty `replyTo` v SDK v6, oddělených Resend klíčů a neměnnosti `sales_lead_mark_replies_read` zůstávají beze změny.
+
 # CLAUDE.md
 
 ## MODUL OBCHOD / LEADY — STAV A PRAVIDLA PRO POKRAČOVÁNÍ (03. 07. 2026)

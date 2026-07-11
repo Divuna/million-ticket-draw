@@ -816,3 +816,8 @@ nebo v jiném/blokovaném stavu (`navrzeny`/`odmitl`/`nekontaktovat`/`archivovan
 trigger:'email_sent'}`). Grant zůstává `service_role`-only. Trigger
 `trg_sales_lead_activities_touch_lead` i EF `send-sales-lead-email` (která RPC volá best-effort
 po odeslání) beze změny — rozšiřuje se jen množina zdrojových stavů uvnitř RPC.
+# Produkční CRM dokončení (11. 07. 2026)
+
+Modul obsahuje interní záznamy telefonátů, schůzek a poznámek, auditované úkoly, ručně potvrzovaný AI follow-up, Resend doručovací události a obchodní přehled podle období a odpovědného administrátora. Migrace: `20260711120000_sales_leads_crm_completion.sql`; funkce: `send-sales-lead-follow-up`, rozšířené `sales-lead-inbound` a `sales-lead-draft-email`.
+
+Follow-up je serverově povolen pouze pro `osloveno`/`follow_up`, schválený e-mail, bez odpovědi, bez blokace a suppression a po úspěšné kontrole duplicit. Nikdy se neodesílá automaticky. Existující inbound webhook ověřuje Svix podpis a zpracovává `email.delivered`, `email.delivery_delayed`, `email.bounced`, `email.failed` a `email.suppressed`; ukládá jen bezpečný technický audit bez klíčů a citlivých hlaviček.

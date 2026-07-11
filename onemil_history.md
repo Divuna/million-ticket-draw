@@ -1,3 +1,10 @@
+# 11. 07. 2026 — Obchod / Leady CRM dokončení
+
+- Přidána nedestruktivní migrace `20260711120000_sales_leads_crm_completion.sql`.
+- Přidány interní aktivity, úkoly, follow-up a doručovací audit Resendu.
+- Testy: TypeScript 0 chyb, build OK, 20 kontraktních testů OK, stagingový DB tok OK a rollback čistý.
+- Staging nasazen; produkce bude aktualizována až po PR, merge a opakovaném ověření.
+
 # OneMil — DEVELOPMENT HISTORY (CHRONOLOGICAL ONLY)
 
 **Timestamp (Europe/Prague): 2026-07-11** (Sales Leads — odpovědi z detailu + nepřečtené + Reply-To fix, LIVE na produkci)
