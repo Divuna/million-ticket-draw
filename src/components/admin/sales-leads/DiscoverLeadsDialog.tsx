@@ -37,6 +37,8 @@ interface DiscoverResult {
   created_without_email: number;
   skipped: number;
   errored: number;
+  websites_verified: number;
+  websites_rejected: number;
 }
 
 /**
@@ -141,6 +143,7 @@ export function DiscoverLeadsDialog({ open, onOpenChange, onSuccess }: Props) {
         success?: boolean; error?: string;
         lead_group?: string; created?: number; created_with_email?: number;
         created_without_email?: number; skipped?: number; errored?: number;
+        websites_verified?: number; websites_rejected?: number;
       };
       if (!res.success) {
         toast.error(rpcErrorMessage(res.error));
@@ -153,6 +156,8 @@ export function DiscoverLeadsDialog({ open, onOpenChange, onSuccess }: Props) {
         created_without_email: res.created_without_email ?? 0,
         skipped: res.skipped ?? 0,
         errored: res.errored ?? 0,
+        websites_verified: res.websites_verified ?? 0,
+        websites_rejected: res.websites_rejected ?? 0,
       };
       setResult(summary);
       toast.success(`Vzniklo ${summary.created} firem · přeskočeno ${summary.skipped}`);
@@ -171,8 +176,8 @@ export function DiscoverLeadsDialog({ open, onOpenChange, onSuccess }: Props) {
         <DialogHeader>
           <DialogTitle>Najít nové firmy</DialogTitle>
           <DialogDescription>
-            Spustíte vy (člověk). AI navrhne firmy do skupiny a uloží je jako „Návrhy" — u každé
-            se zároveň zkusí dohledat veřejný e-mail na jejím webu. Nic se neodesílá — každý
+            Spustíte vy (člověk). AI pouze navrhne firmy. Web se uloží jen po nezávislém
+            ověření identity firmy a teprve potom se na něm hledá kontakt. Nic se neodesílá — každý
             návrh i případný e-mail musíte ručně schválit v záložce „Návrhy".
           </DialogDescription>
         </DialogHeader>
@@ -243,6 +248,8 @@ export function DiscoverLeadsDialog({ open, onOpenChange, onSuccess }: Props) {
                 <li>Vzniklo firem celkem: <strong className="text-foreground">{result.created}</strong></li>
                 <li>— s navrženým e-mailem: <strong className="text-foreground">{result.created_with_email}</strong></li>
                 <li>— bez e-mailu (k ručnímu doplnění): <strong className="text-foreground">{result.created_without_email}</strong></li>
+                <li>Weby potvrzené: <strong className="text-foreground">{result.websites_verified}</strong></li>
+                <li>Weby zamítnuté: <strong className="text-foreground">{result.websites_rejected}</strong></li>
                 <li>Přeskočeno (duplicity/partneři/blokace): <strong className="text-foreground">{result.skipped}</strong></li>
                 {result.errored > 0 && <li>Chyby: <strong className="text-foreground">{result.errored}</strong></li>}
               </ul>

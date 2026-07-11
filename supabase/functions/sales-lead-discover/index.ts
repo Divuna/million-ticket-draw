@@ -1,5 +1,6 @@
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.57.4";
+import { verifyCompanyWebsite } from "../_shared/companyWebsiteVerifier.ts";
 
 // ============================================================================
 // sales-lead-discover — automatické NAVRŽENÍ nových firemních leadů.
@@ -40,7 +41,7 @@ PŘÍSNÉ ZÁKAZY:
 - NEPOUŽÍVEJ slova casino, hazard, sázka, loterie, jackpot.
 
 Výstup: vrať POUZE validní JSON objekt {"companies": [...]}. Každá položka:
-{"company_name": string, "website": string|null, "ico": string|null, "city": string|null, "industry": string|null, "lead_quality": 0|1|2|3, "rationale": string, "email": string|null}
+{"company_name": string, "website": string|null, "alternative_websites": string[], "website_source": string|null, "ico": string|null, "city": string|null, "industry": string|null, "lead_quality": 0|1|2|3, "rationale": string, "email": string|null}
 lead_quality = odhad vhodnosti (0 neznámé … 3 vysoká). rationale = krátké interní zdůvodnění. "email" je jen volitelná nápověda; backend si e-mail vždy ověřuje/dohledává na webu firmy. Vše je neověřený návrh k ruční kontrole člověkem.`;
 
 function jsonResponse(body: Record<string, unknown>, status = 200): Response {
@@ -60,6 +61,8 @@ interface ProposedCompany {
   rationale?: unknown;
   email?: unknown;
   email_source_url?: unknown;
+  alternative_websites?: unknown;
+  website_source?: unknown;
 }
 
 const EMAIL_RE = /^[^@\s]+@[^@\s]+\.[^@\s]+$/;
@@ -474,6 +477,8 @@ serve(async (req: Request) => {
     let createdWithoutEmail = 0;
     let skipped = 0;
     let errored = 0;
+    let websitesVerified = 0;
+    let websitesRejected = 0;
     const details: { company: string; outcome: string; reason?: string; has_email?: boolean }[] = [];
 
     for (const c of companies) {
@@ -481,7 +486,19 @@ serve(async (req: Request) => {
       if (!name) { errored++; continue; }
 
       const websiteRaw = typeof c.website === "string" ? c.website.trim() : "";
-      const website = websiteRaw ? normalizeCompanyWebsite(websiteRaw) : null;
+      const alternatives = Array.isArray(c.alternative_websites)
+        ? c.alternative_websites.filter((v): v is string => typeof v === "string") : [];
+      const candidates = [websiteRaw, ...alternatives].filter(Boolean).map((url, index) => ({
+        url,
+        source: index === 0 && typeof c.website_source === "string" ? c.website_source : "AI candidate",
+      }));
+      const verification = await verifyCompanyWebsite({
+        companyName: name,
+        ico: typeof c.ico === "string" ? c.ico : null,
+        candidates,
+      });
+      const website = verification.status === "verified" ? verification.website : null;
+      if (website) websitesVerified++; else if (candidates.length > 0) websitesRejected++;
       const aiEmailRaw = typeof c.email === "string" ? c.email.trim().toLowerCase() : "";
       const aiHintEmail = EMAIL_RE.test(aiEmailRaw) ? aiEmailRaw : "";
       const aiSourceUrlRaw = typeof c.email_source_url === "string" ? c.email_source_url.trim() : "";
@@ -496,6 +513,7 @@ serve(async (req: Request) => {
         run_at: new Date().toISOString(),
         run_by: caller.id,
         lead_group_label: resolvedGroup.label,
+        website_verification: verification,
       };
 
       if (crawl.found) {
@@ -508,7 +526,7 @@ serve(async (req: Request) => {
           p_email_source_url: crawl.sourceUrl,
           p_discovery_meta: discoveryMeta,
           p_website: website,
-          p_ico: typeof c.ico === "string" ? c.ico : null,
+          p_ico: verification.ico,
           p_city: typeof c.city === "string" ? c.city : null,
           p_industry: typeof c.industry === "string" ? c.industry : null,
           p_lead_quality: quality,
@@ -521,6 +539,10 @@ serve(async (req: Request) => {
         if (res.outcome === "created") {
           created++;
           createdWithEmail++;
+          const leadId = (rpcData as { lead_id?: string } | null)?.lead_id;
+          if (leadId) await supabaseAdmin.from("sales_leads").update({
+            contact_data_provenance: { email: { source: crawl.sourceUrl, confidence: 95, verified_at: new Date().toISOString() } },
+          }).eq("id", leadId);
           details.push({ company: name, outcome: "created", has_email: true });
         } else if (res.outcome === "skipped") {
           skipped++;
@@ -538,7 +560,7 @@ serve(async (req: Request) => {
           p_lead_quality: quality,
           p_discovery_meta: discoveryMeta,
           p_website: website || null,
-          p_ico: typeof c.ico === "string" ? c.ico : null,
+          p_ico: verification.ico,
           p_city: typeof c.city === "string" ? c.city : null,
           p_industry: typeof c.industry === "string" ? c.industry : null,
         });
@@ -569,6 +591,8 @@ serve(async (req: Request) => {
       created,
       created_with_email: createdWithEmail,
       created_without_email: createdWithoutEmail,
+      websites_verified: websitesVerified,
+      websites_rejected: websitesRejected,
       skipped,
       errored,
       details,
