@@ -1,6 +1,3 @@
-Warning: truncated output (original token count: 74941)
-Total output lines: 2039
-
 # Sales Leads CRM invariants (11. 07. 2026)
 
 - Discovery web je fail-closed: AI pouze navrhuje kandidáty. `website` u `source='ai_vyhledavani'` smí být neprázdný jen po nezávislém ARES + HTTP/content ověření identity firmy. Alternativní domény jsou pouze auditní a kontakt se hledá výhradně na `website_verification_status='overeny'`.
@@ -507,7 +504,616 @@ Partner invoice Edge Functions changed on staging: `generate-partner-invoice-pdf
 
 Tests passed: superadmin allowed; admin/subadmin blocked; normal user blocked; anon blocked; affiliate own commission visibility preserved; staging data and roles unchanged after cleanup.
 
-Operational note: the old worktree previously had Supabase…24941 tokens truncated… `bank_export_generated` (export pro Air Bank) → `paid` (admin označí celou dávku po odeslání plateb) → `payment_confirmation_sent` (potvrzení obchodníkovi + souhrn účetní).
+Operational note: the old worktree previously had Supabase CLI linked to production, so any future staging deploy must explicitly pass `--project-ref dxmowysntemfqfnanxua` or use the clean main worktree after verifying the target. Remaining production-only item: `get_admin_top_bar_stats` exists on production and must be handled during production rollout. Public-read `winners` / `bonus_prizes` behavior is a separate product/design decision, not part of this staging lock.
+
+Production rollout requires explicit Pavel approval, manual `pg_dump` first because PITR is off, rollback from `docs/rollback/phase1_baseline.sql`, and staged rollout with stop points.
+
+This record is documentation only. No SQL was run, no Edge Functions were deployed, no production changes were made, and no app behavior was changed.
+
+## PHASE 1 — AFFILIATE FINANCE LOCK KOMPLETNÍ NA STAGINGU (22. 06. 2026)
+
+Celá affiliate finance oblast je na stagingu `dxmowysntemfqfnanxua` uzamčena na **superadmin-only** ve všech třech vrstvách. **Produkce `xkzhjldrojjlrkezorey` NEDOTČENA.**
+
+- **RLS gates (`public.is_superadmin()`):** `affiliate_payout_documents`/`apd_admin_all`, `affiliate_payout_batch_items`/`apbi_admin_all`, `affiliate_payout_batches`/`apb_admin_all`, `affiliate_commissions`/`aff_commissions_admin_write`, `affiliate_commissions`/`aff_commissions_select` (**affiliate-own SELECT branch zachován** — affiliate vidí vlastní provize).
+- **RPC gates (`public.is_superadmin()`, interní gate, owner postgres, SECURITY DEFINER):** `admin_set_affiliate_commission_status`, `create_affiliate_payout_batch`, `mark_affiliate_payout_batch_paid`, `update_affiliate_payout_batch_meta`. (Tyto RPC obcházejí RLS — proto musely být gatovány zvlášť.)
+- **Edge Functions (superadmin-only, `role = 'superadmin'`, chyba `access_denied_superadmin_only`):** `create-affiliate-payout-document` **v10**, `generate-affiliate-bank-export` **v11**. `generate-affiliate-bank-export` přenasazena z přesného commitnutého zdroje (staging = GitHub).
+- **Testy ✅** (seedované řádky / throwaway superadmin + dočasný role flip v transakci s rollbackem; EF přes throwaway user JWT, smazán): superadmin povolen, admin/subadmin blokován, normální uživatel blokován, anon blokován, affiliate vidí vlastní provize, admin přímý write blokován (`42501`), EF admin→403, anon→401, superadmin→safe not_found bez mutace. Staging data/role beze změny (`admin:2`).
+- **Rollback zdroje:** `docs/rollback/phase1_baseline.sql` (RLS policy + RPC definice z živé produkce); git historie / předchozí EF verze pro Edge Functions.
+- **Produkční rollout = samostatný krok s výslovným schválením Pavla + manuální `pg_dump` PŘED zápisem (PITR off).** Pravidlo: affiliate finance gates nevracet na `is_admin()`; `aff_commissions_select` nesmí ztratit affiliate-own branch; EF nevracet na `role IN ('admin','superadmin')`.
+
+## PHASE 1 — AFFILIATE_PAYOUT_BATCH_ITEMS SUPERADMIN-ONLY NA STAGINGU (22. 06. 2026)
+
+Druhý objekt affiliate finance oblasti uzamčen (staging only).
+- **Staging `dxmowysntemfqfnanxua`:** policy `apbi_admin_all` na `public.affiliate_payout_batch_items` změněna z `is_admin()` na `public.is_superadmin()` (ALL, USING+WITH CHECK). Jediná policy tabulky; žádná jiná tabulka/RPC/EF/frontend. **Produkce `xkzhjldrojjlrkezorey` NEDOTČENA.**
+- **Test ✅** (využit existující reálný řádek, dočasný role flip v transakci s rollbackem): superadmin→čte (1), admin/subadmin→0, normální uživatel→0, anon→0; admin přímý INSERT zablokován RLS WITH CHECK (`42501`, s reálnými FK id). Existující řádek beze změny (`total_rows=1`), role beze změny (`admin:2`); opravená policy **záměrně ponechána**.
+- **Rollback SQL:** `DROP POLICY IF EXISTS apbi_admin_all ON public.affiliate_payout_batch_items; CREATE POLICY apbi_admin_all ON public.affiliate_payout_batch_items AS PERMISSIVE FOR ALL TO authenticated USING (is_admin()) WITH CHECK (is_admin());`
+- **Další objekt:** `affiliate_payout_batches` / `apb_admin_all`. Pak `affiliate_commissions` (2 policy, zachovat affiliate-own SELECT), nakonec 4 RPC gates (write teeth — SECURITY DEFINER obchází RLS). Produkční rollout: schválení Pavla + manuální `pg_dump` (PITR off).
+
+## PHASE 1 — AFFILIATE_PAYOUT_DOCUMENTS SUPERADMIN-ONLY NA STAGINGU (22. 06. 2026)
+
+První objekt affiliate finance oblasti uzamčen na superadmina (staging only).
+- **Staging `dxmowysntemfqfnanxua`:** policy `apd_admin_all` na `public.affiliate_payout_documents` změněna z `is_admin()` (ALL, USING+WITH CHECK) na `public.is_superadmin()` (ALL, USING+WITH CHECK). **Změněna JEN tato jedna policy** (tabulka má jedinou policy); žádná jiná tabulka/RPC/EF/frontend. **Produkce `xkzhjldrojjlrkezorey` NEDOTČENA** (stále `is_admin()`).
+- **Test (seedovaný throwaway doc — FK přeskočeno `session_replication_role=replica` jen pro seed — + dočasný role flip v transakci s rollbackem):** superadmin→čte (1), admin/subadmin→0, normální uživatel→0, anon→0; **admin přímý INSERT zablokován RLS WITH CHECK (`42501`)** (testováno s reálnými FK id, aby blokoval jen RLS). Staging data/role beze změny (`total_docs=0`, `admin:2`); opravená policy **záměrně ponechána**.
+- **Rollback SQL (staging):** `DROP POLICY IF EXISTS apd_admin_all ON public.affiliate_payout_documents; CREATE POLICY apd_admin_all ON public.affiliate_payout_documents AS PERMISSIVE FOR ALL TO authenticated USING (is_admin()) WITH CHECK (is_admin());`
+- **Pozn.:** legitimní vytváření dokladů jde přes EF `create-affiliate-payout-document` (service-role, obchází RLS) → neovlivněno. Přímé admin čtení (`AdminAffiliatePayoutDetail.tsx`) je nyní superadmin-only.
+- **Další affiliate finance objekt:** `affiliate_payout_batch_items` / `apbi_admin_all` (taky jediná `ALL is_admin()` policy). Pak `affiliate_payout_batches`, pak `affiliate_commissions` (2 policy, zachovat affiliate-own SELECT branch), nakonec 4 RPC gates (write teeth — SECURITY DEFINER obchází RLS).
+- **Produkční rollout:** výslovné schválení Pavla + manuální `pg_dump` PŘED zápisem (PITR off); per-objekt staging-first + rollback z `docs/rollback/phase1_baseline.sql`.
+
+## PHASE 1 — INFLUENCER_COMMISSIONS EXPOSURE FIX NA STAGINGU (22. 06. 2026)
+
+Oprava nadměrné expozice `public.influencer_commissions` (citlivá finanční data) na stagingu.
+- **Původní staging policy:** `influencer_commissions_read` `SELECT TO public USING (true)` → **anon i kdokoli přihlášený mohl číst všechny řádky provizí.**
+- **Opravená staging policy:** `SELECT TO authenticated USING (public.is_superadmin())`. Byla to jediná policy tabulky; **žádná jiná tabulka/RPC/EF/frontend nezměněna.** **Produkce `xkzhjldrojjlrkezorey` NEDOTČENA** (stále `TO public USING (true)`).
+- **Test (seedovaná provize + dočasný role flip v transakci s rollbackem):** superadmin→čte (1), admin/subadmin→0, normální uživatel→0, anon→0. Staging data/role beze změny (`total_rows=0`, `admin:2`); opravená policy **záměrně ponechána** ve stavu `is_superadmin()`.
+- **Rollback SQL (staging):** `DROP POLICY IF EXISTS influencer_commissions_read ON public.influencer_commissions; CREATE POLICY influencer_commissions_read ON public.influencer_commissions AS PERMISSIVE FOR SELECT TO public USING (true);`
+- **Risk note:** pokud mají influenceři někdy vidět **vlastní** provize, je nutné navrhnout samostatnou own-row policy (`influencer_partner_id` = volající) — teď takový konzument neexistuje, scope je superadmin-only.
+- **Produkční rollout:** výslovné schválení Pavla + manuální `pg_dump` PŘED zápisem (PITR off); per-objekt staging-first + rollback z `docs/rollback/phase1_baseline.sql`.
+
+## PHASE 1 — PAYMENTS SUPERADMIN-ONLY GATE OVĚŘEN NA STAGINGU (22. 06. 2026)
+
+První reálný superadmin-only gate (pilot vzoru) na sensitive oblasti — `payments` read.
+- **Staging `dxmowysntemfqfnanxua`:** policy `admin_payments_read_all` na `public.payments` změněna z `has_role(admin) OR has_role(superadmin)` na `public.is_superadmin()`. **Změněna JEN tato jedna policy**; own-payment policy (`payments_select_own`, `payments_user_read`) beze změny. **Produkce `xkzhjldrojjlrkezorey` NEDOTČENA.**
+- **Test (seedovaná pending platba cizího vlastníka + dočasný role flip v transakci s rollbackem):** superadmin čte všechny platby (1); admin/subadmin necte cizí platby (0); normální uživatel necte cizí (0); anon necte (0). Staging data i role ponechány beze změny (`total_payments=0`, `admin:2`).
+- **Rollback SQL (staging):** `DROP POLICY IF EXISTS admin_payments_read_all ON public.payments; CREATE POLICY admin_payments_read_all ON public.payments AS PERMISSIVE FOR SELECT TO authenticated USING ((has_role(auth.uid(),'admin'::app_role) OR has_role(auth.uid(),'superadmin'::app_role)));`
+- **Frontend dopad (očekávaný, ne bug):** `AdminPayments.tsx` `.from('payments')` — subadmin po gate uvidí prázdný seznam (jen vlastní řádky), ne chybu; superadmin vidí vše.
+- **Validuje vzor pro další Phase 1 gating.** Pravidlo: produkční krok vyžaduje výslovné schválení Pavla + manuální `pg_dump` PŘED zápisem (PITR je off); per-objekt staging-first + rollback SQL z `docs/rollback/phase1_baseline.sql`. (Staging `payments` policy ponechána ve stavu `is_superadmin()`.)
+
+## PHASE 1 — `is_superadmin()` HELPER NA STAGINGU (22. 06. 2026)
+
+První reálná Phase 1 změna: gate helper `public.is_superadmin(check_user_id uuid default auth.uid())`. Vrací true jen když má uživatel `role='superadmin'` v `user_roles`. SECURITY DEFINER, owner postgres, `SET search_path=public`, execute jen `authenticated` (revoke public/anon). **Aditivní — žádná RLS/RPC/EF/frontend změna.**
+- **Migrace:** `supabase/migrations/20260622_is_superadmin_helper.sql`. Commit `059dd981`.
+- **Aplikováno POUZE na staging** `dxmowysntemfqfnanxua`. **Produkce `xkzhjldrojjlrkezorey` NEDOTČENA.**
+- **Staging testy prošly:** superadmin→true, admin/subadmin→false, neznámý uživatel→false, anon/bez auth→false, authenticated může execute, anon nemůže, SECURITY DEFINER owner postgres potvrzeno. (Staging nemá superadmina → true case ověřen přes dočasný transaction-rollback flip, bez rezidua.)
+- **Rollback:** `DROP FUNCTION IF EXISTS public.is_superadmin(uuid);`
+- **Pravidlo / další krok (rozhodnout samostatně):** aplikaci helperu na produkci provést PŘED jakýmkoli superadmin-only gatingem; každý další re-gating staging-first + rollback SQL z `docs/rollback/phase1_baseline.sql`. Helper sám nic neomezuje, dokud se nepoužije v policy/RPC.
+
+## PHASE 1 (SUBADMIN PERMISSIONS) — BACKUP STAV POTVRZEN (22. 06. 2026, jen dokumentace)
+
+Před plánovaným superadmin-only re-gatingem (Phase 1) ověřen produkční backup stav `xkzhjldrojjlrkezorey` v Dashboard → Database → Backups.
+- **Plánované denní DB zálohy existují.** Poslední viditelná: **22. 06. 2026 02:16:36 UTC**. Starší denní zálohy: 21., 20., 19., 18., 17., 16., 15. 06. 2026 (rolling ~7 dní).
+- **PITR (point-in-time recovery) NENÍ zapnuté** — dashboard ho ukazuje jako Pro Plan add-on. Obnova jen na denní body, ne na libovolný čas.
+- **Storage objekty NEJSOU součástí DB záloh** (buckety/soubory zálohovat zvlášť).
+- **Rollback baseline:** `docs/rollback/phase1_baseline.sql` (živý zachycený stav RLS policy + RPC z produkce, 22. 06. 2026) je autoritativní reverzní zdroj — migrační soubory v gitu NEodpovídají plně živému stavu (drift). Checklist: `docs/rollback/phase1_backup_checklist.md`.
+- **Pravidlo pro Phase 1:** postupovat jen po malých staged migracích, každá s rollback SQL odvozeným z `phase1_baseline.sql`; před zápisem doporučen manuální `pg_dump` (PITR je off). Žádné SQL/RLS/EF/frontend/produkční chování nezměněno.
+
+## INVITE-SUBADMIN AUDIT FIX — CALLER ID V `audit_logs` (22. 06. 2026)
+
+Opraveno auditní logování pozvánek subadminů.
+- **Root cause:** `invite-subadmin` volal RPC `log_admin_action`, který zapisuje `audit_logs.user_id = auth.uid()`. EF běží pod **service-role** klientem → `auth.uid()` je NULL → `subadmin_invited` řádky měly `user_id = null` a nešlo zjistit, který superadmin pozvánku poslal.
+- **Nové chování:** `invite-subadmin` zapisuje **přímo do `public.audit_logs`** s `user_id = caller.id` (ověřený volající z JWT, krok 1 funkce). Metadata obsahují `entity_type='user'`, `entity_id` (= pozvaný), `target_user_id`, `invited_email` a `new_data.role='admin'`. Best-effort (try/catch, nikdy neblokuje pozvánku).
+- **Historické `subadmin_invited` řádky s `user_id=null` NEBYLY backfillnuté** — původního volajícího z nich nelze rekonstruovat. Nové pozvánky už superadmina zaznamenávají správně.
+- **Produkce:** `invite-subadmin` přenasazena jako **v3** (`xkzhjldrojjlrkezorey`); staging v2.
+- **Beze změny:** role logika (role hardcoded `admin`, nikdy superadmin), email sending, generateLink, samotný RPC `log_admin_action`, RLS, DB schéma, auth, payments, contests, vouchers, wallets, tickets, partners, Sofinity. Pravidlo: `invite-subadmin` audit zápis nevracet zpět na `log_admin_action` (ztratil by caller id pod service-role).
+
+## SUBADMIN MANAGEMENT — `/admin/admins` LIVE (22. 06. 2026)
+
+Superadmin-only správa adminů je hotová a v provozu.
+
+- **`/admin/admins`** je živá stránka, přístupná **pouze pro `isSuperAdmin`** (jinak redirect na `/admin`). Nav odkaz „Správa adminů" je v sekci **Uživatelé** a vidí ho jen superadmin. Jediný superadmin = **divispavel2@gmail.com**.
+- **Povýšení existujícího uživatele** na admina (subadmina) přes přímý `user_roles` insert/update (RLS už zápis omezuje na superadmina). **Odebrání** admin práv vrací roli na `user`. Superadmin řádky jsou jen pro zobrazení — nelze je zde měnit. Subadmin dostane **vždy roli `admin`, nikdy `superadmin`**.
+- **Pozvání nového subadmina e-mailem:** Edge Function **`invite-subadmin`** je **nasazená na produkci** (`xkzhjldrojjlrkezorey`, v2, `verify_jwt=false`, auth interně). Guard: caller JWT → `auth.getUser` → musí být `superadmin` (401/403 jinak). `createUser` bez hesla → role `admin` → `generateLink('recovery', redirectTo=${SITE_URL}/reset-password)` → e-mail přes `email_queue`. Odkaz/heslo se nikdy nevrací ani neloguje. Odmítá měnit existujícího superadmina (409). Pravidlo: **neměnit role logiku — role je hardcoded `admin`.**
+- **Pozvaný subadmin** dostane e-mail, klikne na jednorázový recovery odkaz, nastaví si heslo na **`/reset-password`** (sdílený generický recovery flow; min. 8 znaků) a přihlásí se přes `/login`. `ResetPassword.tsx` detekuje expirovaný/použitý odkaz (URL error params) a loguje přesnou Supabase chybu.
+- **Status overview na stránce:** RPC **`get_admin_subadmins_overview()`** (SECURITY DEFINER, owner postgres, `SET search_path=public`, interní admin gate, execute jen `authenticated`) vrací bezpečnou projekci z `user_roles + auth.users + profiles + public.users + email_queue`. Stránka zobrazuje: „Pozvánka odeslána/čeká/selhala" (z `email_queue`, **NE** z `auth.invited_at` — invite jde přes `createUser`), „Účet aktivní/Čeká na aktivaci" (z `last_sign_in_at`), „Online teď" (reuse `get_admin_online_users(300)`, poll 30 s) a „Naposledy online" (`public.users.last_seen_at`).
+  - **Migrace `supabase/migrations/20260622_admin_subadmins_overview.sql` aplikována na staging i PRODUKCI.** Produkce `xkzhjldrojjlrkezorey` ověřena (22. 06. 2026): `public.get_admin_subadmins_overview` existuje, SECURITY DEFINER, owner postgres, execute jen `authenticated`, `anon` blokován. Status badge UI na produkci ožije po Lovable Publish frontendu.
+- **Žádná změna RLS/schématu/auth nastavení**; nedotčeno: payments, contests, vouchers, wallets, tickets, partners, Sofinity. Build prošel. Pravidla: `invite-subadmin` nevracet anon/admin (jen superadmin); `get_admin_subadmins_overview` nevracet citlivá pole (tokeny/hesla/metadata/recovery link/email body); `/admin/admins` nepřepínat z `isSuperAdmin` gate.
+
+## PWA FOOTER INSTALL CTA — VISUAL POLISH (16. 06. 2026)
+
+`src/components/InstallAppButton.tsx` is now the active footer install UI surface near footer social icons: compact install pill, main label `Stáhnout aplikaci`, platform label `iPhone`/`Android`, lucide Apple/Chrome icons. Keep behavior unchanged: iOS opens the existing Czech Safari instruction modal, Android/Chrome uses the saved `beforeinstallprompt`, installed/standalone hides UI, desktop stays hidden unless a real install prompt exists. Build `npm run build` passed.
+
+Do not change PWA hook behavior, `public/manifest.webmanifest`, public icons, `public/OneSignalSDKWorker.js`, Supabase, Stripe, payments, routes, or unrelated UI for this polish.
+
+## NON-STRIPE CLEANUP — L02a/L06/CI05 ROZHODNUTO (16. 06. 2026, Pavel)
+
+Rozhodnutí Pavla (detaily v `OWNER_LEGAL_DECISION_SHEET.md`):
+- **L02a** `/pravidla-souteze` → **owner-accepted pro testovací fázi** (jako L01/L03/L04); cleanup placeholderů odložen před live.
+- **L06** reklamace/support → **technická support cesta dostatečná pro testovací fázi** (owner-accepted); finální wording/reklamační text odložen před live s právníkem.
+- **CI05** → **`onemil_spec.md` NEvytvářet**; source-of-truth = onemil_state.md, onemil_history.md, CLAUDE.md, .cursor/SYSTEM_MAP.md, PROJECT_CONTEXT.md + launch docs.
+
+**CI04 PROVEDENO 16.06. (schválení Pavla, commit `35b787cc`):** smazány `src/pages/TestLogin.tsx` + `src/pages/InfluencerDashboard.tsx` + nepoužitý import v `App.tsx`. Build ✅, žádné zbývající reference, funkční routy nedotčeny. Pravidlo: tyto soubory neobnovovat (byly mrtvý kód bez Route/importu).
+
+Zbývá:
+- **L02b** per-contest rules PDF: 0 aktivních z 127 → trvalý pre-aktivační procesní checklist (neblokuje).
+Žádné SQL/CMS/Stripe/deploy (CI04 = jen smazání mrtvého kódu + build).
+
+## AF05 ROZHODNUTO — AFFILIATE ODLOŽEN MIMO 1. VEŘEJNÝ TEST (16. 06. 2026, Pavel)
+
+**Pavel rozhodl: VARIANTA B — Affiliate program NENÍ součástí prvního veřejného testu.** Affiliate NENÍ blocker; zůstává live v kódu, aktivně se neonboarduje. Jádro 1. testu = zákazník → MioCoiny → soutěže/vouchery → později Stripe. Payouty + Air Bank `.kpc` export až ve fázi zapnutí affiliate. **Veřejné odkazy `/influencer`, `/influencer/register`, `/affiliate/login` (patička) se NEMAŽOU — skrytí je volitelný follow-up se samostatným schválením (kódová změna).** Detail + audit footprintu: `docs/launch-readiness/AF05_AFFILIATE_SCOPE_DECISION.md`. Pravidlo: neměnit affiliate kód/routy kvůli tomuto rozhodnutí; affiliate zůstává funkční pro pozdější zapnutí. Žádný kód/SQL/CMS/Stripe/deploy.
+
+## OWNER/LEGAL DECISION SHEET VYTVOŘEN (16. 06. 2026, jen dokumentace)
+
+Konsolidovaný seznam zbývajících non-Stripe owner/legal rozhodnutí: `docs/launch-readiness/OWNER_LEGAL_DECISION_SHEET.md`. Pokrývá L01/L03/L04 (legal review VOP/GDPR/cookies), A13 (CMS obsah), L02a (placeholdery obecných pravidel), L02b (per-contest rules PDF QA), L06 (reklamační wording), AF05 (affiliate scope), CI04 (mazání mrtvého kódu), CI05 (`onemil_spec.md` ano/ne). Každá položka: stav teď + proč rozhodnutí + doporučení + `[ ] schváleno / [ ] odložit`. Sekce na konci „blocked-by-Stripe" (PAY01–PAY04, C23 wallet credit, plný partner invoice flow) — NEřeší se v listu. Žádný kód/SQL/CMS/Stripe/deploy. Pravidlo: doporučení v listu needitovat jako rozhodnutí — rozhoduje Pavel/právník.
+
+## NON-STRIPE LAUNCH AUDIT — P06/P13/L02/L06/AF04/AF05/CI04/CI05 (16. 06. 2026, read-only)
+
+Audit zbývajících non-Stripe bloků po P04 staging fixu. Pouze read-only DB dotazy + code audit; žádný produkční zápis, žádná CMS změna, žádný Stripe, žádný deploy, žádný nový test (Full E2E čerstvě zelený `27597509314`).
+
+**Ověřeno / lze uzavřít:**
+- **P06 → prošlo:** produkční `settings.partner_api_documentation` (6421 znaků) = order-event guide s REÁLNÝM endpointem (`has_real_url=true`, `has_placeholder=false`). Live doc NENÍ stale. Jediný `<onemil-api>` placeholder je v interním repo dokumentu `docs/partner-api/PARTNER_API_GUIDE.md` (handoff, ne live) — kosmetické.
+- **P13 → ověřeno strukturálně:** produkční cron job 17 `weekly_partner_invoices` aktivní `0 2 * * 0` → `create_partner_invoices_for_last_week()`; funkce `_for_period(date,date)` + OBA `enqueue_partner_invoice_email` overloady (uuid; partner+period) existují. Řetězec kompletní; plný draft z reálných aktivovaných coinů vyžaduje reálnou partner paid aktivitu.
+- **AF04 → ověřeno staging + live prod:** specy 40/41/42 zelené (run `27372767070`), backend+EF LIVE (rollout 12.06.). Standardní Full E2E je SKIPuje (payout secrets).
+- **L06 → tech cesta ověřena:** `/kontakt` `mailto:podpora@onemil.cz` + `/messages` Bob/admin handoff; žádné `/support/*` routy nepotřeba.
+- **CI04 → potvrzeno mrtvé:** `InfluencerDashboard` importován (`App.tsx:76`) bez Route; `TestLogin.tsx` nikde neimportován.
+
+**Owner decision (NEdělat bez Pavla):**
+- **AF05** — je affiliate součástí 1. veřejného testu? (scope, ne tech blocker)
+- **L02a** — úklid placeholderů obecné CMS stránky `/pravidla-souteze` (CMS obsah). **L02b** — per-contest rules PDF QA před spuštěním každé soutěže (0 aktivních = teď neblokuje).
+- **L06 wording** — reklamační řád / přesný reklamační text (obsah/legal).
+- **CI04 mazání** — smazání `InfluencerDashboard`/`TestLogin` souborů vyžaduje schválení (mazání souborů).
+- **CI05** — vytvořit `onemil_spec.md`, nebo potvrdit, že `onemil_state.md`+`CLAUDE.md`+SYSTEM_MAP stačí.
+
+**Blocked-by-Stripe (beze změny):** PAY01–PAY03; P13 plný běh z reálných aktivací nepřímo závisí na reálné partner paid aktivitě.
+
+## P04 FIX — PARTNERS UPDATE RLS — PRODUKČNÍ ROLLOUT PROVEDEN (16. 06. 2026, schválení Pavla)
+
+**✅ PRODUKCE `xkzhjldrojjlrkezorey`:** migrace `20260616_partners_update_rls_partner_own.sql` aplikována 16.06. (výslovné schválení Pavla). Precheck: jen `Public read partners` SELECT (bez UPDATE). Postcheck: 3 policy (`Public read partners` SELECT + `partners_update_own` `auth_user_id=auth.uid()` + `partners_update_admin` `is_admin()`). Data NEZMĚNĚNA — 11 partnerů, reward checksum identický `d57e638f9d48f302ad5b562fc2cd90e9` před i po. Žádný Stripe, žádná reálná platba, žádná CMS, žádný frontend deploy.
+
+**⏳ Frontend `.select()` affected-rows check (`PartnerDashboard.tsx`) se na produkci projeví až po samostatném Lovable Publish** — samotná RLS oprava už ale umožní zápis (partner save funguje i se stávajícím live frontendem). **Lovable Publish Code neumí provést automaticky (žádný CLI/API/token) — musí ho ručně provést Pavel v Lovable UI.**
+
+**Poslední P04 staging recheck (16.06.):** cílený staging run `27599115269` (spec 56) = **3 passed · 0 failed · 0 skipped**. 56b potvrdil P04 end-to-end (partner uloží konverzi → DB `reward_base_czk=100, reward_mc=1`, mění jen vlastní řádek). Stripe neřešen.
+
+**P04 = TECHNICKY OVĚŘENO PRO TESTOVACÍ FÁZI (16.06., rozhodnutí Pavla) — už NENÍ aktivní non-Stripe blocker.** Evidence: ✅ staging E2E spec 56 run `27599115269` (56b DB verify); ✅ produkční RLS 3 policy (`Public read partners`/`partners_update_own`/`partners_update_admin`); ✅ live bundle `index-C9tBfrJx.js` obsahuje frontend affected-rows ochranu; ✅ produkční data nezměněna (checksum `d57e638f...`). Plný produkční UI smoke (login partnera → změna → save → DB verify) = VOLITELNÝ follow-up, čeká na bezpečný test partner login (nedělat produkční write pro vytvoření partnera bez schválení).
+
+Partner save konverzního nastavení MioCoinů ověřen **na stagingu** `dxmowysntemfqfnanxua` (schválení Pavla pro staging) a nyní aplikován i na produkci.
+
+- **Migrace** `supabase/migrations/20260616_partners_update_rls_partner_own.sql` (aplikováno jen staging): policy `partners_update_own` (authenticated, `auth_user_id = auth.uid()` USING+WITH CHECK) + `partners_update_admin` (`is_admin()`). `Public read partners` SELECT nedotčen. Postcheck: 3 policy (1 SELECT + 2 UPDATE).
+- **App** `src/pages/PartnerDashboard.tsx`: save používá `.select('id')` a ověřuje `updatedRows.length === 1`; 0 řádků → `throw` → česká `toast.error('Nepodařilo se uložit nastavení')` + rollback. **Žádný falešný success.** (Defense-in-depth; samotná RLS oprava už umožní zápis.)
+- **Spec 56b** odebrán `test.fixme` → reálně prošlo. Cílený run `27597435909`: **3 passed** (56a+56b+56c). Staging Full E2E `27597509314`: **153 passed · 0 failed · 28 skipped**.
+- **Pravidlo:** `partners` UPDATE policy je partner-own (`auth_user_id`) — nevracet `USING(true)`/deny-all; PartnerDashboard save NEvracet zpět na `.update()` bez affected-rows checku.
+- **DOPORUČENÍ PRO PRODUKCI (neaplikováno):** stejnou migraci aplikovat na produkci `xkzhjldrojjlrkezorey` po výslovném schválení Pavla — partner si jinak ani v produkci neuloží konverzní nastavení.
+
+## SPEC 56 — P01 ČÁSTEČNĚ / P04 FAILING (RLS) / P05 PROŠLO — OPRAVA KLAMAVÉHO STAVU (15. 06. 2026)
+
+**⚠️ Commit `7d90f1cd` označil P01/P04/P05 jako `prošlo` PŘEDČASNĚ a NEPOTVRZENĚ.** Citoval run `27571406245` jako „3/3 passed" — ten run ve SKUTEČNOSTI selhal 6/6 (56a/56b/56c × 2 pokusy). Full E2E `27571700378` i cílený `27573182299` rovněž selhaly. Stav vrácen na reálný (commit `384e8020` fix-pokus problém NEvyřešil — šlo o hlubší příčiny). Žádná reálná platba, žádná produkční data, žádný produkční SQL, žádná CMS změna, žádný deploy.
+
+**Diagnóza (run 27573182299 artefakty + přímá reprodukce proti stagingu):**
+- **56a (P01) — env limitace, NE app/RLS/test bug.** `/partner/register` form UI + povinná pole + client validace OVĚŘENY. Plný `auth.signUp` submit (→ „Registrace odeslána") NELZE na stagingu: přímá reprodukce `POST /auth/v1/signup` → `429 over_email_send_rate_limit` (staging má email-confirmation, vestavěný email limit vyčerpán). V `auth.users` 0× `spec56-reg-*` (signUp nic nevytvořil), zatímco `spec56-partner-*` přes service-role `createUser` OK. **Stejný důvod jako trvale skipnutý spec 01.** → 56a rescoped jen na UI+validaci.
+- **56b (P04) — REÁLNÁ RLS CHYBA (zastaveno, neopraveno).** Toast „Nastavení odměn bylo uloženo" se zobrazí, ale DB zůstane `reward_base_czk=0/reward_mc=0`. Příčina: `public.partners` má jedinou policy `Public read partners` (SELECT) a **ŽÁDNOU UPDATE policy** — ověřeno na stagingu `dxmowysntemfqfnanxua` I produkci `xkzhjldrojjlrkezorey`. Partner UPDATE vlastního řádku → 0 řádků + null error; `PartnerDashboard.tsx:857` `.update()` bez `.select()` nekontroluje affected rows → falešný success. → 56b převeden na `test.fixme` s blocker anotací. **Vyžaduje schválení Pavla.**
+- **56c (P05) — prošlo.** Sekce „API klíče" + tlačítko „Regenerovat API klíč" viditelné schválenému partnerovi.
+
+**Pravidla spec 56 (neměnit):**
+- `addInitScript` pro pre-seed `localStorage.cookie_consent` MUSÍ být v každém testu i v `loginAsPartner` — CookieConsentBanner (fixed bottom-0 z-[100]) jinak blokuje pointer events.
+- 56a NEvracet zpět na assertion „Registrace odeslána" — staging email rate-limit to neumožní.
+- 56b NEvracet z `test.fixme` na pass-make bez reálné opravy RLS + app (schválení Pavla).
+
+**LAUNCH_TODO oprava (15. 06. 2026):** P01 → „částečně / form+validace ověřeno"; P04 → „FAILING — RLS blocker"; P05 → „prošlo". Ostatní batch (P02/P03/P07-P11/P14/AF01-AF03/SEC02/CI01) z `7d90f1cd` ponechány (mají vlastní zelené runy z `27569039738`).
+
+## C19/C23/A13 OVĚŘENY — SPEC 54 + 55 (15. 06. 2026)
+
+Staging Full E2E run `27569039738`: **150 passed · 0 failed**. Commity `57b877a2`, `8a68c812`. Žádná reálná platba, žádná produkční data, žádný produkční SQL, žádná CMS změna, žádný deploy.
+
+**Nově přidané specy:**
+- `tests/e2e/54-mobile-layout-customer-pages.spec.ts` — C19. 6 zákaznických stránek (`/`, `/games`, `/wins`, `/vouchers`, `/profile`, `/messages`) na iPhone SE viewportu 375×812px. 3 podmínky na stránku: žádné uncaught JS chyby, bottom nav (`role=navigation name="Hlavní menu"`) viditelná, horizontální overflow ≤ 375px. 6/6 passed (targeted run `27567440891`).
+- `tests/e2e/55-invite-referral-c23.spec.ts` — C23. 55a ReferralSection viditelná (nadpis „Pozvi přátele"). 55b vlastní referral kód v `<code>` elementu (ensure_referral_code RPC). 55c RLS izolace (zákazník2 nevidí cizí referral_codes). 55d anon deny. 4/4 passed (targeted run `27567627210`).
+
+**Pravidla spec 54 (neměnit):**
+- Viewport 375×812 (iPhone SE) — `test.use({ viewport: MOBILE })` platí pro celý describe blok.
+- Bottom nav hledej přes `getByRole('navigation', { name: 'Hlavní menu' })` — přesný accessible name; `aria-label` je v `BottomNavBar.tsx`.
+- Horizontální overflow měříme přes `page.evaluate(() => document.documentElement.scrollWidth)` ≤ `MOBILE.width`.
+- `waitForLoadState('networkidle')` je wrapped do `.catch(() => {})` — stránky mají polling, timeout není chyba.
+
+**Pravidla spec 55 (neměnit):**
+- Referral kód se renderuje v `<code>` elementu (ReferralSection.tsx:368), NIKOLI v `input[readonly]`. Selector: `page.locator('code').first()`.
+- Label text je `'Váš doporučovací kód'` (přesný string z ReferralSection.tsx:366).
+- Wallet credit za doporučení (invite reward) je **BLOCKED-BY-PAY01–PAY03** — vzniká výhradně z `create_referral_reward_from_payment` (trigger na `payment_status='completed'`). Bez reálné Stripe platby není testovatelné.
+- Throwaway customer2 pro 55c: vytvořit přes service_role admin, smazat v `afterAll`.
+
+**A13 CMS obsah:** CMS stránky `vop`, `gdpr`, `pravidla-souteze`, `cookies` existují v `content_pages` a jsou dostupné přes routy. Právní obsah: owner-accepted pro testovací fázi (Pavel, 15.06.) — stejný status jako L01/L03/L04. **Neoznačovat A13 jako `prošlo` bez výslovného potvrzení Pavla po finálním právním review.**
+
+## A02/A11/A12/C10 OVĚŘENY — SPEC 52 + 53 (15. 06. 2026)
+
+Staging Full E2E run `27563286558`: **140 passed · 0 failed**. Commity `83a6f3cb`, `48099c5c`. Žádná reálná platba, žádná produkční data, žádný produkční SQL, žádná CMS změna, žádný deploy.
+
+**Nově přidané specy:**
+- `tests/e2e/52-admin-contest-create.spec.ts` — A02 + A11. 52a/52b: admin create-contest modal UI validace (ticket_count=0 → „Počet tiketů" v error listu; chybějící main_image → „Hlavní obrázek"; save button disabled). 52c: `admin_manage_contest` RPC přes admin JWT, ověření v DB (ticket_count=100). 52d: draft contest RLS — anon klient vrátí 0 řádků.
+- `tests/e2e/53-admin-tests-page-c10-email-mismatch.spec.ts` — A12 + C10. 53a: admin `/admin/tests` stránka zobrazuje „Produkční test vypnut" (žádné `admin-create-test-user` volání). 53b: `redeem_miocoin_code` s cizím JWT → `{success:false, error:'email_mismatch'}` → UI toast „Tento kód je vázán na jiný e-mail." → kód zůstane `issued`.
+
+**Pravidla spec 52 (neměnit):**
+- `AdminContestManagement.tsx` defaultuje `ticket_count: 1000000` → pro test validace je nutné vyčistit input na `0` (`ticketCountInput.fill('0')`).
+- Modal se otevírá na tabu `basic`; save button + error container jsou uvnitř `<TabsContent value="create">` (hidden) → před assertionem nutno přepnout tab: `dialog.getByRole('tab', { name: /Vytvořit soutěž/i }).click()`.
+- Save button selector: `.last()` — tab trigger (`role="tab"`) i save button (`role="button"`) mají stejný text „Vytvořit soutěž"; `.last()` vybere button.
+- Cleanup přes service_role klient (smaže `bonus_prizes`, `admin_actions`, `contests` pro test contest).
+
+**Pravidla spec 53 (neměnit):**
+- 53b setup: throwaway partner (service_role) + customer1 + customer2; `create_partner_order_reward(p_customer_email: CUSTOMER1_EMAIL)` → `update_partner_order_reward_status(p_order_status:'paid')` → kód `issued`; customer2 JWT zavolá `redeem_miocoin_code(p_code)` → `email_mismatch`.
+- `p_order_status` (NE `p_new_status`) — název parametru dle migrace `20260613200202`.
+
+## ZÁKAZNICKÝ FLOW C01–C21 + ADMIN A01–A10 — E2E OVĚŘEN (15. 06. 2026)
+
+Staging Full E2E run `27552310208`: **134 passed · 28 skipped · 0 failed**. Žádná reálná platba, žádná produkční data nezměněna, žádný produkční SQL, žádná CMS změna, žádný deploy. C01–C21 ověřeny E2E nebo pokryty existujícím flow bez reálné Stripe platby; admin A01/A03–A10 ověřeny existujícími specy.
+
+**Nově přidané specy (commit `7e6061c1`):**
+- `tests/e2e/50-miocoin-code-redeem-ui.spec.ts` (C07) — staging-only, self-contained: throwaway partner+customer, objednávka přes `create_partner_order_reward` → `update_partner_order_reward_status('paid')` → kód `issued`; zákazník uplatní přes `RedeemMioCoinCard` na `/profile`. 50a success+DB `activated`, 50b invalid, 50c already_used. Cleanup v afterAll.
+- `tests/e2e/51-delete-account-page.spec.ts` (C21) — `/delete-account` informační stránka: 51a načtení bez chyb, 51b nadpis+instrukce+`podpora@onemil.cz`+GDPR+nevratnost, 51c přihlášený bez redirektu+mailto.
+- **Pravidlo (neměnit):** toast/obsah assertions v spec 50/51 musí mít `.first()` — sonner toast renderuje title+description jako 2 elementy → bez `.first()` strict mode violation. `update_partner_order_reward_status` param je `p_order_status` (NE `p_new_status`).
+
+**Zbývá neověřeno:**
+- C10 — ✅ OVĚŘENO spec 53b (run `27563005623`). Neplatí jako neověřeno.
+- C19 (mobil layout), C23 (invite reward) — non-blocking.
+- A02 — ✅ OVĚŘENO spec 52a/52b/52c (run `27563142294`). Neplatí jako neověřeno.
+- A11 — ✅ OVĚŘENO spec 52d (RLS izolace draft, run `27563142294`). Neplatí jako neověřeno.
+- A12 — ✅ OVĚŘENO spec 53a (run `27563005623`). Neplatí jako neověřeno.
+- A13 (CMS — owner/legal blocker).
+- PAY01–PAY03 — Stripe checkout → webhook → wallet; čeká na staging Stripe secrets (viz `docs/launch-readiness/PAY01_PAYMENTS_TEST_MODE_NOTE.md`).
+
+**28 skipů záměrných:** spec 01 (nový uživatel), spec 07/08 (Partner Offer cooldown), spec 39–42 (affiliate payout bez secrets). LAUNCH_TODO CI02 = prošlo.
+
+## L01 / L03 / L04 — PRÁVNÍ TEXTY OWNER-ACCEPTED PRO TESTOVACÍ FÁZI (15. 06. 2026, rozhodnutí Pavla)
+
+Pavel bere aktuální právní texty `/vop`, `/gdpr` a `/legal/cookies` jako dočasně přijatelné pro testovací fázi. Projekt není veřejně spuštěn pro zákazníky — finální doladění proběhne s právníky před ostrým spuštěním.
+
+**Pravidlo (neměnit bez nového rozhodnutí Pavla):**
+- L01 `/vop`, L03 `/gdpr`, L04 `/legal/cookies` jsou `owner-accepted pro testovací fázi` — NIKOLI finálně schváleny pro live provoz.
+- Před live: právní review + doplnění zjištěných nedostatků: VOP (identifikace firmy, reklamační řád), GDPR (Supabase jako zpracovatel), cookies (Stripe místo „Platební brána", OneSignal, GTM, oprava tvrzení o cookies vs. localStorage).
+- Neoznačovat L01/L03/L04 jako `prošlo` v LAUNCH_TODO bez výslovného potvrzení Pavla po finálním právním review.
+
+## TESTOVACÍ REŽIM — STAV PROJEKTU (15. 06. 2026, dokumentace)
+
+OneMil je technicky dostupný na veřejné adrese, ale zatím nejde o veřejné spuštění pro zákazníky. Projekt je stále v testovací fázi a Pavel na něm průběžně ověřuje funkce, platby, soutěže, MioCoiny, účty a doklady.
+
+Dosavadní data nejsou reálný veřejný provoz. Platby, účty, MioCoiny, soutěže, doklady, Stripe záznamy a související transakce jsou testovací nebo smyšlená data. Web zatím není určený pro běžné uživatele ani reálné zákaznické platby.
+
+Produkční prostředí může být používáno k testování, ale Stripe běží na testovacích klíčích. Před ostrým spuštěním musí Pavel vědomě potvrdit přepnutí Stripe na live režim, live webhook a finální produkční nastavení.
+
+## L08 18+ GATING — SPEC 49 PŘIDÁN A OVĚŘEN (15. 06. 2026)
+
+`tests/e2e/49-age-gating.spec.ts` ověřuje věkový gate na obou vstupních bodech:
+- `/register`: odmítne věk 17 a 0 (zobrazí `Pro registraci musíte mít alespoň 18 let.`); přijme věk 18 a 25 (žádná age error).
+- `/onboarding/date-of-birth`: odmítne věk 17 (age error viditelný); přijme věk 18 (age error není; bez session → `Uživatel není přihlášen.`).
+Staging run `27541581559`: 6/6 passed. Commit `70970e90`. L08 = prošlo. Žádná změna kódu/SQL/CMS.
+Pravidlo: nevracet business logiku `validateAge` (age >= 18); spec 49 spustit při jakékoli změně `/register` nebo `/onboarding/date-of-birth`.
+
+## LAUNCH L04 — COOKIE BANNER LINK OPRAVEN NA /legal/cookies (15. 06. 2026, schválení Pavla)
+
+Technický mismatch cookie banneru opraven: kanonická cookies stránka je `/legal/cookies`, owner-managed CMS obsah přes `/admin/content` (`content_pages section=legal slug=cookies`). Odkazy v `CookieConsentBanner.tsx` nyní míří na `/legal/cookies`; právní text a CMS beze změny. Meta `<noscript>` tracking image fallback zůstává pryč z `index.html`; `consent.ts` beze změny, Meta init/PageView stále jen při `marketing=true`. Žádný SQL ani deploy. L04 zůstává P0 jen do owner/legal potvrzení finálního cookies textu `/legal/cookies`.## LAUNCH L01 — VOP ROUTY TECHNICKY SJEDNOCENY NA /vop (15. 06. 2026, schválení Pavla)
+
+Owner decision: kanonická stránka obchodních podmínek je `/vop`, protože je owner-managed CMS editovatelná přes `/admin/content` a Pavel si VOP text spravuje sám. Kódově sjednoceno pouze routami/odkazy: `/vop` zůstává CMS stránka přes `SlugContentPage slug="vop"`, `/terms` je kompatibilní redirect na `/vop`; registrace míří na `/vop`; footer už vedl na `/vop`. Právní text, CMS `content_pages`, SQL a deploy beze změny. L01 zůstává P0 jen do owner/legal potvrzení finálního právního obsahu `/vop`.
+## LAUNCH L03 — PRIVACY/GDPR ROUTY TECHNICKY SJEDNOCENY NA /gdpr (15. 06. 2026, schválení Pavla)
+
+Owner decision: kanonická privacy/GDPR stránka je `/gdpr`, protože je CMS editovatelná přes `/admin/content` a registrace už ukládá `document_slug='gdpr'`. Kódově sjednoceno pouze routami/odkazy: `/gdpr` zůstává CMS stránka přes `SlugContentPage slug="gdpr"`, `/privacy` a `/legal/ochrana-osobnich-udaju` zůstávají kompatibilní přes redirect na `/gdpr`; footer veřejně ukazuje jen jeden privacy/GDPR odkaz na `/gdpr`; registrační checkbox, cookie banner a související odkazy míří na `/gdpr`. Právní text, CMS `content_pages`, SQL, cookies logika/`consent.ts` a deploy beze změny. L03 zůstává P0 jen do owner/legal potvrzení finálního právního obsahu `/gdpr`.
+## LAUNCH L04 — META NOSCRIPT FALLBACK ODSTRANĚN (15. 06. 2026, schválení Pavla)
+
+Technický follow-up k L04 proveden se schválením Pavla: z `index.html` byl odstraněn pouze Meta Pixel `<noscript>` tracking image fallback (`facebook.com/tr?...PageView&noscript=1`), protože při vypnutém JS nemůže běžet React cookie banner ani `consent.ts`, ale fallback mohl odeslat Meta PageView bez souhlasu. `consent.ts` beze změny: Meta `fbq('init')` + `PageView` se dál volá jen při `marketing=true`; GTM/GA4 beze změny. Build `npm run build` ověřen. Žádný SQL, deploy ani CMS content změněn. L04 stále zůstává P0 jen kvůli owner/legal potvrzení finálního cookies textu.
+
+## LAUNCH L04 — COOKIES POLICY CLEAN AUDIT Z ORIGIN/MAIN (15. 06. 2026, read-only)
+
+L04 cookies audit byl zopakován z čistého detached checkoutu aktuálního `origin/main` na commitu `2eb29291166bea4685d8f11184e999766403fb06`; worktree byl čistý. Tento audit **nahrazuje** předchozí L04 audit z větve `codex/affiliate-payouts-audit`. Produkční CMS `content_pages` `/legal/cookies` (`section=legal`, `slug=cookies`) je aktivní, `content_length=2328`, obsahuje `podpora@onemil.cz`; L09 e-mail mismatch je vyřešený i pro cookies (`info@onemil.cz` 0×, `support@onemil.cz` 0× v aktivním CMS, `podpora@onemil.cz` 5×). L04 ale zůstává **P0 blocker**, protože Pavel/legal musí potvrdit aktualizovaný cookies text proti reálným nástrojům: Supabase Auth `localStorage.onemil-auth`, `localStorage.cookie_consent`, `public.cookie_consents`, GA4, GTM, Meta Pixel, Meta noscript fallback, OneSignal SDK/worker/cache/IndexedDB/`user_devices`, Stripe checkout redirect a aplikační `localStorage`/`sessionStorage` klíče. Samostatný technický follow-up: prověřit Meta noscript fallback. Žádný kód, SQL, deploy ani CMS content změněn.
+
+## LAUNCH L09 — KONTAKTNÍ E-MAILY V CMS SJEDNOCENY (15. 06. 2026, schválení Pavla)
+
+Kanonický veřejný/legal support e-mail = `podpora@onemil.cz` (potvrdil Pavel). Produkční CMS `public.content_pages`: `info@onemil.cz` → `podpora@onemil.cz` nahrazeno (jen e-mail substring, beze změny jakéhokoli právního wordingu) ve **3 aktivních legal stránkách**: `ochrana-osobnich-udaju`, `cookies`, `autorska-prava`. Třetí (`autorska-prava`) nalezena při precheck — stejný špatný e-mail, spadá pod pravidlo „other pages unless the same exact wrong email is found". Postcheck: 0× `info@onemil.cz` kdekoli v CMS, 0× `active_legal_info_remaining`, 0× `support@onemil.cz`, 5 stránek s `podpora@`. App kód byl už 100% čistý. Žádný deploy, žádná změna kódu, žádná migrace — pouze cílený DB UPDATE 3 řádků. L09 v LAUNCH_TODO → `prošlo` (už ne P0 blocker). Pravidlo: needitovat právní texty mimo e-mail; nevracet `info@`/`support@onemil.cz`.
+
+## LAUNCH L02 — PRAVIDLA SOUTĚŽE PER-SOUTĚŽNÍ (15. 06. 2026, jen dokumentace)
+
+Re-audit: závazná pravidla soutěže jsou per-soutěžní (`public.contests.rules` + `contests.rules_pdf_url`; admin nahrává PDF ke konkrétní soutěži do bucketu `contest-rules`; ContestDetail je zobrazuje; žádná PDF šablona → žádné placeholdery v generování). `/pravidla-souteze` je jen obecná CMS stránka, NE závazný zdroj. V LAUNCH_TODO L02 rozdělen na L02a (P1, obecná CMS stránka má placeholdery — content cleanup/owner-legal, NE blocker) a L02b (P0, per-contest QA: každá aktivní soutěž musí mít zkontrolovaný rules_pdf_url). Produkce: 0 aktivních soutěží → per-contest pravidla teď nic neblokují. Pravidlo: pravidla soutěže needitovat jako jeden statický text; kontrolovat per-soutěžní rules PDF.
+
+## SEC01 VYŘEŠENO — E17 PRODUKČNÍ FIX OVĚŘEN (15. 06. 2026, schválení Pavla)
+
+E17 `v_influencer_referrals_paid` affiliate-scoped redesign na produkci `xkzhjldrojjlrkezorey` (migrace `sec01_e17_influencer_referrals_paid_affiliate_scoped`): influencer_referrals owner+admin RLS, 2 minimal-disclosure SECURITY DEFINER helpery (anon exec=false), view security_invoker=on. Precheck=baseline; postcheck count 0=0, invoker on, anon=false, auth=true; prod advisor 2→1; P0 smoke `27529591097` success. Bez rollbacku. **SEC01 efektivně vyřešen — všechny ERRORy fixnuty/accepted; zbývá jen E22 (owner-accepted) a WARN/INFO backlog. SEC01 už NENÍ launch blocker.** Progrese prod ERROR: 23→10→8→7→5→3→2→1(accepted). Pravidla (neměnit): influencer_referrals nevracet USING(true); v_influencer_referrals_paid nevracet na SECURITY DEFINER; helpery bez anon execute; contest_progress nepřepínat na security_invoker.
+
+## SEC01 E17 AFFILIATE-SCOPED REDESIGN — STAGING OVĚŘEN (15. 06. 2026)
+
+E17 `v_influencer_referrals_paid` na stagingu `dxmowysntemfqfnanxua` (migrace `sec01_e17_influencer_referrals_paid_affiliate_scoped`): influencer_referrals owner+admin RLS (broad USING(true) odstraněn), 2 minimal-disclosure SECURITY DEFINER helpery (user_completed_first_topup, referral_user_is_valid; anon exec=false), view přestavěn na security_invoker nad base tabulkou. Postcheck OK, count 0=0. Advisor E17 zmizel (2→1; zbývá jen E22 accepted → effective 0). Full E2E `27528853194` 122 passed/0 fail (affiliate + admin OK). Žádné raw platby/auth.users. Produkce NEDOTČENA (připraveno pro prod schválení). Po prod E17 lze SEC01 uzavřít. Pravidlo: influencer_referrals nevracet USING(true); v_influencer_referrals_paid nevracet na SECURITY DEFINER; helpery nesmí mít anon execute.
+
+## SEC01 E22 contest_progress — OWNER-ACCEPTED (15. 06. 2026, jen dokumentace)
+
+Pavel formálně akceptoval E22 `public.contest_progress` jako záměrný veřejný agregát (tikety prodáno/zbývá/%); bez osobních dat, ponechává se SECURITY DEFINER (security_invoker by rozbil zákaznické počty). Není blocker. Jen dokumentace (SECURITY_FINDINGS.md status accepted-risk; LAUNCH_TODO). Žádné SQL/advisor change. Produkční raw advisor 2 ERROR, ale efektivní nevyřešený SEC01 = 1 (E17 v_influencer_referrals_paid). SEC01 zůstává P0 blocker kvůli E17; po jeho vyřešení lze uzavřít (mimo WARN/INFO). Pravidlo: contest_progress NEpřepínat na security_invoker.
+
+## SEC01 E18 PARTNER-OWN RLS — PRODUKČNÍ FIX OVĚŘEN (15. 06. 2026, schválení Pavla)
+
+Produkce `xkzhjldrojjlrkezorey` (migrace `sec01_e18_partner_api_activity_partner_own_rls`): policy `partner_api_requests_partner_own` (partner-own přes partners.auth_user_id + admin) na partner_api_requests + `security_invoker=on` na partner_api_activity. Precheck=baseline (RLS on, 0 policy, 6 reálných řádků); postcheck: policy on, invoker on, anon=false, auth=true; prod advisor 3→2; P0 smoke `27528174542` success. Bez rollbacku. SEC01 zůstává P0 blocker — produkce 2 ERROR: E17 (affiliate-scoped RLS redesign, NO-GO naslepo) + E22 (formální owner-accept). Progrese prod ERROR: 23→10→8→7→5→3→2. Pravidlo: partner_api_requests_partner_own je partner-scoped — nevracet deny-all/SECURITY DEFINER.
+
+## SEC01 E18 PARTNER-OWN RLS — STAGING OVĚŘEN (15. 06. 2026)
+
+E18 `partner_api_activity` na stagingu `dxmowysntemfqfnanxua` (migrace `sec01_e18_partner_api_activity_partner_own_rls`): RLS policy `partner_api_requests_partner_own` (partner-own přes partners.auth_user_id + admin) na partner_api_requests + `security_invoker=on` na partner_api_activity. Postcheck: policy on, invoker on, anon=false, auth=true. Advisor staging 3→2 (E18 zmizel). Full E2E `27527383016` 122 passed/0 fail (spec 47 green) — partner vidí jen vlastní API aktivitu. Produkce NEDOTČENA (připraveno pro prod schválení). SEC01 zůstává P0 blocker — produkce 3 ERROR (E17 redesign, E18 čeká prod, E22 owner-accept). Pravidlo: partner_api_requests_partner_own je partner-scoped (nevracet deny-all/definer).
+
+## SEC01 GROUP 3 SAFE/INTERIM — PRODUKČNÍ FIX OVĚŘEN (15. 06. 2026, schválení Pavla)
+
+Produkce `xkzhjldrojjlrkezorey` (migrace `sec01_group3_safe_interim_hardening`): E19 contest_miocoin_totals + E20 winners_with_contest (unused) → revoke anon/auth + security_invoker=on (cleared); E17 v_influencer_referrals_paid + E18 partner_api_activity → revoke anon no-op (anon už false), zůstávají interim (redesign pending); E22 contest_progress ponechán (owner-accept candidate). Precheck=baseline; postcheck OK; prod advisor 5→3; P0 smoke `27526912855` success (5 passed). Bez rollbacku. SEC01 zůstává P0 blocker — 3 ERROR: E17 (affiliate-scoped RLS redesign), E18 (partner-own RLS redesign), E22 (formální owner-accept). Progrese prod ERROR: 23→10→8→7→5→3. Pravidlo: E19/E20 nevracet granty/SECURITY DEFINER; E22 nepřepínat na security_invoker (rozbije zákaznické počty).
+
+## SEC01 GROUP 3 SAFE/INTERIM — STAGING OVĚŘEN (15. 06. 2026)
+
+Group 3 safe/interim na stagingu `dxmowysntemfqfnanxua` (migrace `sec01_group3_safe_interim_hardening`): E19 contest_miocoin_totals + E20 winners_with_contest (unused) → revoke anon/auth + security_invoker (cleared); E18 partner_api_activity + E17 v_influencer_referrals_paid → revoke anon (interim, SDV ERROR zůstává, redesign owner decision); E22 contest_progress ponechán (owner-accept candidate — invoker by rozbil zákaznické počty). Advisor staging 5→3. Full E2E `27526273831` 122 passed/0 fail (Games/ContestDetail/partner/affiliate OK). Produkce NEDOTČENA (5 ERROR). SEC01 zůstává P0 blocker. Pravidlo: E19/E20 nevracet anon/auth; E22 nepřepínat na security_invoker (rozbije počty); E17/E18 vyžadují RLS redesign před invoker.
+
+## SEC01 E05/E23 — PRODUKČNÍ FIX OVĚŘEN (15. 06. 2026, schválení Pavla)
+
+Produkce `xkzhjldrojjlrkezorey` (migrace `sec01_e05_e23_tickets_admin_read_and_invoker`): aditivní policy `tickets_admin_select_all` (has_role admin/superadmin) + `security_invoker=on` na E05 `contest_activity_last_24h` a E23 `contest_revenue`. Precheck=baseline; postcheck: policy přítomná (tickets 3 policy), invoker on, output 0/127/4000 nezměněn; customer own-row beze změny. Prod advisor 7→5. P0 smoke `27525944645` success (5 passed). Bez rollbacku. SEC01 zůstává P0 blocker — 5 ERROR = Group 3 (E17/E18/E19/E20/E22) + WARN/INFO. Pravidlo: `tickets_admin_select_all` je gated rolí (nevracet); E05/E23 nesmí zpět na SECURITY DEFINER bez invoker.
+
+## SEC01 E05/E23 — STAGING VYŘEŠENO (14. 06. 2026)
+
+Staging `dxmowysntemfqfnanxua` (migrace `sec01_e05_e23_tickets_admin_read_and_invoker`): aditivní policy `tickets_admin_select_all` (has_role admin/superadmin) + `security_invoker=on` na E05 `contest_activity_last_24h` a E23 `contest_revenue`. Postcheck: policy on, invoker on, output 7/789/1153 nezměněn. Advisor staging 7→5 (zbytek Group 3). Full E2E `27512846743` 122 passed/0 fail (admin contest/revenue/ticket-map OK). Produkce pro E05/E23 security_invoker NEDOTČENA (jen interim anon-revoke). SEC01 zůstává P0 blocker. Pravidlo: `tickets` admin read policy je gated rolí — nezpřístupňuje cizí tikety běžným uživatelům; nevracet.
+
+## SEC01 E09 SECURITY_INVOKER — PRODUKČNÍ FIX OVĚŘEN (14. 06. 2026, schválení Pavla)
+
+E09 `admin_winner_delivery_stats` → `security_invoker=on` na produkci `xkzhjldrojjlrkezorey` (migrace `sec01_e09_admin_winner_delivery_stats_security_invoker`). Postcheck: invoker on, output 127/101 nezměněn. Prod advisor 8→7. P0 smoke `27512629715` success (5 passed). Bez rollbacku. SEC01 zůstává P0 blocker (7 ERROR: E05/E23 + Group 3). E05/E23 nelze (tickets RLS deny-all) — potřebují tickets admin-read policy nebo accept.
+
+## SEC01 E09 SECURITY_INVOKER — STAGING OVĚŘEN (14. 06. 2026)
+
+E09 `admin_winner_delivery_stats` → `security_invoker=on` pouze na staging (migrace `sec01_e09_admin_winner_delivery_stats_security_invoker`). Bezpečné díky admin RLS na contests+winners. Postcheck: invoker on, výstup 786/297 nezměněn. Advisor staging 8→7. Full E2E `27512219000` 122 passed/0 fail (/admin/prize-delivery OK). Produkce NEDOTČENA. E05/E23 security_invoker NELZE (tickets RLS deny-all by vynulovalo totaly) — potřebují tickets admin-read policy (owner decision) nebo accept. SEC01 zůstává P0 blocker (produkce 8 ERROR).
+
+## SEC01 GROUP 2 SAFE/INTERIM — PRODUKČNÍ FIX OVĚŘEN (14. 06. 2026, schválení Pavla)
+
+Group 2 safe/interim aplikován na produkci `xkzhjldrojjlrkezorey` (migrace `sec01_group2_safe_interim_hardening`): E14 revoke anon/auth + security_invoker (cleared); E03 ENABLE RLS + revoke (cleared, NEsmazáno); E05/E09/E23 revoke anon (authenticated ponechán, SDV ERROR zůstává). Precheck=baseline; postcheck OK; prod advisor ERROR 10→8; P0 smoke `27511945205` success (5 passed); bez rollbacku. SEC01 zůstává P0 blocker (8 ERROR = Security Definer View). Pravidlo: nevracet anon SELECT; E05/E09/E23 security_invoker až po ověření admin RLS (owner decision); E03 DROP jen po schválení.
+
+## SEC01 GROUP 2 SAFE/INTERIM — STAGING OVĚŘEN (14. 06. 2026)
+
+SEC01 Group 2 safe/interim aplikován pouze na staging `dxmowysntemfqfnanxua` (migrace `sec01_group2_safe_interim_hardening`): E14 `valid_partner_api_keys` revoke anon/auth + security_invoker (cleared); E03 `_messages_policies_backup` ENABLE RLS + revoke (cleared, NEsmazáno); E05/E09/E23 admin views revoke anon (authenticated ponechán, SDV ERROR zůstává). Advisor staging 10→8. Full E2E `27511465619` = 122 passed/0 fail. Produkce pro Group 2 NEDOTČENA. SEC01 zůstává P0 blocker. Pravidlo: tyto objekty nevracet anon SELECT; E05/E09/E23 security_invoker až po ověření admin RLS (owner decision); E03 DROP jen po schválení.
+
+## SEC01 SECURITY_FINDINGS ŘÁDKY SROVNÁNY (14. 06. 2026, jen dokumentace)
+
+13 Group 1 řádků v `docs/launch-readiness/SECURITY_FINDINGS.md` (E01/E02/E04/E06/E07/E08/E10/E11/E12/E13/E15/E16/E21) přepnuto na `fixed (production, verified)` kvůli souladu s ověřenou hlavičkou. Group 2/3 řádky nezměněny. Jen dokumentace.
+
+## SEC01 GROUP 1 — PRODUKČNÍ FIX OVĚŘEN (14. 06. 2026, schválení Pavla)
+
+SEC01 Group 1 (11 app-unused SECURITY DEFINER views) aplikován na produkci `xkzhjldrojjlrkezorey` (REVOKE anon/auth + `security_invoker=on`, migrace `sec01_group1_safe_view_hardening`). Precheck=baseline; postcheck 11/11; advisor ERROR 23→10; P0 smoke `27511158470` success (5 passed); bez rollbacku. Pravidlo: těchto 11 views NESMÍ mít zpět anon/authenticated SELECT ani SECURITY DEFINER bez invoker. SEC01 zůstává P0 blocker — zbývá 10 ERROR (Group 2/3: 1 RLS Disabled in Public + 9 Security Definer View) + WARN/INFO; vyžadují fix nebo owner-accept.
+
+## SEC01 GROUP 1 — STAGING FIX OVĚŘEN (14. 06. 2026)
+
+SEC01 Group 1 (11 app-unused SECURITY DEFINER views) aplikován pouze na staging `dxmowysntemfqfnanxua` (REVOKE anon/auth + `security_invoker=on`, migrace `sec01_group1_safe_view_hardening`). Advisor staging: 11 cílených ERROR zmizelo (21→10). Full E2E `27510668205` = 121 passed/0 fail. **Produkce NEDOTČENA** (stále 23 ERROR). SEC01 zůstává P0 blocker (Group 2/3 = 10 ERROR + prod neopraven). Produkční rollout vyžaduje samostatné schválení ownera. Pravidlo: tyto views NESMÍ mít zpět anon/authenticated SELECT ani SECURITY DEFINER bez invoker.
+
+## SEC01 SECURITY FINDINGS INVENTÁŘ (14. 06. 2026, jen dokumentace)
+
+`docs/launch-readiness/SECURITY_FINDINGS.md` = read-only inventar produkcniho Security Advisoru (`xkzhjldrojjlrkezorey`): **467 nalezu (23 ERROR / 20 INFO / 424 WARN)**. 23 ERROR odpovida puvodni „23" ze SEC01 (2 Exposed Auth Users, 1 RLS Disabled in Public, 20 Security Definer View). Fixnuto=0 v inventari; ERRORy open, WARN/INFO needs-owner-decision/accepted-risk. **SEC01 = P0 blocker** dokud nejsou ERRORy fixnuty nebo ownerem akceptovany. Nic neoznaceno fixed bez dukazu. Zadny kod/SQL/RLS/deploy/produkce.
+
+## PRAVNI CMS TEXTY — L01–L04 + L09 BLOCKER PO EXPORTU (14. 06. 2026, jen dokumentace)
+
+Po exportu produkcnich CMS pravnich textu (`content_pages`) zaznamenano v `docs/launch-readiness/LAUNCH_TODO.md` jako P0 blocker: /vop prilis kratky; /pravidla-souteze ma placeholdery (`[NÁZEV SOUTĚŽE]`/`[DATUM]`/`[POPIS HLAVNÍ VÝHRY]`/`[HODNOTA]`); /gdpr vs /legal/ochrana-osobnich-udaju se lisi (sjednotit); /legal/cookies overit proti realnym nastrojum+banneru; nektere pravni texty maji `info@onemil.cz` vs verejny `podpora@onemil.cz` (L09 — kontaktni e-maily potvrdit ownerem pred editaci). Zadny pravni text/CMS/SQL/deploy/produkce nezmenen. Dalsi krok: owner/legal review pred launchem.
+
+## CONTACT / LEGAL EMAIL CONSISTENCY AUDIT (14. 06. 2026, jen dokumentace)
+
+Owner potvrzeno: kanonicky verejny support e-mail pro OneMil launch readiness je `podpora@onemil.cz`. `COMPANY_CONTEXT.md` byl dokumentacne sjednocen na `podpora@onemil.cz` pro hlavni verejny support kontakt i podporu; `b2b@onemil.cz` zustava jen pro obchodni spoluprace. Cleanup audit potvrzuje, ze stara support adresa nezustava v live app code, email templates, Edge Functions, settings docs ani current source-of-truth docs; zbyle vyskyty jsou jen stare audit/history notes. `LAUNCH_TODO.md` L05 oznacen jako proslo. CMS `vop`, `gdpr`, `pravidla-souteze` a `cookies` existuji, ale pravni kvalita/aktualnost zustava neoverena v L01-L04. Zadny kod, SQL, deploy, produkcni data, Partner API, fakturace ani reward logika.
+
+## LAUNCH READINESS DOKUMENTACE (14. 06. 2026, jen dokumentace)
+
+Launch testovaci plan ve `docs/launch-readiness/`: `LAUNCH_TEST_PLAN.md` (A–H), `ROUTE_CHECKLIST.md` (mapa rout P0/P1/P2), `LAUNCH_TODO.md` (65 bodu; P0=48/P1=16/P2=1). P0 blockery: pravni obsah (VOP/GDPR/pravidla), cookies, kontakt/reklamace, zeleny Full E2E + P0 smoke, realne partner reward settings. NEOVERENO oznacene jako todo. Zadny kod/SQL/deploy/produkce.
+
+## STAGING INTERNAL_FUNCTION_TOKEN — REALIGNMENT (14. 06. 2026)
+
+Staging `INTERNAL_FUNCTION_TOKEN` (Supabase `dxmowysntemfqfnanxua`) byl realignovan s GitHub secretem `STAGING_VITE_INTERNAL_FUNCTION_TOKEN` (oba na jednu novou sdilenou hodnotu) — predtim drift z partner-API rotaci shazoval spec 44/43/22 (401). Produkcni `INTERNAL_FUNCTION_TOKEN` ani `VITE_INTERNAL_FUNCTION_TOKEN` nezmenen. **Pravidlo: GitHub secrety nastavovat pres `gh secret set --body`, NE pres PowerShell pipe (pipe pridava BOM U+FEFF → header TypeError).** Cilene runy zelene: 44 `27500754646`, 43 `27500810383`, 22 `27500856702`. Zadny kod/test/migrace/deploy/produkce.
+
+## PARTNER API ONBOARDING SADA (14. 06. 2026, jen dokumentace)
+
+Kompletni partner onboarding sada ve `docs/partner-api/`: `README.md` (index), `PARTNER_OWNER_OVERVIEW.md` (netechnicky majitel), `PARTNER_API_GUIDE.md` (vyvojar, order-event), `PARTNER_HANDOFF_EMAIL.md` (cesky predavaci e-mail). Jedna sada, zadne konkurencni verze, bez Botanicu. Owner: order events → OneMil pocita MioCoiny → cekajici → aktivni (paid/delivered/completed) / zrusena (cancelled/returned/unpaid/not_picked_up) → MioCoiny az uplatnenim → partner plati pozdeji jen za aktivovane/uplatnene dle stavajici invoice logiky; pri create zadna faktura/e-mail/PDF/platba/wallet credit. Pripraveno PO rolloutu PR #114, NE zive; `settings.partner_api_documentation` nezmenen. Zadny kod/SQL/deploy/merge/produkce.
+
+## PARTNER API GUIDE — ORDER-EVENT MODEL (14. 06. 2026, jen dokumentace)
+
+Partner-facing pruvodce Partner API je v `docs/partner-api/PARTNER_API_GUIDE.md` (PR #114 branch), revidovan na order-event model (objednavka vytvorena → cekajici odmena; paid/delivered/completed → aktivni odmena; cancelled/returned/unpaid/not_picked_up → zrusena). Checkout neceka na OneMil; retry se stejnym `external_order_id` (idempotence). Partner neposila konecny pocet MioCoinu. Pripraveno PO rolloutu PR #114 — NE zive; `settings.partner_api_documentation` nezmenen. Zadny kod/SQL/deploy/merge/produkce.
+
+## PARTNER API PR #114 — PRODUKCNI ROLLOUT PROVEDEN (14. 06. 2026)
+
+**Rollout PROVEDEN se schvalenim Pavla.** PR #114 mergnuto do `main` (merge commit `f5e508ca`). Na produkci `xkzhjldrojjlrkezorey` aplikovany migrace `20260613200202` + `20260613200849`; nasazena EF `partner-activate` **v130** (`verify_jwt=false`).
+
+- **Postchecky OK:** enum `partner_code_status` ma `pending`; RPC `create_partner_order_reward` + `update_partner_order_reward_status` existuji s EXECUTE jen pro `service_role` (anon/authenticated=false); idempotency index existuje; `redeem_miocoin_code` odmita `pending`; zadny `partner_api_v1` objekt.
+- **Smoke (RPC service_role + EF 401 boundary):** create→`pending` 2 coiny (kod GRT3XLP46KR6, partner Test Influencer A, test e-mail prod-rollout-test@onemil.cz), duplicate→stejny kod, **0 activations / 0 invoices / 0 wallet txns** pri create; EF bez klice i se spatnym klicem → 401. Probe radek pote smazan. Full EF happy-path s realnym klicem zamerne NEspusten (vystaveni produkcniho klice blokovano bezpecnostnim guardem) — overen ekvivalentni RPC, ktery EF vola.
+- **`settings.partner_api_documentation` ZATIM NEZMENEN** (stale stary endpoint) — vyzaduje doplneni realneho base URL misto `<onemil-api>` a schvaleni partner-facing wordingu pred prepsanim.
+- **Rollback info zachyceno** pred zmenou: partner-activate v129 (zdroj ulozen), definice `redeem_miocoin_code`/`log_partner_coin_activation_from_reward`/`activate_partner_reward_sql` (md5).
+- Pri `create_order_reward` NEvznika faktura/e-mail/PDF/platba/wallet credit/activation — overeno.
+
+### Puvodni checklist (historicky, nyni PROVEDEN)
+
+Produkcni rollout checklist pro Partner API existing-system (PR #114) byl pripraven. **Schvalovaci fraze byla:** „Schvaluji produkcni rollout Partner API (PR #114)…". Puvodni gate pred provedenim:
+
+- Staging spec 48 zeleny (run `27490386537`).
+- Pred rolloutem potvrdit `partners.reward_base_czk` + `reward_mc` u realnych partneru.
+- Pri `create_order_reward` NESMI vzniknout faktura/e-mail/PDF/platba/wallet credit/`partner_coin_activations` radek; wallet credit + activation az po `redeem_miocoin_code`.
+- Presna schvalovaci fraze: „Schvaluji produkcni rollout Partner API (PR #114): aplikovat migrace 20260613200202 a 20260613200849 na produkci xkzhjldrojjlrkezorey a nasadit Edge Function partner-activate. Rozumim, ze se nevytvari zadna faktura/e-mail/PDF/platba/wallet credit pri vytvoreni objednavky."
+
+## PUBLIC CUSTOMER-FACING UI TEXT AUDIT — ✅ ČISTÉ (13. 06. 2026)
+
+Read-only audit zákaznických UI textů (routy `/`, `/games`, `/wins`, `/vouchers`, `/profile`, `/messages`, `/my-contests`).
+
+- **Žádné viditelné zákaznické anglické slovo `referral`.** Výskyty jsou code-only (identifikátory, komentáře, RPC/table názvy, `rejected:self_referral`) nebo admin/partner/interní oblasti.
+- **Zákaznické wording české:** `Pozvi přátele` (nadpis `ReferralSection.tsx`), `doporučovací kód`, `odměny z doporučení`.
+- **Žádný B2B/partner billing text neuniká do zákaznických rout.** Billing wording (Fakturace MioCoinů, `price_per_coin`, IČO/DIČ, samofakturace) izolovaný v partner/admin (`PartnerDashboard`, `PartnerInvoices`, `AdminInvoices`). Homepage „partnerské e-shopy" = legitimní zákaznický benefit copy.
+- **Žádný fix nutný.** Volitelné budoucí zpřísnění: CI guard proti viditelnému anglickému `referral` v zákaznickém UI. Read-only: bez změny souborů, SQL, deploye. Affiliate Payouts a Partner Invoices nedotčeny.
+
+## P0 PARTNER FLOW AUDIT — ✅ PO DASHBOARD BUSINESS-TEXT ÚPRAVÁCH (13. 06. 2026)
+
+P0 audit schváleného partnerského flow dokončen po úpravách partner dashboard business textů. Staging cílený run `27466916402` (spec 43): **4 passed · 1 skipped · 0 failed**, success.
+
+- **Ověřeno:** partner login, dashboard loads, konverzní helper text přítomen, karta `Fakturace MioCoinů` viditelná, `Moje faktury` → `/partner/invoices`, partner invoices page loads, PDF download jen když PDF existuje, partner nevidí faktury jiných partnerů, partner nemá přístup na admin invoice stránky, logout přes standardní sdílenou auth cestu.
+- **Produkce read-only:** RLS izolace partnerských invoice dat (`partner_invoices`/`_lines`/`_exports` partner-own přes `auth.uid()`, admin `is_admin()`, žádné `USING (true)`).
+- **Žádný partner blocker.** Bez změny produkčních dat, SQL, deploye, e-mailů, PDF, faktur či partnerů. Affiliate Payouts a customer invite reward security nedotčeny.
+- **Doporučené volitelné zpřísnění — ✅ UZAVŘENO (spec 47, viz níže):** dedikovaný approved-partner dashboard smoke spec přidán.
+
+## PARTNER DASHBOARD SMOKE SPEC 47 (13. 06. 2026, invariant)
+
+`tests/e2e/47-partner-dashboard-smoke.spec.ts` (staging-only, self-contained; service-role throwaway approved partner + cleanup v `afterAll`). Commity `fe5f59a9` (add) + `e3c2439b` (logout). Staging cílený run `27474214282`: **3 passed · 0 skipped · 0 failed**, success.
+
+- **Ověřuje:** schválený partner otevře `/partner/dashboard`; sekce `Nastavení konverze MioCoinů` viditelná; konverzní helper text viditelný (přesná kopie); karta `Fakturace MioCoinů` viditelná; `Moje faktury` → `/partner/invoices`; 47f logout přes top-nav `Odhlásit se` (PartnerHeader v `App.tsx`, `handleLogout` → `navigate('/partner/login')`) redirectuje na `/partner/login`.
+- **Test-only (neměnit charakter):** žádná změna app UI/logiky, schema, SQL, deploye, e-mailů, PDF ani produkčních dat. Uzavírá zpřísnění z P0 partner flow auditu.
+
+## PARTNER DASHBOARD — KONVERZE MIOCOINŮ PŘÍKLAD (13. 06. 2026, invariant)
+
+**✅ LIVE OVĚŘENO (13. 06. 2026):** Lovable Publish dokončen po commitu `7464cd78`; Pavel live ověřil helper pod `Nastavení konverze MioCoinů`. Při ověření žádná změna kalkulace, DB, SQL, EF deploye, e-mailů ani dat.
+
+V sekci „Nastavení konverze MioCoinů" (`/partner/dashboard`, `src/pages/PartnerDashboard.tsx`) je pod inputy český helper text: „Příklad: při nastavení 100 Kč = 1 MioCoin dostane zákazník za objednávku 500 Kč celkem 5 MioCoinů." Pouze frontend info blok (vzor `bg-muted/30` + `Info` ikona). NEMĚNIT kalkulační logiku konverze ani DB. Build ✅ exit 0.
+
+## PARTNER DASHBOARD — FAKTURACE MIOCOINŮ EXPLAINER (13. 06. 2026, invariant)
+
+**✅ LIVE OVĚŘENO (13. 06. 2026):** Lovable Publish dokončen po commitu `8c5e5375`; Pavel live ověřil, že karta `Fakturace MioCoinů` je na `/partner/dashboard` pro schváleného partnera, pod `Nastavení konverze MioCoinů`. Při ověření žádná data nezměněna, žádné e-maily, žádné SQL, žádný deploy mimo Lovable Publish.
+
+Read-only info blok „Fakturace MioCoinů" v `/partner/dashboard` (`src/pages/PartnerDashboard.tsx`, gated `isAccountApproved`, za kartou „Nastavení konverze MioCoinů"). Vysvětluje partnerovi: fakturujeme jen aktivované MioCoiny, vyúčtování automaticky jednou týdně, faktura přijde e-mailem + je v „Moje faktury"; aktuální cena z `partner.price_per_coin` (fallback `1.00`). Odkaz „Moje faktury" → `/partner/invoices`.
+
+- **Sjednocený label konceptu faktury:** partner-facing draft = **„Koncept"** všude (`PartnerInvoices.tsx` + dashboard offer invoice badge; dřívější „Návrh" odstraněn). Neměnit zpět na „Návrh".
+- **Pravidlo:** explainer pouze popisuje existující chování — NEMĚNIT billing logiku, cron `weekly_partner_invoices` (job 17, neděle 02:00 UTC), DB schema, PDF/e-mail EF. Build ✅ exit 0. Žádné SQL/deploy/e-maily. Affiliate Payouts a customer invite reward security nedotčeny.
+
+## P0 ADMIN FLOW AUDIT — ✅ ZELENÝ PO SECURITY + INVOICE + CUSTOMER-FLOW PRÁCI (13. 06. 2026)
+
+P0 audit admin flow dokončen. Staging behaviorálně ověřen (green run), UI kontrakty staticky, produkce read-only.
+
+- **Staging Full E2E run `27464656913` green** — admin specy passed (`15`, `16`, `18`, `23`, `24`, `29`, `30`, `32`, `33` 6/6, `43` 4/5, `44` 7/7, `45` 1/1).
+- **Ověřené admin flow:** admin login, admin dashboard, contests admin page, otevření create/edit contest UI, vouchers admin page (route + policy), messages/admin unread state, partner invoices admin page, partner invoice detail drawer, invoice tlačítka, admin „Doporučení a odměny" overview, admin tests page bez volání `admin-create-test-user`.
+- **Invoice tlačítka (spec 45 + statická kontrola `AdminInvoices.tsx`):** `draft → Odeslat fakturu emailem`, `issued → Znovu odeslat`, `paid → žádné send/resend`. **Admin tests page:** `createTestUser` neutralizován (toast „bezpečnostně vypnut"), žádné `.invoke('admin-create-test-user')` v `src`.
+- **Produkce `xkzhjldrojjlrkezorey` read-only:** `partner_invoices`/`_lines`/`_exports` admin přes `is_admin()` + partner own-row; invite reward tabulky own-row + admin read-all; `vouchers` admin SELECT + záměrný world-readable katalog; žádné `USING (true)`.
+- **Žádný admin blocker.** Bez změny souborů, bez SQL writes, bez deploye, bez e-mailů, bez generování PDF, bez označení faktur zaplaceno, bez vytváření soutěží, žádná produkční data nezměněna.
+- **Doporučené pozdější test-only zlepšení — ✅ UZAVŘENO (spec 46, viz níže):** dedikované read-only smoke specy pro `/admin/vouchers` a `/admin/referrals` přidány.
+
+## ADMIN SMOKE SPEC 46 — VOUCHERS + DOPORUČENÍ A ODMĚNY (13. 06. 2026, invariant)
+
+Dedikovaný read-only admin smoke test `tests/e2e/46-admin-vouchers-referrals-smoke.spec.ts` (staging-only, self-skipping bez admin secrets). Commit `6d67fd2f`. Staging cílený běh `27465396025` (přes `only_spec`): 1 passed, run success.
+
+- **Ověřuje:** `/admin/vouchers` načte s `Přehled voucherů`; `/admin/referrals` načte taby `Doporučení hráčů` a `Audit doporučení`; žádné neodchycené client-side chyby (`pageerror` listener).
+- **Read-only (neměnit charakter):** žádné vytváření/editace voucherů, žádné vytváření/úprava invite rewardů, žádné e-maily, žádné SQL, žádný deploy. Login přes `loginViaUI` helper.
+- Uzavírá test-only gap z P0 admin auditu. Affiliate Payouts a Partner Invoices nedotčeny.
+
+## P0 CUSTOMER FLOW AUDIT — ✅ ZELENÝ PO SECURITY + INVOICE PRÁCI (13. 06. 2026)
+
+P0 audit zákaznických flow dokončen po invite reward security práci a Partner Invoice úklidu. Staging behaviorálně ověřen, produkce pouze read-only.
+
+- **Staging Full E2E run `27464656913` ✅:** 112 passed · 28 skipped · 0 failed (větev `main`).
+- **Ověřené zákaznické flow:** registrace, login, profil, načtení peněženky, „Pozvi přátele"/vlastní invite data, stránka Hry, detail soutěže, stránka Voucher, stránka Zprávy, top-up/checkout otevření bez reálné platby, logout. 28 skipů non-blocking (partner offers cooldown, staging-only B2B/Partner Invoice specy, 1 záměrný registrační skip) — žádný zákaznický P0 flow neselhal.
+- **Produkce `xkzhjldrojjlrkezorey` read-only:** zákaznické RPC přítomny s `authenticated` execute (`buy_ticket_atomic`, `ensure_referral_code`, `set_my_referrer_by_code`, `get_bob_enabled`, `redeem_miocoin_code`, `bump_user_last_seen`); policy `profiles`/`wallets`/`messages`/`contests`/invite reward tabulky scoped, žádné broad `USING (true)`; `vouchers` world-readable SELECT záměrný pro veřejný voucher katalog.
+- **Žádný zákaznický blocker.** Bez změny souborů, bez SQL writes, bez deploye, bez e-mailů, bez plateb, žádná produkční data nezměněna.
+
+## ADMIN TEST DASHBOARD — akce admin-create-test-user VYPNUTA (13. 06. 2026, invariant)
+
+Po odstranění produkční Edge Function `admin-create-test-user` byla v admin test dashboardu vypnuta akce, která ji volala, aby admin neklikal na nefunkční/nebezpečné produkční tlačítko.
+
+- **Soubor:** `src/tests/ComprehensiveAdminTestDashboard.tsx`. `createTestUser` už nevolá `supabase.functions.invoke('admin-create-test-user')`; místo toho zobrazí toast „Tento produkční test byl bezpečnostně vypnut." Tři tlačítka „Vytvořit Test User" přejmenována na „Produkční test vypnut".
+- **Build ✅** `npm run build` exit 0. Commit `a7329fc7`.
+- **Pravidlo (neměnit):** neobnovovat volání `admin-create-test-user` z UI bez přidání řádného admin guardu na samotnou Edge Function (a jejího bezpečného redeploye).
+- Změna omezena na admin test UI. Žádné SQL, žádný deploy Edge Function, žádné e-maily, žádní uživatelé, customer app nedotčena. Affiliate Payouts a Partner Invoices nedotčeny.
+
+## ADMIN-CREATE-TEST-USER ODSTRANĚN Z PRODUKCE (13. 06. 2026, invariant)
+
+Edge Function `admin-create-test-user` byla odstraněna z produkce `xkzhjldrojjlrkezorey` (poslední otevřený bod invite reward security auditu, MEDIUM).
+
+- **Důvod:** funkce měla `verify_jwt=false`, žádnou interní admin/superadmin autorizaci, používala service role a mohla zapisovat testovací data → byla volatelná bez autentizace.
+- **Příkaz:** `supabase functions delete admin-create-test-user --project-ref xkzhjldrojjlrkezorey --yes`. Read-only ověření přes `list_edge_functions` potvrdilo, že slug v produkčním seznamu chybí.
+- **Staging `dxmowysntemfqfnanxua`** tuto funkci nasazenou neměl a nebyl změněn.
+- **Pravidlo (neměnit):** funkci `admin-create-test-user` NEnasazovat zpět na produkci bez řádného admin guardu (Authorization Bearer → `auth.getUser` → `user_roles` admin/superadmin). Zdrojová složka v repu zůstává; redeploy jen po přidání autorizace.
+- Žádná produkční tabulková data nezměněna, žádné SQL, žádná jiná Edge Function nasazena/odstraněna, žádné e-maily, žádní uživatelé. Affiliate Payouts a Partner Invoices nedotčeny.
+- Vedlejší efekt: interní admin test dashboard může zobrazit „function not found", pokud se klikne staré test tlačítko.
+- **Invite reward security audit UZAVŘEN:** (1) CRITICAL wallet-minting RPC opraveno REVOKE; (2) HIGH invite reward RLS expozice opravena; (3) MEDIUM `admin-create-test-user` odstraněn z produkce.
+
+## ODMĚNY ZA DOPORUČENÍ — STAGING SYNCHRONIZOVÁN S PRODUKČNÍMI FIXY (13. 06. 2026, invariant)
+
+Staging `dxmowysntemfqfnanxua` byl synchronizován s již schválenými produkčními invite reward security fixy. Produkce `xkzhjldrojjlrkezorey` byla v tomto kroku **pouze read-only** a nebyla změněna.
+
+- **Staging před syncem postrádal oba fixy:** (1) `create_referral_reward_from_wallet_credit(uuid,numeric)` stále povoloval execute pro `anon` i `authenticated`; (2) `referrals`, `referral_rewards`, `referral_codes` měly RLS zapnuté, ale **nula policy** (deny-all i pro vlastní data).
+- **Aplikováno pouze na staging:** REVOKE `EXECUTE` na `create_referral_reward_from_wallet_credit(uuid,numeric)` od `anon`, `authenticated`, `public`; přidány stejné own-row + admin/superadmin SELECT policy jako na produkci na `referrals`, `referral_rewards`, `referral_codes`.
+- **Staging postcheck ✅:** anon execute=false, authenticated execute=false, service_role execute=true; 6 SELECT policy; žádné broad `USING (true)`; payment reward triggery `create_referral_reward_from_payment` i `reverse_referral_reward_on_payment_status_change` zůstaly intaktní.
+- **Staging Full E2E run `27459386337` ✅** — registrace/login, profil, peněženka, top-up/checkout (bez reálné platby), vlastní invite zobrazení zákazníka, admin invite přehled. Žádný rozbitý flow.
+- **Pravidlo (neměnit):** staging i produkce musí pro tyto tři tabulky držet own+admin policy bez `USING (true)` a funkce `create_referral_reward_from_wallet_credit` nesmí mít anon/authenticated/public EXECUTE.
+- Bez změny produkčních dat, bez reálných plateb, bez vytváření uživatelů, bez e-mailů, bez deploye, bez změny app kódu. Affiliate Payouts a Partner Invoices nedotčeny.
+- **Otevřený bezpečnostní bod (NEOPRAVENO):** MEDIUM — Edge Function `admin-create-test-user` bez autorizace + service role.
+
+## INVITE REWARD RLS — ✅ REGRESSION AUDIT PO PRODUKČNÍ OPRAVĚ (13. 06. 2026)
+
+Regression audit after production invite reward RLS fix was completed on production project `xkzhjldrojjlrkezorey`. Verified read-only on production: `referrals`, `referral_rewards`, `referral_codes` now have exactly 2 scoped SELECT policies per table; no broad `USING (true)` policies remain; `wallets`, `profiles`, and `payments` policies stayed unchanged. Static code check confirmed only 4 frontend files read the 3 invite reward tables: `src/components/ReferralSection.tsx`, `src/pages/AdminReferrals.tsx`, `src/pages/AdminReferralDashboard.tsx`, `src/components/AdminReferralAudit.tsx`. Login, profile, wallet, top-up, voucher, and payment code do not depend on the changed tables. Edge Functions do not reference the changed invite reward tables. `create-stripe-checkout` remains JWT-gated and derives `user_id` server-side. `stripe-webhook` remains signature-verified and uses service-role path; wallet credit and `create_referral_reward_from_payment` are unaffected by tightened customer SELECT policies. Production smoke on post-fix commit `40df522b` passed at 2026-06-13 06:10 and confirmed registration/login still work. Conclusion: customer login safe; profile safe; wallet safe; top-up safe; payment/wallet credit path safe; own invite display safe; admin invite overview safe. No broken flow found. No production data was changed during the audit, no app code changed, no SQL writes, no deploy. Remaining open security item: MEDIUM — `admin-create-test-user` Edge Function lacks authorization and uses service role.
+
+## ODMĚNY ZA DOPORUČENÍ — RLS OPRAVA EXPOZICE DAT (13. 06. 2026, invariant)
+
+Navazuje na REVOKE opravu níže. HIGH nález z auditu: tabulky `referrals`, `referral_rewards`, `referral_codes` měly broad SELECT policy `USING (true)` (role `public`), takže každý přihlášený uživatel mohl číst cizí invite graf, kódy a částky odměn. **Opraveno a ověřeno na produkci `xkzhjldrojjlrkezorey`.**
+
+- **Odstraněny** broad `*_read USING (true)` SELECT policy na všech třech tabulkách.
+- **Přidány own-row SELECT policy (role `authenticated`):**
+  - `referrals` → `referrer_user_id = auth.uid() OR referred_user_id = auth.uid()`.
+  - `referral_rewards` → `referrer_user_id = auth.uid() OR referred_user_id = auth.uid()`.
+  - `referral_codes` → `user_id = auth.uid()`.
+- **Přidány admin/superadmin read-all policy:** `has_role(auth.uid(), 'admin'::app_role) OR has_role(auth.uid(), 'superadmin'::app_role)`.
+- **Postcheck ✅:** přesně 2 SELECT policy na tabulku, žádné `USING (true)` nezůstalo, anon/public nemá policy ani grant (deny).
+- **Pravidlo (neměnit):** tyto tabulky NESMÍ mít zpět `USING (true)` / `public` SELECT policy. Admin referral UI čte plnou tabulku přes admin read-all policy; kódy se generují/čtou přes SECURITY DEFINER RPC (`ensure_referral_code`, `set_my_referrer_by_code`) které RLS obcházejí.
+- **Rozsah:** žádná změna app kódu, žádný deploy, wallet/payment reward trigger nedotčen, Affiliate Payouts nedotčeny, Partner Invoices nedotčeny.
+- **Otevřený bezpečnostní bod (NEOPRAVENO):** MEDIUM — Edge Function `admin-create-test-user` bez autorizace + service role.
+
+## ODMĚNY ZA DOPORUČENÍ — KRITICKÁ PRODUKČNÍ OPRAVA (13. 06. 2026, invariant)
+
+Bezpečnostní audit zákaznického invite reward flow odhalil a opravil kritickou díru na produkci `xkzhjldrojjlrkezorey`.
+
+- **Funkce `public.create_referral_reward_from_wallet_credit(uuid, numeric)`** byla `SECURITY DEFINER` a EXECUTE měl `anon`, `authenticated` i `public`; bez autorizace volajícího, bez vazby na platbu, bez idempotence → kdokoli mohl připsat odměnu za doporučení a MioCoiny do peněženky bez reálné platby.
+- **Aplikováno** (výslovné schválení Pavla): `REVOKE EXECUTE ON FUNCTION public.create_referral_reward_from_wallet_credit(uuid, numeric) FROM anon, authenticated, public;` Postcheck: anon=false, authenticated=false, service_role=true.
+- **Pravidlo (neměnit):** tato funkce NESMÍ mít `anon`/`authenticated`/`public` EXECUTE. Odměny za doporučení vznikají VÝHRADNĚ přes legitimní platební trigger `create_referral_reward_from_payment` (idempotentní `ON CONFLICT (payment_id)`) — ten zůstal nedotčen. Nevracet EXECUTE grant zpět.
+- **Otevřené body z auditu (NEOPRAVENO, vyžadují samostatné schválení):** (1) HIGH — invite reward tabulky `referral_rewards`/`referrals`/`referral_codes` mají široké SELECT policy (`USING (true)`) vystavující cizí data; (2) MEDIUM — Edge Function `admin-create-test-user` bez autorizace + service role.
+
+## PARTNER INVOICES — ✅ PRODUKČNÍ TEST NOVÉ PDF AKTIVAČNÍ TABULKY OVĚŘEN + UKLIZEN (13. 06. 2026)
+
+Produkční test invoice `OMA-20260003` byl vytvořen, PDF-generated, ověřen a odeslán přesně jednou. Pavel potvrdil, že e-mail dorazil a vše je správně. Invoice id: `75fc016e-5283-4801-a19f-0566a2aaa587`. Activation code/id: `TESTPDF20260613A` / `764ddcde-ff44-4c48-99fa-9ed9ef453818`. External order id: `TEST-PDF-OVERVIEW-20260613-5MC`. Invoice total: `5` MioCoins. `partner_invoice_lines` total: `5` MioCoins, 1 line. PDF overview total: `5` MioCoins. PDF export id: `48e44363-acde-4807-8d8c-ec3f85b5a8e7`. PDF obsahuje `Kontrolní přehled aktivací MioCoinů`, test activation code, test external order id a total `5`. E-mail byl odeslán přesně jednou na `eshop@onemil.cz`. Final status: `issued`. `paid_at`: `null`. `OMA-20260001` nebyla dotčena. Nic nebylo označeno jako zaplacené. Affiliate Payouts a nesouvisející systémy byly nedotčeny. **✅ CLEANUP PROVEDEN (13. 06. 2026, schválení Pavla):** smazány `partner_invoices`, `partner_invoice_lines` (1 řádek), `partner_invoice_exports`, `partner_coin_activations`, `partner_reward_codes` pro kód `TESTPDF20260613A`; storage objekt `partner-invoices/invoice-75fc016e-...-1781327271530.pdf` smazán. Postcheck: všechny cílové řádky = 0; `OMA-20260001` existuje a nebyla dotčena.
+
+## PARTNER INVOICES — ✅ ADMIN RESEND BUTTON PŘIDÁN (12. 06. 2026)
+
+Admin UI `src/pages/AdminInvoices.tsx` má tlačítko `Znovu odeslat` pouze pro partner faktury se stavem `issued`. Používá existující safe resend mode `send-partner-invoice-email` s `{ invoice_id, resend: true }`, nemění status, nenastavuje `paid_at` a neregeneruje PDF; pokud není dostupný existující PDF export, zobrazí toast `PDF faktura zatím není k dispozici.` Normální admin invoice UI už nezobrazuje status-only `Odeslat` ani `Označit jako zaplaceno`; draft se vystavuje přes skutečné e-mailové odeslání a paid se zde ručně nenastavuje. Lovable Publish byl ověřen na live webu s bundlem `index-DZZxPOk1.js`: `draft` ukazuje `Odeslat fakturu emailem`, `issued` ukazuje `Znovu odeslat`, `paid` nemá send/resend tlačítko. Při ověření nebyl odeslán žádný e-mail, žádný invoice status se nezměnil a `OMA-20260001` zůstává `issued`, `paid_at = null`. Manuální produkční resend faktury `OMA-20260001` na `eshop@onemil.cz` už byl proveden dříve po schválení Pavla. Affiliate Payouts nedotčeny.
+
+## PARTNER INVOICES — ✅ PDF OVERVIEW PRODUKČNÍ FIX DOKONČEN (12. 06. 2026)
+
+Production fix pro Partner Invoice PDF overview mismatch je kompletní na produkci `xkzhjldrojjlrkezorey`. Migrace `20260612125606_partner_invoice_line_snapshots.sql` byla aplikována jako verze `20260612132440`. Edge Function `generate-partner-invoice-pdf` byla nasazena jako verze `131`; `send-partner-invoice-email` byla později pro schválený jednorázový resend nasazena jako verze `123`. Faktura `OMA-20260001` už nezobrazuje chybný date-range activation overview. Protože jde o legacy fakturu s 0 invoice-linked rows, PDF používá safe fallback/no-detail overview místo zavádějících 15 MioCoins. Při PDF overview fixi nebyly odeslány žádné e-maily, nic nebylo označeno jako zaplacené a Affiliate Payouts byly nedotčeny. Production smoke prošel: run `27418726117`. Strict detail total = 5 pro legacy fakturu by vyžadoval samostatně schválený cílený backfill.
+
+## PARTNER INVOICES — ✅ LIVE V PRODUKCI (12. 06. 2026, schválení Pavla)
+
+Partner Portal fakturace opravena, staging-ověřena a **12. 06. 2026 nasazena na produkci `xkzhjldrojjlrkezorey`** (3 migrace + 2 EF + private bucket + Vault auto-PDF aktivace). Smoke ✅: 401/403 kontrakt, admin Generovat PDF (signed URL, `%PDF`), Odeslat fakturu emailem → pouze `eshop@onemil.cz` (OMA-20260001 `draft → issued`, nic paid), partner RLS own/foreign 5/0. Production smoke `27414185094` + P0 `27414186632` ✅. **Lovable Publish proběhl a post-publish ověření prošlo (12. 06. 2026):** live bundle `index-BKax3mKj.js`, admin „Generovat PDF" funguje po publishi (nový export row — jediná záměrná datová změna), partner PDF download přes signed URL live, e-mail znovu netestován (dřívější smoke pouze `eshop@onemil.cz`), nic paid, Affiliate Payouts nedotčeny. Finální rollout commit `f3d281c0`. **Partner Invoice fix je plně live end-to-end.**
+
+**Aplikované staging migrace (soubory v repu, NEAPLIKOVAT na produkci bez schválení):** `20260612090000_partner_invoice_rls_policies.sql` (partner vidí jen vlastní faktury/exporty/řádky; admin UPDATE statusu) · `20260612093000_partner_invoice_enqueue_fix.sql` (chybějící overload `enqueue_partner_invoice_email(p_invoice_id uuid)` — cron volal neexistující signaturu, první reálná fakturace by spadla) · `20260612110000_partner_invoice_auto_pdf.sql` (hook `partner_invoice_post_create` = enqueue e-mail + best-effort PDF request přes pg_net+Vault; zapojen do `create_partner_invoices_for_last_week` i `_for_period`).
+
+**Závazná pravidla (neměnit bez schválení Pavla):**
+- EF `generate-partner-invoice-pdf` a `send-partner-invoice-email` autorizují: `x-internal-token` (automatizace/cron — stejný vzor jako joby 23/24) NEBO service-role bearer NEBO **admin/superadmin JWT** (UI fallback). **Žádný `VITE_INTERNAL_FUNCTION_TOKEN` v prohlížeči — nevracet.** `verify_jwt=false` v config.toml (auth řeší funkce interně).
+- Bucket `partner-invoices` je na stagingu **private**; EF vrací 10letou signed URL (`createSignedUrl`), ne public URL. Na produkci přepnout na private při rolloutu — nevracet `getPublicUrl`.
+- Partner faktury negeneruje a e-maily neposílá — pouze čte vlastní data (RLS) a stahuje PDF přes uloženou signed URL. `PartnerDashboard.downloadOfferInvoicePdf` čte `partner_invoice_exports`, NEVOLÁ EF.
+- `send-partner-invoice-email` bez `RESEND_API_KEY` vrací řízený `503 email_service_not_configured` a NEMĚNÍ status faktury. Posílá jen pro status `draft`, po úspěchu `draft → issued`.
+- Testovací e-mail příjemce při ověřování partner invoice flow je **výhradně `eshop@onemil.cz`** (aktualizováno 12. 06. 2026). Nikdy neposílat testovací faktury reálným externím partnerům, zákazníkům ani třetím stranám.
+- Spec 43 (`43-partner-invoices.spec.ts`) a spec 44 (`44-partner-invoice-pdf-email.spec.ts`) musí zůstat zelené (run `27412464954`: 9 passed). Oba jsou staging-only a self-contained.
+
+## NEJNOVĚJŠÍ STAV — DÁVKOVÉ VÝPLATY AFFILIATE/OBCHODNÍCH PROVIZÍ (10. 06. 2026)
+
+Fáze A+B+C jsou aplikované a ověřené pouze na staging Supabase projektu `dxmowysntemfqfnanxua`. Produkce `xkzhjldrojjlrkezorey` je netknutá. Nebyl proveden web deploy, Lovable Publish ani full E2E.
+
+Fáze C staging stav:
+- DB migrace `20260610140000_affiliate_payouts_phase_c.sql` aplikovaná na staging.
+- `affiliate_payout_documents` má nové PDF/e-mail auditní sloupce.
+- `email_queue` má nové sloupce pro privátní storage přílohy a `attachment_required`.
+- RPC existují: `prepare_affiliate_payout_document`, `finalize_affiliate_payout_document`.
+- Edge Functions: `create-affiliate-payout-document` nasazená na staging, verze 1; `process-email-queue` nasazený na staging, verze 2.
+- `settings.accounting_email = accounting-test@onemil.test`.
+- Test `tests/e2e/41-affiliate-payout-documents.spec.ts`: `4 passed`.
+- Cleanup testu 41 čistý: `email_queue`, `affiliate_accounts`, `affiliate_payout_documents` pro spec41 = 0.
+
+Oprava během testu: `process-email-queue` už neinicializuje Resend při startu funkce; Resend se inicializuje až před skutečným odesláním. Required PDF příloha bez souboru skončí řízeně jako `failed`. Commit opravy: `6f998677c4fc5ccb085f9e511d625c58579d6f62`.
+
+Fáze D / Air Bank export má připravený opravený reviewable návrh v repu, bez aplikace SQL, bez deploye Edge Function a bez zásahu do Supabase. Připraveno: migrace `supabase/migrations/20260610170000_affiliate_payouts_phase_d.sql`, Edge Function `generate-affiliate-bank-export`, UI detail dávky, cílený test `tests/e2e/42-affiliate-bank-export.spec.ts` a navazující úprava spec 40. Návrh používá prepare/finalize RPC, privátní bucket `affiliate-bank-exports`, Windows-1250, CRLF, částky v haléřích, VS max 10 číslic, KS `0000`, zprávu max 35 znaků a zpřísňuje flow na `created → exported → paid`. Review opravy (commit `7890dc0c745a0659354d0378a97fe35d4c9fd606`): ABO layout dle ČSAS specifikace (položka začíná účtem příjemce, bez debetního účtu), path-traversal regex, items-sum integrity check, `due_date` horní limit +364 dní. Vzorový soubor pro ruční importní test: `docs/affiliate-payouts/sample-bank-export/sample-onemil-20260625.kpc` — účet plátce `3151752019/3030` (Iconic Point s.r.o., Air Bank). **Importní test Air Bank ✅ SPLNĚN (10. 06. 2026):** Test 1 (fiktivní příjemci) → „K opravě" (neexistující účty). Test 2 (reálný příjemce `225259937/0600`, 1,00 Kč) → stav „Vytvořena", **žádné „K opravě"** ✅. Formát `.kpc` plně funkční; „K opravě" bylo artefaktem fiktivních účtů. Pavel žádnou platbu neodeslal. **Blokující podmínka importního testu je splněna. Fáze D DB migrace aplikována na staging `dxmowysntemfqfnanxua` ✅ (10. 06. 2026).** Postcheck OK: 5 export sloupců, 3 CHECK constrainty, index, RPC `prepare_affiliate_bank_export` (service_role only), `finalize_affiliate_bank_export` (service_role only), `mark_affiliate_payout_batch_paid` (authenticated+service_role), bucket `affiliate-bank-exports` privátní. Edge Function `generate-affiliate-bank-export` nasazena na staging ACTIVE verze 1, smoke bez JWT → 401 ✅. Test `tests/e2e/42-affiliate-bank-export.spec.ts`: `3 passed` ✅ (run `27301399760`). Test `tests/e2e/40-affiliate-payouts.spec.ts`: `4 passed` ✅ (run `27301606390`). **Fáze D staging ověření kompletní.** Produkce stále blokována. Do produkce nic nepřenášet bez výslovného schválení Pavla; nedělat deploy ani Lovable Publish.
+
+**Fáze D.1 — APLIKOVÁNA NA STAGING ✅ (10. 06. 2026):** Migrace `supabase/migrations/20260610180000_affiliate_payouts_phase_d1.sql` aplikována **pouze na staging** `dxmowysntemfqfnanxua`. Produkce `xkzhjldrojjlrkezorey` nedotčena a blokována. Settings seed OK: `affiliate_payout_payer_account = 3151752019`, `affiliate_payout_payer_bank_code = 3030`. ACL OK: `create_affiliate_payout_batch` nemá `anon` EXECUTE (explicitní REVOKE proveden po aplikaci — Supabase přidává implicitní grant), `update_affiliate_payout_batch_meta` nemá `anon` EXECUTE. `create_affiliate_payout_batch` auto-filluje `payer_account`/`payer_bank_code` ze settings a `due_date = current_date + 2`. Nové RPC `update_affiliate_payout_batch_meta` (admin-only, FOR UPDATE, guard `status='created'`) umožňuje editaci před exportem; admin edituje v detailu `/admin/affiliate-payouts/:id`. `prepareBatchForExport` workaround odstraněn ze spec 42. Spec 42 `42-affiliate-bank-export.spec.ts`: **6 passed** (run `27303172376`, 42a–42f). Spec 40 `40-affiliate-payouts.spec.ts`: **4 passed** (run `27303389522`, žádné regrese). **Fáze D.1 staging ověření kompletní.** Do produkce nic nepřenášet bez výslovného schválení Pavla; žádný deploy ani Lovable Publish.
+
+**Production rollout checklist (Phase A+B+C+D+D.1) — PŘIPRAVEN, NEAUTORIZOVÁNO (11. 06. 2026):** Plný checklist v `docs/affiliate-payouts/DESIGN.md` §17, shrnutí v `onemil_state.md`. Migration order (NE podle `ls`): A `20260609_…_phase_a` → B `20260610_…_phase_b` → B guard `20260610120000_…_temp_table_guard` → C `20260610140000_…_phase_c` → D `20260610170000_…_phase_d` → D.1 `20260610180000_…_phase_d1`; po D.1 ručně `REVOKE EXECUTE … create_affiliate_payout_batch FROM anon`; potvrdit settings (payer 3151752019/3030, produkční `accounting_email`). EF: `create-affiliate-payout-document`, `generate-affiliate-bank-export`, `process-email-queue`. Postchecks per-fáze (RLS, RPC, `mark_..._paid` vyžaduje `exported`, bucket privátní, service_role-only export RPC, žádný `anon` EXECUTE, advisors). P0 smoke + EF no-JWT→401. E2E staging: spec 40 (4), 41 (4), 42 (6) + Full E2E. Rollback reverzně D.1→A jen na prázdném datasetu; nemazat `dddddddd-…`. **⛔ FINAL GATE: produkce `xkzhjldrojjlrkezorey` BLOKOVÁNA dokud Pavel nedá nové výslovné písemné schválení.**
+
+**Final readiness audit (11. 06. 2026) — ACL nález + patch NEAPLIKOVÁN:** Audit našel na stagingu implicitní `anon`+`authenticated` EXECUTE na `prepare_/finalize_affiliate_payout_document` a `next_affiliate_payout_document_number` (Fáze C funkce BEZ vnitřního auth guardu — reálná díra: každý přihlášený uživatel mohl vytvářet doklady a posouvat provize do `ready_to_pay`) + `anon` EXECUTE na `admin_set_affiliate_commission_status` a `cancel_affiliate_payout_batch` (defense-in-depth, mají `is_admin()`). Fix: migrace `20260611090000_affiliate_payouts_acl_patch.sql` (idempotentní REVOKE, 10 funkcí, v DESIGN.md §17 krok 7, nahrazuje manuální post-apply REVOKE) — **APLIKOVÁNA POUZE NA STAGING `dxmowysntemfqfnanxua` ✅ (11. 06. 2026, schválení Pavla)**. ACL postcheck prošel pro všech 10 funkcí (document/export RPC = service_role only; admin RPC bez `anon`). Post-patch ověření: spec 41 **5 passed** (run `27371575748`, vč. 41e ACL regression locku ✅), spec 42 **6 passed** (run `27372071508`). Spec 40 v tomto kroku záměrně nespuštěn. Po patchi žádné další SQL, žádný deploy, žádný Lovable Publish. Spec 41 po D/D.1 byl předtím ověřen i bez 41e: run `27370912054`, 4 passed. ⚠️ `process-email-queue` nemá vnitřní auth check — produkční redeploy musí zachovat `verify_jwt` kompatibilní s pg_cron job 16 (DESIGN.md §17.2). Buckets privátní ✅, RLS OK ✅, build ✅. **Full Staging E2E (11. 06. 2026) ✅ ZELENÝ — větev PRODUCTION-READY:** run `27372767070` — **123 passed · 4 skipped · 0 failed** (11m49s). Spec 40: 4 passed ✅ · Spec 41: 5 passed (incl. 41e ACL regression lock) ✅ · Spec 42: 6 passed ✅. Telegram OK doručen. Větev `codex/affiliate-payouts-audit` je plně staging-verified.
+
+**🚀 PRODUKČNÍ ROLLOUT BACKENDU PROVEDEN (12. 06. 2026, výslovné písemné schválení Pavla):** Na produkci `xkzhjldrojjlrkezorey` aplikováno všech **7 migrací v pořadí** A → B → B guard → C → D → D.1 → ACL patch (per-migrace postchecky ✅). Settings: `accounting_email = divispavel2@gmail.com`, `affiliate_payout_payer_account = 3151752019`, `affiliate_payout_payer_bank_code = 3030` ✅. EF nasazeny: `create-affiliate-payout-document` v1 (`verify_jwt=true`), `generate-affiliate-bank-export` v1 (`verify_jwt=true`), `process-email-queue` v124 (`verify_jwt=false` — **MUSÍ zůstat false**: pg_cron job 16 volá bez Authorization headeru; ověřeno dotazem na `cron.job` + no-auth smoke 200). Postchecky ✅: 3 tabulky + RLS, oba buckety privátní, document/export RPC service_role-only, admin RPC bez `anon`, no-JWT smoke 401/401, advisors bez nových payout nálezů (admin RPC `authenticated SECURITY DEFINER` WARN = by design, `is_admin()` guard). Testovací řádek `dddddddd-…` nedotčen; žádný payout/platba/e-mail nevytvořen. **✅ PLNĚ DOKONČENO V PRODUKCI (12. 06. 2026):** Backend rollout (7 migrací + 3 EF + settings) ✅ · merge do `main` (commit `fc7c08ec`) ✅ · produkční smoke `27395842847` ✅ · P0 smoke `27395845092` ✅ · Lovable Publish (Pavel) ✅ · authenticated produkční UI smoke ✅: `/admin/affiliate-payouts` empty state, `/admin/affiliate-commissions`, `/admin/affiliate-accounts` — vše načte bez console errors. Žádná produkční data nezměněna. **Dávkové výplaty affiliate/obchodních provizí jsou LIVE.** **TEST flow E2E ověřen na produkci (12. 06. 2026, app neveřejná):** TEST provize `eeeeeeee-…` → doklad APD-2026-000001 → dávka APB-2026-000005 → `.kpc` export; e-mail s PDF přílohou doručen na `divispavel2@gmail.com` ✅, `influencer@onemil.c` řízeně failed (neplatná adresa) ✅; žádná platba, nic paid, `dddddddd-…` nedotčen; TEST artefakty smazány (2 orphan soubory zůstávají v privátních bucketech — lze ručně smazat ve Storage). Ponecháno: affiliate `cd74ff3a` `payout_account=12545857` + `payout_bank=0800` (batch RPC vyžaduje oddělený 4ciferný kód banky); Botanic TEST data (`[TEST DATA]` marker) — **nahradit reálnými údaji před veřejným spuštěním**.
+
+## PRAVIDLO PRO SPOUŠTĚNÍ TESTŮ — ŠKÁLUJ ROZSAH (09. 06. 2026, závazné)
+
+Když Pavel řekne „spusť test" nebo když se ladí konkrétní část aplikace, **NEspouštěj automaticky hned celý staging Full E2E** — je pomalý a při ladění jedné stránky zbytečně zdržuje.
+
+**Správný postup:**
+1. **Nejdřív spusť nejmenší relevantní test** — konkrétní spec (např. `npx playwright test tests/e2e/39-...`), případně jediný test přes `--grep "<title>"`.
+2. **Když cílený test projde**, teprve potom **navrhni** celý staging Full E2E jako finální kontrolu.
+3. **Celý staging Full E2E spusť automaticky jen:**
+   - před finálním schválením větší změny,
+   - před produkčním nasazením,
+   - nebo když Pavel výslovně řekne, že chce celý test.
+4. **U každého spuštění napiš, proč právě tento rozsah** (proč jen tento spec / proč už celý suite).
+
+Toto pravidlo nemění P0 smoke povinnosti před Lovable Publish (viz sekce „OCHRANA PROTI REGRESÍM") — týká se volby rozsahu při běžném ladění.
+
+## 🌿 SAMOSTATNÁ VĚTEV: DÁVKOVÉ VÝPLATY AFFILIATE/OBCHODNÍCH PROVIZÍ (09. 06. 2026, ROZPRACOVÁNO — návrh)
+
+**Samostatná pracovní větev úkolu. Hlavní roadmapa OneMil se teď NEMĚNÍ. Po dokončení této větve se vrací do hlavního kmene.** Žádná implementace nasazená, žádná migrace aplikovaná, produkce nedotčena.
+
+**Řeší:** dávkové výplaty provizí směrem **OneMil → obchodník/affiliate** (opačný směr než `partner_invoices` = firma→OneMil).
+
+### Dohodnutá rozhodnutí Pavla (závazná pro tuto větev)
+1. Admin **NEzadává ručně** datum platby, VS ani referenci — **systém generuje vše automaticky**.
+2. Výplata se řeší **dávkou (batch)**, ne po jedné provizi. Tlačítko **`Označit jako vyplacené` je až na úrovni celé dávky**, NIKDY na jednotlivé provizi.
+3. Systém automaticky generuje: výplatní doklad/samofakturu, číslo dokladu, VS/referenci, PDF, e-maily (obchodník + účetní), platební dávku, **export pro Air Bank**.
+4. Admin jen: zkontroluje schválené provize → vybere k proplacení → vytvoří dávku → stáhne hromadný příkaz pro Air Bank → vloží do banky → odešle → označí celou dávku jako zaplacenou.
+5. Doklad se vytvoří **po schválení provize**, hned se odešle obchodníkovi + kopie účetnímu OneMil. Po označení dávky jako zaplacené se posílá **potvrzení o zaplacení** (ne nový účetní doklad).
+6. Souhlas se samofakturací = součást odsouhlasení podmínek partnerského/affiliate programu.
+7. **Banka = Air Bank.** Importní formát (ABO vs. SEPA XML) **NUTNO OVĚŘIT — nedomýšlet.**
+8. **Předchozí návrh `00a52bc0` (ruční reference/VS/datum) je NAHRAZEN a NESMÍ se aplikovat jako finální řešení.**
+9. **Migrace `20260609_affiliate_commission_payout_evidence.sql` se NEMÁ aplikovat.**
+10. Testovací řádek `dddddddd-dddd-dddd-dddd-dddddddddddd` (produkce, stav `paid`) **zatím nemazat.**
+
+### Cílový workflow (8 stavů)
+`calculated` → `approved` → `payout_document_created` (PDF doklad/samofaktura odeslán obchodníkovi+účetní) → `ready_to_pay` (doklad+bank.údaje+příjemce+částka validní) → `payment_batch_created` (admin vybere, systém vytvoří dávku) → `bank_export_generated` (export pro Air Bank) → `paid` (admin označí celou dávku po odeslání plateb) → `payment_confirmation_sent` (potvrzení obchodníkovi + souhrn účetní).
 
 ### Navržený DB model (jako soubory, NEAPLIKOVAT)
 - `affiliate_payout_documents` (doklad/samofaktura: číslo, PDF URL, email stav, typ, vazba na provizi)
