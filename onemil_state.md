@@ -1,5 +1,11 @@
 # OneMil – aktuální stav projektu
 
+## OBCHOD / LEADY — NAPLÁNOVANÉ AKTIVITY (11. 07. 2026)
+
+Oprava odděluje čas vytvoření od termínu schůzky/telefonátu (`scheduled_for`), zachovává existující budoucí záznamy a přidává samostatnou sekci Naplánované aktivity. Budoucí položky jsou řazené podle termínu, zobrazují autora, účel, poznámku a další krok; lze je upravit, dokončit nebo zrušit bez mazání historie. Hlavní seznam ukazuje nejbližší plán. Český čas se zobrazuje explicitně přes `Europe/Prague`.
+
+# OneMil – aktuální stav projektu
+
 ## OBCHOD / LEADY — CRM DOKONČENÍ (11. 07. 2026)
 
 Na větvi `feature/sales-leads-production-crm` je dokončeno: telefonáty, schůzky a poznámky ve společné historii; úkoly s termínem, odpovědným a trvalou historií; ručně potvrzovaný AI follow-up; Resend doručovací události; přehled úspěšnosti podle období a odpovědného administrátora. Staging: migrace `sales_leads_crm_completion` aplikována, `sales-lead-draft-email` v8, `send-sales-lead-follow-up` v1 a `sales-lead-inbound` v7 ACTIVE. Produkce: stejná migrace aplikována, `sales-lead-draft-email` v6, `send-sales-lead-follow-up` v1 a `sales-lead-inbound` v7 ACTIVE. Databázový tok byl v obou prostředích ověřen transakčním testem a uklizen rollbackem; testovací data ani e-maily nezůstaly.

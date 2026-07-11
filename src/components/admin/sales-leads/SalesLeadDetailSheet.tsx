@@ -66,6 +66,9 @@ interface ActivityRow {
   /** 'outbound' | 'inbound' | 'internal' — rozlišuje směr e-mailové komunikace. */
   direction: string | null;
   created_at: string | null;
+  scheduled_for: string | null;
+  activity_status: string | null;
+  performed_by: string | null;
   subject: string | null;
   /** Plný snapshot těla e-mailu. Zobrazuje se zkráceně, v DB se NIKDY neořezává. */
   body_snapshot: string | null;
@@ -346,6 +349,7 @@ export function SalesLeadDetailSheet({ leadId, open, onOpenChange, onMutated }: 
   const { isSuperAdmin } = useUserRole();
   const [lead, setLead] = useState<SalesLeadDetail | null>(null);
   const [activities, setActivities] = useState<ActivityRow[]>([]);
+  const [activityAuthors, setActivityAuthors] = useState<Record<string,string>>({});
   const [loading, setLoading] = useState(false);
   const [editing, setEditing] = useState(false);
   const [form, setForm] = useState<EditForm | null>(null);
@@ -387,7 +391,7 @@ export function SalesLeadDetailSheet({ leadId, open, onOpenChange, onMutated }: 
         (supabase as any).from('sales_leads').select(DETAIL_COLUMNS).eq('id', leadId).single(),
         (supabase as any)
           .from('sales_lead_activities')
-          .select('id, activity_type, direction, created_at, subject, body_snapshot, read_at, metadata')
+          .select('id, activity_type, direction, created_at, scheduled_for, activity_status, performed_by, subject, body_snapshot, read_at, metadata')
           .eq('lead_id', leadId)
           .order('created_at', { ascending: false })
           .limit(50),
@@ -402,6 +406,11 @@ export function SalesLeadDetailSheet({ leadId, open, onOpenChange, onMutated }: 
       setClsSource(detail.discovery_source ?? '');
       setClsEditing(false);
       setActivities((actData ?? []) as ActivityRow[]);
+      const authorIds = [...new Set(((actData ?? []) as ActivityRow[]).map(a => a.performed_by).filter(Boolean))] as string[];
+      if (authorIds.length > 0) {
+        const { data: profiles } = await (supabase as any).from('profiles').select('id,full_name').in('id', authorIds);
+        setActivityAuthors(Object.fromEntries((profiles ?? []).map((p: {id:string;full_name:string|null}) => [p.id, p.full_name ?? p.id.slice(0,8)])));
+      } else setActivityAuthors({});
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : 'Nepodařilo se načíst detail';
       toast.error(msg);
@@ -1305,7 +1314,7 @@ export function SalesLeadDetailSheet({ leadId, open, onOpenChange, onMutated }: 
               <p className="text-sm text-muted-foreground">Zatím žádná aktivita.</p>
             ) : (
               <ul className="space-y-2">
-                {activities.map((a) =>
+                {activities.filter((a) => !(a.activity_status === 'naplanovano' && a.scheduled_for && new Date(a.scheduled_for) > new Date())).map((a) =>
                   EMAIL_ACTIVITY_TYPES.has(a.activity_type) ? (
                     // E-mailová zpráva — plné vlákno (odesílatel/příjemce, předmět, text).
                     <EmailActivityItem
@@ -1335,6 +1344,16 @@ export function SalesLeadDetailSheet({ leadId, open, onOpenChange, onMutated }: 
                       <span className="mt-1.5 h-1.5 w-1.5 shrink-0 rounded-full bg-primary/60" aria-hidden />
                       <div>
                         <div className="font-medium">{ACTIVITY_LABELS[a.activity_type] ?? a.activity_type}</div>
+                        {['call_logged','meeting_logged','note_added'].includes(a.activity_type) && (
+                          <div className="mt-1 space-y-0.5 text-xs">
+                            <div><strong>Datum a čas:</strong> {formatDateTime(a.scheduled_for ?? a.created_at)}</div>
+                            <div><strong>Účel/výsledek:</strong> {String(a.metadata?.result ?? '—')}</div>
+                            <div><strong>Poznámka:</strong> {a.body_snapshot ?? '—'}</div>
+                            <div><strong>Následující krok:</strong> {String(a.metadata?.next_step ?? '—')}</div>
+                            <div><strong>Stav:</strong> {a.activity_status === 'zruseno' ? 'Zrušeno' : a.activity_status === 'dokonceno' ? 'Dokončeno' : 'Naplánováno'}</div>
+                            <div><strong>Autor:</strong> {a.performed_by ? activityAuthors[a.performed_by] ?? a.performed_by.slice(0,8) : 'Systém'}</div>
+                          </div>
+                        )}
                         {a.activity_type === 'duplicate_override_confirmed' && (
                           <div className="mt-1 space-y-1 text-xs">
                             <div>Důvod: {String(a.metadata?.reason ?? '—')}</div>
@@ -1345,7 +1364,7 @@ export function SalesLeadDetailSheet({ leadId, open, onOpenChange, onMutated }: 
                             ))}
                           </div>
                         )}
-                        <div className="text-xs text-muted-foreground">{formatDateTime(a.created_at)}</div>
+                        {!['call_logged','meeting_logged','note_added'].includes(a.activity_type) && <div className="text-xs text-muted-foreground">{formatDateTime(a.created_at)}</div>}
                       </div>
                     </li>
                   ),

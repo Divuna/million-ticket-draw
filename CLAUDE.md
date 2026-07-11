@@ -1,5 +1,7 @@
 # Sales Leads CRM invariants (11. 07. 2026)
 
+- Naplánovaný termín schůzky/telefonátu patří do `sales_lead_activities.scheduled_for`; `created_at` vždy znamená čas vytvoření záznamu. Dokončené a zrušené aktivity se nemažou.
+
 - Follow-up e-mail se nikdy neposílá automaticky; vždy jej ručně potvrdí admin s `sales_leads.manage`.
 - Follow-up blokuje Nekontaktovat, neschválený/suppressed e-mail, chybějící auditovanou výjimku duplicity a jakoukoli přijatou odpověď.
 - Resend doručovací webhook ověřuje Svix podpis a nesmí ukládat API klíče ani citlivé hlavičky.
