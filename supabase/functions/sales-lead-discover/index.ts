@@ -1,12 +1,27 @@
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.57.4";
 import { verifyCompanyWebsite } from "../_shared/companyWebsiteVerifier.ts";
+import { findOfficialWebsiteCandidates } from "../_shared/companyWebsiteSearch.ts";
+import { crawlCompanyWebsite, EMAIL_RE, normalizeCompanyWebsite } from "../_shared/companyEmailCrawler.ts";
 
 // ============================================================================
 // sales-lead-discover — automatické NAVRŽENÍ nových firemních leadů.
 // Spouští výhradně člověk s oprávněním sales_leads.manage.
-// AI pouze navrhne firmy a uloží je jako `navrzeny`; nic se neodesílá.
-// Skupiny leadů se primárně načítají z DB tabulky sales_lead_groups.
+//
+// Cíl: hledat firmy, které lze SKUTEČNĚ oslovit — s ověřeným oficiálním webem
+// a pokud možno i veřejným kontaktním e-mailem.
+//
+// Postup na firmu:
+//   1. AI navrhne názvy reálných firem dle segmentu (NENÍ zdroj pravdy pro web).
+//   2. Backend aktivně DOHLEDÁ pravděpodobný oficiální web přes webové
+//      vyhledávání (companyWebsiteSearch) + případné AI odhady jako kandidáty.
+//   3. Každý kandidát nezávisle OVĚŘÍ (ARES + HTTP + kontrola identity firmy,
+//      parked/prázdný web zamítne, sleduje redirect na oficiální doménu).
+//   4. Bez ověřeného webu se firma NEUKLÁDÁ (žádné prázdné leady jen s názvem).
+//   5. Na ověřeném webu dohledá veřejný e-mail (homepage + kontakt/o-nás +
+//      mailto). E-mail se NIKDY nevymýšlí; když není, lead se uloží jen s webem.
+//
+// Nic se neodesílá; každý návrh i e-mail musí člověk ručně schválit.
 // ============================================================================
 
 const corsHeaders = {
@@ -34,15 +49,16 @@ const FALLBACK_GROUP_LABELS: Record<string, string> = {
 const DISCOVER_SYSTEM_PROMPT = `Jsi rešeršní asistent OneMil. Navrhni reálné české firmy vhodné k oslovení do věrnostního programu OneMil pro zadanou skupinu.
 
 PŘÍSNÉ ZÁKAZY:
-- NIKDY NEVYMÝŠLEJ e-mail, telefon ani jméno osoby. Vracej jen název firmy, veřejný web, případně IČO a město, pokud je veřejně známé; jinak vynech.
-- Pokud e-mail firmy neznáš jistě z veřejného webu, vrať email = null — nehádej, backend si e-mail dohledá sám na webu firmy.
+- NIKDY NEVYMÝŠLEJ e-mail, telefon ani jméno osoby. Vracej jen název firmy, případně tip na web, IČO a město, pokud je veřejně známé; jinak vynech.
+- Web je jen NÁVRH — backend si oficiální web sám dohledá a nezávisle ověří. Když web neznáš jistě, vrať website = null.
+- Pokud e-mail firmy neznáš jistě z veřejného webu, vrať email = null — nehádej, backend si e-mail dohledá sám na ověřeném webu firmy.
 - NETVRDÍ partnerství ani dohodu s OneMil.
 - NESLIBUJ žádné ceny ani podmínky.
 - NEPOUŽÍVEJ slova casino, hazard, sázka, loterie, jackpot.
 
 Výstup: vrať POUZE validní JSON objekt {"companies": [...]}. Každá položka:
 {"company_name": string, "website": string|null, "alternative_websites": string[], "website_source": string|null, "ico": string|null, "city": string|null, "industry": string|null, "lead_quality": 0|1|2|3, "rationale": string, "email": string|null}
-lead_quality = odhad vhodnosti (0 neznámé … 3 vysoká). rationale = krátké interní zdůvodnění. "email" je jen volitelná nápověda; backend si e-mail vždy ověřuje/dohledává na webu firmy. Vše je neověřený návrh k ruční kontrole člověkem.`;
+lead_quality = odhad vhodnosti (0 neznámé … 3 vysoká). rationale = krátké interní zdůvodnění. "website"/"email" jsou jen volitelné nápovědy; backend si web i e-mail vždy ověřuje/dohledává. Vše je neověřený návrh k ruční kontrole člověkem.`;
 
 function jsonResponse(body: Record<string, unknown>, status = 200): Response {
   return new Response(JSON.stringify(body), {
@@ -63,301 +79,6 @@ interface ProposedCompany {
   email_source_url?: unknown;
   alternative_websites?: unknown;
   website_source?: unknown;
-}
-
-const EMAIL_RE = /^[^@\s]+@[^@\s]+\.[^@\s]+$/;
-const FIND_EMAIL_RE = /[a-z0-9._%+-]+@[a-z0-9.-]+\.[a-z]{2,}/g;
-const SOURCE_FETCH_TIMEOUT_MS = 8000;
-const MAX_SOURCE_BODY_BYTES = 2_000_000;
-const MAX_REDIRECTS = 3;
-const MAX_PAGES_PER_COMPANY = 5;
-
-const CONTACT_LINK_KEYWORDS = [
-  "kontakt", "contact", "kontakty", "o-nas", "o-spolecnosti", "about", "about-us", "impressum",
-];
-
-const PLACEHOLDER_EMAIL_DOMAINS = new Set([
-  "example.com", "example.org", "example.net", "domain.com", "yourdomain.com",
-  "yoursite.com", "email.com", "test.com", "w3.org", "schema.org", "sentry.io",
-  "wixpress.com", "godaddy.com", "placeholder.com",
-]);
-
-function isSafePublicUrl(rawUrl: string): boolean {
-  let parsed: URL;
-  try {
-    parsed = new URL(rawUrl);
-  } catch {
-    return false;
-  }
-  if (parsed.protocol !== "http:" && parsed.protocol !== "https:") return false;
-  if (parsed.username || parsed.password) return false;
-
-  const hostname = parsed.hostname.toLowerCase();
-  if (!hostname) return false;
-  if (hostname === "localhost" || hostname.endsWith(".localhost")) return false;
-  if (hostname === "0.0.0.0") return false;
-
-  const ipv4 = hostname.match(/^(\d{1,3})\.(\d{1,3})\.(\d{1,3})\.(\d{1,3})$/);
-  if (ipv4) {
-    const [a, b] = [Number(ipv4[1]), Number(ipv4[2])];
-    if (a === 127) return false;
-    if (a === 10) return false;
-    if (a === 172 && b >= 16 && b <= 31) return false;
-    if (a === 192 && b === 168) return false;
-    if (a === 169 && b === 254) return false;
-    if (a === 0) return false;
-  }
-
-  if (hostname === "::1" || hostname.startsWith("fe80:") || hostname.startsWith("fc") || hostname.startsWith("fd")) {
-    return false;
-  }
-
-  return true;
-}
-
-function normalizeCompanyWebsite(raw: string): string | null {
-  let trimmed = raw.trim();
-  if (!trimmed) return null;
-
-  const markdownMatch = trimmed.match(/^\[[^\]]*\]\((https?:\/\/[^)\s]+)\)$/i);
-  if (markdownMatch) trimmed = markdownMatch[1].trim();
-
-  if (/^https?:\/\//i.test(trimmed)) {
-    return isSafePublicUrl(trimmed) ? trimmed : null;
-  }
-
-  const domainLike = /^[a-z0-9]([a-z0-9-]*[a-z0-9])?(\.[a-z0-9]([a-z0-9-]*[a-z0-9])?)+(\/[^\s]*)?$/i;
-  if (!domainLike.test(trimmed)) return null;
-
-  const candidate = `https://${trimmed}`;
-  return isSafePublicUrl(candidate) ? candidate : null;
-}
-
-function stripWwwPrefix(hostname: string): string {
-  return hostname.startsWith("www.") ? hostname.slice(4) : hostname;
-}
-
-function isSameCompanyDomain(hostA: string, hostB: string): boolean {
-  return stripWwwPrefix(hostA) === stripWwwPrefix(hostB);
-}
-
-function buildEmailSearchVariants(html: string): { loose: string; compact: string } {
-  const loose = html
-    .replace(/&amp;/gi, "&")
-    .replace(/&#64;|&commat;/gi, "@")
-    .replace(/&#46;|&period;/gi, ".")
-    .replace(/&nbsp;/gi, " ")
-    .replace(/<[^>]*>/g, " ")
-    .replace(/\s+/g, " ")
-    .toLowerCase();
-
-  let compact = loose;
-  let prevLength: number;
-  do {
-    prevLength = compact.length;
-    compact = compact.replace(/\s+@/g, "@").replace(/@\s+/g, "@").replace(/\s+\./g, ".").replace(/\.\s+/g, ".");
-  } while (compact.length !== prevLength);
-
-  return { loose, compact };
-}
-
-function isLikelyPlaceholderEmail(email: string): boolean {
-  const domain = email.split("@")[1] ?? "";
-  return PLACEHOLDER_EMAIL_DOMAINS.has(domain);
-}
-
-function extractMailtoEmails(html: string): string[] {
-  const emails: string[] = [];
-  const re = /mailto:([^"'?&>\s]+)/gi;
-  let m: RegExpExecArray | null;
-  while ((m = re.exec(html))) {
-    let addr = m[1];
-    try { addr = decodeURIComponent(addr); } catch { /* keep raw */ }
-    addr = addr.trim().toLowerCase();
-    if (EMAIL_RE.test(addr) && !isLikelyPlaceholderEmail(addr)) emails.push(addr);
-  }
-  return emails;
-}
-
-function extractTextEmails(variants: { loose: string; compact: string }): string[] {
-  const emails: string[] = [];
-  for (const text of [variants.loose, variants.compact]) {
-    FIND_EMAIL_RE.lastIndex = 0;
-    let m: RegExpExecArray | null;
-    while ((m = FIND_EMAIL_RE.exec(text))) {
-      const addr = m[0];
-      if (EMAIL_RE.test(addr) && !isLikelyPlaceholderEmail(addr) && !emails.includes(addr)) {
-        emails.push(addr);
-      }
-    }
-  }
-  return emails;
-}
-
-function extractContactLikeLinks(html: string, baseUrl: string, originHost: string): string[] {
-  const links: string[] = [];
-  const re = /<a\b[^>]*href\s*=\s*["']([^"'#][^"']*)["'][^>]*>([\s\S]*?)<\/a>/gi;
-  let m: RegExpExecArray | null;
-  while ((m = re.exec(html))) {
-    const hrefRaw = m[1];
-    const text = m[2].replace(/<[^>]*>/g, " ").toLowerCase();
-    const hrefLower = hrefRaw.toLowerCase();
-    const matchesKeyword = CONTACT_LINK_KEYWORDS.some((k) => hrefLower.includes(k) || text.includes(k));
-    if (!matchesKeyword) continue;
-
-    let absolute: string;
-    try {
-      absolute = new URL(hrefRaw, baseUrl).toString();
-    } catch {
-      continue;
-    }
-    if (!isSafePublicUrl(absolute)) continue;
-
-    let host: string;
-    try {
-      host = new URL(absolute).hostname.toLowerCase();
-    } catch {
-      continue;
-    }
-    if (!isSameCompanyDomain(host, originHost)) continue;
-
-    links.push(absolute);
-  }
-  return Array.from(new Set(links));
-}
-
-async function readBodyWithLimit(res: Response): Promise<string> {
-  const reader = res.body?.getReader();
-  if (!reader) return await res.text();
-
-  const decoder = new TextDecoder();
-  let html = "";
-  let received = 0;
-  while (received < MAX_SOURCE_BODY_BYTES) {
-    const { done, value } = await reader.read();
-    if (done) break;
-    received += value.byteLength;
-    html += decoder.decode(value, { stream: true });
-  }
-  try { await reader.cancel(); } catch { /* best-effort */ }
-  return html;
-}
-
-async function fetchSafePage(url: string): Promise<{ finalUrl: string; html: string } | null> {
-  let currentUrl = url;
-  if (!isSafePublicUrl(currentUrl)) return null;
-
-  for (let hop = 0; hop <= MAX_REDIRECTS; hop++) {
-    const controller = new AbortController();
-    const timer = setTimeout(() => controller.abort(), SOURCE_FETCH_TIMEOUT_MS);
-    let res: Response;
-    try {
-      res = await fetch(currentUrl, {
-        method: "GET",
-        redirect: "manual",
-        signal: controller.signal,
-        headers: { "User-Agent": "OneMilSalesLeadVerifier/1.0" },
-      });
-    } catch {
-      return null;
-    } finally {
-      clearTimeout(timer);
-    }
-
-    const isRedirectStatus = res.status >= 300 && res.status < 400;
-    if (res.type === "opaqueredirect" || isRedirectStatus) {
-      const location = res.headers.get("location");
-      if (!location) return null;
-      let nextUrl: string;
-      try {
-        nextUrl = new URL(location, currentUrl).toString();
-      } catch {
-        return null;
-      }
-      if (!isSafePublicUrl(nextUrl)) return null;
-      if (hop === MAX_REDIRECTS) return null;
-      currentUrl = nextUrl;
-      continue;
-    }
-
-    if (!res.ok) return null;
-    const html = await readBodyWithLimit(res);
-    return { finalUrl: currentUrl, html };
-  }
-
-  return null;
-}
-
-type CrawlResult =
-  | { found: true; email: string; sourceUrl: string }
-  | { found: false };
-
-async function crawlCompanyWebsite(
-  website: string,
-  aiHintEmail: string,
-  aiSourceUrl: string,
-): Promise<CrawlResult> {
-  if (!website || !isSafePublicUrl(website)) return { found: false };
-
-  let originHost: string;
-  try {
-    originHost = new URL(website).hostname.toLowerCase();
-  } catch {
-    return { found: false };
-  }
-
-  const seen = new Set<string>();
-  const queue: string[] = [];
-  const pushUnique = (u: string) => {
-    if (!seen.has(u)) {
-      seen.add(u);
-      queue.push(u);
-    }
-  };
-
-  if (aiSourceUrl && aiSourceUrl !== website && isSafePublicUrl(aiSourceUrl)) {
-    let hintHost = "";
-    try {
-      hintHost = new URL(aiSourceUrl).hostname.toLowerCase();
-    } catch {
-      hintHost = "";
-    }
-    if (hintHost && isSameCompanyDomain(hintHost, originHost)) pushUnique(aiSourceUrl);
-  }
-  pushUnique(website);
-
-  const foundEmails = new Map<string, string>();
-  let pagesFetched = 0;
-
-  while (queue.length > 0 && pagesFetched < MAX_PAGES_PER_COMPANY) {
-    const url = queue.shift()!;
-    const page = await fetchSafePage(url);
-    pagesFetched++;
-    if (!page) continue;
-
-    const mailtoEmails = extractMailtoEmails(page.html);
-    const variants = buildEmailSearchVariants(page.html);
-    const textEmails = extractTextEmails(variants);
-    for (const email of [...mailtoEmails, ...textEmails]) {
-      if (!foundEmails.has(email)) foundEmails.set(email, page.finalUrl);
-    }
-    if (foundEmails.size > 0) break;
-
-    if (url === website) {
-      const links = extractContactLikeLinks(page.html, page.finalUrl, originHost);
-      for (const link of links) {
-        if (pagesFetched + queue.length < MAX_PAGES_PER_COMPANY) pushUnique(link);
-      }
-    }
-  }
-
-  if (foundEmails.size === 0) return { found: false };
-
-  if (aiHintEmail && foundEmails.has(aiHintEmail)) {
-    return { found: true, email: aiHintEmail, sourceUrl: foundEmails.get(aiHintEmail)! };
-  }
-  const first = Array.from(foundEmails.entries())[0];
-  return { found: true, email: first[0], sourceUrl: first[1] };
 }
 
 async function resolveLeadGroup(
@@ -472,6 +193,7 @@ serve(async (req: Request) => {
     }
     companies = companies.slice(0, limit);
 
+    let candidatesChecked = 0;
     let created = 0;
     let createdWithEmail = 0;
     let createdWithoutEmail = 0;
@@ -484,26 +206,49 @@ serve(async (req: Request) => {
     for (const c of companies) {
       const name = typeof c.company_name === "string" ? c.company_name.trim() : "";
       if (!name) { errored++; continue; }
+      candidatesChecked++;
 
+      const city = typeof c.city === "string" ? c.city : null;
+      const icoHint = typeof c.ico === "string" ? c.ico : null;
+
+      // ── 1. Aktivně dohledej pravděpodobný oficiální web přes webové vyhledávání.
+      const searchCandidates = await findOfficialWebsiteCandidates({
+        companyName: name,
+        city,
+        ico: icoHint,
+        openaiKey,
+      });
+
+      // ── 2. Přidej AI odhady webu jako doplňkové kandidáty (verifier je stejně ověří).
       const websiteRaw = typeof c.website === "string" ? c.website.trim() : "";
       const alternatives = Array.isArray(c.alternative_websites)
         ? c.alternative_websites.filter((v): v is string => typeof v === "string") : [];
-      const candidates = [websiteRaw, ...alternatives].filter(Boolean).map((url, index) => ({
+      const aiCandidates = [websiteRaw, ...alternatives].filter(Boolean).map((url, index) => ({
         url,
         source: index === 0 && typeof c.website_source === "string" ? c.website_source : "AI candidate",
       }));
-      const verification = await verifyCompanyWebsite({
-        companyName: name,
-        ico: typeof c.ico === "string" ? c.ico : null,
-        candidates,
-      });
+
+      // Vyhledané weby jdou první (spolehlivější než odhad), pak AI odhady.
+      const candidates = [...searchCandidates, ...aiCandidates];
+
+      // ── 3. Nezávislé ověření identity — AI ani vyhledávač nejsou důkaz.
+      const verification = await verifyCompanyWebsite({ companyName: name, ico: icoHint, candidates });
       const website = verification.status === "verified" ? verification.website : null;
-      if (website) websitesVerified++; else if (candidates.length > 0) websitesRejected++;
+
+      // ── 4. Bez ověřeného webu firmu NEUKLÁDÁME (žádné prázdné leady jen s názvem).
+      if (!website) {
+        websitesRejected++;
+        details.push({ company: name, outcome: "skipped", reason: "unverified_website" });
+        continue;
+      }
+      websitesVerified++;
+
+      // ── 5. Na ověřeném webu dohledej veřejný e-mail (AI odhad je jen nápověda).
       const aiEmailRaw = typeof c.email === "string" ? c.email.trim().toLowerCase() : "";
       const aiHintEmail = EMAIL_RE.test(aiEmailRaw) ? aiEmailRaw : "";
       const aiSourceUrlRaw = typeof c.email_source_url === "string" ? c.email_source_url.trim() : "";
       const aiSourceUrl = aiSourceUrlRaw ? (normalizeCompanyWebsite(aiSourceUrlRaw) ?? "") : "";
-      const crawl = website ? await crawlCompanyWebsite(website, aiHintEmail, aiSourceUrl) : { found: false as const };
+      const crawl = await crawlCompanyWebsite(website, aiHintEmail, aiSourceUrl);
 
       const qualityRaw = typeof c.lead_quality === "number" ? Math.floor(c.lead_quality) : 0;
       const quality = Math.min(3, Math.max(0, qualityRaw));
@@ -527,7 +272,7 @@ serve(async (req: Request) => {
           p_discovery_meta: discoveryMeta,
           p_website: website,
           p_ico: verification.ico,
-          p_city: typeof c.city === "string" ? c.city : null,
+          p_city: city,
           p_industry: typeof c.industry === "string" ? c.industry : null,
           p_lead_quality: quality,
           p_proposed_by: "ai",
@@ -559,9 +304,9 @@ serve(async (req: Request) => {
           p_discovery_source: "ai_navrh",
           p_lead_quality: quality,
           p_discovery_meta: discoveryMeta,
-          p_website: website || null,
+          p_website: website,
           p_ico: verification.ico,
-          p_city: typeof c.city === "string" ? c.city : null,
+          p_city: city,
           p_industry: typeof c.industry === "string" ? c.industry : null,
         });
 
@@ -588,6 +333,7 @@ serve(async (req: Request) => {
       lead_group_label: resolvedGroup.label,
       requested: limit,
       proposed_by_ai: companies.length,
+      candidates_checked: candidatesChecked,
       created,
       created_with_email: createdWithEmail,
       created_without_email: createdWithoutEmail,

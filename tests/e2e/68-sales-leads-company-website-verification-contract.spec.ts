@@ -7,7 +7,7 @@ const migration=fs.readFileSync('supabase/migrations/20260711170000_sales_leads_
 test.describe('company website verification is fail closed',()=>{
  test('správný web: HTTP 200, HTML a identita firmy',()=>{expect(verifier).toContain("res.status !== 200");expect(verifier).toContain('identity_confirmed');expect(verifier).toContain('official_page_marker');});
  test('špatný web navržený AI se neuloží',()=>{expect(discover).toContain('verification.status === "verified" ? verification.website : null');expect(migration).toContain("COALESCE(v->>'status','') <> 'verified'");});
- test('firma bez webu se uloží s NULL website',()=>{expect(discover).toContain('p_website: website || null');expect(migration).toContain("website_verification_status := 'neovereny'");});
+ test('firma bez ověřeného webu se NEUKLÁDÁ (žádný prázdný lead)',()=>{expect(discover).toContain("reason: \"unverified_website\"");expect(discover).not.toContain('p_website: website || null');expect(migration).toContain("website_verification_status := 'neovereny'");});
  test('více domén: alternativy jsou jen auditní',()=>{expect(verifier).toContain('alternatives: evaluated.filter');expect(migration).toContain('They must never be used for contact enrichment');});
  test('přesměrování se sleduje a finální web ověří',()=>{expect(verifier).toContain("redirect: 'manual'");expect(verifier).toContain('finalUrl: page.finalUrl');});
  test('zaparkovaná doména je zamítnuta',()=>{expect(verifier).toContain('PARKED_PATTERNS');expect(verifier).toContain('parked_or_for_sale');});

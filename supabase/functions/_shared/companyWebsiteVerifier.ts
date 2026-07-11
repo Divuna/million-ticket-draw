@@ -21,6 +21,16 @@ const ARES_BASE = "https://ares.gov.cz/ekonomicke-subjekty-v-be/rest/ekonomicke-
 const TIMEOUT_MS = 9_000;
 const MAX_BYTES = 2_000_000;
 const MAX_REDIRECTS = 4;
+// Realistická prohlížečová hlavička — spousta firemních webů (Cloudflare/WAF)
+// vrací 403 na zjevně botí User-Agent, což dřív zamítalo i správné oficiální
+// weby. Ověření identity (ARES + název/IČO) zůstává nezměněné a přísné.
+const BROWSER_UA =
+  "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/125.0.0.0 Safari/537.36";
+const BROWSER_HEADERS: Record<string, string> = {
+  "User-Agent": BROWSER_UA,
+  "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
+  "Accept-Language": "cs,en;q=0.8",
+};
 const PARKED_PATTERNS = [
   /domain (?:is )?for sale/i, /buy this domain/i, /this domain is parked/i,
   /domena je na prodej/i, /doména je na prodej/i, /koupit tuto doménu/i,
@@ -60,7 +70,7 @@ async function fetchJson(url: string, init?: RequestInit): Promise<unknown | nul
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), TIMEOUT_MS);
   try {
-    const res = await fetch(url, { ...init, signal: controller.signal, headers: { 'User-Agent': 'OneMilCompanyVerifier/2.0', ...(init?.headers ?? {}) } });
+    const res = await fetch(url, { ...init, signal: controller.signal, headers: { 'User-Agent': BROWSER_UA, ...(init?.headers ?? {}) } });
     return res.ok ? await res.json() : null;
   } catch { return null; } finally { clearTimeout(timer); }
 }
@@ -102,14 +112,18 @@ async function fetchPage(rawUrl: string): Promise<{ finalUrl: string; html: stri
   for (let hop = 0; hop <= MAX_REDIRECTS; hop++) {
     const controller = new AbortController(); const timer = setTimeout(() => controller.abort(), TIMEOUT_MS);
     let res: Response;
-    try { res = await fetch(current, { redirect: 'manual', signal: controller.signal, headers: { 'User-Agent': 'OneMilCompanyVerifier/2.0', Accept: 'text/html,application/xhtml+xml' } }); }
+    try { res = await fetch(current, { redirect: 'manual', signal: controller.signal, headers: BROWSER_HEADERS }); }
     catch { return null; } finally { clearTimeout(timer); }
     if (res.status >= 300 && res.status < 400) {
       const location = res.headers.get('location'); if (!location || hop === MAX_REDIRECTS) return null;
       const next = publicUrl(new URL(location, current).toString()); if (!next) return null;
       current = next; continue;
     }
-    if (res.status !== 200 || !(res.headers.get('content-type') ?? '').toLowerCase().includes('text/html')) return null;
+    // Přijmi HTML i když server neposílá content-type (běžné u WAF/proxy). Identitu
+    // stejně potvrdí až obsah stránky; sem nepatří jen zjevně neHTML odpovědi.
+    const contentType = (res.headers.get('content-type') ?? '').toLowerCase();
+    const looksHtml = contentType === '' || contentType.includes('html') || contentType.includes('text/plain') || contentType.includes('application/xhtml');
+    if (res.status !== 200 || !looksHtml) return null;
     const html = await readLimited(res);
     return { finalUrl: current, html, redirected: hostKey(current) !== initialHost };
   }
