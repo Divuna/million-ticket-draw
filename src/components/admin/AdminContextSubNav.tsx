@@ -182,12 +182,11 @@ export const AdminContextSubNav: React.FC = () => {
     let cancelled = false;
     const loadUnreadSalesReplies = async () => {
       try {
-        const { count, error } = await supabase
-          .from("sales_lead_activities")
-          .select("id", { count: "exact", head: true })
-          .eq("activity_type", "reply_received")
-          .is("read_at", null);
-        if (!cancelled && !error) setUnreadSalesRepliesCount(count ?? 0);
+        const [replies,tasks] = await Promise.all([
+          supabase.from("sales_lead_activities").select("id", { count: "exact", head: true }).eq("activity_type", "reply_received").is("read_at", null),
+          (supabase as any).from("sales_lead_tasks").select("id", { count: "exact", head: true }).eq("status", "ceka"),
+        ]);
+        if (!cancelled && !replies.error) setUnreadSalesRepliesCount((replies.count ?? 0) + (tasks.error ? 0 : tasks.count ?? 0));
       } catch {
         // best-effort — silent fail (např. chybějící sloupec před migrací)
       }
