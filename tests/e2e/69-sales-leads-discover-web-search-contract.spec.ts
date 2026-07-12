@@ -101,4 +101,27 @@ test.describe('discover aktivně dohledá a ověří web, neukládá prázdné l
     expect(dialog).toContain('Uloží se jen firmy s ověřeným oficiálním webem');
     expect(dialog).not.toContain('Uloží se každá použitelná firma');
   });
+
+  test('e-mail: sanitizace + doménová/značková příslušnost firmě', () => {
+    expect(crawler).toContain('export function sanitizeEmail');
+    expect(crawler).toContain('while (s.startsWith("mailto:"))');
+    expect(crawler).toContain('s.includes(":")');
+    expect(crawler).toContain('export function emailBelongsToCompany');
+    expect(crawler).toContain('registrableDomain');
+    // crawler dostává název firmy pro kontrolu příslušnosti e-mailu
+    expect(discover).toContain('crawlCompanyWebsite(website, name,');
+  });
+
+  test('verifier: blocklist zpravodajských/katalogových domén + doménová identita', () => {
+    expect(verifier).toContain('NEWS_CATALOG_BLOCKLIST');
+    expect(verifier).toContain('mediar.cz');
+    expect(verifier).toContain('mam.cz');
+    expect(verifier).toContain('marketingsales.cz');
+    expect(verifier).toContain('e15.cz');
+    expect(verifier).toContain('firmy.cz');
+    expect(verifier).toContain('zivefirmy.cz');
+    expect(verifier).toContain('news_or_catalog_domain');
+    expect(verifier).toContain('domainMatchesCompany');
+    expect(verifier).toContain('domain_identity_mismatch');
+  });
 });

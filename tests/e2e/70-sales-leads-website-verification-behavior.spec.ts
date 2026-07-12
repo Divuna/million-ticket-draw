@@ -1,6 +1,6 @@
 import { test, expect } from '@playwright/test';
 import { verifyCompanyWebsite } from '../../supabase/functions/_shared/companyWebsiteVerifier.ts';
-import { crawlCompanyWebsite } from '../../supabase/functions/_shared/companyEmailCrawler.ts';
+import { crawlCompanyWebsite, sanitizeEmail, emailBelongsToCompany } from '../../supabase/functions/_shared/companyEmailCrawler.ts';
 import { parseDuckDuckGoResults, findOfficialWebsiteCandidates, extractUrlsFromResponses } from '../../supabase/functions/_shared/companyWebsiteSearch.ts';
 
 // Behaviorální testy verifieru a e-mailového crawleru s mockovaným fetch.
@@ -93,7 +93,7 @@ test('shoda podle IČO má nejvyšší důvěru (100)', async () => {
 test('crawler najde veřejný e-mail na kontaktní stránce', async () => {
   pages['https://firma.cz/'] = { body: `<html><body><h1>Firma</h1><a href="/kontakt">Kontakt</a></body></html>` };
   pages['https://firma.cz/kontakt'] = { body: `<html><body>Napište nám: <a href="mailto:info@firma.cz">info@firma.cz</a></body></html>` };
-  const r = await crawlCompanyWebsite('https://firma.cz/', '', '');
+  const r = await crawlCompanyWebsite('https://firma.cz/', 'Firma', '', '');
   expect(r.found).toBe(true);
   if (r.found) {
     expect(r.email).toBe('info@firma.cz');
@@ -103,14 +103,69 @@ test('crawler najde veřejný e-mail na kontaktní stránce', async () => {
 
 test('crawler ignoruje e-mail na cizí technické doméně', async () => {
   pages['https://firma2.cz/'] = { body: `<html><body>Web běží na <a href="mailto:noreply@sentry.io">noreply@sentry.io</a> a support@readymag.com</body></html>` };
-  const r = await crawlCompanyWebsite('https://firma2.cz/', '', '');
+  const r = await crawlCompanyWebsite('https://firma2.cz/', 'Firma2', '', '');
   expect(r.found).toBe(false);
 });
 
 test('ověřený web bez e-mailu vrátí found:false', async () => {
   pages['https://firma3.cz/'] = { body: `<html><body><h1>Firma 3</h1><p>Žádný kontaktní e-mail zde není uveden.</p></body></html>` };
-  const r = await crawlCompanyWebsite('https://firma3.cz/', '', '');
+  const r = await crawlCompanyWebsite('https://firma3.cz/', 'Firma 3', '', '');
   expect(r.found).toBe(false);
+});
+
+test('crawler NEuloží e-mail z cizí firemní domény (Wunderman Thompson regrese)', async () => {
+  // stránka firmy má jen e-mail na cizí doméně (aust.cz) -> nepatří firmě
+  pages['https://firma4.cz/'] = { body: `<html><body>Kontakt: <a href="mailto:ondrej@aust.cz">ondrej@aust.cz</a></body></html>` };
+  const r = await crawlCompanyWebsite('https://firma4.cz/', 'Wunderman Thompson', '', '');
+  expect(r.found).toBe(false);
+});
+
+test('sanitizeEmail opraví / odmítne malformované adresy', () => {
+  expect(sanitizeEmail('mailto:mailto:restaurace@lokalblok.cz')).toBe('restaurace@lokalblok.cz');
+  expect(sanitizeEmail('praha.havlickova@hudy.cz\\')).toBe('praha.havlickova@hudy.cz');
+  expect(sanitizeEmail('<info@umedvidku.cz>')).toBe('info@umedvidku.cz');
+  expect(sanitizeEmail('info@firma.cz).')).toBe('info@firma.cz');
+  expect(sanitizeEmail('a:b@x.cz')).toBeNull();       // dvojtečka v lokální části
+  expect(sanitizeEmail('mailto:foo')).toBeNull();      // není e-mail
+  expect(sanitizeEmail('noname.cz')).toBeNull();
+});
+
+test('emailBelongsToCompany: doména webu / značka firmy', () => {
+  // stejná registrovatelná doména
+  expect(emailBelongsToCompany('info@umedvidku.cz', 'umedvidku.cz', 'Restaurace U Medvídků')).toBe(true);
+  expect(emailBelongsToCompany('praha.havlickova@hudy.cz', 'www.hudy.cz', 'Hudy Sport')).toBe(true);
+  // jiná doména, ale značka firmy (DDB) -> patří
+  expect(emailBelongsToCompany('hello@ddb.cz', 'ddb.about95.cz', 'DDB Prague')).toBe(true);
+  // cizí doména, jiná firma -> nepatří
+  expect(emailBelongsToCompany('ondrej@aust.cz', 'www.mediar.cz', 'Wunderman Thompson')).toBe(false);
+});
+
+test('verifier: zpravodajský portál (mediar.cz) se nepotvrdí jako web firmy', async () => {
+  pages['https://www.mediar.cz/'] = { body: `<html><body>${filler}<h1>Wunderman Thompson otevírá pobočku</h1> Kontakt © 2026 Médiář</body></html>` };
+  const r = await verifyCompanyWebsite({ companyName: 'Wunderman Thompson', ico: null, candidates: [{ url: 'https://www.mediar.cz/', source: 'openai_web_search' }] });
+  expect(r.status).toBe('unverified');
+  expect(r.website).toBeNull();
+});
+
+test('verifier: obecný název (Restaurace Lokál) se nepotvrdí s cizí značkou (lokalblok.cz)', async () => {
+  pages['https://www.lokalblok.cz/'] = { body: `<html><body><h1>Restaurace Lokál Blok</h1>${filler} Kontakt © Lokál Blok</body></html>` };
+  const r = await verifyCompanyWebsite({ companyName: 'Restaurace Lokál', ico: null, candidates: [{ url: 'https://www.lokalblok.cz/', source: 'openai_web_search' }] });
+  expect(r.status).toBe('unverified');
+  expect(r.website).toBeNull();
+});
+
+test('verifier: DDB Prague projde na ddb.about95.cz (doména souvisí přes subdoménu)', async () => {
+  pages['https://ddb.about95.cz/'] = { body: `<html><body><h1>DDB Prague</h1>${filler} Kontakt © DDB Prague</body></html>` };
+  const r = await verifyCompanyWebsite({ companyName: 'DDB Prague', ico: null, candidates: [{ url: 'https://ddb.about95.cz/', source: 'openai_web_search' }] });
+  expect(r.status).toBe('verified');
+  expect(r.website).toBe('https://ddb.about95.cz/');
+});
+
+test('verifier: Restaurace U Medvídků projde na umedvidku.cz', async () => {
+  pages['https://umedvidku.cz/'] = { body: `<html><body><h1>Restaurace U Medvídků</h1>${filler} Kontakt © U Medvídků</body></html>` };
+  const r = await verifyCompanyWebsite({ companyName: 'Restaurace U Medvídků', ico: null, candidates: [{ url: 'https://umedvidku.cz/', source: 'openai_web_search' }] });
+  expect(r.status).toBe('verified');
+  expect(r.website).toBe('https://umedvidku.cz/');
 });
 
 test('extractUrlsFromResponses vytáhne URL z anotací I z textu (markdown)', () => {

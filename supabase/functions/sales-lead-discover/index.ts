@@ -267,7 +267,7 @@ serve(async (req: Request) => {
       const aiHintEmail = EMAIL_RE.test(aiEmailRaw) ? aiEmailRaw : "";
       const aiSourceUrlRaw = typeof c.email_source_url === "string" ? c.email_source_url.trim() : "";
       const aiSourceUrl = aiSourceUrlRaw ? (normalizeCompanyWebsite(aiSourceUrlRaw) ?? "") : "";
-      const crawl = await crawlCompanyWebsite(website, aiHintEmail, aiSourceUrl);
+      const crawl = await crawlCompanyWebsite(website, name, aiHintEmail, aiSourceUrl);
       dbg("crawl_done", { company: name, website, email_found: crawl.found, email: crawl.found ? crawl.email : null });
 
       const qualityRaw = typeof c.lead_quality === "number" ? Math.floor(c.lead_quality) : 0;

@@ -38,6 +38,44 @@ const PARKED_PATTERNS = [
   /expired domain/i, /domain has expired/i, /webhosting zdarma/i,
 ];
 
+// Zpravodajské / oborové / katalogové domény — NIKDY oficiální web firmy.
+// Pouhá zmínka názvu firmy v článku (např. Médiář o „Wunderman Thompson") nestačí.
+const NEWS_CATALOG_BLOCKLIST = new Set([
+  'mediar.cz', 'mam.cz', 'marketingsales.cz', 'e15.cz', 'firmy.cz', 'zivefirmy.cz',
+  'idnes.cz', 'novinky.cz', 'seznamzpravy.cz', 'aktualne.cz', 'denik.cz',
+  'forbes.cz', 'hn.cz', 'ihned.cz', 'root.cz', 'lupa.cz', 'zive.cz', 'cnews.cz',
+  'businessinfo.cz', 'kurzy.cz', 'penize.cz', 'podnikatel.cz', 'mesec.cz',
+  'detail.cz', 'najisto.cz', 'edb.cz', 'merk.cz', 'wikipedia.org',
+]);
+
+const GENERIC_NAME_WORDS = new Set([
+  'restaurace', 'restaurant', 'kavarna', 'cafe', 'bar', 'hospoda', 'hotel',
+  'penzion', 'pension', 'agentura', 'agency', 'studio', 'shop', 'eshop',
+  'sport', 'fitness', 'group', 'praha', 'prague', 'brno', 'ostrava', 'cz',
+  'the', 'and', 'firma', 'company', 'cesky', 'ceska', 'ceske', 's', 'u',
+]);
+
+function registrableDomainOf(host: string): string {
+  const l = host.toLowerCase().replace(/^www\./, '').split('.').filter(Boolean);
+  return l.length <= 2 ? l.join('.') : l.slice(-2).join('.');
+}
+
+// Doména kandidáta musí souviset s názvem firmy. Delší/specifické názvy: token
+// v hostname stačí. Krátké/obecné názvy (po odebrání obecných slov ≤5 znaků):
+// token musí odpovídat celému labelu domény, jinak (nebo bez shody IČO) zamítni.
+function domainMatchesCompany(fullHost: string, companyName: string, icoMatched: boolean): boolean {
+  if (icoMatched) return true;
+  const labels = fullHost.toLowerCase().split('.').filter(Boolean);
+  const hostJoined = labels.join('');
+  const allTokens = normalizeText(companyName).split(' ').filter((t) => t.length >= 3);
+  if (allTokens.length === 0) return false;
+  const specific = allTokens.filter((t) => !GENERIC_NAME_WORDS.has(t));
+  const meaningful = specific.length > 0 ? specific : allTokens;
+  const maxLen = Math.max(...meaningful.map((t) => t.length));
+  if (maxLen >= 6) return meaningful.some((t) => hostJoined.includes(t));
+  return meaningful.some((t) => labels.includes(t));
+}
+
 function normalizeText(value: string): string {
   return value.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase()
     .replace(/\b(s\.?\s*r\.?\s*o\.?|a\.?\s*s\.?|spol\.?\s*s\s*r\.?\s*o\.?)\b/g, " ")
@@ -180,6 +218,10 @@ export async function verifyCompanyWebsite(input: { companyName: string; ico?: s
     let text = pageText(page.html);
     if (text.length < 250) { evaluated.push({ url: normalized, source: candidate.source, confidence: 0, reason: 'empty_page' }); continue; }
     if (PARKED_PATTERNS.some(p => p.test(text))) { evaluated.push({ url: normalized, source: candidate.source, confidence: 0, reason: 'parked_or_for_sale' }); continue; }
+    const finalHost = (() => { try { return new URL(page.finalUrl).hostname.toLowerCase(); } catch { return ''; } })();
+    if (NEWS_CATALOG_BLOCKLIST.has(registrableDomainOf(finalHost))) {
+      evaluated.push({ url: normalized, finalUrl: page.finalUrl, source: candidate.source, confidence: 0, reason: 'news_or_catalog_domain' }); continue;
+    }
     let identity = identityScore(text, input.companyName, registry?.legalName ?? null, registry?.ico ?? ico);
     for (const link of identityLinks(page.html, page.finalUrl)) {
       if (identity.score >= 88) break;
@@ -187,7 +229,14 @@ export async function verifyCompanyWebsite(input: { companyName: string; ico?: s
       const detailText = pageText(detail.html); text += ` ${detailText}`;
       identity = identityScore(text, input.companyName, registry?.legalName ?? null, registry?.ico ?? ico);
     }
-    evaluated.push({ url: normalized, finalUrl: page.finalUrl, source: candidate.source, confidence: identity.score, reason: identity.score > 0 ? 'identity_confirmed' : 'company_identity_not_confirmed', matches: identity.matches });
+    // Zmínka názvu nestačí: doména musí souviset s firmou (jinak zamítni).
+    const icoMatched = identity.matches.includes('ico');
+    let score = identity.score;
+    let reason = score > 0 ? 'identity_confirmed' : 'company_identity_not_confirmed';
+    if (score >= 88 && !domainMatchesCompany(finalHost, input.companyName, icoMatched)) {
+      score = 0; reason = 'domain_identity_mismatch';
+    }
+    evaluated.push({ url: normalized, finalUrl: page.finalUrl, source: candidate.source, confidence: score, reason, matches: identity.matches });
   }
   const accepted = evaluated.filter(e => e.confidence >= 88).sort((a, b) => b.confidence - a.confidence);
   const best = accepted[0];

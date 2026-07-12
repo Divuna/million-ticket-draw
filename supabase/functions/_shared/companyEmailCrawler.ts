@@ -9,7 +9,8 @@
 // redirecty (max 3), timeout, limit velikosti stránky, max stránek na firmu.
 // ============================================================================
 
-export const EMAIL_RE = /^[^@\s]+@[^@\s]+\.[^@\s]+$/;
+// Přísná syntaktická validace — lokální část BEZ „:" a dalších neplatných znaků.
+export const EMAIL_RE = /^[a-z0-9._%+-]+@[a-z0-9](?:[a-z0-9-]*[a-z0-9])?(?:\.[a-z0-9](?:[a-z0-9-]*[a-z0-9])?)+$/;
 const FIND_EMAIL_RE = /[a-z0-9._%+-]+@[a-z0-9.-]+\.[a-z]{2,}/g;
 const SOURCE_FETCH_TIMEOUT_MS = 8000;
 const MAX_SOURCE_BODY_BYTES = 2_000_000;
@@ -29,6 +30,54 @@ const PLACEHOLDER_EMAIL_DOMAINS = new Set([
   "wixpress.com", "godaddy.com", "placeholder.com", "readymag.com", "wix.com",
   "squarespace.com", "shopify.com", "myshoptet.com", "cloudflare.com",
 ]);
+
+/**
+ * Očistí a syntakticky ověří e-mail. Odstraní opakovaný `mailto:` prefix,
+ * obalové znaky (uvozovky, závorky, <>), koncové zpětné lomítko a interpunkci.
+ * Vrátí platnou adresu, nebo null u malformovaného vstupu — do DB se tak
+ * NIKDY nedostane adresa jako `mailto:mailto:x@y.cz` nebo `x@y.cz\`.
+ */
+export function sanitizeEmail(raw: string): string | null {
+  if (typeof raw !== "string") return null;
+  let s = raw.trim().toLowerCase();
+  s = s.replace(/^[<("'\s]+/, "");
+  while (s.startsWith("mailto:")) s = s.slice("mailto:".length);
+  s = s.split(/[\s"'<>]/)[0] ?? "";
+  s = s.replace(/^[.,;:<(\[{\\/]+/, "").replace(/[.,;:>)\]}\\/]+$/, "");
+  if (!EMAIL_RE.test(s)) return null;
+  if (s.includes("mailto") || s.includes(":")) return null;
+  return s;
+}
+
+function normalizeCompanyName(name: string): string {
+  return String(name).normalize("NFD").replace(/[̀-ͯ]/g, "").toLowerCase()
+    .replace(/\b(s\.?\s*r\.?\s*o\.?|a\.?\s*s\.?|spol\.?\s*s\s*r\.?\s*o\.?)\b/g, " ")
+    .replace(/[^a-z0-9]+/g, " ").trim();
+}
+
+/** Poslední dvě části hostname (aproximace registrovatelné domény pro .cz). */
+function registrableDomain(host: string): string {
+  const labels = host.toLowerCase().replace(/^www\./, "").split(".").filter(Boolean);
+  return labels.length <= 2 ? labels.join(".") : labels.slice(-2).join(".");
+}
+
+/**
+ * E-mail smí být uložen jen když patří ověřenému webu / firmě:
+ *   • jeho registrovatelná doména == doméně ověřeného webu, NEBO
+ *   • label jeho domény odpovídá tokenu názvu firmy (stejná značka).
+ * Blokuje např. `ondrej@aust.cz` na webu `mediar.cz` u „Wunderman Thompson".
+ */
+export function emailBelongsToCompany(email: string, siteHost: string, companyName: string): boolean {
+  const eHost = email.split("@")[1] ?? "";
+  if (!eHost) return false;
+  const eReg = registrableDomain(eHost);
+  const sReg = registrableDomain(siteHost);
+  if (eReg && eReg === sReg) return true;
+  const label = eReg.split(".")[0] ?? "";
+  if (!label) return false;
+  const tokens = normalizeCompanyName(companyName).split(" ").filter((t) => t.length >= 3);
+  return tokens.some((t) => label === t || label.includes(t) || t.includes(label));
+}
 
 export function isSafePublicUrl(rawUrl: string): boolean {
   let parsed: URL;
@@ -121,8 +170,8 @@ export function extractMailtoEmails(html: string): string[] {
   while ((m = re.exec(html))) {
     let addr = m[1];
     try { addr = decodeURIComponent(addr); } catch { /* keep raw */ }
-    addr = addr.trim().toLowerCase();
-    if (EMAIL_RE.test(addr) && !isLikelyPlaceholderEmail(addr)) emails.push(addr);
+    const clean = sanitizeEmail(addr);
+    if (clean && !isLikelyPlaceholderEmail(clean) && !emails.includes(clean)) emails.push(clean);
   }
   return emails;
 }
@@ -134,9 +183,9 @@ export function extractTextEmails(html: string): string[] {
     FIND_EMAIL_RE.lastIndex = 0;
     let m: RegExpExecArray | null;
     while ((m = FIND_EMAIL_RE.exec(text))) {
-      const addr = m[0];
-      if (EMAIL_RE.test(addr) && !isLikelyPlaceholderEmail(addr) && !emails.includes(addr)) {
-        emails.push(addr);
+      const clean = sanitizeEmail(m[0]);
+      if (clean && !isLikelyPlaceholderEmail(clean) && !emails.includes(clean)) {
+        emails.push(clean);
       }
     }
   }
@@ -252,6 +301,7 @@ export type CrawlResult =
  */
 export async function crawlCompanyWebsite(
   website: string,
+  companyName: string,
   aiHintEmail: string,
   aiSourceUrl: string,
 ): Promise<CrawlResult> {
@@ -298,7 +348,10 @@ export async function crawlCompanyWebsite(
     for (const email of [...mailtoEmails, ...textEmails]) {
       if (!foundEmails.has(email)) foundEmails.set(email, page.finalUrl);
     }
-    if (foundEmails.size > 0) break;
+    // Zastav se, až když máme e-mail, který PATŘÍ firmě/webu (ne cizí doména).
+    const hasOwned = Array.from(foundEmails.keys()).some((e) =>
+      emailBelongsToCompany(e, originHost, companyName));
+    if (hasOwned) break;
 
     if (url === website) {
       const links = extractContactLikeLinks(page.html, page.finalUrl, originHost);
@@ -308,11 +361,13 @@ export async function crawlCompanyWebsite(
     }
   }
 
-  if (foundEmails.size === 0) return { found: false };
+  // Přijmi jen e-maily patřící ověřenému webu/firmě (doménová shoda / značka).
+  const owned = Array.from(foundEmails.entries()).filter(([email]) =>
+    emailBelongsToCompany(email, originHost, companyName));
+  if (owned.length === 0) return { found: false };
 
-  if (aiHintEmail && foundEmails.has(aiHintEmail)) {
-    return { found: true, email: aiHintEmail, sourceUrl: foundEmails.get(aiHintEmail)! };
-  }
-  const first = Array.from(foundEmails.entries())[0];
-  return { found: true, email: first[0], sourceUrl: first[1] };
+  const hint = sanitizeEmail(aiHintEmail);
+  const hitHint = hint ? owned.find(([email]) => email === hint) : undefined;
+  const [email, sourceUrl] = hitHint ?? owned[0];
+  return { found: true, email, sourceUrl };
 }
