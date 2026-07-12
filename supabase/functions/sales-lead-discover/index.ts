@@ -2,7 +2,6 @@ import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.57.4";
 import { verifyCompanyWebsite } from "../_shared/companyWebsiteVerifier.ts";
 import { findOfficialWebsiteCandidates } from "../_shared/companyWebsiteSearch.ts";
-import { crawlCompanyWebsite, EMAIL_RE, normalizeCompanyWebsite } from "../_shared/companyEmailCrawler.ts";
 
 // ============================================================================
 // sales-lead-discover — automatické NAVRŽENÍ nových firemních leadů.
@@ -18,10 +17,12 @@ import { crawlCompanyWebsite, EMAIL_RE, normalizeCompanyWebsite } from "../_shar
 //   3. Každý kandidát nezávisle OVĚŘÍ (ARES + HTTP + kontrola identity firmy,
 //      parked/prázdný web zamítne, sleduje redirect na oficiální doménu).
 //   4. Bez ověřeného webu se firma NEUKLÁDÁ (žádné prázdné leady jen s názvem).
-//   5. Na ověřeném webu dohledá veřejný e-mail (homepage + kontakt/o-nás +
-//      mailto). E-mail se NIKDY nevymýšlí; když není, lead se uloží jen s webem.
+//   5. Discovery ukládá JEN firmu s ověřeným webem (+ volitelně IČO/město).
+//      E-mail se při discovery NIKDY nehledá, neukládá ani nenavrhuje —
+//      kontakt dohledá až člověk ručně tlačítkem „Dohledat e-mail" v detailu
+//      (samostatná EF sales-lead-enrich-contact, neověřený návrh k potvrzení).
 //
-// Nic se neodesílá; každý návrh i e-mail musí člověk ručně schválit.
+// Nic se neodesílá; každý návrh i pozdější e-mail musí člověk ručně schválit.
 // ============================================================================
 
 const corsHeaders = {
@@ -49,16 +50,15 @@ const FALLBACK_GROUP_LABELS: Record<string, string> = {
 const DISCOVER_SYSTEM_PROMPT = `Jsi rešeršní asistent OneMil. Navrhni reálné české firmy vhodné k oslovení do věrnostního programu OneMil pro zadanou skupinu.
 
 PŘÍSNÉ ZÁKAZY:
-- NIKDY NEVYMÝŠLEJ e-mail, telefon ani jméno osoby. Vracej jen název firmy, případně tip na web, IČO a město, pokud je veřejně známé; jinak vynech.
+- NIKDY NEVYMÝŠLEJ e-mail, telefon ani jméno osoby. E-mail vůbec neřeš — vracej jen název firmy, případně tip na web, IČO a město, pokud je veřejně známé; jinak vynech.
 - Web je jen NÁVRH — backend si oficiální web sám dohledá a nezávisle ověří. Když web neznáš jistě, vrať website = null.
-- Pokud e-mail firmy neznáš jistě z veřejného webu, vrať email = null — nehádej, backend si e-mail dohledá sám na ověřeném webu firmy.
 - NETVRDÍ partnerství ani dohodu s OneMil.
 - NESLIBUJ žádné ceny ani podmínky.
 - NEPOUŽÍVEJ slova casino, hazard, sázka, loterie, jackpot.
 
 Výstup: vrať POUZE validní JSON objekt {"companies": [...]}. Každá položka:
-{"company_name": string, "website": string|null, "alternative_websites": string[], "website_source": string|null, "ico": string|null, "city": string|null, "industry": string|null, "lead_quality": 0|1|2|3, "rationale": string, "email": string|null}
-lead_quality = odhad vhodnosti (0 neznámé … 3 vysoká). rationale = krátké interní zdůvodnění. "website"/"email" jsou jen volitelné nápovědy; backend si web i e-mail vždy ověřuje/dohledává. Vše je neověřený návrh k ruční kontrole člověkem.`;
+{"company_name": string, "website": string|null, "alternative_websites": string[], "website_source": string|null, "ico": string|null, "city": string|null, "industry": string|null, "lead_quality": 0|1|2|3, "rationale": string}
+lead_quality = odhad vhodnosti (0 neznámé … 3 vysoká). rationale = krátké interní zdůvodnění. "website" je jen volitelná nápověda; backend si web vždy nezávisle ověřuje. E-mail se při discovery NEsbírá. Vše je neověřený návrh k ruční kontrole člověkem.`;
 
 function jsonResponse(body: Record<string, unknown>, status = 200): Response {
   return new Response(JSON.stringify(body), {
@@ -81,8 +81,6 @@ interface ProposedCompany {
   industry?: unknown;
   lead_quality?: unknown;
   rationale?: unknown;
-  email?: unknown;
-  email_source_url?: unknown;
   alternative_websites?: unknown;
   website_source?: unknown;
 }
@@ -201,13 +199,11 @@ serve(async (req: Request) => {
 
     let candidatesChecked = 0;
     let created = 0;
-    let createdWithEmail = 0;
-    let createdWithoutEmail = 0;
     let skipped = 0;
     let errored = 0;
     let websitesVerified = 0;
     let websitesRejected = 0;
-    const details: { company: string; outcome: string; reason?: string; has_email?: boolean }[] = [];
+    const details: { company: string; outcome: string; reason?: string }[] = [];
 
     for (const c of companies) {
       const name = typeof c.company_name === "string" ? c.company_name.trim() : "";
@@ -262,14 +258,6 @@ serve(async (req: Request) => {
       }
       websitesVerified++;
 
-      // ── 5. Na ověřeném webu dohledej veřejný e-mail (AI odhad je jen nápověda).
-      const aiEmailRaw = typeof c.email === "string" ? c.email.trim().toLowerCase() : "";
-      const aiHintEmail = EMAIL_RE.test(aiEmailRaw) ? aiEmailRaw : "";
-      const aiSourceUrlRaw = typeof c.email_source_url === "string" ? c.email_source_url.trim() : "";
-      const aiSourceUrl = aiSourceUrlRaw ? (normalizeCompanyWebsite(aiSourceUrlRaw) ?? "") : "";
-      const crawl = await crawlCompanyWebsite(website, name, aiHintEmail, aiSourceUrl);
-      dbg("crawl_done", { company: name, website, email_found: crawl.found, email: crawl.found ? crawl.email : null });
-
       const qualityRaw = typeof c.lead_quality === "number" ? Math.floor(c.lead_quality) : 0;
       const quality = Math.min(3, Math.max(0, qualityRaw));
       const discoveryMeta = {
@@ -281,69 +269,33 @@ serve(async (req: Request) => {
         website_verification: verification,
       };
 
-      if (crawl.found) {
-        const { data: rpcData, error: rpcErr } = await supabaseAdmin.rpc("sales_lead_propose_with_contact", {
-          p_created_by: caller.id,
-          p_company_name: name,
-          p_lead_group: leadGroup,
-          p_discovery_source: "ai_navrh",
-          p_email: crawl.email,
-          p_email_source_url: crawl.sourceUrl,
-          p_discovery_meta: discoveryMeta,
-          p_website: website,
-          p_ico: verification.ico,
-          p_city: city,
-          p_industry: typeof c.industry === "string" ? c.industry : null,
-          p_lead_quality: quality,
-          p_proposed_by: "ai",
-        });
+      // ── 5. Ulož JEN firmu s ověřeným webem. E-mail se při discovery NIKDY
+      //      nehledá ani neukládá — kontakt dohledá až člověk ručně v detailu.
+      const { data: rpcData, error: rpcErr } = await supabaseAdmin.rpc("sales_lead_propose", {
+        p_created_by: caller.id,
+        p_company_name: name,
+        p_lead_group: leadGroup,
+        p_discovery_source: "ai_navrh",
+        p_lead_quality: quality,
+        p_discovery_meta: discoveryMeta,
+        p_website: website,
+        p_ico: verification.ico,
+        p_city: city,
+        p_industry: typeof c.industry === "string" ? c.industry : null,
+      });
 
-        if (rpcErr) { errored++; details.push({ company: name, outcome: "error", reason: "rpc_failed" }); continue; }
-        const res = (rpcData ?? {}) as { outcome?: string; reason?: string };
+      if (rpcErr) { errored++; details.push({ company: name, outcome: "error", reason: "rpc_failed" }); continue; }
+      const res = (rpcData ?? {}) as { outcome?: string; reason?: string };
 
-        if (res.outcome === "created") {
-          created++;
-          createdWithEmail++;
-          const leadId = (rpcData as { lead_id?: string } | null)?.lead_id;
-          if (leadId) await supabaseAdmin.from("sales_leads").update({
-            contact_data_provenance: { email: { source: crawl.sourceUrl, confidence: 95, verified_at: new Date().toISOString() } },
-          }).eq("id", leadId);
-          details.push({ company: name, outcome: "created", has_email: true });
-        } else if (res.outcome === "skipped") {
-          skipped++;
-          details.push({ company: name, outcome: "skipped", reason: res.reason });
-        } else {
-          errored++;
-          details.push({ company: name, outcome: "error", reason: res.reason });
-        }
+      if (res.outcome === "created") {
+        created++;
+        details.push({ company: name, outcome: "created" });
+      } else if (res.outcome === "skipped") {
+        skipped++;
+        details.push({ company: name, outcome: "skipped", reason: res.reason });
       } else {
-        const { data: rpcData, error: rpcErr } = await supabaseAdmin.rpc("sales_lead_propose", {
-          p_created_by: caller.id,
-          p_company_name: name,
-          p_lead_group: leadGroup,
-          p_discovery_source: "ai_navrh",
-          p_lead_quality: quality,
-          p_discovery_meta: discoveryMeta,
-          p_website: website,
-          p_ico: verification.ico,
-          p_city: city,
-          p_industry: typeof c.industry === "string" ? c.industry : null,
-        });
-
-        if (rpcErr) { errored++; details.push({ company: name, outcome: "error", reason: "rpc_failed" }); continue; }
-        const res = (rpcData ?? {}) as { outcome?: string; reason?: string };
-
-        if (res.outcome === "created") {
-          created++;
-          createdWithoutEmail++;
-          details.push({ company: name, outcome: "created", has_email: false });
-        } else if (res.outcome === "skipped") {
-          skipped++;
-          details.push({ company: name, outcome: "skipped", reason: res.reason });
-        } else {
-          errored++;
-          details.push({ company: name, outcome: "error", reason: res.reason });
-        }
+        errored++;
+        details.push({ company: name, outcome: "error", reason: res.reason });
       }
     }
 
@@ -355,8 +307,6 @@ serve(async (req: Request) => {
       proposed_by_ai: companies.length,
       candidates_checked: candidatesChecked,
       created,
-      created_with_email: createdWithEmail,
-      created_without_email: createdWithoutEmail,
       websites_verified: websitesVerified,
       websites_rejected: websitesRejected,
       skipped,

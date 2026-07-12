@@ -34,8 +34,6 @@ interface DiscoverResult {
   lead_group: string;
   candidates_checked: number;
   created: number;
-  created_with_email: number;
-  created_without_email: number;
   skipped: number;
   errored: number;
   websites_verified: number;
@@ -47,11 +45,10 @@ interface DiscoverResult {
  * počet a klikne „Najít nové firmy". EF `sales-lead-discover` navrhne názvy
  * firem, sám dohledá pravděpodobný oficiální web přes webové vyhledávání a
  * nezávisle ho ověří (funkční, skutečný obsah, identita firmy, ne zaparkovaná
- * doména). Firma bez ověřeného webu se NEUKLÁDÁ. Na ověřeném webu se pak hledá
- * veřejný e-mail (homepage + kontakt/about + mailto) — AI odhad je jen
- * nápověda, nikdy důkaz. Pokud se e-mail najde, uloží se jako neověřený návrh;
- * pokud ne, lead se uloží jen s webem a e-mail lze doplnit ručně. Nic se
- * neodesílá a schválení návrhu i e-mailu musí člověk provést ručně v detailu.
+ * doména, ne zpravodajský/katalogový web). Firma bez ověřeného webu se NEUKLÁDÁ.
+ * E-mail se při discovery NEsbírá — kontakt dohledá až člověk ručně tlačítkem
+ * „Dohledat e-mail" v detailu leadu. Nic se neodesílá a schválení návrhu musí
+ * člověk provést ručně v detailu.
  */
 export function DiscoverLeadsDialog({ open, onOpenChange, onSuccess }: Props) {
   const [loading, setLoading] = useState(false);
@@ -141,8 +138,8 @@ export function DiscoverLeadsDialog({ open, onOpenChange, onSuccess }: Props) {
       if (error) throw new Error(error.message);
       const res = (data ?? {}) as {
         success?: boolean; error?: string;
-        lead_group?: string; candidates_checked?: number; created?: number; created_with_email?: number;
-        created_without_email?: number; skipped?: number; errored?: number;
+        lead_group?: string; candidates_checked?: number; created?: number;
+        skipped?: number; errored?: number;
         websites_verified?: number; websites_rejected?: number;
       };
       if (!res.success) {
@@ -153,15 +150,13 @@ export function DiscoverLeadsDialog({ open, onOpenChange, onSuccess }: Props) {
         lead_group: res.lead_group ?? group,
         candidates_checked: res.candidates_checked ?? 0,
         created: res.created ?? 0,
-        created_with_email: res.created_with_email ?? 0,
-        created_without_email: res.created_without_email ?? 0,
         skipped: res.skipped ?? 0,
         errored: res.errored ?? 0,
         websites_verified: res.websites_verified ?? 0,
         websites_rejected: res.websites_rejected ?? 0,
       };
       setResult(summary);
-      toast.success(`Uloženo ${summary.created} firem s ověřeným webem · z toho ${summary.created_with_email} s e-mailem`);
+      toast.success(`Uloženo ${summary.created} firem s ověřeným webem`);
       onSuccess();
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : 'Vyhledávání se nezdařilo';
@@ -177,9 +172,9 @@ export function DiscoverLeadsDialog({ open, onOpenChange, onSuccess }: Props) {
         <DialogHeader>
           <DialogTitle>Najít nové firmy</DialogTitle>
           <DialogDescription>
-            Spustíte vy (člověk). AI pouze navrhne firmy. Web se uloží jen po nezávislém
-            ověření identity firmy a teprve potom se na něm hledá kontakt. Nic se neodesílá — každý
-            návrh i případný e-mail musíte ručně schválit v záložce „Návrhy".
+            Spustíte vy (člověk). AI pouze navrhne firmy. Uloží se jen firma s nezávisle
+            ověřeným oficiálním webem. E-mail se při hledání firem NEsbírá — kontakt dohledáte
+            ručně tlačítkem „Dohledat e-mail" v detailu leadu. Nic se neodesílá.
           </DialogDescription>
         </DialogHeader>
 
@@ -234,12 +229,12 @@ export function DiscoverLeadsDialog({ open, onOpenChange, onSuccess }: Props) {
             <span>
               <strong className="text-foreground">Uloží se jen firmy s ověřeným oficiálním webem.</strong>{' '}
               AI navrhne názvy firem, systém sám dohledá pravděpodobný web přes vyhledávání a
-              nezávisle ho ověří (funkční, skutečný obsah, identita firmy, ne zaparkovaná doména).
-              Firma bez ověřeného webu se neuloží. Na ověřeném webu se pak hledá veřejný e-mail
-              (homepage, kontakt/o nás, mailto) — AI odhad e-mailu je jen nápověda, nikdy důkaz.
-              E-mail je nepovinný: když se nenajde, firma se uloží jen s webem a e-mail lze doplnit
-              ručně. Nic se neposílá; schválení návrhu i e-mailu provedete ručně v detailu leadu.
-              Duplicity, partneři a blokované domény se přeskočí.
+              nezávisle ho ověří (funkční, skutečný obsah, identita firmy, ne zaparkovaná doména,
+              ne zpravodajský/katalogový web). Firma bez ověřeného webu se neuloží. <strong className="text-foreground">E-mail
+              se při hledání firem NEsbírá</strong> — kontakt dohledáte až ručně tlačítkem
+              „Dohledat e-mail" v detailu leadu (neověřený návrh k ručnímu potvrzení). Nic se
+              neposílá; schválení návrhu provedete ručně v detailu leadu. Duplicity, partneři a
+              blokované domény se přeskočí.
             </span>
           </div>
 
@@ -249,16 +244,15 @@ export function DiscoverLeadsDialog({ open, onOpenChange, onSuccess }: Props) {
               <ul className="space-y-0.5 text-muted-foreground">
                 <li>Prověřeno kandidátů: <strong className="text-foreground">{result.candidates_checked}</strong></li>
                 <li>Uloženo firem (s ověřeným webem): <strong className="text-foreground">{result.created}</strong></li>
-                <li>— s veřejným e-mailem: <strong className="text-foreground">{result.created_with_email}</strong></li>
-                <li>— jen web, bez e-mailu (k ručnímu doplnění): <strong className="text-foreground">{result.created_without_email}</strong></li>
+                <li>Ověřené weby: <strong className="text-foreground">{result.websites_verified}</strong></li>
                 <li>Odmítnuto (neověřený web): <strong className="text-foreground">{result.websites_rejected}</strong></li>
                 <li>Přeskočeno (duplicity/partneři/blokace): <strong className="text-foreground">{result.skipped}</strong></li>
                 {result.errored > 0 && <li>Chyby: <strong className="text-foreground">{result.errored}</strong></li>}
               </ul>
               <p className="mt-2 text-[11px] text-muted-foreground">
                 Nové firmy najdete v záložce „Návrhy". Ze stavu „Navržený" je nutné ručně kliknout
-                „Schválit návrh" a v detailu ručně „Schválit e-mail" (pokud byl navržen), než se
-                s firmou dál pracuje.
+                „Schválit návrh". Kontaktní e-mail dohledáte a schválíte ručně v detailu leadu
+                tlačítkem „Dohledat e-mail".
               </p>
             </div>
           )}

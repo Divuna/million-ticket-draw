@@ -43,7 +43,6 @@ test.describe('discover aktivně dohledá a ověří web, neukládá prázdné l
     expect(discover).toContain('dbg("search_done"');
     expect(discover).toContain('dbg("verify_done"');
     expect(discover).toContain('dbg("skipped_unverified_website"');
-    expect(discover).toContain('dbg("crawl_done"');
     expect(search).toContain('logSearch');
   });
 
@@ -87,14 +86,32 @@ test.describe('discover aktivně dohledá a ověří web, neukládá prázdné l
     expect(crawler).toContain('isLikelyPlaceholderEmail');
   });
 
-  test('souhrn běhu ukazuje prověřeno / uloženo / ověřený web / e-mail / odmítnuto', () => {
+  test('souhrn běhu: prověřeno / uloženo / ověřené weby / odmítnuto (bez e-mailových metrik)', () => {
     expect(discover).toContain('candidates_checked: candidatesChecked');
+    expect(discover).toContain('created,');
     expect(discover).toContain('websites_verified: websitesVerified');
     expect(discover).toContain('websites_rejected: websitesRejected');
-    expect(discover).toContain('created_with_email: createdWithEmail');
-    expect(discover).toContain('created_without_email: createdWithoutEmail');
+    // e-mailové metriky discovery zrušeny
+    expect(discover).not.toContain('created_with_email');
+    expect(discover).not.toContain('created_without_email');
     expect(dialog).toContain('Prověřeno kandidátů');
+    expect(dialog).toContain('Ověřené weby');
     expect(dialog).toContain('Odmítnuto (neověřený web)');
+    expect(dialog).not.toContain('s veřejným e-mailem');
+    expect(dialog).not.toContain('jen web, bez e-mailu');
+  });
+
+  test('discovery NIKDY nesbírá ani neukládá e-mail', () => {
+    // žádný email crawl, žádný kontaktní RPC, žádné psaní e-mailu v discovery
+    expect(discover).not.toContain('crawlCompanyWebsite');
+    expect(discover).not.toContain('sales_lead_propose_with_contact');
+    expect(discover).not.toContain('p_email');
+    expect(discover).not.toContain('proposed_contact');
+    expect(discover).not.toContain('contact_data_provenance');
+    // ukládá jen přes web-only RPC
+    expect(discover).toContain('supabaseAdmin.rpc("sales_lead_propose"');
+    // prompt už e-mail nesbírá
+    expect(discover).toContain('E-mail se při discovery NEsbírá');
   });
 
   test('UI copy už netvrdí, že se uloží každá firma bez ohledu na web', () => {
@@ -108,8 +125,6 @@ test.describe('discover aktivně dohledá a ověří web, neukládá prázdné l
     expect(crawler).toContain('s.includes(":")');
     expect(crawler).toContain('export function emailBelongsToCompany');
     expect(crawler).toContain('registrableDomain');
-    // crawler dostává název firmy pro kontrolu příslušnosti e-mailu
-    expect(discover).toContain('crawlCompanyWebsite(website, name,');
   });
 
   test('verifier: blocklist zpravodajských/katalogových domén + doménová identita', () => {
