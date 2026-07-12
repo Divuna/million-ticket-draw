@@ -8,12 +8,25 @@ const verifier = fs.readFileSync('supabase/functions/_shared/companyWebsiteVerif
 const dialog = fs.readFileSync('src/components/admin/sales-leads/DiscoverLeadsDialog.tsx', 'utf8');
 
 test.describe('discover aktivně dohledá a ověří web, neukládá prázdné leady', () => {
-  test('web se aktivně dohledá reálným vyhledávačem (ne jen AI odhad)', () => {
+  test('primární vyhledávání je OpenAI Responses API web search', () => {
     expect(discover).toContain('findOfficialWebsiteCandidates');
-    // reálný keyless vyhledávač (DuckDuckGo), ne AI hádání domény
+    expect(search).toContain('api.openai.com/v1/responses');
+    expect(search).toContain('web_search_preview');
+    expect(search).toContain('gpt-4o-mini');
+    // URL se berou z anotací/citací I z textu odpovědi
+    expect(search).toContain('extractUrlsFromResponses');
+    expect(search).toContain('url_citation');
+    expect(search).toContain('URL_IN_TEXT_RE');
+  });
+
+  test('DuckDuckGo zůstává jen jako nouzový fallback', () => {
     expect(search).toContain('duckduckgo.com/html');
     expect(search).toContain('parseDuckDuckGoResults');
     expect(search).toContain('uddg=');
+    expect(search).toContain('FALLBACK');
+    // Brave Search API se neimplementuje
+    expect(search).not.toContain('brave');
+    expect(search).not.toContain('api.search.brave.com');
   });
 
   test('web search má druhý pokus s jinou formulací dotazu', () => {

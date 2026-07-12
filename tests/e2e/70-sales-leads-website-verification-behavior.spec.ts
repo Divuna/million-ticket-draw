@@ -1,7 +1,7 @@
 import { test, expect } from '@playwright/test';
 import { verifyCompanyWebsite } from '../../supabase/functions/_shared/companyWebsiteVerifier.ts';
 import { crawlCompanyWebsite } from '../../supabase/functions/_shared/companyEmailCrawler.ts';
-import { parseDuckDuckGoResults, findOfficialWebsiteCandidates } from '../../supabase/functions/_shared/companyWebsiteSearch.ts';
+import { parseDuckDuckGoResults, findOfficialWebsiteCandidates, extractUrlsFromResponses } from '../../supabase/functions/_shared/companyWebsiteSearch.ts';
 
 // Behaviorální testy verifieru a e-mailového crawleru s mockovaným fetch.
 // Pokrývají scénáře z požadavku: správný web, špatná AI doména, přesměrování na
@@ -111,6 +111,24 @@ test('ověřený web bez e-mailu vrátí found:false', async () => {
   pages['https://firma3.cz/'] = { body: `<html><body><h1>Firma 3</h1><p>Žádný kontaktní e-mail zde není uveden.</p></body></html>` };
   const r = await crawlCompanyWebsite('https://firma3.cz/', '', '');
   expect(r.found).toBe(false);
+});
+
+test('extractUrlsFromResponses vytáhne URL z anotací I z textu (markdown)', () => {
+  const json = {
+    output: [
+      {
+        content: [
+          {
+            text: 'Oficiální web reklamní agentury DDB Prague je [www.ddb.cz](https://www.ddb.cz/).',
+            annotations: [{ type: 'url_citation', url: 'https://cited-source.cz/o-nas' }],
+          },
+        ],
+      },
+    ],
+  };
+  const urls = extractUrlsFromResponses(json as never);
+  expect(urls).toContain('https://cited-source.cz/o-nas');
+  expect(urls.some((u) => u.startsWith('https://www.ddb.cz'))).toBe(true);
 });
 
 test('parseDuckDuckGoResults vytáhne cílové URL z DDG výsledků', () => {
