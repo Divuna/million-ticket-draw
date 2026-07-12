@@ -67,6 +67,12 @@ function jsonResponse(body: Record<string, unknown>, status = 200): Response {
   });
 }
 
+function dbg(stage: string, data: Record<string, unknown>): void {
+  try {
+    console.log(`[discover] ${stage} ${JSON.stringify(data)}`);
+  } catch { /* logging must never throw */ }
+}
+
 interface ProposedCompany {
   company_name?: unknown;
   website?: unknown;
@@ -210,6 +216,7 @@ serve(async (req: Request) => {
 
       const city = typeof c.city === "string" ? c.city : null;
       const icoHint = typeof c.ico === "string" ? c.ico : null;
+      dbg("ai_proposed", { company: name, ico: icoHint, city, ai_website: c.website ?? null });
 
       // ── 1. Aktivně dohledej pravděpodobný oficiální web přes webové vyhledávání.
       const searchCandidates = await findOfficialWebsiteCandidates({
@@ -218,6 +225,7 @@ serve(async (req: Request) => {
         ico: icoHint,
         openaiKey,
       });
+      dbg("search_done", { company: name, found: searchCandidates.length, urls: searchCandidates.map((s) => s.url) });
 
       // ── 2. Přidej AI odhady webu jako doplňkové kandidáty (verifier je stejně ověří).
       const websiteRaw = typeof c.website === "string" ? c.website.trim() : "";
@@ -232,12 +240,23 @@ serve(async (req: Request) => {
       const candidates = [...searchCandidates, ...aiCandidates];
 
       // ── 3. Nezávislé ověření identity — AI ani vyhledávač nejsou důkaz.
+      dbg("verify_start", { company: name, candidate_urls: candidates.map((c2) => c2.url) });
       const verification = await verifyCompanyWebsite({ companyName: name, ico: icoHint, candidates });
       const website = verification.status === "verified" ? verification.website : null;
+      dbg("verify_done", {
+        company: name,
+        status: verification.status,
+        website: verification.website,
+        confidence: verification.confidence,
+        ares_legal_name: verification.legalName,
+        candidates_checked: (verification.evidence as { candidates_checked?: number })?.candidates_checked ?? null,
+        rejected: verification.alternatives.map((a) => ({ url: a.url, reason: a.reason, confidence: a.confidence })),
+      });
 
       // ── 4. Bez ověřeného webu firmu NEUKLÁDÁME (žádné prázdné leady jen s názvem).
       if (!website) {
         websitesRejected++;
+        dbg("skipped_unverified_website", { company: name, had_candidates: candidates.length });
         details.push({ company: name, outcome: "skipped", reason: "unverified_website" });
         continue;
       }
@@ -249,6 +268,7 @@ serve(async (req: Request) => {
       const aiSourceUrlRaw = typeof c.email_source_url === "string" ? c.email_source_url.trim() : "";
       const aiSourceUrl = aiSourceUrlRaw ? (normalizeCompanyWebsite(aiSourceUrlRaw) ?? "") : "";
       const crawl = await crawlCompanyWebsite(website, aiHintEmail, aiSourceUrl);
+      dbg("crawl_done", { company: name, website, email_found: crawl.found, email: crawl.found ? crawl.email : null });
 
       const qualityRaw = typeof c.lead_quality === "number" ? Math.floor(c.lead_quality) : 0;
       const quality = Math.min(3, Math.max(0, qualityRaw));

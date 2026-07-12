@@ -1,6 +1,7 @@
 import { test, expect } from '@playwright/test';
 import { verifyCompanyWebsite } from '../../supabase/functions/_shared/companyWebsiteVerifier.ts';
 import { crawlCompanyWebsite } from '../../supabase/functions/_shared/companyEmailCrawler.ts';
+import { parseDuckDuckGoResults, findOfficialWebsiteCandidates } from '../../supabase/functions/_shared/companyWebsiteSearch.ts';
 
 // Behaviorální testy verifieru a e-mailového crawleru s mockovaným fetch.
 // Pokrývají scénáře z požadavku: správný web, špatná AI doména, přesměrování na
@@ -110,4 +111,24 @@ test('ověřený web bez e-mailu vrátí found:false', async () => {
   pages['https://firma3.cz/'] = { body: `<html><body><h1>Firma 3</h1><p>Žádný kontaktní e-mail zde není uveden.</p></body></html>` };
   const r = await crawlCompanyWebsite('https://firma3.cz/', '', '');
   expect(r.found).toBe(false);
+});
+
+test('parseDuckDuckGoResults vytáhne cílové URL z DDG výsledků', () => {
+  const html =
+    `<a class="result__a" href="//duckduckgo.com/l/?uddg=${encodeURIComponent('https://ddb.about95.cz/')}&rut=x">DDB</a>` +
+    `<a class="result__a" href="//duckduckgo.com/l/?uddg=${encodeURIComponent('https://www.firmy.cz/detail/485098-ddb.html')}&rut=y">firmy</a>`;
+  const urls = parseDuckDuckGoResults(html);
+  expect(urls).toContain('https://ddb.about95.cz/');
+  expect(urls.some((u) => u.includes('firmy.cz'))).toBe(true);
+});
+
+test('findOfficialWebsiteCandidates najde reálný web a odfiltruje katalog', async () => {
+  const html =
+    `<a class="result__a" href="//duckduckgo.com/l/?uddg=${encodeURIComponent('https://ddb.about95.cz/o-nas')}&rut=x">DDB</a>` +
+    `<a class="result__a" href="//duckduckgo.com/l/?uddg=${encodeURIComponent('https://www.firmy.cz/detail/485098-ddb.html')}&rut=y">firmy</a>`;
+  globalThis.fetch = (async () =>
+    new Response(html, { status: 200, headers: { 'content-type': 'text/html' } })) as typeof fetch;
+  const cands = await findOfficialWebsiteCandidates({ companyName: 'DDB Prague', city: 'Praha' });
+  expect(cands.map((c) => c.url)).toContain('https://ddb.about95.cz/');
+  expect(cands.some((c) => c.url.includes('firmy.cz'))).toBe(false);
 });

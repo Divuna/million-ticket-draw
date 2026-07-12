@@ -8,21 +8,30 @@ const verifier = fs.readFileSync('supabase/functions/_shared/companyWebsiteVerif
 const dialog = fs.readFileSync('src/components/admin/sales-leads/DiscoverLeadsDialog.tsx', 'utf8');
 
 test.describe('discover aktivně dohledá a ověří web, neukládá prázdné leady', () => {
-  test('web se aktivně dohledá webovým vyhledáváním (ne jen AI odhad)', () => {
+  test('web se aktivně dohledá reálným vyhledávačem (ne jen AI odhad)', () => {
     expect(discover).toContain('findOfficialWebsiteCandidates');
-    expect(search).toContain('web_search_options');
-    expect(search).toContain('search-preview');
-    // AI zůstává jen executor: vrací jen citované/reálné URL, ne zdroj pravdy.
-    expect(search).toContain('Nikdy si URL nevymýšlíš');
+    // reálný keyless vyhledávač (DuckDuckGo), ne AI hádání domény
+    expect(search).toContain('duckduckgo.com/html');
+    expect(search).toContain('parseDuckDuckGoResults');
+    expect(search).toContain('uddg=');
   });
 
   test('web search má druhý pokus s jinou formulací dotazu', () => {
     // dvě různě formulované varianty; firma se opustí až po druhém neúspěchu
-    expect(search).toContain('const prompts = [');
-    expect(search).toContain('Jaká je adresa vlastních webových stránek firmy');
-    expect(search).toContain('for (const prompt of prompts)');
+    expect(search).toContain('const queries = [');
+    expect(search).toContain('kontakt oficiální web');
+    expect(search).toContain('for (const query of queries)');
     expect(search).toContain('if (candidates.length > 0) return candidates;');
-    expect(search).toContain('async function searchOnce(');
+  });
+
+  test('celá pipeline má podrobné logování (kde se proces zastaví)', () => {
+    expect(discover).toContain('function dbg(');
+    expect(discover).toContain('dbg("ai_proposed"');
+    expect(discover).toContain('dbg("search_done"');
+    expect(discover).toContain('dbg("verify_done"');
+    expect(discover).toContain('dbg("skipped_unverified_website"');
+    expect(discover).toContain('dbg("crawl_done"');
+    expect(search).toContain('logSearch');
   });
 
   test('vyhledané weby jdou před AI odhady a stejně se ověří', () => {
@@ -33,9 +42,9 @@ test.describe('discover aktivně dohledá a ověří web, neukládá prázdné l
   test('bez ověřeného webu se firma NEUKLÁDÁ (žádný prázdný lead)', () => {
     expect(discover).toContain('if (!website) {');
     expect(discover).toContain("reason: \"unverified_website\"");
-    // po unverified_website následuje continue před jakýmkoli RPC zápisem
-    const idx = discover.indexOf('unverified_website');
-    const after = discover.slice(idx, idx + 120);
+    // po zápisu unverified_website následuje continue před jakýmkoli RPC zápisem
+    const idx = discover.indexOf('reason: "unverified_website"');
+    const after = discover.slice(idx, idx + 60);
     expect(after).toContain('continue');
   });
 
