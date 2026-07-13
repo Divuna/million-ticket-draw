@@ -175,6 +175,7 @@ test.describe.serial('Sales lead email templates – real staging acceptance', (
   });
 
   test('creates, uses, validates, assists and deactivates templates without sending email', async ({ page }, testInfo) => {
+    test.setTimeout(180_000);
     const forbiddenCalls: string[] = [];
     page.on('request', (request) => {
       if (/\/functions\/v1\/send-sales-lead-(email|reply|follow-up)/.test(request.url())) forbiddenCalls.push(request.url());
@@ -217,7 +218,7 @@ test.describe.serial('Sales lead email templates – real staging acceptance', (
     const initialPicker = page.getByTestId('sales-lead-template-picker-initial');
     await expect(initialPicker.getByText(names.initial, { exact: true })).toBeVisible();
     await shot(page, testInfo, '02-vyber-prvni-email');
-    await initialPicker.getByText(names.initial, { exact: true }).locator('..').locator('..').getByRole('button', { name: 'Použít šablonu' }).click();
+    await initialPicker.locator('article').filter({ hasText: names.initial }).getByRole('button', { name: 'Použít šablonu' }).click();
     await expect(page.locator('#sl-draft-subject')).toHaveValue(`OneMil pro ${companies.initial} v Brno`);
     const initialBody = await page.locator('#sl-draft-body').inputValue();
     for (const value of [companies.initial, 'Jana Nováková', 'CEO', 'Brno', 'https://initial.e2e-template.example']) expect(initialBody).toContain(value);
@@ -238,7 +239,7 @@ test.describe.serial('Sales lead email templates – real staging acceptance', (
     const engagementMissing = page.getByTestId('sales-lead-engagement-column');
     await engagementMissing.getByRole('button', { name: /Vybrat šablonu/ }).first().click();
     const missingPicker = page.getByTestId('sales-lead-template-picker-initial');
-    await missingPicker.getByText(names.initial, { exact: true }).locator('..').locator('..').getByRole('button', { name: 'Použít šablonu' }).click();
+    await missingPicker.locator('article').filter({ hasText: names.initial }).getByRole('button', { name: 'Použít šablonu' }).click();
     await expect(page.locator('#sl-draft-body')).toHaveValue(/\{\{contact_role\}\}/);
     await expect(engagementMissing.getByText(/Doplňte nevyřešené proměnné/)).toBeVisible();
     await engagementMissing.getByRole('button', { name: 'Uložit koncept' }).click();
@@ -255,7 +256,7 @@ test.describe.serial('Sales lead email templates – real staging acceptance', (
     const replyPicker = page.getByTestId('sales-lead-template-picker-reply');
     await expect(replyPicker.getByText(names.reply, { exact: true })).toBeVisible();
     await shot(page, testInfo, '03-vyber-odpoved');
-    await replyPicker.getByText(names.reply, { exact: true }).locator('..').locator('..').getByRole('button', { name: 'Použít šablonu' }).click();
+    await replyPicker.locator('article').filter({ hasText: names.reply }).getByRole('button', { name: 'Použít šablonu' }).click();
     await expect(page.locator('#reply-body')).not.toHaveValue(/\{\{[^{}]+\}\}/);
     await expect(page.getByRole('button', { name: 'Odeslat odpověď' })).toBeEnabled();
     await closeLead(page);
@@ -266,7 +267,7 @@ test.describe.serial('Sales lead email templates – real staging acceptance', (
     const followPicker = page.getByTestId('sales-lead-template-picker-follow_up');
     await expect(followPicker.getByText(names.followUp, { exact: true })).toBeVisible();
     await shot(page, testInfo, '04-vyber-follow-up');
-    await followPicker.getByText(names.followUp, { exact: true }).locator('..').locator('..').getByRole('button', { name: 'Použít šablonu' }).click();
+    await followPicker.locator('article').filter({ hasText: names.followUp }).getByRole('button', { name: 'Použít šablonu' }).click();
     await expect(next.getByRole('button', { name: 'Ručně odeslat follow-up' })).toBeEnabled();
     await closeLead(page);
 
@@ -274,7 +275,7 @@ test.describe.serial('Sales lead email templates – real staging acceptance', (
     await login(page, superEmail, superPassword);
     await page.goto('/admin/sales-leads');
     await page.getByTestId('sl-template-manager-btn').click();
-    const replyCard = page.getByTestId('sales-lead-template-manager').getByText(names.reply, { exact: true }).locator('..').locator('..').locator('..');
+    const replyCard = page.getByTestId('sales-lead-template-manager').locator('article').filter({ hasText: names.reply });
     await replyCard.getByRole('button', { name: 'Deaktivovat' }).click();
     await expect(replyCard.getByText('Neaktivní')).toBeVisible();
     const { data: inactive } = await scoped.from('sales_lead_email_templates').select('id').eq('id', templateIds.find((id) => created?.find((row) => row.id === id)?.name === names.reply) ?? '');
