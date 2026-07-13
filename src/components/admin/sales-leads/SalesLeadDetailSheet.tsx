@@ -810,12 +810,30 @@ export function SalesLeadDetailSheet({ leadId, open, onOpenChange, onMutated }: 
     }
   };
 
-  const ReadRow = ({ label, value }: { label: string; value: string | null | undefined }) => (
-    <div className="grid grid-cols-3 gap-2 py-1.5 text-sm">
-      <span className="text-muted-foreground">{label}</span>
-      <span className="col-span-2 break-words">{value || '—'}</span>
-    </div>
-  );
+  const ReadRow = ({ label, value, href }: { label: string; value: string | null | undefined; href?: string | null }) => {
+    const linkHref = href && value
+      ? (/^https?:\/\//i.test(href) ? href : `https://${href}`)
+      : null;
+    return (
+      <div className="grid grid-cols-3 gap-2 py-1.5 text-sm">
+        <span className="text-muted-foreground">{label}</span>
+        <span className="col-span-2 break-words">
+          {linkHref ? (
+            <a
+              href={linkHref}
+              target="_blank"
+              rel="noopener noreferrer nofollow"
+              className="text-primary underline underline-offset-2 hover:opacity-80"
+            >
+              {value}
+            </a>
+          ) : (
+            value || '—'
+          )}
+        </span>
+      </div>
+    );
+  };
 
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
@@ -1015,7 +1033,7 @@ export function SalesLeadDetailSheet({ leadId, open, onOpenChange, onMutated }: 
                 <ReadRow label="Název" value={lead.company_name} />
                 <ReadRow label="IČO" value={lead.ico} />
                 <ReadRow label="DIČ" value={lead.dic} />
-                <ReadRow label="Web" value={lead.website} />
+                <ReadRow label="Web" value={lead.website} href={lead.website} />
                 <ReadRow label="Stav webu" value={lead.website_verification_status === 'overeny' ? 'Ověřený' : 'Neověřený web'} />
                 <ReadRow label="Zdroj webu" value={lead.website_verification_source} />
                 <ReadRow label="Důvěra webu" value={lead.website_confidence == null ? null : `${lead.website_confidence} %`} />
