@@ -4,6 +4,7 @@ import {
   OPT_OUT_SENTENCE,
   renderSalesLeadEmailTemplate,
   validateSalesLeadEmailContent,
+  validateSalesLeadEmailTemplateDefinition,
 } from '../../src/components/admin/sales-leads/salesLeadEmailTemplates';
 
 const read = (path: string) => fs.readFileSync(path, 'utf8');
@@ -31,6 +32,17 @@ test.describe('Sales lead email template contracts', () => {
       'Chybí povinná závěrečná věta pro odhlášení.',
     );
     expect(validateSalesLeadEmailContent('follow_up', 'Připomenutí', `Text\n\n${OPT_OUT_SENTENCE}`)).toEqual([]);
+  });
+
+  test('template definitions allow approved variables but reject unknown ones', () => {
+    expect(validateSalesLeadEmailTemplateDefinition(
+      'initial',
+      'Nabídka pro {{company_name}}',
+      `Dobrý den {{contact_person}}.\n\n${OPT_OUT_SENTENCE}`,
+    )).toEqual([]);
+    expect(validateSalesLeadEmailTemplateDefinition('reply', 'Re: {{unknown}}', 'Děkuji.')).toContain(
+      'Nepodporované proměnné: {{unknown}}.',
+    );
   });
 
   test('database access is team-readable, superadmin-managed and deactivate-only', () => {

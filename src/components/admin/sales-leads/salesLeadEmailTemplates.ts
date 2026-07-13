@@ -75,3 +75,23 @@ export const validateSalesLeadEmailContent = (
   }
   return errors;
 };
+
+export const validateSalesLeadEmailTemplateDefinition = (
+  type: SalesLeadEmailTemplateType,
+  subject: string,
+  body: string,
+): string[] => {
+  const errors: string[] = [];
+  if (!subject.trim()) errors.push('Předmět je povinný.');
+  if (!body.trim()) errors.push('Text e-mailu je povinný.');
+  if (subject.trim().length > 300) errors.push('Předmět může mít nejvýše 300 znaků.');
+  if (body.trim().length > 20000) errors.push('Text může mít nejvýše 20 000 znaků.');
+
+  const allowedTokens = new Set<string>(SALES_LEAD_TEMPLATE_VARIABLES.map((variable) => variable.token));
+  const unsupported = unresolvedTemplateVariables(subject, body).filter((token) => !allowedTokens.has(token));
+  if (unsupported.length > 0) errors.push(`Nepodporované proměnné: ${unsupported.join(', ')}.`);
+  if ((type === 'initial' || type === 'follow_up') && !body.includes(OPT_OUT_SENTENCE)) {
+    errors.push('Chybí povinná závěrečná věta pro odhlášení.');
+  }
+  return errors;
+};

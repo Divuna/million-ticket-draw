@@ -14,7 +14,7 @@ import {
   OPT_OUT_SENTENCE,
   SALES_LEAD_TEMPLATE_VARIABLES,
   TEMPLATE_TYPE_LABELS,
-  validateSalesLeadEmailContent,
+  validateSalesLeadEmailTemplateDefinition,
   type SalesLeadEmailTemplate,
   type SalesLeadEmailTemplateType,
 } from './salesLeadEmailTemplates';
@@ -57,7 +57,7 @@ export function SalesLeadEmailTemplateManager({ open, onOpenChange }: { open: bo
   });
 
   const save = async () => {
-    const errors = validateSalesLeadEmailContent(form.template_type, form.subject, form.body);
+    const errors = validateSalesLeadEmailTemplateDefinition(form.template_type, form.subject, form.body);
     if (!form.name.trim()) errors.unshift('Název šablony je povinný.');
     if (errors.length > 0) return toast.error(errors[0]);
     setSaving(true);
