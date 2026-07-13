@@ -176,6 +176,7 @@ test.describe.serial('Sales lead email templates – real staging acceptance', (
 
   test('creates, uses, validates, assists and deactivates templates without sending email', async ({ page }, testInfo) => {
     test.setTimeout(180_000);
+    page.setDefaultTimeout(15_000);
     const forbiddenCalls: string[] = [];
     page.on('request', (request) => {
       if (/\/functions\/v1\/send-sales-lead-(email|reply|follow-up)/.test(request.url())) forbiddenCalls.push(request.url());
@@ -252,7 +253,8 @@ test.describe.serial('Sales lead email templates – real staging acceptance', (
 
     await openLead(page, companies.reply);
     await page.getByTestId('sales-lead-engagement-column').getByRole('button', { name: 'Odpovědět' }).click();
-    await page.getByRole('button', { name: 'Vybrat šablonu', exact: true }).last().click();
+    const replyEditor = page.locator('#reply-body').locator('xpath=../..');
+    await replyEditor.getByRole('button', { name: 'Vybrat šablonu', exact: true }).click();
     const replyPicker = page.getByTestId('sales-lead-template-picker-reply');
     await expect(replyPicker.getByText(names.reply, { exact: true })).toBeVisible();
     await shot(page, testInfo, '03-vyber-odpoved');
