@@ -814,6 +814,14 @@ export function SalesLeadDetailSheet({ leadId, open, onOpenChange, onMutated }: 
     const linkHref = href && value
       ? (/^https?:\/\//i.test(href) ? href : `https://${href}`)
       : null;
+    // Zobraz jen čistou doménu (bez protokolu, www, cesty a koncového lomítka);
+    // odkaz (href) míří na celou uloženou URL.
+    const displayText = linkHref
+      ? linkHref
+          .replace(/^https?:\/\//i, '')
+          .replace(/^www\./i, '')
+          .replace(/\/.*$/, '')
+      : value;
     return (
       <div className="grid grid-cols-3 gap-2 py-1.5 text-sm">
         <span className="text-muted-foreground">{label}</span>
@@ -825,7 +833,7 @@ export function SalesLeadDetailSheet({ leadId, open, onOpenChange, onMutated }: 
               rel="noopener noreferrer nofollow"
               className="text-primary underline underline-offset-2 hover:opacity-80"
             >
-              {value}
+              {displayText}
             </a>
           ) : (
             value || '—'
