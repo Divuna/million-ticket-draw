@@ -845,14 +845,14 @@ export function SalesLeadDetailSheet({ leadId, open, onOpenChange, onMutated }: 
 
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
-      <SheetContent className="w-full sm:max-w-xl overflow-y-auto">
+      <SheetContent className="w-full overflow-y-auto sm:max-w-xl xl:inset-y-4 xl:flex xl:h-[calc(100dvh-2rem)] xl:w-[calc(100vw-2rem)] xl:max-w-[calc(100vw-2rem)] xl:flex-col xl:gap-0 xl:overflow-hidden xl:rounded-l-xl xl:p-0">
         {loading || !lead ? (
           <div className="flex items-center justify-center py-20 text-muted-foreground">
             <Loader2 className="h-5 w-5 animate-spin mr-2" /> Načítám…
           </div>
         ) : (
           <>
-            <SheetHeader>
+            <SheetHeader className="xl:shrink-0 xl:border-b xl:px-6 xl:py-4">
               <div className="flex items-center justify-between gap-3 pr-6">
                 <SheetTitle className="text-left">{lead.company_name}</SheetTitle>
                 <Badge variant="outline" className={STATUS_BADGE_CLASS[lead.status] ?? ''}>
@@ -864,8 +864,10 @@ export function SalesLeadDetailSheet({ leadId, open, onOpenChange, onMutated }: 
               </SheetDescription>
             </SheetHeader>
 
-            {/* Změna stavu */}
-            <div className="mt-4 space-y-2">
+            <div className="xl:grid xl:min-h-0 xl:flex-1 xl:grid-cols-[minmax(0,2fr)_minmax(0,3fr)] xl:divide-x">
+              <div className="xl:min-h-0 xl:overflow-y-auto xl:px-6 xl:py-4">
+                {/* Změna stavu */}
+                <div className="mt-4 space-y-2 xl:mt-0">
               <div className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Změna stavu</div>
               {targets.length === 0 ? (
                 <p className="text-sm text-muted-foreground">Z tohoto stavu není povolen žádný přechod.</p>
@@ -1229,7 +1231,13 @@ export function SalesLeadDetailSheet({ leadId, open, onOpenChange, onMutated }: 
               </div>
             )}
 
-            <Separator className="my-4" />
+                <Separator className="my-4" />
+
+                <LeadCrmPanel leadId={lead.id} status={lead.status} emailApproved={lead.email_verified_by_admin} onChanged={() => { void load(); onMutated(); }} />
+              </div>
+
+              <div className="xl:min-h-0 xl:overflow-y-auto xl:px-6 xl:py-4">
+            <Separator className="my-4 xl:hidden" />
 
             {/* AI příprava (Fáze 3B) — jen interní koncepty, nic se neodesílá */}
             <div className="flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wide text-muted-foreground mb-2">
@@ -1334,11 +1342,8 @@ export function SalesLeadDetailSheet({ leadId, open, onOpenChange, onMutated }: 
               )}
             </div>
 
-            <Separator className="my-4" />
-
-            <LeadCrmPanel leadId={lead.id} status={lead.status} emailApproved={lead.email_verified_by_admin} onChanged={() => { void load(); onMutated(); }} />
-
             {/* Historie */}
+            <Separator className="my-4" />
             <div className="text-xs font-semibold uppercase tracking-wide text-muted-foreground mb-2">Historie kontaktu</div>
             {activities.length === 0 ? (
               <p className="text-sm text-muted-foreground">Zatím žádná aktivita.</p>
@@ -1401,6 +1406,8 @@ export function SalesLeadDetailSheet({ leadId, open, onOpenChange, onMutated }: 
                 )}
               </ul>
             )}
+              </div>
+            </div>
           </>
         )}
       </SheetContent>
