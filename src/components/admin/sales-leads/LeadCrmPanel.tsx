@@ -74,18 +74,18 @@ const RailCard = ({
   accent?: boolean;
 }) => (
   <section
-    className={`rounded-[22px] border p-5 shadow-[0_18px_55px_-34px_rgba(0,0,0,0.95)] ring-1 ring-black/5 ${
-      accent ? 'border-primary/25 bg-gradient-to-br from-primary/[0.12] via-card to-card' : 'border-white/[0.08] bg-card/95'
+    className={`rounded-2xl border p-4 shadow-[0_12px_35px_-24px_rgba(0,0,0,0.9)] ring-1 ring-black/10 transition-colors duration-150 hover:border-white/[0.13] focus-within:border-primary/35 ${
+      accent ? 'border-primary/25 bg-gradient-to-br from-primary/[0.1] via-card to-card' : 'border-white/[0.09] bg-card'
     }`}
   >
     <div className="mb-3 flex items-start justify-between gap-3">
       <div className="flex items-start gap-2.5">
-        <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl border border-white/[0.07] bg-gradient-to-br from-white/[0.08] to-white/[0.02] text-foreground shadow-md">
+        <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl border border-white/[0.09] bg-white/[0.045] text-foreground shadow-sm shadow-black/20">
           {icon}
         </div>
         <div>
           <div className="text-[9px] font-semibold uppercase tracking-[0.16em] text-muted-foreground">{eyebrow}</div>
-          <h3 className="mt-0.5 text-base font-semibold tracking-[-0.02em]">{title}</h3>
+          <h3 className="mt-0.5 text-[15px] font-semibold tracking-[-0.02em]">{title}</h3>
         </div>
       </div>
       {typeof count === 'number' && <Badge className="h-5 min-w-5 justify-center rounded-full px-1.5 text-[10px]">{count}</Badge>}
@@ -259,19 +259,19 @@ export function LeadCrmPanel({
   };
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-3.5">
       <RailCard icon={<CalendarClock className="h-4 w-4" />} eyebrow="Upcoming" title="Naplánované aktivity" count={planned.length} accent>
         {planned.length === 0 ? (
-          <div className="rounded-xl border border-dashed border-border/70 bg-background/30 px-3 py-4 text-center">
-            <Clock3 className="mx-auto h-5 w-5 text-muted-foreground/60" />
-            <p className="mt-2 text-xs leading-relaxed text-muted-foreground">Žádná naplánovaná schůzka, telefonát ani další krok.</p>
+          <div className="flex items-center gap-3 rounded-xl border border-dashed border-white/[0.09] bg-background/45 px-3.5 py-3 text-left">
+            <Clock3 className="h-4 w-4 shrink-0 text-muted-foreground/60" />
+            <p className="text-xs leading-relaxed text-muted-foreground">Žádná naplánovaná aktivita.</p>
           </div>
         ) : (
           <div className="space-y-2.5">
             {planned.map((a, i) => (
               <article
                 key={a.id}
-                className={`rounded-xl border bg-background/80 p-3 ${new Date(a.scheduled_for) < new Date() ? 'border-destructive/60' : 'border-border/60'}`}
+                className={`rounded-xl border bg-background/70 p-3 transition-colors duration-150 hover:bg-background/90 ${new Date(a.scheduled_for) < new Date() ? 'border-destructive/60' : 'border-white/[0.09]'}`}
               >
                 <div className="flex flex-wrap items-center gap-1.5">
                   <Badge variant="outline" className="rounded-full text-[9px]">{typeLabel(a.activity_type)}</Badge>
@@ -308,7 +308,7 @@ export function LeadCrmPanel({
               <Button
                 key={action.value}
                 variant={activityComposerOpen && kind === action.value ? 'default' : 'outline'}
-                className="h-auto flex-col gap-2 rounded-2xl border-white/[0.08] px-2 py-3 text-[11px]"
+                className="h-auto flex-col gap-2 rounded-xl border-white/[0.09] bg-background/55 px-2 py-3 text-[11px] transition-colors duration-150 hover:border-primary/30 hover:bg-background/80 focus-visible:ring-2 focus-visible:ring-primary/40"
                 onClick={() => { setKind(action.value); setActivityComposerOpen(true); }}
               >
                 {action.icon}{action.label}
@@ -349,7 +349,7 @@ export function LeadCrmPanel({
             {tasks.map((t) => (
               <div
                 key={t.id}
-                className={`rounded-xl border p-2.5 ${t.status === 'ceka' && new Date(t.due_at) < new Date() ? 'border-destructive/50 bg-destructive/5' : 'border-border/50 bg-background/40'}`}
+                className={`rounded-xl border p-3 transition-colors duration-150 ${t.status === 'ceka' && new Date(t.due_at) < new Date() ? 'border-destructive/50 bg-destructive/5' : 'border-white/[0.08] bg-background/55 hover:border-white/[0.12]'}`}
               >
                 <div className="flex items-start justify-between gap-2">
                   <span className="text-xs font-medium leading-snug">{t.title}</span>
@@ -366,8 +366,13 @@ export function LeadCrmPanel({
             ))}
           </div>
         )}
+        {tasks.length === 0 && (
+          <div className="mb-3 flex items-center gap-3 rounded-xl border border-dashed border-white/[0.09] bg-background/45 px-3.5 py-3 text-xs text-muted-foreground">
+            <ListTodo className="h-4 w-4 shrink-0 opacity-60" />Žádné otevřené úkoly.
+          </div>
+        )}
         {!taskComposerOpen && (
-          <Button variant="outline" className="h-11 w-full rounded-2xl border-dashed border-white/[0.12] bg-background/35 text-xs" onClick={() => setTaskComposerOpen(true)}>
+          <Button variant="outline" className="h-9 w-full rounded-xl border-dashed border-white/[0.11] bg-background/55 text-xs transition-colors duration-150 hover:border-primary/30 hover:bg-background/80 focus-visible:ring-2 focus-visible:ring-primary/40" onClick={() => setTaskComposerOpen(true)}>
             <Plus className="mr-2 h-4 w-4" />Nový úkol
           </Button>
         )}
@@ -393,7 +398,7 @@ export function LeadCrmPanel({
         <Button
           size="sm"
           variant="outline"
-          className="h-11 w-full rounded-2xl text-xs"
+          className="h-9 w-full rounded-xl text-xs transition-colors duration-150 focus-visible:ring-2 focus-visible:ring-primary/40"
           disabled={!['osloveno', 'follow_up'].includes(status) || !emailApproved || busy}
           onClick={draftFollowUp}
         >
