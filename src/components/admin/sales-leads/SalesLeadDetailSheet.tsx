@@ -37,6 +37,7 @@ import {
   CheckCircle2,
   CircleDot,
   Clock3,
+  FileText,
   Globe2,
   History,
   Loader2,
@@ -71,6 +72,11 @@ import {
 } from './salesLeadsShared';
 import { DuplicateConflictAlert } from './DuplicateConflictAlert';
 import { LeadCrmPanel } from './LeadCrmPanel';
+import { SalesLeadEmailTemplatePicker } from './SalesLeadEmailTemplatePicker';
+import {
+  validateSalesLeadEmailContent,
+  type SalesLeadEmailTemplateType,
+} from './salesLeadEmailTemplates';
 
 interface Props {
   leadId: string | null;
@@ -342,6 +348,11 @@ const InlineReplyForm = ({
   onCancel,
   sending,
   repliedToAt,
+  onChooseTemplate,
+  onPersonalize,
+  onImprove,
+  aiBusy,
+  validationErrors,
 }: {
   subject: string;
   body: string;
@@ -351,6 +362,11 @@ const InlineReplyForm = ({
   onCancel: () => void;
   sending: boolean;
   repliedToAt: string | null;
+  onChooseTemplate: () => void;
+  onPersonalize: () => void;
+  onImprove: () => void;
+  aiBusy: boolean;
+  validationErrors: string[];
 }) => {
   const ref = useRef<HTMLDivElement | null>(null);
   useEffect(() => {
@@ -370,8 +386,24 @@ const InlineReplyForm = ({
         <Label htmlFor="reply-body">Text odpovědi</Label>
         <Textarea id="reply-body" value={body} onChange={(e) => onBodyChange(e.target.value)} disabled={sending} rows={6} maxLength={20000} />
       </div>
+      <div className="flex flex-wrap gap-2">
+        <Button type="button" variant="outline" size="sm" onClick={onChooseTemplate} disabled={sending || aiBusy} className="gap-1.5">
+          <FileText className="h-3.5 w-3.5" /> Vybrat šablonu
+        </Button>
+        <Button type="button" variant="outline" size="sm" onClick={onPersonalize} disabled={sending || aiBusy || !subject.trim() || !body.trim()} className="gap-1.5">
+          <Sparkles className="h-3.5 w-3.5" /> Personalizovat pro firmu
+        </Button>
+        <Button type="button" variant="outline" size="sm" onClick={onImprove} disabled={sending || aiBusy || !subject.trim() || !body.trim()} className="gap-1.5">
+          {aiBusy ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Sparkles className="h-3.5 w-3.5" />} Vylepšit text
+        </Button>
+      </div>
+      {validationErrors.length > 0 && (
+        <div className="rounded-lg border border-destructive/30 bg-destructive/8 px-3 py-2 text-xs text-destructive">
+          {validationErrors.map((error) => <div key={error}>{error}</div>)}
+        </div>
+      )}
       <div className="flex justify-end">
-        <Button onClick={onSend} disabled={sending || !subject.trim() || !body.trim()} className="gap-1.5">
+        <Button onClick={onSend} disabled={sending || aiBusy || validationErrors.length > 0} className="gap-1.5">
           {sending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />} Odeslat odpověď
         </Button>
       </div>
@@ -451,6 +483,8 @@ export function SalesLeadDetailSheet({ leadId, open, onOpenChange, onMutated }: 
   const [replySubject, setReplySubject] = useState('');
   const [replyBody, setReplyBody] = useState('');
   const [replySending, setReplySending] = useState(false);
+  const [replyAiBusy, setReplyAiBusy] = useState(false);
+  const [templatePickerType, setTemplatePickerType] = useState<SalesLeadEmailTemplateType | null>(null);
 
   const load = useCallback(async () => {
     if (!leadId) return;
@@ -620,6 +654,11 @@ export function SalesLeadDetailSheet({ leadId, open, onOpenChange, onMutated }: 
       toast.error('Vyplňte předmět i text odpovědi.');
       return;
     }
+    const validationErrors = validateSalesLeadEmailContent('reply', replySubject, replyBody);
+    if (validationErrors.length > 0) {
+      toast.error(validationErrors[0]);
+      return;
+    }
     setReplySending(true);
     try {
       const { data, error } = await supabase.functions.invoke('send-sales-lead-reply', {
@@ -667,34 +706,88 @@ export function SalesLeadDetailSheet({ leadId, open, onOpenChange, onMutated }: 
     }
   };
 
-  const prepareDraft = async () => {
-    if (!lead) return;
-    setDraftBusy(true);
+  const improveWithAi = async (
+    emailType: SalesLeadEmailTemplateType,
+    action: 'personalize' | 'improve',
+    subject: string,
+    body: string,
+    replyToActivityId?: string,
+  ) => {
+    if (!lead || !subject.trim() || !body.trim()) {
+      toast.error('Nejdřív vyplňte předmět a text e-mailu.');
+      return null;
+    }
     try {
       const { data, error } = await supabase.functions.invoke('sales-lead-draft-email', {
-        body: { lead_id: lead.id },
+        body: {
+          lead_id: lead.id,
+          mode: 'assist',
+          action,
+          email_type: emailType,
+          subject,
+          body,
+          reply_to_activity_id: replyToActivityId,
+        },
       });
       if (error) throw new Error(error.message);
       const res = (data ?? {}) as { success?: boolean; error?: string; subject?: string; body?: string };
       if (!res.success) {
         toast.error(rpcErrorMessage(res.error));
-        return;
+        return null;
       }
-      setDraftSubject(res.subject ?? '');
-      setDraftBody(res.body ?? '');
-      toast.success('Návrh e-mailu připraven');
-      await load();
-      onMutated();
+      toast.success(action === 'personalize' ? 'Text byl personalizován pro firmu.' : 'Text byl vylepšen.');
+      return { subject: res.subject ?? subject, body: res.body ?? body };
     } catch (err: unknown) {
-      const msg = err instanceof Error ? err.message : 'Příprava návrhu se nezdařila';
-      toast.error(msg);
-    } finally {
-      setDraftBusy(false);
+      toast.error(err instanceof Error ? err.message : 'AI úprava se nezdařila');
+      return null;
+    }
+  };
+
+  const assistDraft = async (action: 'personalize' | 'improve') => {
+    setDraftBusy(true);
+    const result = await improveWithAi('initial', action, draftSubject, draftBody);
+    if (result) {
+      setDraftSubject(result.subject);
+      setDraftBody(result.body);
+    }
+    setDraftBusy(false);
+  };
+
+  const assistReply = async (action: 'personalize' | 'improve') => {
+    if (!replyToActivity) return;
+    setReplyAiBusy(true);
+    const result = await improveWithAi('reply', action, replySubject, replyBody, replyToActivity.id);
+    if (result) {
+      setReplySubject(result.subject);
+      setReplyBody(result.body);
+    }
+    setReplyAiBusy(false);
+  };
+
+  const applyTemplate = (value: { subject: string; body: string; unresolved: string[]; templateName: string }) => {
+    if (templatePickerType === 'reply') {
+      setReplySubject(value.subject);
+      setReplyBody(value.body);
+    } else {
+      setDraftSubject(value.subject);
+      setDraftBody(value.body);
+      setAiWorkspaceOpen(true);
+    }
+    setTemplatePickerType(null);
+    if (value.unresolved.length > 0) {
+      toast.warning(`Šablona „${value.templateName}“ obsahuje nedoplněné proměnné: ${value.unresolved.join(', ')}`);
+    } else {
+      toast.success(`Šablona „${value.templateName}“ byla vložena do editoru.`);
     }
   };
 
   const saveDraft = async () => {
     if (!lead) return;
+    const validationErrors = validateSalesLeadEmailContent('initial', draftSubject, draftBody);
+    if (validationErrors.length > 0) {
+      toast.error(validationErrors[0]);
+      return;
+    }
     if (!draftSubject.trim() || !draftBody.trim()) {
       toast.error('Předmět i tělo návrhu musí být vyplněné.');
       return;
@@ -816,14 +909,26 @@ export function SalesLeadDetailSheet({ leadId, open, onOpenChange, onMutated }: 
   // Tlačítko je aktivní jen když je koncept uložený, je vyplněný contact_email
   // a lead není do_not_contact. EF navíc všechny bariéry ověřuje server-side.
   const draftSaved = !!(lead?.draft_email_subject && lead?.draft_email_body);
+  const draftDirty = draftSubject.trim() !== (lead?.draft_email_subject ?? '').trim()
+    || draftBody.trim() !== (lead?.draft_email_body ?? '').trim();
+  const draftValidationErrors = validateSalesLeadEmailContent('initial', draftSubject, draftBody);
+  const replyValidationErrors = validateSalesLeadEmailContent('reply', replySubject, replyBody);
   const hasContactEmail = !!lead?.contact_email;
   const isDoNotContact = !!lead?.do_not_contact;
-  const canSend = draftSaved && hasContactEmail && !isDoNotContact;
+  const canSend = draftSaved && !draftDirty && draftValidationErrors.length === 0 && hasContactEmail && !isDoNotContact;
   // activities je řazeno created_at DESC → první email_sent je ten poslední.
   const lastEmailSent = activities.find((a) => a.activity_type === 'email_sent') ?? null;
 
   const sendEmail = async () => {
     if (!lead) return;
+    if (draftDirty) {
+      toast.error('Před odesláním uložte aktuální změny konceptu.');
+      return;
+    }
+    if (draftValidationErrors.length > 0) {
+      toast.error(draftValidationErrors[0]);
+      return;
+    }
     setSending(true);
     try {
       const { data, error } = await supabase.functions.invoke('send-sales-lead-email', {
@@ -1370,12 +1475,12 @@ export function SalesLeadDetailSheet({ leadId, open, onOpenChange, onMutated }: 
               </Button>
               <Button
                 variant="outline"
-                onClick={() => { setAiWorkspaceOpen(true); void prepareDraft(); }}
+                onClick={() => { setAiWorkspaceOpen(true); setTemplatePickerType('initial'); }}
                 disabled={draftBusy}
                 className="h-auto justify-start gap-3 rounded-xl border-white/[0.09] bg-background/65 px-3.5 py-3 text-left shadow-sm transition-colors duration-150 hover:border-primary/30 hover:bg-background/80 focus-visible:ring-2 focus-visible:ring-primary/40"
               >
                 <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-primary/15 text-primary"><Mail className="h-4 w-4" /></span>
-                <span><span className="block text-sm font-semibold">Připravit e-mail</span><span className="block text-[10px] font-normal text-muted-foreground">Vytvořit interní koncept</span></span>
+                <span><span className="block text-sm font-semibold">Vybrat šablonu</span><span className="block text-[10px] font-normal text-muted-foreground">Ručně vyplnit současný editor</span></span>
               </Button>
             </div>
 
@@ -1412,6 +1517,17 @@ export function SalesLeadDetailSheet({ leadId, open, onOpenChange, onMutated }: 
                   Připravil: {lead.draft_prepared_by === 'ai' ? 'AI' : 'admin'}
                 </p>
               )}
+              <div className="flex flex-wrap gap-2">
+                <Button type="button" size="sm" variant="outline" onClick={() => setTemplatePickerType('initial')} disabled={draftBusy || draftSaving} className="gap-1.5">
+                  <FileText className="h-3.5 w-3.5" /> Vybrat šablonu
+                </Button>
+                <Button type="button" size="sm" variant="outline" onClick={() => void assistDraft('personalize')} disabled={draftBusy || draftSaving || !draftSubject.trim() || !draftBody.trim()} className="gap-1.5">
+                  <Sparkles className="h-3.5 w-3.5" /> Personalizovat pro firmu
+                </Button>
+                <Button type="button" size="sm" variant="outline" onClick={() => void assistDraft('improve')} disabled={draftBusy || draftSaving || !draftSubject.trim() || !draftBody.trim()} className="gap-1.5">
+                  {draftBusy ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Sparkles className="h-3.5 w-3.5" />} Vylepšit text
+                </Button>
+              </div>
               <div className="space-y-1">
                 <Label htmlFor="sl-draft-subject" className="text-xs">Předmět</Label>
                 <Input
@@ -1434,6 +1550,11 @@ export function SalesLeadDetailSheet({ leadId, open, onOpenChange, onMutated }: 
                   placeholder="Tělo e-mailu — libovolně upravte…"
                 />
               </div>
+              {draftValidationErrors.length > 0 && (draftSubject.length > 0 || draftBody.length > 0) && (
+                <div className="rounded-lg border border-destructive/30 bg-destructive/8 px-3 py-2 text-xs text-destructive">
+                  {draftValidationErrors.map((error) => <div key={error}>{error}</div>)}
+                </div>
+              )}
               <div className="flex items-center justify-end gap-2">
                 <Button size="sm" variant="outline" onClick={saveDraft} disabled={draftSaving || draftBusy || sending} className="gap-1.5">
                   {draftSaving ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Save className="h-3.5 w-3.5" />}
@@ -1508,6 +1629,11 @@ export function SalesLeadDetailSheet({ leadId, open, onOpenChange, onMutated }: 
                             onCancel={() => setReplyToActivity(null)}
                             sending={replySending}
                             repliedToAt={replyToActivity.created_at}
+                            onChooseTemplate={() => setTemplatePickerType('reply')}
+                            onPersonalize={() => void assistReply('personalize')}
+                            onImprove={() => void assistReply('improve')}
+                            aiBusy={replyAiBusy}
+                            validationErrors={replyValidationErrors}
                           />
                         ) : undefined
                       }
@@ -1557,7 +1683,19 @@ export function SalesLeadDetailSheet({ leadId, open, onOpenChange, onMutated }: 
                   title="Další kroky"
                   description="Naplánované aktivity, úkoly a follow-up na jednom místě."
                 />
-                <LeadCrmPanel leadId={lead.id} status={lead.status} emailApproved={lead.email_verified_by_admin} onChanged={() => { void load(); onMutated(); }} />
+                <LeadCrmPanel
+                  leadId={lead.id}
+                  status={lead.status}
+                  emailApproved={lead.email_verified_by_admin}
+                  templateContext={{
+                    company_name: lead.company_name,
+                    contact_person: lead.contact_person,
+                    contact_role: lead.contact_role,
+                    city: lead.city,
+                    website: lead.website,
+                  }}
+                  onChanged={() => { void load(); onMutated(); }}
+                />
               </aside>
             </div>
           </>
@@ -1565,6 +1703,22 @@ export function SalesLeadDetailSheet({ leadId, open, onOpenChange, onMutated }: 
       </SheetContent>
 
       {/* Potvrzení odeslání — jasné, že odesílá člověk, ne AI */}
+      {lead && templatePickerType && templatePickerType !== 'follow_up' && (
+        <SalesLeadEmailTemplatePicker
+          open
+          onOpenChange={(pickerOpen) => { if (!pickerOpen) setTemplatePickerType(null); }}
+          type={templatePickerType}
+          context={{
+            company_name: lead.company_name,
+            contact_person: lead.contact_person,
+            contact_role: lead.contact_role,
+            city: lead.city,
+            website: lead.website,
+          }}
+          onSelect={applyTemplate}
+        />
+      )}
+
       <AlertDialog open={sendConfirmOpen} onOpenChange={(o) => !sending && setSendConfirmOpen(o)}>
         <AlertDialogContent>
           <AlertDialogHeader>

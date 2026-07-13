@@ -22,6 +22,7 @@ const corsHeaders = {
 
 const AI_MODEL = Deno.env.get("SALES_LEADS_AI_MODEL") ?? "gpt-4o-mini";
 const AI_TIMEOUT_MS = 20000;
+const OPT_OUT_SENTENCE = "Pokud si nepřejete být kontaktováni, odpovězte prosím slovem NEKONTAKTOVAT a příště vás nebudeme oslovovat.";
 
 // Zakázaná slova — pojistka proti hazardnímu wordingu ve výstupu AI.
 const FORBIDDEN_WORDS = [
@@ -41,6 +42,17 @@ PŘÍSNÁ PRAVIDLA:
 - NEPOUŽÍVEJ slova casino, hazard, sázka, loterie, jackpot.
 - Do těla vlož zdvořilé oslovení, 2–3 odstavce (co OneMil je + proč dává smysl pro tuto firmu + výzva k nezávaznému hovoru) a podpis „Tým OneMil, b2b@onemil.cz".
 - Na konec těla přidej větu: "Pokud si nepřejete být kontaktováni, odpovězte prosím slovem NEKONTAKTOVAT a příště vás nebudeme oslovovat."`;
+
+const ASSIST_SYSTEM_PROMPT = `Jsi textový asistent obchodního týmu OneMil. Upravuješ výhradně pracovní text v editoru. Nic neukládáš ani neodesíláš.
+
+PŘÍSNÁ PRAVIDLA:
+- Vrať POUZE validní JSON: {"subject": "...", "body": "..."} — nic jiného.
+- Zachovej význam, pravdivost, obchodní nabídku, ceny, právní tvrzení i podpis vstupního textu.
+- Nevymýšlej partnerství, dohody, čísla, garance, exkluzivitu ani informace, které nejsou v kontextu.
+- NEPOUŽÍVEJ slova casino, hazard, sázka, loterie, jackpot.
+- Akce "personalize" přizpůsobí text doloženým údajům firmy; akce "improve" zlepší stručnost, čitelnost a češtinu bez změny významu.
+- U prvního e-mailu a follow-upu musí tělo obsahovat přesně tuto závěrečnou větu: "${OPT_OUT_SENTENCE}"
+- U odpovědi tuto odhlašovací větu nepřidávej, pokud ve vstupním textu už není.`;
 
 function jsonResponse(body: Record<string, unknown>, status = 200): Response {
   return new Response(JSON.stringify(body), {
@@ -92,20 +104,32 @@ serve(async (req: Request) => {
       return jsonResponse({ success: false, error: "invalid_json" }, 400);
     }
     const leadId = typeof body.lead_id === "string" ? body.lead_id.trim() : null;
+    const assistMode = body.mode === "assist";
     const mode = body.mode === "follow_up" ? "follow_up" : "initial";
+    const assistAction = body.action === "improve" ? "improve" : "personalize";
+    const emailType = body.email_type === "reply" || body.email_type === "follow_up" ? body.email_type : "initial";
+    const currentSubject = typeof body.subject === "string" ? body.subject.trim() : "";
+    const currentBody = typeof body.body === "string" ? body.body.trim() : "";
+    const replyToActivityId = typeof body.reply_to_activity_id === "string" ? body.reply_to_activity_id.trim() : "";
     if (!leadId) return jsonResponse({ success: false, error: "lead_id_required" }, 400);
+    if (assistMode && (currentSubject.length > 300 || currentBody.length > 20000)) {
+      return jsonResponse({ success: false, error: "invalid_email_content" }, 400);
+    }
+    if (assistMode && emailType !== "follow_up" && (!currentSubject || !currentBody)) {
+      return jsonResponse({ success: false, error: "email_content_required" }, 400);
+    }
 
     // ── 3. Load lead + research ──────────────────────────────────────────────
     const { data: lead, error: leadErr } = await supabaseAdmin
       .from("sales_leads")
-      .select("id, company_name, website, city, industry, contact_person, ai_research_summary, status")
+      .select("id, company_name, website, city, industry, contact_person, contact_role, ai_research_summary, status")
       .eq("id", leadId)
       .maybeSingle();
     if (leadErr) return jsonResponse({ success: false, error: "lead_lookup_failed" }, 500);
     if (!lead) return jsonResponse({ success: false, error: "lead_not_found" }, 404);
     let previousSubject = "";
     let previousBody = "";
-    if (mode === "follow_up") {
+    if (mode === "follow_up" || (assistMode && emailType === "follow_up")) {
       if (!['osloveno','follow_up'].includes(lead.status)) return jsonResponse({ success:false,error:'follow_up_not_allowed' },409);
       const [{data:lastSent},{count:replyCount}] = await Promise.all([
         supabaseAdmin.from('sales_lead_activities').select('subject,body_snapshot').eq('lead_id',leadId).eq('activity_type','email_sent').order('created_at',{ascending:false}).limit(1).maybeSingle(),
@@ -115,6 +139,21 @@ serve(async (req: Request) => {
       if (!lastSent) return jsonResponse({success:false,error:'first_email_missing'},409);
       previousSubject=lastSent.subject??''; previousBody=lastSent.body_snapshot??'';
     }
+    let receivedSubject = "";
+    let receivedBody = "";
+    if (assistMode && emailType === "reply") {
+      if (!replyToActivityId) return jsonResponse({ success: false, error: "reply_to_activity_id_required" }, 400);
+      const { data: received } = await supabaseAdmin
+        .from("sales_lead_activities")
+        .select("subject,body_snapshot")
+        .eq("id", replyToActivityId)
+        .eq("lead_id", leadId)
+        .eq("activity_type", "reply_received")
+        .maybeSingle();
+      if (!received) return jsonResponse({ success: false, error: "reply_activity_not_found" }, 404);
+      receivedSubject = received.subject ?? "";
+      receivedBody = received.body_snapshot ?? "";
+    }
 
     // ── 4. OpenAI ────────────────────────────────────────────────────────────
     const openaiKey = Deno.env.get("OPENAI_API_KEY");
@@ -122,7 +161,22 @@ serve(async (req: Request) => {
       return jsonResponse({ success: false, error: "ai_not_configured" }, 503);
     }
 
-    const userPrompt = `Firma: ${lead.company_name}
+    const userPrompt = assistMode ? `Firma: ${lead.company_name}
+Web: ${lead.website ?? "neuvedeno"}
+Obor: ${lead.industry ?? "neuvedeno"}
+Město: ${lead.city ?? "neuvedeno"}
+Kontaktní osoba: ${lead.contact_person ?? "neuvedeno"}
+Role kontaktu: ${lead.contact_role ?? "neuvedeno"}
+Rešerše: ${lead.ai_research_summary ?? "(zatím neprovedena)"}
+Typ e-mailu: ${emailType}
+Akce: ${assistAction}
+${emailType === "follow_up" ? `Původní odeslaný předmět: ${previousSubject}\nPůvodní odeslaný e-mail: ${previousBody}` : ""}
+${emailType === "reply" ? `Přijatý předmět: ${receivedSubject}\nPřijatý e-mail: ${receivedBody}` : ""}
+
+Aktuální předmět editoru: ${currentSubject || "(zatím prázdný — vytvoř stručný předmět)"}
+Aktuální text editoru: ${currentBody || "(zatím prázdný — vytvoř stručný personalizovaný follow-up)"}
+
+Vrať upravený JSON {"subject","body"}.` : `Firma: ${lead.company_name}
 Obor: ${lead.industry ?? "neuvedeno"}
 Město: ${lead.city ?? "neuvedeno"}
 Kontaktní osoba: ${lead.contact_person ?? "neuvedeno"}
@@ -145,7 +199,7 @@ Vrať JSON {"subject","body"} dle pravidel.`;
           temperature: 0.5,
           response_format: { type: "json_object" },
           messages: [
-            { role: "system", content: DRAFT_SYSTEM_PROMPT },
+            { role: "system", content: assistMode ? ASSIST_SYSTEM_PROMPT : DRAFT_SYSTEM_PROMPT },
             { role: "user", content: userPrompt },
           ],
         }),
@@ -178,6 +232,13 @@ Vrať JSON {"subject","body"} dle pravidel.`;
     if (containsForbidden(subject) || containsForbidden(emailBody)) {
       return jsonResponse({ success: false, error: "forbidden_wording_detected" }, 422);
     }
+    if (assistMode && (emailType === "initial" || emailType === "follow_up") && !emailBody.includes(OPT_OUT_SENTENCE)) {
+      return jsonResponse({ success: false, error: "opt_out_sentence_missing" }, 422);
+    }
+
+    // Režim asistenta pouze vrací upravený text do existujícího editoru.
+    // Záměrně nic nezapisuje do leadu ani historie a nikdy nic neodesílá.
+    if (assistMode) return jsonResponse({ success: true, subject, body: emailBody });
 
     // ── 6. Uložit KONCEPT (NIKDY neodesílá, NIKDY neenqueue do email_queue) ──
     const { error: updErr } = mode === 'initial' ? await supabaseAdmin
