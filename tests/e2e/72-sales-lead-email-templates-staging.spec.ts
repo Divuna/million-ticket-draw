@@ -82,12 +82,19 @@ async function createTemplate(
   name: string,
   subject: string,
   body: string,
+  verifyOptOutRequired = false,
 ): Promise<void> {
   const manager = page.getByTestId('sales-lead-template-manager');
   await manager.getByLabel('Název').fill(name);
   await manager.getByRole('combobox').first().click();
   await page.getByRole('option', { name: type, exact: true }).click();
   await manager.getByLabel('Předmět').fill(subject);
+  if (verifyOptOutRequired) {
+    await manager.getByLabel('Text šablony').fill(body.replace(`\n\n${optOut}`, ''));
+    await manager.getByRole('button', { name: 'Vytvořit šablonu' }).click();
+    await expect(page.getByText('Chybí povinná závěrečná věta pro odhlášení.', { exact: true })).toBeVisible();
+    await expect(manager.getByText(name, { exact: true })).toHaveCount(0);
+  }
   await manager.getByLabel('Text šablony').fill(body);
   await manager.getByRole('button', { name: 'Vytvořit šablonu' }).click();
   await expect(manager.getByText(name, { exact: true })).toBeVisible();
@@ -185,9 +192,9 @@ test.describe.serial('Sales lead email templates – real staging acceptance', (
     await login(page, superEmail, superPassword);
     await page.goto('/admin/sales-leads');
     await page.getByTestId('sl-template-manager-btn').click();
-    await createTemplate(page, 'První e-mail', names.initial, `OneMil pro {{company_name}} v {{city}}`, `Dobrý den {{contact_person}},\n\nobracím se na vás jako {{contact_role}} ve společnosti {{company_name}}. Web: {{website}}, město: {{city}}.\n\n${optOut}`);
+    await createTemplate(page, 'První e-mail', names.initial, `OneMil pro {{company_name}} v {{city}}`, `Dobrý den {{contact_person}},\n\nobracím se na vás jako {{contact_role}} ve společnosti {{company_name}}. Web: {{website}}, město: {{city}}.\n\n${optOut}`, true);
     await createTemplate(page, 'Odpověď', names.reply, `Re: {{company_name}} – {{contact_person}}`, `Dobrý den {{contact_person}}, děkuji za odpověď. Evidujeme vás jako {{contact_role}} pro {{company_name}} v {{city}} ({{website}}).`);
-    await createTemplate(page, 'Follow-up', names.followUp, `Připomenutí pro {{company_name}}`, `Dobrý den {{contact_person}}, připomínám nabídku pro {{company_name}}, {{contact_role}}, {{city}}, {{website}}.\n\n${optOut}`);
+    await createTemplate(page, 'Follow-up', names.followUp, `Připomenutí pro {{company_name}}`, `Dobrý den {{contact_person}}, připomínám nabídku pro {{company_name}}, {{contact_role}}, {{city}}, {{website}}.\n\n${optOut}`, true);
     await shot(page, testInfo, '01-sprava-sablon');
 
     const { data: created, error: createdError } = await admin.from('sales_lead_email_templates')
