@@ -18,7 +18,8 @@ import {
 } from '@/components/ui/alert-dialog';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
-import { Briefcase, Plus, Search, Info, Sparkles, Trash2 } from 'lucide-react';
+import { Briefcase, FileText, Plus, Search, Info, Sparkles, Trash2 } from 'lucide-react';
+import { useUserRole } from '@/hooks/useUserRole';
 import {
   STATUS_LABELS,
   STATUS_BADGE_CLASS,
@@ -30,6 +31,7 @@ import { AddSalesLeadDialog } from '@/components/admin/sales-leads/AddSalesLeadD
 import { SalesLeadDetailSheet } from '@/components/admin/sales-leads/SalesLeadDetailSheet';
 import { DiscoverLeadsDialog } from '@/components/admin/sales-leads/DiscoverLeadsDialog';
 import { SalesLeadOverview } from '@/components/admin/sales-leads/SalesLeadOverview';
+import { SalesLeadEmailTemplateManager } from '@/components/admin/sales-leads/SalesLeadEmailTemplateManager';
 
 /**
  * Admin modul „Obchod / Leady" — Fáze 3A (ruční přidání, detail, editace, změna stavu)
@@ -76,6 +78,7 @@ const formatDate = (iso: string | null): string => {
 };
 
 const AdminSalesLeads: React.FC = () => {
+  const { isSuperAdmin } = useUserRole();
   const [leads, setLeads] = useState<SalesLeadRow[]>([]);
   const [loading, setLoading] = useState(true);
   const [tableMissing, setTableMissing] = useState(false);
@@ -83,6 +86,7 @@ const AdminSalesLeads: React.FC = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [addOpen, setAddOpen] = useState(false);
   const [discoverOpen, setDiscoverOpen] = useState(false);
+  const [templateManagerOpen, setTemplateManagerOpen] = useState(false);
   const [detailId, setDetailId] = useState<string | null>(null);
   const [detailOpen, setDetailOpen] = useState(false);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
@@ -321,6 +325,12 @@ const AdminSalesLeads: React.FC = () => {
           </div>
         </div>
         <div className="flex flex-wrap gap-2">
+          {isSuperAdmin && (
+            <Button variant="outline" onClick={() => setTemplateManagerOpen(true)} data-testid="sl-template-manager-btn">
+              <FileText className="h-4 w-4 mr-1.5" aria-hidden />
+              E-mailové šablony
+            </Button>
+          )}
           <Button variant="outline" onClick={() => setDiscoverOpen(true)} data-testid="sl-discover-btn">
             <Sparkles className="h-4 w-4 mr-1.5" aria-hidden />
             Najít nové firmy
@@ -498,6 +508,9 @@ const AdminSalesLeads: React.FC = () => {
       </Card>
 
       <AddSalesLeadDialog open={addOpen} onOpenChange={setAddOpen} onSuccess={load} />
+      {isSuperAdmin && (
+        <SalesLeadEmailTemplateManager open={templateManagerOpen} onOpenChange={setTemplateManagerOpen} />
+      )}
       <DiscoverLeadsDialog
         open={discoverOpen}
         onOpenChange={setDiscoverOpen}

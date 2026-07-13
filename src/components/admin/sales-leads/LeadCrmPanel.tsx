@@ -6,6 +6,7 @@ import {
   Check,
   CheckCircle2,
   Clock3,
+  FileText,
   ListTodo,
   MessageSquarePlus,
   PhoneCall,
@@ -22,6 +23,11 @@ import { Badge } from '@/components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
+import { SalesLeadEmailTemplatePicker } from './SalesLeadEmailTemplatePicker';
+import {
+  validateSalesLeadEmailContent,
+  type SalesLeadTemplateContext,
+} from './salesLeadEmailTemplates';
 
 type Planned = {
   id: string;
@@ -98,11 +104,13 @@ export function LeadCrmPanel({
   leadId,
   status,
   emailApproved,
+  templateContext,
   onChanged,
 }: {
   leadId: string;
   status: string;
   emailApproved: boolean;
+  templateContext: SalesLeadTemplateContext;
   onChanged: () => void;
 }) {
   const [kind, setKind] = useState('telefonat');
@@ -121,6 +129,7 @@ export function LeadCrmPanel({
   const [taskNote, setTaskNote] = useState('');
   const [fuSubject, setFuSubject] = useState('');
   const [fuBody, setFuBody] = useState('');
+  const [followUpPickerOpen, setFollowUpPickerOpen] = useState(false);
   const [activityComposerOpen, setActivityComposerOpen] = useState(false);
   const [taskComposerOpen, setTaskComposerOpen] = useState(false);
   const names = useMemo(() => new Map(admins.map((a) => [a.id, a.full_name || a.id.slice(0, 8)])), [admins]);
@@ -236,15 +245,33 @@ export function LeadCrmPanel({
     await load();
     onChanged();
   };
-  const draftFollowUp = async () => {
+  const assistFollowUp = async (action: 'personalize' | 'improve') => {
+    if (action === 'improve' && (!fuSubject.trim() || !fuBody.trim())) {
+      toast.error('Nejdřív vyplňte předmět a text follow-upu.');
+      return;
+    }
     setBusy(true);
-    const { data, error } = await supabase.functions.invoke('sales-lead-draft-email', { body: { lead_id: leadId, mode: 'follow_up' } });
+    const { data, error } = await supabase.functions.invoke('sales-lead-draft-email', {
+      body: {
+        lead_id: leadId,
+        mode: 'assist',
+        action,
+        email_type: 'follow_up',
+        subject: fuSubject,
+        body: fuBody,
+      },
+    });
     setBusy(false);
-    if (error || !data?.success) return toast.error('Follow-up nyní nelze připravit.');
+    if (error || !data?.success) return toast.error('AI úpravu follow-upu nyní nelze připravit.');
     setFuSubject(data.subject);
     setFuBody(data.body);
   };
   const sendFollowUp = async () => {
+    const validationErrors = validateSalesLeadEmailContent('follow_up', fuSubject, fuBody);
+    if (validationErrors.length > 0) {
+      toast.error(validationErrors[0]);
+      return;
+    }
     if (!confirm('Opravdu ručně odeslat tento follow-up?')) return;
     setBusy(true);
     const { data, error } = await supabase.functions.invoke('send-sales-lead-follow-up', {
@@ -257,6 +284,7 @@ export function LeadCrmPanel({
     setFuBody('');
     onChanged();
   };
+  const followUpValidationErrors = validateSalesLeadEmailContent('follow_up', fuSubject, fuBody);
 
   return (
     <div className="space-y-3.5">
@@ -394,26 +422,58 @@ export function LeadCrmPanel({
       </RailCard>
 
       <RailCard icon={<Sparkles className="h-4 w-4" />} eyebrow="Follow-up" title="Navázat bez odpovědi">
-        <p className="mb-3 text-xs leading-relaxed text-muted-foreground">AI připraví návrh. Odeslání zůstává vždy ruční.</p>
-        <Button
-          size="sm"
-          variant="outline"
-          className="h-9 w-full rounded-xl text-xs transition-colors duration-150 focus-visible:ring-2 focus-visible:ring-primary/40"
-          disabled={!['osloveno', 'follow_up'].includes(status) || !emailApproved || busy}
-          onClick={draftFollowUp}
-        >
-          <Sparkles className="mr-1.5 h-3.5 w-3.5" />Připravit AI follow-up
-        </Button>
+        <p className="mb-3 text-xs leading-relaxed text-muted-foreground">Šablonu vždy vybírá člověk. AI upraví pouze text v editoru a nic sama neodešle.</p>
+        <div className="grid gap-2">
+          <Button
+            size="sm"
+            variant="outline"
+            className="h-9 w-full rounded-xl text-xs transition-colors duration-150 focus-visible:ring-2 focus-visible:ring-primary/40"
+            disabled={!['osloveno', 'follow_up'].includes(status) || !emailApproved || busy}
+            onClick={() => setFollowUpPickerOpen(true)}
+          >
+            <FileText className="mr-1.5 h-3.5 w-3.5" />Vybrat šablonu
+          </Button>
+          <Button
+            size="sm"
+            variant="outline"
+            className="h-9 w-full rounded-xl text-xs transition-colors duration-150 focus-visible:ring-2 focus-visible:ring-primary/40"
+            disabled={!['osloveno', 'follow_up'].includes(status) || !emailApproved || busy}
+            onClick={() => void assistFollowUp('personalize')}
+          >
+            <Sparkles className="mr-1.5 h-3.5 w-3.5" />Personalizovat pro firmu
+          </Button>
+        </div>
         {fuSubject && (
           <div className="mt-3 space-y-2 border-t border-border/50 pt-3">
             <Label className="text-xs">Předmět</Label>
             <Input className="h-9 text-xs" value={fuSubject} onChange={(e) => setFuSubject(e.target.value)} />
             <Label className="text-xs">Text</Label>
             <Textarea className="resize-none text-xs" rows={7} value={fuBody} onChange={(e) => setFuBody(e.target.value)} />
-            <Button className="h-8 w-full text-xs" disabled={busy || !fuBody.trim()} onClick={sendFollowUp}>Ručně odeslat follow-up</Button>
+            <Button type="button" variant="outline" className="h-8 w-full text-xs" disabled={busy || !fuBody.trim()} onClick={() => void assistFollowUp('improve')}>
+              <Sparkles className="mr-1.5 h-3.5 w-3.5" />Vylepšit text
+            </Button>
+            {followUpValidationErrors.length > 0 && (
+              <div className="rounded-lg border border-destructive/30 bg-destructive/8 px-3 py-2 text-[11px] text-destructive">
+                {followUpValidationErrors.map((error) => <div key={error}>{error}</div>)}
+              </div>
+            )}
+            <Button className="h-8 w-full text-xs" disabled={busy || followUpValidationErrors.length > 0} onClick={sendFollowUp}>Ručně odeslat follow-up</Button>
           </div>
         )}
       </RailCard>
+      <SalesLeadEmailTemplatePicker
+        open={followUpPickerOpen}
+        onOpenChange={setFollowUpPickerOpen}
+        type="follow_up"
+        context={templateContext}
+        onSelect={(value) => {
+          setFuSubject(value.subject);
+          setFuBody(value.body);
+          setFollowUpPickerOpen(false);
+          if (value.unresolved.length > 0) toast.warning(`Doplňte proměnné: ${value.unresolved.join(', ')}`);
+          else toast.success(`Šablona „${value.templateName}“ byla vložena do editoru.`);
+        }}
+      />
     </div>
   );
 }
