@@ -12,7 +12,6 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Badge } from '@/components/ui/badge';
 import { Checkbox } from '@/components/ui/checkbox';
-import { Separator } from '@/components/ui/separator';
 import {
   Select,
   SelectContent,
@@ -30,7 +29,24 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
-import { Loader2, Pencil, X, Sparkles, Mail, Save, Send } from 'lucide-react';
+import {
+  ArrowUpRight,
+  Building2,
+  CalendarClock,
+  CircleDot,
+  Clock3,
+  Globe2,
+  History,
+  Loader2,
+  Mail,
+  MapPin,
+  MessageSquareText,
+  Pencil,
+  Save,
+  Send,
+  Sparkles,
+  X,
+} from 'lucide-react';
 import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
 import { useUserRole } from '@/hooks/useUserRole';
@@ -144,6 +160,37 @@ const formatDateTime = (iso: string | null): string => {
   return d.toLocaleString('cs-CZ', { day: 'numeric', month: 'numeric', year: 'numeric', hour: '2-digit', minute: '2-digit' });
 };
 
+const WorkspaceColumnHeader = ({
+  icon,
+  eyebrow,
+  title,
+  description,
+}: {
+  icon: ReactNode;
+  eyebrow: string;
+  title: string;
+  description: string;
+}) => (
+  <div className="sticky top-0 z-20 -mx-4 -mt-4 mb-4 border-b border-border/50 bg-background/95 px-4 py-3 backdrop-blur xl:-mx-5 xl:-mt-5 xl:px-5">
+    <div className="flex items-start gap-3">
+      <div className="mt-0.5 flex h-9 w-9 shrink-0 items-center justify-center rounded-xl border border-border/60 bg-muted/50 text-muted-foreground">
+        {icon}
+      </div>
+      <div className="min-w-0">
+        <div className="text-[10px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">{eyebrow}</div>
+        <h2 className="mt-0.5 text-base font-semibold tracking-tight text-foreground">{title}</h2>
+        <p className="mt-0.5 text-xs leading-relaxed text-muted-foreground">{description}</p>
+      </div>
+    </div>
+  </div>
+);
+
+const WorkspaceCard = ({ children, className = '' }: { children: ReactNode; className?: string }) => (
+  <section className={`rounded-2xl border border-border/60 bg-card/70 p-4 shadow-sm ${className}`}>
+    {children}
+  </section>
+);
+
 /**
  * Jedna e-mailová zpráva ve vlákně historie kontaktu.
  * Odchozí (`outbound`) a příchozí (`inbound`) se liší barvou i orientací.
@@ -174,14 +221,20 @@ const EmailActivityItem = ({
   const visibleMain = isLong && !showFullBody ? `${main.slice(0, BODY_PREVIEW_CHARS).trimEnd()}…` : main;
 
   return (
-    <li className="flex">
+    <li className="relative pl-6 before:absolute before:bottom-[-0.75rem] before:left-[7px] before:top-5 before:w-px before:bg-border/60 last:before:hidden">
+      <span
+        className={`absolute left-0 top-4 h-3.5 w-3.5 rounded-full border-2 border-background ring-1 ${
+          isInbound ? 'bg-primary ring-primary/40' : 'bg-muted-foreground/50 ring-border'
+        }`}
+        aria-hidden
+      />
       <div
         className={
           isUnread
-            ? 'w-full rounded-lg border-2 border-destructive/60 bg-destructive/5 p-3'
+            ? 'w-full rounded-2xl border-2 border-destructive/50 bg-destructive/5 p-4 shadow-sm'
             : isInbound
-            ? 'w-full rounded-lg border border-primary/30 bg-primary/5 p-3'
-            : 'w-full rounded-lg border border-border bg-muted/30 p-3'
+            ? 'w-full rounded-2xl border border-primary/25 bg-primary/[0.06] p-4 shadow-sm'
+            : 'w-full rounded-2xl border border-border/60 bg-background/70 p-4 shadow-sm'
         }
       >
         <div className="flex flex-wrap items-center gap-2">
@@ -214,7 +267,7 @@ const EmailActivityItem = ({
         )}
 
         {body.length > 0 ? (
-          <div className="mt-2 whitespace-pre-wrap break-words rounded border border-border/60 bg-background/60 p-2 text-sm">
+          <div className="mt-3 whitespace-pre-wrap break-words rounded-xl border border-border/50 bg-background/70 p-3 text-sm leading-relaxed">
             {visibleMain}
             {isLong && (
               <button
@@ -289,7 +342,7 @@ const InlineReplyForm = ({
     ref.current?.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
   }, []);
   return (
-    <div ref={ref} className="mt-3 space-y-3 rounded-lg border border-primary/40 bg-background p-3">
+    <div ref={ref} className="mt-4 space-y-3 rounded-xl border border-primary/30 bg-background/90 p-4 shadow-sm">
       <div className="flex items-center justify-between gap-2">
         <div className="text-sm font-medium">Odpověď na e-mail z {formatDateTime(repliedToAt)}</div>
         <Button variant="ghost" size="sm" onClick={onCancel} disabled={sending}>Zrušit</Button>
@@ -823,17 +876,17 @@ export function SalesLeadDetailSheet({ leadId, open, onOpenChange, onMutated }: 
           .replace(/\/.*$/, '')
       : value;
     return (
-      <div className="grid grid-cols-3 gap-2 py-1.5 text-sm">
-        <span className="text-muted-foreground">{label}</span>
-        <span className="col-span-2 break-words">
+      <div className="grid grid-cols-[minmax(88px,0.8fr)_minmax(0,1.35fr)] items-start gap-3 border-b border-border/35 py-2.5 text-sm last:border-b-0">
+        <span className="text-xs font-medium text-muted-foreground">{label}</span>
+        <span className="min-w-0 break-words text-sm font-medium text-foreground">
           {linkHref ? (
             <a
               href={linkHref}
               target="_blank"
               rel="noopener noreferrer nofollow"
-              className="text-primary underline underline-offset-2 hover:opacity-80"
+              className="inline-flex items-center gap-1 text-primary underline decoration-primary/30 underline-offset-4 transition-colors hover:decoration-primary"
             >
-              {displayText}
+              {displayText}<ArrowUpRight className="h-3 w-3" aria-hidden />
             </a>
           ) : (
             value || '—'
@@ -845,28 +898,54 @@ export function SalesLeadDetailSheet({ leadId, open, onOpenChange, onMutated }: 
 
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
-      <SheetContent className="w-full sm:max-w-xl overflow-y-auto">
+      <SheetContent data-testid="sales-lead-crm-workspace" className="inset-0 flex h-dvh w-screen max-w-none flex-col gap-0 overflow-hidden border-0 bg-background p-0 sm:max-w-none">
         {loading || !lead ? (
-          <div className="flex items-center justify-center py-20 text-muted-foreground">
+          <div className="flex flex-1 items-center justify-center text-muted-foreground">
             <Loader2 className="h-5 w-5 animate-spin mr-2" /> Načítám…
           </div>
         ) : (
           <>
-            <SheetHeader>
-              <div className="flex items-center justify-between gap-3 pr-6">
-                <SheetTitle className="text-left">{lead.company_name}</SheetTitle>
-                <Badge variant="outline" className={STATUS_BADGE_CLASS[lead.status] ?? ''}>
-                  {STATUS_LABELS[lead.status] ?? lead.status}
-                </Badge>
+            <SheetHeader className="shrink-0 border-b border-border/60 bg-background/95 px-5 py-4 text-left backdrop-blur xl:px-7">
+              <div className="flex items-center gap-4 pr-10">
+                <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-primary/10 text-sm font-bold tracking-wide text-primary ring-1 ring-inset ring-primary/20">
+                  {lead.company_name.slice(0, 2).toUpperCase()}
+                </div>
+                <div className="min-w-0 flex-1">
+                  <div className="flex flex-wrap items-center gap-2.5">
+                    <SheetTitle className="truncate text-left text-xl tracking-tight">{lead.company_name}</SheetTitle>
+                    <Badge variant="outline" className={`rounded-full px-2.5 py-1 text-[11px] ${STATUS_BADGE_CLASS[lead.status] ?? ''}`}>
+                      <CircleDot className="mr-1 h-3 w-3" aria-hidden />
+                      {STATUS_LABELS[lead.status] ?? lead.status}
+                    </Badge>
+                  </div>
+                  <SheetDescription className="mt-1 flex flex-wrap items-center gap-x-4 gap-y-1 text-left text-xs">
+                    <span className="inline-flex items-center gap-1.5"><Clock3 className="h-3.5 w-3.5" />Založeno {formatDateTime(lead.created_at)}</span>
+                    {lead.city && <span className="inline-flex items-center gap-1.5"><MapPin className="h-3.5 w-3.5" />{lead.city}</span>}
+                    {lead.contact_email && <span className="inline-flex items-center gap-1.5"><Mail className="h-3.5 w-3.5" />{lead.contact_email}</span>}
+                    {lead.website && <span className="inline-flex items-center gap-1.5"><Globe2 className="h-3.5 w-3.5" />{lead.website.replace(/^https?:\/\//i, '').replace(/^www\./i, '').replace(/\/.*$/, '')}</span>}
+                  </SheetDescription>
+                </div>
               </div>
-              <SheetDescription className="text-left">
-                Detail leadu · založeno {formatDateTime(lead.created_at)}
-              </SheetDescription>
             </SheetHeader>
 
+            <div className="flex min-h-0 flex-1 flex-col overflow-y-auto bg-muted/10 xl:grid xl:grid-cols-[minmax(280px,0.78fr)_minmax(500px,1.35fr)_minmax(340px,0.92fr)] xl:divide-x xl:divide-border/50 xl:overflow-hidden">
+              <aside data-testid="sales-lead-record-column" className="space-y-4 p-4 xl:min-h-0 xl:overflow-y-auto xl:p-5 xl:[scrollbar-color:hsl(var(--border))_transparent] xl:[scrollbar-width:thin] xl:[&::-webkit-scrollbar]:w-1.5 xl:[&::-webkit-scrollbar-thumb]:rounded-full xl:[&::-webkit-scrollbar-thumb]:bg-border">
+                <WorkspaceColumnHeader
+                  icon={<Building2 className="h-4 w-4" />}
+                  eyebrow="Record"
+                  title="Profil leadu"
+                  description="Identita firmy, kontakt a obchodní kvalifikace."
+                />
+
             {/* Změna stavu */}
-            <div className="mt-4 space-y-2">
-              <div className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Změna stavu</div>
+            <WorkspaceCard className="space-y-3">
+              <div className="flex items-center justify-between gap-3">
+                <div>
+                  <div className="text-[10px] font-semibold uppercase tracking-[0.16em] text-muted-foreground">Pipeline</div>
+                  <div className="mt-1 text-sm font-semibold">Další stav leadu</div>
+                </div>
+                <Badge variant="secondary" className="rounded-full text-[10px]">{STATUS_LABELS[lead.status] ?? lead.status}</Badge>
+              </div>
               {targets.length === 0 ? (
                 <p className="text-sm text-muted-foreground">Z tohoto stavu není povolen žádný přechod.</p>
               ) : pendingStatus ? (
@@ -936,13 +1015,15 @@ export function SalesLeadDetailSheet({ leadId, open, onOpenChange, onMutated }: 
               {lead.do_not_contact && lead.do_not_contact_reason && (
                 <p className="text-xs text-destructive">Nekontaktovat: {lead.do_not_contact_reason}</p>
               )}
-            </div>
-
-            <Separator className="my-4" />
+            </WorkspaceCard>
 
             {/* Zařazení / discovery (Fáze 4B) */}
+            <WorkspaceCard>
             <div className="flex items-center justify-between">
-              <div className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Zařazení</div>
+              <div>
+                <div className="text-[10px] font-semibold uppercase tracking-[0.16em] text-muted-foreground">Kvalifikace</div>
+                <div className="mt-1 text-sm font-semibold">Zařazení leadu</div>
+              </div>
               {!clsEditing ? (
                 <Button variant="ghost" size="sm" onClick={() => setClsEditing(true)} className="gap-1.5">
                   <Pencil className="h-3.5 w-3.5" /> Upravit
@@ -1019,12 +1100,15 @@ export function SalesLeadDetailSheet({ leadId, open, onOpenChange, onMutated }: 
                 </pre>
               </details>
             )}
-
-            <Separator className="my-4" />
+            </WorkspaceCard>
 
             {/* Údaje firmy */}
+            <WorkspaceCard>
             <div className="flex items-center justify-between">
-              <div className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Údaje firmy</div>
+              <div>
+                <div className="text-[10px] font-semibold uppercase tracking-[0.16em] text-muted-foreground">Company</div>
+                <div className="mt-1 text-sm font-semibold">Údaje firmy</div>
+              </div>
               {!editing ? (
                 <Button variant="ghost" size="sm" onClick={startEdit} className="gap-1.5">
                   <Pencil className="h-3.5 w-3.5" /> Upravit
@@ -1147,12 +1231,15 @@ export function SalesLeadDetailSheet({ leadId, open, onOpenChange, onMutated }: 
                 </div>
               </div>
             )}
-
-            <Separator className="my-4" />
+            </WorkspaceCard>
 
             {/* Kontakt firmy — dohledání veřejného e-mailu (Fáze 5B) */}
+            <WorkspaceCard>
             <div className="flex items-center justify-between gap-2 mb-2">
-              <div className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Kontaktní e-mail</div>
+              <div>
+                <div className="text-[10px] font-semibold uppercase tracking-[0.16em] text-muted-foreground">Contact</div>
+                <div className="mt-1 text-sm font-semibold">Kontaktní e-mail</div>
+              </div>
               <Button variant="outline" size="sm" onClick={runEnrich} disabled={enrichBusy} className="gap-1.5">
                 {enrichBusy ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Sparkles className="h-3.5 w-3.5" />}
                 Dohledat e-mail
@@ -1228,10 +1315,19 @@ export function SalesLeadDetailSheet({ leadId, open, onOpenChange, onMutated }: 
                 )}
               </div>
             )}
+            </WorkspaceCard>
+              </aside>
 
-            <Separator className="my-4" />
+              <main data-testid="sales-lead-engagement-column" className="space-y-4 p-4 xl:min-h-0 xl:overflow-y-auto xl:p-5 xl:[scrollbar-color:hsl(var(--border))_transparent] xl:[scrollbar-width:thin] xl:[&::-webkit-scrollbar]:w-1.5 xl:[&::-webkit-scrollbar-thumb]:rounded-full xl:[&::-webkit-scrollbar-thumb]:bg-border">
+                <WorkspaceColumnHeader
+                  icon={<MessageSquareText className="h-4 w-4" />}
+                  eyebrow="Engagement"
+                  title="Komunikace a AI"
+                  description="Příprava oslovení, konverzace a úplná historie vztahu."
+                />
 
             {/* AI příprava (Fáze 3B) — jen interní koncepty, nic se neodesílá */}
+            <WorkspaceCard className="border-primary/20 bg-gradient-to-br from-primary/[0.06] via-card/80 to-card/70">
             <div className="flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wide text-muted-foreground mb-2">
               <Sparkles className="h-3.5 w-3.5" aria-hidden /> AI příprava
             </div>
@@ -1333,13 +1429,17 @@ export function SalesLeadDetailSheet({ leadId, open, onOpenChange, onMutated }: 
                 </p>
               )}
             </div>
-
-            <Separator className="my-4" />
-
-            <LeadCrmPanel leadId={lead.id} status={lead.status} emailApproved={lead.email_verified_by_admin} onChanged={() => { void load(); onMutated(); }} />
+            </WorkspaceCard>
 
             {/* Historie */}
-            <div className="text-xs font-semibold uppercase tracking-wide text-muted-foreground mb-2">Historie kontaktu</div>
+            <WorkspaceCard>
+            <div className="mb-3 flex items-center gap-2">
+              <History className="h-4 w-4 text-muted-foreground" aria-hidden />
+              <div>
+                <div className="text-[10px] font-semibold uppercase tracking-[0.16em] text-muted-foreground">Timeline</div>
+                <div className="mt-0.5 text-sm font-semibold">Historie kontaktu</div>
+              </div>
+            </div>
             {activities.length === 0 ? (
               <p className="text-sm text-muted-foreground">Zatím žádná aktivita.</p>
             ) : (
@@ -1369,10 +1469,10 @@ export function SalesLeadDetailSheet({ leadId, open, onOpenChange, onMutated }: 
                   ) : (
                     // Systémová aktivita — tenký řádek mezi zprávami.
                     <li key={a.id} className={a.activity_type === 'duplicate_override_confirmed'
-                      ? 'rounded-lg border border-destructive/40 bg-destructive/10 p-3 text-sm'
-                      : 'flex items-start gap-2 text-sm'}>
-                      <span className="mt-1.5 h-1.5 w-1.5 shrink-0 rounded-full bg-primary/60" aria-hidden />
-                      <div>
+                      ? 'relative ml-1 rounded-xl border border-destructive/40 bg-destructive/10 p-3 pl-4 text-sm'
+                      : 'relative ml-1 border-l border-border/60 py-2 pl-5 text-sm'}>
+                      <span className="absolute -left-[5px] top-4 h-2.5 w-2.5 shrink-0 rounded-full border-2 border-background bg-muted-foreground/60 ring-1 ring-border" aria-hidden />
+                      <div className="min-w-0">
                         <div className="font-medium">{ACTIVITY_LABELS[a.activity_type] ?? a.activity_type}</div>
                         {['call_logged','meeting_logged','note_added'].includes(a.activity_type) && (
                           <div className="mt-1 space-y-0.5 text-xs">
@@ -1401,6 +1501,19 @@ export function SalesLeadDetailSheet({ leadId, open, onOpenChange, onMutated }: 
                 )}
               </ul>
             )}
+            </WorkspaceCard>
+              </main>
+
+              <aside data-testid="sales-lead-next-column" className="space-y-4 p-4 xl:min-h-0 xl:overflow-y-auto xl:p-5 xl:[scrollbar-color:hsl(var(--border))_transparent] xl:[scrollbar-width:thin] xl:[&::-webkit-scrollbar]:w-1.5 xl:[&::-webkit-scrollbar-thumb]:rounded-full xl:[&::-webkit-scrollbar-thumb]:bg-border">
+                <WorkspaceColumnHeader
+                  icon={<CalendarClock className="h-4 w-4" />}
+                  eyebrow="Next"
+                  title="Další kroky"
+                  description="Naplánované aktivity, úkoly a follow-up na jednom místě."
+                />
+                <LeadCrmPanel leadId={lead.id} status={lead.status} emailApproved={lead.email_verified_by_admin} onChanged={() => { void load(); onMutated(); }} />
+              </aside>
+            </div>
           </>
         )}
       </SheetContent>

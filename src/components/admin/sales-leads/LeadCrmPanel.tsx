@@ -1,41 +1,377 @@
 /* eslint-disable @typescript-eslint/no-explicit-any, react-hooks/exhaustive-deps */
-import { useEffect,useMemo,useState } from 'react';
+import { useEffect, useMemo, useState, type ReactNode } from 'react';
+import {
+  CalendarClock,
+  Check,
+  CheckCircle2,
+  Clock3,
+  ListTodo,
+  MessageSquarePlus,
+  PhoneCall,
+  Plus,
+  Sparkles,
+  X,
+} from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
-import { Select,SelectContent,SelectItem,SelectTrigger,SelectValue } from '@/components/ui/select';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 
-type Planned={id:string;activity_type:string;scheduled_for:string;activity_status:string;body_snapshot:string|null;performed_by:string|null;metadata:Record<string,unknown>|null};
-type Task={id:string;title:string;due_at:string;status:string;note:string|null;assigned_admin_id:string};
-type Admin={id:string;full_name:string|null};
-const localInput=(date=new Date())=>{const p=(n:number)=>String(n).padStart(2,'0');return `${date.getFullYear()}-${p(date.getMonth()+1)}-${p(date.getDate())}T${p(date.getHours())}:${p(date.getMinutes())}`;};
-const czDate=(iso:string)=>new Intl.DateTimeFormat('cs-CZ',{timeZone:'Europe/Prague',day:'numeric',month:'long',year:'numeric',hour:'2-digit',minute:'2-digit'}).format(new Date(iso));
-const typeLabel=(v:string)=>v==='meeting_logged'?'Schůzka':v==='call_logged'?'Telefonát':'Další krok';
-const urgency=(iso:string)=>{const d=new Date(iso),now=new Date();const today=new Intl.DateTimeFormat('en-CA',{timeZone:'Europe/Prague'}).format(now)===new Intl.DateTimeFormat('en-CA',{timeZone:'Europe/Prague'}).format(d);return d<now?'Po termínu':today?'Dnes':'Nejbližší termín';};
+type Planned = {
+  id: string;
+  activity_type: string;
+  scheduled_for: string;
+  activity_status: string;
+  body_snapshot: string | null;
+  performed_by: string | null;
+  metadata: Record<string, unknown> | null;
+};
+type Task = { id: string; title: string; due_at: string; status: string; note: string | null; assigned_admin_id: string };
+type Admin = { id: string; full_name: string | null };
 
-export function LeadCrmPanel({leadId,status,emailApproved,onChanged}:{leadId:string;status:string;emailApproved:boolean;onChanged:()=>void}){
- const [kind,setKind]=useState('telefonat'),[result,setResult]=useState(''),[note,setNote]=useState(''),[next,setNext]=useState(''),[when,setWhen]=useState(localInput());
- const [planned,setPlanned]=useState<Planned[]>([]),[tasks,setTasks]=useState<Task[]>([]),[admins,setAdmins]=useState<Admin[]>([]),[busy,setBusy]=useState(false);
- const [editing,setEditing]=useState<string|null>(null),[title,setTitle]=useState(''),[due,setDue]=useState(''),[assignee,setAssignee]=useState(''),[taskNote,setTaskNote]=useState('');
- const [fuSubject,setFuSubject]=useState(''),[fuBody,setFuBody]=useState(''); const names=useMemo(()=>new Map(admins.map(a=>[a.id,a.full_name||a.id.slice(0,8)])),[admins]);
- const load=async()=>{const [{data:a},{data:t},{data:r}]=await Promise.all([(supabase as any).from('sales_lead_activities').select('id,activity_type,scheduled_for,activity_status,body_snapshot,performed_by,metadata').eq('lead_id',leadId).in('activity_type',['call_logged','meeting_logged','note_added']).eq('activity_status','naplanovano').not('scheduled_for','is',null).order('scheduled_for'),(supabase as any).from('sales_lead_tasks').select('id,title,due_at,status,note,assigned_admin_id').eq('lead_id',leadId).order('due_at'),(supabase as any).from('user_roles').select('user_id').in('role',['admin','superadmin'])]);setPlanned(a??[]);setTasks(t??[]);const ids=[...new Set((r??[]).map((x:any)=>x.user_id))] as string[];const {data:p}=ids.length?await (supabase as any).from('profiles').select('id,full_name').in('id',ids):{data:[]};const nm=new Map((p??[]).map((x:any)=>[x.id,x.full_name]));const list=ids.map(id=>({id,full_name:nm.get(id)??null}));setAdmins(list);if(!assignee&&list[0])setAssignee(list[0].id);};
- useEffect(()=>{void load();},[leadId]);
- const clear=()=>{setResult('');setNote('');setNext('');setWhen(localInput());setEditing(null);};
- const saveActivity=async()=>{if(!result.trim()||!when)return toast.error('Doplňte účel a datum s časem.');setBusy(true);const date=new Date(when).toISOString();const {data}=editing?await (supabase as any).rpc('sales_lead_scheduled_activity_update',{p_activity_id:editing,p_scheduled_for:date,p_result:result,p_next_step:next||null,p_note:note||null}):await (supabase as any).rpc('sales_lead_log_activity',{p_lead_id:leadId,p_kind:kind,p_happened_at:date,p_result:result,p_next_step:next||null,p_note:note||null});setBusy(false);if(!data?.success)return toast.error('Aktivitu se nepodařilo uložit.');toast.success(editing?'Naplánovaná aktivita upravena.':data.scheduled?'Aktivita je vidět v sekci Naplánované aktivity.':'Aktivita uložena do historie.');clear();await load();onChanged();};
- const edit=(a:Planned)=>{setEditing(a.id);setKind(a.activity_type==='meeting_logged'?'schuzka':a.activity_type==='call_logged'?'telefonat':'poznamka');setWhen(localInput(new Date(a.scheduled_for)));setResult(String(a.metadata?.result??''));setNext(String(a.metadata?.next_step??''));setNote(a.body_snapshot??'');};
- const setActivityStatus=async(id:string,s:string)=>{const {data}=await (supabase as any).rpc('sales_lead_scheduled_activity_set_status',{p_activity_id:id,p_status:s});if(!data?.success)return toast.error('Stav se nepodařilo změnit.');toast.success(s==='dokonceno'?'Aktivita dokončena a přesunuta do historie.':'Aktivita zrušena a ponechána v historii.');await load();onChanged();};
- const addTask=async()=>{if(!title||!due||!assignee)return toast.error('Vyplňte úkol, termín a odpovědnou osobu.');setBusy(true);const {data}=await (supabase as any).rpc('sales_lead_task_create',{p_lead_id:leadId,p_title:title,p_due_at:new Date(due).toISOString(),p_assigned_admin_id:assignee,p_note:taskNote||null});setBusy(false);if(!data?.success)return toast.error('Úkol se nepodařilo vytvořit.');setTitle('');setDue('');setTaskNote('');await load();onChanged();};
- const finishTask=async(id:string,s:string)=>{const {data}=await (supabase as any).rpc('sales_lead_task_set_status',{p_task_id:id,p_status:s});if(!data?.success)return toast.error('Úkol se nepodařilo změnit.');await load();onChanged();};
- const draftFollowUp=async()=>{setBusy(true);const {data,error}=await supabase.functions.invoke('sales-lead-draft-email',{body:{lead_id:leadId,mode:'follow_up'}});setBusy(false);if(error||!data?.success)return toast.error('Follow-up nyní nelze připravit.');setFuSubject(data.subject);setFuBody(data.body);};
- const sendFollowUp=async()=>{if(!confirm('Opravdu ručně odeslat tento follow-up?'))return;setBusy(true);const {data,error}=await supabase.functions.invoke('send-sales-lead-follow-up',{body:{lead_id:leadId,subject:fuSubject,body:fuBody}});setBusy(false);if(error||!data?.success)return toast.error(`Follow-up nebyl odeslán (${data?.error??'chyba'}).`);toast.success('Follow-up odeslán.');setFuSubject('');setFuBody('');onChanged();};
- return <div className="space-y-5">
-  <section className="rounded-lg border-2 border-primary/30 bg-primary/5 p-4"><div className="mb-3 flex items-center justify-between"><h3 className="font-semibold">Naplánované aktivity</h3><Badge>{planned.length}</Badge></div>{planned.length===0?<p className="text-sm text-muted-foreground">Žádná naplánovaná schůzka, telefonát ani další krok.</p>:<div className="space-y-3">{planned.map((a,i)=><article key={a.id} className={`rounded-lg border bg-background p-3 ${new Date(a.scheduled_for)<new Date()?'border-destructive':''}`}><div className="flex flex-wrap items-center gap-2"><Badge variant="outline">{typeLabel(a.activity_type)}</Badge><Badge variant={new Date(a.scheduled_for)<new Date()?'destructive':'secondary'}>{i===0?urgency(a.scheduled_for):new Date(a.scheduled_for)<new Date()?'Po termínu':''}</Badge><strong className="text-base">{czDate(a.scheduled_for)}</strong></div><div className="mt-2 text-sm"><div><strong>Účel/výsledek:</strong> {String(a.metadata?.result??'—')}</div><div><strong>Poznámka:</strong> {a.body_snapshot||'—'}</div><div><strong>Následující krok:</strong> {String(a.metadata?.next_step??'—')}</div><div><strong>Autor:</strong> {a.performed_by?names.get(a.performed_by)||a.performed_by.slice(0,8):'Systém'}</div></div><div className="mt-2 flex gap-2"><Button size="sm" variant="outline" onClick={()=>edit(a)}>Upravit</Button><Button size="sm" onClick={()=>setActivityStatus(a.id,'dokonceno')}>Dokončit</Button><Button size="sm" variant="ghost" onClick={()=>setActivityStatus(a.id,'zruseno')}>Zrušit</Button></div></article>)}</div>}</section>
-  <section className="rounded-lg border p-4"><h3 className="mb-2 font-semibold">{editing?'Upravit naplánovanou aktivitu':'Zapsat nebo naplánovat aktivitu'}</h3><div className="grid gap-2 sm:grid-cols-2"><Select value={kind} onValueChange={setKind} disabled={!!editing}><SelectTrigger><SelectValue/></SelectTrigger><SelectContent><SelectItem value="telefonat">Telefonát</SelectItem><SelectItem value="schuzka">Schůzka</SelectItem><SelectItem value="poznamka">Další krok / poznámka</SelectItem></SelectContent></Select><Input type="datetime-local" value={when} onChange={e=>setWhen(e.target.value)}/><Input placeholder="Účel nebo výsledek" value={result} onChange={e=>setResult(e.target.value)}/><Input placeholder="Následující krok (volitelný)" value={next} onChange={e=>setNext(e.target.value)}/></div><Textarea className="mt-2" placeholder="Poznámka (volitelná)" value={note} onChange={e=>setNote(e.target.value)}/><div className="mt-2 flex gap-2"><Button size="sm" disabled={busy} onClick={saveActivity}>{editing?'Uložit změny':'Uložit aktivitu'}</Button>{editing&&<Button size="sm" variant="ghost" onClick={clear}>Zrušit úpravu</Button>}</div><p className="mt-2 text-xs text-muted-foreground">Čas zadáváte v českém čase. Budoucí termín se zobrazí nahoře v Naplánovaných aktivitách.</p></section>
-  <section className="rounded-lg border p-4"><h3 className="mb-2 font-semibold">Úkoly a připomenutí</h3><div className="space-y-2">{tasks.map(t=><div key={t.id} className={`flex flex-wrap items-center gap-2 rounded border p-2 ${t.status==='ceka'&&new Date(t.due_at)<new Date()?'border-destructive bg-destructive/5':''}`}><span className="font-medium">{t.title}</span><Badge variant="outline">{t.status}</Badge><span className="text-xs">{czDate(t.due_at)}</span>{t.status==='ceka'&&<><Button size="sm" variant="outline" onClick={()=>finishTask(t.id,'dokonceno')}>Dokončit</Button><Button size="sm" variant="ghost" onClick={()=>finishTask(t.id,'zruseno')}>Zrušit</Button></>}</div>)}</div><div className="mt-3 grid gap-2 sm:grid-cols-2"><Input placeholder="Název úkolu" value={title} onChange={e=>setTitle(e.target.value)}/><Input type="datetime-local" value={due} onChange={e=>setDue(e.target.value)}/><Select value={assignee} onValueChange={setAssignee}><SelectTrigger><SelectValue placeholder="Odpovědný administrátor"/></SelectTrigger><SelectContent>{admins.map(a=><SelectItem key={a.id} value={a.id}>{a.full_name||a.id.slice(0,8)}</SelectItem>)}</SelectContent></Select><Input placeholder="Poznámka" value={taskNote} onChange={e=>setTaskNote(e.target.value)}/></div><Button className="mt-2" size="sm" disabled={busy} onClick={addTask}>Vytvořit úkol</Button></section>
-  <section className="rounded-lg border p-4"><h3 className="mb-1 font-semibold">Follow-up bez odpovědi</h3><p className="mb-2 text-xs text-muted-foreground">Odeslání je vždy ruční.</p><Button size="sm" variant="outline" disabled={!['osloveno','follow_up'].includes(status)||!emailApproved||busy} onClick={draftFollowUp}>Připravit AI návrh follow-upu</Button>{fuSubject&&<div className="mt-2 space-y-2"><Label>Předmět</Label><Input value={fuSubject} onChange={e=>setFuSubject(e.target.value)}/><Label>Text</Label><Textarea rows={7} value={fuBody} onChange={e=>setFuBody(e.target.value)}/><Button disabled={busy||!fuBody.trim()} onClick={sendFollowUp}>Ručně odeslat follow-up</Button></div>}</section>
- </div>;
+const localInput = (date = new Date()) => {
+  const p = (n: number) => String(n).padStart(2, '0');
+  return `${date.getFullYear()}-${p(date.getMonth() + 1)}-${p(date.getDate())}T${p(date.getHours())}:${p(date.getMinutes())}`;
+};
+const czDate = (iso: string) =>
+  new Intl.DateTimeFormat('cs-CZ', {
+    timeZone:'Europe/Prague',
+    day: 'numeric',
+    month: 'short',
+    year: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit',
+  }).format(new Date(iso));
+const typeLabel = (v: string) => (v === 'meeting_logged' ? 'Schůzka' : v === 'call_logged' ? 'Telefonát' : 'Další krok');
+const urgency = (iso: string) => {
+  const d = new Date(iso);
+  const now = new Date();
+  const today =
+    new Intl.DateTimeFormat('en-CA', { timeZone: 'Europe/Prague' }).format(now) ===
+    new Intl.DateTimeFormat('en-CA', { timeZone: 'Europe/Prague' }).format(d);
+  return d < now ? 'Po termínu' : today ? 'Dnes' : 'Naplánováno';
+};
+
+const RailCard = ({
+  icon,
+  eyebrow,
+  title,
+  count,
+  children,
+  accent = false,
+}: {
+  icon: ReactNode;
+  eyebrow: string;
+  title: string;
+  count?: number;
+  children: ReactNode;
+  accent?: boolean;
+}) => (
+  <section
+    className={`rounded-2xl border p-4 shadow-sm ${
+      accent ? 'border-primary/25 bg-gradient-to-br from-primary/[0.08] to-card/80' : 'border-border/60 bg-card/70'
+    }`}
+  >
+    <div className="mb-3 flex items-start justify-between gap-3">
+      <div className="flex items-start gap-2.5">
+        <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-muted/60 text-muted-foreground">
+          {icon}
+        </div>
+        <div>
+          <div className="text-[9px] font-semibold uppercase tracking-[0.16em] text-muted-foreground">{eyebrow}</div>
+          <h3 className="mt-0.5 text-sm font-semibold tracking-tight">{title}</h3>
+        </div>
+      </div>
+      {typeof count === 'number' && <Badge className="h-5 min-w-5 justify-center rounded-full px-1.5 text-[10px]">{count}</Badge>}
+    </div>
+    {children}
+  </section>
+);
+
+export function LeadCrmPanel({
+  leadId,
+  status,
+  emailApproved,
+  onChanged,
+}: {
+  leadId: string;
+  status: string;
+  emailApproved: boolean;
+  onChanged: () => void;
+}) {
+  const [kind, setKind] = useState('telefonat');
+  const [result, setResult] = useState('');
+  const [note, setNote] = useState('');
+  const [next, setNext] = useState('');
+  const [when, setWhen] = useState(localInput());
+  const [planned, setPlanned] = useState<Planned[]>([]);
+  const [tasks, setTasks] = useState<Task[]>([]);
+  const [admins, setAdmins] = useState<Admin[]>([]);
+  const [busy, setBusy] = useState(false);
+  const [editing, setEditing] = useState<string | null>(null);
+  const [title, setTitle] = useState('');
+  const [due, setDue] = useState('');
+  const [assignee, setAssignee] = useState('');
+  const [taskNote, setTaskNote] = useState('');
+  const [fuSubject, setFuSubject] = useState('');
+  const [fuBody, setFuBody] = useState('');
+  const names = useMemo(() => new Map(admins.map((a) => [a.id, a.full_name || a.id.slice(0, 8)])), [admins]);
+
+  const load = async () => {
+    const [{ data: a }, { data: t }, { data: r }] = await Promise.all([
+      (supabase as any)
+        .from('sales_lead_activities')
+        .select('id,activity_type,scheduled_for,activity_status,body_snapshot,performed_by,metadata')
+        .eq('lead_id', leadId)
+        .in('activity_type', ['call_logged', 'meeting_logged', 'note_added'])
+        .eq('activity_status', 'naplanovano')
+        .not('scheduled_for', 'is', null)
+        .order('scheduled_for'),
+      (supabase as any).from('sales_lead_tasks').select('id,title,due_at,status,note,assigned_admin_id').eq('lead_id', leadId).order('due_at'),
+      (supabase as any).from('user_roles').select('user_id').in('role', ['admin', 'superadmin']),
+    ]);
+    setPlanned(a ?? []);
+    setTasks(t ?? []);
+    const ids = [...new Set((r ?? []).map((x: any) => x.user_id))] as string[];
+    const { data: p } = ids.length
+      ? await (supabase as any).from('profiles').select('id,full_name').in('id', ids)
+      : { data: [] };
+    const nm = new Map((p ?? []).map((x: any) => [x.id, x.full_name]));
+    const list = ids.map((id) => ({ id, full_name: nm.get(id) ?? null }));
+    setAdmins(list);
+    if (!assignee && list[0]) setAssignee(list[0].id);
+  };
+
+  useEffect(() => {
+    void load();
+  }, [leadId]);
+
+  const clear = () => {
+    setResult('');
+    setNote('');
+    setNext('');
+    setWhen(localInput());
+    setEditing(null);
+  };
+  const saveActivity = async () => {
+    if (!result.trim() || !when) return toast.error('Doplňte účel a datum s časem.');
+    setBusy(true);
+    const date = new Date(when).toISOString();
+    const { data } = editing
+      ? await (supabase as any).rpc('sales_lead_scheduled_activity_update', {
+          p_activity_id: editing,
+          p_scheduled_for: date,
+          p_result: result,
+          p_next_step: next || null,
+          p_note: note || null,
+        })
+      : await (supabase as any).rpc('sales_lead_log_activity', {
+          p_lead_id: leadId,
+          p_kind: kind,
+          p_happened_at: date,
+          p_result: result,
+          p_next_step: next || null,
+          p_note: note || null,
+        });
+    setBusy(false);
+    if (!data?.success) return toast.error('Aktivitu se nepodařilo uložit.');
+    toast.success(
+      editing
+        ? 'Naplánovaná aktivita upravena.'
+        : data.scheduled
+          ? 'Aktivita je vidět v sekci Naplánované aktivity.'
+          : 'Aktivita uložena do historie.',
+    );
+    clear();
+    await load();
+    onChanged();
+  };
+  const edit = (a: Planned) => {
+    setEditing(a.id);
+    setKind(a.activity_type === 'meeting_logged' ? 'schuzka' : a.activity_type === 'call_logged' ? 'telefonat' : 'poznamka');
+    setWhen(localInput(new Date(a.scheduled_for)));
+    setResult(String(a.metadata?.result ?? ''));
+    setNext(String(a.metadata?.next_step ?? ''));
+    setNote(a.body_snapshot ?? '');
+  };
+  const setActivityStatus = async (id: string, s: string) => {
+    const { data } = await (supabase as any).rpc('sales_lead_scheduled_activity_set_status', { p_activity_id: id, p_status: s });
+    if (!data?.success) return toast.error('Stav se nepodařilo změnit.');
+    toast.success(s === 'dokonceno' ? 'Aktivita dokončena a přesunuta do historie.' : 'Aktivita zrušena a ponechána v historii.');
+    await load();
+    onChanged();
+  };
+  const addTask = async () => {
+    if (!title || !due || !assignee) return toast.error('Vyplňte úkol, termín a odpovědnou osobu.');
+    setBusy(true);
+    const { data } = await (supabase as any).rpc('sales_lead_task_create', {
+      p_lead_id: leadId,
+      p_title: title,
+      p_due_at: new Date(due).toISOString(),
+      p_assigned_admin_id: assignee,
+      p_note: taskNote || null,
+    });
+    setBusy(false);
+    if (!data?.success) return toast.error('Úkol se nepodařilo vytvořit.');
+    setTitle('');
+    setDue('');
+    setTaskNote('');
+    await load();
+    onChanged();
+  };
+  const finishTask = async (id: string, s: string) => {
+    const { data } = await (supabase as any).rpc('sales_lead_task_set_status', { p_task_id: id, p_status: s });
+    if (!data?.success) return toast.error('Úkol se nepodařilo změnit.');
+    await load();
+    onChanged();
+  };
+  const draftFollowUp = async () => {
+    setBusy(true);
+    const { data, error } = await supabase.functions.invoke('sales-lead-draft-email', { body: { lead_id: leadId, mode: 'follow_up' } });
+    setBusy(false);
+    if (error || !data?.success) return toast.error('Follow-up nyní nelze připravit.');
+    setFuSubject(data.subject);
+    setFuBody(data.body);
+  };
+  const sendFollowUp = async () => {
+    if (!confirm('Opravdu ručně odeslat tento follow-up?')) return;
+    setBusy(true);
+    const { data, error } = await supabase.functions.invoke('send-sales-lead-follow-up', {
+      body: { lead_id: leadId, subject: fuSubject, body: fuBody },
+    });
+    setBusy(false);
+    if (error || !data?.success) return toast.error(`Follow-up nebyl odeslán (${data?.error ?? 'chyba'}).`);
+    toast.success('Follow-up odeslán.');
+    setFuSubject('');
+    setFuBody('');
+    onChanged();
+  };
+
+  return (
+    <div className="space-y-4">
+      <RailCard icon={<CalendarClock className="h-4 w-4" />} eyebrow="Upcoming" title="Naplánované aktivity" count={planned.length} accent>
+        {planned.length === 0 ? (
+          <div className="rounded-xl border border-dashed border-border/70 bg-background/30 px-3 py-4 text-center">
+            <Clock3 className="mx-auto h-5 w-5 text-muted-foreground/60" />
+            <p className="mt-2 text-xs leading-relaxed text-muted-foreground">Žádná naplánovaná schůzka, telefonát ani další krok.</p>
+          </div>
+        ) : (
+          <div className="space-y-2.5">
+            {planned.map((a, i) => (
+              <article
+                key={a.id}
+                className={`rounded-xl border bg-background/80 p-3 ${new Date(a.scheduled_for) < new Date() ? 'border-destructive/60' : 'border-border/60'}`}
+              >
+                <div className="flex flex-wrap items-center gap-1.5">
+                  <Badge variant="outline" className="rounded-full text-[9px]">{typeLabel(a.activity_type)}</Badge>
+                  <Badge variant={new Date(a.scheduled_for) < new Date() ? 'destructive' : 'secondary'} className="rounded-full text-[9px]">
+                    {i === 0 ? urgency(a.scheduled_for) : new Date(a.scheduled_for) < new Date() ? 'Po termínu' : 'Později'}
+                  </Badge>
+                </div>
+                <div className="mt-2 text-sm font-semibold">{czDate(a.scheduled_for)}</div>
+                <div className="mt-2 space-y-1 text-xs leading-relaxed text-muted-foreground">
+                  <div><span className="font-medium text-foreground">Výsledek:</span> {String(a.metadata?.result ?? '—')}</div>
+                  <div><span className="font-medium text-foreground">Další krok:</span> {String(a.metadata?.next_step ?? '—')}</div>
+                  {a.body_snapshot && <div>{a.body_snapshot}</div>}
+                  <div className="text-[10px]">Autor: {a.performed_by ? names.get(a.performed_by) || a.performed_by.slice(0, 8) : 'Systém'}</div>
+                </div>
+                <div className="mt-3 grid grid-cols-3 gap-1.5">
+                  <Button size="sm" variant="outline" className="h-8 px-2 text-[10px]" onClick={() => edit(a)}>Upravit</Button>
+                  <Button size="sm" className="h-8 px-2 text-[10px]" onClick={() => setActivityStatus(a.id, 'dokonceno')}><Check className="mr-1 h-3 w-3" />Hotovo</Button>
+                  <Button size="sm" variant="ghost" className="h-8 px-2 text-[10px]" onClick={() => setActivityStatus(a.id, 'zruseno')}><X className="mr-1 h-3 w-3" />Zrušit</Button>
+                </div>
+              </article>
+            ))}
+          </div>
+        )}
+      </RailCard>
+
+      <RailCard icon={<PhoneCall className="h-4 w-4" />} eyebrow="Log" title={editing ? 'Upravit aktivitu' : 'Zapsat aktivitu'}>
+        <div className="space-y-2">
+          <div className="grid grid-cols-2 gap-2">
+            <Select value={kind} onValueChange={setKind} disabled={!!editing}>
+              <SelectTrigger className="h-9 text-xs"><SelectValue /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="telefonat">Telefonát</SelectItem>
+                <SelectItem value="schuzka">Schůzka</SelectItem>
+                <SelectItem value="poznamka">Další krok / poznámka</SelectItem>
+              </SelectContent>
+            </Select>
+            <Input className="h-9 text-xs" type="datetime-local" value={when} onChange={(e) => setWhen(e.target.value)} />
+          </div>
+          <Input className="h-9 text-xs" placeholder="Účel nebo výsledek" value={result} onChange={(e) => setResult(e.target.value)} />
+          <Input className="h-9 text-xs" placeholder="Následující krok (volitelný)" value={next} onChange={(e) => setNext(e.target.value)} />
+          <Textarea className="min-h-20 resize-none text-xs" placeholder="Poznámka (volitelná)" value={note} onChange={(e) => setNote(e.target.value)} />
+          <div className="flex gap-2">
+            <Button size="sm" className="h-8 flex-1 text-xs" disabled={busy} onClick={saveActivity}>
+              <MessageSquarePlus className="mr-1.5 h-3.5 w-3.5" />{editing ? 'Uložit změny' : 'Uložit aktivitu'}
+            </Button>
+            {editing && <Button size="sm" variant="ghost" className="h-8 text-xs" onClick={clear}>Zrušit</Button>}
+          </div>
+          <p className="text-[10px] leading-relaxed text-muted-foreground">Čas zadáváte v českém čase. Budoucí termín se přesune mezi naplánované aktivity.</p>
+        </div>
+      </RailCard>
+
+      <RailCard icon={<ListTodo className="h-4 w-4" />} eyebrow="Tasks" title="Úkoly a připomenutí" count={tasks.filter((t) => t.status === 'ceka').length}>
+        {tasks.length > 0 && (
+          <div className="mb-3 space-y-2">
+            {tasks.map((t) => (
+              <div
+                key={t.id}
+                className={`rounded-xl border p-2.5 ${t.status === 'ceka' && new Date(t.due_at) < new Date() ? 'border-destructive/50 bg-destructive/5' : 'border-border/50 bg-background/40'}`}
+              >
+                <div className="flex items-start justify-between gap-2">
+                  <span className="text-xs font-medium leading-snug">{t.title}</span>
+                  <Badge variant="outline" className="shrink-0 rounded-full text-[9px]">{t.status}</Badge>
+                </div>
+                <div className="mt-1 text-[10px] text-muted-foreground">{czDate(t.due_at)}</div>
+                {t.status === 'ceka' && (
+                  <div className="mt-2 flex gap-1.5">
+                    <Button size="sm" variant="outline" className="h-7 flex-1 text-[10px]" onClick={() => finishTask(t.id, 'dokonceno')}><CheckCircle2 className="mr-1 h-3 w-3" />Dokončit</Button>
+                    <Button size="sm" variant="ghost" className="h-7 text-[10px]" onClick={() => finishTask(t.id, 'zruseno')}>Zrušit</Button>
+                  </div>
+                )}
+              </div>
+            ))}
+          </div>
+        )}
+        <div className="space-y-2 border-t border-border/50 pt-3">
+          <Input className="h-9 text-xs" placeholder="Název úkolu" value={title} onChange={(e) => setTitle(e.target.value)} />
+          <Input className="h-9 text-xs" type="datetime-local" value={due} onChange={(e) => setDue(e.target.value)} />
+          <Select value={assignee} onValueChange={setAssignee}>
+            <SelectTrigger className="h-9 text-xs"><SelectValue placeholder="Odpovědný administrátor" /></SelectTrigger>
+            <SelectContent>{admins.map((a) => <SelectItem key={a.id} value={a.id}>{a.full_name || a.id.slice(0, 8)}</SelectItem>)}</SelectContent>
+          </Select>
+          <Input className="h-9 text-xs" placeholder="Poznámka" value={taskNote} onChange={(e) => setTaskNote(e.target.value)} />
+          <Button className="h-8 w-full text-xs" size="sm" disabled={busy} onClick={addTask}><Plus className="mr-1.5 h-3.5 w-3.5" />Vytvořit úkol</Button>
+        </div>
+      </RailCard>
+
+      <RailCard icon={<Sparkles className="h-4 w-4" />} eyebrow="Follow-up" title="Navázat bez odpovědi">
+        <p className="mb-3 text-xs leading-relaxed text-muted-foreground">AI připraví návrh. Odeslání zůstává vždy ruční.</p>
+        <Button
+          size="sm"
+          variant="outline"
+          className="h-8 w-full text-xs"
+          disabled={!['osloveno', 'follow_up'].includes(status) || !emailApproved || busy}
+          onClick={draftFollowUp}
+        >
+          <Sparkles className="mr-1.5 h-3.5 w-3.5" />Připravit AI follow-up
+        </Button>
+        {fuSubject && (
+          <div className="mt-3 space-y-2 border-t border-border/50 pt-3">
+            <Label className="text-xs">Předmět</Label>
+            <Input className="h-9 text-xs" value={fuSubject} onChange={(e) => setFuSubject(e.target.value)} />
+            <Label className="text-xs">Text</Label>
+            <Textarea className="resize-none text-xs" rows={7} value={fuBody} onChange={(e) => setFuBody(e.target.value)} />
+            <Button className="h-8 w-full text-xs" disabled={busy || !fuBody.trim()} onClick={sendFollowUp}>Ručně odeslat follow-up</Button>
+          </div>
+        )}
+      </RailCard>
+    </div>
+  );
 }
