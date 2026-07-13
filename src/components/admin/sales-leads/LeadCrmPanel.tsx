@@ -2,6 +2,7 @@
 import { useEffect, useMemo, useState, type ReactNode } from 'react';
 import {
   CalendarClock,
+  CalendarDays,
   Check,
   CheckCircle2,
   Clock3,
@@ -10,6 +11,7 @@ import {
   PhoneCall,
   Plus,
   Sparkles,
+  StickyNote,
   X,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -72,18 +74,18 @@ const RailCard = ({
   accent?: boolean;
 }) => (
   <section
-    className={`rounded-2xl border p-4 shadow-sm ${
-      accent ? 'border-primary/25 bg-gradient-to-br from-primary/[0.08] to-card/80' : 'border-border/60 bg-card/70'
+    className={`rounded-[22px] border p-5 shadow-[0_18px_55px_-34px_rgba(0,0,0,0.95)] ring-1 ring-black/5 ${
+      accent ? 'border-primary/25 bg-gradient-to-br from-primary/[0.12] via-card to-card' : 'border-white/[0.08] bg-card/95'
     }`}
   >
     <div className="mb-3 flex items-start justify-between gap-3">
       <div className="flex items-start gap-2.5">
-        <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-muted/60 text-muted-foreground">
+        <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl border border-white/[0.07] bg-gradient-to-br from-white/[0.08] to-white/[0.02] text-foreground shadow-md">
           {icon}
         </div>
         <div>
           <div className="text-[9px] font-semibold uppercase tracking-[0.16em] text-muted-foreground">{eyebrow}</div>
-          <h3 className="mt-0.5 text-sm font-semibold tracking-tight">{title}</h3>
+          <h3 className="mt-0.5 text-base font-semibold tracking-[-0.02em]">{title}</h3>
         </div>
       </div>
       {typeof count === 'number' && <Badge className="h-5 min-w-5 justify-center rounded-full px-1.5 text-[10px]">{count}</Badge>}
@@ -119,6 +121,8 @@ export function LeadCrmPanel({
   const [taskNote, setTaskNote] = useState('');
   const [fuSubject, setFuSubject] = useState('');
   const [fuBody, setFuBody] = useState('');
+  const [activityComposerOpen, setActivityComposerOpen] = useState(false);
+  const [taskComposerOpen, setTaskComposerOpen] = useState(false);
   const names = useMemo(() => new Map(admins.map((a) => [a.id, a.full_name || a.id.slice(0, 8)])), [admins]);
 
   const load = async () => {
@@ -156,6 +160,7 @@ export function LeadCrmPanel({
     setNext('');
     setWhen(localInput());
     setEditing(null);
+    setActivityComposerOpen(false);
   };
   const saveActivity = async () => {
     if (!result.trim() || !when) return toast.error('Doplňte účel a datum s časem.');
@@ -191,6 +196,7 @@ export function LeadCrmPanel({
     onChanged();
   };
   const edit = (a: Planned) => {
+    setActivityComposerOpen(true);
     setEditing(a.id);
     setKind(a.activity_type === 'meeting_logged' ? 'schuzka' : a.activity_type === 'call_logged' ? 'telefonat' : 'poznamka');
     setWhen(localInput(new Date(a.scheduled_for)));
@@ -220,6 +226,7 @@ export function LeadCrmPanel({
     setTitle('');
     setDue('');
     setTaskNote('');
+    setTaskComposerOpen(false);
     await load();
     onChanged();
   };
@@ -291,7 +298,26 @@ export function LeadCrmPanel({
       </RailCard>
 
       <RailCard icon={<PhoneCall className="h-4 w-4" />} eyebrow="Log" title={editing ? 'Upravit aktivitu' : 'Zapsat aktivitu'}>
-        <div className="space-y-2">
+        {!editing && (
+          <div className="grid grid-cols-3 gap-2">
+            {[
+              { value: 'telefonat', label: 'Zavolat', icon: <PhoneCall className="h-4 w-4" /> },
+              { value: 'schuzka', label: 'Schůzka', icon: <CalendarDays className="h-4 w-4" /> },
+              { value: 'poznamka', label: 'Poznámka', icon: <StickyNote className="h-4 w-4" /> },
+            ].map((action) => (
+              <Button
+                key={action.value}
+                variant={activityComposerOpen && kind === action.value ? 'default' : 'outline'}
+                className="h-auto flex-col gap-2 rounded-2xl border-white/[0.08] px-2 py-3 text-[11px]"
+                onClick={() => { setKind(action.value); setActivityComposerOpen(true); }}
+              >
+                {action.icon}{action.label}
+              </Button>
+            ))}
+          </div>
+        )}
+        {activityComposerOpen && (
+        <div className="mt-4 space-y-2 border-t border-white/[0.07] pt-4">
           <div className="grid grid-cols-2 gap-2">
             <Select value={kind} onValueChange={setKind} disabled={!!editing}>
               <SelectTrigger className="h-9 text-xs"><SelectValue /></SelectTrigger>
@@ -310,10 +336,11 @@ export function LeadCrmPanel({
             <Button size="sm" className="h-8 flex-1 text-xs" disabled={busy} onClick={saveActivity}>
               <MessageSquarePlus className="mr-1.5 h-3.5 w-3.5" />{editing ? 'Uložit změny' : 'Uložit aktivitu'}
             </Button>
-            {editing && <Button size="sm" variant="ghost" className="h-8 text-xs" onClick={clear}>Zrušit</Button>}
+            <Button size="sm" variant="ghost" className="h-8 text-xs" onClick={() => editing ? clear() : setActivityComposerOpen(false)}>Zrušit</Button>
           </div>
           <p className="text-[10px] leading-relaxed text-muted-foreground">Čas zadáváte v českém čase. Budoucí termín se přesune mezi naplánované aktivity.</p>
         </div>
+        )}
       </RailCard>
 
       <RailCard icon={<ListTodo className="h-4 w-4" />} eyebrow="Tasks" title="Úkoly a připomenutí" count={tasks.filter((t) => t.status === 'ceka').length}>
@@ -339,7 +366,13 @@ export function LeadCrmPanel({
             ))}
           </div>
         )}
-        <div className="space-y-2 border-t border-border/50 pt-3">
+        {!taskComposerOpen && (
+          <Button variant="outline" className="h-11 w-full rounded-2xl border-dashed border-white/[0.12] bg-background/35 text-xs" onClick={() => setTaskComposerOpen(true)}>
+            <Plus className="mr-2 h-4 w-4" />Nový úkol
+          </Button>
+        )}
+        {taskComposerOpen && (
+        <div className="space-y-2 border-t border-white/[0.07] pt-4">
           <Input className="h-9 text-xs" placeholder="Název úkolu" value={title} onChange={(e) => setTitle(e.target.value)} />
           <Input className="h-9 text-xs" type="datetime-local" value={due} onChange={(e) => setDue(e.target.value)} />
           <Select value={assignee} onValueChange={setAssignee}>
@@ -347,8 +380,12 @@ export function LeadCrmPanel({
             <SelectContent>{admins.map((a) => <SelectItem key={a.id} value={a.id}>{a.full_name || a.id.slice(0, 8)}</SelectItem>)}</SelectContent>
           </Select>
           <Input className="h-9 text-xs" placeholder="Poznámka" value={taskNote} onChange={(e) => setTaskNote(e.target.value)} />
-          <Button className="h-8 w-full text-xs" size="sm" disabled={busy} onClick={addTask}><Plus className="mr-1.5 h-3.5 w-3.5" />Vytvořit úkol</Button>
+          <div className="flex gap-2">
+            <Button className="h-9 flex-1 text-xs" size="sm" disabled={busy} onClick={addTask}><Plus className="mr-1.5 h-3.5 w-3.5" />Vytvořit úkol</Button>
+            <Button className="h-9 text-xs" size="sm" variant="ghost" onClick={() => setTaskComposerOpen(false)}>Zrušit</Button>
+          </div>
         </div>
+        )}
       </RailCard>
 
       <RailCard icon={<Sparkles className="h-4 w-4" />} eyebrow="Follow-up" title="Navázat bez odpovědi">
@@ -356,7 +393,7 @@ export function LeadCrmPanel({
         <Button
           size="sm"
           variant="outline"
-          className="h-8 w-full text-xs"
+          className="h-11 w-full rounded-2xl text-xs"
           disabled={!['osloveno', 'follow_up'].includes(status) || !emailApproved || busy}
           onClick={draftFollowUp}
         >
