@@ -122,24 +122,19 @@ test.describe.serial('Sales lead email templates – real staging acceptance', (
     }
 
     const common = {
-      ico: '12345678',
-      dic: 'CZ12345678',
-      website: 'https://e2e-template.example',
-      website_domain: 'e2e-template.example',
       industry: 'retail',
       city: 'Brno',
       contact_person: 'Jana Nováková',
       contact_role: 'CEO',
-      contact_email: 'crm-template-e2e@example.invalid',
       email_verified_by_admin: true,
       do_not_contact: false,
       source: 'staging_e2e',
       created_by: superId,
     };
     const { data: leads, error: leadError } = await admin.from('sales_leads').insert([
-      { ...common, company_name: companies.initial, status: 'priprava' },
-      { ...common, company_name: companies.reply, status: 'odpovedel' },
-      { ...common, company_name: companies.followUp, status: 'follow_up' },
+      { ...common, company_name: companies.initial, status: 'priprava', ico: '98100001', dic: 'CZ98100001', website: 'https://initial.e2e-template.example', website_domain: 'initial.e2e-template.example', contact_email: 'initial@e2e-template.example' },
+      { ...common, company_name: companies.reply, status: 'odpovedel', ico: '98100002', dic: 'CZ98100002', website: 'https://reply.e2e-template.example', website_domain: 'reply.e2e-template.example', contact_email: 'reply@e2e-template.example' },
+      { ...common, company_name: companies.followUp, status: 'follow_up', ico: '98100003', dic: 'CZ98100003', website: 'https://follow-up.e2e-template.example', website_domain: 'follow-up.e2e-template.example', contact_email: 'follow-up@e2e-template.example' },
     ]).select('id,company_name');
     if (leadError) throw leadError;
     for (const lead of leads ?? []) leadIds.push(lead.id);
@@ -223,7 +218,7 @@ test.describe.serial('Sales lead email templates – real staging acceptance', (
     await initialPicker.getByText(names.initial, { exact: true }).locator('..').locator('..').getByRole('button', { name: 'Použít šablonu' }).click();
     await expect(page.locator('#sl-draft-subject')).toHaveValue(`OneMil pro ${companies.initial} v Brno`);
     const initialBody = await page.locator('#sl-draft-body').inputValue();
-    for (const value of [companies.initial, 'Jana Nováková', 'CEO', 'Brno', 'https://e2e-template.example']) expect(initialBody).toContain(value);
+    for (const value of [companies.initial, 'Jana Nováková', 'CEO', 'Brno', 'https://initial.e2e-template.example']) expect(initialBody).toContain(value);
     expect(initialBody).not.toMatch(/\{\{[^{}]+\}\}/);
 
     const beforeAssist = await admin.from('sales_leads').select('draft_email_subject,draft_email_body').eq('id', leadIds[0]).single();
