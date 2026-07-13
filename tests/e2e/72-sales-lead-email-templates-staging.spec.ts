@@ -46,6 +46,8 @@ async function login(page: Page, email: string, password: string): Promise<void>
   await page.locator('#password').fill(password);
   await page.getByRole('button', { name: 'Přihlásit se', exact: true }).click();
   await page.waitForURL((current) => !current.pathname.endsWith('/login'), { timeout: 20_000 });
+  const cookieConsent = page.getByRole('button', { name: 'Souhlasím', exact: true });
+  if (await cookieConsent.isVisible().catch(() => false)) await cookieConsent.click();
 }
 
 async function resetSession(page: Page): Promise<void> {
