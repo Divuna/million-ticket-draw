@@ -1,142 +1,98 @@
 import { test, expect } from '@playwright/test';
 import fs from 'node:fs';
 
-const discover = fs.readFileSync('supabase/functions/sales-lead-discover/index.ts', 'utf8');
-const search = fs.readFileSync('supabase/functions/_shared/companyWebsiteSearch.ts', 'utf8');
-const crawler = fs.readFileSync('supabase/functions/_shared/companyEmailCrawler.ts', 'utf8');
+const worker = fs.readFileSync('supabase/functions/sales-lead-discover/index.ts', 'utf8');
+const candidates = fs.readFileSync('supabase/functions/_shared/companyCandidateSearch.ts', 'utf8');
+const registry = fs.readFileSync('supabase/functions/_shared/companyRegistryEnrich.ts', 'utf8');
 const verifier = fs.readFileSync('supabase/functions/_shared/companyWebsiteVerifier.ts', 'utf8');
 const dialog = fs.readFileSync('src/components/admin/sales-leads/DiscoverLeadsDialog.tsx', 'utf8');
+const migJobs = fs.readFileSync('supabase/migrations/20260712120000_sales_lead_discovery_jobs.sql', 'utf8');
+const migCron = fs.readFileSync('supabase/migrations/20260712130000_sales_lead_discovery_worker_cron.sql', 'utf8');
 
-test.describe('discover aktivně dohledá a ověří web, neukládá prázdné leady', () => {
-  test('primární vyhledávání je OpenAI Responses API web search', () => {
-    expect(discover).toContain('findOfficialWebsiteCandidates');
-    expect(search).toContain('api.openai.com/v1/responses');
-    expect(search).toContain('web_search_preview');
-    expect(search).toContain('gpt-4o-mini');
-    // URL se berou z anotací/citací I z textu odpovědi
-    expect(search).toContain('extractUrlsFromResponses');
-    expect(search).toContain('url_citation');
-    expect(search).toContain('URL_IN_TEXT_RE');
+test.describe('Discovery Jobs — worker, kandidáti z web search, bez e-mailu', () => {
+  test('kandidáti se získávají AKTIVNÍM web search (ne AI generuje seznam)', () => {
+    expect(candidates).toContain('web_search_preview');
+    expect(candidates).toContain('api.openai.com/v1/responses');
+    expect(candidates).toContain('duckduckgo.com/html'); // fallback
+    expect(candidates).toContain('SEGMENT_QUERIES');
+    expect(candidates).toContain('buildQueriesForRound');
+    expect(worker).toContain('generateCandidateUrls');
   });
 
-  test('DuckDuckGo zůstává jen jako nouzový fallback', () => {
-    expect(search).toContain('duckduckgo.com/html');
-    expect(search).toContain('parseDuckDuckGoResults');
-    expect(search).toContain('uddg=');
-    expect(search).toContain('FALLBACK');
-    // Brave Search API se neimplementuje
-    expect(search).not.toContain('brave');
-    expect(search).not.toContain('api.search.brave.com');
+  test('AI se používá JEN pro klasifikaci/relevanci/shrnutí', () => {
+    expect(worker).toContain('async function classify(');
+    expect(worker).toContain('"relevant"');
+    expect(worker).toContain('summary');
+    // AI není zdroj pravdy pro web/IČO/DIČ/adresu → ty jsou z ARES/webu
+    expect(worker).toContain('verifyDiscoveredCompanySite');
+    expect(worker).toContain('aresByIco');
+    expect(worker).toContain('aresByName');
   });
 
-  test('web search má druhý pokus s jinou formulací dotazu', () => {
-    // dvě různě formulované varianty; firma se opustí až po druhém neúspěchu
-    expect(search).toContain('const queries = [');
-    expect(search).toContain('kontakt oficiální web');
-    expect(search).toContain('for (const query of queries)');
-    expect(search).toContain('if (candidates.length > 0) return candidates;');
-  });
-
-  test('celá pipeline má podrobné logování (kde se proces zastaví)', () => {
-    expect(discover).toContain('function dbg(');
-    expect(discover).toContain('dbg("ai_proposed"');
-    expect(discover).toContain('dbg("search_done"');
-    expect(discover).toContain('dbg("verify_done"');
-    expect(discover).toContain('dbg("skipped_unverified_website"');
-    expect(search).toContain('logSearch');
-  });
-
-  test('vyhledané weby jdou před AI odhady a stejně se ověří', () => {
-    expect(discover).toContain('const candidates = [...searchCandidates, ...aiCandidates]');
-    expect(discover).toContain('verifyCompanyWebsite({ companyName: name, ico: icoHint, candidates })');
-  });
-
-  test('bez ověřeného webu se firma NEUKLÁDÁ (žádný prázdný lead)', () => {
-    expect(discover).toContain('if (!website) {');
-    expect(discover).toContain("reason: \"unverified_website\"");
-    // po zápisu unverified_website následuje continue před jakýmkoli RPC zápisem
-    const idx = discover.indexOf('reason: "unverified_website"');
-    const after = discover.slice(idx, idx + 60);
-    expect(after).toContain('continue');
-  });
-
-  test('firma bez webu se už NEukládá přes sales_lead_propose s null webem', () => {
-    // no-email větev se volá jen pro ověřený web -> p_website je vždy `website`, ne `website || null`
-    expect(discover).not.toContain('p_website: website || null');
-    expect(discover).toContain('p_website: website,');
-  });
-
-  test('sociální sítě a katalogy se neberou jako oficiální web', () => {
-    expect(search).toContain('NON_OFFICIAL_HOST_SUFFIXES');
-    expect(search).toContain('facebook.com');
-    expect(search).toContain('firmy.cz');
-  });
-
-  test('stahování používá realistickou prohlížečovou hlavičku (méně WAF 403)', () => {
-    expect(verifier).toContain('BROWSER_UA');
-    expect(verifier).toContain('Mozilla/5.0');
-    expect(verifier).toContain('Accept-Language');
-    expect(crawler).toContain('Mozilla/5.0');
-  });
-
-  test('e-mail se bere jen z ověřeného webu a filtrují se cizí tech domény', () => {
-    expect(crawler).toContain('PLACEHOLDER_EMAIL_DOMAINS');
-    expect(crawler).toContain('sentry.io');
-    expect(crawler).toContain('readymag.com');
-    expect(crawler).toContain('isLikelyPlaceholderEmail');
-  });
-
-  test('souhrn běhu: prověřeno / uloženo / ověřené weby / odmítnuto (bez e-mailových metrik)', () => {
-    expect(discover).toContain('candidates_checked: candidatesChecked');
-    expect(discover).toContain('created,');
-    expect(discover).toContain('websites_verified: websitesVerified');
-    expect(discover).toContain('websites_rejected: websitesRejected');
-    // e-mailové metriky discovery zrušeny
-    expect(discover).not.toContain('created_with_email');
-    expect(discover).not.toContain('created_without_email');
-    expect(dialog).toContain('Prověřeno kandidátů');
-    expect(dialog).toContain('Ověřené weby');
-    expect(dialog).toContain('Odmítnuto (neověřený web)');
-    expect(dialog).not.toContain('s veřejným e-mailem');
-    expect(dialog).not.toContain('jen web, bez e-mailu');
+  test('requested_count = počet ULOŽENÝCH firem (fill-to-count po dávkách)', () => {
+    expect(worker).toContain('counters.created_count < requested');
+    expect(worker).toContain('counters.candidates_checked < maxCandidates');
+    expect(worker).toContain('target_reached');
+    expect(worker).toContain('candidates_exhausted');
+    expect(worker).toContain('max_candidates_reached');
+    expect(migJobs).toContain('requested_count = počet uložených firem');
   });
 
   test('discovery NIKDY nesbírá ani neukládá e-mail', () => {
-    // žádný email crawl, žádný kontaktní RPC, žádné psaní e-mailu v discovery
-    expect(discover).not.toContain('crawlCompanyWebsite');
-    expect(discover).not.toContain('sales_lead_propose_with_contact');
-    expect(discover).not.toContain('p_email');
-    expect(discover).not.toContain('proposed_contact');
-    expect(discover).not.toContain('contact_data_provenance');
-    // ukládá jen přes web-only RPC
-    expect(discover).toContain('supabaseAdmin.rpc("sales_lead_propose"');
-    // prompt už e-mail nesbírá
-    expect(discover).toContain('E-mail se při discovery NEsbírá');
+    expect(worker).not.toContain('crawlCompanyWebsite');
+    expect(worker).not.toContain('sales_lead_propose_with_contact');
+    expect(worker).not.toContain('p_email');
+    expect(worker).not.toContain('proposed_contact');
+    expect(worker).toContain('supabaseAdmin.rpc("sales_lead_propose"');
   });
 
-  test('UI copy už netvrdí, že se uloží každá firma bez ohledu na web', () => {
-    expect(dialog).toContain('Uloží se jen firmy s ověřeným oficiálním webem');
-    expect(dialog).not.toContain('Uloží se každá použitelná firma');
+  test('enrichment jen doložitelných údajů z ARES/webu (nic se nehádá)', () => {
+    expect(registry).toContain('export async function aresByIco');
+    expect(registry).toContain('export async function aresByName');
+    expect(registry).toContain('export function extractIcoFromText');
+    expect(worker).toContain('contact_data_provenance');
+    expect(worker).toContain('ARES');
+    expect(worker).toContain('dic:');
+    expect(worker).toContain('contact_phone');
   });
 
-  test('e-mail: sanitizace + doménová/značková příslušnost firmě', () => {
-    expect(crawler).toContain('export function sanitizeEmail');
-    expect(crawler).toContain('while (s.startsWith("mailto:"))');
-    expect(crawler).toContain('s.includes(":")');
-    expect(crawler).toContain('export function emailBelongsToCompany');
-    expect(crawler).toContain('registrableDomain');
+  test('dedup + wrong-category do správné kategorie', () => {
+    expect(worker).toContain('counters.duplicates++');
+    expect(worker).toContain('website_domain.eq');
+    expect(worker).toContain('validSlugs.has(cls.slug)');
+    expect(worker).toContain('counters.wrong_category++');
   });
 
-  test('verifier: blocklist zpravodajských/katalogových domén + doménová identita', () => {
+  test('přísné ověření webu (news blocklist, parked, prázdný)', () => {
+    expect(verifier).toContain('verifyDiscoveredCompanySite');
     expect(verifier).toContain('NEWS_CATALOG_BLOCKLIST');
-    expect(verifier).toContain('mediar.cz');
-    expect(verifier).toContain('mam.cz');
-    expect(verifier).toContain('marketingsales.cz');
-    expect(verifier).toContain('e15.cz');
-    expect(verifier).toContain('firmy.cz');
-    expect(verifier).toContain('zivefirmy.cz');
     expect(verifier).toContain('news_or_catalog_domain');
-    expect(verifier).toContain('domainMatchesCompany');
-    expect(verifier).toContain('domain_identity_mismatch');
+    expect(verifier).toContain('parked_or_for_sale');
+    expect(verifier).toContain('no_business_identity');
+  });
+
+  test('worker běží jen na interní token (ne uživatelské volání)', () => {
+    expect(worker).toContain('x-internal-token');
+    expect(worker).toContain("error: \"unauthorized\"");
+    expect(migCron).toContain('run_sales_lead_discovery_worker');
+    expect(migCron).toContain('cron.schedule');
+  });
+
+  test('job tabulka + guarded RPC + 1 aktivní job', () => {
+    expect(migJobs).toContain('CREATE TABLE IF NOT EXISTS public.sales_lead_discovery_jobs');
+    expect(migJobs).toContain('sales_lead_discovery_job_create');
+    expect(migJobs).toContain("has_admin_permission('sales_leads.manage')");
+    expect(migJobs).toContain('job_already_running');
+    expect(migJobs).toContain('ENABLE ROW LEVEL SECURITY');
+  });
+
+  test('UI: job + živý progress + cíl uložených, bez e-mailu', () => {
+    expect(dialog).toContain('sales_lead_discovery_job_create');
+    expect(dialog).toContain('sales_lead_discovery_jobs');
+    expect(dialog).toContain('Počet uložených firem (cíl)');
+    expect(dialog).toContain('Prověřeno kandidátů');
+    expect(dialog).toContain('Uloženo do segmentu');
+    expect(dialog).toContain('běží dál');
+    expect(dialog).toContain('E-mail se NEsbírá');
   });
 });

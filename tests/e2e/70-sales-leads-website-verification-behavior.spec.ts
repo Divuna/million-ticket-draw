@@ -1,5 +1,6 @@
 import { test, expect } from '@playwright/test';
-import { verifyCompanyWebsite } from '../../supabase/functions/_shared/companyWebsiteVerifier.ts';
+import { verifyCompanyWebsite, verifyDiscoveredCompanySite } from '../../supabase/functions/_shared/companyWebsiteVerifier.ts';
+import { extractIcoFromText, extractCompanyNameFromHtml } from '../../supabase/functions/_shared/companyRegistryEnrich.ts';
 import { crawlCompanyWebsite, sanitizeEmail, emailBelongsToCompany } from '../../supabase/functions/_shared/companyEmailCrawler.ts';
 import { parseDuckDuckGoResults, findOfficialWebsiteCandidates, extractUrlsFromResponses } from '../../supabase/functions/_shared/companyWebsiteSearch.ts';
 
@@ -184,6 +185,38 @@ test('extractUrlsFromResponses vytáhne URL z anotací I z textu (markdown)', ()
   const urls = extractUrlsFromResponses(json as never);
   expect(urls).toContain('https://cited-source.cz/o-nas');
   expect(urls.some((u) => u.startsWith('https://www.ddb.cz'))).toBe(true);
+});
+
+test('verifyDiscoveredCompanySite: web s IČO je ověřený firemní web', async () => {
+  pages['https://autofirma.cz/'] = { body: `<html><head><title>AutoFirma s.r.o. – autoservis</title></head><body><h1>AutoFirma</h1>${filler} Kontakt · IČO: 27082440 · <a href="tel:+420733111222">volejte</a> <a href="/kontakt">Kontakt</a></body></html>` };
+  const r = await verifyDiscoveredCompanySite('https://autofirma.cz/');
+  expect(r.verified).toBe(true);
+  expect(r.website).toBe('https://autofirma.cz/');
+  expect(r.icoOnPage).toBe('27082440');
+  expect(r.phone).toBe('+420733111222');
+  expect(r.contactFormUrl).toBe('https://autofirma.cz/kontakt');
+});
+
+test('verifyDiscoveredCompanySite: zpravodajský portál se nepovtrdí', async () => {
+  pages['https://www.mediar.cz/'] = { body: `<html><body>${filler} Wunderman Thompson otevírá pobočku. Kontakt © Médiář</body></html>` };
+  const r = await verifyDiscoveredCompanySite('https://www.mediar.cz/');
+  expect(r.verified).toBe(false);
+  expect(r.reason).toBe('news_or_catalog_domain');
+});
+
+test('verifyDiscoveredCompanySite: zaparkovaná doména se nepotvrdí', async () => {
+  pages['https://parked-xyz.cz/'] = { body: `<html><body>Tato doména je na prodej.${filler}</body></html>` };
+  const r = await verifyDiscoveredCompanySite('https://parked-xyz.cz/');
+  expect(r.verified).toBe(false);
+  expect(r.reason).toBe('parked_or_for_sale');
+});
+
+test('extractIcoFromText / extractCompanyNameFromHtml', () => {
+  expect(extractIcoFromText('Sídlo firmy, IČO: 27082440, DIČ CZ27082440')).toBe('27082440');
+  expect(extractIcoFromText('IČ 123 456 78 nesmysl')).toBeNull(); // 8 číslic ale špatně seskupené -> jen validní 8
+  expect(extractIcoFromText('žádné ičo tu není')).toBeNull();
+  expect(extractCompanyNameFromHtml('<title>Kofola a.s. | Úvod</title>')).toBe('Kofola a.s.');
+  expect(extractCompanyNameFromHtml('<meta property="og:site_name" content="Hudy Sport">')).toBe('Hudy Sport');
 });
 
 test('parseDuckDuckGoResults vytáhne cílové URL z DDG výsledků', () => {

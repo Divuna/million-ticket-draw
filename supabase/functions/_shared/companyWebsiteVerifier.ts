@@ -1,3 +1,5 @@
+import { extractCompanyNameFromHtml, extractIcoFromText } from "./companyRegistryEnrich.ts";
+
 export type VerificationStatus = "verified" | "unverified";
 
 export interface WebsiteCandidate {
@@ -247,4 +249,70 @@ export async function verifyCompanyWebsite(input: { companyName: string; ico?: s
     ico: registry?.ico ?? ico, evidence: { registry: registry ? 'ARES' : null, selected: best ?? null, candidates_checked: evaluated.length },
     alternatives: evaluated.filter(e => !best || e.url !== best.url).map(e => ({ url: e.finalUrl ?? e.url, source: e.source, confidence: e.confidence, reason: e.reason })),
   };
+}
+
+export interface DiscoveredSite {
+  verified: boolean;
+  website: string | null;
+  companyName: string | null;
+  icoOnPage: string | null;
+  phone: string | null;
+  contactFormUrl: string | null;
+  snippet: string;
+  confidence: number;
+  reason: string;
+}
+
+function extractPhoneFromHtml(html: string): string | null {
+  const tel = /href\s*=\s*["']tel:([^"']+)["']/i.exec(html);
+  const raw = tel?.[1] ?? "";
+  const digits = raw.replace(/[^\d+]/g, "");
+  const m = /^(\+420)?(\d{9})$/.exec(digits);
+  if (m) return m[1] ? `+420${m[2]}` : m[2];
+  return null;
+}
+
+function extractContactUrl(html: string, baseUrl: string): string | null {
+  const host = hostKey(baseUrl);
+  const re = /<a\b[^>]*href\s*=\s*["']([^"'#]+)["'][^>]*>([\s\S]*?)<\/a>/gi;
+  let m: RegExpExecArray | null;
+  while ((m = re.exec(html))) {
+    const hint = `${m[1]} ${m[2].replace(/<[^>]+>/g, " ")}`.toLowerCase();
+    if (!/kontakt|contact/.test(hint)) continue;
+    try {
+      const abs = new URL(m[1], baseUrl).toString();
+      if (publicUrl(abs) && hostKey(abs) === host) return abs;
+    } catch { /* ignore */ }
+  }
+  return null;
+}
+
+/**
+ * Ověří, že KANDIDÁTNÍ URL (z web search pro segment) je skutečný FUNKČNÍ web
+ * reálné firmy — ne katalog, zpravodajský/článkový portál, zaparkovaná nebo
+ * prázdná doména. Vytáhne kandidátní název firmy a IČO uvedené na stránce.
+ * Autoritativní IČO/DIČ/adresu doplní až worker z ARES.
+ */
+export async function verifyDiscoveredCompanySite(url: string): Promise<DiscoveredSite> {
+  const empty: DiscoveredSite = { verified: false, website: null, companyName: null, icoOnPage: null, phone: null, contactFormUrl: null, snippet: '', confidence: 0, reason: '' };
+  const page = await fetchPage(url);
+  if (!page) return { ...empty, reason: 'http_or_content_failed' };
+  const host = (() => { try { return new URL(page.finalUrl).hostname.toLowerCase(); } catch { return ''; } })();
+  if (NEWS_CATALOG_BLOCKLIST.has(registrableDomainOf(host))) return { ...empty, reason: 'news_or_catalog_domain' };
+  const text = pageText(page.html);
+  if (text.length < 250) return { ...empty, reason: 'empty_page' };
+  if (PARKED_PATTERNS.some((p) => p.test(text))) return { ...empty, reason: 'parked_or_for_sale' };
+
+  const icoOnPage = extractIcoFromText(text);
+  const companyName = extractCompanyNameFromHtml(page.html);
+  const phone = extractPhoneFromHtml(page.html);
+  const contactFormUrl = extractContactUrl(page.html, page.finalUrl);
+  const snippet = text.slice(0, 500);
+  const hasBusinessMarker = /kontakt|contact|impressum|obchodni podminky|obchodn[ií] podm[ií]nky|copyright|©|i[čc]o/i.test(text);
+
+  const base = { website: page.finalUrl, companyName, icoOnPage, phone, contactFormUrl, snippet };
+  // Reálný firemní web: IČO na stránce (nejsilnější), nebo název + firemní marker.
+  if (icoOnPage) return { ...base, verified: true, confidence: 100, reason: 'ico_on_site' };
+  if (companyName && hasBusinessMarker) return { ...base, verified: true, icoOnPage: null, confidence: 80, reason: 'business_site' };
+  return { ...empty, companyName, phone, contactFormUrl, snippet, reason: 'no_business_identity' };
 }

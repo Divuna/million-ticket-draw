@@ -1,319 +1,257 @@
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.57.4";
-import { verifyCompanyWebsite } from "../_shared/companyWebsiteVerifier.ts";
-import { findOfficialWebsiteCandidates } from "../_shared/companyWebsiteSearch.ts";
+import { verifyDiscoveredCompanySite } from "../_shared/companyWebsiteVerifier.ts";
+import { generateCandidateUrls } from "../_shared/companyCandidateSearch.ts";
+import { aresByIco, aresByName, type RegistryRecord } from "../_shared/companyRegistryEnrich.ts";
 
 // ============================================================================
-// sales-lead-discover — automatické NAVRŽENÍ nových firemních leadů.
-// Spouští výhradně člověk s oprávněním sales_leads.manage.
+// sales-lead-discover — WORKER Discovery Jobu (dávkové zpracování).
+// Poháněný pg_cronem (interní token). Zpracuje 1 aktivní job po dávce a uloží
+// průběh; cron ho volá znovu, dokud nedodá requested_count ULOŽENÝCH firem s
+// ověřeným webem, nedojdou kandidáti, nebo se nedosáhne max_candidates.
 //
-// Cíl: hledat firmy, které lze SKUTEČNĚ oslovit — s ověřeným oficiálním webem
-// a pokud možno i veřejným kontaktním e-mailem.
-//
-// Postup na firmu:
-//   1. AI navrhne názvy reálných firem dle segmentu (NENÍ zdroj pravdy pro web).
-//   2. Backend aktivně DOHLEDÁ pravděpodobný oficiální web přes webové
-//      vyhledávání (companyWebsiteSearch) + případné AI odhady jako kandidáty.
-//   3. Každý kandidát nezávisle OVĚŘÍ (ARES + HTTP + kontrola identity firmy,
-//      parked/prázdný web zamítne, sleduje redirect na oficiální doménu).
-//   4. Bez ověřeného webu se firma NEUKLÁDÁ (žádné prázdné leady jen s názvem).
-//   5. Discovery ukládá JEN firmu s ověřeným webem (+ volitelně IČO/město).
-//      E-mail se při discovery NIKDY nehledá, neukládá ani nenavrhuje —
-//      kontakt dohledá až člověk ručně tlačítkem „Dohledat e-mail" v detailu
-//      (samostatná EF sales-lead-enrich-contact, neověřený návrh k potvrzení).
-//
-// Nic se neodesílá; každý návrh i pozdější e-mail musí člověk ručně schválit.
+// PRINCIP: kandidáti z AKTIVNÍHO web search (companyCandidateSearch) — AI
+// nevymýšlí seznam firem. Web se přísně ověří (verifyDiscoveredCompanySite),
+// IČO/DIČ/adresa z ARES (autoritativně), AI JEN klasifikuje obor/relevanci.
+// E-mail se NIKDY nehledá ani neukládá. Nic se neposílá.
 // ============================================================================
-
-const corsHeaders = {
-  "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
-  "Access-Control-Allow-Methods": "POST, OPTIONS",
-};
 
 const AI_MODEL = Deno.env.get("SALES_LEADS_AI_MODEL") ?? "gpt-4o-mini";
-const AI_TIMEOUT_MS = 25000;
-const MAX_PER_RUN = 10;
-const DEFAULT_LIMIT = 5;
-
-const FALLBACK_GROUP_LABELS: Record<string, string> = {
-  "e-shopy": "E-shopy",
-  "auto-moto": "Auto / moto",
-  "luxusni-zbozi": "Luxusní zboží",
-  sport: "Sport",
-  cestovani: "Cestování",
-  gastronomie: "Gastronomie",
-  "lokalni-sluzby": "Lokální služby",
-  jine: "Jiné",
-};
-
-const DISCOVER_SYSTEM_PROMPT = `Jsi rešeršní asistent OneMil. Navrhni reálné české firmy vhodné k oslovení do věrnostního programu OneMil pro zadanou skupinu.
-
-PŘÍSNÉ ZÁKAZY:
-- NIKDY NEVYMÝŠLEJ e-mail, telefon ani jméno osoby. E-mail vůbec neřeš — vracej jen název firmy, případně tip na web, IČO a město, pokud je veřejně známé; jinak vynech.
-- Web je jen NÁVRH — backend si oficiální web sám dohledá a nezávisle ověří. Když web neznáš jistě, vrať website = null.
-- NETVRDÍ partnerství ani dohodu s OneMil.
-- NESLIBUJ žádné ceny ani podmínky.
-- NEPOUŽÍVEJ slova casino, hazard, sázka, loterie, jackpot.
-
-Výstup: vrať POUZE validní JSON objekt {"companies": [...]}. Každá položka:
-{"company_name": string, "website": string|null, "alternative_websites": string[], "website_source": string|null, "ico": string|null, "city": string|null, "industry": string|null, "lead_quality": 0|1|2|3, "rationale": string}
-lead_quality = odhad vhodnosti (0 neznámé … 3 vysoká). rationale = krátké interní zdůvodnění. "website" je jen volitelná nápověda; backend si web vždy nezávisle ověřuje. E-mail se při discovery NEsbírá. Vše je neověřený návrh k ruční kontrole člověkem.`;
+const BATCH_MAX = 12;
+const TIME_BUDGET_MS = 90_000;
+const MAX_EMPTY_ROUNDS = 3;
 
 function jsonResponse(body: Record<string, unknown>, status = 200): Response {
-  return new Response(JSON.stringify(body), {
-    status,
-    headers: { ...corsHeaders, "Content-Type": "application/json" },
-  });
+  return new Response(JSON.stringify(body), { status, headers: { "Content-Type": "application/json" } });
 }
 
 function dbg(stage: string, data: Record<string, unknown>): void {
+  try { console.log(`[discover-worker] ${stage} ${JSON.stringify(data)}`); } catch { /* never throw */ }
+}
+
+function registrableDomain(host: string): string {
+  const l = host.toLowerCase().replace(/^www\./, "").split(".").filter(Boolean);
+  return l.length <= 2 ? l.join(".") : l.slice(-2).join(".");
+}
+
+function hostOf(url: string): string {
+  try { return new URL(url).hostname.toLowerCase(); } catch { return ""; }
+}
+
+function normName(v: string): string {
+  return v.normalize("NFD").replace(/[̀-ͯ]/g, "").toLowerCase().replace(/[^a-z0-9]+/g, " ").trim();
+}
+
+interface Classification { slug: string | null; relevant: boolean; summary: string }
+
+async function classify(
+  name: string, snippet: string, groups: { slug: string; label: string }[], openaiKey: string,
+): Promise<Classification> {
+  const list = groups.map((g) => `${g.slug} = ${g.label}`).join("; ");
+  const sys = `Jsi klasifikátor firem pro B2B akvizici OneMil. Zařaď firmu do JEDNÉ kategorie z číselníku a posuď, zda je to reálná firma vhodná k oslovení. Nevymýšlej fakta; klasifikuj jen podle názvu a útržku webu. Vrať POUZE JSON {"slug": <slug z číselníku nebo null>, "relevant": true|false, "summary": "<max 160 znaků>"}.`;
+  const user = `Číselník kategorií: ${list}.\nNázev firmy: ${name}\nÚtržek webu: ${snippet.slice(0, 400)}`;
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), 20000);
   try {
-    console.log(`[discover] ${stage} ${JSON.stringify(data)}`);
-  } catch { /* logging must never throw */ }
-}
-
-interface ProposedCompany {
-  company_name?: unknown;
-  website?: unknown;
-  ico?: unknown;
-  city?: unknown;
-  industry?: unknown;
-  lead_quality?: unknown;
-  rationale?: unknown;
-  alternative_websites?: unknown;
-  website_source?: unknown;
-}
-
-async function resolveLeadGroup(
-  supabaseAdmin: ReturnType<typeof createClient>,
-  leadGroup: string,
-): Promise<{ valid: true; label: string } | { valid: false }> {
-  if (!leadGroup) return { valid: false };
-
-  const { data, error } = await supabaseAdmin
-    .from("sales_lead_groups")
-    .select("slug, label, is_active")
-    .eq("slug", leadGroup)
-    .eq("is_active", true)
-    .maybeSingle();
-
-  if (!error) {
-    if (data?.label) return { valid: true, label: String(data.label) };
-    return { valid: false };
+    const res = await fetch("https://api.openai.com/v1/chat/completions", {
+      method: "POST",
+      headers: { Authorization: `Bearer ${openaiKey}`, "Content-Type": "application/json" },
+      signal: controller.signal,
+      body: JSON.stringify({
+        model: AI_MODEL, temperature: 0, response_format: { type: "json_object" },
+        messages: [{ role: "system", content: sys }, { role: "user", content: user }],
+      }),
+    });
+    if (!res.ok) return { slug: null, relevant: false, summary: "" };
+    const j = await res.json();
+    const parsed = JSON.parse(j?.choices?.[0]?.message?.content ?? "{}");
+    return {
+      slug: typeof parsed.slug === "string" ? parsed.slug : null,
+      relevant: parsed.relevant === true,
+      summary: typeof parsed.summary === "string" ? parsed.summary.slice(0, 200) : "",
+    };
+  } catch {
+    return { slug: null, relevant: false, summary: "" };
+  } finally {
+    clearTimeout(timer);
   }
-
-  const fallbackLabel = FALLBACK_GROUP_LABELS[leadGroup];
-  if (fallbackLabel) return { valid: true, label: fallbackLabel };
-  return { valid: false };
 }
 
 serve(async (req: Request) => {
-  if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders });
-  if (req.method !== "POST") return jsonResponse({ success: false, error: "method_not_allowed" }, 405);
+  if (req.method === "OPTIONS") return new Response("ok");
+  // Auth: jen interní token (cron). Ne uživatelské volání.
+  const token = req.headers.get("x-internal-token") ?? "";
+  const expected = Deno.env.get("SALES_LEADS_WORKER_TOKEN") ?? Deno.env.get("INTERNAL_FUNCTION_TOKEN") ?? "";
+  if (!expected || token !== expected) return jsonResponse({ success: false, error: "unauthorized" }, 401);
 
-  const supabaseUrl = Deno.env.get("SUPABASE_URL") ?? "";
-  const serviceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "";
-  const supabaseAdmin = createClient(supabaseUrl, serviceRoleKey, {
-    auth: { persistSession: false },
-  });
+  const supabaseAdmin = createClient(Deno.env.get("SUPABASE_URL") ?? "", Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "", { auth: { persistSession: false } });
+  const openaiKey = Deno.env.get("OPENAI_API_KEY");
+  if (!openaiKey) return jsonResponse({ success: false, error: "ai_not_configured" }, 503);
 
-  try {
-    const authHeader = req.headers.get("Authorization");
-    if (!authHeader?.startsWith("Bearer ")) {
-      return jsonResponse({ success: false, error: "missing_authorization_header" }, 401);
-    }
-    const jwtToken = authHeader.replace("Bearer ", "").trim();
-    const { data: userData, error: userError } = await supabaseAdmin.auth.getUser(jwtToken);
-    const caller = userData?.user;
-    if (userError || !caller) {
-      return jsonResponse({ success: false, error: "invalid_authorization_token" }, 401);
-    }
-    const { data: canManage } = await supabaseAdmin.rpc("has_admin_permission", {
-      check_key: "sales_leads.manage",
-      check_user_id: caller.id,
-    });
-    if (canManage !== true) {
-      return jsonResponse({ success: false, error: "access_denied_sales_leads_manage_only" }, 403);
-    }
+  // ── Vezmi 1 aktivní job ──────────────────────────────────────────────────
+  const { data: jobRow } = await supabaseAdmin
+    .from("sales_lead_discovery_jobs")
+    .select("*").in("status", ["queued", "running"]).order("created_at", { ascending: true }).limit(1).maybeSingle();
+  if (!jobRow) return jsonResponse({ success: true, no_job: true });
+  const job = jobRow as Record<string, unknown>;
+  const jobId = job.id as string;
+  const leadGroup = job.lead_group as string;
 
-    let body: Record<string, unknown>;
-    try {
-      body = (await req.json()) as Record<string, unknown>;
-    } catch {
-      return jsonResponse({ success: false, error: "invalid_json" }, 400);
-    }
+  await supabaseAdmin.from("sales_lead_discovery_jobs").update({
+    status: "running", started_at: job.started_at ?? new Date().toISOString(), updated_at: new Date().toISOString(),
+  }).eq("id", jobId);
 
-    const leadGroup = typeof body.lead_group === "string" ? body.lead_group.trim() : "";
-    const resolvedGroup = await resolveLeadGroup(supabaseAdmin, leadGroup);
-    if (!resolvedGroup.valid) {
-      return jsonResponse({ success: false, error: "invalid_lead_group" }, 400);
-    }
+  const { data: groupRows } = await supabaseAdmin.from("sales_lead_groups").select("slug, label").eq("is_active", true);
+  const groups = (groupRows ?? []) as { slug: string; label: string }[];
+  const validSlugs = new Set(groups.map((g) => g.slug));
 
-    let limit = typeof body.limit === "number" ? Math.floor(body.limit) : DEFAULT_LIMIT;
-    if (!Number.isFinite(limit) || limit < 1) limit = DEFAULT_LIMIT;
-    if (limit > MAX_PER_RUN) limit = MAX_PER_RUN;
+  // Stav jobu
+  let pool = Array.isArray(job.candidate_pool) ? (job.candidate_pool as string[]) : [];
+  let cursor = job.cursor as number;
+  let searchRounds = job.search_rounds as number;
+  let searchExhausted = job.search_exhausted as boolean;
+  const requested = job.requested_count as number;
+  const maxCandidates = job.max_candidates as number;
+  const counters = {
+    candidates_checked: job.candidates_checked as number,
+    created_count: job.created_count as number,
+    duplicates: job.duplicates as number,
+    websites_rejected: job.websites_rejected as number,
+    wrong_category: job.wrong_category as number,
+    with_ico: job.with_ico as number,
+    with_dic: job.with_dic as number,
+    with_address: job.with_address as number,
+    with_phone: job.with_phone as number,
+  };
 
-    const openaiKey = Deno.env.get("OPENAI_API_KEY");
-    if (!openaiKey) {
-      return jsonResponse({ success: false, error: "ai_not_configured" }, 503);
-    }
+  const deadline = Date.now() + TIME_BUDGET_MS;
+  let processed = 0;
+  let emptyRounds = 0;
 
-    const userPrompt = `Skupina: ${resolvedGroup.label} (${leadGroup})\nPočet návrhů: ${limit}\n\nNavrhni ${limit} reálných českých firem pro tuto skupinu dle pravidel. Vrať JSON {"companies":[...]}.`;
-
-    const controller = new AbortController();
-    const timer = setTimeout(() => controller.abort(), AI_TIMEOUT_MS);
-    let raw = "";
-    try {
-      const aiRes = await fetch("https://api.openai.com/v1/chat/completions", {
-        method: "POST",
-        headers: { Authorization: `Bearer ${openaiKey}`, "Content-Type": "application/json" },
-        signal: controller.signal,
-        body: JSON.stringify({
-          model: AI_MODEL,
-          temperature: 0.5,
-          response_format: { type: "json_object" },
-          messages: [
-            { role: "system", content: DISCOVER_SYSTEM_PROMPT },
-            { role: "user", content: userPrompt },
-          ],
-        }),
-      });
-      if (!aiRes.ok) return jsonResponse({ success: false, error: "ai_request_failed" }, 502);
-      const aiJson = await aiRes.json();
-      raw = (aiJson?.choices?.[0]?.message?.content ?? "").trim();
-    } catch {
-      return jsonResponse({ success: false, error: "ai_request_failed" }, 502);
-    } finally {
-      clearTimeout(timer);
-    }
-
-    let companies: ProposedCompany[] = [];
-    try {
-      const parsed = JSON.parse(raw) as { companies?: unknown };
-      companies = Array.isArray(parsed.companies) ? (parsed.companies as ProposedCompany[]) : [];
-    } catch {
-      return jsonResponse({ success: false, error: "ai_invalid_format" }, 502);
-    }
-    companies = companies.slice(0, limit);
-
-    let candidatesChecked = 0;
-    let created = 0;
-    let skipped = 0;
-    let errored = 0;
-    let websitesVerified = 0;
-    let websitesRejected = 0;
-    const details: { company: string; outcome: string; reason?: string }[] = [];
-
-    for (const c of companies) {
-      const name = typeof c.company_name === "string" ? c.company_name.trim() : "";
-      if (!name) { errored++; continue; }
-      candidatesChecked++;
-
-      const city = typeof c.city === "string" ? c.city : null;
-      const icoHint = typeof c.ico === "string" ? c.ico : null;
-      dbg("ai_proposed", { company: name, ico: icoHint, city, ai_website: c.website ?? null });
-
-      // ── 1. Aktivně dohledej pravděpodobný oficiální web přes webové vyhledávání.
-      const searchCandidates = await findOfficialWebsiteCandidates({
-        companyName: name,
-        city,
-        ico: icoHint,
-        openaiKey,
-      });
-      dbg("search_done", { company: name, found: searchCandidates.length, urls: searchCandidates.map((s) => s.url) });
-
-      // ── 2. Přidej AI odhady webu jako doplňkové kandidáty (verifier je stejně ověří).
-      const websiteRaw = typeof c.website === "string" ? c.website.trim() : "";
-      const alternatives = Array.isArray(c.alternative_websites)
-        ? c.alternative_websites.filter((v): v is string => typeof v === "string") : [];
-      const aiCandidates = [websiteRaw, ...alternatives].filter(Boolean).map((url, index) => ({
-        url,
-        source: index === 0 && typeof c.website_source === "string" ? c.website_source : "AI candidate",
-      }));
-
-      // Vyhledané weby jdou první (spolehlivější než odhad), pak AI odhady.
-      const candidates = [...searchCandidates, ...aiCandidates];
-
-      // ── 3. Nezávislé ověření identity — AI ani vyhledávač nejsou důkaz.
-      dbg("verify_start", { company: name, candidate_urls: candidates.map((c2) => c2.url) });
-      const verification = await verifyCompanyWebsite({ companyName: name, ico: icoHint, candidates });
-      const website = verification.status === "verified" ? verification.website : null;
-      dbg("verify_done", {
-        company: name,
-        status: verification.status,
-        website: verification.website,
-        confidence: verification.confidence,
-        ares_legal_name: verification.legalName,
-        candidates_checked: (verification.evidence as { candidates_checked?: number })?.candidates_checked ?? null,
-        rejected: verification.alternatives.map((a) => ({ url: a.url, reason: a.reason, confidence: a.confidence })),
-      });
-
-      // ── 4. Bez ověřeného webu firmu NEUKLÁDÁME (žádné prázdné leady jen s názvem).
-      if (!website) {
-        websitesRejected++;
-        dbg("skipped_unverified_website", { company: name, had_candidates: candidates.length });
-        details.push({ company: name, outcome: "skipped", reason: "unverified_website" });
+  while (
+    Date.now() < deadline && processed < BATCH_MAX &&
+    counters.created_count < requested && counters.candidates_checked < maxCandidates
+  ) {
+    // Doplň frontu kandidátů, když dojde.
+    if (cursor >= pool.length) {
+      if (searchExhausted) break;
+      const fresh = await generateCandidateUrls({ leadGroup, round: searchRounds, openaiKey });
+      searchRounds++;
+      const added = fresh.filter((u) => !pool.includes(u));
+      if (added.length === 0) {
+        emptyRounds++;
+        if (emptyRounds >= MAX_EMPTY_ROUNDS) { searchExhausted = true; break; }
         continue;
       }
-      websitesVerified++;
-
-      const qualityRaw = typeof c.lead_quality === "number" ? Math.floor(c.lead_quality) : 0;
-      const quality = Math.min(3, Math.max(0, qualityRaw));
-      const discoveryMeta = {
-        model: AI_MODEL,
-        rationale: typeof c.rationale === "string" ? c.rationale : null,
-        run_at: new Date().toISOString(),
-        run_by: caller.id,
-        lead_group_label: resolvedGroup.label,
-        website_verification: verification,
-      };
-
-      // ── 5. Ulož JEN firmu s ověřeným webem. E-mail se při discovery NIKDY
-      //      nehledá ani neukládá — kontakt dohledá až člověk ručně v detailu.
-      const { data: rpcData, error: rpcErr } = await supabaseAdmin.rpc("sales_lead_propose", {
-        p_created_by: caller.id,
-        p_company_name: name,
-        p_lead_group: leadGroup,
-        p_discovery_source: "ai_navrh",
-        p_lead_quality: quality,
-        p_discovery_meta: discoveryMeta,
-        p_website: website,
-        p_ico: verification.ico,
-        p_city: city,
-        p_industry: typeof c.industry === "string" ? c.industry : null,
-      });
-
-      if (rpcErr) { errored++; details.push({ company: name, outcome: "error", reason: "rpc_failed" }); continue; }
-      const res = (rpcData ?? {}) as { outcome?: string; reason?: string };
-
-      if (res.outcome === "created") {
-        created++;
-        details.push({ company: name, outcome: "created" });
-      } else if (res.outcome === "skipped") {
-        skipped++;
-        details.push({ company: name, outcome: "skipped", reason: res.reason });
-      } else {
-        errored++;
-        details.push({ company: name, outcome: "error", reason: res.reason });
-      }
+      emptyRounds = 0;
+      pool = [...pool, ...added];
     }
 
-    return jsonResponse({
-      success: true,
-      lead_group: leadGroup,
-      lead_group_label: resolvedGroup.label,
-      requested: limit,
-      proposed_by_ai: companies.length,
-      candidates_checked: candidatesChecked,
-      created,
-      websites_verified: websitesVerified,
-      websites_rejected: websitesRejected,
-      skipped,
-      errored,
-      details,
+    const url = pool[cursor];
+    cursor++;
+    processed++;
+    counters.candidates_checked++;
+
+    const site = await verifyDiscoveredCompanySite(url);
+    if (!site.verified || !site.website) { counters.websites_rejected++; continue; }
+
+    // Autoritativní registr (ARES): podle IČO na webu, jinak podle názvu.
+    let reg: RegistryRecord | null = null;
+    if (site.icoOnPage) reg = await aresByIco(site.icoOnPage);
+    if (!reg && site.companyName) reg = await aresByName(site.companyName);
+    const name = reg?.legalName ?? site.companyName;
+    if (!name) { counters.websites_rejected++; continue; }
+
+    // Dedup proti existujícím leadům (doména / IČO / název).
+    const domain = registrableDomain(hostOf(site.website));
+    const ico = reg?.ico ?? site.icoOnPage ?? null;
+    let dupQuery = supabaseAdmin.from("sales_leads").select("id").limit(1);
+    const orParts = [`website_domain.eq.${domain}`, `company_name.ilike.${name.replace(/[,%]/g, " ")}`];
+    if (ico) orParts.push(`ico.eq.${ico}`);
+    dupQuery = dupQuery.or(orParts.join(","));
+    const { data: dupRows } = await dupQuery;
+    if (dupRows && dupRows.length > 0) { counters.duplicates++; continue; }
+
+    // AI klasifikace oboru (jen klasifikace/relevance/shrnutí).
+    const cls = await classify(name, site.snippet, groups, openaiKey);
+    if (!cls.relevant) { continue; }
+    const targetGroup = cls.slug === leadGroup ? leadGroup : (cls.slug && validSlugs.has(cls.slug) ? cls.slug : null);
+    if (!targetGroup) { counters.wrong_category++; continue; }
+    const isTargetSegment = targetGroup === leadGroup;
+
+    const nowIso = new Date().toISOString();
+    const discoveryMeta = {
+      model: AI_MODEL, run_at: nowIso, job_id: jobId, lead_group_label: groups.find((g) => g.slug === targetGroup)?.label ?? null,
+      classification: { slug: cls.slug, summary: cls.summary },
+      website_verification: {
+        status: "verified", confidence: site.confidence, source: site.reason === "ico_on_site" ? "IČO na oficiálním webu" : "Oficiální web",
+        verifiedAt: nowIso, evidence: { reason: site.reason, ico_on_page: site.icoOnPage }, alternatives: [],
+      },
+    };
+
+    const { data: rpcData, error: rpcErr } = await supabaseAdmin.rpc("sales_lead_propose", {
+      p_created_by: job.created_by,
+      p_company_name: name,
+      p_lead_group: targetGroup,
+      p_discovery_source: "ai_navrh",
+      p_lead_quality: site.icoOnPage ? 3 : 2,
+      p_discovery_meta: discoveryMeta,
+      p_website: site.website,
+      p_ico: ico,
+      p_city: reg?.city ?? null,
+      p_industry: groups.find((g) => g.slug === targetGroup)?.label ?? null,
     });
-  } catch (_err) {
-    return jsonResponse({ success: false, error: "internal_error" }, 500);
+    if (rpcErr) { dbg("rpc_error", { url, error: rpcErr.message }); continue; }
+    const res = (rpcData ?? {}) as { outcome?: string; reason?: string; lead_id?: string };
+
+    if (res.outcome !== "created") {
+      if (res.outcome === "skipped") counters.duplicates++;
+      continue;
+    }
+
+    // Enrichment bez hádání — jen doložitelné údaje (do jsonb, netriggeruje web).
+    const provenance: Record<string, unknown> = {
+      website: { value: site.website, source: "web_search+verify", verified_at: nowIso, confidence: site.confidence },
+    };
+    if (ico) provenance.ico = { value: ico, source: reg?.ico ? "ARES" : "web", verified_at: nowIso };
+    if (reg?.dic) provenance.dic = { value: reg.dic, source: "ARES", verified_at: nowIso };
+    if (reg?.address) provenance.address = { value: reg.address, source: "ARES", verified_at: nowIso };
+    if (reg?.city) provenance.city = { value: reg.city, source: "ARES", verified_at: nowIso };
+    if (site.phone) provenance.phone = { value: site.phone, source: "website", verified_at: nowIso };
+    if (site.contactFormUrl) provenance.contact_form = { value: site.contactFormUrl, source: "website", verified_at: nowIso };
+
+    const leadId = res.lead_id;
+    if (leadId) {
+      await supabaseAdmin.from("sales_leads").update({
+        dic: reg?.dic ?? null,
+        contact_phone: site.phone ?? null,
+        ai_research_summary: cls.summary || null,
+        contact_data_provenance: provenance,
+      }).eq("id", leadId);
+    }
+
+    if (isTargetSegment) counters.created_count++; else counters.wrong_category++;
+    if (ico) counters.with_ico++;
+    if (reg?.dic) counters.with_dic++;
+    if (reg?.address) counters.with_address++;
+    if (site.phone) counters.with_phone++;
+    dbg("saved", { company: name, website: site.website, group: targetGroup, target: isTargetSegment });
   }
+
+  // ── Rozhodni finish stav ───────────────────────────────────────────────────
+  let status = "running";
+  let finishReason: string | null = null;
+  if (counters.created_count >= requested) { status = "done"; finishReason = "target_reached"; }
+  else if (counters.candidates_checked >= maxCandidates) { status = "done"; finishReason = "max_candidates_reached"; }
+  else if (searchExhausted && cursor >= pool.length) { status = "done"; finishReason = "candidates_exhausted"; }
+
+  await supabaseAdmin.from("sales_lead_discovery_jobs").update({
+    ...counters,
+    candidate_pool: pool, cursor, search_rounds: searchRounds, search_exhausted: searchExhausted,
+    status, finish_reason: finishReason,
+    finished_at: status === "done" ? new Date().toISOString() : null,
+    updated_at: new Date().toISOString(),
+  }).eq("id", jobId);
+
+  return jsonResponse({ success: true, job_id: jobId, status, finish_reason: finishReason, ...counters, processed });
 });
