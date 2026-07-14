@@ -38,7 +38,7 @@ type Planned = {
   performed_by: string | null;
   metadata: Record<string, unknown> | null;
 };
-type Task = { id: string; title: string; due_at: string; status: string; note: string | null; assigned_admin_id: string };
+type Task = { id: string; title: string; due_at: string; status: string; task_type: 'ukol' | 'follow_up'; note: string | null; assigned_admin_id: string };
 type Admin = { id: string; full_name: string | null };
 
 const localInput = (date = new Date()) => {
@@ -124,6 +124,7 @@ export function LeadCrmPanel({
   const [busy, setBusy] = useState(false);
   const [editing, setEditing] = useState<string | null>(null);
   const [title, setTitle] = useState('');
+  const [taskType, setTaskType] = useState<'ukol' | 'follow_up'>('ukol');
   const [due, setDue] = useState('');
   const [assignee, setAssignee] = useState('');
   const [taskNote, setTaskNote] = useState('');
@@ -141,10 +142,10 @@ export function LeadCrmPanel({
         .select('id,activity_type,scheduled_for,activity_status,body_snapshot,performed_by,metadata')
         .eq('lead_id', leadId)
         .in('activity_type', ['call_logged', 'meeting_logged', 'note_added'])
-        .eq('activity_status', 'naplanovano')
+        .in('activity_status', ['naplanovano', 'rozpracovano'])
         .not('scheduled_for', 'is', null)
         .order('scheduled_for'),
-      (supabase as any).from('sales_lead_tasks').select('id,title,due_at,status,note,assigned_admin_id').eq('lead_id', leadId).order('due_at'),
+      (supabase as any).from('sales_lead_tasks').select('id,title,due_at,status,task_type,note,assigned_admin_id').eq('lead_id', leadId).order('due_at'),
       (supabase as any).from('user_roles').select('user_id').in('role', ['admin', 'superadmin']),
     ]);
     setPlanned(a ?? []);
@@ -229,10 +230,12 @@ export function LeadCrmPanel({
       p_due_at: new Date(due).toISOString(),
       p_assigned_admin_id: assignee,
       p_note: taskNote || null,
+      p_task_type: taskType,
     });
     setBusy(false);
     if (!data?.success) return toast.error('Úkol se nepodařilo vytvořit.');
     setTitle('');
+    setTaskType('ukol');
     setDue('');
     setTaskNote('');
     setTaskComposerOpen(false);
@@ -314,8 +317,9 @@ export function LeadCrmPanel({
                   {a.body_snapshot && <div>{a.body_snapshot}</div>}
                   <div className="text-[10px]">Autor: {a.performed_by ? names.get(a.performed_by) || a.performed_by.slice(0, 8) : 'Systém'}</div>
                 </div>
-                <div className="mt-3 grid grid-cols-3 gap-1.5">
+                <div className="mt-3 grid grid-cols-2 gap-1.5">
                   <Button size="sm" variant="outline" className="h-8 px-2 text-[10px]" onClick={() => edit(a)}>Upravit</Button>
+                  <Button size="sm" variant="outline" className="h-8 px-2 text-[10px]" onClick={() => setActivityStatus(a.id, a.activity_status === 'rozpracovano' ? 'naplanovano' : 'rozpracovano')}>{a.activity_status === 'rozpracovano' ? 'Vrátit k čekání' : 'Začít'}</Button>
                   <Button size="sm" className="h-8 px-2 text-[10px]" onClick={() => setActivityStatus(a.id, 'dokonceno')}><Check className="mr-1 h-3 w-3" />Hotovo</Button>
                   <Button size="sm" variant="ghost" className="h-8 px-2 text-[10px]" onClick={() => setActivityStatus(a.id, 'zruseno')}><X className="mr-1 h-3 w-3" />Zrušit</Button>
                 </div>
@@ -371,21 +375,25 @@ export function LeadCrmPanel({
         )}
       </RailCard>
 
-      <RailCard icon={<ListTodo className="h-4 w-4" />} eyebrow="Tasks" title="Úkoly a připomenutí" count={tasks.filter((t) => t.status === 'ceka').length}>
+      <RailCard icon={<ListTodo className="h-4 w-4" />} eyebrow="Tasks" title="Úkoly a připomenutí" count={tasks.filter((t) => ['ceka','rozpracovano'].includes(t.status)).length}>
         {tasks.length > 0 && (
           <div className="mb-3 space-y-2">
             {tasks.map((t) => (
               <div
                 key={t.id}
-                className={`rounded-xl border p-3 transition-colors duration-150 ${t.status === 'ceka' && new Date(t.due_at) < new Date() ? 'border-destructive/50 bg-destructive/5' : 'border-white/[0.08] bg-background/55 hover:border-white/[0.12]'}`}
+                className={`rounded-xl border p-3 transition-colors duration-150 ${['ceka','rozpracovano'].includes(t.status) && new Date(t.due_at) < new Date() ? 'border-destructive/50 bg-destructive/5' : 'border-white/[0.08] bg-background/55 hover:border-white/[0.12]'}`}
               >
                 <div className="flex items-start justify-between gap-2">
                   <span className="text-xs font-medium leading-snug">{t.title}</span>
-                  <Badge variant="outline" className="shrink-0 rounded-full text-[9px]">{t.status}</Badge>
+                  <div className="flex gap-1">
+                    <Badge variant="outline" className="shrink-0 rounded-full text-[9px]">{t.task_type === 'follow_up' ? 'Follow-up' : 'Úkol'}</Badge>
+                    <Badge variant="outline" className="shrink-0 rounded-full text-[9px]">{t.status === 'rozpracovano' ? 'Rozpracováno' : t.status === 'ceka' ? 'Čeká' : t.status === 'dokonceno' ? 'Dokončeno' : 'Zrušeno'}</Badge>
+                  </div>
                 </div>
                 <div className="mt-1 text-[10px] text-muted-foreground">{czDate(t.due_at)}</div>
-                {t.status === 'ceka' && (
-                  <div className="mt-2 flex gap-1.5">
+                {['ceka','rozpracovano'].includes(t.status) && (
+                  <div className="mt-2 grid grid-cols-3 gap-1.5">
+                    <Button size="sm" variant="outline" className="h-7 text-[10px]" onClick={() => finishTask(t.id, t.status === 'rozpracovano' ? 'ceka' : 'rozpracovano')}>{t.status === 'rozpracovano' ? 'Čekat' : 'Začít'}</Button>
                     <Button size="sm" variant="outline" className="h-7 flex-1 text-[10px]" onClick={() => finishTask(t.id, 'dokonceno')}><CheckCircle2 className="mr-1 h-3 w-3" />Dokončit</Button>
                     <Button size="sm" variant="ghost" className="h-7 text-[10px]" onClick={() => finishTask(t.id, 'zruseno')}>Zrušit</Button>
                   </div>
@@ -406,6 +414,10 @@ export function LeadCrmPanel({
         )}
         {taskComposerOpen && (
         <div className="space-y-2 border-t border-white/[0.07] pt-4">
+          <Select value={taskType} onValueChange={(value) => setTaskType(value as 'ukol' | 'follow_up')}>
+            <SelectTrigger className="h-9 text-xs"><SelectValue /></SelectTrigger>
+            <SelectContent><SelectItem value="ukol">Úkol</SelectItem><SelectItem value="follow_up">Follow-up</SelectItem></SelectContent>
+          </Select>
           <Input className="h-9 text-xs" placeholder="Název úkolu" value={title} onChange={(e) => setTitle(e.target.value)} />
           <Input className="h-9 text-xs" type="datetime-local" value={due} onChange={(e) => setDue(e.target.value)} />
           <Select value={assignee} onValueChange={setAssignee}>
