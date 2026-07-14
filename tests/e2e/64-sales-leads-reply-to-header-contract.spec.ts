@@ -28,6 +28,15 @@ test.describe('64 — sales leads public Reply-To contract', () => {
     expect(followUpSender).toContain('replyTo,subject');
   });
 
+  test('all senders use an invisible capture id separately from the provider id', () => {
+    for (const source of [initialSender, replySender, followUpSender]) {
+      expect(source).toContain('createOutboundCapture');
+      expect(source).toMatch(/bcc\s*:\s*\[?outboundCapture\.address/);
+      expect(source).toMatch(/outbound_capture_id\s*:\s*outboundCapture\.id/);
+      expect(source).not.toMatch(/["']Message-ID["']\s*:/);
+    }
+  });
+
   test('inbound never derives a lead from recipient, sender, or subject', () => {
     expect(inbound).not.toContain('extractLeadId');
     expect(inbound).not.toMatch(/reply\+\(\[0-9a-f\]/);

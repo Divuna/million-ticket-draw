@@ -2,6 +2,7 @@ import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.57.4";
 import { Resend } from "npm:resend@2.0.0";
 import { markdownLinksToVisibleText } from "../_shared/salesLeadEmailRendering.ts";
+import { createOutboundCapture } from "../_shared/salesLeadEmailThreading.ts";
 
 // ============================================================================
 // send-sales-lead-email — Fáze 3C: odeslání uloženého konceptu ČLOVĚKEM
@@ -156,11 +157,13 @@ serve(async (req: Request) => {
     const textBody = String(lead.draft_email_body);
     const renderedBody = markdownLinksToVisibleText(textBody);
     const htmlBody = `<div style="white-space:pre-wrap;font-family:Arial,sans-serif;font-size:14px;line-height:1.5">${escapeHtml(renderedBody)}</div>`;
+    const outboundCapture = createOutboundCapture();
 
     const resend = new Resend(resendApiKey);
     const emailResponse = await resend.emails.send({
       from: FROM_ADDRESS,
       to: [recipient],
+      bcc: [outboundCapture.address],
       reply_to: REPLY_TO,
       subject,
       text: renderedBody,
@@ -185,6 +188,8 @@ serve(async (req: Request) => {
         reply_to: "b2b@onemil.cz",
         to: recipient,
         resend_email_id: (emailResponse.data as { id?: string } | null)?.id ?? null,
+        outbound_capture_id: outboundCapture.id,
+        references: [],
       },
     });
 

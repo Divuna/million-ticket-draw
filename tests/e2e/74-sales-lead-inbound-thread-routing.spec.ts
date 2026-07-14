@@ -6,6 +6,11 @@ import {
   extractMessageIds,
   headerValue,
 } from '../../supabase/functions/_shared/salesLeadInboundRouting';
+import {
+  buildReplyHeaders,
+  createOutboundCapture,
+  extractOutboundCaptureId,
+} from '../../supabase/functions/_shared/salesLeadEmailThreading';
 
 const read = (path: string) => readFileSync(resolve(process.cwd(), path), 'utf8');
 const inbound = read('supabase/functions/sales-lead-inbound/index.ts');
@@ -17,6 +22,25 @@ test.describe('74 — safe inbound thread routing', () => {
       inReplyToLeadIds: ['lead-a'],
       referenceLeadIds: ['lead-b'],
     })).toEqual({ leadId: 'lead-a', method: 'in_reply_to', ambiguous: false });
+  });
+
+  test('every outbound email gets a unique hidden capture address', () => {
+    const first = createOutboundCapture();
+    const second = createOutboundCapture();
+    expect(first.address).toMatch(/^sales-lead-capture-[0-9a-f-]{36}@ulduuzoul\.resend\.app$/);
+    expect(second.id).not.toBe(first.id);
+    expect(extractOutboundCaptureId([first.address])).toBe(first.id);
+  });
+
+  test('thread headers preserve the full parent reference chain', () => {
+    const headers = buildReplyHeaders(
+      '<customer-reply@example.test>',
+      ['<sales-lead-first@onemil.cz>'],
+    );
+    expect(headers).toEqual({
+      'In-Reply-To': '<customer-reply@example.test>',
+      References: '<sales-lead-first@onemil.cz> <customer-reply@example.test>',
+    });
   });
 
   test('valid References selects one lead when In-Reply-To has no match', () => {
@@ -50,6 +74,13 @@ test.describe('74 — safe inbound thread routing', () => {
     expect(receivingCall).toBeGreaterThan(duplicateCheck);
     expect(migration).toContain('uq_sales_lead_activities_inbound_provider_id');
     expect(migration).toContain('resend_email_id     text NOT NULL UNIQUE');
+  });
+
+  test('hidden outbound capture stores the provider RFC Message-ID without entering the queue', () => {
+    expect(inbound).toContain('extractOutboundCaptureId');
+    expect(inbound).toContain('outbound_capture: true');
+    expect(inbound).toMatch(/rfc_message_id:\s*rfcMessageId/);
+    expect(inbound.indexOf('if (outboundCaptureId)')).toBeLessThan(inbound.indexOf('const decision = decideInboundRoute'));
   });
 
   test('unassigned mailbox is RLS protected and manual assignment preserves lead history', () => {

@@ -7,6 +7,7 @@ import {
   headerValue,
   normalizeMessageId,
 } from "../_shared/salesLeadInboundRouting.ts";
+import { extractOutboundCaptureId } from "../_shared/salesLeadEmailThreading.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -246,6 +247,42 @@ serve(async (req: Request) => {
   const inReplyTo = extractMessageIds(headerValue(headers, "in-reply-to"))[0] ?? null;
   const referenceIds = extractMessageIds(headerValue(headers, "references"));
   const threadId = providerThreadId(received, data);
+  const recipients = [
+    ...toAddressList(received.to),
+    ...toAddressList(data.to),
+    ...toAddressList(data.received_for),
+  ];
+  const rfcMessageId = normalizeMessageId(asString(received.message_id) ?? asString(data.message_id));
+  const outboundCaptureId = extractOutboundCaptureId(recipients);
+
+  // Resend/SES generates the authoritative outbound RFC Message-ID and does
+  // not preserve a caller-supplied Message-ID. A hidden BCC copy sent to the
+  // random capture address lets Receiving return that exact provider value.
+  if (outboundCaptureId) {
+    if (!rfcMessageId) return jsonResponse({ success: false, error: "capture_message_id_missing" }, 502);
+    const { data: sent, error: lookupError } = await admin.from("sales_lead_activities")
+      .select("id,rfc_message_id,metadata")
+      .eq("activity_type", "email_sent")
+      .contains("metadata", { outbound_capture_id: outboundCaptureId })
+      .order("created_at", { ascending: false })
+      .limit(1)
+      .maybeSingle();
+    if (lookupError) return jsonResponse({ success: false, error: "capture_lookup_failed" }, 500);
+    // The BCC can arrive milliseconds before the post-send activity insert.
+    // A 503 makes Resend retry instead of turning the internal copy into mail.
+    if (!sent) return jsonResponse({ success: false, error: "capture_activity_pending" }, 503);
+    if (sent.rfc_message_id && normalizeMessageId(sent.rfc_message_id) !== rfcMessageId) {
+      return jsonResponse({ success: false, error: "capture_message_id_conflict" }, 409);
+    }
+    const metadata = sent.metadata && typeof sent.metadata === "object" ? sent.metadata : {};
+    const { error: updateError } = await admin.from("sales_lead_activities").update({
+      rfc_message_id: rfcMessageId,
+      provider_thread_id: threadId,
+      metadata: { ...metadata, message_id: rfcMessageId, provider_thread_id: threadId },
+    }).eq("id", sent.id);
+    if (updateError) return jsonResponse({ success: false, error: "capture_update_failed" }, 500);
+    return jsonResponse({ success: true, outbound_capture: true });
+  }
 
   const lookupLeads = async (column: "rfc_message_id" | "provider_thread_id", values: string[]) => {
     if (values.length === 0) return [] as string[];
@@ -272,12 +309,6 @@ serve(async (req: Request) => {
   const subject = asString(received.subject) ?? asString(data.subject);
   const rawFrom = toAddressList(received.from)[0] ?? toAddressList(data.from)[0] ?? "";
   const sender = parseMailbox(rawFrom);
-  const recipients = [
-    ...toAddressList(received.to),
-    ...toAddressList(data.to),
-    ...toAddressList(data.received_for),
-  ];
-  const rfcMessageId = normalizeMessageId(asString(received.message_id) ?? asString(data.message_id));
   const receivedAt = asString(received.created_at) ?? asString(payload.created_at) ?? new Date().toISOString();
 
   if (!decision.leadId) {
