@@ -2,6 +2,7 @@ import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.57.4";
 import { Resend } from "npm:resend@6.17.2";
 import { markdownLinksToVisibleText } from "../_shared/salesLeadEmailRendering.ts";
+import { buildReplyHeaders, createOutboundCapture, referencesFromMetadata } from "../_shared/salesLeadEmailThreading.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -37,7 +38,7 @@ serve(async (req) => {
     }
     const [{ data: lead }, { data: incoming }] = await Promise.all([
       admin.from("sales_leads").select("id,company_name,contact_email,do_not_contact").eq("id", leadId).maybeSingle(),
-      admin.from("sales_lead_activities").select("id,lead_id,activity_type,metadata").eq("id", activityId).eq("lead_id", leadId).eq("activity_type", "reply_received").maybeSingle(),
+      admin.from("sales_lead_activities").select("id,lead_id,activity_type,metadata,rfc_message_id").eq("id", activityId).eq("lead_id", leadId).eq("activity_type", "reply_received").maybeSingle(),
     ]);
     if (!lead) return json({ success: false, error: "lead_not_found" }, 404);
     if (!incoming) return json({ success: false, error: "reply_target_not_found" }, 404);
@@ -53,23 +54,26 @@ serve(async (req) => {
 
     const key = Deno.env.get("RESEND_API_KEY");
     if (!key) return json({ success: false, error: "email_not_configured" }, 503);
-    const messageId = typeof incoming.metadata?.message_id === "string" ? incoming.metadata.message_id : null;
-    // Per-lead Reply-To — zákazníkova další odpověď musí dorazit sem, aby ji
-    // Resend inbound spároval s leadem. POZOR: Resend SDK v6 očekává `replyTo`
-    // (camelCase), NE `reply_to`. Se `reply_to` v6 pole tiše ignoruje a odchozí
-    // e-mail nemá Reply-To hlavičku → další odpověď se ztratí (šla by na from).
-    const replyTo = `reply+${leadId}@ulduuzoul.resend.app`;
+    const parentMessageId = typeof incoming.rfc_message_id === "string"
+      ? incoming.rfc_message_id
+      : typeof incoming.metadata?.message_id === "string" ? incoming.metadata.message_id : null;
+    const outboundCapture = createOutboundCapture();
+    const threadHeaders = buildReplyHeaders(
+      parentMessageId,
+      referencesFromMetadata(incoming.metadata),
+    );
+    const replyTo = "OneMil obchodní tým <b2b@onemil.cz>";
     const renderedBody = markdownLinksToVisibleText(body);
     const response = await new Resend(key).emails.send({
-      from: "OneMil <b2b@onemil.cz>", to: [recipient], replyTo,
+      from: "OneMil obchodní tým <b2b@onemil.cz>", to: [recipient], bcc: [outboundCapture.address], replyTo,
       subject, text: renderedBody, html: `<div style="white-space:pre-wrap;font-family:Arial,sans-serif;font-size:14px;line-height:1.5">${escapeHtml(renderedBody)}</div>`,
-      ...(messageId ? { headers: { "In-Reply-To": messageId, "References": messageId } } : {}),
+      headers: threadHeaders,
     });
     if (response.error) return json({ success: false, error: "email_send_failed" }, 502);
     const { error: historyError } = await admin.from("sales_lead_activities").insert({
       lead_id: leadId, activity_type: "email_sent", direction: "outbound", subject, body_snapshot: body,
       email_message_id: response.data?.id ?? null, performed_by: caller.id,
-      metadata: { sent_by: "human_reply", from: "b2b@onemil.cz", reply_to: replyTo, to: recipient, reply_to_activity_id: activityId },
+      metadata: { sent_by: "human_reply", from: "b2b@onemil.cz", reply_to: "b2b@onemil.cz", to: recipient, reply_to_activity_id: activityId, resend_email_id: response.data?.id ?? null, outbound_capture_id: outboundCapture.id, in_reply_to: threadHeaders["In-Reply-To"] ?? null, references: threadHeaders.References?.split(" ") ?? [] },
     });
     // E-mail už byl odeslán. Nevracíme chybu vhodnou k retry, aby člověk
     // nevytvořil duplicitní odpověď; warning je explicitní pro následný audit.

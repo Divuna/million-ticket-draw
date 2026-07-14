@@ -32,6 +32,7 @@ import { SalesLeadDetailSheet } from '@/components/admin/sales-leads/SalesLeadDe
 import { DiscoverLeadsDialog } from '@/components/admin/sales-leads/DiscoverLeadsDialog';
 import { SalesLeadOverview } from '@/components/admin/sales-leads/SalesLeadOverview';
 import { SalesLeadEmailTemplateManager } from '@/components/admin/sales-leads/SalesLeadEmailTemplateManager';
+import { SalesLeadUnassignedEmails } from '@/components/admin/sales-leads/SalesLeadUnassignedEmails';
 
 /**
  * Admin modul „Obchod / Leady" — Fáze 3A (ruční přidání, detail, editace, změna stavu)
@@ -68,6 +69,7 @@ const TABS: { id: string; label: string; statuses: string[] | null }[] = [
   { id: 'not-converted', label: 'Bez spolupráce', statuses: ['odmitl'] },
   { id: 'blocked', label: 'Nekontaktovat', statuses: ['nekontaktovat'] },
   { id: 'archive', label: 'Archiv', statuses: ['archivovan'] },
+  { id: 'unassigned-emails', label: 'Nepřiřazené e-maily', statuses: [] },
 ];
 
 const formatDate = (iso: string | null): string => {
@@ -98,11 +100,12 @@ const AdminSalesLeads: React.FC = () => {
   const [unreadTotal, setUnreadTotal] = useState(0);
   const [openTasks, setOpenTasks] = useState<{lead_id:string;due_at:string}[]>([]);
   const [plannedActivities, setPlannedActivities] = useState<{lead_id:string;scheduled_for:string;activity_type:string}[]>([]);
+  const [unassignedEmailCount, setUnassignedEmailCount] = useState(0);
 
   const load = useCallback(async () => {
     setLoading(true);
     try {
-      const [leadsRes, unreadRes, tasksRes, plannedRes] = await Promise.all([
+      const [leadsRes, unreadRes, tasksRes, plannedRes, unassignedRes] = await Promise.all([
         (supabase as any)
           .from('sales_leads')
           .select('id, company_name, industry, city, status, contact_email, updated_at, assigned_admin_id, lead_group')
@@ -115,6 +118,7 @@ const AdminSalesLeads: React.FC = () => {
           .is('read_at', null),
         (supabase as any).from('sales_lead_tasks').select('lead_id,due_at').eq('status','ceka').order('due_at'),
         (supabase as any).from('sales_lead_activities').select('lead_id,scheduled_for,activity_type').eq('activity_status','naplanovano').not('scheduled_for','is',null).in('activity_type',['call_logged','meeting_logged','note_added']).order('scheduled_for'),
+        (supabase as any).from('sales_lead_unassigned_emails').select('id', { count: 'exact', head: true }).eq('status', 'unassigned'),
       ]);
       if (leadsRes.error) {
         setTableMissing(true);
@@ -130,6 +134,7 @@ const AdminSalesLeads: React.FC = () => {
       setUnreadTotal(unreadRows.length);
       setOpenTasks((tasksRes.error ? [] : tasksRes.data ?? []) as {lead_id:string;due_at:string}[]);
       setPlannedActivities((plannedRes.error ? [] : plannedRes.data ?? []) as {lead_id:string;scheduled_for:string;activity_type:string}[]);
+      setUnassignedEmailCount(unassignedRes.error ? 0 : unassignedRes.count ?? 0);
     } catch {
       setTableMissing(true);
       setLeads([]);
@@ -137,6 +142,7 @@ const AdminSalesLeads: React.FC = () => {
       setUnreadTotal(0);
       setOpenTasks([]);
       setPlannedActivities([]);
+      setUnassignedEmailCount(0);
     } finally {
       setLoading(false);
     }
@@ -382,8 +388,10 @@ const AdminSalesLeads: React.FC = () => {
       <Card>
         <CardHeader className="pb-3 space-y-3">
           <div className="flex flex-wrap items-center justify-between gap-3">
-            <CardTitle className="text-base">Seznam leadů</CardTitle>
-            <div className="relative w-full sm:w-72">
+            <CardTitle className="text-base">
+              {activeTab === 'unassigned-emails' ? 'Příchozí pošta bez návaznosti' : 'Seznam leadů'}
+            </CardTitle>
+            {activeTab !== 'unassigned-emails' && <div className="relative w-full sm:w-72">
               <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" aria-hidden />
               <Input
                 value={searchTerm}
@@ -391,13 +399,16 @@ const AdminSalesLeads: React.FC = () => {
                 placeholder="Hledat název, e-mail, město…"
                 className="pl-8"
               />
-            </div>
+            </div>}
           </div>
           <Tabs value={activeTab} onValueChange={handleTabChange}>
             <TabsList className="h-auto flex-wrap justify-start">
               {TABS.map((t) => (
                 <TabsTrigger key={t.id} value={t.id} className="text-xs">
                   {t.label}
+                  {t.id === 'unassigned-emails' && unassignedEmailCount > 0 && (
+                    <Badge className="ml-1.5 h-5 min-w-5 justify-center px-1.5">{unassignedEmailCount}</Badge>
+                  )}
                 </TabsTrigger>
               ))}
             </TabsList>
@@ -419,8 +430,16 @@ const AdminSalesLeads: React.FC = () => {
             </div>
           )}
         </CardHeader>
-        <CardContent>
-          {loading ? (
+        <CardContent className={activeTab === 'unassigned-emails' ? 'p-0' : undefined}>
+          {activeTab === 'unassigned-emails' ? (
+            <SalesLeadUnassignedEmails
+              onCountChange={setUnassignedEmailCount}
+              onOpenLead={(leadId) => {
+                setActiveTab('all');
+                openDetail(leadId);
+              }}
+            />
+          ) : loading ? (
             <div className="py-10 text-center text-sm text-muted-foreground">Načítám…</div>
           ) : visibleLeads.length === 0 ? (
             <div className="py-12 text-center text-sm text-muted-foreground">
