@@ -18,16 +18,16 @@ serve(async req=>{
  const recipient=String(lead.contact_email??'').trim().toLowerCase(); if(!recipient)return json({success:false,error:'missing_contact_email'},422);
  const [{count:replies},{data:lastSent},{data:suppressed},{data:guard}]=await Promise.all([
   admin.from('sales_lead_activities').select('id',{count:'exact',head:true}).eq('lead_id',leadId).eq('activity_type','reply_received'),
-  admin.from('sales_lead_activities').select('email_message_id').eq('lead_id',leadId).eq('activity_type','email_sent').order('created_at',{ascending:false}).limit(1).maybeSingle(),
+  admin.from('sales_lead_activities').select('rfc_message_id').eq('lead_id',leadId).eq('activity_type','email_sent').order('created_at',{ascending:false}).limit(1).maybeSingle(),
   admin.from('sales_lead_email_suppression').select('id').in('email_pattern',[recipient,`@${recipient.split('@')[1]??''}`]).limit(1).maybeSingle(),
   admin.rpc('sales_lead_email_send_guard',{p_lead_id:leadId}),
  ]);
  if((replies??0)>0)return json({success:false,error:'lead_already_replied'},409); if(suppressed)return json({success:false,error:'suppressed'},403); if(!(guard as {success?:boolean}|null)?.success)return json({success:false,error:'duplicate_override_required'},409);
- const key=Deno.env.get('RESEND_API_KEY'); if(!key)return json({success:false,error:'email_not_configured'},503); const replyTo=`reply+${leadId}@ulduuzoul.resend.app`;
+ const key=Deno.env.get('RESEND_API_KEY'); if(!key)return json({success:false,error:'email_not_configured'},503); const replyTo='OneMil obchodní tým <b2b@onemil.cz>';
  const renderedBody=markdownLinksToVisibleText(body);
- const messageId=lastSent?.email_message_id??null; const sent=await new Resend(key).emails.send({from:'OneMil <b2b@onemil.cz>',to:[recipient],replyTo,subject,text:renderedBody,html:`<div style="white-space:pre-wrap;font-family:Arial,sans-serif">${esc(renderedBody)}</div>`,...(messageId?{headers:{'In-Reply-To':messageId,'References':messageId}}:{})});
+ const messageId=lastSent?.rfc_message_id??null; const sent=await new Resend(key).emails.send({from:'OneMil obchodní tým <b2b@onemil.cz>',to:[recipient],replyTo,subject,text:renderedBody,html:`<div style="white-space:pre-wrap;font-family:Arial,sans-serif">${esc(renderedBody)}</div>`,...(messageId?{headers:{'In-Reply-To':messageId,'References':messageId}}:{})});
  if(sent.error)return json({success:false,error:'email_send_failed'},502);
- const {error}=await admin.from('sales_lead_activities').insert({lead_id:leadId,activity_type:'email_sent',direction:'outbound',subject,body_snapshot:body,email_message_id:sent.data?.id??null,performed_by:u.user.id,metadata:{sent_by:'human_follow_up',from:'b2b@onemil.cz',reply_to:replyTo,to:recipient}});
+ const {error}=await admin.from('sales_lead_activities').insert({lead_id:leadId,activity_type:'email_sent',direction:'outbound',subject,body_snapshot:body,email_message_id:sent.data?.id??null,performed_by:u.user.id,metadata:{sent_by:'human_follow_up',from:'b2b@onemil.cz',reply_to:'b2b@onemil.cz',to:recipient,resend_email_id:sent.data?.id??null}});
  if(error)return json({success:true,history_recorded:false,warning:'history_write_failed_after_send'});
  await admin.from('sales_leads').update({status:'follow_up',next_action_at:null}).eq('id',leadId).in('status',['osloveno','follow_up']);
  return json({success:true,lead_id:leadId});

@@ -38,13 +38,8 @@ const corsHeaders = {
   "Access-Control-Allow-Methods": "POST, OPTIONS",
 };
 
-const FROM_ADDRESS = "OneMil <b2b@onemil.cz>";
-// Odesílatelská schránka (Active24). Zůstává beze změny.
-const REPLY_TO = "b2b@onemil.cz";
-// Bezplatná Resend receiving doména — odpovědi firem chodí na per-lead adresu
-// `reply+<lead_id>@ulduuzoul.resend.app`, kterou EF `sales-lead-inbound`
-// deterministicky spáruje s leadem. Custom (placenou) doménu nepoužíváme.
-const REPLY_INBOUND_DOMAIN = "ulduuzoul.resend.app";
+const FROM_ADDRESS = "OneMil obchodní tým <b2b@onemil.cz>";
+const REPLY_TO = "OneMil obchodní tým <b2b@onemil.cz>";
 
 function jsonResponse(body: Record<string, unknown>, status = 200): Response {
   return new Response(JSON.stringify(body), {
@@ -162,15 +157,11 @@ serve(async (req: Request) => {
     const renderedBody = markdownLinksToVisibleText(textBody);
     const htmlBody = `<div style="white-space:pre-wrap;font-family:Arial,sans-serif;font-size:14px;line-height:1.5">${escapeHtml(renderedBody)}</div>`;
 
-    // Per-lead reply-to — odpovědi firmy dorazí na adresu s tokenem leadu,
-    // kterou EF `sales-lead-inbound` deterministicky spáruje s tímto leadem.
-    const replyTo = `reply+${lead.id}@${REPLY_INBOUND_DOMAIN}`;
-
     const resend = new Resend(resendApiKey);
     const emailResponse = await resend.emails.send({
       from: FROM_ADDRESS,
       to: [recipient],
-      reply_to: replyTo,
+      reply_to: REPLY_TO,
       subject,
       text: renderedBody,
       html: htmlBody,
@@ -188,7 +179,13 @@ serve(async (req: Request) => {
       body_snapshot: textBody,
       email_message_id: (emailResponse.data as { id?: string } | null)?.id ?? null,
       performed_by: caller.id,
-      metadata: { sent_by: "human", from: REPLY_TO, reply_to: replyTo, to: recipient },
+      metadata: {
+        sent_by: "human",
+        from: "b2b@onemil.cz",
+        reply_to: "b2b@onemil.cz",
+        to: recipient,
+        resend_email_id: (emailResponse.data as { id?: string } | null)?.id ?? null,
+      },
     });
 
     // ── 7. Best-effort propsání stavu (§18 spec) ─────────────────────────────

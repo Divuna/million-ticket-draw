@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import {
   Dialog,
   DialogContent,
@@ -26,7 +26,8 @@ import { DuplicateConflictAlert } from './DuplicateConflictAlert';
 interface Props {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  onSuccess: () => void;
+  onSuccess: (leadId?: string) => void;
+  initialValues?: Partial<FormState>;
 }
 
 const EMPTY_FORM = {
@@ -52,11 +53,18 @@ type FormState = typeof EMPTY_FORM;
  * `sales_lead_create` — žádný přímý client INSERT (RLS nemá write policy).
  * Neposílá e-maily, nevolá AI ani Resend.
  */
-export function AddSalesLeadDialog({ open, onOpenChange, onSuccess }: Props) {
+export function AddSalesLeadDialog({ open, onOpenChange, onSuccess, initialValues }: Props) {
   const [loading, setLoading] = useState(false);
   const [form, setForm] = useState<FormState>(EMPTY_FORM);
   const [duplicateConflicts, setDuplicateConflicts] = useState<DuplicateConflict[]>([]);
   const [overrideReason, setOverrideReason] = useState('');
+
+  useEffect(() => {
+    if (!open) return;
+    setForm({ ...EMPTY_FORM, ...initialValues });
+    setDuplicateConflicts([]);
+    setOverrideReason('');
+  }, [open, initialValues]);
 
   const setField =
     (field: keyof FormState) =>
@@ -112,7 +120,7 @@ export function AddSalesLeadDialog({ open, onOpenChange, onSuccess }: Props) {
       });
 
       if (error) throw new Error(error.message);
-      const res = (data ?? {}) as { success?: boolean; error?: string; conflicts?: DuplicateConflict[] };
+      const res = (data ?? {}) as { success?: boolean; error?: string; conflicts?: DuplicateConflict[]; lead_id?: string };
       if (!res.success) {
         if (res.error === 'duplicate_conflict' || res.error === 'duplicate_override_reason_required') {
           setDuplicateConflicts(res.conflicts ?? []);
@@ -126,7 +134,7 @@ export function AddSalesLeadDialog({ open, onOpenChange, onSuccess }: Props) {
       setDuplicateConflicts([]);
       setOverrideReason('');
       onOpenChange(false);
-      onSuccess();
+      onSuccess(res.lead_id);
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : 'Nepodařilo se přidat firmu';
       toast.error(msg);
