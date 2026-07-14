@@ -1,7 +1,7 @@
 # OneMil — business context
 
 **Status:** permanent business/product context  
-**Last updated:** 2026-05-11  
+**Last updated:** 2026-07-14  
 **Owner:** Pavel Diviš  
 **Company context:** see `COMPANY_CONTEXT.md`
 
@@ -291,21 +291,65 @@ The influencer system must not be merged with the regular user reward system.
 
 ---
 
-## 13. Agencies and e-shop managers
+## 13. Agencies, sales representatives, and e-shop managers
 
-Agencies that manage e-shops or marketing for companies can be a partner acquisition channel for OneMil.
+Agencies, sales representatives, and people who manage e-shops or marketing for companies can bring partner companies and customers into OneMil.
 
-The agency model should follow the same logic as the influencer / partner acquisition system:
+The model is long-term and has two separate commission streams.
+
+### 13.1 Commission from a brought e-shop
+
+An agency or sales representative brings an e-shop or company into OneMil. After approval, the company is linked to the affiliate account that brought it.
+
+The commission is calculated from the amount excluding VAT that OneMil actually invoices to the brought e-shop for activated / used MioCoins.
+
+It is not calculated from the e-shop's turnover and not from the potential value of all distributed coupons.
+
+Example:
 
 ```text
-agency registers or brings an e-shop → e-shop uses agency / partner code → e-shop starts using OneMil rewards → agency can receive commission from the activity of the brought partner and its customers
+The e-shop distributes rewards with a potential value of 100,000 Kč.
+Customers activate rewards worth 20,000 Kč.
+OneMil invoices the e-shop 20,000 Kč excluding VAT.
+At a 5 % commission rate, the agency or sales representative receives 1,000 Kč.
 ```
 
-The intended model is long-term, not only one-time.
+The intended model is long-term. If the brought e-shop continues using OneMil and OneMil continues invoicing the e-shop, the linked agency or sales representative can continue receiving commission according to the approved agreement.
 
-If an agency brings an e-shop that keeps using OneMil and gives MioCoins to customers, the agency can keep receiving a commission according to the agreed partner model.
+### 13.2 Commission from customer top-ups
 
-This model may require final business and technical implementation details, but it is part of the OneMil business direction.
+An agency can also bring end users through its tracking link or code. Paid top-ups of these customers can create a separate customer commission.
+
+For this customer commission, the agency can determine who receives it:
+
+- the agency can keep the commission itself,
+- the agency can assign it to a specific sales representative or collaborator,
+- the agency can assign it to another approved affiliate account in its structure.
+
+This allows the agency to own the relationship with the e-shop while the person who manages promotion or brings customers receives the commission from their paid top-ups.
+
+### 13.3 Practical flow
+
+```text
+agency / sales representative brings an e-shop
+→ the e-shop is approved and linked to the affiliate account
+→ OneMil invoices the e-shop for actually activated / used MioCoins
+→ the linked affiliate receives an agreed commission from the invoiced amount excluding VAT
+→ the agency selects who will receive customer top-up commissions
+→ customers register through the relevant code or link
+→ their paid top-ups are attributed to the selected recipient
+→ OneMil records, approves, and pays monetary commissions
+```
+
+Changing the recipient of customer top-up commissions applies only to future commission attribution. Commission already created must not be reassigned retroactively unless an admin-approved correction is explicitly made.
+
+All monetary commissions are recorded, approved, invoiced, and paid under admin control.
+
+Public summary:
+
+```text
+An agency or sales representative can receive two long-term commissions. The first is based on amounts excluding VAT that OneMil actually invoices to e-shops brought by that partner. The second can arise from paid top-ups of brought customers. The agency can decide whether it keeps the customer commission or assigns it to a specific sales representative, collaborator, or another approved affiliate account.
+```
 
 ---
 
@@ -522,11 +566,13 @@ Admin and production actions are sensitive and must follow the existing project 
 - receive measurable commissions or campaign rewards
 - participate in campaigns with tracked performance
 
-### For agencies
+### For agencies and sales representatives
 
 - bring e-shops and brands to OneMil
+- receive long-term commission from amounts excluding VAT actually invoiced by OneMil to brought e-shops
+- bring end users and receive commission from their paid top-ups
+- keep customer top-up commission or assign it to a selected sales representative, collaborator, or approved affiliate account
 - help clients use OneMil as a customer reward channel
-- potentially receive long-term commissions from partner activity
 
 ### For starting brands
 
@@ -566,6 +612,8 @@ Users can earn MioCoins through personal codes.
 
 Influencers and agencies can be growth and commission channels.
 
+Agencies and sales representatives can receive commission from amounts excluding VAT actually invoiced by OneMil to brought e-shops and can control who receives customer top-up commissions within their approved affiliate structure.
+
 Partner Offers, vouchers, coupons, contests, MioCoins, and social campaigns are different parts of the same reward ecosystem.
 
 ---
@@ -574,7 +622,6 @@ Partner Offers, vouchers, coupons, contests, MioCoins, and social campaigns are 
 
 - exact billing email
 - exact legal wording for partner contracts
-- exact agency commission model
 - exact influencer commission model if it changes from current implementation
 - exact B2B onboarding flow for e-shops
 - exact API integration package for partners
