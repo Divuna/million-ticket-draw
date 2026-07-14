@@ -1,6 +1,7 @@
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.57.4";
 import { Resend } from "npm:resend@2.0.0";
+import { markdownLinksToVisibleText } from "../_shared/salesLeadEmailRendering.ts";
 
 // ============================================================================
 // send-sales-lead-email — Fáze 3C: odeslání uloženého konceptu ČLOVĚKEM
@@ -158,7 +159,8 @@ serve(async (req: Request) => {
 
     const subject = String(lead.draft_email_subject);
     const textBody = String(lead.draft_email_body);
-    const htmlBody = `<div style="white-space:pre-wrap;font-family:Arial,sans-serif;font-size:14px;line-height:1.5">${escapeHtml(textBody)}</div>`;
+    const renderedBody = markdownLinksToVisibleText(textBody);
+    const htmlBody = `<div style="white-space:pre-wrap;font-family:Arial,sans-serif;font-size:14px;line-height:1.5">${escapeHtml(renderedBody)}</div>`;
 
     // Per-lead reply-to — odpovědi firmy dorazí na adresu s tokenem leadu,
     // kterou EF `sales-lead-inbound` deterministicky spáruje s tímto leadem.
@@ -170,7 +172,7 @@ serve(async (req: Request) => {
       to: [recipient],
       reply_to: replyTo,
       subject,
-      text: textBody,
+      text: renderedBody,
       html: htmlBody,
     });
     if (emailResponse.error) {

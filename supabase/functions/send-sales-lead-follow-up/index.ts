@@ -1,6 +1,7 @@
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.57.4";
 import { Resend } from "npm:resend@6.17.2";
+import { markdownLinksToVisibleText } from "../_shared/salesLeadEmailRendering.ts";
 const json=(b:Record<string,unknown>,s=200)=>new Response(JSON.stringify(b),{status:s,headers:{"content-type":"application/json","access-control-allow-origin":"*","access-control-allow-headers":"authorization,apikey,content-type"}});
 const esc=(v:string)=>v.replaceAll('&','&amp;').replaceAll('<','&lt;').replaceAll('>','&gt;');
 serve(async req=>{
@@ -23,7 +24,8 @@ serve(async req=>{
  ]);
  if((replies??0)>0)return json({success:false,error:'lead_already_replied'},409); if(suppressed)return json({success:false,error:'suppressed'},403); if(!(guard as {success?:boolean}|null)?.success)return json({success:false,error:'duplicate_override_required'},409);
  const key=Deno.env.get('RESEND_API_KEY'); if(!key)return json({success:false,error:'email_not_configured'},503); const replyTo=`reply+${leadId}@ulduuzoul.resend.app`;
- const messageId=lastSent?.email_message_id??null; const sent=await new Resend(key).emails.send({from:'OneMil <b2b@onemil.cz>',to:[recipient],replyTo,subject,text:body,html:`<div style="white-space:pre-wrap;font-family:Arial,sans-serif">${esc(body)}</div>`,...(messageId?{headers:{'In-Reply-To':messageId,'References':messageId}}:{})});
+ const renderedBody=markdownLinksToVisibleText(body);
+ const messageId=lastSent?.email_message_id??null; const sent=await new Resend(key).emails.send({from:'OneMil <b2b@onemil.cz>',to:[recipient],replyTo,subject,text:renderedBody,html:`<div style="white-space:pre-wrap;font-family:Arial,sans-serif">${esc(renderedBody)}</div>`,...(messageId?{headers:{'In-Reply-To':messageId,'References':messageId}}:{})});
  if(sent.error)return json({success:false,error:'email_send_failed'},502);
  const {error}=await admin.from('sales_lead_activities').insert({lead_id:leadId,activity_type:'email_sent',direction:'outbound',subject,body_snapshot:body,email_message_id:sent.data?.id??null,performed_by:u.user.id,metadata:{sent_by:'human_follow_up',from:'b2b@onemil.cz',reply_to:replyTo,to:recipient}});
  if(error)return json({success:true,history_recorded:false,warning:'history_write_failed_after_send'});

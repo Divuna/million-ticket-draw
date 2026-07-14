@@ -1,6 +1,7 @@
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.57.4";
 import { Resend } from "npm:resend@6.17.2";
+import { markdownLinksToVisibleText } from "../_shared/salesLeadEmailRendering.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -58,9 +59,10 @@ serve(async (req) => {
     // (camelCase), NE `reply_to`. Se `reply_to` v6 pole tiše ignoruje a odchozí
     // e-mail nemá Reply-To hlavičku → další odpověď se ztratí (šla by na from).
     const replyTo = `reply+${leadId}@ulduuzoul.resend.app`;
+    const renderedBody = markdownLinksToVisibleText(body);
     const response = await new Resend(key).emails.send({
       from: "OneMil <b2b@onemil.cz>", to: [recipient], replyTo,
-      subject, text: body, html: `<div style="white-space:pre-wrap;font-family:Arial,sans-serif;font-size:14px;line-height:1.5">${escapeHtml(body)}</div>`,
+      subject, text: renderedBody, html: `<div style="white-space:pre-wrap;font-family:Arial,sans-serif;font-size:14px;line-height:1.5">${escapeHtml(renderedBody)}</div>`,
       ...(messageId ? { headers: { "In-Reply-To": messageId, "References": messageId } } : {}),
     });
     if (response.error) return json({ success: false, error: "email_send_failed" }, 502);
