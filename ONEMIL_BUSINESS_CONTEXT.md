@@ -449,6 +449,38 @@ The proceeds from selected voucher activity can go to a good cause.
 
 Vouchers should not be identical to partner offers. A voucher is an unlocked/bought offer; a partner offer is a free or special in-flow offer from a partner.
 
+### 17.1 Partner vouchers in the main OneMil voucher offer
+
+A partner can place its own voucher in the main OneMil voucher section. Users can buy or unlock this voucher with MioCoins.
+
+This can bring users directly back to the partner's e-shop, selected category, product page, seasonal campaign, or clearance sale.
+
+### 17.2 Partner vouchers placed into contests
+
+A partner can also provide its own vouchers for selected OneMil contests as additional contest rewards or promotional benefits.
+
+This is suitable especially for:
+
+- clearance sales,
+- seasonal campaigns,
+- selling older stock,
+- supporting a selected product or category,
+- attracting new customers to a specific offer.
+
+Example:
+
+```text
+An e-shop needs to support the clearance sale of an older collection.
+It provides 100 vouchers with a 20 % discount for a selected OneMil contest.
+Users receive the vouchers during the contest and the e-shop brings new customers directly to its clearance offer.
+```
+
+### 17.3 Partner cost
+
+Placing the partner's own vouchers in the OneMil voucher section or into selected contests is free for the partner as part of the cooperation with OneMil.
+
+The partner defines the voucher value, validity, conditions, quantity, and target offer. Any direct discount or product benefit provided to the customer is covered by the partner, but OneMil does not charge the partner a separate placement fee for inserting these vouchers within the cooperation.
+
 ---
 
 ## 18. Partner Offers
@@ -548,6 +580,9 @@ Admin and production actions are sensitive and must follow the existing project 
 - get measurable performance
 - get product and brand exposure
 - use OneMil as a loyalty and marketing channel
+- place their own vouchers in the main OneMil voucher offer for free within the cooperation
+- place their own vouchers into selected contests for free within the cooperation
+- use vouchers to support clearance sales, seasonal campaigns, selected products, and older stock
 
 ### For end users
 
@@ -613,6 +648,8 @@ Users can earn MioCoins through personal codes.
 Influencers and agencies can be growth and commission channels.
 
 Agencies and sales representatives can receive commission from amounts excluding VAT actually invoiced by OneMil to brought e-shops and can control who receives customer top-up commissions within their approved affiliate structure.
+
+Partners can place their own vouchers in the main OneMil voucher offer or into selected contests free of charge as part of the cooperation. These vouchers can support clearance sales, seasonal campaigns, selected products, and older stock.
 
 Partner Offers, vouchers, coupons, contests, MioCoins, and social campaigns are different parts of the same reward ecosystem.
 
