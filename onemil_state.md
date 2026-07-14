@@ -1,5 +1,11 @@
 # OneMil – aktuální stav projektu
 
+## OBCHOD / LEADY — DENNÍ PRACOVNÍ PŘEHLED A ČISTÉ E-MAILOVÉ ODPOVĚDI LIVE (14. 07. 2026)
+
+**PR #220 a PR #221 jsou kompletně nasazené na produkci.** PR #220 (`0c27aa174419414e0171158da7f54b95d1bfe04a`) nahradil viditelnou technickou Reply-To adresu běžnou adresou `OneMil obchodní tým <b2b@onemil.cz>`. Active24 uchovává kopii a přesměrovává odpovědi do Resend Receiving; systém je bezpečně páruje podle skutečného RFC e-mailového vlákna (`In-Reply-To`/`References`/provider thread ID). Nenavázané nebo nejednoznačné zprávy končí v sekci „Nepřiřazené e-maily“. Migrace `sales_lead_inbound_thread_routing`, nové inbound RPC/tabulka a dotčené Edge Functions jsou na produkci; živý test Active24 → Resend → správný lead prošel bez duplicity.
+
+PR #221 (`cc9a06d95fd5501314c5a7fbb1d0c5c55e5f0ff7`) přidal do `Administrace → Obchod → Leady` záložku **Dnes**. Přehled sjednocuje existující CRM úkoly a plánované aktivity napříč leady: zobrazuje firmu, typ, termín, odpovědnou osobu a stav; podporuje „Rozpracováno“, dokončení a přesunutí termínu. Dnešní i zmeškané nedokončené položky zůstávají viditelné; poznámky bez termínu zůstávají jen v historii leadu. Migrace `sales_leads_today_work_queue` je aplikovaná na stagingu i produkci, šest zápisových RPC má EXECUTE pouze pro `authenticated` a oprávnění `sales_leads.manage`/superadmin. Funkční stagingový i produkční rollback test prošel a nezanechal testovací data. Lovable Publish proběhl; produkční asset `onemil.cz/assets/index-DBJulzUv.js` obsahuje novou pracovní frontu. Produkční CI je zelené.
+
 ## OBCHOD / LEADY — OVĚŘOVÁNÍ FIREMNÍCH WEBŮ (11. 07. 2026)
 
 Discovery ukládá web pouze po skutečném ověření: identita firmy se porovná s ARES (IČO nebo jednoznačný právní název), kandidátní web musí vrátit HTTP 200 a neprázdné HTML, nesmí být zaparkovaný/prodávaný/expirovaný a obsah musí potvrdit firmu. Bez důkazu vznikne lead s `website=NULL` a stavem `neovereny`. Kontaktní enrichment odmítne lead bez ověřeného webu a navržený e-mail znovu fyzicky hledá na zdrojové stránce stejné domény.

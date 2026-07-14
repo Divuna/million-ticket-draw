@@ -1,3 +1,20 @@
+# 14. 07. 2026 — Obchod / Leady: záložka Dnes nasazena na produkci
+
+- PR #221 „Add sales lead daily work queue“ mergnut do `main`, merge commit `cc9a06d95fd5501314c5a7fbb1d0c5c55e5f0ff7`; GitHub Smoke E2E po merge prošel.
+- Přidána záložka `Administrace → Obchod → Leady → Dnes` nad existujícími `sales_lead_tasks` a plánovanými `sales_lead_activities`. Zobrazuje dnešní a zmeškané úkoly, follow-upy, telefonáty a schůzky napříč leady včetně firmy, typu, termínu, odpovědné osoby a stavu.
+- Položku lze označit jako rozpracovanou, dokončit nebo přesunout na nový termín. Nedokončené položky po termínu zůstávají viditelné jako zmeškané; poznámky bez termínu se do denního přehledu nenačítají.
+- Migrace `20260714141545_sales_leads_today_work_queue.sql` aplikována nejprve na staging `dxmowysntemfqfnanxua`, poté po Pavlově schválení na produkci `xkzhjldrojjlrkezorey` jako `sales_leads_today_work_queue`. Přidán `task_type` (`ukol`/`follow_up`), stav `rozpracovano`, index otevřených termínů a bezpečná RPC pro změnu stavu/přesunutí úkolů a plánovaných aktivit.
+- Ověřeno: všech 6 RPC dostupných jen `authenticated`, `anon`/`PUBLIC` bez EXECUTE; staging build prošel; cílené testy 4/4; stagingový i produkční funkční test vytvoření → rozpracování → přesunutí → dokončení prošel v rollback transakci; 0 testovacích dat po kontrole.
+- Lovable Publish provedl Pavel. Produkční web byl následně ověřen přímo stažením assetů: `https://onemil.cz/assets/index-DBJulzUv.js` obsahuje texty nové pracovní fronty. Produkce je LIVE.
+
+# 14. 07. 2026 — Obchod / Leady: čisté Reply-To a bezpečné přiřazení odpovědí
+
+- PR #220 mergnut do `main`, merge commit `0c27aa174419414e0171158da7f54b95d1bfe04a`; migrace `sales_lead_inbound_thread_routing` a dotčené Edge Functions nasazeny na produkci.
+- Zákazník nyní u `From` i `Reply-To` vidí pouze `OneMil obchodní tým <b2b@onemil.cz>`. Technická `reply+LEAD_ID@…` adresa byla odstraněna z veřejných hlaviček.
+- Active24 přesměrovává zprávy z `b2b@onemil.cz` na `b2b@ulduuzoul.resend.app` a ponechává kopii ve schránce. Autoritativní RFC `Message-ID` vytvořený Resend/SES se zachytává skrytou BCC capture kopií a ukládá odděleně od Resend provider ID.
+- Inbound páruje pouze podle `In-Reply-To`, `References` nebo jednoznačného provider thread ID. Nenavázané a nejednoznačné zprávy ukládá do RLS chráněné sekce „Nepřiřazené e-maily“, odkud je admin může ručně přiřadit, převést na nový lead, vyřešit nebo ignorovat.
+- Živý stagingový test přes Active24 prošel: metoda `in_reply_to`, správný lead, jedna aktivita `reply_received`, 0 nepřiřazených záznamů, 0 duplicit. Produkční backend a frontend byly následně nasazeny; žádný produkční testovací e-mail nebyl odeslán.
+
 # 11. 07. 2026 — Obchod / Leady CRM dokončení
 
 - Přidána nedestruktivní migrace `20260711120000_sales_leads_crm_completion.sql`.

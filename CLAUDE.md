@@ -1,3 +1,13 @@
+# Sales Leads CRM — aktuální produkční invarianty (14. 07. 2026)
+
+- Odpovědi zákazníků směřují veřejně na `OneMil obchodní tým <b2b@onemil.cz>`. Technická adresa `reply+<lead_id>@…` se už zákazníkovi nesmí zobrazovat.
+- Active24 ponechá kopii zprávy v `b2b@onemil.cz` a přesměruje ji na `b2b@ulduuzoul.resend.app`. Automatické přiřazení k leadu smí použít pouze jednoznačné `In-Reply-To`, `References` nebo provider thread ID; nikdy jen odesílatele, firmu či předmět.
+- Skutečný RFC `Message-ID` od Resend/SES se získává skrytou BCC capture kopií `sales-lead-capture-<uuid>@ulduuzoul.resend.app` a ukládá se do `sales_lead_activities.rfc_message_id`. Nenavázané nebo nejednoznačné zprávy patří do `sales_lead_unassigned_emails`.
+- Záložka `Administrace → Obchod → Leady → Dnes` je společný pracovní přehled nad existujícími `sales_lead_tasks` a plánovanými `sales_lead_activities`; nevytvářet třetí paralelní tabulku práce.
+- Do přehledu `Dnes` patří dnešní a zmeškané otevřené úkoly, follow-upy, telefonáty a schůzky. Poznámky bez termínu zůstávají pouze v historii leadu.
+- Otevřená položka má stav `ceka`/`naplanovano` nebo `rozpracovano`. Nedokončená položka po termínu nesmí zmizet; zůstává zmeškaná, dokud není dokončena, zrušena nebo přesunuta.
+- Přesunutí termínu mění pouze budoucí termín a zachovává historii. Dokončené a zrušené záznamy se nemažou. Zápisové RPC zůstávají jen pro `authenticated` s guardem `sales_leads.manage` nebo superadminem; `anon`/`PUBLIC` nesmí mít EXECUTE.
+
 # Sales Leads CRM invariants (11. 07. 2026)
 
 - Discovery web je fail-closed: AI pouze navrhuje kandidáty. `website` u `source='ai_vyhledavani'` smí být neprázdný jen po nezávislém ARES + HTTP/content ověření identity firmy. Alternativní domény jsou pouze auditní a kontakt se hledá výhradně na `website_verification_status='overeny'`.
