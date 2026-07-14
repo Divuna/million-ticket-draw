@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -33,6 +34,7 @@ import { DiscoverLeadsDialog } from '@/components/admin/sales-leads/DiscoverLead
 import { SalesLeadOverview } from '@/components/admin/sales-leads/SalesLeadOverview';
 import { SalesLeadEmailTemplateManager } from '@/components/admin/sales-leads/SalesLeadEmailTemplateManager';
 import { SalesLeadUnassignedEmails } from '@/components/admin/sales-leads/SalesLeadUnassignedEmails';
+import { SalesLeadToday } from '@/components/admin/sales-leads/SalesLeadToday';
 
 /**
  * Admin modul „Obchod / Leady" — Fáze 3A (ruční přidání, detail, editace, změna stavu)
@@ -56,6 +58,7 @@ const INDUSTRY_LABEL = (v: string | null): string =>
 
 /** Záložky dle spec §2 — každá mapuje na množinu stavů. */
 const TABS: { id: string; label: string; statuses: string[] | null }[] = [
+  { id: 'today', label: 'Dnes', statuses: [] },
   { id: 'all', label: 'Vše', statuses: null },
   // Fáze 4B — navržené leady ke kontrole člověkem.
   { id: 'proposed', label: 'Návrhy', statuses: ['navrzeny'] },
@@ -84,7 +87,7 @@ const AdminSalesLeads: React.FC = () => {
   const [leads, setLeads] = useState<SalesLeadRow[]>([]);
   const [loading, setLoading] = useState(true);
   const [tableMissing, setTableMissing] = useState(false);
-  const [activeTab, setActiveTab] = useState('all');
+  const [activeTab, setActiveTab] = useState('today');
   const [searchTerm, setSearchTerm] = useState('');
   const [addOpen, setAddOpen] = useState(false);
   const [discoverOpen, setDiscoverOpen] = useState(false);
@@ -116,8 +119,8 @@ const AdminSalesLeads: React.FC = () => {
           .select('lead_id')
           .eq('activity_type', 'reply_received')
           .is('read_at', null),
-        (supabase as any).from('sales_lead_tasks').select('lead_id,due_at').eq('status','ceka').order('due_at'),
-        (supabase as any).from('sales_lead_activities').select('lead_id,scheduled_for,activity_type').eq('activity_status','naplanovano').not('scheduled_for','is',null).in('activity_type',['call_logged','meeting_logged','note_added']).order('scheduled_for'),
+        (supabase as any).from('sales_lead_tasks').select('lead_id,due_at').in('status',['ceka','rozpracovano']).order('due_at'),
+        (supabase as any).from('sales_lead_activities').select('lead_id,scheduled_for,activity_type').in('activity_status',['naplanovano','rozpracovano']).not('scheduled_for','is',null).in('activity_type',['call_logged','meeting_logged','note_added']).order('scheduled_for'),
         (supabase as any).from('sales_lead_unassigned_emails').select('id', { count: 'exact', head: true }).eq('status', 'unassigned'),
       ]);
       if (leadsRes.error) {
@@ -348,8 +351,6 @@ const AdminSalesLeads: React.FC = () => {
         </div>
       </div>
 
-      {(openTasks.length+plannedActivities.length)>0 && <Card><CardHeader><CardTitle className="text-base">Naplánované aktivity a úkoly</CardTitle></CardHeader><CardContent className="grid gap-2 sm:grid-cols-3"><div className="rounded border border-destructive/40 p-3"><div className="text-xs text-muted-foreground">Po termínu</div><div className="text-xl font-bold text-destructive">{[...openTasks.map(t=>t.due_at),...plannedActivities.map(t=>t.scheduled_for)].filter(d=>new Date(d)<new Date()).length}</div></div><div className="rounded border p-3"><div className="text-xs text-muted-foreground">Dnes</div><div className="text-xl font-bold">{[...openTasks.map(t=>t.due_at),...plannedActivities.map(t=>t.scheduled_for)].filter(d=>new Date(d).toDateString()===new Date().toDateString()).length}</div></div><div className="rounded border p-3"><div className="text-xs text-muted-foreground">Nejbližší termín</div><div className="text-sm font-bold">{[...openTasks.map(t=>t.due_at),...plannedActivities.map(t=>t.scheduled_for)].sort()[0]?new Date([...openTasks.map(t=>t.due_at),...plannedActivities.map(t=>t.scheduled_for)].sort()[0]).toLocaleString('cs-CZ',{timeZone:'Europe/Prague'}):'—'}</div></div></CardContent></Card>}
-
       <SalesLeadOverview />
 
       {tableMissing && (
@@ -389,9 +390,9 @@ const AdminSalesLeads: React.FC = () => {
         <CardHeader className="pb-3 space-y-3">
           <div className="flex flex-wrap items-center justify-between gap-3">
             <CardTitle className="text-base">
-              {activeTab === 'unassigned-emails' ? 'Příchozí pošta bez návaznosti' : 'Seznam leadů'}
+              {activeTab === 'today' ? 'Dnes' : activeTab === 'unassigned-emails' ? 'Příchozí pošta bez návaznosti' : 'Seznam leadů'}
             </CardTitle>
-            {activeTab !== 'unassigned-emails' && <div className="relative w-full sm:w-72">
+            {!['today', 'unassigned-emails'].includes(activeTab) && <div className="relative w-full sm:w-72">
               <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" aria-hidden />
               <Input
                 value={searchTerm}
@@ -413,7 +414,7 @@ const AdminSalesLeads: React.FC = () => {
               ))}
             </TabsList>
           </Tabs>
-          {selectedIds.size > 0 && (
+          {!['today', 'unassigned-emails'].includes(activeTab) && selectedIds.size > 0 && (
             <div className="flex items-center justify-between gap-3 rounded-lg border border-destructive/30 bg-destructive/5 px-3 py-2">
               <span className="text-sm text-muted-foreground">
                 Vybráno leadů: <strong className="text-foreground">{selectedIds.size}</strong>
@@ -430,8 +431,15 @@ const AdminSalesLeads: React.FC = () => {
             </div>
           )}
         </CardHeader>
-        <CardContent className={activeTab === 'unassigned-emails' ? 'p-0' : undefined}>
-          {activeTab === 'unassigned-emails' ? (
+        <CardContent className={['today', 'unassigned-emails'].includes(activeTab) ? 'p-0' : undefined}>
+          {activeTab === 'today' ? (
+            <SalesLeadToday
+              onOpenLead={(leadId) => {
+                setActiveTab('all');
+                openDetail(leadId);
+              }}
+            />
+          ) : activeTab === 'unassigned-emails' ? (
             <SalesLeadUnassignedEmails
               onCountChange={setUnassignedEmailCount}
               onOpenLead={(leadId) => {
