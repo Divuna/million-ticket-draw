@@ -4,7 +4,7 @@
 
 PR #224 na větvi `codex/sales-lead-ares-lookup` doplňuje do ručního formuláře leadu akci **Načíst z ARES**. Po zadání osmimístného IČO se bez automatického uložení doplní oficiální název, normalizované IČO, dostupné DIČ, úplná adresa sídla a město; web, obor a kontaktní údaje se nemění a všechna pole zůstávají editovatelná. Adresa je nově uložena v `sales_leads.address` a zobrazena také v editaci a detailu leadu.
 
-**STAGING OVĚŘEN:** migrace `sales_lead_ares_lookup_address` je na `dxmowysntemfqfnanxua`, Edge Function `sales-lead-ares-lookup` v1 je ACTIVE. Funkce používá existující sdílený ARES helper, vyžaduje JWT + `sales_leads.manage` a nic nezapisuje. Živý API test i UI E2E prošly; create/update RPC zachovávají RLS, duplicitní kontroly a audit. Produkční migrace, produkční Edge Function a frontendový Publish se provedou až po merge a zeleném CI.
+**BACKEND LIVE:** PR #224 je squash-merge do `main` (`230e55a98d03d387c38ca76bf5ca18a0ee5ffc54`). Migrace `sales_lead_ares_lookup_address` je na stagingu `dxmowysntemfqfnanxua` i produkci `xkzhjldrojjlrkezorey`. Edge Function `sales-lead-ares-lookup` je ACTIVE: staging v1, produkce v2, shodný checksum `d5313b8b…`. Funkce používá existující sdílený ARES helper, vyžaduje JWT + `sales_leads.manage` a nic nezapisuje. Živé API testy a staging UI E2E prošly; create/update RPC zachovávají RLS, duplicitní kontroly a audit. Produkční frontend čeká pouze na ruční Lovable Publish, který Codex neumí bezpečně spustit programově.
 
 ## OBCHOD / LEADY — DENNÍ PRACOVNÍ PŘEHLED A ČISTÉ E-MAILOVÉ ODPOVĚDI LIVE (14. 07. 2026)
 
