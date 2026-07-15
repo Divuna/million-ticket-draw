@@ -832,6 +832,19 @@ po odeslání) beze změny — rozšiřuje se jen množina zdrojových stavů uv
 - `sales_leads.address` ukládá úplnou adresu sídla. Adresa je součástí stávajících SECURITY
   DEFINER RPC `sales_lead_create` a `sales_lead_update_fields` a zobrazuje se v přidání, editaci
   i detailu leadu. RLS a stávající oprávnění se nemění.
+
+## 20. Ruční psaní prvního e-mailu a follow-upu
+
+- Primární akce prvního oslovení je `Napsat e-mail`. Otevře prázdný existující editor předmětu a
+  textu; výběr šablony není podmínkou pro uložení ani odeslání.
+- Uvnitř editoru je volitelná akce `Použít šablonu`. Vybraná šablona pouze vyplní stejná pole a
+  uživatel je může dále libovolně upravit.
+- Follow-up používá stejný princip: `Napsat follow-up` otevře prázdný editor a šablona je pouze
+  volitelná pomůcka uvnitř editoru.
+- Stávající validace obsahu, povinná odhlašovací věta, ruční uložení konceptu, potvrzení odeslání,
+  odesílací Edge Functions a historie komunikace zůstávají beze změny.
+- Odpověď pod konkrétní příchozí zprávou zůstává ve stávajícím inline editoru a její workflow se
+  nemění.
 # Produkční CRM dokončení (11. 07. 2026) — LIVE
 
 ### Naplánované aktivity

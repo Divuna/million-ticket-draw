@@ -1,5 +1,14 @@
 # OneMil – aktuální stav projektu
 
+## OBCHOD / LEADY — RUČNÍ PSANÍ E-MAILU (16. 07. 2026)
+
+V detailu leadu je primární akcí `Napsat e-mail`, která otevře prázdný existující editor předmětu
+a textu. Šablona je dostupná až uvnitř editoru přes volitelnou akci `Použít šablonu` a pouze
+vyplní editovatelná pole. Stejné chování používá follow-up přes `Napsat follow-up`. Inline odpověď
+pod konkrétní zprávou, validace, koncepty, historie i všechny odesílací Edge Functions zůstávají
+beze změny. Jde pouze o frontend; po merge do `main` je k aktivaci na produkčním webu nutný ruční
+Lovable krok `Share → Publish`.
+
 ## OBCHOD / LEADY — RUČNÍ NAČTENÍ FIRMY Z ARES (15. 07. 2026)
 
 PR #224 na větvi `codex/sales-lead-ares-lookup` doplňuje do ručního formuláře leadu akci **Načíst z ARES**. Po zadání osmimístného IČO se bez automatického uložení doplní oficiální název, normalizované IČO, dostupné DIČ, úplná adresa sídla a město; web, obor a kontaktní údaje se nemění a všechna pole zůstávají editovatelná. Adresa je nově uložena v `sales_leads.address` a zobrazena také v editaci a detailu leadu.

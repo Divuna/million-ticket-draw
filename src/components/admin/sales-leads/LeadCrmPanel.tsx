@@ -130,6 +130,7 @@ export function LeadCrmPanel({
   const [taskNote, setTaskNote] = useState('');
   const [fuSubject, setFuSubject] = useState('');
   const [fuBody, setFuBody] = useState('');
+  const [followUpComposerOpen, setFollowUpComposerOpen] = useState(false);
   const [followUpPickerOpen, setFollowUpPickerOpen] = useState(false);
   const [activityComposerOpen, setActivityComposerOpen] = useState(false);
   const [taskComposerOpen, setTaskComposerOpen] = useState(false);
@@ -269,6 +270,11 @@ export function LeadCrmPanel({
     setFuSubject(data.subject);
     setFuBody(data.body);
   };
+  const openFollowUpComposer = () => {
+    setFuSubject('');
+    setFuBody('');
+    setFollowUpComposerOpen(true);
+  };
   const sendFollowUp = async () => {
     const validationErrors = validateSalesLeadEmailContent('follow_up', fuSubject, fuBody);
     if (validationErrors.length > 0) {
@@ -285,6 +291,7 @@ export function LeadCrmPanel({
     toast.success('Follow-up odeslán.');
     setFuSubject('');
     setFuBody('');
+    setFollowUpComposerOpen(false);
     onChanged();
   };
   const followUpValidationErrors = validateSalesLeadEmailContent('follow_up', fuSubject, fuBody);
@@ -434,29 +441,28 @@ export function LeadCrmPanel({
       </RailCard>
 
       <RailCard icon={<Sparkles className="h-4 w-4" />} eyebrow="Follow-up" title="Navázat bez odpovědi">
-        <p className="mb-3 text-xs leading-relaxed text-muted-foreground">Šablonu vždy vybírá člověk. AI upraví pouze text v editoru a nic sama neodešle.</p>
+        <p className="mb-3 text-xs leading-relaxed text-muted-foreground">E-mail můžete napsat ručně nebo volitelně vložit šablonu. AI upraví pouze text v editoru a nic sama neodešle.</p>
         <div className="grid gap-2">
           <Button
             size="sm"
             variant="outline"
             className="h-9 w-full rounded-xl text-xs transition-colors duration-150 focus-visible:ring-2 focus-visible:ring-primary/40"
             disabled={!['osloveno', 'follow_up'].includes(status) || !emailApproved || busy}
-            onClick={() => setFollowUpPickerOpen(true)}
+            onClick={openFollowUpComposer}
           >
-            <FileText className="mr-1.5 h-3.5 w-3.5" />Vybrat šablonu
-          </Button>
-          <Button
-            size="sm"
-            variant="outline"
-            className="h-9 w-full rounded-xl text-xs transition-colors duration-150 focus-visible:ring-2 focus-visible:ring-primary/40"
-            disabled={!['osloveno', 'follow_up'].includes(status) || !emailApproved || busy}
-            onClick={() => void assistFollowUp('personalize')}
-          >
-            <Sparkles className="mr-1.5 h-3.5 w-3.5" />Personalizovat pro firmu
+            <Mail className="mr-1.5 h-3.5 w-3.5" />Napsat follow-up
           </Button>
         </div>
-        {fuSubject && (
+        {followUpComposerOpen && (
           <div className="mt-3 space-y-2 border-t border-border/50 pt-3">
+            <div className="grid gap-2 sm:grid-cols-2">
+              <Button type="button" variant="outline" className="h-8 w-full text-xs" disabled={busy} onClick={() => setFollowUpPickerOpen(true)}>
+                <FileText className="mr-1.5 h-3.5 w-3.5" />Použít šablonu
+              </Button>
+              <Button type="button" variant="outline" className="h-8 w-full text-xs" disabled={busy || !fuSubject.trim() || !fuBody.trim()} onClick={() => void assistFollowUp('personalize')}>
+                <Sparkles className="mr-1.5 h-3.5 w-3.5" />Personalizovat pro firmu
+              </Button>
+            </div>
             <Label className="text-xs">Předmět</Label>
             <Input className="h-9 text-xs" value={fuSubject} onChange={(e) => setFuSubject(e.target.value)} />
             <Label className="text-xs">Text</Label>
@@ -481,6 +487,7 @@ export function LeadCrmPanel({
         onSelect={(value) => {
           setFuSubject(value.subject);
           setFuBody(value.body);
+          setFollowUpComposerOpen(true);
           setFollowUpPickerOpen(false);
           if (value.unresolved.length > 0) toast.warning(`Doplňte proměnné: ${value.unresolved.join(', ')}`);
           else toast.success(`Šablona „${value.templateName}“ byla vložena do editoru.`);

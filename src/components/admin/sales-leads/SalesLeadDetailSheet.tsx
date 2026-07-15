@@ -767,6 +767,12 @@ export function SalesLeadDetailSheet({ leadId, open, onOpenChange, onMutated }: 
     setReplyAiBusy(false);
   };
 
+  const openInitialEmailComposer = () => {
+    setDraftSubject('');
+    setDraftBody('');
+    setAiWorkspaceOpen(true);
+  };
+
   const applyTemplate = (value: { subject: string; body: string; unresolved: string[]; templateName: string }) => {
     if (templatePickerType === 'reply') {
       setReplySubject(value.subject);
@@ -1483,12 +1489,12 @@ export function SalesLeadDetailSheet({ leadId, open, onOpenChange, onMutated }: 
               </Button>
               <Button
                 variant="outline"
-                onClick={() => { setAiWorkspaceOpen(true); setTemplatePickerType('initial'); }}
+                onClick={openInitialEmailComposer}
                 disabled={draftBusy}
                 className="h-auto justify-start gap-3 rounded-xl border-white/[0.09] bg-background/65 px-3.5 py-3 text-left shadow-sm transition-colors duration-150 hover:border-primary/30 hover:bg-background/80 focus-visible:ring-2 focus-visible:ring-primary/40"
               >
                 <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-primary/15 text-primary"><Mail className="h-4 w-4" /></span>
-                <span><span className="block text-sm font-semibold">Vybrat šablonu</span><span className="block text-[10px] font-normal text-muted-foreground">Ručně vyplnit současný editor</span></span>
+                <span><span className="block text-sm font-semibold">Napsat e-mail</span><span className="block text-[10px] font-normal text-muted-foreground">Otevřít prázdný editor</span></span>
               </Button>
             </div>
 
@@ -1527,7 +1533,7 @@ export function SalesLeadDetailSheet({ leadId, open, onOpenChange, onMutated }: 
               )}
               <div className="flex flex-wrap gap-2">
                 <Button type="button" size="sm" variant="outline" onClick={() => setTemplatePickerType('initial')} disabled={draftBusy || draftSaving} className="gap-1.5">
-                  <FileText className="h-3.5 w-3.5" /> Vybrat šablonu
+                  <FileText className="h-3.5 w-3.5" /> Použít šablonu
                 </Button>
                 <Button type="button" size="sm" variant="outline" onClick={() => void assistDraft('personalize')} disabled={draftBusy || draftSaving || !draftSubject.trim() || !draftBody.trim()} className="gap-1.5">
                   <Sparkles className="h-3.5 w-3.5" /> Personalizovat pro firmu
