@@ -179,6 +179,7 @@ export interface DuplicateConflict {
 export interface SalesLeadDetail extends SalesLeadRow {
   ico: string | null;
   dic: string | null;
+  address: string | null;
   website: string | null;
   website_verification_status: 'overeny' | 'neovereny';
   website_verification_source: string | null;

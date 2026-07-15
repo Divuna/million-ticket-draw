@@ -3770,6 +3770,7 @@ export type Database = {
       }
       sales_leads: {
         Row: {
+          address: string | null
           ai_research_at: string | null
           ai_research_summary: string | null
           assigned_admin_id: string | null
@@ -3815,6 +3816,7 @@ export type Database = {
           website_domain: string | null
         }
         Insert: {
+          address?: string | null
           ai_research_at?: string | null
           ai_research_summary?: string | null
           assigned_admin_id?: string | null
@@ -3860,6 +3862,7 @@ export type Database = {
           website_domain?: string | null
         }
         Update: {
+          address?: string | null
           ai_research_at?: string | null
           ai_research_summary?: string | null
           assigned_admin_id?: string | null
@@ -6471,6 +6474,7 @@ export type Database = {
       }
       sales_lead_create: {
         Args: {
+          p_address?: string
           p_city?: string
           p_company_name: string
           p_company_size?: string
@@ -6629,6 +6633,7 @@ export type Database = {
       }
       sales_lead_update_fields: {
         Args: {
+          p_address?: string
           p_city?: string
           p_company_name: string
           p_company_size?: string

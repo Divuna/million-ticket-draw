@@ -163,3 +163,6 @@ verify_jwt = false
 
 [functions.send-sales-lead-follow-up]
 verify_jwt = false
+
+[functions.sales-lead-ares-lookup]
+verify_jwt = false

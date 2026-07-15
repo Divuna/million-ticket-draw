@@ -17,11 +17,18 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { Loader2 } from 'lucide-react';
+import { Loader2, Search } from 'lucide-react';
 import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
 import { INDUSTRY_OPTIONS, rpcErrorMessage, type DuplicateConflict } from './salesLeadsShared';
 import { DuplicateConflictAlert } from './DuplicateConflictAlert';
+import {
+  applyAresResult,
+  isValidSalesLeadIco,
+  SALES_LEAD_ARES_NOT_FOUND,
+  SALES_LEAD_ICO_ERROR,
+  type SalesLeadAresResult,
+} from './salesLeadAres';
 
 interface Props {
   open: boolean;
@@ -37,6 +44,7 @@ const EMPTY_FORM = {
   website: '',
   industry: '',
   city: '',
+  address: '',
   company_size: '',
   contact_person: '',
   contact_role: '',
@@ -55,6 +63,8 @@ type FormState = typeof EMPTY_FORM;
  */
 export function AddSalesLeadDialog({ open, onOpenChange, onSuccess, initialValues }: Props) {
   const [loading, setLoading] = useState(false);
+  const [aresLoading, setAresLoading] = useState(false);
+  const [icoError, setIcoError] = useState('');
   const [form, setForm] = useState<FormState>(EMPTY_FORM);
   const [duplicateConflicts, setDuplicateConflicts] = useState<DuplicateConflict[]>([]);
   const [overrideReason, setOverrideReason] = useState('');
@@ -64,14 +74,52 @@ export function AddSalesLeadDialog({ open, onOpenChange, onSuccess, initialValue
     setForm({ ...EMPTY_FORM, ...initialValues });
     setDuplicateConflicts([]);
     setOverrideReason('');
+    setIcoError('');
   }, [open, initialValues]);
 
   const setField =
     (field: keyof FormState) =>
     (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
       if (field === 'contact_email') { setDuplicateConflicts([]); setOverrideReason(''); }
+      if (field === 'ico') setIcoError('');
       setForm((prev) => ({ ...prev, [field]: e.target.value }));
     };
+
+  const loadFromAres = async () => {
+    const ico = form.ico.trim();
+    if (!isValidSalesLeadIco(ico)) {
+      setIcoError(SALES_LEAD_ICO_ERROR);
+      return;
+    }
+
+    setAresLoading(true);
+    setIcoError('');
+    try {
+      const { data, error } = await supabase.functions.invoke('sales-lead-ares-lookup', {
+        body: { ico },
+      });
+      let payload = data as Record<string, unknown> | null;
+      if (error && 'context' in error && error.context instanceof Response) {
+        try { payload = await error.context.json() as Record<string, unknown>; } catch { /* response has no JSON */ }
+      }
+      if (error || payload?.success !== true) {
+        const message = payload?.message === SALES_LEAD_ARES_NOT_FOUND
+          ? SALES_LEAD_ARES_NOT_FOUND
+          : typeof payload?.message === 'string'
+            ? payload.message
+            : 'Údaje se z ARES nepodařilo načíst';
+        setIcoError(message);
+        return;
+      }
+
+      setForm((prev) => applyAresResult(prev, payload as SalesLeadAresResult));
+      toast.success('Údaje firmy byly načteny z ARES');
+    } catch {
+      setIcoError('Údaje se z ARES nepodařilo načíst');
+    } finally {
+      setAresLoading(false);
+    }
+  };
 
   const previewDuplicate = async () => {
     const email = form.contact_email.trim();
@@ -84,10 +132,14 @@ export function AddSalesLeadDialog({ open, onOpenChange, onSuccess, initialValue
   };
 
   const handleClose = () => {
-    if (!loading) onOpenChange(false);
+    if (!loading && !aresLoading) onOpenChange(false);
   };
 
   const submit = async (confirmOverride: boolean) => {
+    if (form.ico.trim() && !isValidSalesLeadIco(form.ico)) {
+      setIcoError(SALES_LEAD_ICO_ERROR);
+      return;
+    }
     if (!form.company_name.trim()) {
       toast.error('Zadejte název firmy');
       return;
@@ -108,6 +160,7 @@ export function AddSalesLeadDialog({ open, onOpenChange, onSuccess, initialValue
         p_website: normalizedWebsite || null,
         p_industry: form.industry || null,
         p_city: form.city.trim() || null,
+        p_address: form.address.trim() || null,
         p_company_size: form.company_size || null,
         p_contact_person: form.contact_person.trim() || null,
         p_contact_role: form.contact_role.trim() || null,
@@ -167,6 +220,21 @@ export function AddSalesLeadDialog({ open, onOpenChange, onSuccess, initialValue
         </DialogHeader>
 
         <form onSubmit={handleSubmit} className="space-y-4 pt-2">
+          <div className="space-y-1.5">
+            <Label htmlFor="sl-ico">IČO</Label>
+            <div className="flex gap-2">
+              <Input id="sl-ico" value={form.ico} onChange={setField('ico')} placeholder="12345678"
+                inputMode="numeric" maxLength={8} disabled={loading || aresLoading} aria-invalid={Boolean(icoError)}
+                aria-describedby={icoError ? 'sl-ico-error' : undefined} data-testid="sl-ico" />
+              <Button type="button" variant="outline" onClick={loadFromAres} disabled={loading || aresLoading}
+                className="shrink-0 gap-2" data-testid="sl-ares-lookup">
+                {aresLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Search className="h-4 w-4" />}
+                Načíst z ARES
+              </Button>
+            </div>
+            {icoError && <p id="sl-ico-error" role="alert" className="text-xs text-destructive">{icoError}</p>}
+          </div>
+
           <div className="space-y-1">
             <Label htmlFor="sl-company_name">
               Název firmy <span className="text-destructive">*</span>
@@ -176,7 +244,7 @@ export function AddSalesLeadDialog({ open, onOpenChange, onSuccess, initialValue
               value={form.company_name}
               onChange={setField('company_name')}
               placeholder="Acme s.r.o."
-              disabled={loading}
+              disabled={loading || aresLoading}
               required
               data-testid="sl-company-name"
             />
@@ -187,39 +255,39 @@ export function AddSalesLeadDialog({ open, onOpenChange, onSuccess, initialValue
 
           <div className="grid grid-cols-2 gap-3">
             <div className="space-y-1">
-              <Label htmlFor="sl-ico">IČO</Label>
-              <Input id="sl-ico" value={form.ico} onChange={setField('ico')} placeholder="12345678" disabled={loading} />
-            </div>
-            <div className="space-y-1">
               <Label htmlFor="sl-dic">DIČ</Label>
-              <Input id="sl-dic" value={form.dic} onChange={setField('dic')} placeholder="CZ12345678" disabled={loading} />
-            </div>
-          </div>
-
-          <div className="grid grid-cols-2 gap-3">
-            <div className="space-y-1">
-              <Label htmlFor="sl-industry">Obor</Label>
-              <Select
-                value={form.industry}
-                onValueChange={(v) => setForm((p) => ({ ...p, industry: v }))}
-                disabled={loading}
-              >
-                <SelectTrigger id="sl-industry">
-                  <SelectValue placeholder="Vyberte obor" />
-                </SelectTrigger>
-                <SelectContent>
-                  {INDUSTRY_OPTIONS.map((o) => (
-                    <SelectItem key={o.value} value={o.value}>
-                      {o.label}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              <Input id="sl-dic" value={form.dic} onChange={setField('dic')} placeholder="CZ12345678" disabled={loading || aresLoading} />
             </div>
             <div className="space-y-1">
               <Label htmlFor="sl-city">Město</Label>
-              <Input id="sl-city" value={form.city} onChange={setField('city')} placeholder="Praha" disabled={loading} />
+              <Input id="sl-city" value={form.city} onChange={setField('city')} placeholder="Praha" disabled={loading || aresLoading} />
             </div>
+          </div>
+
+          <div className="space-y-1">
+            <Label htmlFor="sl-address">Adresa sídla</Label>
+            <Input id="sl-address" value={form.address} onChange={setField('address')}
+              placeholder="Ulice 123, 110 00 Praha" disabled={loading || aresLoading} maxLength={500} data-testid="sl-address" />
+          </div>
+
+          <div className="space-y-1">
+            <Label htmlFor="sl-industry">Obor</Label>
+            <Select
+              value={form.industry}
+              onValueChange={(v) => setForm((p) => ({ ...p, industry: v }))}
+              disabled={loading}
+            >
+              <SelectTrigger id="sl-industry">
+                <SelectValue placeholder="Vyberte obor" />
+              </SelectTrigger>
+              <SelectContent>
+                {INDUSTRY_OPTIONS.map((o) => (
+                  <SelectItem key={o.value} value={o.value}>
+                    {o.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           </div>
 
           <div className="space-y-1">
