@@ -68,4 +68,11 @@ test.describe('Sales lead email template contracts', () => {
     expect(ai.indexOf('if (assistMode) return jsonResponse')).toBeLessThan(ai.indexOf('.update({'));
     expect(ai).toContain('reply_to_activity_id_required');
   });
+
+  test('template validation replaces repeated errors instead of stacking duplicate toasts', () => {
+    const manager = read('src/components/admin/sales-leads/SalesLeadEmailTemplateManager.tsx');
+    expect(manager).toContain("const TEMPLATE_VALIDATION_TOAST_ID = 'sales-lead-email-template-validation'");
+    expect(manager).toContain('toast.error(errors[0], { id: TEMPLATE_VALIDATION_TOAST_ID })');
+    expect(manager).toContain('toast.dismiss(TEMPLATE_VALIDATION_TOAST_ID)');
+  });
 });
