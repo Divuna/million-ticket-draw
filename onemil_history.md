@@ -24,6 +24,8 @@
 
 # OneMil — DEVELOPMENT HISTORY (CHRONOLOGICAL ONLY)
 
+- **2026-07-15 — Ruční načtení leadu z ARES ověřeno na stagingu:** PR #224 přidává IČO + tlačítko „Načíst z ARES“ do ručního založení firmy, pole `sales_leads.address`, rozšíření existujících create/update RPC a zabezpečenou read-only Edge Function využívající sdílený `companyRegistryEnrich` helper. Staging migrace `sales_lead_ares_lookup_address` je aplikovaná, `sales-lead-ares-lookup` v1 ACTIVE. Živě ověřeno platné/chybné/nenalezené IČO, zákaz bez `sales_leads.manage`, ruční editace načtených údajů, create i update; UI E2E 8/8 a testovací data byla odstraněna. Produkce zatím v tomto bodě nebyla změněna.
+
 - **2026-07-11 — Fail-closed ověřování webů v Sales Leads discovery je LIVE:** PR #214 squash mergnut (`e200b49ae005cb322704d4fae24c6478df6015bc`). AI doména už není zdroj pravdy; přidáno ARES + HTTP/HTML + ověření identity, detekce parked/for-sale/expired, audit zdroje/důvěry/času a DB trigger. Migrace `sales_leads_verified_company_websites` aplikována na staging i produkci. Staging EF: discover v10, enrich v5; produkce EF: discover v11, enrich v7, vše ACTIVE. Benchmark 30 firem: 11 potvrzeno, 19 odmítnuto, 2 kanonické URL opraveny, 0 falešně uložených. Produkční rollback test čistý, 16 leadů a 0 testovacích řádků; žádný skutečný e-mail odeslán.
 
 - **2026-07-11 — Naplánované aktivity leadů:** opravena záměna času vytvoření a plánovaného termínu; přidán samostatný seznam budoucích schůzek, telefonátů a kroků, jejich úprava/dokončení/zrušení a nejbližší plán v hlavním seznamu.
