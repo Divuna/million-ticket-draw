@@ -59,7 +59,7 @@ export const renderSalesLeadEmailTemplate = (
 };
 
 export const validateSalesLeadEmailContent = (
-  type: SalesLeadEmailTemplateType,
+  _type: SalesLeadEmailTemplateType,
   subject: string,
   body: string,
 ): string[] => {
@@ -70,14 +70,11 @@ export const validateSalesLeadEmailContent = (
   if (body.trim().length > 20000) errors.push('Text může mít nejvýše 20 000 znaků.');
   const unresolved = unresolvedTemplateVariables(subject, body);
   if (unresolved.length > 0) errors.push(`Doplňte nevyřešené proměnné: ${unresolved.join(', ')}.`);
-  if ((type === 'initial' || type === 'follow_up') && !body.includes(OPT_OUT_SENTENCE)) {
-    errors.push('Chybí povinná závěrečná věta pro odhlášení.');
-  }
   return errors;
 };
 
 export const validateSalesLeadEmailTemplateDefinition = (
-  type: SalesLeadEmailTemplateType,
+  _type: SalesLeadEmailTemplateType,
   subject: string,
   body: string,
 ): string[] => {
@@ -90,8 +87,5 @@ export const validateSalesLeadEmailTemplateDefinition = (
   const allowedTokens = new Set<string>(SALES_LEAD_TEMPLATE_VARIABLES.map((variable) => variable.token));
   const unsupported = unresolvedTemplateVariables(subject, body).filter((token) => !allowedTokens.has(token));
   if (unsupported.length > 0) errors.push(`Nepodporované proměnné: ${unsupported.join(', ')}.`);
-  if ((type === 'initial' || type === 'follow_up') && !body.includes(OPT_OUT_SENTENCE)) {
-    errors.push('Chybí povinná závěrečná věta pro odhlášení.');
-  }
   return errors;
 };
