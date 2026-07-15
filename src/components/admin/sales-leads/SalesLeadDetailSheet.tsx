@@ -104,7 +104,7 @@ interface ActivityRow {
 }
 
 const DETAIL_COLUMNS =
-  'id, company_name, industry, city, status, contact_email, updated_at, assigned_admin_id, ' +
+  'id, company_name, industry, city, address, status, contact_email, updated_at, assigned_admin_id, ' +
   'ico, dic, website, company_size, contact_person, contact_role, contact_phone, email_source, ' +
   'email_verified_by_admin, do_not_contact, do_not_contact_reason, notes, created_at, ' +
   'ai_research_summary, ai_research_at, draft_email_subject, draft_email_body, draft_prepared_by, ' +
@@ -418,6 +418,7 @@ type EditForm = {
   website: string;
   industry: string;
   city: string;
+  address: string;
   company_size: string;
   contact_person: string;
   contact_role: string;
@@ -435,6 +436,7 @@ const toForm = (l: SalesLeadDetail): EditForm => ({
   website: l.website ?? '',
   industry: l.industry ?? '',
   city: l.city ?? '',
+  address: l.address ?? '',
   company_size: l.company_size ?? '',
   contact_person: l.contact_person ?? '',
   contact_role: l.contact_role ?? '',
@@ -601,6 +603,7 @@ export function SalesLeadDetailSheet({ leadId, open, onOpenChange, onMutated }: 
         p_website: normalizedWebsite || null,
         p_industry: form.industry || null,
         p_city: form.city.trim() || null,
+        p_address: form.address.trim() || null,
         p_company_size: form.company_size || null,
         p_contact_person: form.contact_person.trim() || null,
         p_contact_role: form.contact_role.trim() || null,
@@ -1260,6 +1263,7 @@ export function SalesLeadDetailSheet({ leadId, open, onOpenChange, onMutated }: 
                 <ReadRow label="Ověřeno" value={lead.website_verified_at ? formatDateTime(lead.website_verified_at) : null} />
                 <ReadRow label="Obor" value={INDUSTRY_OPTIONS.find((o) => o.value === lead.industry)?.label ?? lead.industry} />
                 <ReadRow label="Město" value={lead.city} />
+                <ReadRow label="Adresa" value={lead.address} />
                 <ReadRow label="Velikost" value={lead.company_size} />
                 <ReadRow label="Kontakt" value={lead.contact_person} />
                 <ReadRow label="Funkce" value={lead.contact_role} />
@@ -1284,6 +1288,10 @@ export function SalesLeadDetailSheet({ leadId, open, onOpenChange, onMutated }: 
                     <Label htmlFor="e-dic">DIČ</Label>
                     <Input id="e-dic" value={form.dic} onChange={setField('dic')} disabled={saving} />
                   </div>
+                </div>
+                <div className="space-y-1">
+                  <Label htmlFor="e-address">Adresa sídla</Label>
+                  <Input id="e-address" value={form.address} onChange={setField('address')} disabled={saving} maxLength={500} />
                 </div>
                 <div className="space-y-1">
                   <Label htmlFor="e-website">Web</Label>

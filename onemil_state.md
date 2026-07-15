@@ -1,5 +1,11 @@
 # OneMil – aktuální stav projektu
 
+## OBCHOD / LEADY — RUČNÍ NAČTENÍ FIRMY Z ARES (15. 07. 2026)
+
+PR #224 na větvi `codex/sales-lead-ares-lookup` doplňuje do ručního formuláře leadu akci **Načíst z ARES**. Po zadání osmimístného IČO se bez automatického uložení doplní oficiální název, normalizované IČO, dostupné DIČ, úplná adresa sídla a město; web, obor a kontaktní údaje se nemění a všechna pole zůstávají editovatelná. Adresa je nově uložena v `sales_leads.address` a zobrazena také v editaci a detailu leadu.
+
+**STAGING OVĚŘEN:** migrace `sales_lead_ares_lookup_address` je na `dxmowysntemfqfnanxua`, Edge Function `sales-lead-ares-lookup` v1 je ACTIVE. Funkce používá existující sdílený ARES helper, vyžaduje JWT + `sales_leads.manage` a nic nezapisuje. Živý API test i UI E2E prošly; create/update RPC zachovávají RLS, duplicitní kontroly a audit. Produkční migrace, produkční Edge Function a frontendový Publish se provedou až po merge a zeleném CI.
+
 ## OBCHOD / LEADY — DENNÍ PRACOVNÍ PŘEHLED A ČISTÉ E-MAILOVÉ ODPOVĚDI LIVE (14. 07. 2026)
 
 **PR #220 a PR #221 jsou kompletně nasazené na produkci.** PR #220 (`0c27aa174419414e0171158da7f54b95d1bfe04a`) nahradil viditelnou technickou Reply-To adresu běžnou adresou `OneMil obchodní tým <b2b@onemil.cz>`. Active24 uchovává kopii a přesměrovává odpovědi do Resend Receiving; systém je bezpečně páruje podle skutečného RFC e-mailového vlákna (`In-Reply-To`/`References`/provider thread ID). Nenavázané nebo nejednoznačné zprávy končí v sekci „Nepřiřazené e-maily“. Migrace `sales_lead_inbound_thread_routing`, nové inbound RPC/tabulka a dotčené Edge Functions jsou na produkci; živý test Active24 → Resend → správný lead prošel bez duplicity.

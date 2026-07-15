@@ -816,6 +816,22 @@ nebo v jiném/blokovaném stavu (`navrzeny`/`odmitl`/`nekontaktovat`/`archivovan
 trigger:'email_sent'}`). Grant zůstává `service_role`-only. Trigger
 `trg_sales_lead_activities_touch_lead` i EF `send-sales-lead-email` (která RPC volá best-effort
 po odeslání) beze změny — rozšiřuje se jen množina zdrojových stavů uvnitř RPC.
+
+## 19. Ruční načtení firemních údajů z ARES
+
+- Ve formuláři `Přidat firmu` je IČO před názvem firmy a vedle něj ručně spouštěná akce
+  `Načíst z ARES`. Akce nikdy sama nezaloží ani neupraví lead.
+- Přijímá se přesně osm číslic. Nenalezený subjekt vrací uživateli přesnou hlášku
+  `Firma nebyla v ARES nalezena`.
+- Edge Function `sales-lead-ares-lookup` ověří JWT přes `auth.getUser` a oprávnění
+  `sales_leads.manage`. Autoritativní data čte přes existující sdílený helper
+  `_shared/companyRegistryEnrich.ts`; discovery tok tím není změněný.
+- Z ARES se do pracovního formuláře přenesou pouze oficiální název, normalizované IČO, dostupné
+  DIČ, úplná adresa sídla a město. Web, obor, kontaktní osoba, e-mail a telefon zůstanou beze
+  změny. Všechny hodnoty může uživatel před uložením ručně upravit.
+- `sales_leads.address` ukládá úplnou adresu sídla. Adresa je součástí stávajících SECURITY
+  DEFINER RPC `sales_lead_create` a `sales_lead_update_fields` a zobrazuje se v přidání, editaci
+  i detailu leadu. RLS a stávající oprávnění se nemění.
 # Produkční CRM dokončení (11. 07. 2026) — LIVE
 
 ### Naplánované aktivity
