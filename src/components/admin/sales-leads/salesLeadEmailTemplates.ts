@@ -19,9 +19,6 @@ export type SalesLeadTemplateContext = {
   website?: string | null;
 };
 
-export const OPT_OUT_SENTENCE =
-  'Pokud si nepřejete být kontaktováni, odpovězte prosím slovem NEKONTAKTOVAT a příště vás nebudeme oslovovat.';
-
 export const SALES_LEAD_TEMPLATE_VARIABLES = [
   { key: 'company_name', token: '{{company_name}}', label: 'Název firmy' },
   { key: 'contact_person', token: '{{contact_person}}', label: 'Kontaktní osoba' },
@@ -34,6 +31,23 @@ export const TEMPLATE_TYPE_LABELS: Record<SalesLeadEmailTemplateType, string> = 
   initial: 'První e-mail',
   reply: 'Odpověď',
   follow_up: 'Follow-up',
+};
+
+const TEMPLATE_SAVE_ERROR_MESSAGES: Record<string, string> = {
+  access_denied_superadmin_only: 'E-mailové šablony může spravovat pouze superadmin.',
+  invalid_template: 'Šablona obsahuje neplatné nebo příliš dlouhé údaje.',
+  unsupported_template_variable: 'Šablona obsahuje nepodporovanou proměnnou.',
+  template_not_found: 'Upravovaná šablona nebyla nalezena.',
+  opt_out_sentence_required: 'Databáze stále vyžaduje odhlašovací větu; je nutné aplikovat připravenou migraci.',
+};
+
+export const salesLeadEmailTemplateSaveErrorMessage = (
+  rpcError: string | undefined,
+  responseError: string | undefined,
+): string => {
+  const reason = responseError || rpcError;
+  if (!reason) return 'Šablonu se nepodařilo uložit z neznámého důvodu.';
+  return TEMPLATE_SAVE_ERROR_MESSAGES[reason] ?? `Šablonu se nepodařilo uložit: ${reason}`;
 };
 
 const tokenPattern = /\{\{[^{}]+\}\}/g;

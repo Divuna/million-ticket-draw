@@ -11,9 +11,9 @@ import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
 import {
-  OPT_OUT_SENTENCE,
   SALES_LEAD_TEMPLATE_VARIABLES,
   TEMPLATE_TYPE_LABELS,
+  salesLeadEmailTemplateSaveErrorMessage,
   validateSalesLeadEmailTemplateDefinition,
   type SalesLeadEmailTemplate,
   type SalesLeadEmailTemplateType,
@@ -70,7 +70,7 @@ export function SalesLeadEmailTemplateManager({ open, onOpenChange }: { open: bo
       p_sort_order: Number(form.sort_order) || 0,
     });
     setSaving(false);
-    if (error || !data?.success) return toast.error('Šablonu se nepodařilo uložit.');
+    if (error || !data?.success) return toast.error(salesLeadEmailTemplateSaveErrorMessage(error?.message, data?.error));
     toast.success(form.id ? 'Šablona upravena.' : 'Šablona vytvořena.');
     setForm(emptyForm());
     await load();
@@ -138,9 +138,6 @@ export function SalesLeadEmailTemplateManager({ open, onOpenChange }: { open: bo
               <div className="rounded-2xl border border-white/[0.08] bg-background/55 p-4">
                 <div className="text-xs font-semibold uppercase tracking-[0.14em] text-muted-foreground">Povolené proměnné</div>
                 <div className="mt-3 flex flex-wrap gap-2">{SALES_LEAD_TEMPLATE_VARIABLES.map((variable) => <button type="button" key={variable.key} onClick={() => setForm((value) => ({ ...value, body: `${value.body}${value.body ? ' ' : ''}${variable.token}` }))} className="rounded-full border border-white/[0.1] bg-card px-3 py-1.5 text-xs hover:border-primary/35"><span className="font-mono text-primary">{variable.token}</span><span className="ml-1.5 text-muted-foreground">{variable.label}</span></button>)}</div>
-                {(form.template_type === 'initial' || form.template_type === 'follow_up') && (
-                  <div className="mt-4 border-t border-white/[0.07] pt-4"><p className="text-xs text-muted-foreground">První e-mail a follow-up musí obsahovat závěrečnou větu pro odhlášení.</p><Button type="button" variant="outline" size="sm" className="mt-2" onClick={() => setForm((value) => ({ ...value, body: value.body.includes(OPT_OUT_SENTENCE) ? value.body : `${value.body.trim()}${value.body.trim() ? '\n\n' : ''}${OPT_OUT_SENTENCE}` }))}>Vložit povinnou větu</Button></div>
-                )}
               </div>
               <div className="flex justify-end gap-2"><Button variant="ghost" onClick={() => setForm(emptyForm())}>Vyčistit</Button><Button onClick={() => void save()} disabled={saving}>{saving ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Save className="mr-2 h-4 w-4" />}{form.id ? 'Uložit změny' : 'Vytvořit šablonu'}</Button></div>
             </div>
