@@ -55,6 +55,15 @@ export const STATUS_BADGE_CLASS: Record<string, string> = {
   archivovan: 'bg-muted text-muted-foreground',
 };
 
+export const INITIAL_EMAIL_ALLOWED_STATUSES: readonly SalesLeadStatus[] = [
+  'novy',
+  'priprava',
+  'schvaleni_ceka',
+];
+
+export const isInitialEmailStatusAllowed = (status: string): boolean =>
+  INITIAL_EMAIL_ALLOWED_STATUSES.includes(status as SalesLeadStatus);
+
 /** Číselník oborů (§3). */
 export const INDUSTRY_OPTIONS: { value: string; label: string }[] = [
   { value: 'e-shop', label: 'E-shop' },
@@ -253,7 +262,12 @@ export const RPC_ERROR_MESSAGES: Record<string, string> = {
   do_not_contact: 'Lead je označený jako Nekontaktovat.',
   duplicate_guard_failed: 'Serverovou kontrolu duplicit se nepodařilo dokončit. Nic nebylo odesláno.',
   reply_target_not_found: 'Původní přijatá zpráva nebyla nalezena.',
-  history_write_failed_after_send: 'Odpověď byla odeslána, ale zápis historie se nezdařil. Neodesílejte ji znovu.',
+  history_write_failed_after_send: 'Zpráva byla odeslána, ale zápis historie se nezdařil. Neodesílejte ji znovu.',
+  proposal_not_approved: 'Návrh nejdřív schvalte. Z navrženého leadu nelze odeslat první e-mail.',
+  initial_email_status_not_allowed: 'První e-mail lze odeslat pouze ze schváleného leadu před oslovením.',
+  status_sync_failed_after_send: 'E-mail byl odeslán, ale stav leadu se nepodařilo synchronizovat. E-mail znovu neposílejte.',
+  initial_email_history_check_failed: 'Nepodařilo se ověřit historii prvního e-mailu. Nic nebylo odesláno.',
+  initial_email_already_sent: 'První e-mail už byl tomuto leadu odeslán a nelze jej odeslat znovu.',
 };
 
 export function rpcErrorMessage(code: string | undefined): string {
