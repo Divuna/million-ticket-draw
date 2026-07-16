@@ -20,6 +20,7 @@ import {
 } from './salesLeadEmailTemplates';
 
 const emptyForm = () => ({ id: null as string | null, name: '', template_type: 'initial' as SalesLeadEmailTemplateType, subject: '', body: '', sort_order: '0' });
+const TEMPLATE_VALIDATION_TOAST_ID = 'sales-lead-email-template-validation';
 
 export function SalesLeadEmailTemplateManager({ open, onOpenChange }: { open: boolean; onOpenChange: (open: boolean) => void }) {
   const [templates, setTemplates] = useState<SalesLeadEmailTemplate[]>([]);
@@ -59,7 +60,8 @@ export function SalesLeadEmailTemplateManager({ open, onOpenChange }: { open: bo
   const save = async () => {
     const errors = validateSalesLeadEmailTemplateDefinition(form.template_type, form.subject, form.body);
     if (!form.name.trim()) errors.unshift('Název šablony je povinný.');
-    if (errors.length > 0) return toast.error(errors[0]);
+    if (errors.length > 0) return toast.error(errors[0], { id: TEMPLATE_VALIDATION_TOAST_ID });
+    toast.dismiss(TEMPLATE_VALIDATION_TOAST_ID);
     setSaving(true);
     const { data, error } = await (supabase as any).rpc('sales_lead_email_template_upsert', {
       p_id: form.id,
