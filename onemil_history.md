@@ -24,6 +24,12 @@
 
 # OneMil — DEVELOPMENT HISTORY (CHRONOLOGICAL ONLY)
 
+- **2026-07-16 — Hotfix ikony e-mailu v detailu leadu:** Doplněn chybějící import `Mail` z
+  `lucide-react` v `LeadCrmPanel.tsx`. Oprava odstraňuje produkční runtime chybu `Mail is not
+  defined` při otevření detailu leadu po PR #226. Chování editorů, databáze, Edge Functions,
+  validace i historie komunikace zůstávají beze změny; aktivace frontendu vyžaduje ruční Lovable
+  `Share → Publish`.
+
 - **2026-07-16 — Lead e-mail lze napsat bez šablony:** Primární akce prvního e-mailu nyní otevírá
   prázdný editor a šablona je jen volitelná výplň uvnitř editoru. Stejný princip byl doplněn pro
   follow-up; odpověď ve vlákně a veškeré odesílání, validace a historie zůstaly beze změny. Bez

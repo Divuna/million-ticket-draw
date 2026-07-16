@@ -25,6 +25,8 @@ test.describe('Sales lead e-mail compose flow', () => {
   });
 
   test('follow-up opens a blank editor without requiring a template', () => {
+    expect(panel).toMatch(/\bMail,\s+MessageSquarePlus,/);
+    expect(panel).toContain('<Mail className="mr-1.5 h-3.5 w-3.5" />Napsat follow-up');
     expect(panel).toContain('const openFollowUpComposer = () => {');
     expect(panel).toContain("setFuSubject('');");
     expect(panel).toContain("setFuBody('');");

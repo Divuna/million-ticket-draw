@@ -8,6 +8,7 @@ import {
   Clock3,
   FileText,
   ListTodo,
+  Mail,
   MessageSquarePlus,
   PhoneCall,
   Plus,
