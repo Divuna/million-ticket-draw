@@ -47,6 +47,7 @@ import {
   Pencil,
   PhoneCall,
   Save,
+  Search,
   Send,
   Sparkles,
   UserRound,
@@ -79,6 +80,15 @@ import {
   validateSalesLeadEmailContent,
   type SalesLeadEmailTemplateType,
 } from './salesLeadEmailTemplates';
+import {
+  applyAresResult,
+  getAresConflicts,
+  isValidSalesLeadIco,
+  lookupSalesLeadAres,
+  SALES_LEAD_ICO_ERROR,
+  type SalesLeadAresConflict,
+  type SalesLeadAresResult,
+} from './salesLeadAres';
 
 interface Props {
   leadId: string | null;
@@ -458,6 +468,10 @@ export function SalesLeadDetailSheet({ leadId, open, onOpenChange, onMutated }: 
   const [editing, setEditing] = useState(false);
   const [form, setForm] = useState<EditForm | null>(null);
   const [saving, setSaving] = useState(false);
+  const [aresLoading, setAresLoading] = useState(false);
+  const [icoError, setIcoError] = useState('');
+  const [pendingAresResult, setPendingAresResult] = useState<SalesLeadAresResult | null>(null);
+  const [aresConflicts, setAresConflicts] = useState<SalesLeadAresConflict[]>([]);
   // Změna stavu: vybraný cíl + důvod.
   const [pendingStatus, setPendingStatus] = useState<string | null>(null);
   const [reason, setReason] = useState('');
@@ -553,6 +567,10 @@ export function SalesLeadDetailSheet({ leadId, open, onOpenChange, onMutated }: 
       setDuplicateConflicts([]);
       setOverrideReason('');
       setReplyToActivity(null);
+      setAresLoading(false);
+      setIcoError('');
+      setPendingAresResult(null);
+      setAresConflicts([]);
       void (async () => {
         await load();
         await markRepliesRead();
@@ -563,6 +581,9 @@ export function SalesLeadDetailSheet({ leadId, open, onOpenChange, onMutated }: 
   const startEdit = () => {
     if (lead) {
       setForm(toForm(lead));
+      setIcoError('');
+      setPendingAresResult(null);
+      setAresConflicts([]);
       setEditing(true);
     }
   };
@@ -571,8 +592,49 @@ export function SalesLeadDetailSheet({ leadId, open, onOpenChange, onMutated }: 
     (field: keyof EditForm) =>
     (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
       if (field === 'contact_email') { setDuplicateConflicts([]); setOverrideReason(''); }
+      if (field === 'ico') setIcoError('');
       setForm((prev) => (prev ? { ...prev, [field]: e.target.value } : prev));
     };
+
+  const applyLoadedAresResult = (result: SalesLeadAresResult) => {
+    setForm((prev) => (prev ? applyAresResult(prev, result) : prev));
+    setPendingAresResult(null);
+    setAresConflicts([]);
+    toast.success('Údaje firmy byly načteny z ARES');
+  };
+
+  const loadFromAres = async () => {
+    if (!form) return;
+    const ico = form.ico.trim();
+    if (!isValidSalesLeadIco(ico)) {
+      setIcoError(SALES_LEAD_ICO_ERROR);
+      return;
+    }
+
+    setAresLoading(true);
+    setIcoError('');
+    try {
+      const outcome = await lookupSalesLeadAres(
+        (functionName, options) => supabase.functions.invoke(functionName, options),
+        ico,
+      );
+      if (!outcome.ok) {
+        setIcoError(outcome.message);
+        return;
+      }
+
+      const result = outcome.result;
+      const conflicts = getAresConflicts(form, result);
+      if (conflicts.length > 0) {
+        setPendingAresResult(result);
+        setAresConflicts(conflicts);
+        return;
+      }
+      applyLoadedAresResult(result);
+    } finally {
+      setAresLoading(false);
+    }
+  };
 
   const previewDuplicate = async () => {
     if (!lead || !form?.contact_email.trim().includes('@')) return;
@@ -585,6 +647,10 @@ export function SalesLeadDetailSheet({ leadId, open, onOpenChange, onMutated }: 
 
   const saveEdit = async (confirmOverride = false) => {
     if (!lead || !form) return;
+    if (form.ico.trim() && !isValidSalesLeadIco(form.ico)) {
+      setIcoError(SALES_LEAD_ICO_ERROR);
+      return;
+    }
     if (!form.company_name.trim()) {
       toast.error('Název firmy je povinný');
       return;
@@ -1310,21 +1376,32 @@ export function SalesLeadDetailSheet({ leadId, open, onOpenChange, onMutated }: 
               <div className="mt-2 space-y-3">
                 <div className="space-y-1">
                   <Label htmlFor="e-company_name">Název firmy <span className="text-destructive">*</span></Label>
-                  <Input id="e-company_name" value={form.company_name} onChange={setField('company_name')} disabled={saving} />
+                  <Input id="e-company_name" value={form.company_name} onChange={setField('company_name')}
+                    disabled={saving || aresLoading} data-testid="e-company-name" />
+                </div>
+                <div className="space-y-1">
+                  <Label htmlFor="e-ico">IČO</Label>
+                  <div className="flex gap-2">
+                    <Input id="e-ico" value={form.ico} onChange={setField('ico')} disabled={saving || aresLoading}
+                      inputMode="numeric" maxLength={8} aria-invalid={Boolean(icoError)}
+                      aria-describedby={icoError ? 'e-ico-error' : undefined} data-testid="e-ico" />
+                    <Button type="button" variant="outline" onClick={loadFromAres} disabled={saving || aresLoading}
+                      className="shrink-0 gap-2" data-testid="e-ares-lookup">
+                      {aresLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Search className="h-4 w-4" />}
+                      Načíst z ARES
+                    </Button>
+                  </div>
+                  {icoError && <p id="e-ico-error" role="alert" className="text-xs text-destructive">{icoError}</p>}
                 </div>
                 <div className="grid grid-cols-2 gap-3">
                   <div className="space-y-1">
-                    <Label htmlFor="e-ico">IČO</Label>
-                    <Input id="e-ico" value={form.ico} onChange={setField('ico')} disabled={saving} />
-                  </div>
-                  <div className="space-y-1">
                     <Label htmlFor="e-dic">DIČ</Label>
-                    <Input id="e-dic" value={form.dic} onChange={setField('dic')} disabled={saving} />
+                    <Input id="e-dic" value={form.dic} onChange={setField('dic')} disabled={saving || aresLoading} />
                   </div>
                 </div>
                 <div className="space-y-1">
                   <Label htmlFor="e-address">Adresa sídla</Label>
-                  <Input id="e-address" value={form.address} onChange={setField('address')} disabled={saving} maxLength={500} />
+                  <Input id="e-address" value={form.address} onChange={setField('address')} disabled={saving || aresLoading} maxLength={500} data-testid="e-address" />
                 </div>
                 <div className="space-y-1">
                   <Label htmlFor="e-website">Web</Label>
@@ -1344,7 +1421,7 @@ export function SalesLeadDetailSheet({ leadId, open, onOpenChange, onMutated }: 
                   </div>
                   <div className="space-y-1">
                     <Label htmlFor="e-city">Město</Label>
-                    <Input id="e-city" value={form.city} onChange={setField('city')} disabled={saving} />
+                    <Input id="e-city" value={form.city} onChange={setField('city')} disabled={saving || aresLoading} />
                   </div>
                 </div>
                 <div className="space-y-1">
@@ -1391,9 +1468,9 @@ export function SalesLeadDetailSheet({ leadId, open, onOpenChange, onMutated }: 
                 <DuplicateConflictAlert conflicts={duplicateConflicts} reason={overrideReason}
                   onReasonChange={setOverrideReason} disabled={saving} />
                 <div className="flex justify-end gap-2 pt-1">
-                  <Button variant="outline" onClick={() => setEditing(false)} disabled={saving}>Zrušit</Button>
+                  <Button variant="outline" onClick={() => setEditing(false)} disabled={saving || aresLoading}>Zrušit</Button>
                   <Button onClick={duplicateConflicts.length > 0 ? confirmEditOverride : () => saveEdit(false)}
-                    variant={duplicateConflicts.length > 0 ? 'destructive' : 'default'} disabled={saving} className="gap-1.5">
+                    variant={duplicateConflicts.length > 0 ? 'destructive' : 'default'} disabled={saving || aresLoading} className="gap-1.5">
                     {saving && <Loader2 className="h-4 w-4 animate-spin" />}
                     {duplicateConflicts.length > 0 ? 'Potvrdit výjimku a pokračovat' : 'Uložit'}
                   </Button>
@@ -1747,6 +1824,40 @@ export function SalesLeadDetailSheet({ leadId, open, onOpenChange, onMutated }: 
           </>
         )}
       </SheetContent>
+
+      <AlertDialog
+        open={pendingAresResult !== null}
+        onOpenChange={(dialogOpen) => {
+          if (!dialogOpen) {
+            setPendingAresResult(null);
+            setAresConflicts([]);
+          }
+        }}
+      >
+        <AlertDialogContent data-testid="e-ares-confirm">
+          <AlertDialogHeader>
+            <AlertDialogTitle>Přepsat ručně vyplněné údaje?</AlertDialogTitle>
+            <AlertDialogDescription>
+              ARES našel odlišné hodnoty. Bez vašeho potvrzení se formulář nezmění.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <div className="max-h-64 space-y-2 overflow-y-auto text-sm">
+            {aresConflicts.map((conflict) => (
+              <div key={conflict.field} className="rounded-lg border border-border bg-muted/30 p-3">
+                <div className="font-medium">{conflict.label}</div>
+                <div className="mt-1 text-xs text-muted-foreground">Vaše hodnota: {conflict.current}</div>
+                <div className="text-xs text-muted-foreground">ARES: {conflict.incoming || '—'}</div>
+              </div>
+            ))}
+          </div>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Zachovat ruční údaje</AlertDialogCancel>
+            <AlertDialogAction onClick={() => pendingAresResult && applyLoadedAresResult(pendingAresResult)}>
+              Přepsat údaji z ARES
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
 
       {/* Potvrzení odeslání — jasné, že odesílá člověk, ne AI */}
       {lead && templatePickerType && templatePickerType !== 'follow_up' && (

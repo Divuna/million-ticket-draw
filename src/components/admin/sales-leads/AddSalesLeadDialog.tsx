@@ -26,9 +26,8 @@ import { isNonOfficialWebsiteUrl } from '../../../../supabase/functions/_shared/
 import {
   applyAresResult,
   isValidSalesLeadIco,
-  SALES_LEAD_ARES_NOT_FOUND,
+  lookupSalesLeadAres,
   SALES_LEAD_ICO_ERROR,
-  type SalesLeadAresResult,
 } from './salesLeadAres';
 
 interface Props {
@@ -96,27 +95,17 @@ export function AddSalesLeadDialog({ open, onOpenChange, onSuccess, initialValue
     setAresLoading(true);
     setIcoError('');
     try {
-      const { data, error } = await supabase.functions.invoke('sales-lead-ares-lookup', {
-        body: { ico },
-      });
-      let payload = data as Record<string, unknown> | null;
-      if (error && 'context' in error && error.context instanceof Response) {
-        try { payload = await error.context.json() as Record<string, unknown>; } catch { /* response has no JSON */ }
-      }
-      if (error || payload?.success !== true) {
-        const message = payload?.message === SALES_LEAD_ARES_NOT_FOUND
-          ? SALES_LEAD_ARES_NOT_FOUND
-          : typeof payload?.message === 'string'
-            ? payload.message
-            : 'Údaje se z ARES nepodařilo načíst';
-        setIcoError(message);
+      const outcome = await lookupSalesLeadAres(
+        (functionName, options) => supabase.functions.invoke(functionName, options),
+        ico,
+      );
+      if (!outcome.ok) {
+        setIcoError(outcome.message);
         return;
       }
 
-      setForm((prev) => applyAresResult(prev, payload as SalesLeadAresResult));
+      setForm((prev) => applyAresResult(prev, outcome.result));
       toast.success('Údaje firmy byly načteny z ARES');
-    } catch {
-      setIcoError('Údaje se z ARES nepodařilo načíst');
     } finally {
       setAresLoading(false);
     }
