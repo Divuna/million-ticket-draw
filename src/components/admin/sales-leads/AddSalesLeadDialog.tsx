@@ -22,6 +22,7 @@ import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
 import { INDUSTRY_OPTIONS, rpcErrorMessage, type DuplicateConflict } from './salesLeadsShared';
 import { DuplicateConflictAlert } from './DuplicateConflictAlert';
+import { isNonOfficialWebsiteUrl } from '../../../../supabase/functions/_shared/officialWebsitePolicy';
 import {
   applyAresResult,
   isValidSalesLeadIco,
@@ -150,6 +151,10 @@ export function AddSalesLeadDialog({ open, onOpenChange, onSuccess, initialValue
         ? website
         : `https://${website}`
       : '';
+    if (normalizedWebsite && isNonOfficialWebsiteUrl(normalizedWebsite)) {
+      toast.error('Katalog, rejstřík, sociální síť ani cizí profil nelze uložit jako firemní web.');
+      return;
+    }
 
     setLoading(true);
     try {

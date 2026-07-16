@@ -1,6 +1,6 @@
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.57.4";
-import { verifyDiscoveredCompanySite } from "../_shared/companyWebsiteVerifier.ts";
+import { verifyCompanyWebsite, verifyDiscoveredCompanySite } from "../_shared/companyWebsiteVerifier.ts";
 import { generateCandidateUrls } from "../_shared/companyCandidateSearch.ts";
 import { aresByIco, aresByName, type RegistryRecord } from "../_shared/companyRegistryEnrich.ts";
 
@@ -162,9 +162,19 @@ serve(async (req: Request) => {
     const name = reg?.legalName ?? site.companyName;
     if (!name) { counters.websites_rejected++; continue; }
 
-    // Dedup proti existujícím leadům (doména / IČO / název).
-    const domain = registrableDomain(hostOf(site.website));
     const ico = reg?.ico ?? site.icoOnPage ?? null;
+    const official = await verifyCompanyWebsite({
+      companyName: name,
+      ico,
+      candidates: [{ url: site.website, source: "discovery_candidate" }],
+    });
+    if (official.status !== "verified" || !official.website) {
+      counters.websites_rejected++;
+      continue;
+    }
+
+    // Dedup proti existujícím leadům (doména / IČO / název).
+    const domain = registrableDomain(hostOf(official.website));
     let dupQuery = supabaseAdmin.from("sales_leads").select("id").limit(1);
     const orParts = [`website_domain.eq.${domain}`, `company_name.ilike.${name.replace(/[,%]/g, " ")}`];
     if (ico) orParts.push(`ico.eq.${ico}`);
@@ -184,8 +194,8 @@ serve(async (req: Request) => {
       model: AI_MODEL, run_at: nowIso, job_id: jobId, lead_group_label: groups.find((g) => g.slug === targetGroup)?.label ?? null,
       classification: { slug: cls.slug, summary: cls.summary },
       website_verification: {
-        status: "verified", confidence: site.confidence, source: site.reason === "ico_on_site" ? "IČO na oficiálním webu" : "Oficiální web",
-        verifiedAt: nowIso, evidence: { reason: site.reason, ico_on_page: site.icoOnPage }, alternatives: [],
+        status: official.status, confidence: official.confidence, source: official.source,
+        verifiedAt: official.verifiedAt, evidence: official.evidence, alternatives: official.alternatives,
       },
     };
 
@@ -196,7 +206,7 @@ serve(async (req: Request) => {
       p_discovery_source: "ai_navrh",
       p_lead_quality: site.icoOnPage ? 3 : 2,
       p_discovery_meta: discoveryMeta,
-      p_website: site.website,
+      p_website: official.website,
       p_ico: ico,
       p_city: reg?.city ?? null,
       p_industry: groups.find((g) => g.slug === targetGroup)?.label ?? null,
@@ -211,7 +221,7 @@ serve(async (req: Request) => {
 
     // Enrichment bez hádání — jen doložitelné údaje (do jsonb, netriggeruje web).
     const provenance: Record<string, unknown> = {
-      website: { value: site.website, source: "web_search+verify", verified_at: nowIso, confidence: site.confidence },
+      website: { value: official.website, source: "web_search+strict_verify", verified_at: official.verifiedAt, confidence: official.confidence },
     };
     if (ico) provenance.ico = { value: ico, source: reg?.ico ? "ARES" : "web", verified_at: nowIso };
     if (reg?.dic) provenance.dic = { value: reg.dic, source: "ARES", verified_at: nowIso };
@@ -235,7 +245,7 @@ serve(async (req: Request) => {
     if (reg?.dic) counters.with_dic++;
     if (reg?.address) counters.with_address++;
     if (site.phone) counters.with_phone++;
-    dbg("saved", { company: name, website: site.website, group: targetGroup, target: isTargetSegment });
+    dbg("saved", { company: name, website: official.website, group: targetGroup, target: isTargetSegment });
   }
 
   // ── Rozhodni finish stav ───────────────────────────────────────────────────

@@ -9,6 +9,8 @@
 // jen na ověřeném webu. AI zde není zdroj pravdy.
 // ============================================================================
 
+import { isNonOfficialWebsiteUrl } from "./officialWebsitePolicy.ts";
+
 const OPENAI_MODEL =
   (typeof Deno !== "undefined" ? Deno.env.get("SALES_LEADS_SEARCH_MODEL") : undefined) ?? "gpt-4o-mini";
 const OPENAI_TOOL = "web_search_preview";
@@ -17,20 +19,6 @@ const DDG_TIMEOUT_MS = 12000;
 const MAX_SEARCH_CANDIDATES = 5;
 const BROWSER_UA =
   "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/125.0.0.0 Safari/537.36";
-
-// Domény, které NIKDY nejsou „oficiální web firmy": sociální sítě, katalogy,
-// mapy, wiki, obchodní rejstříky, agregátory.
-const NON_OFFICIAL_HOST_SUFFIXES = [
-  "facebook.com", "instagram.com", "linkedin.com", "twitter.com", "x.com",
-  "youtube.com", "youtu.be", "tiktok.com", "pinterest.com",
-  "google.com", "google.cz", "goo.gl", "maps.app.goo.gl",
-  "wikipedia.org", "wikiwand.com",
-  "firmy.cz", "zivefirmy.cz", "najisto.centrum.cz", "najisto.cz", "edb.cz",
-  "kurzy.cz", "rejstrik-firem.kurzy.cz", "or.justice.cz", "justice.cz",
-  "ares.gov.cz", "merk.cz", "detail.firmy.cz", "cz.linkedin.com",
-  "heureka.cz", "zbozi.cz", "glami.cz", "yelp.com", "foursquare.com",
-  "duckduckgo.com", "bing.com", "seznam.cz", "mapy.cz",
-];
 
 const URL_IN_TEXT_RE = /https?:\/\/[^\s"'<>()\]]+/gi;
 
@@ -51,12 +39,6 @@ function safeHost(url: string): string | null {
   } catch {
     return null;
   }
-}
-
-function isNonOfficialHost(host: string): boolean {
-  return NON_OFFICIAL_HOST_SUFFIXES.some(
-    (suffix) => host === suffix || host.endsWith(`.${suffix}`),
-  );
 }
 
 /** URL -> homepage téže domény (schéma + host), bez cesty/query/fragmentu. */
@@ -196,7 +178,7 @@ function toCandidates(rawUrls: string[], sourceLabel: string): { candidates: Off
   for (const rawUrl of rawUrls) {
     const host = safeHost(rawUrl);
     if (!host) continue;
-    if (isNonOfficialHost(host)) {
+    if (isNonOfficialWebsiteUrl(rawUrl)) {
       if (!rejected.includes(host)) rejected.push(host);
       continue;
     }

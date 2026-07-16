@@ -54,6 +54,7 @@ import {
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
+import { isNonOfficialWebsiteUrl } from '../../../../supabase/functions/_shared/officialWebsitePolicy';
 import { useUserRole } from '@/hooks/useUserRole';
 import {
   INDUSTRY_OPTIONS,
@@ -593,6 +594,10 @@ export function SalesLeadDetailSheet({ leadId, open, onOpenChange, onMutated }: 
         ? website
         : `https://${website}`
       : '';
+    if (normalizedWebsite && isNonOfficialWebsiteUrl(normalizedWebsite)) {
+      toast.error('Katalog, rejstřík, sociální síť ani cizí profil nelze uložit jako firemní web.');
+      return;
+    }
     setSaving(true);
     try {
       const { data, error } = await (supabase as any).rpc('sales_lead_update_fields', {
