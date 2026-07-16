@@ -58,6 +58,7 @@ import { isNonOfficialWebsiteUrl } from '../../../../supabase/functions/_shared/
 import { useUserRole } from '@/hooks/useUserRole';
 import {
   INDUSTRY_OPTIONS,
+  isInitialEmailStatusAllowed,
   STATUS_LABELS,
   STATUS_BADGE_CLASS,
   LEAD_GROUP_OPTIONS,
@@ -773,6 +774,12 @@ export function SalesLeadDetailSheet({ leadId, open, onOpenChange, onMutated }: 
   };
 
   const openInitialEmailComposer = () => {
+    if (!lead || !isInitialEmailStatusAllowed(lead.status)) {
+      toast.error(lead?.status === 'navrzeny'
+        ? 'Návrh nejdřív schvalte. Potom můžete napsat první e-mail.'
+        : 'V tomto stavu už nelze odeslat první e-mail.');
+      return;
+    }
     setDraftSubject('');
     setDraftBody('');
     setAiWorkspaceOpen(true);
@@ -929,12 +936,22 @@ export function SalesLeadDetailSheet({ leadId, open, onOpenChange, onMutated }: 
   const replyValidationErrors = validateSalesLeadEmailContent('reply', replySubject, replyBody);
   const hasContactEmail = !!lead?.contact_email;
   const isDoNotContact = !!lead?.do_not_contact;
-  const canSend = draftSaved && !draftDirty && draftValidationErrors.length === 0 && hasContactEmail && !isDoNotContact;
+  const initialEmailStatusAllowed = !!lead && isInitialEmailStatusAllowed(lead.status);
   // activities je řazeno created_at DESC → první email_sent je ten poslední.
   const lastEmailSent = activities.find((a) => a.activity_type === 'email_sent') ?? null;
+  const initialEmailAlreadySent = activities.some((a) =>
+    a.activity_type === 'email_sent' && a.direction === 'outbound' && a.metadata?.sent_by === 'human');
+  const canSend = initialEmailStatusAllowed && !initialEmailAlreadySent && draftSaved && !draftDirty
+    && draftValidationErrors.length === 0 && hasContactEmail && !isDoNotContact;
 
   const sendEmail = async () => {
     if (!lead) return;
+    if (!isInitialEmailStatusAllowed(lead.status)) {
+      toast.error(lead.status === 'navrzeny'
+        ? 'Návrh nejdřív schvalte. Z navrženého leadu nelze odeslat první e-mail.'
+        : 'V tomto stavu už nelze odeslat první e-mail.');
+      return;
+    }
     if (draftDirty) {
       toast.error('Před odesláním uložte aktuální změny konceptu.');
       return;
@@ -949,9 +966,14 @@ export function SalesLeadDetailSheet({ leadId, open, onOpenChange, onMutated }: 
         body: { lead_id: lead.id },
       });
       if (error) throw new Error(error.message);
-      const res = (data ?? {}) as { success?: boolean; error?: string };
+      const res = (data ?? {}) as { success?: boolean; error?: string; email_sent?: boolean };
       if (!res.success) {
         toast.error(rpcErrorMessage(res.error));
+        if (res.email_sent) {
+          setSendConfirmOpen(false);
+          await load();
+          onMutated();
+        }
         return;
       }
       toast.success('E-mail odeslán');
@@ -1495,7 +1517,8 @@ export function SalesLeadDetailSheet({ leadId, open, onOpenChange, onMutated }: 
               <Button
                 variant="outline"
                 onClick={openInitialEmailComposer}
-                disabled={draftBusy}
+                disabled={draftBusy || !initialEmailStatusAllowed}
+                title={lead.status === 'navrzeny' ? 'Nejdřív schvalte návrh' : undefined}
                 className="h-auto justify-start gap-3 rounded-xl border-white/[0.09] bg-background/65 px-3.5 py-3 text-left shadow-sm transition-colors duration-150 hover:border-primary/30 hover:bg-background/80 focus-visible:ring-2 focus-visible:ring-primary/40"
               >
                 <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-primary/15 text-primary"><Mail className="h-4 w-4" /></span>
@@ -1585,7 +1608,11 @@ export function SalesLeadDetailSheet({ leadId, open, onOpenChange, onMutated }: 
                   disabled={!canSend || sending || draftSaving || draftBusy}
                   className="gap-1.5"
                   title={
-                    !draftSaved
+                    initialEmailAlreadySent
+                      ? 'První e-mail už byl odeslán'
+                      : !initialEmailStatusAllowed
+                      ? lead.status === 'navrzeny' ? 'Nejdřív schvalte návrh' : 'První e-mail už v tomto stavu nelze odeslat'
+                      : !draftSaved
                       ? 'Nejdřív uložte koncept'
                       : !hasContactEmail
                       ? 'Lead nemá kontaktní e-mail'

@@ -22,11 +22,9 @@ import { createOutboundCapture } from "../_shared/salesLeadEmailThreading.ts";
 // Po úspěšném odeslání zapíše do historie kontaktu activity 'email_sent'
 // se snapshotem předmětu (ne AI). Odesílatel je b2b@onemil.cz.
 //
-// Oprava po Fázi 6 (§18 spec): po zápisu 'email_sent' volá service-role-only
-// RPC `sales_lead_mark_emailed`, která leada ve stavu 'schvaleni_ceka' posune
-// na 'osloveno' (jinak stav beze změny — nikdy nevrací zpět, nikdy nepřeskakuje
-// stavy). Volání je best-effort: pokud selže, úspěšně odeslaný e-mail se
-// NEVRACÍ zpět, jen se nepropíše stav (odesílání zůstává zdrojem pravdy).
+// Navržený lead se nesmí odeslat: nejdřív jej člověk schválí do `novy`.
+// Po úspěšném Resend odeslání se stav povinně synchronizuje přes service-role
+// RPC `sales_lead_mark_emailed`; teprve pak funkce vrací success:true.
 //
 // Auth: JWT → getUser → has_admin_permission('sales_leads.manage').
 // Zápis přes service_role (obchází RLS). Nedotýká se wallets/payments/contests/
@@ -41,6 +39,8 @@ const corsHeaders = {
 
 const FROM_ADDRESS = "OneMil obchodní tým <b2b@onemil.cz>";
 const REPLY_TO = "OneMil obchodní tým <b2b@onemil.cz>";
+const INITIAL_EMAIL_ALLOWED_STATUSES = new Set(["novy", "priprava", "schvaleni_ceka"]);
+const ALREADY_CONTACTED_STATUSES = new Set(["osloveno", "follow_up", "odpovedel", "jednani", "konvertovan"]);
 
 function jsonResponse(body: Record<string, unknown>, status = 200): Response {
   return new Response(JSON.stringify(body), {
@@ -101,11 +101,17 @@ serve(async (req: Request) => {
     // ── 3. Load lead ─────────────────────────────────────────────────────────
     const { data: lead, error: leadErr } = await supabaseAdmin
       .from("sales_leads")
-      .select("id, company_name, contact_email, do_not_contact, draft_email_subject, draft_email_body")
+      .select("id, company_name, status, contact_email, do_not_contact, draft_email_subject, draft_email_body")
       .eq("id", leadId)
       .maybeSingle();
     if (leadErr) return jsonResponse({ success: false, error: "lead_lookup_failed" }, 500);
     if (!lead) return jsonResponse({ success: false, error: "lead_not_found" }, 404);
+    if (lead.status === "navrzeny") {
+      return jsonResponse({ success: false, error: "proposal_not_approved" }, 409);
+    }
+    if (!INITIAL_EMAIL_ALLOWED_STATUSES.has(lead.status)) {
+      return jsonResponse({ success: false, error: "initial_email_status_not_allowed" }, 409);
+    }
 
     // ── 4. Tvrdé bariéry ─────────────────────────────────────────────────────
     // Odesílá se JEN uložený koncept — nic se negeneruje.
@@ -130,6 +136,24 @@ serve(async (req: Request) => {
       .maybeSingle();
     if (suppressed) {
       return jsonResponse({ success: false, error: "suppressed" }, 403);
+    }
+
+    // Idempotency guard: if Resend succeeded previously but a later DB step
+    // failed, the same first e-mail must never be sent again.
+    const { data: previousInitialEmail, error: previousInitialEmailError } = await supabaseAdmin
+      .from("sales_lead_activities")
+      .select("id")
+      .eq("lead_id", leadId)
+      .eq("activity_type", "email_sent")
+      .eq("direction", "outbound")
+      .contains("metadata", { sent_by: "human" })
+      .limit(1)
+      .maybeSingle();
+    if (previousInitialEmailError) {
+      return jsonResponse({ success: false, error: "initial_email_history_check_failed" }, 500);
+    }
+    if (previousInitialEmail) {
+      return jsonResponse({ success: false, error: "initial_email_already_sent" }, 409);
     }
 
     // Autoritativní kontrola duplicit těsně před odesláním. Frontend ji nemůže
@@ -174,7 +198,7 @@ serve(async (req: Request) => {
     }
 
     // ── 6. Historie kontaktu (snapshot; odeslal člověk, ne AI) ───────────────
-    await supabaseAdmin.from("sales_lead_activities").insert({
+    const { error: activityError } = await supabaseAdmin.from("sales_lead_activities").insert({
       lead_id: leadId,
       activity_type: "email_sent",
       direction: "outbound",
@@ -192,17 +216,30 @@ serve(async (req: Request) => {
         references: [],
       },
     });
+    if (activityError) {
+      return jsonResponse({ success: false, error: "history_write_failed_after_send", email_sent: true });
+    }
 
-    // ── 7. Best-effort propsání stavu (§18 spec) ─────────────────────────────
-    // E-mail byl už úspěšně odeslán a zapsán — pokud tento krok selže,
-    // odpověď zůstává success:true, jen se nepropíše stav leadu.
-    try {
-      await supabaseAdmin.rpc("sales_lead_mark_emailed", {
-        p_lead_id: leadId,
-        p_performed_by: caller.id,
-      });
-    } catch {
-      // best-effort — neblokuje úspěšné odeslání e-mailu
+    // ── 7. Povinné propsání stavu (§18 spec) ─────────────────────────────────
+    const { data: statusData, error: statusError } = await supabaseAdmin.rpc("sales_lead_mark_emailed", {
+      p_lead_id: leadId,
+      p_performed_by: caller.id,
+    });
+    const statusResult = statusData as {
+      success?: boolean;
+      status_changed?: boolean;
+      new_status?: string;
+      current_status?: string;
+    } | null;
+    const movedToContacted = statusResult?.success === true
+      && statusResult.status_changed === true
+      && statusResult.new_status === "osloveno";
+    const alreadyProgressed = statusResult?.success === true
+      && statusResult.status_changed === false
+      && typeof statusResult.current_status === "string"
+      && ALREADY_CONTACTED_STATUSES.has(statusResult.current_status);
+    if (statusError || (!movedToContacted && !alreadyProgressed)) {
+      return jsonResponse({ success: false, error: "status_sync_failed_after_send", email_sent: true });
     }
 
     return jsonResponse({ success: true, lead_id: leadId, sent_to: recipient });
