@@ -3,6 +3,7 @@ import { verifyCompanyWebsite, verifyDiscoveredCompanySite } from '../../supabas
 import { extractIcoFromText, extractCompanyNameFromHtml } from '../../supabase/functions/_shared/companyRegistryEnrich.ts';
 import { crawlCompanyWebsite, sanitizeEmail, emailBelongsToCompany } from '../../supabase/functions/_shared/companyEmailCrawler.ts';
 import { parseDuckDuckGoResults, findOfficialWebsiteCandidates, extractUrlsFromResponses } from '../../supabase/functions/_shared/companyWebsiteSearch.ts';
+import { isNonOfficialWebsiteUrl, nonOfficialWebsiteMatch } from '../../supabase/functions/_shared/officialWebsitePolicy.ts';
 
 // Behaviorální testy verifieru a e-mailového crawleru s mockovaným fetch.
 // Pokrývají scénáře z požadavku: správný web, špatná AI doména, přesměrování na
@@ -155,11 +156,11 @@ test('verifier: obecný název (Restaurace Lokál) se nepotvrdí s cizí značko
   expect(r.website).toBeNull();
 });
 
-test('verifier: DDB Prague projde na ddb.about95.cz (doména souvisí přes subdoménu)', async () => {
+test('verifier: profil firmy na cizí hlavní doméně se nepotvrdí ani přes firemní subdoménu', async () => {
   pages['https://ddb.about95.cz/'] = { body: `<html><body><h1>DDB Prague</h1>${filler} Kontakt © DDB Prague</body></html>` };
   const r = await verifyCompanyWebsite({ companyName: 'DDB Prague', ico: null, candidates: [{ url: 'https://ddb.about95.cz/', source: 'openai_web_search' }] });
-  expect(r.status).toBe('verified');
-  expect(r.website).toBe('https://ddb.about95.cz/');
+  expect(r.status).toBe('unverified');
+  expect(r.website).toBeNull();
 });
 
 test('verifier: Restaurace U Medvídků projde na umedvidku.cz', async () => {
@@ -201,7 +202,53 @@ test('verifyDiscoveredCompanySite: zpravodajský portál se nepovtrdí', async (
   pages['https://www.mediar.cz/'] = { body: `<html><body>${filler} Wunderman Thompson otevírá pobočku. Kontakt © Médiář</body></html>` };
   const r = await verifyDiscoveredCompanySite('https://www.mediar.cz/');
   expect(r.verified).toBe(false);
-  expect(r.reason).toBe('news_or_catalog_domain');
+  expect(r.reason).toBe('non_official_third_party');
+});
+
+test('rojik.sluzby.cz se odmítne i se správným IČO a identitou firmy', async () => {
+  aresJson = { obchodniJmeno: 'Ladislav Rojik', ico: '26255430' };
+  pages['https://rojik.sluzby.cz/'] = {
+    body: `<html><body><h1>Ladislav Rojik</h1>${filler} IČO: 26255430 Kontakt © Ladislav Rojik</body></html>`,
+  };
+  const r = await verifyCompanyWebsite({
+    companyName: 'Ladislav Rojik',
+    ico: '26255430',
+    candidates: [{ url: 'https://rojik.sluzby.cz/', source: 'web_search' }],
+  });
+  expect(r.status).toBe('unverified');
+  expect(r.website).toBeNull();
+  expect(r.alternatives[0]).toMatchObject({ reason: 'non_official_third_party', confidence: 0 });
+});
+
+test('profil na neznámé cizí hlavní doméně neprojde ani se správným IČO', async () => {
+  aresJson = { obchodniJmeno: 'Acme s.r.o.', ico: '12345678' };
+  pages['https://acme.cizi-katalog.cz/'] = {
+    body: `<html><body><h1>Acme s.r.o.</h1>${filler} IČO: 12345678 Kontakt © Acme</body></html>`,
+  };
+  const r = await verifyCompanyWebsite({
+    companyName: 'Acme s.r.o.',
+    ico: '12345678',
+    candidates: [{ url: 'https://acme.cizi-katalog.cz/', source: 'web_search' }],
+  });
+  expect(r.status).toBe('unverified');
+  expect(r.website).toBeNull();
+});
+
+test('firma.firmy.cz a facebookový profil jsou centrálně odmítnuty včetně subdomén', () => {
+  expect(isNonOfficialWebsiteUrl('https://firma.firmy.cz/profil')).toBe(true);
+  expect(isNonOfficialWebsiteUrl('https://www.facebook.com/acme')).toBe(true);
+  expect(nonOfficialWebsiteMatch('https://rojik.sluzby.cz/')?.matchedRule).toBe('sluzby.cz');
+});
+
+test('web bez důkazu identity a vlastnictví se neověří', async () => {
+  pages['https://acme.cz/'] = { body: `<html><body><h1>Vítejte</h1>${filler}</body></html>` };
+  const r = await verifyCompanyWebsite({
+    companyName: 'Acme s.r.o.',
+    ico: null,
+    candidates: [{ url: 'https://acme.cz/', source: 'web_search' }],
+  });
+  expect(r.status).toBe('unverified');
+  expect(r.website).toBeNull();
 });
 
 test('verifyDiscoveredCompanySite: zaparkovaná doména se nepotvrdí', async () => {

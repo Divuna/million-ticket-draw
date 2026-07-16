@@ -6,27 +6,14 @@
 // NENÍ zdrojem firem. Každý web se dál ověřuje a doplňuje z ARES.
 // ============================================================================
 
+import { isNonOfficialWebsiteUrl } from "./officialWebsitePolicy.ts";
+
 const OPENAI_MODEL =
   (typeof Deno !== "undefined" ? Deno.env.get("SALES_LEADS_SEARCH_MODEL") : undefined) ?? "gpt-4o-mini";
 const OPENAI_TIMEOUT_MS = 25000;
 const DDG_TIMEOUT_MS = 12000;
 const BROWSER_UA =
   "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/125.0.0.0 Safari/537.36";
-
-const NON_OFFICIAL_HOST_SUFFIXES = [
-  "facebook.com", "instagram.com", "linkedin.com", "cz.linkedin.com", "twitter.com", "x.com",
-  "youtube.com", "youtu.be", "tiktok.com", "pinterest.com",
-  "google.com", "google.cz", "goo.gl", "maps.app.goo.gl", "mapy.cz",
-  "wikipedia.org", "wikiwand.com", "seznam.cz", "bing.com", "duckduckgo.com",
-  "firmy.cz", "zivefirmy.cz", "najisto.cz", "najisto.centrum.cz", "edb.cz",
-  "kurzy.cz", "rejstrik-firem.kurzy.cz", "or.justice.cz", "justice.cz", "ares.gov.cz",
-  "merk.cz", "detail.firmy.cz", "detail.cz", "heureka.cz", "zbozi.cz", "glami.cz",
-  "yelp.com", "foursquare.com",
-  // zpravodajské/oborové portály
-  "mediar.cz", "mam.cz", "marketingsales.cz", "e15.cz", "idnes.cz", "novinky.cz",
-  "seznamzpravy.cz", "aktualne.cz", "forbes.cz", "hn.cz", "ihned.cz", "denik.cz",
-  "root.cz", "lupa.cz", "zive.cz", "businessinfo.cz", "penize.cz", "podnikatel.cz",
-];
 
 const CITIES = ["Praha", "Brno", "Ostrava", "Plzeň", "Olomouc", "Liberec", "Hradec Králové", "České Budějovice"];
 
@@ -62,10 +49,6 @@ function safeHost(url: string): string | null {
   } catch {
     return null;
   }
-}
-
-function isNonOfficialHost(host: string): boolean {
-  return NON_OFFICIAL_HOST_SUFFIXES.some((s) => host === s || host.endsWith(`.${s}`));
 }
 
 function toHomepage(url: string): string | null {
@@ -182,7 +165,7 @@ export async function generateCandidateUrls(input: {
   const collect = (rawUrls: string[]) => {
     for (const raw of rawUrls) {
       const host = safeHost(raw);
-      if (!host || isNonOfficialHost(host)) continue;
+      if (!host || isNonOfficialWebsiteUrl(raw)) continue;
       const home = toHomepage(raw);
       if (!home) continue;
       const key = host.replace(/^www\./, "");

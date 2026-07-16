@@ -1,4 +1,5 @@
 import { extractCompanyNameFromHtml, extractIcoFromText } from "./companyRegistryEnrich.ts";
+import { isNonOfficialWebsiteUrl, nonOfficialWebsiteMatch } from "./officialWebsitePolicy.ts";
 
 export type VerificationStatus = "verified" | "unverified";
 
@@ -40,16 +41,6 @@ const PARKED_PATTERNS = [
   /expired domain/i, /domain has expired/i, /webhosting zdarma/i,
 ];
 
-// Zpravodajské / oborové / katalogové domény — NIKDY oficiální web firmy.
-// Pouhá zmínka názvu firmy v článku (např. Médiář o „Wunderman Thompson") nestačí.
-const NEWS_CATALOG_BLOCKLIST = new Set([
-  'mediar.cz', 'mam.cz', 'marketingsales.cz', 'e15.cz', 'firmy.cz', 'zivefirmy.cz',
-  'idnes.cz', 'novinky.cz', 'seznamzpravy.cz', 'aktualne.cz', 'denik.cz',
-  'forbes.cz', 'hn.cz', 'ihned.cz', 'root.cz', 'lupa.cz', 'zive.cz', 'cnews.cz',
-  'businessinfo.cz', 'kurzy.cz', 'penize.cz', 'podnikatel.cz', 'mesec.cz',
-  'detail.cz', 'najisto.cz', 'edb.cz', 'merk.cz', 'wikipedia.org',
-]);
-
 const GENERIC_NAME_WORDS = new Set([
   'restaurace', 'restaurant', 'kavarna', 'cafe', 'bar', 'hospoda', 'hotel',
   'penzion', 'pension', 'agentura', 'agency', 'studio', 'shop', 'eshop',
@@ -65,17 +56,27 @@ function registrableDomainOf(host: string): string {
 // Doména kandidáta musí souviset s názvem firmy. Delší/specifické názvy: token
 // v hostname stačí. Krátké/obecné názvy (po odebrání obecných slov ≤5 znaků):
 // token musí odpovídat celému labelu domény, jinak (nebo bez shody IČO) zamítni.
-function domainMatchesCompany(fullHost: string, companyName: string, icoMatched: boolean): boolean {
-  if (icoMatched) return true;
-  const labels = fullHost.toLowerCase().split('.').filter(Boolean);
+function domainMatchesCompany(finalUrl: string, companyName: string, icoMatched: boolean): boolean {
+  let url: URL;
+  try { url = new URL(finalUrl); } catch { return false; }
+  const fullHost = url.hostname.toLowerCase().replace(/^www\./, '');
+  const registrable = registrableDomainOf(fullHost);
+  const labels = registrable.split('.').filter(Boolean);
   const hostJoined = labels.join('');
   const allTokens = normalizeText(companyName).split(' ').filter((t) => t.length >= 3);
   if (allTokens.length === 0) return false;
   const specific = allTokens.filter((t) => !GENERIC_NAME_WORDS.has(t));
   const meaningful = specific.length > 0 ? specific : allTokens;
   const maxLen = Math.max(...meaningful.map((t) => t.length));
-  if (maxLen >= 6) return meaningful.some((t) => hostJoined.includes(t));
-  return meaningful.some((t) => labels.includes(t));
+  const nameMatchesDomain = maxLen >= 6
+    ? meaningful.some((t) => hostJoined.includes(t))
+    : meaningful.some((t) => labels.includes(t));
+  if (nameMatchesDomain) return true;
+
+  // A matching ICO can prove a differently branded root homepage. It must not
+  // rescue company.catalog.cz or catalog.cz/company profile pages.
+  const isRegistrableRoot = fullHost === registrable && (url.pathname === '' || url.pathname === '/');
+  return icoMatched && isRegistrableRoot;
 }
 
 function normalizeText(value: string): string {
@@ -198,7 +199,7 @@ function identityScore(text: string, companyName: string, legalName: string | nu
   if (names.some(n => n.length >= 4 && normalized.includes(n))) matches.push('company_name');
   const tokens = normalizeText(legalName ?? companyName).split(' ').filter(t => t.length >= 4);
   if (tokens.length >= 2 && tokens.filter(t => normalized.includes(t)).length >= Math.min(2, tokens.length)) matches.push('name_tokens');
-  const supporting = /kontakt|contact|obchodni podminky|obchodn[ií] podm[ií]nky|copyright|\u00a9/i.test(text);
+  const supporting = /kontakt|contact|obchodni podminky|obchodn[ií] podm[ií]nky|provozovatel|impressum|copyright|\u00a9|produkty?|products?|ko[sš][ií]k|cart|objednat/i.test(text);
   if (supporting) matches.push('official_page_marker');
   const strong = matches.includes('ico') || matches.includes('company_name');
   return { score: strong && supporting ? (matches.includes('ico') ? 100 : 95) : strong ? 88 : 0, matches };
@@ -215,14 +216,18 @@ export async function verifyCompanyWebsite(input: { companyName: string; ico?: s
   const evaluated: Array<{ url: string; source: string; confidence: number; reason: string; finalUrl?: string; matches?: string[] }> = [];
   for (const candidate of unique) {
     const normalized = publicUrl(candidate.url); if (!normalized) continue;
+    const blockedCandidate = nonOfficialWebsiteMatch(normalized);
+    if (blockedCandidate) {
+      evaluated.push({ url: normalized, source: candidate.source, confidence: 0, reason: blockedCandidate.reason });
+      continue;
+    }
     const page = await fetchPage(normalized);
     if (!page) { evaluated.push({ url: normalized, source: candidate.source, confidence: 0, reason: 'http_or_content_failed' }); continue; }
     let text = pageText(page.html);
     if (text.length < 250) { evaluated.push({ url: normalized, source: candidate.source, confidence: 0, reason: 'empty_page' }); continue; }
     if (PARKED_PATTERNS.some(p => p.test(text))) { evaluated.push({ url: normalized, source: candidate.source, confidence: 0, reason: 'parked_or_for_sale' }); continue; }
-    const finalHost = (() => { try { return new URL(page.finalUrl).hostname.toLowerCase(); } catch { return ''; } })();
-    if (NEWS_CATALOG_BLOCKLIST.has(registrableDomainOf(finalHost))) {
-      evaluated.push({ url: normalized, finalUrl: page.finalUrl, source: candidate.source, confidence: 0, reason: 'news_or_catalog_domain' }); continue;
+    if (isNonOfficialWebsiteUrl(page.finalUrl)) {
+      evaluated.push({ url: normalized, finalUrl: page.finalUrl, source: candidate.source, confidence: 0, reason: 'non_official_third_party' }); continue;
     }
     let identity = identityScore(text, input.companyName, registry?.legalName ?? null, registry?.ico ?? ico);
     for (const link of identityLinks(page.html, page.finalUrl)) {
@@ -232,10 +237,9 @@ export async function verifyCompanyWebsite(input: { companyName: string; ico?: s
       identity = identityScore(text, input.companyName, registry?.legalName ?? null, registry?.ico ?? ico);
     }
     // Zmínka názvu nestačí: doména musí souviset s firmou (jinak zamítni).
-    const icoMatched = identity.matches.includes('ico');
     let score = identity.score;
     let reason = score > 0 ? 'identity_confirmed' : 'company_identity_not_confirmed';
-    if (score >= 88 && !domainMatchesCompany(finalHost, input.companyName, icoMatched)) {
+    if (score >= 88 && !domainMatchesCompany(page.finalUrl, input.companyName, identity.matches.includes('ico'))) {
       score = 0; reason = 'domain_identity_mismatch';
     }
     evaluated.push({ url: normalized, finalUrl: page.finalUrl, source: candidate.source, confidence: score, reason, matches: identity.matches });
@@ -295,10 +299,12 @@ function extractContactUrl(html: string, baseUrl: string): string | null {
  */
 export async function verifyDiscoveredCompanySite(url: string): Promise<DiscoveredSite> {
   const empty: DiscoveredSite = { verified: false, website: null, companyName: null, icoOnPage: null, phone: null, contactFormUrl: null, snippet: '', confidence: 0, reason: '' };
+  if (isNonOfficialWebsiteUrl(url)) return { ...empty, reason: 'non_official_third_party' };
   const page = await fetchPage(url);
   if (!page) return { ...empty, reason: 'http_or_content_failed' };
-  const host = (() => { try { return new URL(page.finalUrl).hostname.toLowerCase(); } catch { return ''; } })();
-  if (NEWS_CATALOG_BLOCKLIST.has(registrableDomainOf(host))) return { ...empty, reason: 'news_or_catalog_domain' };
+  if (isNonOfficialWebsiteUrl(page.finalUrl)) {
+    return { ...empty, reason: 'non_official_third_party' };
+  }
   const text = pageText(page.html);
   if (text.length < 250) return { ...empty, reason: 'empty_page' };
   if (PARKED_PATTERNS.some((p) => p.test(text))) return { ...empty, reason: 'parked_or_for_sale' };

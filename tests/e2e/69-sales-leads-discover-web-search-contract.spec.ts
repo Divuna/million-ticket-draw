@@ -65,8 +65,8 @@ test.describe('Discovery Jobs — worker, kandidáti z web search, bez e-mailu',
 
   test('přísné ověření webu (news blocklist, parked, prázdný)', () => {
     expect(verifier).toContain('verifyDiscoveredCompanySite');
-    expect(verifier).toContain('NEWS_CATALOG_BLOCKLIST');
-    expect(verifier).toContain('news_or_catalog_domain');
+    expect(verifier).toContain('isNonOfficialWebsiteUrl');
+    expect(verifier).toContain('non_official_third_party');
     expect(verifier).toContain('parked_or_for_sale');
     expect(verifier).toContain('no_business_identity');
   });

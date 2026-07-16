@@ -1,5 +1,6 @@
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.57.4";
+import { verifyCompanyWebsite } from "../_shared/companyWebsiteVerifier.ts";
 
 // ============================================================================
 // sales-lead-enrich-contact — bezpečné dohledání VEŘEJNÉHO kontaktu (Fáze 5B)
@@ -96,6 +97,16 @@ serve(async (req: Request) => {
       return jsonResponse({ success: true, found: false, reason: "verified_website_required" });
     }
 
+    const websiteVerification = await verifyCompanyWebsite({
+      companyName: lead.company_name,
+      ico: lead.ico,
+      candidates: [{ url: lead.website, source: "stored_verified_website" }],
+    });
+    if (websiteVerification.status !== "verified" || !websiteVerification.website) {
+      return jsonResponse({ success: true, found: false, reason: "verified_website_revalidation_failed" });
+    }
+    const verifiedWebsite = websiteVerification.website;
+
     // ── 4. OpenAI — vrátí veřejný e-mail + zdroj, nebo null (nehádá) ─────────
     const openaiKey = Deno.env.get("OPENAI_API_KEY");
     if (!openaiKey) {
@@ -103,7 +114,7 @@ serve(async (req: Request) => {
     }
 
     const userPrompt = `Firma: ${lead.company_name}
-Web: ${lead.website ?? "neuvedeno"}
+Web: ${verifiedWebsite}
 IČO: ${lead.ico ?? "neuvedeno"}
 Město: ${lead.city ?? "neuvedeno"}
 Obor: ${lead.industry ?? "neuvedeno"}
@@ -159,7 +170,7 @@ Dohledej veřejně uvedený kontaktní e-mail této firmy dle pravidel. Pokud ho
     // AI je pouze navigace. Zdroj musí být na již ověřené firemní doméně a backend
     // musí navržený e-mail skutečně najít ve staženém obsahu stránky.
     let source: URL; let official: URL;
-    try { source = new URL(sourceUrl); official = new URL(lead.website); }
+    try { source = new URL(sourceUrl); official = new URL(verifiedWebsite); }
     catch { return jsonResponse({ success: true, found: false, reason: "invalid_source_url" }); }
     const host = (u: URL) => u.hostname.toLowerCase().replace(/^www\./, "");
     if (!['https:', 'http:'].includes(source.protocol) || host(source) !== host(official)) {
