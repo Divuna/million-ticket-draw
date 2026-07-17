@@ -45,6 +45,6 @@ test.describe('73 — sales lead outgoing e-mail rendering', () => {
 
     expect(read('supabase/functions/send-sales-lead-email/index.ts')).toContain('body_snapshot: textBody');
     expect(read('supabase/functions/send-sales-lead-reply/index.ts')).toContain('body_snapshot: body');
-    expect(read('supabase/functions/send-sales-lead-follow-up/index.ts')).toContain('body_snapshot:body');
+    expect(read('supabase/functions/send-sales-lead-follow-up/index.ts')).toMatch(/body_snapshot:\s*body/);
   });
 });

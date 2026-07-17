@@ -20,6 +20,13 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog';
+import {
   AlertDialog,
   AlertDialogAction,
   AlertDialogCancel,
@@ -43,6 +50,7 @@ import {
   Loader2,
   Mail,
   MapPin,
+  Maximize2,
   MessageSquareText,
   Pencil,
   PhoneCall,
@@ -90,6 +98,10 @@ import {
   type SalesLeadAresConflict,
   type SalesLeadAresResult,
 } from './salesLeadAres';
+import {
+  SalesLeadEmailAttachmentsField,
+  type SalesLeadEmailAttachment,
+} from './SalesLeadEmailAttachments';
 
 interface Props {
   leadId: string | null;
@@ -175,6 +187,14 @@ const splitQuotedReply = (body: string): { main: string; quoted: string | null }
 
 /** Nad tuto délku se hlavní text sbalí a nabídne „Zobrazit celý e-mail“. */
 const BODY_PREVIEW_CHARS = 320;
+
+const resizeTextareaToContent = (node: HTMLTextAreaElement | null, maxHeight = 360) => {
+  if (!node) return;
+  node.style.height = 'auto';
+  const height = Math.min(node.scrollHeight, maxHeight);
+  node.style.height = `${height}px`;
+  node.style.overflowY = node.scrollHeight > maxHeight ? 'auto' : 'hidden';
+};
 
 const formatDateTime = (iso: string | null): string => {
   if (!iso) return '—';
@@ -366,6 +386,8 @@ const InlineReplyForm = ({
   onImprove,
   aiBusy,
   validationErrors,
+  attachments,
+  onAttachmentsChange,
 }: {
   subject: string;
   body: string;
@@ -380,11 +402,17 @@ const InlineReplyForm = ({
   onImprove: () => void;
   aiBusy: boolean;
   validationErrors: string[];
+  attachments: SalesLeadEmailAttachment[];
+  onAttachmentsChange: (next: SalesLeadEmailAttachment[]) => void;
 }) => {
   const ref = useRef<HTMLDivElement | null>(null);
+  const bodyRef = useRef<HTMLTextAreaElement | null>(null);
   useEffect(() => {
     ref.current?.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
   }, []);
+  useEffect(() => {
+    resizeTextareaToContent(bodyRef.current, 280);
+  }, [body]);
   return (
     <div ref={ref} className="mt-4 space-y-3 rounded-xl border border-primary/30 bg-background/90 p-4 shadow-sm">
       <div className="flex items-center justify-between gap-2">
@@ -397,8 +425,21 @@ const InlineReplyForm = ({
       </div>
       <div className="space-y-1">
         <Label htmlFor="reply-body">Text odpovědi</Label>
-        <Textarea id="reply-body" value={body} onChange={(e) => onBodyChange(e.target.value)} disabled={sending} rows={6} maxLength={20000} />
+        <Textarea
+          ref={bodyRef}
+          id="reply-body"
+          value={body}
+          onChange={(e) => {
+            onBodyChange(e.target.value);
+            resizeTextareaToContent(e.currentTarget, 280);
+          }}
+          disabled={sending}
+          rows={6}
+          maxLength={20000}
+          className="resize-none"
+        />
       </div>
+      <SalesLeadEmailAttachmentsField attachments={attachments} onChange={onAttachmentsChange} disabled={sending} />
       <div className="flex flex-wrap gap-2">
         <Button type="button" variant="outline" size="sm" onClick={onChooseTemplate} disabled={sending || aiBusy} className="gap-1.5">
           <FileText className="h-3.5 w-3.5" /> Vybrat šablonu
@@ -484,6 +525,12 @@ export function SalesLeadDetailSheet({ leadId, open, onOpenChange, onMutated }: 
   const [draftSaving, setDraftSaving] = useState(false);
   const [draftSubject, setDraftSubject] = useState('');
   const [draftBody, setDraftBody] = useState('');
+  const draftTouchedRef = useRef(false);
+  const draftComposerLeadIdRef = useRef<string | null>(null);
+  const [draftExpandedOpen, setDraftExpandedOpen] = useState(false);
+  const [draftAttachments, setDraftAttachments] = useState<SalesLeadEmailAttachment[]>([]);
+  const draftBodyRef = useRef<HTMLTextAreaElement | null>(null);
+  const expandedDraftBodyRef = useRef<HTMLTextAreaElement | null>(null);
   // Odeslání konceptu člověkem (Fáze 3C).
   const [sendConfirmOpen, setSendConfirmOpen] = useState(false);
   const [sending, setSending] = useState(false);
@@ -503,6 +550,7 @@ export function SalesLeadDetailSheet({ leadId, open, onOpenChange, onMutated }: 
   const [replyBody, setReplyBody] = useState('');
   const [replySending, setReplySending] = useState(false);
   const [replyAiBusy, setReplyAiBusy] = useState(false);
+  const [replyAttachments, setReplyAttachments] = useState<SalesLeadEmailAttachment[]>([]);
   const [templatePickerType, setTemplatePickerType] = useState<SalesLeadEmailTemplateType | null>(null);
 
   const load = useCallback(async () => {
@@ -521,8 +569,12 @@ export function SalesLeadDetailSheet({ leadId, open, onOpenChange, onMutated }: 
       if (leadErr) throw new Error(leadErr.message);
       const detail = leadData as SalesLeadDetail;
       setLead(detail);
-      setDraftSubject(detail.draft_email_subject ?? '');
-      setDraftBody(detail.draft_email_body ?? '');
+      if (draftComposerLeadIdRef.current !== detail.id || !draftTouchedRef.current) {
+        setDraftSubject(detail.draft_email_subject ?? '');
+        setDraftBody(detail.draft_email_body ?? '');
+        draftTouchedRef.current = false;
+        draftComposerLeadIdRef.current = detail.id;
+      }
       setClsGroup(detail.lead_group ?? '');
       setClsQuality(String(detail.lead_quality ?? 0));
       setClsSource(detail.discovery_source ?? '');
@@ -572,12 +624,22 @@ export function SalesLeadDetailSheet({ leadId, open, onOpenChange, onMutated }: 
       setIcoError('');
       setPendingAresResult(null);
       setAresConflicts([]);
+      setDraftExpandedOpen(false);
+      setDraftAttachments([]);
+      draftTouchedRef.current = false;
+      draftComposerLeadIdRef.current = leadId;
+      setReplyAttachments([]);
       void (async () => {
         await load();
         await markRepliesRead();
       })();
     }
   }, [open, leadId, load, markRepliesRead]);
+
+  useEffect(() => {
+    resizeTextareaToContent(draftBodyRef.current);
+    resizeTextareaToContent(expandedDraftBodyRef.current, 620);
+  }, [draftBody, draftExpandedOpen]);
 
   const startEdit = () => {
     if (lead) {
@@ -723,6 +785,7 @@ export function SalesLeadDetailSheet({ leadId, open, onOpenChange, onMutated }: 
     setReplyToActivity(activity);
     setReplySubject(activity.subject?.toLowerCase().startsWith('re:') ? activity.subject : `Re: ${activity.subject ?? ''}`);
     setReplyBody('');
+    setReplyAttachments([]);
   };
 
   const sendReply = async () => {
@@ -738,14 +801,20 @@ export function SalesLeadDetailSheet({ leadId, open, onOpenChange, onMutated }: 
     setReplySending(true);
     try {
       const { data, error } = await supabase.functions.invoke('send-sales-lead-reply', {
-        body: { lead_id: lead.id, reply_to_activity_id: replyToActivity.id, subject: replySubject.trim(), body: replyBody.trim() },
+        body: {
+          lead_id: lead.id,
+          reply_to_activity_id: replyToActivity.id,
+          subject: replySubject.trim(),
+          body: replyBody.trim(),
+          attachments: replyAttachments,
+        },
       });
       if (error) throw new Error(error.message);
       const res = (data ?? {}) as { success?: boolean; error?: string; warning?: string };
       if (!res.success) { toast.error(rpcErrorMessage(res.error)); return; }
       if (res.warning) toast.warning(rpcErrorMessage(res.warning));
       else toast.success('Odpověď byla odeslána.');
-      setReplyToActivity(null); setReplyBody(''); setReplySubject('');
+      setReplyToActivity(null); setReplyBody(''); setReplySubject(''); setReplyAttachments([]);
       await load(); onMutated();
     } catch (err: unknown) {
       toast.error(err instanceof Error ? err.message : 'Odpověď se nepodařilo odeslat.');
@@ -825,6 +894,7 @@ export function SalesLeadDetailSheet({ leadId, open, onOpenChange, onMutated }: 
     if (result) {
       setDraftSubject(result.subject);
       setDraftBody(result.body);
+      draftTouchedRef.current = true;
     }
     setDraftBusy(false);
   };
@@ -847,8 +917,11 @@ export function SalesLeadDetailSheet({ leadId, open, onOpenChange, onMutated }: 
         : 'V tomto stavu už nelze odeslat první e-mail.');
       return;
     }
-    setDraftSubject('');
-    setDraftBody('');
+    const sameLeadComposer = draftComposerLeadIdRef.current === lead.id;
+    setDraftSubject(sameLeadComposer ? draftSubject : lead.draft_email_subject ?? '');
+    setDraftBody(sameLeadComposer ? draftBody : lead.draft_email_body ?? '');
+    if (!sameLeadComposer) draftTouchedRef.current = false;
+    draftComposerLeadIdRef.current = lead.id;
     setAiWorkspaceOpen(true);
   };
 
@@ -859,6 +932,7 @@ export function SalesLeadDetailSheet({ leadId, open, onOpenChange, onMutated }: 
     } else {
       setDraftSubject(value.subject);
       setDraftBody(value.body);
+      draftTouchedRef.current = true;
       setAiWorkspaceOpen(true);
     }
     setTemplatePickerType(null);
@@ -890,6 +964,8 @@ export function SalesLeadDetailSheet({ leadId, open, onOpenChange, onMutated }: 
         return;
       }
       toast.success('Koncept uložen');
+      draftTouchedRef.current = false;
+      draftComposerLeadIdRef.current = lead.id;
       await load();
       onMutated();
     } catch (err: unknown) {
@@ -1018,7 +1094,7 @@ export function SalesLeadDetailSheet({ leadId, open, onOpenChange, onMutated }: 
     setSending(true);
     try {
       const { data, error } = await supabase.functions.invoke('send-sales-lead-email', {
-        body: { lead_id: lead.id, subject: draftSubject, body: draftBody },
+        body: { lead_id: lead.id, subject: draftSubject, body: draftBody, attachments: draftAttachments },
       });
       if (error) throw new Error(error.message);
       const res = (data ?? {}) as { success?: boolean; error?: string; email_sent?: boolean };
@@ -1033,6 +1109,8 @@ export function SalesLeadDetailSheet({ leadId, open, onOpenChange, onMutated }: 
       }
       toast.success('E-mail odeslán');
       setSendConfirmOpen(false);
+      setDraftAttachments([]);
+      setDraftExpandedOpen(false);
       await load();
       onMutated();
     } catch (err: unknown) {
@@ -1641,7 +1719,10 @@ export function SalesLeadDetailSheet({ leadId, open, onOpenChange, onMutated }: 
                 <Input
                   id="sl-draft-subject"
                   value={draftSubject}
-                  onChange={(e) => setDraftSubject(e.target.value)}
+                  onChange={(e) => {
+                    draftTouchedRef.current = true;
+                    setDraftSubject(e.target.value);
+                  }}
                   disabled={draftBusy || draftSaving}
                   placeholder="Předmět e-mailu…"
                 />
@@ -1649,15 +1730,26 @@ export function SalesLeadDetailSheet({ leadId, open, onOpenChange, onMutated }: 
               <div className="space-y-1">
                 <Label htmlFor="sl-draft-body" className="text-xs">Tělo e-mailu (koncept)</Label>
                 <Textarea
+                  ref={draftBodyRef}
                   id="sl-draft-body"
                   value={draftBody}
-                  onChange={(e) => setDraftBody(e.target.value)}
+                  onChange={(e) => {
+                    draftTouchedRef.current = true;
+                    setDraftBody(e.target.value);
+                    resizeTextareaToContent(e.currentTarget);
+                  }}
                   disabled={draftBusy || draftSaving}
-                  rows={6}
-                  className="resize-none"
+                  rows={8}
+                  className="max-h-[360px] resize-none"
                   placeholder="Tělo e-mailu — libovolně upravte…"
                 />
               </div>
+              <div className="flex flex-wrap gap-2">
+                <Button type="button" size="sm" variant="outline" onClick={() => setDraftExpandedOpen(true)} disabled={draftBusy || draftSaving} className="gap-1.5">
+                  <Maximize2 className="h-3.5 w-3.5" /> Zvětšit editor
+                </Button>
+              </div>
+              <SalesLeadEmailAttachmentsField attachments={draftAttachments} onChange={setDraftAttachments} disabled={draftBusy || draftSaving || sending} />
               {draftValidationErrors.length > 0 && (draftSubject.length > 0 || draftBody.length > 0) && (
                 <div className="rounded-lg border border-destructive/30 bg-destructive/8 px-3 py-2 text-xs text-destructive">
                   {draftValidationErrors.map((error) => <div key={error}>{error}</div>)}
@@ -1736,7 +1828,7 @@ export function SalesLeadDetailSheet({ leadId, open, onOpenChange, onMutated }: 
                             onSubjectChange={setReplySubject}
                             onBodyChange={setReplyBody}
                             onSend={sendReply}
-                            onCancel={() => setReplyToActivity(null)}
+                            onCancel={() => { setReplyToActivity(null); setReplyAttachments([]); }}
                             sending={replySending}
                             repliedToAt={replyToActivity.created_at}
                             onChooseTemplate={() => setTemplatePickerType('reply')}
@@ -1744,6 +1836,8 @@ export function SalesLeadDetailSheet({ leadId, open, onOpenChange, onMutated }: 
                             onImprove={() => void assistReply('improve')}
                             aiBusy={replyAiBusy}
                             validationErrors={replyValidationErrors}
+                            attachments={replyAttachments}
+                            onAttachmentsChange={setReplyAttachments}
                           />
                         ) : undefined
                       }
@@ -1862,6 +1956,52 @@ export function SalesLeadDetailSheet({ leadId, open, onOpenChange, onMutated }: 
           onSelect={applyTemplate}
         />
       )}
+
+      <Dialog open={draftExpandedOpen} onOpenChange={setDraftExpandedOpen}>
+        <DialogContent className="flex h-[92vh] max-w-[min(1100px,94vw)] flex-col gap-4 overflow-hidden bg-card">
+          <DialogHeader>
+            <DialogTitle>Zvětšený editor e-mailu</DialogTitle>
+            <DialogDescription>
+              Upravujete stejný předmět, text i přílohy jako v detailu leadu.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="grid min-h-0 flex-1 grid-rows-[auto_minmax(0,1fr)_auto] gap-3">
+            <div className="space-y-1">
+              <Label htmlFor="sl-draft-subject-expanded" className="text-xs">Předmět</Label>
+              <Input
+                id="sl-draft-subject-expanded"
+                value={draftSubject}
+                onChange={(e) => {
+                  draftTouchedRef.current = true;
+                  setDraftSubject(e.target.value);
+                }}
+                disabled={draftBusy || draftSaving}
+                maxLength={300}
+              />
+            </div>
+            <div className="min-h-0 space-y-1">
+              <Label htmlFor="sl-draft-body-expanded" className="text-xs">Text e-mailu</Label>
+              <Textarea
+                ref={expandedDraftBodyRef}
+                id="sl-draft-body-expanded"
+                value={draftBody}
+                onChange={(e) => {
+                  draftTouchedRef.current = true;
+                  setDraftBody(e.target.value);
+                  resizeTextareaToContent(e.currentTarget, 620);
+                }}
+                disabled={draftBusy || draftSaving}
+                maxLength={20000}
+                className="h-full min-h-[420px] resize-none leading-6"
+              />
+            </div>
+            <SalesLeadEmailAttachmentsField attachments={draftAttachments} onChange={setDraftAttachments} disabled={draftBusy || draftSaving || sending} />
+          </div>
+          <div className="flex justify-end">
+            <Button type="button" onClick={() => setDraftExpandedOpen(false)}>Zpět do detailu</Button>
+          </div>
+        </DialogContent>
+      </Dialog>
 
       <AlertDialog open={sendConfirmOpen} onOpenChange={(o) => !sending && setSendConfirmOpen(o)}>
         <AlertDialogContent>

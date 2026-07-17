@@ -1,5 +1,5 @@
 /* eslint-disable @typescript-eslint/no-explicit-any, react-hooks/exhaustive-deps */
-import { useEffect, useMemo, useState, type ReactNode } from 'react';
+import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import {
   CalendarClock,
   CalendarDays,
@@ -29,6 +29,10 @@ import {
   validateSalesLeadEmailContent,
   type SalesLeadTemplateContext,
 } from './salesLeadEmailTemplates';
+import {
+  SalesLeadEmailAttachmentsField,
+  type SalesLeadEmailAttachment,
+} from './SalesLeadEmailAttachments';
 
 type Planned = {
   id: string;
@@ -63,6 +67,14 @@ const urgency = (iso: string) => {
     new Intl.DateTimeFormat('en-CA', { timeZone: 'Europe/Prague' }).format(now) ===
     new Intl.DateTimeFormat('en-CA', { timeZone: 'Europe/Prague' }).format(d);
   return d < now ? 'Po termínu' : today ? 'Dnes' : 'Naplánováno';
+};
+
+const resizeTextareaToContent = (node: HTMLTextAreaElement | null, maxHeight = 280) => {
+  if (!node) return;
+  node.style.height = 'auto';
+  const height = Math.min(node.scrollHeight, maxHeight);
+  node.style.height = `${height}px`;
+  node.style.overflowY = node.scrollHeight > maxHeight ? 'auto' : 'hidden';
 };
 
 const RailCard = ({
@@ -131,10 +143,12 @@ export function LeadCrmPanel({
   const [taskNote, setTaskNote] = useState('');
   const [fuSubject, setFuSubject] = useState('');
   const [fuBody, setFuBody] = useState('');
+  const [fuAttachments, setFuAttachments] = useState<SalesLeadEmailAttachment[]>([]);
   const [followUpComposerOpen, setFollowUpComposerOpen] = useState(false);
   const [followUpPickerOpen, setFollowUpPickerOpen] = useState(false);
   const [activityComposerOpen, setActivityComposerOpen] = useState(false);
   const [taskComposerOpen, setTaskComposerOpen] = useState(false);
+  const followUpBodyRef = useRef<HTMLTextAreaElement | null>(null);
   const names = useMemo(() => new Map(admins.map((a) => [a.id, a.full_name || a.id.slice(0, 8)])), [admins]);
 
   const load = async () => {
@@ -165,6 +179,10 @@ export function LeadCrmPanel({
   useEffect(() => {
     void load();
   }, [leadId]);
+
+  useEffect(() => {
+    resizeTextareaToContent(followUpBodyRef.current);
+  }, [fuBody, followUpComposerOpen]);
 
   const clear = () => {
     setResult('');
@@ -274,6 +292,7 @@ export function LeadCrmPanel({
   const openFollowUpComposer = () => {
     setFuSubject('');
     setFuBody('');
+    setFuAttachments([]);
     setFollowUpComposerOpen(true);
   };
   const sendFollowUp = async () => {
@@ -285,13 +304,14 @@ export function LeadCrmPanel({
     if (!confirm('Opravdu ručně odeslat tento follow-up?')) return;
     setBusy(true);
     const { data, error } = await supabase.functions.invoke('send-sales-lead-follow-up', {
-      body: { lead_id: leadId, subject: fuSubject, body: fuBody },
+      body: { lead_id: leadId, subject: fuSubject, body: fuBody, attachments: fuAttachments },
     });
     setBusy(false);
     if (error || !data?.success) return toast.error(`Follow-up nebyl odeslán (${data?.error ?? 'chyba'}).`);
     toast.success('Follow-up odeslán.');
     setFuSubject('');
     setFuBody('');
+    setFuAttachments([]);
     setFollowUpComposerOpen(false);
     onChanged();
   };
@@ -467,7 +487,17 @@ export function LeadCrmPanel({
             <Label className="text-xs">Předmět</Label>
             <Input className="h-9 text-xs" value={fuSubject} onChange={(e) => setFuSubject(e.target.value)} />
             <Label className="text-xs">Text</Label>
-            <Textarea className="resize-none text-xs" rows={7} value={fuBody} onChange={(e) => setFuBody(e.target.value)} />
+            <Textarea
+              ref={followUpBodyRef}
+              className="max-h-[280px] resize-none text-xs"
+              rows={8}
+              value={fuBody}
+              onChange={(e) => {
+                setFuBody(e.target.value);
+                resizeTextareaToContent(e.currentTarget);
+              }}
+            />
+            <SalesLeadEmailAttachmentsField attachments={fuAttachments} onChange={setFuAttachments} disabled={busy} />
             <Button type="button" variant="outline" className="h-8 w-full text-xs" disabled={busy || !fuBody.trim()} onClick={() => void assistFollowUp('improve')}>
               <Sparkles className="mr-1.5 h-3.5 w-3.5" />Vylepšit text
             </Button>
