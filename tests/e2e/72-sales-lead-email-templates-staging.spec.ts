@@ -64,6 +64,7 @@ async function shot(page: Page, testInfo: TestInfo, name: string): Promise<void>
 
 async function openLead(page: Page, company: string): Promise<void> {
   await page.goto('/admin/sales-leads');
+  await page.getByRole('tab', { name: 'Vše', exact: true }).click();
   await page.getByPlaceholder(/Hledat název/).fill(company);
   const row = page.getByRole('row').filter({ hasText: company });
   await expect(row).toHaveCount(1);
