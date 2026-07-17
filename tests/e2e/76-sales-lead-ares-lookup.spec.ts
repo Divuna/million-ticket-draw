@@ -1,4 +1,5 @@
 import { expect, test } from '@playwright/test';
+import { createClient } from '@supabase/supabase-js';
 import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import {
@@ -19,8 +20,23 @@ const detail = read('src/components/admin/sales-leads/SalesLeadDetailSheet.tsx')
 const migration = read('supabase/migrations/20260715211027_sales_lead_ares_lookup_address.sql');
 const liveAdminEmail = process.env.E2E_ADMIN_EMAIL ?? '';
 const liveAdminPassword = process.env.E2E_ADMIN_PASSWORD ?? '';
+const serviceKey = process.env.E2E_SUPABASE_SERVICE_ROLE_KEY ?? '';
 const stagingReady = (process.env.VITE_SUPABASE_URL ?? '').includes('dxmowysntemfqfnanxua')
-  && Boolean(liveAdminEmail && liveAdminPassword);
+  && Boolean(liveAdminEmail && liveAdminPassword && serviceKey);
+
+async function stagingUserIdByEmail(email: string): Promise<string> {
+  const admin = createClient(process.env.VITE_SUPABASE_URL ?? '', serviceKey, {
+    auth: { persistSession: false, autoRefreshToken: false },
+  });
+  for (let page = 1; page <= 20; page += 1) {
+    const { data, error } = await admin.auth.admin.listUsers({ page, perPage: 1000 });
+    if (error) throw error;
+    const found = data.users.find((user) => user.email?.toLowerCase() === email.toLowerCase());
+    if (found) return found.id;
+    if (data.users.length < 1000) break;
+  }
+  throw new Error(`Staging user not found: ${email}`);
+}
 
 test.describe('76 — ruční načtení firmy z ARES', () => {
   test('přijímá pouze platné osmimístné IČO', () => {
@@ -171,29 +187,59 @@ test.describe('76 — ruční načtení firmy z ARES', () => {
     test.skip(!stagingReady, 'Živý test se spouští pouze proti stagingu s E2E admin účtem.');
     test.setTimeout(60_000);
 
-    await loginViaUI(page, liveAdminEmail, liveAdminPassword);
-    await page.goto('/admin/sales-leads');
-    await page.getByRole('button', { name: 'Přidat firmu', exact: true }).first().click();
+    const admin = createClient(process.env.VITE_SUPABASE_URL ?? '', serviceKey, {
+      auth: { persistSession: false, autoRefreshToken: false },
+    });
+    const adminId = await stagingUserIdByEmail(liveAdminEmail);
+    const { data: existingPermission, error: permissionReadError } = await admin
+      .from('admin_permissions')
+      .select('id')
+      .eq('user_id', adminId)
+      .eq('permission_key', 'sales_leads.manage')
+      .maybeSingle();
+    if (permissionReadError) throw permissionReadError;
 
-    const ico = page.getByTestId('sl-ico');
-    await ico.fill('123');
-    await page.getByTestId('sl-ares-lookup').click();
-    await expect(page.getByRole('alert')).toHaveText(SALES_LEAD_ICO_ERROR);
+    let insertedPermissionId: string | null = null;
+    if (!existingPermission) {
+      const { data, error } = await admin
+        .from('admin_permissions')
+        .insert({ user_id: adminId, permission_key: 'sales_leads.manage' })
+        .select('id')
+        .single();
+      if (error) throw error;
+      insertedPermissionId = data.id;
+    }
 
-    await ico.fill('99999999');
-    await page.getByTestId('sl-ares-lookup').click();
-    await expect(page.getByRole('alert')).toHaveText(SALES_LEAD_ARES_NOT_FOUND);
+    try {
+      await loginViaUI(page, liveAdminEmail, liveAdminPassword);
+      await page.goto('/admin/sales-leads');
+      await page.getByRole('button', { name: 'Přidat firmu', exact: true }).first().click();
 
-    await ico.fill('17795851');
-    await page.getByTestId('sl-ares-lookup').click();
-    await expect(page.getByTestId('sl-company-name')).toHaveValue('iCONIC POINT s.r.o.');
-    await expect(page.locator('#sl-dic')).toHaveValue('CZ17795851');
-    await expect(page.getByTestId('sl-address')).toHaveValue('Na Folimance 2155/15, Vinohrady, 12000 Praha 2');
-    await expect(page.locator('#sl-city')).toHaveValue('Praha');
+      const ico = page.getByTestId('sl-ico');
+      await ico.fill('123');
+      await page.getByTestId('sl-ares-lookup').click();
+      await expect(page.getByRole('alert')).toHaveText(SALES_LEAD_ICO_ERROR);
 
-    await page.getByTestId('sl-company-name').fill('Ručně upravený název');
-    await page.getByTestId('sl-address').fill('Ručně upravená adresa');
-    await expect(page.getByTestId('sl-company-name')).toHaveValue('Ručně upravený název');
-    await expect(page.getByTestId('sl-address')).toHaveValue('Ručně upravená adresa');
+      await ico.fill('99999999');
+      await page.getByTestId('sl-ares-lookup').click();
+      await expect(page.getByRole('alert')).toHaveText(SALES_LEAD_ARES_NOT_FOUND);
+
+      await ico.fill('17795851');
+      await page.getByTestId('sl-ares-lookup').click();
+      await expect(page.getByTestId('sl-company-name')).toHaveValue('iCONIC POINT s.r.o.');
+      await expect(page.locator('#sl-dic')).toHaveValue('CZ17795851');
+      await expect(page.getByTestId('sl-address')).toHaveValue('Na Folimance 2155/15, Vinohrady, 12000 Praha 2');
+      await expect(page.locator('#sl-city')).toHaveValue('Praha');
+
+      await page.getByTestId('sl-company-name').fill('Ručně upravený název');
+      await page.getByTestId('sl-address').fill('Ručně upravená adresa');
+      await expect(page.getByTestId('sl-company-name')).toHaveValue('Ručně upravený název');
+      await expect(page.getByTestId('sl-address')).toHaveValue('Ručně upravená adresa');
+    } finally {
+      if (insertedPermissionId) {
+        const { error } = await admin.from('admin_permissions').delete().eq('id', insertedPermissionId);
+        expect(error, 'Dočasné oprávnění sales_leads.manage se musí po testu odstranit').toBeNull();
+      }
+    }
   });
 });
