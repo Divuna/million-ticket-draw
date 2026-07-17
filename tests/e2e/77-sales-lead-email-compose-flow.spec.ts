@@ -6,14 +6,13 @@ const detail = read('src/components/admin/sales-leads/SalesLeadDetailSheet.tsx')
 const panel = read('src/components/admin/sales-leads/LeadCrmPanel.tsx');
 
 test.describe('Sales lead e-mail compose flow', () => {
-  test('first e-mail opens a blank editor without requiring a template', () => {
+  test('first e-mail opens the existing editor without requiring a template', () => {
     expect(detail).toContain('const openInitialEmailComposer = () => {');
-    expect(detail).toContain("setDraftSubject('');");
-    expect(detail).toContain("setDraftBody('');");
+    expect(detail).toContain('lead.draft_email_subject ??');
+    expect(detail).toContain('lead.draft_email_body ??');
     expect(detail).toContain('setAiWorkspaceOpen(true);');
     expect(detail).toContain('onClick={openInitialEmailComposer}');
     expect(detail).toContain('Napsat e-mail');
-    expect(detail).toContain('Otevřít prázdný editor');
   });
 
   test('first e-mail template is optional and only fills the existing editor', () => {
@@ -21,7 +20,8 @@ test.describe('Sales lead e-mail compose flow', () => {
     expect(detail).toContain("onClick={() => setTemplatePickerType('initial')}");
     expect(detail).toContain('setDraftSubject(value.subject);');
     expect(detail).toContain('setDraftBody(value.body);');
-    expect(detail).toContain("type={templatePickerType}");
+    expect(detail).toContain('draftTouchedRef.current = true');
+    expect(detail).toContain('type={templatePickerType}');
   });
 
   test('follow-up opens a blank editor without requiring a template', () => {
@@ -30,6 +30,7 @@ test.describe('Sales lead e-mail compose flow', () => {
     expect(panel).toContain('const openFollowUpComposer = () => {');
     expect(panel).toContain("setFuSubject('');");
     expect(panel).toContain("setFuBody('');");
+    expect(panel).toContain('setFuAttachments([]);');
     expect(panel).toContain('setFollowUpComposerOpen(true);');
     expect(panel).toContain('onClick={openFollowUpComposer}');
     expect(panel).toContain('Napsat follow-up');
@@ -49,5 +50,13 @@ test.describe('Sales lead e-mail compose flow', () => {
     expect(detail).toContain('Odeslat odpověď');
     expect(detail).toContain("setTemplatePickerType('reply')");
     expect(detail).toContain("supabase.functions.invoke('send-sales-lead-reply'");
+  });
+
+  test('all lead e-mail composers can pass attachments without duplicating workflow', () => {
+    expect(detail).toContain('attachments: draftAttachments');
+    expect(detail).toContain('attachments: replyAttachments');
+    expect(panel).toContain('attachments: fuAttachments');
+    expect(detail).toContain('SalesLeadEmailAttachmentsField');
+    expect(panel).toContain('SalesLeadEmailAttachmentsField');
   });
 });

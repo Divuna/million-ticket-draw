@@ -3,6 +3,7 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2.57.4";
 import { Resend } from "npm:resend@2.0.0";
 import { markdownLinksToVisibleText } from "../_shared/salesLeadEmailRendering.ts";
 import { createOutboundCapture } from "../_shared/salesLeadEmailThreading.ts";
+import { parseSalesLeadEmailAttachments } from "../_shared/salesLeadEmailAttachments.ts";
 
 // ============================================================================
 // send-sales-lead-email — odeslání aktuálního obsahu editoru ČLOVĚKEM
@@ -113,6 +114,8 @@ serve(async (req: Request) => {
     }
     const contentError = validateEmailContent(subject, textBody);
     if (contentError) return jsonResponse({ success: false, error: contentError }, 422);
+    const attachmentResult = parseSalesLeadEmailAttachments(body.attachments);
+    if (!attachmentResult.ok) return jsonResponse({ success: false, error: attachmentResult.error }, 422);
 
     // ── 3. Load lead ─────────────────────────────────────────────────────────
     const { data: lead, error: leadErr } = await supabaseAdmin
@@ -194,7 +197,7 @@ serve(async (req: Request) => {
     const outboundCapture = createOutboundCapture();
 
     const resend = new Resend(resendApiKey);
-    const emailResponse = await resend.emails.send({
+    const emailPayload: Record<string, unknown> = {
       from: FROM_ADDRESS,
       to: [recipient],
       bcc: [outboundCapture.address],
@@ -202,7 +205,11 @@ serve(async (req: Request) => {
       subject,
       text: renderedBody,
       html: htmlBody,
-    });
+    };
+    if (attachmentResult.attachments.length > 0) {
+      emailPayload.attachments = attachmentResult.attachments;
+    }
+    const emailResponse = await resend.emails.send(emailPayload as never);
     if (emailResponse.error) {
       return jsonResponse({ success: false, error: "email_send_failed" }, 502);
     }
@@ -223,6 +230,7 @@ serve(async (req: Request) => {
         to: recipient,
         resend_email_id: (emailResponse.data as { id?: string } | null)?.id ?? null,
         outbound_capture_id: outboundCapture.id,
+        attachments: attachmentResult.metadata,
         references: [],
       },
     });
