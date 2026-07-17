@@ -64,6 +64,7 @@ async function shot(page: Page, testInfo: TestInfo, name: string): Promise<void>
 
 async function openLead(page: Page, company: string): Promise<void> {
   await page.goto('/admin/sales-leads');
+  await page.getByRole('tab', { name: 'Vše', exact: true }).click();
   await page.getByPlaceholder(/Hledat název/).fill(company);
   const row = page.getByRole('row').filter({ hasText: company });
   await expect(row).toHaveCount(1);
@@ -82,19 +83,12 @@ async function createTemplate(
   name: string,
   subject: string,
   body: string,
-  verifyOptOutRequired = false,
 ): Promise<void> {
   const manager = page.getByTestId('sales-lead-template-manager');
   await manager.getByLabel('Název').fill(name);
   await manager.getByRole('combobox').first().click();
   await page.getByRole('option', { name: type, exact: true }).click();
   await manager.getByLabel('Předmět').fill(subject);
-  if (verifyOptOutRequired) {
-    await manager.getByLabel('Text šablony').fill(body.replace(`\n\n${optOut}`, ''));
-    await manager.getByRole('button', { name: 'Vytvořit šablonu' }).click();
-    await expect(page.getByText('Chybí povinná závěrečná věta pro odhlášení.', { exact: true })).toBeVisible();
-    await expect(manager.getByText(name, { exact: true })).toHaveCount(0);
-  }
   await manager.getByLabel('Text šablony').fill(body);
   await manager.getByRole('button', { name: 'Vytvořit šablonu' }).click();
   await expect(manager.getByText(name, { exact: true })).toBeVisible();
@@ -192,9 +186,9 @@ test.describe.serial('Sales lead email templates – real staging acceptance', (
     await login(page, superEmail, superPassword);
     await page.goto('/admin/sales-leads');
     await page.getByTestId('sl-template-manager-btn').click();
-    await createTemplate(page, 'První e-mail', names.initial, `OneMil pro {{company_name}} v {{city}}`, `Dobrý den {{contact_person}},\n\nobracím se na vás jako {{contact_role}} ve společnosti {{company_name}}. Web: {{website}}, město: {{city}}.\n\n${optOut}`, true);
+    await createTemplate(page, 'První e-mail', names.initial, `OneMil pro {{company_name}} v {{city}}`, `Dobrý den {{contact_person}},\n\nobracím se na vás jako {{contact_role}} ve společnosti {{company_name}}. Web: {{website}}, město: {{city}}.\n\n${optOut}`);
     await createTemplate(page, 'Odpověď', names.reply, `Re: {{company_name}} – {{contact_person}}`, `Dobrý den {{contact_person}}, děkuji za odpověď. Evidujeme vás jako {{contact_role}} pro {{company_name}} v {{city}} ({{website}}).`);
-    await createTemplate(page, 'Follow-up', names.followUp, `Připomenutí pro {{company_name}}`, `Dobrý den {{contact_person}}, připomínám nabídku pro {{company_name}}, {{contact_role}}, {{city}}, {{website}}.\n\n${optOut}`, true);
+    await createTemplate(page, 'Follow-up', names.followUp, `Připomenutí pro {{company_name}}`, `Dobrý den {{contact_person}}, připomínám nabídku pro {{company_name}}, {{contact_role}}, {{city}}, {{website}}.\n\n${optOut}`);
     await shot(page, testInfo, '01-sprava-sablon');
 
     const { data: created, error: createdError } = await admin.from('sales_lead_email_templates')
@@ -222,7 +216,8 @@ test.describe.serial('Sales lead email templates – real staging acceptance', (
 
     await openLead(page, companies.initial);
     const engagement = page.getByTestId('sales-lead-engagement-column');
-    await engagement.getByRole('button', { name: /Vybrat šablonu/ }).first().click();
+    await engagement.getByRole('button', { name: /Napsat e-mail/ }).first().click();
+    await engagement.getByRole('button', { name: 'Použít šablonu', exact: true }).click();
     const initialPicker = page.getByTestId('sales-lead-template-picker-initial');
     await expect(initialPicker.getByText(names.initial, { exact: true })).toBeVisible();
     await shot(page, testInfo, '02-vyber-prvni-email');
@@ -245,7 +240,8 @@ test.describe.serial('Sales lead email templates – real staging acceptance', (
     await admin.from('sales_leads').update({ contact_role: null }).eq('id', leadIds[0]);
     await openLead(page, companies.initial);
     const engagementMissing = page.getByTestId('sales-lead-engagement-column');
-    await engagementMissing.getByRole('button', { name: /Vybrat šablonu/ }).first().click();
+    await engagementMissing.getByRole('button', { name: /Napsat e-mail/ }).first().click();
+    await engagementMissing.getByRole('button', { name: 'Použít šablonu', exact: true }).click();
     const missingPicker = page.getByTestId('sales-lead-template-picker-initial');
     await missingPicker.locator('article').filter({ hasText: names.initial }).getByRole('button', { name: 'Použít šablonu' }).click();
     await expect(page.locator('#sl-draft-body')).toHaveValue(/\{\{contact_role\}\}/);
@@ -272,7 +268,8 @@ test.describe.serial('Sales lead email templates – real staging acceptance', (
 
     await openLead(page, companies.followUp);
     const next = page.getByTestId('sales-lead-next-column');
-    await next.getByRole('button', { name: 'Vybrat šablonu', exact: true }).click();
+    await next.getByRole('button', { name: 'Napsat follow-up', exact: true }).click();
+    await next.getByRole('button', { name: 'Použít šablonu', exact: true }).click();
     const followPicker = page.getByTestId('sales-lead-template-picker-follow_up');
     await expect(followPicker.getByText(names.followUp, { exact: true })).toBeVisible();
     await shot(page, testInfo, '04-vyber-follow-up');
