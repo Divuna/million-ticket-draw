@@ -78,6 +78,7 @@ import { LeadCrmPanel } from './LeadCrmPanel';
 import { SalesLeadEmailTemplatePicker } from './SalesLeadEmailTemplatePicker';
 import {
   validateSalesLeadEmailContent,
+  validateSalesLeadEmailDraft,
   type SalesLeadEmailTemplateType,
 } from './salesLeadEmailTemplates';
 import {
@@ -870,13 +871,9 @@ export function SalesLeadDetailSheet({ leadId, open, onOpenChange, onMutated }: 
 
   const saveDraft = async () => {
     if (!lead) return;
-    const validationErrors = validateSalesLeadEmailContent('initial', draftSubject, draftBody);
+    const validationErrors = validateSalesLeadEmailDraft(draftSubject, draftBody);
     if (validationErrors.length > 0) {
       toast.error(validationErrors[0]);
-      return;
-    }
-    if (!draftSubject.trim() || !draftBody.trim()) {
-      toast.error('Předmět i tělo návrhu musí být vyplněné.');
       return;
     }
     setDraftSaving(true);
@@ -991,23 +988,19 @@ export function SalesLeadDetailSheet({ leadId, open, onOpenChange, onMutated }: 
     }
   };
 
-  // ── Odeslání konceptu ČLOVĚKEM (Fáze 3C) — nikdy ne AI ────────────────────
-  // Odešle výhradně uložený koncept z leadu přes EF send-sales-lead-email.
-  // Tlačítko je aktivní jen když je koncept uložený, je vyplněný contact_email
-  // a lead není do_not_contact. EF navíc všechny bariéry ověřuje server-side.
-  const draftSaved = !!(lead?.draft_email_subject && lead?.draft_email_body);
-  const draftDirty = draftSubject.trim() !== (lead?.draft_email_subject ?? '').trim()
-    || draftBody.trim() !== (lead?.draft_email_body ?? '').trim();
+  // ── Odeslání aktuálního obsahu ČLOVĚKEM — nikdy ne AI ─────────────────────
+  // Uložení konceptu je volitelné. Edge Function dostane obsah editoru a
+  // autoritativně znovu ověří obsah i všechny stavové a bezpečnostní bariéry.
   const draftValidationErrors = validateSalesLeadEmailContent('initial', draftSubject, draftBody);
   const replyValidationErrors = validateSalesLeadEmailContent('reply', replySubject, replyBody);
-  const hasContactEmail = !!lead?.contact_email;
+  const hasContactEmail = !!lead?.contact_email && lead.email_verified_by_admin === true;
   const isDoNotContact = !!lead?.do_not_contact;
   const initialEmailStatusAllowed = !!lead && isInitialEmailStatusAllowed(lead.status);
   // activities je řazeno created_at DESC → první email_sent je ten poslední.
   const lastEmailSent = activities.find((a) => a.activity_type === 'email_sent') ?? null;
   const initialEmailAlreadySent = activities.some((a) =>
     a.activity_type === 'email_sent' && a.direction === 'outbound' && a.metadata?.sent_by === 'human');
-  const canSend = initialEmailStatusAllowed && !initialEmailAlreadySent && draftSaved && !draftDirty
+  const canSend = initialEmailStatusAllowed && !initialEmailAlreadySent
     && draftValidationErrors.length === 0 && hasContactEmail && !isDoNotContact;
 
   const sendEmail = async () => {
@@ -1018,10 +1011,6 @@ export function SalesLeadDetailSheet({ leadId, open, onOpenChange, onMutated }: 
         : 'V tomto stavu už nelze odeslat první e-mail.');
       return;
     }
-    if (draftDirty) {
-      toast.error('Před odesláním uložte aktuální změny konceptu.');
-      return;
-    }
     if (draftValidationErrors.length > 0) {
       toast.error(draftValidationErrors[0]);
       return;
@@ -1029,7 +1018,7 @@ export function SalesLeadDetailSheet({ leadId, open, onOpenChange, onMutated }: 
     setSending(true);
     try {
       const { data, error } = await supabase.functions.invoke('send-sales-lead-email', {
-        body: { lead_id: lead.id },
+        body: { lead_id: lead.id, subject: draftSubject, body: draftBody },
       });
       if (error) throw new Error(error.message);
       const res = (data ?? {}) as { success?: boolean; error?: string; email_sent?: boolean };
@@ -1675,7 +1664,7 @@ export function SalesLeadDetailSheet({ leadId, open, onOpenChange, onMutated }: 
                 </div>
               )}
               <div className="flex items-center justify-end gap-2">
-                <Button size="sm" variant="outline" onClick={saveDraft} disabled={draftSaving || draftBusy || sending} className="gap-1.5">
+                <Button type="button" size="sm" variant="outline" onClick={saveDraft} disabled={draftSaving || draftBusy || sending} className="gap-1.5">
                   {draftSaving ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Save className="h-3.5 w-3.5" />}
                   Uložit koncept
                 </Button>
@@ -1689,13 +1678,11 @@ export function SalesLeadDetailSheet({ leadId, open, onOpenChange, onMutated }: 
                       ? 'První e-mail už byl odeslán'
                       : !initialEmailStatusAllowed
                       ? lead.status === 'navrzeny' ? 'Nejdřív schvalte návrh' : 'První e-mail už v tomto stavu nelze odeslat'
-                      : !draftSaved
-                      ? 'Nejdřív uložte koncept'
                       : !hasContactEmail
-                      ? 'Lead nemá kontaktní e-mail'
+                      ? 'Lead nemá schválený kontaktní e-mail'
                       : isDoNotContact
                       ? 'Lead je označený Nekontaktovat'
-                      : 'Odeslat uložený koncept na kontaktní e-mail'
+                      : 'Odeslat aktuální obsah editoru na kontaktní e-mail'
                   }
                 >
                   {sending ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Send className="h-3.5 w-3.5" />}
@@ -1703,8 +1690,8 @@ export function SalesLeadDetailSheet({ leadId, open, onOpenChange, onMutated }: 
                 </Button>
               </div>
               <p className="text-[11px] text-muted-foreground">
-                E-mail odesíláte <strong>vy (člověk)</strong>, ne AI. Odešle se přesně uložený koncept výše na
-                kontaktní e-mail leadu. Neuloží-li se koncept nebo chybí kontaktní e-mail, odeslání je zablokované.
+                E-mail odesíláte <strong>vy (člověk)</strong>, ne AI. Odešle se aktuální předmět a text z editoru výše.
+                Uložení konceptu je volitelné; schválený kontaktní e-mail je povinný.
               </p>
               {lastEmailSent && (
                 <p className="text-[11px] text-muted-foreground">
@@ -1883,13 +1870,13 @@ export function SalesLeadDetailSheet({ leadId, open, onOpenChange, onMutated }: 
             <AlertDialogDescription asChild>
               <div className="space-y-2 text-sm">
                 <p>
-                  Odešle se uložený koncept e-mailu na{' '}
+                  Odešle se aktuální obsah editoru na{' '}
                   <strong>{lead?.contact_email ?? '—'}</strong>
                   {lead?.company_name ? <> (firma {lead.company_name})</> : null}.
                 </p>
                 <p className="text-muted-foreground">
                   E-mail odesíláte <strong>vy jako člověk</strong> s oprávněním „Obchodní leady". AI e-mail nikdy
-                  neodesílá. Odeslání proběhne přesně podle konceptu výše, nic se nepřegeneruje.
+                  neodesílá. Odeslání proběhne přesně podle aktuálního obsahu editoru, nic se nepřegeneruje.
                 </p>
               </div>
             </AlertDialogDescription>

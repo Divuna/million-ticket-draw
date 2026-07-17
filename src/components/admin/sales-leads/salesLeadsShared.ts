@@ -256,6 +256,12 @@ export const RPC_ERROR_MESSAGES: Record<string, string> = {
   // Fáze 3C — odeslání konceptu člověkem.
   email_not_configured: 'Odesílání e-mailů zatím není v tomto prostředí nakonfigurované.',
   missing_contact_email: 'Chybí ověřený e-mail kontaktu.',
+  email_content_required: 'Otevřený editor neposlal předmět nebo text e-mailu. Zkuste akci zopakovat.',
+  email_subject_required: 'Předmět je povinný.',
+  email_body_required: 'Text e-mailu je povinný.',
+  email_subject_too_long: 'Předmět může mít nejvýše 300 znaků.',
+  email_body_too_long: 'Text může mít nejvýše 20 000 znaků.',
+  unresolved_template_variables: 'Doplňte všechny nevyřešené proměnné v e-mailu.',
   draft_missing: 'Chybí připravený koncept e-mailu.',
   email_send_failed: 'E-mail se nepodařilo odeslat.',
   suppressed: 'Tato adresa nebo doména je na seznamu Nekontaktovat.',

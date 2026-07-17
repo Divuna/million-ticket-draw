@@ -5,15 +5,15 @@ import { markdownLinksToVisibleText } from "../_shared/salesLeadEmailRendering.t
 import { createOutboundCapture } from "../_shared/salesLeadEmailThreading.ts";
 
 // ============================================================================
-// send-sales-lead-email — Fáze 3C: odeslání uloženého konceptu ČLOVĚKEM
+// send-sales-lead-email — odeslání aktuálního obsahu editoru ČLOVĚKEM
 // Spec: docs/SALES_LEADS_ADMIN_SPEC.md (§8, §10, §11, §12, §13)
 //
 // ⚠️ Tuto funkci spouští VÝHRADNĚ člověk s oprávněním `sales_leads.manage`
 //    kliknutím v UI. AI NIKDY nemá cestu k odeslání e-mailu.
 //
-// Odesílá POUZE existující, ručně/AI připravený a uložený KONCEPT z leadu
-// (draft_email_subject + draft_email_body). NIC negeneruje. Tvrdé bariéry:
-//   • chybí koncept                 → 422 no_draft
+// Odesílá POUZE předmět a text dodaný otevřeným editorem. NIC negeneruje a
+// nikdy nenačítá starší uložený koncept. Tvrdé bariéry:
+//   • chybí/neprojde obsah          → 422 chyba validace obsahu
 //   • chybí contact_email           → 422 missing_contact_email
 //   • lead je do_not_contact        → 403 do_not_contact
 //   • e-mail/doména na suppression  → 403 suppressed
@@ -58,6 +58,15 @@ function escapeHtml(v: string): string {
     .replaceAll("'", "&#39;");
 }
 
+function validateEmailContent(subject: string, body: string): string | null {
+  if (!subject.trim()) return "email_subject_required";
+  if (!body.trim()) return "email_body_required";
+  if (subject.trim().length > 300) return "email_subject_too_long";
+  if (body.trim().length > 20_000) return "email_body_too_long";
+  if (/\{\{[^{}]+\}\}/.test(`${subject}\n${body}`)) return "unresolved_template_variables";
+  return null;
+}
+
 serve(async (req: Request) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders });
   if (req.method !== "POST") return jsonResponse({ success: false, error: "method_not_allowed" }, 405);
@@ -97,11 +106,18 @@ serve(async (req: Request) => {
     }
     const leadId = typeof body.lead_id === "string" ? body.lead_id.trim() : null;
     if (!leadId) return jsonResponse({ success: false, error: "lead_id_required" }, 400);
+    const subject = typeof body.subject === "string" ? body.subject : null;
+    const textBody = typeof body.body === "string" ? body.body : null;
+    if (subject === null || textBody === null) {
+      return jsonResponse({ success: false, error: "email_content_required" }, 422);
+    }
+    const contentError = validateEmailContent(subject, textBody);
+    if (contentError) return jsonResponse({ success: false, error: contentError }, 422);
 
     // ── 3. Load lead ─────────────────────────────────────────────────────────
     const { data: lead, error: leadErr } = await supabaseAdmin
       .from("sales_leads")
-      .select("id, company_name, status, contact_email, do_not_contact, draft_email_subject, draft_email_body")
+      .select("id, company_name, status, contact_email, email_verified_by_admin, do_not_contact")
       .eq("id", leadId)
       .maybeSingle();
     if (leadErr) return jsonResponse({ success: false, error: "lead_lookup_failed" }, 500);
@@ -114,12 +130,8 @@ serve(async (req: Request) => {
     }
 
     // ── 4. Tvrdé bariéry ─────────────────────────────────────────────────────
-    // Odesílá se JEN uložený koncept — nic se negeneruje.
-    if (!lead.draft_email_subject || !lead.draft_email_body) {
-      return jsonResponse({ success: false, error: "no_draft" }, 422);
-    }
     const recipient = (lead.contact_email ?? "").trim().toLowerCase();
-    if (!recipient) {
+    if (!recipient || lead.email_verified_by_admin !== true) {
       return jsonResponse({ success: false, error: "missing_contact_email" }, 422);
     }
     if (lead.do_not_contact === true) {
@@ -177,8 +189,6 @@ serve(async (req: Request) => {
       return jsonResponse({ success: false, error: "email_not_configured" }, 503);
     }
 
-    const subject = String(lead.draft_email_subject);
-    const textBody = String(lead.draft_email_body);
     const renderedBody = markdownLinksToVisibleText(textBody);
     const htmlBody = `<div style="white-space:pre-wrap;font-family:Arial,sans-serif;font-size:14px;line-height:1.5">${escapeHtml(renderedBody)}</div>`;
     const outboundCapture = createOutboundCapture();
