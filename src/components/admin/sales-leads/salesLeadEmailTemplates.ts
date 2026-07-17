@@ -87,6 +87,17 @@ export const validateSalesLeadEmailContent = (
   return errors;
 };
 
+/** Drafts may be incomplete; sending still uses the strict validator above. */
+export const validateSalesLeadEmailDraft = (subject: string, body: string): string[] => {
+  const errors: string[] = [];
+  if (!subject.trim() && !body.trim()) errors.push('Koncept musí obsahovat předmět nebo text e-mailu.');
+  if (subject.trim().length > 300) errors.push('Předmět může mít nejvýše 300 znaků.');
+  if (body.trim().length > 20000) errors.push('Text může mít nejvýše 20 000 znaků.');
+  const unresolved = unresolvedTemplateVariables(subject, body);
+  if (unresolved.length > 0) errors.push(`Doplňte nevyřešené proměnné: ${unresolved.join(', ')}.`);
+  return errors;
+};
+
 export const validateSalesLeadEmailTemplateDefinition = (
   _type: SalesLeadEmailTemplateType,
   subject: string,
