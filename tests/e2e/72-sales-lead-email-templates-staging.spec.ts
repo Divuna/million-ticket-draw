@@ -216,7 +216,8 @@ test.describe.serial('Sales lead email templates – real staging acceptance', (
 
     await openLead(page, companies.initial);
     const engagement = page.getByTestId('sales-lead-engagement-column');
-    await engagement.getByRole('button', { name: /Vybrat šablonu/ }).first().click();
+    await engagement.getByRole('button', { name: /Napsat e-mail/ }).first().click();
+    await engagement.getByRole('button', { name: 'Použít šablonu', exact: true }).click();
     const initialPicker = page.getByTestId('sales-lead-template-picker-initial');
     await expect(initialPicker.getByText(names.initial, { exact: true })).toBeVisible();
     await shot(page, testInfo, '02-vyber-prvni-email');
@@ -239,7 +240,8 @@ test.describe.serial('Sales lead email templates – real staging acceptance', (
     await admin.from('sales_leads').update({ contact_role: null }).eq('id', leadIds[0]);
     await openLead(page, companies.initial);
     const engagementMissing = page.getByTestId('sales-lead-engagement-column');
-    await engagementMissing.getByRole('button', { name: /Vybrat šablonu/ }).first().click();
+    await engagementMissing.getByRole('button', { name: /Napsat e-mail/ }).first().click();
+    await engagementMissing.getByRole('button', { name: 'Použít šablonu', exact: true }).click();
     const missingPicker = page.getByTestId('sales-lead-template-picker-initial');
     await missingPicker.locator('article').filter({ hasText: names.initial }).getByRole('button', { name: 'Použít šablonu' }).click();
     await expect(page.locator('#sl-draft-body')).toHaveValue(/\{\{contact_role\}\}/);
@@ -266,7 +268,8 @@ test.describe.serial('Sales lead email templates – real staging acceptance', (
 
     await openLead(page, companies.followUp);
     const next = page.getByTestId('sales-lead-next-column');
-    await next.getByRole('button', { name: 'Vybrat šablonu', exact: true }).click();
+    await next.getByRole('button', { name: 'Napsat follow-up', exact: true }).click();
+    await next.getByRole('button', { name: 'Použít šablonu', exact: true }).click();
     const followPicker = page.getByTestId('sales-lead-template-picker-follow_up');
     await expect(followPicker.getByText(names.followUp, { exact: true })).toBeVisible();
     await shot(page, testInfo, '04-vyber-follow-up');
