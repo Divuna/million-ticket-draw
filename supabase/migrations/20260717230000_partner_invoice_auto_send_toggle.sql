@@ -103,10 +103,13 @@ REVOKE ALL ON FUNCTION public.release_partner_invoice_auto_send_claim(uuid) FROM
 GRANT EXECUTE ON FUNCTION public.release_partner_invoice_auto_send_claim(uuid) TO service_role;
 
 -- 4. Weekly automation: draft-only, no email enqueue (removes the OFF-mode
---    auto email described in requirement 6). Body identical to the previous
---    definition except the trailing enqueue_partner_invoice_email() call.
-CREATE OR REPLACE FUNCTION public.create_partner_invoices_for_last_week()
-RETURNS void
+--    auto email described in requirement 6). Now RETURNS the ids of the
+--    invoices it created in THIS run, so the auto-send flow only processes
+--    the current weekly period's fresh invoices and never touches older
+--    drafts (which must always stay for manual approval).
+DROP FUNCTION IF EXISTS public.create_partner_invoices_for_last_week();
+CREATE FUNCTION public.create_partner_invoices_for_last_week()
+RETURNS TABLE(invoice_id uuid)
 LANGUAGE plpgsql
 AS $function$
 DECLARE
@@ -245,16 +248,85 @@ BEGIN
     UPDATE public.partner_coin_activations
        SET invoiced = true
      WHERE id IN (
-       SELECT activation_id
-       FROM public.partner_invoice_lines
-       WHERE invoice_id = v_invoice_id
+       SELECT l.activation_id
+       FROM public.partner_invoice_lines l
+       WHERE l.invoice_id = v_invoice_id
      );
 
-    -- NOTE: no automatic email here. The weekly automation creates drafts
-    -- only. Automatic issuing + sending (PDF + exactly one email + status
-    -- 'issued', only after success) is handled by the
-    -- partner-invoice-auto-send Edge Function when the superadmin switch
-    -- partner_invoice_auto_send_enabled is ON.
+    -- Emit the id of the invoice created in this run. No automatic email
+    -- here: the weekly automation creates drafts only. Automatic issuing +
+    -- sending (PDF + exactly one email + status 'issued', only after
+    -- success) is handled by the partner-invoice-auto-send Edge Function
+    -- when the superadmin switch partner_invoice_auto_send_enabled is ON,
+    -- and only for the ids returned here.
+    invoice_id := v_invoice_id;
+    RETURN NEXT;
   END LOOP;
+  RETURN;
 END;
 $function$;
+
+-- 5. Cron entrypoint: post to the partner-invoice-auto-send Edge Function via
+--    pg_net + Vault (same pattern as request_partner_invoice_pdf). This is the
+--    safe way to run the weekly automation through the Edge Function so that
+--    the ON-mode "PDF + one email + issued only after success" flow applies.
+--    Creating this function is side-effect free; it only runs when invoked.
+CREATE OR REPLACE FUNCTION public.run_partner_invoice_weekly_automation()
+RETURNS void
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path TO ''
+AS $function$
+DECLARE
+  v_token    text;
+  v_base_url text;
+BEGIN
+  IF NOT EXISTS (SELECT 1 FROM pg_extension WHERE extname = 'pg_net') THEN
+    RETURN;
+  END IF;
+
+  BEGIN
+    SELECT decrypted_secret INTO v_token
+      FROM vault.decrypted_secrets WHERE name = 'internal_function_token';
+    SELECT decrypted_secret INTO v_base_url
+      FROM vault.decrypted_secrets WHERE name = 'edge_functions_url';
+  EXCEPTION WHEN OTHERS THEN
+    RETURN;
+  END;
+
+  IF v_token IS NULL OR v_base_url IS NULL THEN
+    RETURN;
+  END IF;
+
+  BEGIN
+    PERFORM net.http_post(
+      url     := v_base_url || '/partner-invoice-auto-send',
+      headers := jsonb_build_object(
+        'Content-Type',     'application/json',
+        'x-internal-token', v_token
+      ),
+      body    := jsonb_build_object('trigger', 'weekly_cron')
+    );
+  EXCEPTION WHEN OTHERS THEN
+    RETURN;
+  END;
+END;
+$function$;
+
+REVOKE ALL ON FUNCTION public.run_partner_invoice_weekly_automation() FROM PUBLIC, anon, authenticated;
+GRANT EXECUTE ON FUNCTION public.run_partner_invoice_weekly_automation() TO service_role;
+
+-- 6. Cron repoint — STAGING ONLY, applied outside this migration file so that
+--    applying the migration to production never changes the production cron.
+--    The production weekly job (job 17, 'weekly_partner_invoices',
+--    '0 2 * * 0' -> select public.create_partner_invoices_for_last_week())
+--    must be repointed to the Edge Function only in a separate, explicitly
+--    approved step, e.g.:
+--
+--      SELECT cron.schedule(
+--        'weekly_partner_invoices',
+--        '0 2 * * 0',
+--        $$ SELECT public.run_partner_invoice_weekly_automation(); $$
+--      );
+--
+--    (cron.schedule upserts by job name, preserving the schedule.)

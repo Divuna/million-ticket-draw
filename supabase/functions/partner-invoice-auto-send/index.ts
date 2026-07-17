@@ -71,26 +71,43 @@ serve(async (req: Request) => {
   const internalToken = Deno.env.get("INTERNAL_FUNCTION_TOKEN") ?? "";
   const supabase = createClient(supabaseUrl, serviceKey);
 
-  // Optional payload: { skip_create?: boolean } — used by tests that seed
-  // their own draft invoices and only want the send phase exercised.
+  // Payload:
+  //  - skip_create?: boolean — skip the create step (tests seed drafts).
+  //  - invoice_ids?: string[] — when skip_create is true, the explicit set of
+  //    freshly-created ids to process (test hook simulating the create output).
   let skipCreate = false;
+  let providedIds: string[] = [];
   try {
     const body = await req.json();
     skipCreate = body?.skip_create === true;
+    if (Array.isArray(body?.invoice_ids)) {
+      providedIds = body.invoice_ids.filter((x: unknown): x is string => typeof x === "string");
+    }
   } catch (_e) {
     /* no body */
   }
 
   try {
-    // 1. Create weekly drafts (draft-only; unchanged VAT / numbers / lines).
+    // 1. Create this week's drafts (draft-only; unchanged VAT / numbers /
+    //    lines) and capture the ids created in THIS run. Only these are
+    //    eligible for auto-send — older drafts are never touched and stay for
+    //    manual approval.
+    let targetIds: string[] = [];
     if (!skipCreate) {
-      const { error: createError } = await supabase.rpc("create_partner_invoices_for_last_week");
+      const { data: created, error: createError } = await supabase.rpc(
+        "create_partner_invoices_for_last_week",
+      );
       if (createError) {
         return new Response(JSON.stringify({ error: "create_failed", detail: createError.message }), {
           status: 500,
           headers: { "Content-Type": "application/json", ...corsHeaders },
         });
       }
+      targetIds = (created ?? [])
+        .map((r: { invoice_id?: string }) => r?.invoice_id)
+        .filter((x: unknown): x is string => typeof x === "string");
+    } else {
+      targetIds = providedIds;
     }
 
     // 2. Read the switch.
@@ -107,33 +124,18 @@ serve(async (req: Request) => {
 
     if (!enabled) {
       return new Response(
-        JSON.stringify({ enabled: false, processed: 0, issued: 0, emails: 0, errors: 0 }),
+        JSON.stringify({ enabled: false, created: targetIds.length, processed: 0, issued: 0, emails: 0, errors: 0 }),
         { status: 200, headers: { "Content-Type": "application/json", ...corsHeaders } },
       );
     }
 
-    // 3. ON: process draft coin invoices that are not yet claimed.
-    const { data: drafts, error: draftsError } = await supabase
-      .from("partner_invoices")
-      .select("id, type, status, auto_email_sent_at")
-      .eq("status", "draft")
-      .is("auto_email_sent_at", null)
-      .neq("type", "offer");
-
-    if (draftsError) {
-      return new Response(JSON.stringify({ error: "drafts_query_failed", detail: draftsError.message }), {
-        status: 500,
-        headers: { "Content-Type": "application/json", ...corsHeaders },
-      });
-    }
-
+    // 3. ON: process ONLY the invoices created in this run.
     let issued = 0;
     let emails = 0;
     let errors = 0;
     const results: Array<Record<string, unknown>> = [];
 
-    for (const inv of drafts ?? []) {
-      const invoiceId = inv.id as string;
+    for (const invoiceId of targetIds) {
 
       // 3a. Atomic DB-side claim — only the first run for this invoice wins.
       const { data: claimed, error: claimError } = await supabase.rpc(
@@ -177,7 +179,7 @@ serve(async (req: Request) => {
     }
 
     return new Response(
-      JSON.stringify({ enabled: true, processed: (drafts ?? []).length, issued, emails, errors, results }),
+      JSON.stringify({ enabled: true, processed: targetIds.length, issued, emails, errors, results }),
       { status: 200, headers: { "Content-Type": "application/json", ...corsHeaders } },
     );
   } catch (error) {
