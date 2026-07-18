@@ -12,6 +12,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Switch } from '@/components/ui/switch';
 import { Label } from '@/components/ui/label';
 import { supabase } from '@/integrations/supabase/client';
+import { openPartnerInvoiceExport } from '@/lib/partnerInvoiceDownload';
 import { toast } from 'sonner';
 import { Loader2, Building2, CheckCircle, XCircle, Eye, Coins, FileText, Calendar, Key, Copy, Check, Receipt, Send, Download, UserPlus, Clock } from 'lucide-react';
 import { format, startOfMonth, endOfMonth } from 'date-fns';
@@ -673,8 +674,8 @@ const AdminPartnersPortal = () => {
       if (error) throw error;
       if (!data?.success) throw new Error(data?.error || 'Nepodařilo se vygenerovat PDF');
       toast.success('PDF bylo vygenerováno');
-      if (data.file_url) {
-        window.open(data.file_url, '_blank');
+      if (data.export_id) {
+        await openPartnerInvoiceExport(data.export_id);
       }
     } catch (error: any) {
       console.error('Error generating PDF:', error);

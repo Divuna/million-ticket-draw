@@ -132,6 +132,9 @@ verify_jwt = true
 [functions.generate-partner-invoice-pdf]
 verify_jwt = false
 
+[functions.get-partner-invoice-export-url]
+verify_jwt = true
+
 [functions.send-partner-invoice-email]
 verify_jwt = false
 

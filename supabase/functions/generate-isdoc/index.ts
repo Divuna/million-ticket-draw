@@ -248,7 +248,7 @@ serve(async (req) => {
     const filename = `isdoc-${invoice_id}-${Date.now()}.isdoc`;
     const xmlBytes = new TextEncoder().encode(xmlContent);
 
-    const { data: uploadData, error: uploadError } = await supabase.storage
+    const { error: uploadError } = await supabase.storage
       .from('partner-invoices')
       .upload(filename, xmlBytes, {
         contentType: 'application/xml',
@@ -263,13 +263,10 @@ serve(async (req) => {
       );
     }
 
-    // 6. Get public URL
-    const { data: urlData } = supabase.storage
-      .from('partner-invoices')
-      .getPublicUrl(filename);
-
-    const fileUrl = urlData.publicUrl;
-    console.log('File uploaded:', fileUrl);
+    // 6. Keep the object private. Signed URLs are created only on authorized download.
+    // Short-lived URL for this immediate response only. Persist the private
+    // Storage object path instead of any public/signed URL.
+    console.log('ISDOC uploaded to private Storage');
 
     // 7. Insert into partner_invoice_exports
     const { data: exportData, error: exportError } = await supabase
@@ -277,7 +274,15 @@ serve(async (req) => {
       .insert({
         invoice_id: invoice_id,
         format: 'isdoc',
-        file_url: fileUrl
+        file_url: null,
+        storage_bucket: 'partner-invoices',
+        storage_path: filename,
+        metadata: {
+          content_type: 'application/xml',
+          filename,
+          size_bytes: xmlBytes.length,
+          generated_by: 'generate-isdoc',
+        },
       })
       .select()
       .single();
@@ -295,8 +300,9 @@ serve(async (req) => {
     return new Response(
       JSON.stringify({
         success: true,
-        file_url: fileUrl,
         export_id: exportData.id,
+        storage_bucket: 'partner-invoices',
+        storage_path: filename,
         filename
       }),
       { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }

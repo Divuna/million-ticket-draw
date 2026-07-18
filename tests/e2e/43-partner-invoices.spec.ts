@@ -10,7 +10,7 @@
  *
  * Setup: two partners (A, B) with auth users; one draft invoice for partner A
  * with one invoice line (via reward code + coin activation FK chain) and one
- * PDF export row with a fake file_url (no real PDF is generated, no email is
+ * PDF export row with a fake private Storage path (no real PDF is generated, no email is
  * sent, nothing is marked paid).
  *
  * Invariants verified:
@@ -178,7 +178,9 @@ async function setupData(): Promise<void> {
     .insert({
       invoice_id: inv.id,
       format: 'pdf',
-      file_url: `https://example.invalid/spec43/${inv.id}.pdf`,
+      file_url: null,
+      storage_bucket: 'partner-invoices',
+      storage_path: `spec43/${inv.id}.pdf`,
     });
   if (expErr) throw new Error(`export insert: ${expErr.message}`);
 }
@@ -267,10 +269,12 @@ test.describe.serial('43 — Partner invoice RLS visibility', () => {
 
     const { data: exps, error: expErr } = await (client as any)
       .from('partner_invoice_exports')
-      .select('invoice_id, format, file_url');
+      .select('invoice_id, format, file_url, storage_bucket, storage_path');
     expect(expErr).toBeNull();
     expect(exps).toHaveLength(1);
     expect(exps![0].invoice_id).toBe(ctx.invoiceId);
+    expect(exps![0].file_url).toBeNull();
+    expect(exps![0].storage_bucket).toBe('partner-invoices');
 
     const { data: lines, error: lineErr } = await (client as any)
       .from('partner_invoice_lines')
@@ -303,13 +307,6 @@ test.describe.serial('43 — Partner invoice RLS visibility', () => {
     await client.auth.signOut();
   });
 });
-
-function storagePathFromPublicUrl(url: string): string | undefined {
-  const marker = '/storage/v1/object/public/partner-invoices/';
-  const index = url.indexOf(marker);
-  if (index === -1) return undefined;
-  return decodeURIComponent(url.slice(index + marker.length));
-}
 
 async function callGeneratePdf(invoiceId: string) {
   const response = await fetch(`${SUPABASE_URL}/functions/v1/generate-partner-invoice-pdf`, {
@@ -527,7 +524,7 @@ test.describe('43e — Partner invoice PDF overview lines', () => {
       expect(pdf.body.activation_overview_total_coins).toBe(5);
       expect(pdf.body.activation_overview_total_coins).toBe(Number(invoice.coins_total));
       expect(pdf.body.activation_overview_total_coins).not.toBe(dateRangeCoins);
-      ids.pdfPath = storagePathFromPublicUrl(pdf.body.file_url);
+      ids.pdfPath = pdf.body.storage_path;
     } finally {
       await cleanupPdfOverviewData(admin, ids);
     }

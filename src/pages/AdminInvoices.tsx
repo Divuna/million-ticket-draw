@@ -15,6 +15,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { NavigateToLogin } from '@/components/NavigateToLogin';
 import { useAuth } from '@/hooks/useAuth';
 import { useUserRole } from '@/hooks/useUserRole';
+import { openPartnerInvoiceExport } from '@/lib/partnerInvoiceDownload';
 
 type InvoiceStatus = 'draft' | 'issued' | 'paid';
 
@@ -76,7 +77,8 @@ const AdminInvoices: React.FC = () => {
   const [sendingEmail, setSendingEmail] = useState(false);
   const [resendingEmail, setResendingEmail] = useState(false);
   const [generatingPdf, setGeneratingPdf] = useState(false);
-  const [pdfUrl, setPdfUrl] = useState<string | null>(null);
+  const [pdfExportId, setPdfExportId] = useState<string | null>(null);
+  const [downloadingPdf, setDownloadingPdf] = useState(false);
 
   const currentWeekStart = startOfWeek(addWeeks(new Date(), weekOffset), { weekStartsOn: 1 });
   const currentWeekEnd = endOfWeek(addWeeks(new Date(), weekOffset), { weekStartsOn: 1 });
@@ -147,7 +149,7 @@ const AdminInvoices: React.FC = () => {
 
   const openInvoiceDetail = (invoice: Invoice) => {
     setSelectedInvoice(invoice);
-    setPdfUrl(null);
+    setPdfExportId(null);
     fetchInvoiceLines(invoice.id);
     fetchExistingPdf(invoice.id);
   };
@@ -155,19 +157,21 @@ const AdminInvoices: React.FC = () => {
   const closeDrawer = () => {
     setSelectedInvoice(null);
     setInvoiceLines([]);
-    setPdfUrl(null);
+    setPdfExportId(null);
   };
 
   const fetchExistingPdf = async (invoiceId: string) => {
     const { data } = await supabase
       .from('partner_invoice_exports')
-      .select('file_url')
+      .select('id, storage_path')
       .eq('invoice_id', invoiceId)
       .eq('format', 'pdf')
+      .eq('storage_bucket', 'partner-invoices')
+      .not('storage_path', 'is', null)
       .order('created_at', { ascending: false })
       .limit(1)
       .maybeSingle();
-    if (data?.file_url) setPdfUrl(data.file_url);
+    if (data?.id && data?.storage_path) setPdfExportId(data.id);
   };
 
   const generatePdf = async () => {
@@ -178,17 +182,30 @@ const AdminInvoices: React.FC = () => {
         body: { invoice_id: selectedInvoice.id },
       });
       if (error) throw error;
-      if (data?.file_url) {
-        setPdfUrl(data.file_url);
+      if (data?.export_id) {
+        setPdfExportId(data.export_id);
         toast.success('PDF faktura byla vygenerována');
       } else {
-        throw new Error('Chybí URL souboru');
+        throw new Error('Chybí záznam exportu PDF');
       }
     } catch (err: any) {
       console.error('PDF generation error:', err);
       toast.error('Chyba při generování PDF faktury');
     } finally {
       setGeneratingPdf(false);
+    }
+  };
+
+  const downloadPdf = async () => {
+    if (!pdfExportId) return;
+    setDownloadingPdf(true);
+    try {
+      await openPartnerInvoiceExport(pdfExportId);
+    } catch (err) {
+      console.error('PDF download error:', err);
+      toast.error('Chyba při přípravě odkazu ke stažení PDF');
+    } finally {
+      setDownloadingPdf(false);
     }
   };
 
@@ -204,9 +221,9 @@ const AdminInvoices: React.FC = () => {
   //
   //     if (error) throw error;
   //
-  //     if (data?.file_url) {
+  //     if (data?.export_id) {
   //       toast.success('ISDOC vygenerován');
-  //       window.open(data.file_url, '_blank');
+  //       await openPartnerInvoiceExport(data.export_id);
   //     }
   //   } catch (err) {
   //     toast.error('Chyba při generování ISDOC');
@@ -240,7 +257,7 @@ const AdminInvoices: React.FC = () => {
   const resendInvoiceEmail = async () => {
     if (!selectedInvoice) return;
 
-    if (!pdfUrl) {
+    if (!pdfExportId) {
       toast.error('PDF faktura zatím není k dispozici.');
       return;
     }
@@ -545,16 +562,19 @@ const AdminInvoices: React.FC = () => {
                       )}
                       Generovat PDF
                     </Button>
-                    {pdfUrl && (
+                    {pdfExportId && (
                       <Button
                         variant="outline"
                         size="sm"
-                        asChild
+                        onClick={downloadPdf}
+                        disabled={downloadingPdf}
                       >
-                        <a href={pdfUrl} target="_blank" rel="noopener noreferrer">
+                        {downloadingPdf ? (
+                          <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                        ) : (
                           <Download className="h-4 w-4 mr-2" />
-                          Stáhnout PDF
-                        </a>
+                        )}
+                        Stáhnout PDF
                       </Button>
                     )}
                   </div>
