@@ -51,22 +51,41 @@ async function tokenDigest(value: string): Promise<string> {
 }
 
 async function isInternalTokenAuthorized(req: Request): Promise<boolean> {
-  const expectedToken = Deno.env.get("INTERNAL_FUNCTION_TOKEN");
   const providedToken = req.headers.get("x-internal-token");
-
-  if (!expectedToken || !providedToken) {
+  if (!providedToken) {
     return false;
   }
 
-  const [expectedDigest, providedDigest] = await Promise.all([
-    tokenDigest(expectedToken),
-    tokenDigest(providedToken),
-  ]);
+  // 1) Match against the deployed Edge secret INTERNAL_FUNCTION_TOKEN.
+  const expectedToken = Deno.env.get("INTERNAL_FUNCTION_TOKEN");
+  if (expectedToken) {
+    const [expectedDigest, providedDigest] = await Promise.all([
+      tokenDigest(expectedToken),
+      tokenDigest(providedToken),
+    ]);
+    if (
+      expectedToken.length === providedToken.length &&
+      expectedDigest === providedDigest
+    ) {
+      return true;
+    }
+  }
 
-  return (
-    expectedToken.length === providedToken.length &&
-    expectedDigest === providedDigest
-  );
+  // 2) Fall back to server-side verification against the current Vault secret
+  //    internal_function_token — the value pg_cron actually sends. Keeps the
+  //    scheduled call working even if the Edge secret has drifted from Vault.
+  try {
+    const supabaseUrl = Deno.env.get("SUPABASE_URL") ?? "";
+    const serviceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "";
+    if (!supabaseUrl || !serviceKey) return false;
+    const client = createClient(supabaseUrl, serviceKey);
+    const { data, error } = await client.rpc("verify_internal_function_token", {
+      p_token: providedToken,
+    });
+    return !error && data === true;
+  } catch (_e) {
+    return false;
+  }
 }
 
 async function authorizeRequest(req: Request): Promise<AuthFailure | null> {
