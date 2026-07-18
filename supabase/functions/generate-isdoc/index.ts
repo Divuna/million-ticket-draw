@@ -248,7 +248,7 @@ serve(async (req) => {
     const filename = `isdoc-${invoice_id}-${Date.now()}.isdoc`;
     const xmlBytes = new TextEncoder().encode(xmlContent);
 
-    const { data: uploadData, error: uploadError } = await supabase.storage
+    const { error: uploadError } = await supabase.storage
       .from('partner-invoices')
       .upload(filename, xmlBytes, {
         contentType: 'application/xml',
@@ -263,13 +263,22 @@ serve(async (req) => {
       );
     }
 
-    // 6. Get public URL
-    const { data: urlData } = supabase.storage
+    // 6. Get signed URL (bucket is private — no public access)
+    const SIGNED_URL_TTL_SECONDS = 10 * 365 * 24 * 60 * 60; // ~10 years
+    const { data: urlData, error: signError } = await supabase.storage
       .from('partner-invoices')
-      .getPublicUrl(filename);
+      .createSignedUrl(filename, SIGNED_URL_TTL_SECONDS);
 
-    const fileUrl = urlData.publicUrl;
-    console.log('File uploaded:', fileUrl);
+    if (signError || !urlData?.signedUrl) {
+      console.error('Signed URL error:', signError);
+      return new Response(
+        JSON.stringify({ error: 'Nepodařilo se vytvořit odkaz na ISDOC', details: signError?.message }),
+        { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
+    const fileUrl = urlData.signedUrl;
+    console.log('File uploaded, signed URL created');
 
     // 7. Insert into partner_invoice_exports
     const { data: exportData, error: exportError } = await supabase
