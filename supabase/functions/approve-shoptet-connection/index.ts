@@ -4,7 +4,7 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2.57.4";
 //
 // Security model:
 //   - verify_jwt = false: EF validates JWT internally for precise error codes.
-//   - Caller must be admin or superadmin (user_roles check).
+//   - Caller must be superadmin (user_roles check).
 //   - CRITICAL: approve MUST set shoptet_customer_delivery = 'onemil' for
 //     all self-service partners. BOHEMIA stays on 'partner' (separate row,
 //     never submitted through this flow).
@@ -62,10 +62,10 @@ Deno.serve(async (req) => {
     .from("user_roles")
     .select("role")
     .eq("user_id", user.id)
-    .in("role", ["admin", "superadmin"])
+    .eq("role", "superadmin")
     .maybeSingle();
   if (roleErr) { console.error("role lookup:", roleErr.message); return err(500, "internal_error", "Internal error"); }
-  if (!roleRow) return err(403, "access_denied_admin_only", "Admin or superadmin role required");
+  if (!roleRow) return err(403, "access_denied_superadmin_only", "Superadmin role required");
 
   // ── 3. Parse and validate body ─────────────────────────────────────────────
   let body: Record<string, unknown>;
