@@ -136,17 +136,30 @@ serve(async (req) => {
     return new Response(null, { headers: corsHeaders });
   }
 
-  // ── Internal auth guard (same pattern as daily-onboarding-reminder) ──
-  const internalToken = Deno.env.get("INTERNAL_FUNCTION_TOKEN");
-  if (!internalToken || req.headers.get("x-internal-token") !== internalToken) {
+  const supabase = createClient(
+    Deno.env.get("SUPABASE_URL")!,
+    Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!
+  );
+
+  // ── Internal auth guard ──
+  // Accept the x-internal-token if it matches the deployed Edge secret
+  // INTERNAL_FUNCTION_TOKEN OR the current Vault secret internal_function_token
+  // (the value pg_cron actually sends). The Vault check keeps the scheduled
+  // call working even when the Edge secret has drifted from Vault.
+  const providedToken = req.headers.get("x-internal-token") ?? "";
+  const internalToken = Deno.env.get("INTERNAL_FUNCTION_TOKEN") ?? "";
+  let authorized = internalToken.length > 0 && providedToken === internalToken;
+  if (!authorized && providedToken) {
+    const { data: vaultOk } = await supabase.rpc("verify_internal_function_token", {
+      p_token: providedToken,
+    });
+    authorized = vaultOk === true;
+  }
+  if (!authorized) {
     return new Response("Unauthorized", { status: 401, headers: corsHeaders });
   }
 
   try {
-    const supabase = createClient(
-      Deno.env.get("SUPABASE_URL")!,
-      Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!
-    );
 
     console.log("send-offer-reminders: fetching due rows...");
 
