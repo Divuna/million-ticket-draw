@@ -99,8 +99,8 @@ const AdminUsers: React.FC = () => {
 
   const handleRoleChange = async (userId: string, role: string) => {
     const { error } = await supabase.rpc('set_user_role', {
-      target_user_id: userId,
-      new_role: role
+      p_user_id: userId,
+      p_role: role
     });
 
     if (error) {
