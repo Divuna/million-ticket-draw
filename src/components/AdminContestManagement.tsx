@@ -69,6 +69,13 @@ interface ContestViewStats {
   users_last_24h: number;
 }
 
+interface ContestProgressAdminRow {
+  contest_id: string;
+  tickets_sold: number | null;
+  tickets_remaining: number | null;
+  sold_percent: number | null;
+}
+
 interface ContestFormData {
   title: string;
   description: string;
@@ -3185,7 +3192,7 @@ export const AdminContestManagement: React.FC = () => {
         // Scoped subadmins must not learn how close a contest is to ending, so
         // these analytics views are not even fetched for them.
         isSuperAdmin
-          ? supabase.from("contest_progress").select("contest_id, tickets_sold, tickets_remaining, sold_percent")
+          ? supabase.rpc("get_contest_progress_admin", { p_contest_ids: null })
           : Promise.resolve({ data: [], error: null }),
         isSuperAdmin
           ? supabase.from("contest_revenue").select("contest_id, estimated_revenue")
@@ -3211,12 +3218,12 @@ export const AdminContestManagement: React.FC = () => {
         console.error("Error fetching contest activity:", activityRes.error);
       }
 
-      const progressRows = progressRes.data || [];
+      const progressRows = (progressRes.data || []) as ContestProgressAdminRow[];
       const revenueRows = revenueRes.data || [];
       const activityRows = activityRes.data || [];
 
       const contestsData: ContestData[] = (contestsRes.data || []).map((contest) => {
-        const progress = progressRows.find((row: any) => row.contest_id === contest.id);
+        const progress = progressRows.find((row) => row.contest_id === contest.id);
 
         return {
           contest_id: contest.id,
@@ -3241,7 +3248,7 @@ export const AdminContestManagement: React.FC = () => {
       // Build per-contest stats map from analytics views
       const newStatsMap: Record<string, ContestViewStats> = {};
       contestsData.forEach((c) => {
-        const progress = progressRows.find((r: any) => r.contest_id === c.contest_id);
+        const progress = progressRows.find((r) => r.contest_id === c.contest_id);
         const revenue = revenueRows.find((r: any) => r.contest_id === c.contest_id);
         const activity = activityRows.find((r: any) => r.contest_id === c.contest_id);
         newStatsMap[c.contest_id] = {

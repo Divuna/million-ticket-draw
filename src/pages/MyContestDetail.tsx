@@ -6,7 +6,6 @@ import { Header } from '@/components/Header';
 import { useUserRole } from '@/hooks/useUserRole';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { Progress } from '@/components/ui/progress';
 import { ArrowLeft } from 'lucide-react';
 import { OneMilTrophyIcon } from '@/components/icons/OneMilIcons';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -50,13 +49,11 @@ const MyContestDetail: React.FC = () => {
   const [contest, setContest] = useState<Contest | null>(null);
   const [bonusPrizes, setBonusPrizes] = useState<BonusPrize[]>([]);
   const [userWins, setUserWins] = useState<UserWin[]>([]);
-  const [ticketCount, setTicketCount] = useState(0);
   const [userTickets, setUserTickets] = useState(0);
   
   const [loadingContest, setLoadingContest] = useState(true);
   const [loadingBonuses, setLoadingBonuses] = useState(true);
   const [loadingWins, setLoadingWins] = useState(true);
-  const [loadingTickets, setLoadingTickets] = useState(true);
 
   useEffect(() => {
     if (id && user) {
@@ -165,25 +162,15 @@ const MyContestDetail: React.FC = () => {
     try {
       if (!id || !user) return;
 
-      // Aggregate sold/total from view (avoids counting all ticket rows under strict RLS)
-      const { data: prog } = await supabase
-        .from('contest_progress')
-        .select('tickets_sold, tickets_total')
-        .eq('contest_id', id)
-        .maybeSingle();
-
       const { count: userCount } = await supabase
         .from('tickets')
         .select('*', { count: 'exact', head: true })
         .eq('contest_id', id)
         .eq('user_id', user.id);
 
-      setTicketCount(prog?.tickets_sold ?? 0);
       setUserTickets(userCount || 0);
     } catch (error) {
       console.error('Error fetching ticket data:', error);
-    } finally {
-      setLoadingTickets(false);
     }
   };
 
@@ -235,8 +222,6 @@ const MyContestDetail: React.FC = () => {
       </div>
     );
   }
-
-  const progressPercentage = contest.ticket_count > 0 ? (ticketCount / contest.ticket_count) * 100 : 0;
 
   return (
     <div className="min-h-screen bg-background pb-20">

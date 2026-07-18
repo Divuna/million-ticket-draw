@@ -61,7 +61,6 @@ interface UnlockTicketResult {
 
 const FavoriteGames = () => {
   const [contests, setContests] = useState<Contest[]>([]);
-  const [progressMap, setProgressMap] = useState<Record<string, { tickets_sold: number; tickets_total: number }>>({});
   const [loading, setLoading] = useState(true);
   const [processingContestId, setProcessingContestId] = useState<string | null>(null);
   const [modalResult, setModalResult] = useState<UnlockTicketResult | null>(null);
@@ -159,25 +158,9 @@ const FavoriteGames = () => {
 
       if (contestData.length === 0) {
         setContests([]);
-        setProgressMap({});
         return;
       }
 
-      const ids = contestData.map((c) => c.id);
-      const { data: progressRows } = await supabase
-        .from('contest_progress')
-        .select('contest_id, tickets_sold, tickets_total')
-        .in('contest_id', ids);
-
-      const map: Record<string, { tickets_sold: number; tickets_total: number }> = {};
-      (progressRows || []).forEach((r) => {
-        map[r.contest_id] = {
-          tickets_sold: r.tickets_sold ?? 0,
-          tickets_total: r.tickets_total ?? 1_000_000,
-        };
-      });
-
-      setProgressMap(map);
       setContests(contestData);
     } catch (error) {
       console.error('Error fetching favorite contests:', error);
@@ -398,8 +381,8 @@ const FavoriteGames = () => {
               onRemoveFavorite={handleRemoveFavorite}
               onPlay={handleUnlockTicket}
               fromPage="favorites"
-              ticketsSold={progressMap[contest.id]?.tickets_sold ?? 0}
-              ticketsTotal={progressMap[contest.id]?.tickets_total ?? 1_000_000}
+              showTotalOnly
+              ticketsTotal={contest.ticket_count ?? 1_000_000}
               walletBalance={walletBalance}
             />
           ))}
