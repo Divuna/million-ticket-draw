@@ -26,6 +26,12 @@ interface ContestOption {
   tickets_total: number;
 }
 
+interface ContestProgressAdminRow {
+  contest_id: string;
+  tickets_sold: number | null;
+  tickets_total: number | null;
+}
+
 const STATUS_LABELS: Record<string, string> = {
   active: 'Aktivní',
   paused: 'Pozastavená',
@@ -61,13 +67,12 @@ export const ContestControlPanel: React.FC = () => {
 
       const ids = contestRows.map((c) => c.id);
       const { data: progressRows } = await supabase
-        .from('contest_progress')
-        .select('contest_id, tickets_sold, tickets_total')
-        .in('contest_id', ids);
+        .rpc('get_contest_progress_admin', { p_contest_ids: ids });
 
-      const progressMap: Record<string, { tickets_sold: number; tickets_total: number }> = {};
+      const progressMap: Record<string, ContestProgressAdminRow> = {};
       (progressRows || []).forEach((r) => {
         progressMap[r.contest_id] = {
+          contest_id: r.contest_id,
           tickets_sold: r.tickets_sold ?? 0,
           tickets_total: r.tickets_total ?? 1_000_000,
         };
@@ -216,7 +221,7 @@ export const ContestControlPanel: React.FC = () => {
       <Card className="bg-card/40 border border-white/10">
         <CardHeader>
           <CardTitle>Vyberte soutěž</CardTitle>
-          <CardDescription>Načteno z public.contests a contest_progress</CardDescription>
+          <CardDescription>Načteno z public.contests a chráněné agregace průběhu</CardDescription>
         </CardHeader>
         <CardContent className="space-y-6">
           {loading ? (

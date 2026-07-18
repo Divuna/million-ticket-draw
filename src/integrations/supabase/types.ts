@@ -6159,6 +6159,16 @@ export type Database = {
         Args: { p_contest_id: string }
         Returns: number
       }
+      get_contest_progress_admin: {
+        Args: { p_contest_ids?: string[] | null }
+        Returns: {
+          contest_id: string
+          sold_percent: number | null
+          tickets_remaining: number | null
+          tickets_sold: number | null
+          tickets_total: number | null
+        }[]
+      }
       get_contests_json: { Args: never; Returns: Json }
       get_current_user_role: { Args: never; Returns: string }
       get_due_offer_reminder_rows: {

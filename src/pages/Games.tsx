@@ -62,7 +62,6 @@ interface UnlockTicketResult {
 
 const Index = () => {
   const [contests, setContests] = useState<Contest[]>([]);
-  const [progressMap, setProgressMap] = useState<Record<string, { tickets_sold: number; tickets_total: number }>>({});
   const [loading, setLoading] = useState(true);
   const [processingContestId, setProcessingContestId] = useState<string | null>(null);
   const [modalResult, setModalResult] = useState<UnlockTicketResult | null>(null);
@@ -107,33 +106,6 @@ const Index = () => {
 
       const rows = (data ?? []) as Contest[];
       setContests(rows);
-
-      if (rows.length === 0) {
-        setProgressMap({});
-        return;
-      }
-
-      const ids = rows.map((c) => c.id);
-      const { data: progressRows, error: progressError } = await supabase
-        .from('contest_progress')
-        .select('contest_id, tickets_sold, tickets_total')
-        .in('contest_id', ids);
-
-      if (progressError) {
-        console.error('Error fetching contest progress:', progressError);
-        setProgressMap({});
-        return;
-      }
-
-      const map: Record<string, { tickets_sold: number; tickets_total: number }> = {};
-      (progressRows || []).forEach((r) => {
-        if (r.contest_id == null) return;
-        map[r.contest_id] = {
-          tickets_sold: r.tickets_sold ?? 0,
-          tickets_total: r.tickets_total ?? 1_000_000,
-        };
-      });
-      setProgressMap(map);
     } catch (error) {
       console.error('Error fetching contests:', error);
       toast.error('Chyba při načítání soutěží');
@@ -495,8 +467,7 @@ const Index = () => {
               onPlay={handleUnlockTicket}
               fromPage="games"
               showTotalOnly
-              ticketsSold={progressMap[contest.id]?.tickets_sold ?? 0}
-              ticketsTotal={progressMap[contest.id]?.tickets_total ?? 1_000_000}
+              ticketsTotal={contest.ticket_count ?? 1_000_000}
               walletBalance={walletBalance}
               hideTitleAndCount
               className="customer-games-contest-card"

@@ -35,6 +35,7 @@ type Contest = {
   rules_pdf_url: string | null;
   main_prize: string | null;
   ticket_price: number;
+  ticket_count: number;
   status: string;
   main_prize_secondary_image: string | null;
   main_image: string | null;
@@ -359,14 +360,7 @@ export default function ContestDetail() {
         
         // Refresh balance and progress immediately
         loadUserBalance(user.id);
-        const { data: prog } = await supabase
-          .from("contest_progress")
-          .select("tickets_total")
-          .eq("contest_id", contest.id)
-          .maybeSingle();
-        if (prog) {
-          setProgressTicketsTotal(prog.tickets_total ?? 1_000_000);
-        }
+        setProgressTicketsTotal(contest.ticket_count ?? 1_000_000);
 
         // ── Partner Offer lookup ──────────────────────────────────────────────
         // buy_ticket_atomic returns ticket_row_id (UUID of the new tickets row).
@@ -463,7 +457,7 @@ export default function ContestDetail() {
       try {
         const { data: contestData, error: contestError } = await supabase
           .from("contests")
-          .select("id, title, description, rules, rules_pdf_url, main_prize, ticket_price, status, main_prize_secondary_image, main_image, banner_image, fast_game, total_miocoin_bonus")
+          .select("id, title, description, rules, rules_pdf_url, main_prize, ticket_price, ticket_count, status, main_prize_secondary_image, main_image, banner_image, fast_game, total_miocoin_bonus")
           .eq("id", id)
           .maybeSingle();
 
@@ -484,6 +478,7 @@ export default function ContestDetail() {
 
         console.log('[DEBUG ContestDetail] setContest:', JSON.stringify(contestData));
         setContest(contestData as Contest);
+        setProgressTicketsTotal(contestData.ticket_count ?? 1_000_000);
 
         // === Bonusové MioCoiny (součet) — přes RPC, obchází 1000-row cap PostgRESTu ===
         const { data: poolSum, error: poolError } = await supabase
@@ -579,12 +574,6 @@ export default function ContestDetail() {
         console.log('[DEBUG ContestDetail] setGalleryMedia:', mediaData?.length, 'items');
         setGalleryMedia(mediaData ?? []);
 
-        const { data: prog } = await supabase
-          .from("contest_progress")
-          .select("tickets_total")
-          .eq("contest_id", id)
-          .maybeSingle();
-        setProgressTicketsTotal(prog?.tickets_total ?? 1_000_000);
         console.log("galleryMedia", mediaData);
 
         console.log('[DEBUG ContestDetail] setLoading: false');
