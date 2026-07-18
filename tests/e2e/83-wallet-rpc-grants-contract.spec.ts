@@ -61,6 +61,7 @@ test.describe('wallet mutation RPC grant contract', () => {
     const allowedDirectCallers = new Set([
       'supabase/functions/stripe-refund/index.ts',
       'tests/e2e/83-wallet-rpc-grants-contract.spec.ts',
+      'tests/e2e/86-payment-wallet-high-risk-rpc-contract.spec.ts',
     ]);
     const filesWithDeductRpc = listFiles('.').filter((file) => (
       read(file).includes('deduct_wallet_for_refund') && !allowedDirectCallers.has(file)
