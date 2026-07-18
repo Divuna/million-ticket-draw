@@ -135,6 +135,9 @@ verify_jwt = false
 [functions.send-partner-invoice-email]
 verify_jwt = false
 
+[functions.partner-invoice-auto-send]
+verify_jwt = false
+
 [functions.stripe-refund]
 verify_jwt = true
 

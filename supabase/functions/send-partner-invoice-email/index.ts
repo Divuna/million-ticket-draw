@@ -5,17 +5,18 @@ import { Resend } from "npm:resend@2.0.0";
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Headers":
-    "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
+    "authorization, x-client-info, apikey, content-type, x-internal-token, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
 };
 
 const STAGING_REF = "dxmowysntemfqfnanxua";
 const SAFE_STAGING_RECIPIENT = "eshop@onemil.cz";
 
 /**
- * Authorization (12. 06. 2026):
+ * Authorization:
  *  1. backend/automation path — `x-internal-token` matching INTERNAL_FUNCTION_TOKEN
- *     (same pattern as pg_cron jobs 23/24) OR service-role bearer token
- *  2. admin fallback path — logged-in admin/superadmin JWT (no secret in browser)
+ *     OR service-role bearer token
+ *  2. admin fallback path — logged-in superadmin JWT (no secret in browser)
+ * Resend (explicit superadmin re-send) always requires the admin JWT path.
  */
 async function authorizeRequest(
   req: Request,
@@ -47,224 +48,206 @@ async function authorizeRequest(
   return null;
 }
 
+function json(body: unknown, status: number) {
+  return new Response(JSON.stringify(body), {
+    status,
+    headers: { "Content-Type": "application/json", ...corsHeaders },
+  });
+}
+
+/** Latest recorded PDF export (reused so we never create a duplicate PDF). */
+async function latestPdfExport(
+  supabase: ReturnType<typeof createClient>,
+  invoiceId: string,
+): Promise<{ id: string; file_url: string } | null> {
+  const { data } = await supabase
+    .from("partner_invoice_exports")
+    .select("id, file_url, created_at")
+    .eq("invoice_id", invoiceId)
+    .eq("format", "pdf")
+    .order("created_at", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+  if (data?.file_url) return { id: data.id as string, file_url: data.file_url as string };
+  return null;
+}
+
+async function buildAttachment(pdfUrl: string, periodStart: string, periodEnd: string) {
+  const res = await fetch(pdfUrl);
+  if (!res.ok) throw new Error(`pdf_fetch_failed_${res.status}`);
+  const arrayBuffer = await res.arrayBuffer();
+  const base64Content = btoa(String.fromCharCode(...new Uint8Array(arrayBuffer)));
+  return {
+    filename: `faktura-${periodStart}-${periodEnd}.pdf`,
+    content: base64Content,
+    content_type: "application/pdf",
+  };
+}
+
 serve(async (req: Request) => {
-  if (req.method === "OPTIONS") {
-    return new Response(null, { headers: corsHeaders });
-  }
+  if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
 
   let payload: { invoice_id?: string; resend?: boolean; mode?: string };
   try {
     payload = await req.json();
   } catch (_error) {
-    return new Response(
-      JSON.stringify({ error: "invalid_json" }),
-      { status: 400, headers: { "Content-Type": "application/json", ...corsHeaders } }
-    );
+    return json({ error: "invalid_json" }, 400);
   }
 
   const isResend = payload.resend === true || payload.mode === "resend";
   const authFailure = await authorizeRequest(req, { adminJwtOnly: isResend });
-  if (authFailure) {
-    return new Response(
-      JSON.stringify({ error: authFailure.error }),
-      { status: authFailure.status, headers: { "Content-Type": "application/json", ...corsHeaders } }
+  if (authFailure) return json({ error: authFailure.error }, authFailure.status);
+
+  const supabaseUrl = Deno.env.get("SUPABASE_URL") ?? "";
+  const serviceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "";
+  const internalToken = Deno.env.get("INTERNAL_FUNCTION_TOKEN") ?? "";
+  const supabase = createClient(supabaseUrl, serviceKey);
+  const isStaging = supabaseUrl.includes(STAGING_REF);
+
+  const { invoice_id } = payload;
+  if (!invoice_id) return json({ error: "Missing invoice_id" }, 400);
+
+  // Load invoice + partner.
+  const { data: invoice, error: invError } = await supabase
+    .from("partner_invoices")
+    .select("*, partner:partners(name, company_name, contact_email)")
+    .eq("id", invoice_id)
+    .maybeSingle();
+  if (invError) return json({ error: `load_failed: ${invError.message}` }, 500);
+  if (!invoice) return json({ error: "invoice_not_found" }, 404);
+
+  const partner = invoice.partner as { name?: string; company_name?: string | null; contact_email?: string | null } | null;
+  if (!partner) return json({ error: "partner_not_found" }, 404);
+  const recipientEmail = partner.contact_email ?? null;
+  if (!recipientEmail) return json({ error: "partner_has_no_contact_email" }, 400);
+  if (isStaging && recipientEmail !== SAFE_STAGING_RECIPIENT) {
+    return json(
+      { error: "recipient_not_allowed_for_staging_test", sent_to: recipientEmail, allowed_recipient: SAFE_STAGING_RECIPIENT },
+      403,
     );
   }
 
-  try {
-    const { invoice_id } = payload;
-    if (!invoice_id) {
-      throw new Error("Missing invoice_id");
+  const periodStart = invoice.period_start;
+  const periodEnd = invoice.period_end;
+  const partnerName = partner.company_name || partner.name || "Partner";
+  const amountGross = Number(invoice.amount_gross ?? 0);
+  const formattedAmount = new Intl.NumberFormat("cs-CZ", { style: "currency", currency: "CZK" }).format(amountGross);
+
+  // ── Resend path: explicit superadmin re-send. Requires an existing PDF,
+  //    does NOT touch the first-send claim, does NOT change status. ──────────
+  if (isResend) {
+    const pdf = await latestPdfExport(supabase, invoice_id);
+    if (!pdf) return json({ error: "pdf_export_required_for_resend" }, 409);
+
+    const resendApiKey = Deno.env.get("RESEND_API_KEY");
+    if (!resendApiKey) return json({ error: "email_service_not_configured" }, 503);
+
+    let attachment;
+    try {
+      attachment = await buildAttachment(pdf.file_url, periodStart, periodEnd);
+    } catch (_e) {
+      return json({ error: "pdf_fetch_failed" }, 502);
     }
 
-    const supabaseClient = createClient(
-      Deno.env.get("SUPABASE_URL") ?? "",
-      Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? ""
-    );
-
-    // 1. Load invoice with partner info
-    const { data: invoice, error: invError } = await supabaseClient
-      .from("partner_invoices")
-      .select("*, partner:partners(name, company_name, contact_email)")
-      .eq("id", invoice_id)
-      .maybeSingle();
-
-    if (invError) throw new Error(`Chyba při načítání faktury: ${invError.message}`);
-    if (!invoice) throw new Error("Faktura nenalezena");
-
-    // 1a. Only send if status is 'draft'
-    if (!isResend && invoice.status !== "draft") {
-      console.log(`⏭️ Invoice ${invoice_id} has status '${invoice.status}', skipping (only 'draft' allowed)`);
-      return new Response(
-        JSON.stringify({ success: false, skipped: true, reason: `Faktura má stav '${invoice.status}', odesílání je povoleno pouze pro stav 'draft'.` }),
-        { status: 200, headers: { "Content-Type": "application/json", ...corsHeaders } }
-      );
-    }
-
-    const partner = invoice.partner;
-    if (!partner) throw new Error("Partner nenalezen");
-
-    const recipientEmail = partner.contact_email;
-    const isStaging = (Deno.env.get("SUPABASE_URL") ?? "").includes(STAGING_REF);
-    if (!recipientEmail) throw new Error("Partner nemá nastaven kontaktní e-mail");
-
-    if (isStaging && recipientEmail !== SAFE_STAGING_RECIPIENT) {
-      return new Response(
-        JSON.stringify({
-          error: "recipient_not_allowed_for_staging_test",
-          sent_to: recipientEmail,
-          allowed_recipient: SAFE_STAGING_RECIPIENT,
-        }),
-        { status: 403, headers: { "Content-Type": "application/json", ...corsHeaders } }
-      );
-    }
-
-    // 2. Load latest PDF export
-    const { data: pdfExport } = await supabaseClient
-      .from("partner_invoice_exports")
-      .select("id, file_url, created_at")
-      .eq("invoice_id", invoice_id)
-      .eq("format", "pdf")
-      .order("created_at", { ascending: false })
-      .limit(1)
-      .maybeSingle();
-
-    const pdfUrl = pdfExport?.file_url ?? null;
-    if (isResend && !pdfUrl) {
-      return new Response(
-        JSON.stringify({ error: "pdf_export_required_for_resend" }),
-        { status: 409, headers: { "Content-Type": "application/json", ...corsHeaders } }
-      );
-    }
-
-    // 3. Build email
-    const partnerName = partner.company_name || partner.name;
-    const periodStart = invoice.period_start;
-    const periodEnd = invoice.period_end;
-    const amountGross = Number(invoice.amount_gross ?? 0);
-
-    const formattedAmount = new Intl.NumberFormat("cs-CZ", {
-      style: "currency",
-      currency: "CZK",
-    }).format(amountGross);
-
-    let pdfSection = "";
-    const attachments: Array<{ filename: string; content: string; content_type?: string }> = [];
-
-    if (pdfUrl) {
-      // Fetch and attach the PDF
-      try {
-        console.log(`📎 Fetching PDF from: ${pdfUrl}`);
-        const pdfResponse = await fetch(pdfUrl);
-        if (pdfResponse.ok) {
-          const arrayBuffer = await pdfResponse.arrayBuffer();
-          const base64Content = btoa(
-            String.fromCharCode(...new Uint8Array(arrayBuffer))
-          );
-          attachments.push({
-            filename: `faktura-${periodStart}-${periodEnd}.pdf`,
-            content: base64Content,
-            content_type: "application/pdf",
-          });
-          pdfSection = `<p>PDF faktura je přiložena k tomuto e-mailu.</p>`;
-          console.log(`✅ PDF attached (${arrayBuffer.byteLength} bytes)`);
-        } else {
-          console.warn(`⚠️ Could not fetch PDF (${pdfResponse.status}), including link instead`);
-          pdfSection = `<p><a href="${pdfUrl}">Stáhnout PDF fakturu</a></p>`;
-        }
-      } catch (fetchErr) {
-        console.warn("⚠️ PDF fetch failed, including link instead:", fetchErr);
-        pdfSection = `<p><a href="${pdfUrl}">Stáhnout PDF fakturu</a></p>`;
-      }
-    } else {
-      pdfSection = `<p><em>PDF faktura zatím nebyla vygenerována.</em></p>`;
-    }
-
-    const htmlBody = `
-      <h2>Faktura – ${partnerName}</h2>
-      <p>Dobrý den,</p>
-      <p>zasíláme Vám fakturu za období <strong>${periodStart}</strong> – <strong>${periodEnd}</strong>.</p>
-      <table style="border-collapse:collapse;margin:16px 0">
-        <tr><td style="padding:4px 12px 4px 0;color:#666">Celková částka:</td><td style="font-weight:bold">${formattedAmount}</td></tr>
-        <tr><td style="padding:4px 12px 4px 0;color:#666">Stav:</td><td>${invoice.status}</td></tr>
-      </table>
-      ${pdfSection}
-      <p>S pozdravem,<br/>Tým OneMil</p>
-    `;
-
-    // 4. Send via Resend
-    console.log(`📧 Sending invoice email to: ${recipientEmail}`);
-
-    const emailOptions: {
-      from: string;
-      to: string[];
-      subject: string;
-      html: string;
-      attachments?: typeof attachments;
-    } = {
+    const resend = new Resend(resendApiKey);
+    const emailResponse = await resend.emails.send({
       from: "OneMil <noreply@onemil.cz>",
       to: [recipientEmail],
       subject: `Faktura OneMil – ${periodStart} – ${periodEnd}`,
-      html: htmlBody,
-    };
+      html: renderEmail(partnerName, periodStart, periodEnd, formattedAmount),
+      attachments: [attachment],
+    });
+    if (emailResponse.error) return json({ error: `resend_error: ${emailResponse.error.message}` }, 502);
+    return json({ success: true, resend: true, sent_to: recipientEmail, pdf_export_id: pdf.id, status_updated: false }, 200);
+  }
 
-    if (attachments.length > 0) {
-      emailOptions.attachments = attachments;
+  // ── Initial send path (manual "Odeslat e-mailem" AND weekly automation). ──
+  if (invoice.status !== "draft") {
+    return json({ success: false, skipped: true, reason: `invoice_status_${invoice.status}_not_draft` }, 200);
+  }
+
+  // 1. Atomic shared reservation. Two concurrent callers / auto+manual: only
+  //    one wins; the loser is skipped and sends nothing.
+  const { data: claimed, error: claimError } = await supabase.rpc("claim_partner_invoice_for_auto_send", {
+    p_invoice_id: invoice_id,
+  });
+  if (claimError) return json({ error: `claim_failed: ${claimError.message}` }, 500);
+  if (claimed !== true) {
+    return json({ success: false, skipped: true, reason: "already_claimed_or_sent" }, 200);
+  }
+
+  let emailSent = false;
+  try {
+    // 2. Ensure a PDF exists — REUSE the latest export; only generate when none
+    //    exists (so retries and repeated runs never add a duplicate PDF).
+    let pdf = await latestPdfExport(supabase, invoice_id);
+    if (!pdf) {
+      const { data: gen, error: genError } = await supabase.functions.invoke("generate-partner-invoice-pdf", {
+        body: { invoice_id },
+        headers: { "x-internal-token": internalToken },
+      });
+      if (genError || !gen?.file_url) throw new Error(genError?.message ?? "pdf_generation_failed");
+      pdf = await latestPdfExport(supabase, invoice_id);
+      if (!pdf) throw new Error("pdf_unavailable_after_generate");
     }
 
+    // 3. Build the attachment from the (reused or freshly generated) PDF.
+    const attachment = await buildAttachment(pdf.file_url, periodStart, periodEnd);
+
+    // 4. Send exactly one email.
     const resendApiKey = Deno.env.get("RESEND_API_KEY");
-    if (!resendApiKey) {
-      // Controlled failure: nothing sent, invoice status unchanged
-      console.warn("⚠️ RESEND_API_KEY not configured — email not sent");
-      return new Response(
-        JSON.stringify({ error: "email_service_not_configured" }),
-        { status: 503, headers: { "Content-Type": "application/json", ...corsHeaders } }
-      );
-    }
+    if (!resendApiKey) throw new Error("email_service_not_configured");
     const resend = new Resend(resendApiKey);
-    const emailResponse = await resend.emails.send(emailOptions);
+    const emailResponse = await resend.emails.send({
+      from: "OneMil <noreply@onemil.cz>",
+      to: [recipientEmail],
+      subject: `Faktura OneMil – ${periodStart} – ${periodEnd}`,
+      html: renderEmail(partnerName, periodStart, periodEnd, formattedAmount),
+      attachments: [attachment],
+    });
+    if (emailResponse.error) throw new Error(`resend_error: ${emailResponse.error.message}`);
+    emailSent = true;
 
-    if (emailResponse.error) {
-      throw new Error(`Resend chyba: ${emailResponse.error.message}`);
-    }
-
-    console.log(`✅ Invoice email sent successfully to ${recipientEmail}`);
-
-    if (isResend) {
-      return new Response(
-        JSON.stringify({
-          success: true,
-          resend: true,
-          sent_to: recipientEmail,
-          pdf_export_id: pdfExport?.id ?? null,
-          status_updated: false,
-        }),
-        { status: 200, headers: { "Content-Type": "application/json", ...corsHeaders } }
-      );
-    }
-
-    // 5. Update invoice status to 'issued' and set issued_at
-    const { error: updateError } = await supabaseClient
+    // 5. Only after a successful send: close draft -> issued and verify that
+    //    EXACTLY ONE row changed. If zero rows changed, do not report success.
+    const { data: updatedRows, error: updateError } = await supabase
       .from("partner_invoices")
       .update({ status: "issued", issued_at: new Date().toISOString() })
       .eq("id", invoice_id)
-      .eq("status", "draft"); // extra guard against race conditions
-
+      .eq("status", "draft")
+      .select("id");
     if (updateError) {
-      console.warn(`⚠️ Email sent but status update failed:`, updateError.message);
-    } else {
-      console.log(`✅ Invoice ${invoice_id} status updated to 'issued'`);
+      return json({ success: false, sent_to: recipientEmail, status_updated: false, reason: `status_update_error: ${updateError.message}` }, 500);
+    }
+    if (!updatedRows || updatedRows.length !== 1) {
+      return json({ success: false, sent_to: recipientEmail, status_updated: false, reason: "status_close_zero_rows" }, 409);
     }
 
-    return new Response(
-      JSON.stringify({ success: true, sent_to: recipientEmail, status_updated: !updateError }),
-      { status: 200, headers: { "Content-Type": "application/json", ...corsHeaders } }
-    );
-  } catch (error: any) {
-    console.error("❌ send-partner-invoice-email error:", error);
-    return new Response(
-      JSON.stringify({ error: error.message }),
-      { status: 500, headers: { "Content-Type": "application/json", ...corsHeaders } }
-    );
+    return json({ success: true, sent_to: recipientEmail, status_updated: true }, 200);
+  } catch (error) {
+    // Failure before a successful send: release the reservation so a later
+    // attempt can retry; the invoice stays 'draft' and no duplicate PDF is
+    // created (existing export is reused on retry).
+    if (!emailSent) {
+      await supabase.rpc("release_partner_invoice_auto_send_claim", { p_invoice_id: invoice_id });
+    }
+    const message = (error as Error).message;
+    const status = message === "email_service_not_configured" ? 503 : 500;
+    return json({ success: false, error: message, status_updated: false }, status);
   }
 });
+
+function renderEmail(partnerName: string, periodStart: string, periodEnd: string, formattedAmount: string): string {
+  // Note: the invoice status is intentionally NOT shown — on the first
+  // successful send the invoice is being issued, so "draft" must never appear.
+  return `
+    <h2>Faktura – ${partnerName}</h2>
+    <p>Dobrý den,</p>
+    <p>zasíláme Vám fakturu za období <strong>${periodStart}</strong> – <strong>${periodEnd}</strong>.</p>
+    <table style="border-collapse:collapse;margin:16px 0">
+      <tr><td style="padding:4px 12px 4px 0;color:#666">Celková částka:</td><td style="font-weight:bold">${formattedAmount}</td></tr>
+    </table>
+    <p>PDF faktura je přiložena k tomuto e-mailu.</p>
+    <p>S pozdravem,<br/>Tým OneMil</p>
+  `;
+}

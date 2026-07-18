@@ -9,6 +9,8 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Badge } from '@/components/ui/badge';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Switch } from '@/components/ui/switch';
+import { Label } from '@/components/ui/label';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import { Loader2, Building2, CheckCircle, XCircle, Eye, Coins, FileText, Calendar, Key, Copy, Check, Receipt, Send, Download, UserPlus, Clock } from 'lucide-react';
@@ -120,7 +122,7 @@ const invoiceStatusColors: Record<InvoiceStatus, "pending" | "info" | "success" 
 const AdminPartnersPortal = () => {
   const navigate = useNavigate();
   const { user } = useAuth();
-  const { isAdmin, loading: roleLoading } = useUserRole();
+  const { isAdmin, isSuperAdmin, loading: roleLoading } = useUserRole();
   const [loading, setLoading] = useState(true);
   const [partners, setPartners] = useState<Partner[]>([]);
   const [selectedPartner, setSelectedPartner] = useState<PartnerDetail | null>(null);
@@ -140,6 +142,11 @@ const AdminPartnersPortal = () => {
   const [generatingPdf, setGeneratingPdf] = useState(false);
   const [sendingEmail, setSendingEmail] = useState(false);
 
+  // Partner-invoice auto-send switch (superadmin only). Default OFF.
+  const [autoSendEnabled, setAutoSendEnabled] = useState(false);
+  const [autoSendLoading, setAutoSendLoading] = useState(true);
+  const [autoSendSaving, setAutoSendSaving] = useState(false);
+
   // Pending registrations state
   const [pendingRegistrations, setPendingRegistrations] = useState<PendingRegistration[]>([]);
   const [pendingLoading, setPendingLoading] = useState(true);
@@ -150,6 +157,56 @@ const AdminPartnersPortal = () => {
     loadInvoices();
     loadPendingRegistrations();
   }, []);
+
+  // Load the auto-send switch only for superadmins (settings RLS is
+  // superadmin-only, so a non-superadmin read simply returns nothing).
+  useEffect(() => {
+    if (roleLoading) return;
+    if (!isSuperAdmin) {
+      setAutoSendLoading(false);
+      return;
+    }
+    loadAutoSendFlag();
+  }, [roleLoading, isSuperAdmin]);
+
+  const loadAutoSendFlag = async () => {
+    setAutoSendLoading(true);
+    try {
+      const { data, error } = await supabase
+        .from('settings')
+        .select('value')
+        .eq('key', 'partner_invoice_auto_send_enabled')
+        .maybeSingle();
+      if (error) throw error;
+      setAutoSendEnabled((data?.value ?? 'false').toString().trim().toLowerCase() === 'true');
+    } catch (error) {
+      console.error('Error loading auto-send flag:', error);
+    } finally {
+      setAutoSendLoading(false);
+    }
+  };
+
+  const toggleAutoSend = async (next: boolean) => {
+    setAutoSendSaving(true);
+    try {
+      const { error } = await supabase
+        .from('settings')
+        .upsert(
+          { key: 'partner_invoice_auto_send_enabled', value: next ? 'true' : 'false', updated_at: new Date().toISOString() },
+          { onConflict: 'key' },
+        );
+      if (error) throw error;
+      setAutoSendEnabled(next);
+      toast.success(next
+        ? 'Automatické vystavování a odesílání faktur zapnuto'
+        : 'Automatické vystavování a odesílání faktur vypnuto');
+    } catch (error) {
+      console.error('Error saving auto-send flag:', error);
+      toast.error('Nastavení se nepodařilo uložit');
+    } finally {
+      setAutoSendSaving(false);
+    }
+  };
 
   const loadPartners = async () => {
     try {
@@ -923,6 +980,30 @@ const AdminPartnersPortal = () => {
 
           {/* Invoices Tab */}
           <TabsContent value="invoices">
+            {/* Superadmin-only automation switch. Default OFF. */}
+            {isSuperAdmin && (
+              <Card className="border-border/50 mb-6">
+                <CardContent className="flex items-start justify-between gap-4 pt-6">
+                  <div className="space-y-1">
+                    <Label htmlFor="partner-invoice-auto-send" className="text-base font-medium">
+                      Automaticky vystavovat a odesílat partnerské faktury
+                    </Label>
+                    <p className="text-sm text-muted-foreground">
+                      Když je zapnuto, nedělní automat po vytvoření faktury vygeneruje PDF a odešle
+                      partnerovi jeden e-mail; stav se změní na „Odesláno“ až po úspěšném odeslání.
+                      Když je vypnuto, automat vytvoří pouze koncept a fakturu odešlete ručně.
+                    </p>
+                  </div>
+                  <Switch
+                    id="partner-invoice-auto-send"
+                    checked={autoSendEnabled}
+                    disabled={autoSendLoading || autoSendSaving}
+                    onCheckedChange={toggleAutoSend}
+                  />
+                </CardContent>
+              </Card>
+            )}
+
             <Card className="border-border/50">
               <CardHeader>
                 <CardTitle>Seznam faktur</CardTitle>
