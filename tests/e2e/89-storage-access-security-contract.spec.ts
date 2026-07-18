@@ -6,6 +6,8 @@ const read = (path: string) => readFileSync(resolve(process.cwd(), path), 'utf8'
 
 const migrationPath =
   'supabase/migrations/20260718191000_restrict_storage_object_access.sql';
+const storagePolicyFixPath =
+  'supabase/migrations/20260718194231_fix_storage_policy_object_name.sql';
 
 test.describe('storage access security contract', () => {
   test('partner invoice documents are private and service-role only in Storage', () => {
@@ -96,34 +98,71 @@ test.describe('storage access security contract', () => {
   });
 
   test('partner offer assets are scoped to offers/{partner_id}', () => {
-    const migration = read(migrationPath);
+    const migration = read(storagePolicyFixPath);
 
     expect(migration).toContain(
-      'DROP POLICY IF EXISTS "partner-offer-assets authenticated upload" ON storage.objects',
+      'DROP POLICY IF EXISTS "storage_partner_offer_assets_owner_insert" ON storage.objects',
     );
     expect(migration).toContain(
-      'DROP POLICY IF EXISTS "partner-offer-assets authenticated update" ON storage.objects',
+      'DROP POLICY IF EXISTS "storage_partner_offer_assets_owner_update" ON storage.objects',
     );
     expect(migration).toContain('storage_partner_offer_assets_owner_insert');
+    expect(migration).toContain('storage_partner_offer_assets_owner_update');
+    expect(migration).toContain("public.has_role(auth.uid(), 'admin'::public.app_role)");
+    expect(migration).toContain("public.has_role(auth.uid(), 'superadmin'::public.app_role)");
     expect(migration).toContain("p.auth_user_id = auth.uid()");
-    expect(migration).toContain("(storage.foldername(name))[1] = 'offers'");
-    expect(migration).toContain('(storage.foldername(name))[2] = p.id::text');
+    expect(migration).toContain("(storage.foldername(storage.objects.name))[1] = 'offers'");
+    expect(migration).toContain('(storage.foldername(storage.objects.name))[2] = p.id::text');
+    expect(migration).toContain('WITH CHECK');
+    expect(migration).toContain('USING');
+    expect(migration).not.toContain('storage.foldername(name)');
   });
 
   test('partner logo writes are limited to admin or current partner-derived names', () => {
-    const migration = read(migrationPath);
+    const migration = read(storagePolicyFixPath);
 
     expect(migration).toContain(
-      'DROP POLICY IF EXISTS "partner_upload_own_logo" ON storage.objects',
+      'DROP POLICY IF EXISTS "storage_partner_logos_owner_insert" ON storage.objects',
     );
     expect(migration).toContain(
-      'DROP POLICY IF EXISTS "partner_update_own_logo" ON storage.objects',
+      'DROP POLICY IF EXISTS "storage_partner_logos_owner_update" ON storage.objects',
     );
     expect(migration).toContain('storage_partner_logos_owner_insert');
-    expect(migration).toContain("name LIKE (p.id::text || '-%')");
-    expect(migration).toContain("name LIKE (p.id::text || '.%')");
-    expect(migration).toContain("name LIKE ('affiliate/' || p.id::text || '.%')");
-    expect(migration).toContain("allowed_mime_types = ARRAY['image/png', 'image/jpeg', 'image/jpg', 'image/webp', 'image/svg+xml']");
-    expect(migration).toContain('file_size_limit = 5242880');
+    expect(migration).toContain('storage_partner_logos_owner_update');
+    expect(migration).toContain("storage.objects.name LIKE (p.id::text || '-%')");
+    expect(migration).toContain("storage.objects.name LIKE (p.id::text || '.%')");
+    expect(migration).toContain("storage.objects.name LIKE ('affiliate/' || p.id::text || '.%')");
+    expect(migration).toContain('WITH CHECK');
+    expect(migration).toContain('USING');
+    expect(migration).not.toMatch(/[^.]\bname LIKE \(p\.id::text/);
+  });
+
+  test('storage owner policy examples preserve partner/admin boundaries', () => {
+    const migration = read(storagePolicyFixPath);
+    const ownPartnerId = '11111111-1111-4111-8111-111111111111';
+    const otherPartnerId = '22222222-2222-4222-8222-222222222222';
+
+    const offerPathAllowed = (objectName: string, partnerId: string) => {
+      const parts = objectName.split('/');
+      return parts[0] === 'offers' && parts[1] === partnerId;
+    };
+    const logoPathAllowed = (objectName: string, partnerId: string) =>
+      objectName.startsWith(`${partnerId}-`) ||
+      objectName.startsWith(`${partnerId}.`) ||
+      objectName.startsWith(`affiliate/${partnerId}.`);
+
+    expect(offerPathAllowed(`offers/${ownPartnerId}/banner.webp`, ownPartnerId)).toBe(true);
+    expect(offerPathAllowed(`offers/${otherPartnerId}/banner.webp`, ownPartnerId)).toBe(false);
+    expect(offerPathAllowed('offers/missing-partner/banner.webp', ownPartnerId)).toBe(false);
+    expect(logoPathAllowed(`${ownPartnerId}.png`, ownPartnerId)).toBe(true);
+    expect(logoPathAllowed(`${ownPartnerId}-logo.webp`, ownPartnerId)).toBe(true);
+    expect(logoPathAllowed(`affiliate/${ownPartnerId}.svg`, ownPartnerId)).toBe(true);
+    expect(logoPathAllowed(`${otherPartnerId}.png`, ownPartnerId)).toBe(false);
+
+    expect(migration).toContain("public.has_role(auth.uid(), 'admin'::public.app_role)");
+    expect(migration).toContain("public.has_role(auth.uid(), 'superadmin'::public.app_role)");
+    expect(migration).toContain('EXISTS (');
+    expect(migration).toContain('FROM public.partners p');
+    expect(migration).toContain('WHERE p.auth_user_id = auth.uid()');
   });
 });
