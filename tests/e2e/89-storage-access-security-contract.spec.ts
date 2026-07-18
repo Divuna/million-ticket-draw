@@ -24,13 +24,54 @@ test.describe('storage access security contract', () => {
     expect(migration).not.toMatch(/partner-invoices[\s\S]{0,240}TO anon/i);
   });
 
-  test('ISDOC exports no longer create public Storage URLs', () => {
+  test('invoice exports store private Storage paths, not long-lived signed URLs', () => {
+    const migration = read(migrationPath);
     const isdoc = read('supabase/functions/generate-isdoc/index.ts');
+    const pdf = read('supabase/functions/generate-partner-invoice-pdf/index.ts');
 
+    expect(migration).toContain('ADD COLUMN IF NOT EXISTS storage_bucket text');
+    expect(migration).toContain('ADD COLUMN IF NOT EXISTS storage_path text');
+    expect(migration).toContain('ADD COLUMN IF NOT EXISTS metadata jsonb');
+    expect(migration).toContain('SET file_url = NULL');
+    expect(migration).toContain('Do not store public or signed invoice URLs');
     expect(isdoc).toContain(".from('partner-invoices')");
-    expect(isdoc).toContain('.createSignedUrl(filename, SIGNED_URL_TTL_SECONDS)');
+    expect(isdoc).toContain('file_url: null');
+    expect(isdoc).toContain("storage_bucket: 'partner-invoices'");
+    expect(isdoc).toContain('storage_path: filename');
+    expect(isdoc).not.toContain('.createSignedUrl(');
+    expect(isdoc).not.toContain('10 * 365 * 24 * 60 * 60');
     expect(isdoc).not.toContain('.getPublicUrl(filename)');
     expect(isdoc).not.toContain('urlData.publicUrl');
+
+    expect(pdf).toContain('file_url: null');
+    expect(pdf).toContain("storage_bucket: 'partner-invoices'");
+    expect(pdf).toContain('storage_path: filename');
+    expect(pdf).not.toContain('.createSignedUrl(');
+    expect(pdf).not.toContain('10 * 365 * 24 * 60 * 60');
+    expect(pdf).not.toContain('.getPublicUrl(filename)');
+  });
+
+  test('authorized invoice download creates only short-lived signed URLs', () => {
+    const download = read('supabase/functions/get-partner-invoice-export-url/index.ts');
+
+    expect(download).toContain('const SIGNED_URL_TTL_SECONDS = 15 * 60');
+    expect(download).toContain('.createSignedUrl(exportRow.storage_path, SIGNED_URL_TTL_SECONDS)');
+    expect(download).toContain('.from("user_roles")');
+    expect(download).toContain('.in("role", ["admin", "superadmin"])');
+    expect(download).toContain('.from("partners")');
+    expect(download).toContain('partner.auth_user_id !== userId');
+    expect(download).toContain('access_denied');
+    expect(download).not.toContain('10 * 365 * 24 * 60 * 60');
+  });
+
+  test('partner invoice email attachments use private Storage paths instead of persisted URLs', () => {
+    const sender = read('supabase/functions/send-partner-invoice-email/index.ts');
+
+    expect(sender).toContain('.select("id, storage_bucket, storage_path, created_at")');
+    expect(sender).toContain('.download(exportRow.storage_path)');
+    expect(sender).toContain('buildAttachment(supabase, pdf, periodStart, periodEnd)');
+    expect(sender).not.toContain('fetch(pdf.file_url)');
+    expect(sender).not.toContain('buildAttachment(pdf.file_url');
   });
 
   test('contest image and banner mutations require admin role', () => {

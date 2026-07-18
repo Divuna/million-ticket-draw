@@ -10,6 +10,7 @@ import { Label } from '@/components/ui/label';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { supabase } from '@/integrations/supabase/client';
+import { openPartnerInvoiceExport } from '@/lib/partnerInvoiceDownload';
 import { toast } from 'sonner';
 import { Loader2, Building2, Coins, Key, FileText, TrendingUp, Calendar, Upload, Image, Clock, CheckCircle, XCircle, Mail, BookOpen, Rocket, ListChecks, ExternalLink, AlertCircle, Info, Gift, RefreshCw, Copy, Eye, EyeOff, Activity, Settings, Save, Plus, Send, RotateCcw, Tag, Receipt, Download } from 'lucide-react';
 import { Textarea } from '@/components/ui/textarea';
@@ -523,15 +524,17 @@ const PartnerDashboard = () => {
     try {
       const { data, error } = await supabase
         .from('partner_invoice_exports')
-        .select('file_url')
+        .select('id, storage_path')
         .eq('invoice_id', invoiceId)
         .eq('format', 'pdf')
+        .eq('storage_bucket', 'partner-invoices')
+        .not('storage_path', 'is', null)
         .order('created_at', { ascending: false })
         .limit(1)
         .maybeSingle();
       if (error) throw error;
-      if (data?.file_url) {
-        window.open(data.file_url, '_blank');
+      if (data?.id && data?.storage_path) {
+        await openPartnerInvoiceExport(data.id);
       } else {
         toast.error('PDF faktura zatím není k dispozici');
       }

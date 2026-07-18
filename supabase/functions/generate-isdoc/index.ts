@@ -263,22 +263,10 @@ serve(async (req) => {
       );
     }
 
-    // 6. Get signed URL (bucket is private — no public access)
-    const SIGNED_URL_TTL_SECONDS = 10 * 365 * 24 * 60 * 60; // ~10 years
-    const { data: urlData, error: signError } = await supabase.storage
-      .from('partner-invoices')
-      .createSignedUrl(filename, SIGNED_URL_TTL_SECONDS);
-
-    if (signError || !urlData?.signedUrl) {
-      console.error('Signed URL error:', signError);
-      return new Response(
-        JSON.stringify({ error: 'Nepodařilo se vytvořit odkaz na ISDOC', details: signError?.message }),
-        { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
-    }
-
-    const fileUrl = urlData.signedUrl;
-    console.log('File uploaded, signed URL created');
+    // 6. Keep the object private. Signed URLs are created only on authorized download.
+    // Short-lived URL for this immediate response only. Persist the private
+    // Storage object path instead of any public/signed URL.
+    console.log('ISDOC uploaded to private Storage');
 
     // 7. Insert into partner_invoice_exports
     const { data: exportData, error: exportError } = await supabase
@@ -286,7 +274,15 @@ serve(async (req) => {
       .insert({
         invoice_id: invoice_id,
         format: 'isdoc',
-        file_url: fileUrl
+        file_url: null,
+        storage_bucket: 'partner-invoices',
+        storage_path: filename,
+        metadata: {
+          content_type: 'application/xml',
+          filename,
+          size_bytes: xmlBytes.length,
+          generated_by: 'generate-isdoc',
+        },
       })
       .select()
       .single();
@@ -304,8 +300,9 @@ serve(async (req) => {
     return new Response(
       JSON.stringify({
         success: true,
-        file_url: fileUrl,
         export_id: exportData.id,
+        storage_bucket: 'partner-invoices',
+        storage_path: filename,
         filename
       }),
       { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }

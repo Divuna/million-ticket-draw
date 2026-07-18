@@ -2260,6 +2260,9 @@ export type Database = {
           format: string
           id: string
           invoice_id: string
+          metadata: Json
+          storage_bucket: string | null
+          storage_path: string | null
         }
         Insert: {
           created_at?: string | null
@@ -2267,6 +2270,9 @@ export type Database = {
           format: string
           id?: string
           invoice_id: string
+          metadata?: Json
+          storage_bucket?: string | null
+          storage_path?: string | null
         }
         Update: {
           created_at?: string | null
@@ -2274,6 +2280,9 @@ export type Database = {
           format?: string
           id?: string
           invoice_id?: string
+          metadata?: Json
+          storage_bucket?: string | null
+          storage_path?: string | null
         }
         Relationships: [
           {

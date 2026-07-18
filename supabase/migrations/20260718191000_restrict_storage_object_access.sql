@@ -5,12 +5,51 @@
 
 -- Partner invoices are private documents. They must never be listable/readable
 -- by anon/authenticated users directly from Storage. Edge Functions use the
--- service role to upload files and create signed URLs.
+-- service role to upload files and create short-lived signed URLs on demand.
 UPDATE storage.buckets
 SET public = false,
     allowed_mime_types = ARRAY['application/pdf', 'application/xml', 'text/xml'],
     file_size_limit = 10485760
 WHERE id = 'partner-invoices';
+
+ALTER TABLE public.partner_invoice_exports
+  ADD COLUMN IF NOT EXISTS storage_bucket text,
+  ADD COLUMN IF NOT EXISTS storage_path text,
+  ADD COLUMN IF NOT EXISTS metadata jsonb NOT NULL DEFAULT '{}'::jsonb;
+
+ALTER TABLE public.partner_invoice_exports
+  DROP CONSTRAINT IF EXISTS partner_invoice_exports_storage_bucket_check;
+
+ALTER TABLE public.partner_invoice_exports
+  ADD CONSTRAINT partner_invoice_exports_storage_bucket_check
+  CHECK (storage_bucket IS NULL OR storage_bucket = 'partner-invoices');
+
+UPDATE public.partner_invoice_exports
+SET storage_bucket = 'partner-invoices',
+    storage_path = regexp_replace(
+      substring(file_url from '/storage/v1/object/(?:sign|public)/partner-invoices/([^?]+)'),
+      '%2F',
+      '/',
+      'g'
+    )
+WHERE file_url IS NOT NULL
+  AND storage_path IS NULL
+  AND substring(file_url from '/storage/v1/object/(?:sign|public)/partner-invoices/([^?]+)') IS NOT NULL;
+
+UPDATE public.partner_invoice_exports
+SET file_url = NULL
+WHERE storage_bucket = 'partner-invoices'
+  AND storage_path IS NOT NULL
+  AND file_url IS NOT NULL;
+
+COMMENT ON COLUMN public.partner_invoice_exports.file_url IS
+  'Deprecated. Do not store public or signed invoice URLs; store storage_bucket/storage_path and mint short-lived signed URLs only on authorized download.';
+COMMENT ON COLUMN public.partner_invoice_exports.storage_bucket IS
+  'Private invoice export bucket. Expected value: partner-invoices.';
+COMMENT ON COLUMN public.partner_invoice_exports.storage_path IS
+  'Internal private Storage object path for the invoice export.';
+COMMENT ON COLUMN public.partner_invoice_exports.metadata IS
+  'Non-sensitive export metadata such as content type, filename and size.';
 
 DROP POLICY IF EXISTS "Anyone can view partner invoices" ON storage.objects;
 DROP POLICY IF EXISTS "allow upload partner invoices" ON storage.objects;
