@@ -50,17 +50,23 @@ AS $function$
   );
 $function$;
 
-REVOKE ALL ON FUNCTION public.is_partner_invoice_auto_send_enabled() FROM PUBLIC;
-GRANT EXECUTE ON FUNCTION public.is_partner_invoice_auto_send_enabled() TO authenticated, service_role;
+-- Only the automation (service_role) may read the flag through this helper.
+-- The superadmin UI reads/writes the value directly on public.settings, whose
+-- RLS is superadmin-only, so a normal authenticated user / partner must NOT be
+-- able to learn the value via this SECURITY DEFINER helper.
+REVOKE ALL ON FUNCTION public.is_partner_invoice_auto_send_enabled() FROM PUBLIC, anon, authenticated;
+GRANT EXECUTE ON FUNCTION public.is_partner_invoice_auto_send_enabled() TO service_role;
 
 -- 3. Dedup claim marker + atomic claim/release for the auto-send flow.
 ALTER TABLE public.partner_invoices
   ADD COLUMN IF NOT EXISTS auto_email_sent_at timestamptz;
 
--- Atomically claim a draft invoice for automatic sending. Returns true only
--- for the caller that first flips auto_email_sent_at from NULL while the
--- invoice is still 'draft'. Any repeated / concurrent run gets false and must
--- not send an email — this is the database-side duplicate guard.
+-- Atomically claim a draft invoice for the FIRST send (shared by the manual
+-- "Odeslat e-mailem" action and the weekly automation). Returns true only for
+-- the caller that first flips auto_email_sent_at from NULL while the invoice is
+-- still 'draft'. Any repeated / concurrent caller gets false and must not send
+-- an email — this is the database-side single-send guard. Works for both coin
+-- and offer invoices; the automation never passes offer ids anyway.
 CREATE OR REPLACE FUNCTION public.claim_partner_invoice_for_auto_send(p_invoice_id uuid)
 RETURNS boolean
 LANGUAGE plpgsql
@@ -75,7 +81,6 @@ BEGIN
    WHERE id = p_invoice_id
      AND status = 'draft'
      AND auto_email_sent_at IS NULL
-     AND type IS DISTINCT FROM 'offer'
   RETURNING id INTO v_claimed;
 
   RETURN v_claimed IS NOT NULL;

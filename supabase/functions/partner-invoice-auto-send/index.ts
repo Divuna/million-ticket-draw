@@ -129,57 +129,43 @@ serve(async (req: Request) => {
       );
     }
 
-    // 3. ON: process ONLY the invoices created in this run.
+    // 3. ON: process ONLY the invoices created in this run. Delegate the whole
+    //    "reserve + ensure PDF + one email + close issued" flow to
+    //    send-partner-invoice-email so manual and automatic first sends share
+    //    the exact same atomic claim, PDF reuse and status-close logic.
     let issued = 0;
     let emails = 0;
     let errors = 0;
+    let skipped = 0;
     const results: Array<Record<string, unknown>> = [];
 
     for (const invoiceId of targetIds) {
-
-      // 3a. Atomic DB-side claim — only the first run for this invoice wins.
-      const { data: claimed, error: claimError } = await supabase.rpc(
-        "claim_partner_invoice_for_auto_send",
-        { p_invoice_id: invoiceId },
-      );
-      if (claimError || claimed !== true) {
-        results.push({ invoice_id: invoiceId, outcome: "skipped_not_claimed" });
-        continue;
-      }
-
       try {
-        // 3b. Generate PDF.
-        const { data: pdfData, error: pdfError } = await supabase.functions.invoke(
-          "generate-partner-invoice-pdf",
-          { body: { invoice_id: invoiceId }, headers: { "x-internal-token": internalToken } },
-        );
-        if (pdfError || !pdfData?.file_url) {
-          throw new Error(pdfError?.message ?? "pdf_generation_failed");
-        }
-
-        // 3c. Send exactly one email; the send EF flips draft -> issued only
-        //     after a successful send.
         const { data: sendData, error: sendError } = await supabase.functions.invoke(
           "send-partner-invoice-email",
           { body: { invoice_id: invoiceId }, headers: { "x-internal-token": internalToken } },
         );
         if (sendError) throw new Error(sendError.message);
-        if (sendData?.error) throw new Error(String(sendData.error));
-        if (sendData?.success !== true) throw new Error(sendData?.reason ?? "send_failed");
 
-        emails += 1;
-        if (sendData?.status_updated) issued += 1;
-        results.push({ invoice_id: invoiceId, outcome: "sent", status_updated: !!sendData?.status_updated });
+        if (sendData?.skipped === true) {
+          skipped += 1;
+          results.push({ invoice_id: invoiceId, outcome: "skipped", reason: sendData?.reason });
+        } else if (sendData?.success === true) {
+          emails += 1;
+          if (sendData?.status_updated) issued += 1;
+          results.push({ invoice_id: invoiceId, outcome: "sent", status_updated: !!sendData?.status_updated });
+        } else {
+          errors += 1;
+          results.push({ invoice_id: invoiceId, outcome: "error", detail: sendData?.error ?? sendData?.reason ?? "send_failed" });
+        }
       } catch (err) {
-        // On failure: release the claim and leave the invoice as 'draft'.
-        await supabase.rpc("release_partner_invoice_auto_send_claim", { p_invoice_id: invoiceId });
         errors += 1;
         results.push({ invoice_id: invoiceId, outcome: "error", detail: (err as Error).message });
       }
     }
 
     return new Response(
-      JSON.stringify({ enabled: true, processed: targetIds.length, issued, emails, errors, results }),
+      JSON.stringify({ enabled: true, processed: targetIds.length, issued, emails, skipped, errors, results }),
       { status: 200, headers: { "Content-Type": "application/json", ...corsHeaders } },
     );
   } catch (error) {
