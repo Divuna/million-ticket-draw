@@ -183,3 +183,54 @@ verify_jwt = false
 
 [functions.generate-tickets]
 verify_jwt = false
+
+# Disabled legacy test/debug/Sofinity endpoints. They remain deployable only to
+# replace old production copies with safe 410 tombstones that never use
+# service_role, database writes, Storage, email, OneSignal, Stripe, or Sofinity.
+[functions.event_forward_log_listener]
+verify_jwt = false
+
+[functions.event_forward_log_listener_debug]
+verify_jwt = false
+
+[functions.event_forward_log_listener_test_call]
+verify_jwt = false
+
+[functions.forward_env_check]
+verify_jwt = false
+
+[functions.forward_messages_to_sofinity]
+verify_jwt = false
+
+[functions.forward_to_sofinity]
+verify_jwt = false
+
+[functions.forward_to_sofinity_fixed]
+verify_jwt = false
+
+[functions.invoke_env_check]
+verify_jwt = false
+
+[functions.invoke_forward_to_sofinity]
+verify_jwt = false
+
+[functions.invoke_helper_event_forward_log_listener]
+verify_jwt = false
+
+[functions.invoke_listener_directly]
+verify_jwt = false
+
+[functions.noop]
+verify_jwt = false
+
+[functions.sofinity-noop]
+verify_jwt = false
+
+[functions.sync-player-to-sofinity]
+verify_jwt = false
+
+[functions.sync-to-sofinity]
+verify_jwt = false
+
+[functions.trigger-sync-caller]
+verify_jwt = false
