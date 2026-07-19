@@ -5,6 +5,7 @@ import { Badge } from '@/components/ui/badge';
 import { OneMilHeartIcon, OneMilTrophyIcon } from '@/components/icons/OneMilIcons';
 import type { User } from '@supabase/supabase-js';
 import { supabase } from '@/integrations/supabase/client';
+import { isNativeApp } from '@/lib/nativeApp';
 import trophyIcon from '@/assets/icon-trophy-onemil.png';
 import './ContestCard.css';
 
@@ -289,6 +290,8 @@ export const ContestCard: React.FC<ContestCardProps> = ({
                 onClick={(e) => {
                   e.stopPropagation();
                   if (insufficientFunds) {
+                    // Nativní aplikace: žádné přesměrování na dobíjení.
+                    if (isNativeApp()) return;
                     navigate('/profile', {
                       state: {
                         paymentReturnTo: `${location.pathname}${location.search}`,
@@ -298,10 +301,10 @@ export const ContestCard: React.FC<ContestCardProps> = ({
                   }
                   handlePlayClick(e);
                 }}
-                disabled={contest.status !== 'active' || (!insufficientFunds && isProcessing)}
+                disabled={contest.status !== 'active' || (!insufficientFunds && isProcessing) || (insufficientFunds && isNativeApp())}
               >
                 {insufficientFunds ? (
-                  <>Dobít MioCoiny</>
+                  <>{isNativeApp() ? 'Nedostatek MioCoinů' : 'Dobít MioCoiny'}</>
                 ) : (
                   <><OneMilTrophyIcon size={16} className="w-4 h-4 shrink-0" />{getPlayButtonText()}</>
                 )}
