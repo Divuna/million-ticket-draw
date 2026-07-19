@@ -804,7 +804,8 @@ const Homepage = () => {
           </div>
         </div>
 
-        {/* Premium value message — MioCoiny jako odměna */}
+        {/* Premium value message — MioCoiny jako odměna. V nativní aplikaci skryto (zmiňuje dobití). */}
+        {!isNativeApp() && (
         <section className="w-full">
           <div className="max-w-[720px] mx-auto px-4 py-2 text-center">
             <div className="flex items-center justify-center gap-2 mb-2">
@@ -821,6 +822,7 @@ const Homepage = () => {
             </p>
           </div>
         </section>
+        )}
 
         {/* Dynamic Banners */}
         {(voucherBanner || gamesBanner) && (
