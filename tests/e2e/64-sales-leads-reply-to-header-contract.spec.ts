@@ -22,10 +22,20 @@ test.describe('64 — sales leads public Reply-To contract', () => {
   }
 
   test('SDK-specific Reply-To property remains correct', () => {
+    const replySendPayload = replySender.slice(
+      replySender.indexOf('const emailPayload'),
+      replySender.indexOf('const response = await new Resend'),
+    );
+    const followUpSendPayload = followUpSender.slice(
+      followUpSender.indexOf('const emailPayload'),
+      followUpSender.indexOf('const sent = await new Resend'),
+    );
+
     expect(initialSender).toContain('reply_to: REPLY_TO');
-    expect(replySender).toMatch(/emails\.send\(\{[\s\S]*replyTo[\s\S]*\}\)/);
-    expect(replySender).not.toMatch(/emails\.send\(\{[^}]*\breply_to:/);
-    expect(followUpSender).toContain('replyTo,subject');
+    expect(replySendPayload).toMatch(/\breplyTo\b/);
+    expect(replySendPayload).not.toMatch(/\breply_to\s*:/);
+    expect(followUpSendPayload).toMatch(/\breplyTo\s*:/);
+    expect(followUpSendPayload).not.toMatch(/\breply_to\s*:/);
   });
 
   test('all senders use an invisible capture id separately from the provider id', () => {
