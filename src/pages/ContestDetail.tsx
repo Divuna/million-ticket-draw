@@ -24,6 +24,7 @@ import { buildBuyTicketAtomicRpcPayload } from "@/utils/buyTicketAtomicRpcArgs";
 import { TicketResultModal } from "@/components/TicketResultModal";
 import { BonusPrizeDetailModal } from "@/components/BonusPrizeDetailModal";
 import { usePlacementBanners } from "@/hooks/usePlacementBanners";
+import { isNativeApp } from "@/lib/nativeApp";
 import "@/components/ContestCard.css";
 import { Helmet } from "react-helmet-async";
 
@@ -913,6 +914,11 @@ export default function ContestDetail() {
           )}
           <div className="flex flex-col sm:flex-row items-stretch gap-3 mt-auto">
             {insufficientFunds ? (
+              isNativeApp() ? (
+                <div className="flex-1 h-11 flex items-center justify-center text-sm font-semibold text-amber-300/95">
+                  Nedostatek MioCoinů
+                </div>
+              ) : (
               <Button
                 onClick={() =>
                   navigate('/profile', {
@@ -924,6 +930,7 @@ export default function ContestDetail() {
               >
                 Dobít MioCoiny
               </Button>
+              )
             ) : (
               <>
                 <Button
@@ -939,6 +946,7 @@ export default function ContestDetail() {
                     </span>
                   ) : `Uplatnit ${contest.ticket_price} MioCoin`}
                 </Button>
+                {!isNativeApp() && (
                 <Button
                   onClick={() =>
                     navigate('/profile', {
@@ -950,6 +958,7 @@ export default function ContestDetail() {
                 >
                   Dobít MioCoiny
                 </Button>
+                )}
               </>
             )}
           </div>
