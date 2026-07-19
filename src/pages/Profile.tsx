@@ -32,6 +32,7 @@ import RecommendShopMailtoCard from '@/components/RecommendShopMailtoCard';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { Link } from 'react-router-dom';
 import { setPendingPaymentSuccessContext, isSafeInternalPath } from '@/lib/paymentSuccessContext';
+import { isNativeApp } from '@/lib/nativeApp';
 import { logStripeCheckoutClientFailure } from '@/lib/monitoring';
 import { useUserRole } from '@/hooks/useUserRole';
 import { useNotificationSettings } from '@/hooks/useNotificationSettings';
@@ -544,6 +545,8 @@ const Profile: React.FC = () => {
   };
 
   const handleTopUpPurchase = async () => {
+    // Nativní aplikace nesmí spustit Stripe checkout (Apple/Google pravidla).
+    if (isNativeApp()) return;
     if (purchaseLoading) return;
     let priceInCzk: number;
     let totalCoins: number;
@@ -804,12 +807,14 @@ const Profile: React.FC = () => {
 
               {/* Action buttons */}
               <div className="flex flex-col sm:flex-row gap-3 mb-5">
-                <Button onClick={() => setShowTopUpModal(true)}
-                  className="flex-1 bg-gradient-to-r from-[#FF8A00] to-[#FFB547] hover:from-[#FFB547] hover:to-[#FF8A00] text-black font-bold shadow-lg shadow-[rgba(255,138,0,0.2)] transition-all duration-200"
-                  size="lg">
-                  <OneMilCoinsIcon size={20} className="h-5 w-5 mr-2" />
-                  Dobít MioCoiny
-                </Button>
+                {!isNativeApp() && (
+                  <Button onClick={() => setShowTopUpModal(true)}
+                    className="flex-1 bg-gradient-to-r from-[#FF8A00] to-[#FFB547] hover:from-[#FFB547] hover:to-[#FF8A00] text-black font-bold shadow-lg shadow-[rgba(255,138,0,0.2)] transition-all duration-200"
+                    size="lg">
+                    <OneMilCoinsIcon size={20} className="h-5 w-5 mr-2" />
+                    Dobít MioCoiny
+                  </Button>
+                )}
                 <Button onClick={() => navigate('/my-contests')} variant="outline"
                   className="flex-1 border-[rgba(255,138,0,0.3)] hover:border-[rgba(255,138,0,0.5)] hover:bg-[rgba(255,138,0,0.06)] text-[#E7EBF0] font-semibold transition-all duration-200"
                   size="lg">
@@ -1337,7 +1342,8 @@ const Profile: React.FC = () => {
       </div>
 
       {/* Premium Top-up Modal */}
-      <Dialog open={showTopUpModal} onOpenChange={setShowTopUpModal}>
+      {/* Top-up modal se v nativní aplikaci vůbec nerenderuje — nejde otevřít ani nepřímo. */}
+      <Dialog open={showTopUpModal && !isNativeApp()} onOpenChange={setShowTopUpModal}>
         <DialogContent className="max-w-md border-[rgba(255,138,0,0.15)] bg-gradient-to-br from-card via-card to-[rgba(255,138,0,0.04)] backdrop-blur-xl">
           <DialogHeader>
             <DialogTitle className="text-2xl font-bold flex items-center gap-3">
