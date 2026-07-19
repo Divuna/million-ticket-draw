@@ -5,6 +5,7 @@ import CMSPageLayout from '@/components/cms/CMSPageLayout';
 import SupportForm from '@/components/SupportForm';
 import ContactForm from '@/components/ContactForm';
 import { normalizeSlug, transformContentToHtml } from '@/lib/cms-content-utils';
+import { isNativeApp } from '@/lib/nativeApp';
 
 interface ContentPageData {
   id: string;
@@ -40,8 +41,17 @@ const ContentPage: React.FC = () => {
   // Transform content to structured HTML (unified Legal pages format)
   const transformedContent = useMemo(() => {
     if (!page?.content) return '';
-    return transformContentToHtml(page.content);
-  }, [page?.content]);
+
+    let content = page.content;
+
+    // Nativní aplikace: skrytí nákupu voucherů na stránce Jak to funguje
+    // Důvod: Apple/Google pravidla zakazují odkazovat na externí nákupy digitálního obsahu
+    if (isNativeApp() && slug === 'jak-to-funguje') {
+      content = content.replace('nákupem digitálních voucherů přímo na platformě OneMil,', '');
+    }
+
+    return transformContentToHtml(content);
+  }, [page?.content, slug]);
 
   useEffect(() => {
     const fetchPage = async () => {
