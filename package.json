@@ -23,6 +23,7 @@
     "test:smoke": "playwright test"
   },
   "dependencies": {
+    "@capacitor/core": "^8.4.2",
     "@hookform/resolvers": "^3.10.0",
     "@playwright/test": "^1.57.0",
     "@radix-ui/react-accordion": "^1.2.11",
