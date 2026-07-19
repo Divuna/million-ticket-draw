@@ -8,7 +8,7 @@ console.log("AI: no auto support")
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Headers":
-    "authorization, x-client-info, apikey, content-type, x-internal-token",
+    "authorization, x-client-info, apikey, content-type, x-internal-token, x-is-native-app",
 }
 
 const MAX_USER_MESSAGE_CHARS = 500
@@ -128,7 +128,11 @@ function formatCsNumber(n: number): string {
  * Final approved scenarios — runs after DB handlers, before getPredefinedReply + GPT.
  * IMPORTANT: pricing is high-priority to avoid wrong MioCoin definition answers.
  */
-function getExtendedKnowledgeReply(text: string): string | null {
+/** Native app: safe answer for MioCoin pricing/top-up questions (no purchase mention). */
+const NATIVE_MIOCOIN_SOURCES_ANSWER =
+  "MioCoiny získáváš jako odměnu za nákupy u našich partnerských e-shopů, nebo je můžeš získat uplatněním MioCoin kódu v Profilu."
+
+function getExtendedKnowledgeReply(text: string, isNativeApp = false): string | null {
   const t = text.toLowerCase()
 
   if (isGeneralRecommendationQuestion(text)) {
@@ -152,7 +156,7 @@ function getExtendedKnowledgeReply(text: string): string | null {
 
   // High-priority single-price wording (exact customer text).
   if (pricingSpecific) {
-    return AI_KNOWLEDGE.pricing.customer_text
+    return isNativeApp ? NATIVE_MIOCOIN_SOURCES_ANSWER : AI_KNOWLEDGE.pricing.customer_text
   }
 
   if (
@@ -169,7 +173,7 @@ function getExtendedKnowledgeReply(text: string): string | null {
       return AI_KNOWLEDGE.miocoin.definition
     }
 
-    return AI_KNOWLEDGE.pricing.packages
+    return isNativeApp ? NATIVE_MIOCOIN_SOURCES_ANSWER : AI_KNOWLEDGE.pricing.packages
   }
 
   if (t.includes("jak převést bonus") || t.includes("jak prevest bonus")) {
@@ -186,6 +190,10 @@ function getExtendedKnowledgeReply(text: string): string | null {
   }
 
   if (t.includes("pozvi") || t.includes("referral")) {
+    // Native app: referral.info mentions top-up ("dobití") — use a neutral variant.
+    if (isNativeApp) {
+      return `Můžeš zvát své přátele pomocí unikátního odkazu nebo kódu a získávat za to odměny.\n\n${AI_KNOWLEDGE.referral.stats}`
+    }
     return `${AI_KNOWLEDGE.referral.info}\n\n${AI_KNOWLEDGE.referral.stats}`
   }
 
@@ -514,6 +522,16 @@ async function deleteMessageById(
 }
 
 /** SYSTEM (rules) — context sandwich, first layer. Answers must be Czech. */
+/**
+ * Native app mode (Capacitor Android/iOS): Apple/Google rules forbid pointing
+ * users to external MioCoin purchase. Appended AFTER BOB_SYSTEM_BASE so it
+ * overrides its top-up instructions.
+ */
+const BOB_NATIVE_APP_SYSTEM = `IMPORTANT — NATIVE APP MODE (overrides any earlier instruction about top-up, including the "MioCoiny dobijete v sekci Vouchery nebo v Profilu" instruction):
+The user is using the OneMil mobile app. NEVER mention buying MioCoins, topping up ("dobít", "dobití", "dobijete", "dobij si"), MioCoin package prices, payment, Stripe, or any way to purchase MioCoins.
+If the user asks how to get MioCoins, about MioCoin prices or packages, answer ONLY that MioCoins are earned as rewards for purchases at OneMil partner e-shops, or by redeeming a MioCoin code in Profil. Do not mention the web version or any purchase path.
+Never use a CTA to route a top-up/payment question anywhere; use "cta": null for such questions.`
+
 const BOB_SYSTEM_BASE = `You are Bob, AI assistant for OneMil.
 You speak Czech.
 You are helpful, short, and human.
@@ -1712,6 +1730,9 @@ serve(async (req) => {
   const internalToken = Deno.env.get("INTERNAL_FUNCTION_TOKEN") ?? ""
   const openaiKey = Deno.env.get("OPENAI_API_KEY") ?? ""
 
+  // Native app mode (Capacitor): client sends x-is-native-app: true → Bob must never mention top-up/prices.
+  const isNativeAppRequest = req.headers.get("x-is-native-app") === "true"
+
   if (!supabaseUrl || !serviceRoleKey) {
     return new Response(JSON.stringify({ error: "Missing Supabase configuration" }), {
       status: 500,
@@ -2758,7 +2779,7 @@ serve(async (req) => {
 
     // 2) Knowledge-base: general informational only — skipped for user-specific data questions (GPT + USER DATA).
     if (!routeUserDataToGpt) {
-      const extendedKb = getExtendedKnowledgeReply(userContent.trim())
+      const extendedKb = getExtendedKnowledgeReply(userContent.trim(), isNativeAppRequest)
       if (extendedKb) {
         console.log("KB handler: extended → rephrase")
         const rephrased = shouldRephraseKnowledge(extendedKb)
@@ -3045,6 +3066,7 @@ serve(async (req) => {
                   content:
                     BOB_SYSTEM_BASE +
                     (supportMode ? "\n\n" + BOB_SUPPORT_MODE_SYSTEM : "") +
+                    (isNativeAppRequest ? "\n\n" + BOB_NATIVE_APP_SYSTEM : "") +
                     "\n\n" +
                     systemContext,
                 },
