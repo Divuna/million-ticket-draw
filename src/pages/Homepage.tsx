@@ -2,6 +2,7 @@ import React, { useEffect, useRef, useState } from "react";
 import { useNavigate, Link, useLocation } from "react-router-dom";
 import { buildLoginRedirectUrl } from "@/lib/loginRedirect";
 import { setPendingPaymentSuccessContext } from "@/lib/paymentSuccessContext";
+import { isNativeApp } from "@/lib/nativeApp";
 import { Header } from "@/components/Header";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -327,6 +328,8 @@ const Homepage = () => {
   const [topUpLoading, setTopUpLoading] = useState(false);
 
   const handleCoinPurchase = async (priceInCzk: number, totalCoins: number) => {
+    // Nativní aplikace nesmí spustit Stripe checkout (Apple/Google pravidla).
+    if (isNativeApp()) return;
     if (!user) {
       toast.error("Pro nákup MioCoinů se musíte přihlásit");
       navigate(buildLoginRedirectUrl(location.pathname + location.search));
@@ -523,6 +526,9 @@ const Homepage = () => {
           <Card className="homepage-light-panel homepage-miocoin-panel rounded-xl overflow-hidden bg-[hsl(220_45%_6%)] border border-[rgba(255,138,0,0.2)] shadow-[0_4px_16px_hsl(222_50%_3%/0.5)] h-full">
             <CardContent className="p-5 md:p-6 h-full flex flex-col">
               <div className="space-y-4 flex-1 flex flex-col">
+                {/* Dobíjecí sekce se v nativní aplikaci nerenderuje (Apple/Google pravidla). */}
+                {!isNativeApp() && (
+                <>
                 <div className="space-y-2 homepage-miocoin-header">
                   <h2 className="homepage-premium-orange-heading text-xl md:text-2xl font-bold text-heading-gold flex items-center gap-2">
                     <OneMilMioCoinIcon size={24} className="w-6 h-6 md:w-7 md:h-7" />
@@ -666,6 +672,8 @@ const Homepage = () => {
                     </div>
                   </div>
                 </div>
+                </>
+                )}
 
                 {/* Two Boxes Below */}
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mt-3">
