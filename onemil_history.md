@@ -47,6 +47,8 @@
 
 # OneMil — DEVELOPMENT HISTORY (CHRONOLOGICAL ONLY)
 
+- **2026-07-19 — Dokončení a integrace Android aplikace:** Android Capacitor projekt sloučen do `main` (PR #266, commit `310e7ff`). Nastaveno Application ID `cz.onemil.app`. Implementováno automatické skrývání nákupu digitálního obsahu (dobíjení, vouchery) v nativním prostředí přes `isNativeApp()` v `ContentPage.tsx` a dalších částech, čímž je zajištěna kompatibilita s pravidly obchodů Play Store a App Store. Ověřeno v emulátoru Android 16.
+
 - **2026-07-16 — Hotfix ikony e-mailu v detailu leadu:** Doplněn chybějící import `Mail` z
   `lucide-react` v `LeadCrmPanel.tsx`. Oprava odstraňuje produkční runtime chybu `Mail is not
   defined` při otevření detailu leadu po PR #226. Chování editorů, databáze, Edge Functions,

@@ -1,5 +1,16 @@
 # OneMil – aktuální stav projektu
 
+## ANDROID APLIKACE — DOKONČENÍ INTEGRACE (19. 07. 2026)
+
+**Android Capacitor projekt byl úspěšně sloučen do `main` (PR #266, merge commit `310e7ff`).** Aplikace OneMil je nyní dostupná jako nativní Android balíček.
+
+- **Identifikace:** Android Application ID je `cz.onemil.app`.
+- **Sestavení:** Debug build byl úspěšně spuštěn v emulátoru Android 16. TypeScript kontrola i kompletní produkční sestavení (`npm run build`) prošly bez chyb.
+- **Specifické chování pro Store:** Nativní aplikace automaticky skrývá možnosti dobíjení MioCoinů (Stripe checkout) a texty odkazující na nákup digitálních voucherů. Toto zajišťuje soulad s pravidly Google Play a Apple App Store.
+- **Implementace:** Detekce platformy probíhá přes centrální modul `src/lib/nativeApp.ts` (`isNativeApp()`).
+- **Obsah stránek:** Stránka „Jak to funguje“ čerpá obsah ze Supabase tabulky `content_pages` (slug `jak-to-funguje`). Úprava pro skrytí věty o nákupu voucherů v nativní aplikaci byla implementována v `src/pages/ContentPage.tsx` a následně ověřena přímo v emulátoru.
+- **Web a PWA:** Chování pro webové prohlížeče a instalovanou PWA verzi zůstává nezměněno — všechny funkce včetně dobíjení jsou nadále dostupné.
+
 ## PARTNERSKÉ FAKTURY — CRON AUTH FIX (email-queue + offer-reminders) LIVE (18. 07. 2026)
 
 **PR #241 (`fix/cron-internal-token-auth`) je nasazený a ověřený na produkci `xkzhjldrojjlrkezorey`.** Opravuje opakované HTTP 401 dvou nedělně/denně/10min plánovaných automatů, jejichž kořenová příčina byl drift Edge secretu `INTERNAL_FUNCTION_TOKEN` proti Vault secretu `internal_function_token` (cron posílá Vault hodnotu, funkce porovnávaly jen s Edge hodnotou).
