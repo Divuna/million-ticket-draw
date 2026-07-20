@@ -237,7 +237,7 @@ test.describe.serial('43 — Partner invoice RLS visibility', () => {
     // Invoice row: gross amount + Koncept badge + PDF download link
     await expect(page.getByText('121,00 Kč')).toBeVisible({ timeout: 15_000 });
     await expect(page.getByText('Koncept')).toBeVisible();
-    await expect(page.getByRole('link', { name: /Stáhnout/i })).toBeVisible();
+    await expect(page.getByRole('button', { name: /Stáhnout/i })).toBeVisible();
     // Exactly one invoice row
     await expect(page.locator('tbody tr')).toHaveCount(1);
   });
