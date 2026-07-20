@@ -1,3 +1,11 @@
+# 19. 07. 2026 — Staging Full E2E oprava po Storage/lead e-mail změnách (PR #258)
+
+- PR #258 (`codex/fix-staging-e2e-contracts-29674796367`) připraven proti `main`; mění pouze E2E kontraktní testy: `tests/e2e/43-partner-invoices.spec.ts`, `tests/e2e/64-sales-leads-reply-to-header-contract.spec.ts`, `tests/e2e/66-sales-leads-crm-completion-contract.spec.ts`.
+- Původní GitHub Actions run `29674796367` padal kvůli driftu staging backendu po bezpečnostním Storage rollout: staging `partner_invoice_exports` neměl nové sloupce `storage_bucket`/`storage_path`/`metadata`, fakturační Edge Functions vracely staré `file_url` chování a několik testů mělo příliš křehké textové/source-code aserce.
+- Staging `dxmowysntemfqfnanxua` byl dorovnán s aktuálním `main`: aplikována migrace `20260718191000_restrict_storage_object_access` a nasazeny staging Edge Functions `generate-isdoc` v1, `generate-partner-invoice-pdf` v26, `get-partner-invoice-export-url` v1, `send-partner-invoice-email` v27. Produkce nebyla dotčena.
+- Testy upraveny na aktuální bezpečný model: partnerská faktura v UI používá tlačítko `Stáhnout`, které teprve při kliknutí získá krátkodobý signed URL; lead e-mail kontrakty akceptují aktuální Resend payload strukturu a tolerantní formátování stavových guardů.
+- Ověření: `npx tsc --noEmit` OK, `npm run build` OK, `git diff --check` OK, lokální cílený Playwright balík 12 passed / 13 skipped, GitHub Smoke E2E OK, ručně spuštěný Full Staging E2E run `29678829790` OK. PR #258 zůstává otevřené a mergeable; nic nebylo mergnuto ani nasazeno na produkci.
+
 # 18. 07. 2026 — Cron auth fix: process-email-queue a send-offer-reminders (PR #241) LIVE na produkci
 
 - PR #241 (`fix/cron-internal-token-auth`) mergnut do `main` a nasazen na produkci `xkzhjldrojjlrkezorey`. Řeší opakované HTTP 401 plánovaných automatů.
