@@ -1,37 +1,6 @@
 import { test, expect, Page } from '@playwright/test';
 
 /**
- * Fill a React-controlled <input type="date"> reliably.
- * Playwright's fill() triggers native input events, but React's synthetic
- * onChange can miss them in some builds. This helper sets the value via the
- * native setter and fires both input and change so React picks it up.
- */
-async function fillDateInput(page: Page, selector: string, isoDate: string): Promise<void> {
-  const input = page.locator(selector);
-  await input.focus();
-  await input.fill(isoDate);
-  // Re-dispatch if React's controlled value didn't update
-  await input.evaluate((el: HTMLInputElement, val: string) => {
-    if (el.value !== val) {
-      const nativeSetter = Object.getOwnPropertyDescriptor(
-        window.HTMLInputElement.prototype,
-        'value',
-      )?.set;
-      nativeSetter?.call(el, val);
-      el.dispatchEvent(new Event('input', { bubbles: true }));
-      el.dispatchEvent(new Event('change', { bubbles: true }));
-    }
-  }, isoDate);
-  await expect(input).toHaveValue(isoDate);
-}
-
-function dobString(yearsAgo: number): string {
-  const d = new Date();
-  d.setFullYear(d.getFullYear() - yearsAgo);
-  return d.toISOString().split('T')[0];
-}
-
-/**
  * Verify a Supabase session was written to localStorage.
  * The app configures storageKey: 'onemil-auth' in the Supabase client.
  */
@@ -43,13 +12,16 @@ async function expectSessionExists(page: Page): Promise<void> {
 }
 
 test.describe('User Registration', () => {
-  test('registration form renders all required fields', async ({ page }) => {
+  test('registration form renders required fields with 18+ confirmation and no date of birth', async ({ page }) => {
     await page.goto('/register');
 
     await expect(page.locator('#email')).toBeVisible();
     await expect(page.locator('#password')).toBeVisible();
     await expect(page.locator('#confirmPassword')).toBeVisible();
-    await expect(page.locator('#dateOfBirth')).toBeVisible();
+    // 18+ confirmation checkbox is present …
+    await expect(page.locator('#ageConfirm')).toBeVisible();
+    // … and the date-of-birth field is gone entirely.
+    await expect(page.locator('#dateOfBirth')).toHaveCount(0);
     await expect(page.locator('#terms')).toBeVisible();
     await expect(page.locator('#gdpr')).toBeVisible();
     await expect(page.getByRole('button', { name: 'Zaregistrovat se' })).toBeVisible();
@@ -61,7 +33,7 @@ test.describe('User Registration', () => {
     await page.fill('#email', 'mismatch@example.com');
     await page.fill('#password', 'Password123!');
     await page.fill('#confirmPassword', 'DifferentPassword!');
-    await fillDateInput(page, '#dateOfBirth', dobString(25));
+    await page.locator('#ageConfirm').click();
     await page.locator('#terms').click();
     await page.locator('#gdpr').click();
     await page.getByRole('button', { name: 'Zaregistrovat se' }).click();
@@ -72,17 +44,13 @@ test.describe('User Registration', () => {
   test('new user registers and is authenticated', async ({ page }) => {
     const uniqueEmail = `e2e+${Date.now()}@onemil.cz`;
     const password = 'E2eSmoke123!';
-    const dob = dobString(25);
 
     await page.goto('/register');
     await page.fill('#email', uniqueEmail);
     await page.fill('#password', password);
     await page.fill('#confirmPassword', password);
-    await fillDateInput(page, '#dateOfBirth', dob);
 
-    // Confirm DOB was accepted before submitting
-    await expect(page.locator('#dateOfBirth')).toHaveValue(dob);
-
+    await page.locator('#ageConfirm').click();
     await page.locator('#terms').click();
     await page.locator('#gdpr').click();
 

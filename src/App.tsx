@@ -63,7 +63,6 @@ import Wins from "@/pages/Wins";
 import FavoriteGames from "@/pages/FavoriteGames";
 import ShareTicket from "@/pages/ShareTicket";
 import UnsubscribeMarketing from "@/pages/UnsubscribeMarketing";
-import OnboardingDateOfBirth from "@/pages/OnboardingDateOfBirth";
 import DeleteAccount from "@/pages/DeleteAccount";
 import Kontakt from "@/pages/Kontakt";
 import PartnerLogin from "@/pages/PartnerLogin";
@@ -621,7 +620,9 @@ function AppContent() {
           <Route path="/winners" element={<Winners />} />
           <Route path="/wins" element={<Wins />} />
           <Route path="/share/ticket/:ticketId" element={<ShareTicket />} />
-          <Route path="/onboarding/date-of-birth" element={<OnboardingDateOfBirth />} />
+          {/* Datum narození se už při registraci nevyžaduje — stará onboarding
+              routa přesměruje na domovskou stránku, nikoho neblokuje. */}
+          <Route path="/onboarding/date-of-birth" element={<Navigate to="/" replace />} />
           <Route element={<AdminLayout />}>
             <Route path="/admin" element={<RequireSuperadminOrRedirect><AdminDashboard /></RequireSuperadminOrRedirect>} />
             <Route path="/admin/users" element={<RequirePermission permission="users.view.basic"><AdminUsers /></RequirePermission>} />
