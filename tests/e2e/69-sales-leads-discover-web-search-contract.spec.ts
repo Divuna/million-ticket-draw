@@ -6,6 +6,10 @@ const candidates = fs.readFileSync('supabase/functions/_shared/companyCandidateS
 const registry = fs.readFileSync('supabase/functions/_shared/companyRegistryEnrich.ts', 'utf8');
 const verifier = fs.readFileSync('supabase/functions/_shared/companyWebsiteVerifier.ts', 'utf8');
 const dialog = fs.readFileSync('src/components/admin/sales-leads/DiscoverLeadsDialog.tsx', 'utf8');
+// Sledování jobu žije nad dialogem (aby zavření okna nezastavilo průběh),
+// proto se tabulka i RPC volají z hooku — kontrakt platí pro celý modul.
+const discoveryHook = fs.readFileSync('src/components/admin/sales-leads/useDiscoveryJob.ts', 'utf8');
+const discoveryUi = `${dialog}\n${discoveryHook}`;
 const migJobs = fs.readFileSync('supabase/migrations/20260712120000_sales_lead_discovery_jobs.sql', 'utf8');
 const migCron = fs.readFileSync('supabase/migrations/20260712130000_sales_lead_discovery_worker_cron.sql', 'utf8');
 
@@ -87,8 +91,8 @@ test.describe('Discovery Jobs — worker, kandidáti z web search, bez e-mailu',
   });
 
   test('UI: job + živý progress + cíl uložených, bez e-mailu', () => {
-    expect(dialog).toContain('sales_lead_discovery_job_create');
-    expect(dialog).toContain('sales_lead_discovery_jobs');
+    expect(discoveryUi).toContain('sales_lead_discovery_job_create');
+    expect(discoveryUi).toContain('sales_lead_discovery_jobs');
     expect(dialog).toContain('Počet uložených firem (cíl)');
     expect(dialog).toContain('Prověřeno kandidátů');
     expect(dialog).toContain('Uloženo do segmentu');
