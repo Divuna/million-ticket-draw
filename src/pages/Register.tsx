@@ -10,6 +10,10 @@ import { toast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 import logo from '@/assets/logo-onemil.png';
 import { PENDING_REFERRAL_STORAGE_KEY } from '@/hooks/useApplyPendingReferral';
+import {
+  markAdultConfirmationPending,
+  ADULT_CONFIRMATION_TEXT,
+} from '@/hooks/useApplyPendingAdultConfirmation';
 
 // Affiliate v2: pending affiliate ref code captured from ?ref= (separate from legacy referral).
 const PENDING_AFFILIATE_REF_KEY = 'onemil_affiliate_ref';
@@ -102,8 +106,12 @@ const Register: React.FC = () => {
 
     setLoading(true);
 
+    // Marker přežije i případ, kdy okamžitý zápis po signUp neprojde
+    // (např. účet ještě není potvrzený) — dopíše se po přihlášení.
+    markAdultConfirmationPending();
+
     try {
-      const { error } = await signUp(email, password, marketingAccepted);
+      const { error } = await signUp(email, password, marketingAccepted, ageConfirmed);
       
       if (error) {
         toast({
@@ -170,6 +178,10 @@ const Register: React.FC = () => {
       return;
     }
     setAgeError('');
+
+    // Potvrzení musí přežít přesměrování k poskytovateli a zpět — zapíše se
+    // po návratu, až bude znám přihlášený uživatel (useApplyPendingAdultConfirmation).
+    markAdultConfirmationPending();
 
     try {
       await signInWithOAuth(provider, searchParams.get('redirect'));
@@ -253,7 +265,7 @@ const Register: React.FC = () => {
                   }}
                 />
                 <label htmlFor="ageConfirm" className="text-sm leading-tight cursor-pointer">
-                  Potvrzuji, že mi bylo 18 let. *
+                  {ADULT_CONFIRMATION_TEXT} *
                 </label>
               </div>
               {ageError && (

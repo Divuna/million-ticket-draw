@@ -103,6 +103,7 @@ import { RequireSuperadminOrRedirect } from "@/components/admin/RequireSuperadmi
 import { RequireSuperadmin } from "@/components/admin/RequireSuperadmin";
 import { useUserRole } from "@/hooks/useUserRole";
 import { useApplyPendingReferral } from "@/hooks/useApplyPendingReferral";
+import { useApplyPendingAdultConfirmation } from "@/hooks/useApplyPendingAdultConfirmation";
 import { useRetentionTriggers } from "@/hooks/useRetentionTriggers";
 import { useHeartbeat } from "@/hooks/useHeartbeat";
 import { GlobalMusicPlayer } from "@/components/GlobalMusicPlayer";
@@ -383,6 +384,8 @@ function AppContent() {
   const partnerData = usePartnerData(isPartnerAccount && !isInfluencerAccount ? user?.id : undefined);
   useOneSignal();
   useApplyPendingReferral(user?.id);
+  // Uloží potvrzení 18+ po přihlášení (zejména po návratu z OAuth).
+  useApplyPendingAdultConfirmation(user?.id);
   useRetentionTriggers(user?.id);
   useHeartbeat(user?.id);
 

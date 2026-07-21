@@ -2,6 +2,10 @@ import { useState, useEffect, createContext, useContext } from 'react';
 import { User, Session } from '@supabase/supabase-js';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/hooks/use-toast';
+import {
+  ADULT_CONFIRMATION_SLUG,
+  ADULT_CONFIRMATION_VERSION,
+} from '@/hooks/useApplyPendingAdultConfirmation';
 
 /** Same-origin path only (open-redirect safe). Mirrors Login.tsx safeRedirectPath. */
 function safeRedirectPath(raw: string | null): string | null {
@@ -107,7 +111,12 @@ export const useAuthState = () => {
     return () => subscription.unsubscribe();
   }, []);
 
-  const signUp = async (email: string, password: string, marketingConsent: boolean = false) => {
+  const signUp = async (
+    email: string,
+    password: string,
+    marketingConsent: boolean = false,
+    adultConfirmed: boolean = false,
+  ) => {
     const normalizedEmail = email.trim().toLowerCase();
     const redirectUrl = `${import.meta.env.VITE_APP_URL || window.location.origin}/`;
     
@@ -139,6 +148,16 @@ export const useAuthState = () => {
         }
       ];
       
+      // Potvrzení věku 18+ — ukládá se do stejného mechanismu souhlasů.
+      // Slug/verze jsou sdílené s OAuth cestou (useApplyPendingAdultConfirmation).
+      if (adultConfirmed) {
+        acceptances.push({
+          user_id: data.user.id,
+          document_slug: ADULT_CONFIRMATION_SLUG,
+          document_version: ADULT_CONFIRMATION_VERSION
+        });
+      }
+
       // Add marketing consent only if accepted
       if (marketingConsent) {
         acceptances.push({
