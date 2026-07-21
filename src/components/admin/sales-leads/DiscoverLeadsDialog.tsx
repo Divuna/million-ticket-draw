@@ -137,7 +137,9 @@ export function DiscoverLeadsDialog({ open, onOpenChange, job, isRunning, onStar
 
   return (
     <Dialog open={open} onOpenChange={handleClose}>
-      <DialogContent className="max-w-md" data-testid="sl-discover-dialog">
+      {/* Obsah může být vyšší než okno (formulář + průběh) — musí jít odrolovat,
+          jinak jsou tlačítka „Zastavit"/„Zavřít" nedosažitelná. */}
+      <DialogContent className="max-w-md max-h-[85vh] overflow-y-auto" data-testid="sl-discover-dialog">
         <DialogHeader>
           <DialogTitle data-testid="sl-discover-title">
             {finished ? 'Vyhledávání dokončeno' : 'Najít nové firmy'}
