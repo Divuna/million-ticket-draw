@@ -7,13 +7,10 @@
  * ║    adult_confirmed = existence řádku · čas = accepted_at ·                 ║
  * ║    verze textu = document_version                                          ║
  * ║                                                                            ║
- * ║  ⛔ BLOCKER (90a, 90e): živá DB odmítá klientský INSERT do                 ║
- * ║     user_legal_acceptances chybou 42501 i pro VLASTNÍ řádek —              ║
- * ║     chybí INSERT policy, kterou migrace v gitu deklaruje (drift).          ║
- * ║     Připravena migrace                                                     ║
- * ║     supabase/migrations/20260721090000_user_legal_acceptances_insert_own   ║
- * ║     — NEAPLIKOVÁNO. Po aplikaci na staging převést oba testy zpět          ║
- * ║     z test.fixme na test.                                                  ║
+ * ║  Pozn.: staging měl na této tabulce RLS zapnuté, ale NULA policies         ║
+ * ║  (deny-all) — klientský zápis padal na 42501. Doplněno migrací            ║
+ * ║  20260721090000_user_legal_acceptances_insert_own.sql (aplikováno         ║
+ * ║  pouze na staging; produkce ekvivalentní policies už měla).               ║
  * ║                                                                            ║
  * ║  STAGING-ONLY, self-contained (vlastní throwaway uživatelé + cleanup).    ║
  * ║  Required env: VITE_SUPABASE_URL, VITE_SUPABASE_ANON_KEY,                  ║
@@ -129,9 +126,7 @@ test.describe.serial('90 — potvrzení 18+ se bezpečně ukládá', () => {
     expect((await confirmationRows(ctx.b!)).length).toBe(0);
   });
 
-  // ⛔ BLOCKER: živá DB nemá INSERT policy pro vlastní souhlasy (42501).
-  // Odblokuje migrace 20260721090000_user_legal_acceptances_insert_own.sql.
-  test.fixme('90b) přihlášený uživatel smí zapsat vlastní potvrzení', async () => {
+  test('90b) přihlášený uživatel smí zapsat vlastní potvrzení', async () => {
     const clientB = await signedInClient(USER_B_EMAIL);
     const { error } = await clientB.from('user_legal_acceptances').insert({
       user_id: ctx.b!,
@@ -145,8 +140,7 @@ test.describe.serial('90 — potvrzení 18+ se bezpečně ukládá', () => {
     expect(rows[0].user_id).toBe(ctx.b);
   });
 
-  // ⛔ BLOCKER: stejná chybějící INSERT policy — hook zápis provede, ale DB ho odmítne.
-  test.fixme('90c) návrat z OAuth uloží potvrzení přihlášenému uživateli', async ({ page }) => {
+  test('90c) návrat z OAuth uloží potvrzení přihlášenému uživateli', async ({ page }) => {
     const consoleErrors: string[] = [];
     page.on('console', (msg) => {
       if (msg.type() === 'error') consoleErrors.push(msg.text());
