@@ -55,6 +55,7 @@ import {
   Pencil,
   PhoneCall,
   Save,
+  Trash2,
   Search,
   Send,
   Sparkles,
@@ -84,6 +85,12 @@ import {
 import { DuplicateConflictAlert } from './DuplicateConflictAlert';
 import { LeadCrmPanel } from './LeadCrmPanel';
 import { SalesLeadEmailTemplatePicker } from './SalesLeadEmailTemplatePicker';
+import {
+  useDraftAutosave,
+  readLocalDraft,
+  clearLocalDraft,
+  DRAFT_AUTOSAVE_LABEL,
+} from './useDraftAutosave';
 import {
   validateSalesLeadEmailContent,
   validateSalesLeadEmailDraft,
@@ -132,7 +139,7 @@ const DETAIL_COLUMNS =
   'id, company_name, industry, city, address, status, contact_email, updated_at, assigned_admin_id, ' +
   'ico, dic, website, company_size, contact_person, contact_role, contact_phone, email_source, ' +
   'email_verified_by_admin, do_not_contact, do_not_contact_reason, notes, created_at, ' +
-  'ai_research_summary, ai_research_at, draft_email_subject, draft_email_body, draft_prepared_by, ' +
+  'ai_research_summary, ai_research_at, draft_email_subject, draft_email_body, draft_prepared_by, draft_updated_at, ' +
   'lead_group, lead_quality, discovery_source, discovery_meta, website_verification_status, website_verification_source, website_confidence, website_verified_at, website_verification_evidence, alternative_websites, contact_data_provenance, ' +
   'proposed_contact_email, proposed_contact_source_url, proposed_contact_at, ' +
   'proposed_contact_by, proposed_contact_status';
@@ -527,6 +534,7 @@ export function SalesLeadDetailSheet({ leadId, open, onOpenChange, onMutated }: 
   const [draftSubject, setDraftSubject] = useState('');
   const [draftBody, setDraftBody] = useState('');
   const draftTouchedRef = useRef(false);
+  const [deleteDraftOpen, setDeleteDraftOpen] = useState(false);
   const draftComposerLeadIdRef = useRef<string | null>(null);
   const [draftExpandedOpen, setDraftExpandedOpen] = useState(false);
   const [draftAttachments, setDraftAttachments] = useState<SalesLeadEmailAttachment[]>([]);
@@ -1005,9 +1013,20 @@ export function SalesLeadDetailSheet({ leadId, open, onOpenChange, onMutated }: 
       return;
     }
     const sameLeadComposer = draftComposerLeadIdRef.current === lead.id;
-    setDraftSubject(sameLeadComposer ? draftSubject : lead.draft_email_subject ?? '');
-    setDraftBody(sameLeadComposer ? draftBody : lead.draft_email_body ?? '');
-    if (!sameLeadComposer) draftTouchedRef.current = false;
+    if (sameLeadComposer) {
+      setDraftSubject(draftSubject);
+      setDraftBody(draftBody);
+    } else {
+      // Obnov poslední uložený koncept; pokud v zařízení zůstala NOVĚJŠÍ
+      // neodeslaná verze (výpadek sítě), automaticky ji vrátíme.
+      const local = readLocalDraft(lead.id);
+      const serverAt = lead.draft_updated_at ? Date.parse(lead.draft_updated_at) : 0;
+      const useLocal = local !== null && local.updatedAt > serverAt;
+      setDraftSubject(useLocal ? local.subject : lead.draft_email_subject ?? '');
+      setDraftBody(useLocal ? local.body : lead.draft_email_body ?? '');
+      draftTouchedRef.current = useLocal;
+      if (useLocal) toast.message('Obnovena novější neuložená verze konceptu z tohoto zařízení.');
+    }
     draftComposerLeadIdRef.current = lead.id;
     setAiWorkspaceOpen(true);
   };
@@ -1027,6 +1046,48 @@ export function SalesLeadDetailSheet({ leadId, open, onOpenChange, onMutated }: 
       toast.warning(`Šablona „${value.templateName}“ obsahuje nedoplněné proměnné: ${value.unresolved.join(', ')}`);
     } else {
       toast.success(`Šablona „${value.templateName}“ byla vložena do editoru.`);
+    }
+  };
+
+  /**
+   * Tiché automatické ukládání konceptu. Má VLASTNÍ stav — záměrně nepoužívá
+   * `draftSaving`, který zakazuje inputy (to by při psaní shodilo kurzor).
+   * Po uložení obnoví jen seznam/počty v rodiči, nikdy nesahá na text editoru.
+   */
+  const autosave = useDraftAutosave({
+    leadId: lead?.id ?? null,
+    subject: draftSubject,
+    body: draftBody,
+    enabled: Boolean(lead) && aiWorkspaceOpen,
+    onPersisted: onMutated,
+  });
+
+  const deleteDraft = async () => {
+    if (!lead) return;
+    setDraftSaving(true);
+    try {
+      const { data, error } = await (supabase as any).rpc('sales_lead_autosave_draft', {
+        p_lead_id: lead.id,
+        p_subject: '',
+        p_body: '',
+        p_client_updated_at: new Date().toISOString(),
+      });
+      if (error) throw new Error(error.message);
+      const res = (data ?? {}) as { success?: boolean; error?: string };
+      if (!res.success) { toast.error(rpcErrorMessage(res.error)); return; }
+      setDraftSubject('');
+      setDraftBody('');
+      draftTouchedRef.current = false;
+      autosave.reset();
+      clearLocalDraft(lead.id);
+      setDeleteDraftOpen(false);
+      toast.success('Koncept smazán');
+      await load();
+      onMutated();
+    } catch (err: unknown) {
+      toast.error(err instanceof Error ? err.message : 'Smazání konceptu se nezdařilo');
+    } finally {
+      setDraftSaving(false);
     }
   };
 
@@ -1053,6 +1114,7 @@ export function SalesLeadDetailSheet({ leadId, open, onOpenChange, onMutated }: 
       toast.success('Koncept uložen');
       draftTouchedRef.current = false;
       draftComposerLeadIdRef.current = lead.id;
+      autosave.markSaved(draftSubject, draftBody);
       await load();
       onMutated();
     } catch (err: unknown) {
@@ -1198,6 +1260,18 @@ export function SalesLeadDetailSheet({ leadId, open, onOpenChange, onMutated }: 
       setSendConfirmOpen(false);
       setDraftAttachments([]);
       setDraftExpandedOpen(false);
+      // Koncept je vyřízený → lead zmizí z Rozpracovaných.
+      // Odeslaný e-mail zůstává v historii (aktivity se nemění).
+      autosave.reset();
+      try {
+        await (supabase as any).rpc('sales_lead_autosave_draft', {
+          p_lead_id: lead.id, p_subject: '', p_body: '',
+          p_client_updated_at: new Date().toISOString(),
+        });
+      } catch { /* best-effort úklid konceptu; odeslání už proběhlo */ }
+      setDraftSubject('');
+      setDraftBody('');
+      draftTouchedRef.current = false;
       await load();
       onMutated();
     } catch (err: unknown) {
@@ -1274,7 +1348,15 @@ export function SalesLeadDetailSheet({ leadId, open, onOpenChange, onMutated }: 
   };
 
   return (
-    <Sheet open={open} onOpenChange={onOpenChange}>
+    <Sheet
+      open={open}
+      onOpenChange={(nextOpen) => {
+        // Při zavření detailu okamžitě ulož poslední změny konceptu.
+        // Žádné potvrzovací okno — koncept je bezpečně uložený.
+        if (!nextOpen) void autosave.flush();
+        onOpenChange(nextOpen);
+      }}
+    >
       <SheetContent data-testid="sales-lead-crm-workspace" className="inset-0 flex h-dvh w-screen max-w-none flex-col gap-0 overflow-hidden border-0 bg-background p-0 sm:max-w-none">
         {loading || !lead ? (
           <div className="flex flex-1 items-center justify-center text-muted-foreground">
@@ -1866,7 +1948,23 @@ export function SalesLeadDetailSheet({ leadId, open, onOpenChange, onMutated }: 
                   {draftValidationErrors.map((error) => <div key={error}>{error}</div>)}
                 </div>
               )}
-              <div className="flex items-center justify-end gap-2">
+              <div className="flex flex-wrap items-center justify-end gap-2">
+                {/* Nenápadný stav automatického ukládání */}
+                <span
+                  data-testid="sl-draft-autosave-state"
+                  data-state={autosave.state}
+                  className={`mr-auto text-[11px] ${autosave.state === 'offline' ? 'text-amber-500' : 'text-muted-foreground'}`}
+                >
+                  {DRAFT_AUTOSAVE_LABEL[autosave.state]}
+                </span>
+                {(draftSubject.trim() || draftBody.trim()) && (
+                  <Button type="button" size="sm" variant="ghost" data-testid="sl-draft-delete"
+                    onClick={() => setDeleteDraftOpen(true)}
+                    disabled={draftSaving || draftBusy || sending}
+                    className="gap-1.5 text-muted-foreground hover:text-destructive">
+                    <Trash2 className="h-3.5 w-3.5" /> Smazat koncept
+                  </Button>
+                )}
                 <Button type="button" size="sm" variant="outline" onClick={saveDraft} disabled={draftSaving || draftBusy || sending} className="gap-1.5">
                   {draftSaving ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Save className="h-3.5 w-3.5" />}
                   Uložit koncept
@@ -2141,6 +2239,31 @@ export function SalesLeadDetailSheet({ leadId, open, onOpenChange, onMutated }: 
             >
               {sending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
               Odeslat e-mail
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* Smazání konceptu — čistí jen rozepsaný text, ne lead ani historii. */}
+      <AlertDialog open={deleteDraftOpen} onOpenChange={setDeleteDraftOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Smazat rozepsaný koncept?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Smaže se pouze rozepsaný předmět a text e-mailu. Lead ani historie
+              komunikace se nesmažou. Lead zmizí ze záložky „Rozpracované".
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={draftSaving}>Zrušit</AlertDialogCancel>
+            <AlertDialogAction
+              data-testid="sl-draft-delete-confirm"
+              onClick={(e) => { e.preventDefault(); void deleteDraft(); }}
+              disabled={draftSaving}
+              className="gap-1.5"
+            >
+              {draftSaving && <Loader2 className="h-4 w-4 animate-spin" />}
+              Smazat koncept
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

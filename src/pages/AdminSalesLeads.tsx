@@ -59,13 +59,15 @@ const INDUSTRY_LABEL = (v: string | null): string =>
   (v && INDUSTRY_OPTIONS.find((o) => o.value === v)?.label) || v || '—';
 
 /** Záložky dle spec §2 — každá mapuje na množinu stavů. */
-const TABS: { id: string; label: string; statuses: string[] | null }[] = [
+const TABS: { id: string; label: string; statuses: string[] | null; draftsOnly?: boolean }[] = [
   { id: 'today', label: 'Dnes', statuses: [] },
   { id: 'all', label: 'Vše', statuses: null },
   // Fáze 4B — navržené leady ke kontrole člověkem.
   { id: 'proposed', label: 'Návrhy', statuses: ['navrzeny'] },
   { id: 'new', label: 'Nové', statuses: ['novy'] },
-  { id: 'prep', label: 'Příprava', statuses: ['priprava', 'schvaleni_ceka'] },
+  // Rozpracované = leady se skutečně ULOŽENÝM konceptem e-mailu
+  // (nezávisle na stavu leadu) — `draft_updated_at` je vyplněné.
+  { id: 'prep', label: 'Rozpracované', statuses: null, draftsOnly: true },
   { id: 'contacted', label: 'Osloveno', statuses: ['osloveno', 'follow_up'] },
   // `odpovedel` a `jednani` jsou oddělené fáze — nesmí se počítat dvakrát.
   { id: 'replied', label: 'Odpovědělo', statuses: ['odpovedel'] },
@@ -113,7 +115,7 @@ const AdminSalesLeads: React.FC = () => {
       const [leadsRes, unreadRes, tasksRes, plannedRes, unassignedRes] = await Promise.all([
         (supabase as any)
           .from('sales_leads')
-          .select('id, company_name, industry, city, status, contact_email, updated_at, assigned_admin_id, lead_group')
+          .select('id, company_name, industry, city, status, contact_email, updated_at, assigned_admin_id, lead_group, draft_updated_at')
           .order('updated_at', { ascending: false }),
         // Nepřečtené odpovědi napříč všemi leady (RLS pustí jen držitele oprávnění).
         (supabase as any)
@@ -301,10 +303,17 @@ const AdminSalesLeads: React.FC = () => {
     [leads],
   );
 
+  /** Počet leadů s uloženým konceptem — badge u záložky Rozpracované. */
+  const draftCount = useMemo(
+    () => leads.filter((l) => Boolean(l.draft_updated_at)).length,
+    [leads],
+  );
+
   const visibleLeads = useMemo(() => {
     const tab = TABS.find((t) => t.id === activeTab);
     const term = searchTerm.trim().toLowerCase();
     return leads.filter((l) => {
+      if (tab?.draftsOnly && !l.draft_updated_at) return false;
       if (tab?.statuses && !tab.statuses.includes(l.status)) return false;
       if (!term) return true;
       return (
@@ -440,6 +449,11 @@ const AdminSalesLeads: React.FC = () => {
                   {t.label}
                   {t.id === 'unassigned-emails' && unassignedEmailCount > 0 && (
                     <Badge className="ml-1.5 h-5 min-w-5 justify-center px-1.5">{unassignedEmailCount}</Badge>
+                  )}
+                  {t.draftsOnly && draftCount > 0 && (
+                    <Badge data-testid="sl-drafts-count" className="ml-1.5 h-5 min-w-5 justify-center px-1.5">
+                      {draftCount}
+                    </Badge>
                   )}
                 </TabsTrigger>
               ))}
