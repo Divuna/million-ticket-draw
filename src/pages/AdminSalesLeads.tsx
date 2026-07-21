@@ -31,6 +31,8 @@ import {
 import { AddSalesLeadDialog } from '@/components/admin/sales-leads/AddSalesLeadDialog';
 import { SalesLeadDetailSheet } from '@/components/admin/sales-leads/SalesLeadDetailSheet';
 import { DiscoverLeadsDialog } from '@/components/admin/sales-leads/DiscoverLeadsDialog';
+import { DiscoveryStatusBar } from '@/components/admin/sales-leads/DiscoveryStatusBar';
+import { useDiscoveryJob, type DiscoveryJobRow } from '@/components/admin/sales-leads/useDiscoveryJob';
 import { SalesLeadOverview } from '@/components/admin/sales-leads/SalesLeadOverview';
 import { SalesLeadEmailTemplateManager } from '@/components/admin/sales-leads/SalesLeadEmailTemplateManager';
 import { SalesLeadUnassignedEmails } from '@/components/admin/sales-leads/SalesLeadUnassignedEmails';
@@ -154,6 +156,30 @@ const AdminSalesLeads: React.FC = () => {
   useEffect(() => {
     load();
   }, [load]);
+
+  /**
+   * Sledování hledání nových firem žije NAD dialogem — zavření okna ho
+   * nezastaví a stav přežije i refresh stránky (dohledá se poslední běžící
+   * úloha admina v `sales_lead_discovery_jobs`).
+   */
+  const handleDiscoveryFinished = useCallback((finishedJob: DiscoveryJobRow) => {
+    // Po dokončení: obnovit seznam i počty a přepnout na „Návrhy".
+    load();
+    setActiveTab('proposed');
+    if (finishedJob.status === 'failed') {
+      toast.error('Vyhledávání selhalo.');
+    } else if (finishedJob.status === 'stopped') {
+      toast.message(`Vyhledávání zastaveno — uloženo ${finishedJob.created_count} firem.`);
+    } else {
+      toast.success(`Vyhledávání dokončeno — uloženo ${finishedJob.created_count} firem.`);
+    }
+  }, [load]);
+
+  // Průběžné obnovení během běhu — bez přepínání záložky.
+  const discovery = useDiscoveryJob({
+    onFinished: handleDiscoveryFinished,
+    onProgress: load,
+  });
 
   // Obnovení bez pollingu: stav leadu mění i věci mimo tuto stránku (příchozí
   // odpověď firmy přes `sales-lead-inbound`, jiná záložka prohlížeče). Místo
@@ -363,6 +389,11 @@ const AdminSalesLeads: React.FC = () => {
         </div>
       )}
 
+      {/* Stav hledání nových firem — viditelný i při zavřeném dialogu */}
+      {discovery.showStatusBar && discovery.job && (
+        <DiscoveryStatusBar job={discovery.job} onOpen={() => setDiscoverOpen(true)} />
+      )}
+
       {/* Souhrnné karty */}
       <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-8 gap-3">
         {summaryCards.map((c) => (
@@ -541,7 +572,10 @@ const AdminSalesLeads: React.FC = () => {
       <DiscoverLeadsDialog
         open={discoverOpen}
         onOpenChange={setDiscoverOpen}
-        onSuccess={() => { setActiveTab('proposed'); load(); }}
+        job={discovery.showStatusBar ? discovery.job : null}
+        isRunning={discovery.isRunning}
+        onStart={discovery.startJob}
+        onStop={discovery.stopJob}
       />
       <SalesLeadDetailSheet
         leadId={detailId}
