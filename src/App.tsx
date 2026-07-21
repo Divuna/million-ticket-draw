@@ -63,7 +63,6 @@ import Wins from "@/pages/Wins";
 import FavoriteGames from "@/pages/FavoriteGames";
 import ShareTicket from "@/pages/ShareTicket";
 import UnsubscribeMarketing from "@/pages/UnsubscribeMarketing";
-import OnboardingDateOfBirth from "@/pages/OnboardingDateOfBirth";
 import DeleteAccount from "@/pages/DeleteAccount";
 import Kontakt from "@/pages/Kontakt";
 import PartnerLogin from "@/pages/PartnerLogin";
@@ -104,6 +103,7 @@ import { RequireSuperadminOrRedirect } from "@/components/admin/RequireSuperadmi
 import { RequireSuperadmin } from "@/components/admin/RequireSuperadmin";
 import { useUserRole } from "@/hooks/useUserRole";
 import { useApplyPendingReferral } from "@/hooks/useApplyPendingReferral";
+import { useApplyPendingAdultConfirmation } from "@/hooks/useApplyPendingAdultConfirmation";
 import { useRetentionTriggers } from "@/hooks/useRetentionTriggers";
 import { useHeartbeat } from "@/hooks/useHeartbeat";
 import { GlobalMusicPlayer } from "@/components/GlobalMusicPlayer";
@@ -384,6 +384,8 @@ function AppContent() {
   const partnerData = usePartnerData(isPartnerAccount && !isInfluencerAccount ? user?.id : undefined);
   useOneSignal();
   useApplyPendingReferral(user?.id);
+  // Uloží potvrzení 18+ po přihlášení (zejména po návratu z OAuth).
+  useApplyPendingAdultConfirmation(user?.id);
   useRetentionTriggers(user?.id);
   useHeartbeat(user?.id);
 
@@ -621,7 +623,9 @@ function AppContent() {
           <Route path="/winners" element={<Winners />} />
           <Route path="/wins" element={<Wins />} />
           <Route path="/share/ticket/:ticketId" element={<ShareTicket />} />
-          <Route path="/onboarding/date-of-birth" element={<OnboardingDateOfBirth />} />
+          {/* Datum narození se už při registraci nevyžaduje — stará onboarding
+              routa přesměruje na domovskou stránku, nikoho neblokuje. */}
+          <Route path="/onboarding/date-of-birth" element={<Navigate to="/" replace />} />
           <Route element={<AdminLayout />}>
             <Route path="/admin" element={<RequireSuperadminOrRedirect><AdminDashboard /></RequireSuperadminOrRedirect>} />
             <Route path="/admin/users" element={<RequirePermission permission="users.view.basic"><AdminUsers /></RequirePermission>} />
