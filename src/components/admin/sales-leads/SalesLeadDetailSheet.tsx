@@ -508,6 +508,7 @@ export function SalesLeadDetailSheet({ leadId, open, onOpenChange, onMutated }: 
   const [activityAuthors, setActivityAuthors] = useState<Record<string,string>>({});
   const [loading, setLoading] = useState(false);
   const [editing, setEditing] = useState(false);
+  const [approving, setApproving] = useState(false);
   const [form, setForm] = useState<EditForm | null>(null);
   const [saving, setSaving] = useState(false);
   const [aresLoading, setAresLoading] = useState(false);
@@ -779,6 +780,92 @@ export function SalesLeadDetailSheet({ leadId, open, onOpenChange, onMutated }: 
       return;
     }
     await saveEdit(true);
+  };
+
+  /**
+   * Schválení navrženého leadu JEDNOU akcí: uloží právě upravená pole
+   * (včetně `email_verified_by_admin`) a zároveň změní stav `navrzeny → novy`.
+   *
+   * Vše dělá jediná transakční RPC `sales_lead_approve_proposed`, která uvnitř
+   * volá existující `sales_lead_update_fields` + `sales_lead_set_status` —
+   * duplicitní kontroly, historie stavu i audit tedy zůstávají beze změny
+   * a lead nikdy nezůstane napůl uložený.
+   *
+   * Schválit lze i bez zaškrtnutého ověření e-mailu; odesílání e-mailů hlídají
+   * beze změny stávající kontroly jinde.
+   */
+  const approveProposed = async (confirmOverride = false) => {
+    if (!lead || lead.status !== 'navrzeny') return;
+    if (confirmOverride && overrideReason.trim().length < 3) {
+      toast.error('Uveďte důvod výjimky alespoň 3 znaky.');
+      return;
+    }
+    // Když se needituje, vezmi aktuální hodnoty leadu.
+    const values = editing && form ? form : toForm(lead);
+
+    if (values.ico.trim() && !isValidSalesLeadIco(values.ico)) {
+      setIcoError(SALES_LEAD_ICO_ERROR);
+      toast.error(SALES_LEAD_ICO_ERROR);
+      return;
+    }
+    if (!values.company_name.trim()) {
+      toast.error('Název firmy je povinný');
+      return;
+    }
+    const website = values.website.trim();
+    const normalizedWebsite = website
+      ? (/^https?:\/\//i.test(website) ? website : `https://${website}`)
+      : '';
+    if (normalizedWebsite && isNonOfficialWebsiteUrl(normalizedWebsite)) {
+      toast.error('Katalog, rejstřík, sociální síť ani cizí profil nelze uložit jako firemní web.');
+      return;
+    }
+
+    setApproving(true);
+    try {
+      const { data, error } = await (supabase as any).rpc('sales_lead_approve_proposed', {
+        p_lead_id: lead.id,
+        p_company_name: values.company_name.trim(),
+        p_ico: values.ico.trim() || null,
+        p_dic: values.dic.trim() || null,
+        p_website: normalizedWebsite || null,
+        p_industry: values.industry || null,
+        p_city: values.city.trim() || null,
+        p_address: values.address.trim() || null,
+        p_company_size: values.company_size || null,
+        p_contact_person: values.contact_person.trim() || null,
+        p_contact_role: values.contact_role.trim() || null,
+        p_contact_email: values.contact_email.trim() || null,
+        p_contact_phone: values.contact_phone.trim() || null,
+        p_email_source: values.email_source.trim() || null,
+        p_email_verified_by_admin: values.email_verified_by_admin,
+        p_notes: values.notes.trim() || null,
+        p_duplicate_override: confirmOverride,
+        p_duplicate_override_reason: confirmOverride ? overrideReason.trim() : null,
+      });
+      if (error) throw new Error(error.message);
+      const res = (data ?? {}) as { success?: boolean; error?: string; conflicts?: DuplicateConflict[] };
+      if (!res.success) {
+        if (res.error === 'duplicate_conflict' || res.error === 'duplicate_override_reason_required') {
+          setDuplicateConflicts(res.conflicts ?? []);
+          setEditing(true);
+        }
+        toast.error(rpcErrorMessage(res.error));
+        return;
+      }
+      toast.success('Lead byl schválen a uložen.');
+      setPendingStatus(null);
+      setReason('');
+      setEditing(false);
+      setDuplicateConflicts([]);
+      setOverrideReason('');
+      await load();
+      onMutated();
+    } catch (err: unknown) {
+      toast.error(err instanceof Error ? err.message : 'Schválení se nezdařilo');
+    } finally {
+      setApproving(false);
+    }
   };
 
   const startReply = (activity: ActivityRow) => {
@@ -1221,16 +1308,23 @@ export function SalesLeadDetailSheet({ leadId, open, onOpenChange, onMutated }: 
                 {!pendingStatus && targets.length > 0 && (
                   <div className="flex shrink-0 flex-wrap items-center gap-2 xl:max-w-[420px] xl:justify-end">
                     {targets.map((t) => {
-                      const label = lead.status === 'navrzeny' && t === 'novy' ? 'Schválit návrh' : STATUS_LABELS[t];
+                      // Schválení návrhu je JEDNA akce — uloží údaje i změní stav.
+                      // Žádné mezikroky „Schválit návrh" → „Změnit stav na Nový?".
+                      const isApprove = lead.status === 'navrzeny' && t === 'novy';
                       return (
                         <Button
                           key={t}
-                          variant={lead.status === 'navrzeny' && t === 'novy' ? 'default' : 'outline'}
+                          variant={isApprove ? 'default' : 'outline'}
                           size="sm"
-                          onClick={() => { setPendingStatus(t); setReason(''); }}
-                          className={lead.status === 'navrzeny' && t === 'novy' ? 'h-9 rounded-xl px-4 font-semibold shadow-md shadow-primary/20 transition-colors duration-150' : 'h-9 rounded-xl border-white/[0.09] bg-background/60 px-4 transition-colors duration-150 hover:bg-muted/70'}
+                          data-testid={isApprove ? 'sl-approve-proposed' : undefined}
+                          disabled={isApprove && (approving || saving)}
+                          onClick={isApprove
+                            ? () => void approveProposed(false)
+                            : () => { setPendingStatus(t); setReason(''); }}
+                          className={isApprove ? 'h-9 gap-1.5 rounded-xl px-4 font-semibold shadow-md shadow-primary/20 transition-colors duration-150' : 'h-9 rounded-xl border-white/[0.09] bg-background/60 px-4 transition-colors duration-150 hover:bg-muted/70'}
                         >
-                          {label}
+                          {isApprove && approving && <Loader2 className="h-3.5 w-3.5 animate-spin" />}
+                          {isApprove ? 'Schválit a uložit lead' : STATUS_LABELS[t]}
                         </Button>
                       );
                     })}
@@ -1303,9 +1397,10 @@ export function SalesLeadDetailSheet({ leadId, open, onOpenChange, onMutated }: 
               )}
               {lead.status === 'navrzeny' && (
                 <p className="text-[11px] text-muted-foreground">
-                  Navržený lead: rozhodněte ručně — <strong>Schválit návrh</strong> (→ Nový),
-                  <strong> Nekontaktovat</strong> nebo <strong>Archivován</strong>. Do oslovování ani
-                  odesílání e-mailu se z návrhu nedostanete přímo — nejdřív musí projít schválením.
+                  Navržený lead: rozhodněte ručně — <strong>Schválit a uložit lead</strong> (uloží
+                  úpravy a rovnou přepne na Nový), <strong>Nekontaktovat</strong> nebo
+                  <strong> Archivován</strong>. Do oslovování ani odesílání e-mailu se z návrhu
+                  nedostanete přímo — nejdřív musí projít schválením.
                 </p>
               )}
               {lead.do_not_contact && lead.do_not_contact_reason && (
@@ -1535,12 +1630,28 @@ export function SalesLeadDetailSheet({ leadId, open, onOpenChange, onMutated }: 
                 <DuplicateConflictAlert conflicts={duplicateConflicts} reason={overrideReason}
                   onReasonChange={setOverrideReason} disabled={saving} />
                 <div className="flex justify-end gap-2 pt-1">
-                  <Button variant="outline" onClick={() => setEditing(false)} disabled={saving || aresLoading}>Zrušit</Button>
-                  <Button onClick={duplicateConflicts.length > 0 ? confirmEditOverride : () => saveEdit(false)}
-                    variant={duplicateConflicts.length > 0 ? 'destructive' : 'default'} disabled={saving || aresLoading} className="gap-1.5">
-                    {saving && <Loader2 className="h-4 w-4 animate-spin" />}
-                    {duplicateConflicts.length > 0 ? 'Potvrdit výjimku a pokračovat' : 'Uložit'}
-                  </Button>
+                  <Button variant="outline" onClick={() => setEditing(false)} disabled={saving || approving || aresLoading}>Zrušit</Button>
+                  {lead.status === 'navrzeny' ? (
+                    // Navržený lead: jedna hlavní akce — uloží úpravy a rovnou schválí.
+                    <Button
+                      data-testid="sl-approve-proposed-edit"
+                      onClick={duplicateConflicts.length > 0
+                        ? () => void approveProposed(true)
+                        : () => void approveProposed(false)}
+                      variant={duplicateConflicts.length > 0 ? 'destructive' : 'default'}
+                      disabled={saving || approving || aresLoading}
+                      className="gap-1.5"
+                    >
+                      {approving && <Loader2 className="h-4 w-4 animate-spin" />}
+                      {duplicateConflicts.length > 0 ? 'Potvrdit výjimku a schválit' : 'Schválit a uložit lead'}
+                    </Button>
+                  ) : (
+                    <Button onClick={duplicateConflicts.length > 0 ? confirmEditOverride : () => saveEdit(false)}
+                      variant={duplicateConflicts.length > 0 ? 'destructive' : 'default'} disabled={saving || aresLoading} className="gap-1.5">
+                      {saving && <Loader2 className="h-4 w-4 animate-spin" />}
+                      {duplicateConflicts.length > 0 ? 'Potvrdit výjimku a pokračovat' : 'Uložit'}
+                    </Button>
+                  )}
                 </div>
               </div>
             )}
