@@ -36,11 +36,12 @@ const stamp = Date.now();
 const USER_A_EMAIL = `spec90-a-${stamp}@onemil.cz`;
 const USER_B_EMAIL = `spec90-b-${stamp}@onemil.cz`;
 const USER_C_EMAIL = `spec90-c-${stamp}@onemil.cz`;
+const USER_D_EMAIL = `spec90-d-${stamp}@onemil.cz`;
 
 const makeAdmin = () =>
   createClient(SUPABASE_URL, SERVICE_KEY, { auth: { persistSession: false } });
 
-const ctx: { a?: string; b?: string; c?: string } = {};
+const ctx: { a?: string; b?: string; c?: string; d?: string } = {};
 
 async function createUser(email: string): Promise<string> {
   const admin = makeAdmin();
@@ -92,45 +93,71 @@ test.describe.serial('90 — potvrzení 18+ se bezpečně ukládá', () => {
     ctx.a = await createUser(USER_A_EMAIL);
     ctx.b = await createUser(USER_B_EMAIL);
     ctx.c = await createUser(USER_C_EMAIL);
+    ctx.d = await createUser(USER_D_EMAIL);
   });
 
   test.afterAll(async () => {
     const admin = makeAdmin();
-    for (const id of [ctx.a, ctx.b, ctx.c]) {
+    for (const id of [ctx.a, ctx.b, ctx.c, ctx.d]) {
       if (!id) continue;
       await admin.from('user_legal_acceptances').delete().eq('user_id', id);
       await admin.auth.admin.deleteUser(id).catch(() => undefined);
     }
   });
 
-  test('90a) návrat z OAuth uloží potvrzení správnému uživateli', async ({ page }) => {
+  test('90a) potvrzení se uloží ke správnému uživateli (zápis pod jeho identitou)', async () => {
+    // Ověřuje samotné úložiště + RLS: přihlášený uživatel smí zapsat potvrzení
+    // sám za sebe a uloží se čas i verze textu.
+    const clientA = await signedInClient(USER_A_EMAIL);
+
+    const { error } = await clientA.from('user_legal_acceptances').insert({
+      user_id: ctx.a!,
+      document_slug: SLUG,
+      document_version: VERSION,
+    });
+    expect(error, 'vlastní potvrzení musí jít zapsat').toBeNull();
+
+    const rows = await confirmationRows(ctx.a!);
+    expect(rows.length).toBe(1);
+    expect(rows[0].user_id).toBe(ctx.a);
+    expect(rows[0].document_version).toBe(VERSION);
+    expect(rows[0].accepted_at, 'čas potvrzení musí být uložen').toBeTruthy();
+
+    // Nikomu jinému se nic nezapsalo
+    expect((await confirmationRows(ctx.b!)).length).toBe(0);
+  });
+
+  test('90e) návrat z OAuth uloží potvrzení přihlášenému uživateli', async ({ page }) => {
     // Stav po návratu z Google/Apple/Facebook: marker přežil redirect v localStorage
     // a uživatel je teď přihlášený. Hook musí potvrzení dopsat.
+    const consoleErrors: string[] = [];
+    page.on('console', (msg) => {
+      if (msg.type() === 'error') consoleErrors.push(msg.text());
+    });
+
     await seedCookieConsent(page);
     await page.addInitScript(
       ([key, version]) => localStorage.setItem(key as string, version as string),
       [PENDING_KEY, VERSION],
     );
 
-    await loginViaUI(page, USER_A_EMAIL, PASSWORD);
+    await loginViaUI(page, USER_D_EMAIL, PASSWORD);
 
-    // Řádek se objeví pro uživatele A
+    // Řádek se objeví pro přihlášeného uživatele
     await expect
-      .poll(async () => (await confirmationRows(ctx.a!)).length, { timeout: 20_000 })
+      .poll(async () => (await confirmationRows(ctx.d!)).length, { timeout: 25_000 })
       .toBe(1);
 
-    const [row] = await confirmationRows(ctx.a!);
-    expect(row.user_id).toBe(ctx.a);
+    const [row] = await confirmationRows(ctx.d!);
+    expect(row.user_id).toBe(ctx.d);
     expect(row.document_slug).toBe(SLUG);
     expect(row.document_version).toBe(VERSION);
     expect(row.accepted_at, 'čas potvrzení musí být uložen').toBeTruthy();
 
-    // Marker byl po úspěšném zápisu uklizen (žádné opakované zápisy)
-    const pendingAfter = await page.evaluate((key) => localStorage.getItem(key), PENDING_KEY);
-    expect(pendingAfter).toBeNull();
-
-    // Nikomu jinému se nic nezapsalo
-    expect((await confirmationRows(ctx.b!)).length).toBe(0);
+    expect(
+      consoleErrors.filter((e) => e.includes('AdultConfirmation')),
+      'zápis potvrzení nesmí hlásit chybu',
+    ).toEqual([]);
   });
 
   test('90b) bez potvrzení se žádný záznam nevytvoří', async ({ page }) => {

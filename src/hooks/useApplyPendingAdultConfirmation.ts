@@ -70,11 +70,16 @@ export async function recordAdultConfirmation(
 
   if (existing) return;
 
-  await supabase.from('user_legal_acceptances').insert({
+  const { error } = await supabase.from('user_legal_acceptances').insert({
     user_id: userId,
     document_slug: ADULT_CONFIRMATION_SLUG,
     document_version: version,
   });
+
+  // Chybu NEpolykat — marker se pak nesmí smazat a zápis se zkusí znovu.
+  if (error) {
+    throw new Error(`adult confirmation insert failed: ${error.message}`);
+  }
 }
 
 /**
@@ -102,8 +107,9 @@ export function useApplyPendingAdultConfirmation(userId: string | undefined): vo
       try {
         await recordAdultConfirmation(userId, pending || ADULT_CONFIRMATION_VERSION);
         clearAdultConfirmationPending();
-      } catch {
+      } catch (err) {
         // non-blocking; marker zůstane a zápis se zkusí při příštím načtení
+        console.error('[AdultConfirmation] zápis potvrzení 18+ selhal', err);
         appliedRef.current = false;
       }
     })();
