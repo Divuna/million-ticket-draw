@@ -32,6 +32,9 @@ const FacebookIcon = () => (
   </svg>
 );
 
+/** Povinné potvrzení 18+ platí pro e-mailovou i sociální (OAuth) registraci. */
+const AGE_CONFIRM_ERROR = 'Pro registraci musíte potvrdit, že vám bylo 18 let.';
+
 const Register: React.FC = () => {
   const [searchParams] = useSearchParams();
   const [email, setEmail] = useState('');
@@ -66,7 +69,7 @@ const Register: React.FC = () => {
     setAgeError('');
 
     if (!ageConfirmed) {
-      setAgeError('Pro registraci musíte potvrdit, že vám bylo 18 let.');
+      setAgeError(AGE_CONFIRM_ERROR);
       return;
     }
 
@@ -160,6 +163,14 @@ const Register: React.FC = () => {
   };
 
   const handleOAuthSignIn = async (provider: OAuthProvider) => {
+    // Potvrzení 18+ je povinné i pro registraci přes Google / Apple / Facebook.
+    // Bez zaškrtnutí se nesmí spustit žádné přesměrování k poskytovateli.
+    if (!ageConfirmed) {
+      setAgeError(AGE_CONFIRM_ERROR);
+      return;
+    }
+    setAgeError('');
+
     try {
       await signInWithOAuth(provider, searchParams.get('redirect'));
     } catch (error) {
