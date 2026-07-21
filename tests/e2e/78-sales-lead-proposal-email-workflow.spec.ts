@@ -25,7 +25,11 @@ test.describe('sales lead proposal and initial-email workflow', () => {
   test('human proposal approval uses existing navrzeny -> novy transition', () => {
     expect(isTransitionAllowed('navrzeny', 'novy', false)).toBe(true);
     expect(isTransitionAllowed('navrzeny', 'priprava', true)).toBe(false);
-    expect(detail).toContain("lead.status === 'navrzeny' && t === 'novy' ? 'Schválit návrh'");
+    // Schválení návrhu zůstává ruční akcí člověka nad přechodem navrzeny → novy.
+    // Nově je to jedna akce („Schválit a uložit lead") místo tří kroků.
+    expect(detail).toContain("lead.status === 'navrzeny' && t === 'novy'");
+    expect(detail).toContain('Schválit a uložit lead');
+    expect(detail).toContain('sales_lead_approve_proposed');
     expect(adminPage).toContain("{ id: 'proposed', label: 'Návrhy', statuses: ['navrzeny'] }");
     expect(adminPage).toContain("{ id: 'new', label: 'Nové', statuses: ['novy'] }");
   });
