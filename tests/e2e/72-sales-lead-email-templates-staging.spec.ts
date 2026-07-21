@@ -227,14 +227,25 @@ test.describe.serial('Sales lead email templates – real staging acceptance', (
     for (const value of [companies.initial, 'Jana Nováková', 'CEO', 'Brno', 'https://initial.e2e-template.example']) expect(initialBody).toContain(value);
     expect(initialBody).not.toMatch(/\{\{[^{}]+\}\}/);
 
-    const beforeAssist = await admin.from('sales_leads').select('draft_email_subject,draft_email_body').eq('id', leadIds[0]).single();
     for (const action of ['Personalizovat pro firmu', 'Vylepšit text']) {
       const response = page.waitForResponse((res) => res.url().includes('/functions/v1/sales-lead-draft-email') && res.request().method() === 'POST', { timeout: 30_000 });
       await engagement.getByRole('button', { name: action, exact: true }).click();
       expect((await response).status()).toBe(200);
     }
-    const afterAssist = await admin.from('sales_leads').select('draft_email_subject,draft_email_body').eq('id', leadIds[0]).single();
-    expect(afterAssist.data).toEqual(beforeAssist.data);
+    // Koncept se nově tiše automaticky ukládá (viz spec 93), takže DB se po
+    // asistenci legitimně změní. Invariant ale platí dál: v DB nesmí být NIC
+    // jiného než přesný obsah editoru — AI sama nic tajně nezapisuje.
+    const editorSubject = await page.locator('#sl-draft-subject').inputValue();
+    const editorBody = await page.locator('#sl-draft-body').inputValue();
+    await expect
+      .poll(async () => {
+        const { data } = await admin
+          .from('sales_leads')
+          .select('draft_email_subject,draft_email_body')
+          .eq('id', leadIds[0]).single();
+        return `${data?.draft_email_subject ?? ''} ${data?.draft_email_body ?? ''}`;
+      }, { timeout: 15_000 })
+      .toBe(`${editorSubject} ${editorBody}`);
 
     await closeLead(page);
     await admin.from('sales_leads').update({ contact_role: null }).eq('id', leadIds[0]);

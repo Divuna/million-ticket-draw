@@ -1062,6 +1062,25 @@ export function SalesLeadDetailSheet({ leadId, open, onOpenChange, onMutated }: 
     onPersisted: onMutated,
   });
 
+  /**
+   * Best-effort vyčištění konceptu na serveru. Záměrně samostatná funkce —
+   * úklid nesmí být nikdy blízko mazání editoru, aby při chybě odeslání
+   * nemohl přijít rozepsaný text uživatele.
+   */
+  const clearServerDraft = async (targetLeadId: string) => {
+    try {
+      await (supabase as any).rpc('sales_lead_autosave_draft', {
+        p_lead_id: targetLeadId,
+        p_subject: '',
+        p_body: '',
+        p_client_updated_at: new Date().toISOString(),
+      });
+      clearLocalDraft(targetLeadId);
+    } catch {
+      // odeslání už proběhlo; koncept se doklidí při dalším uložení
+    }
+  };
+
   const deleteDraft = async () => {
     if (!lead) return;
     setDraftSaving(true);
@@ -1263,15 +1282,10 @@ export function SalesLeadDetailSheet({ leadId, open, onOpenChange, onMutated }: 
       // Koncept je vyřízený → lead zmizí z Rozpracovaných.
       // Odeslaný e-mail zůstává v historii (aktivity se nemění).
       autosave.reset();
-      try {
-        await (supabase as any).rpc('sales_lead_autosave_draft', {
-          p_lead_id: lead.id, p_subject: '', p_body: '',
-          p_client_updated_at: new Date().toISOString(),
-        });
-      } catch { /* best-effort úklid konceptu; odeslání už proběhlo */ }
       setDraftSubject('');
       setDraftBody('');
       draftTouchedRef.current = false;
+      await clearServerDraft(lead.id);
       await load();
       onMutated();
     } catch (err: unknown) {
