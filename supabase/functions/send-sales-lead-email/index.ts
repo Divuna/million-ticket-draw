@@ -68,6 +68,10 @@ function validateEmailContent(subject: string, body: string): string | null {
   return null;
 }
 
+function isValidRecipient(value: string): boolean {
+  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value) && value.length <= 320;
+}
+
 serve(async (req: Request) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders });
   if (req.method !== "POST") return jsonResponse({ success: false, error: "method_not_allowed" }, 405);
@@ -107,6 +111,16 @@ serve(async (req: Request) => {
     }
     const leadId = typeof body.lead_id === "string" ? body.lead_id.trim() : null;
     if (!leadId) return jsonResponse({ success: false, error: "lead_id_required" }, 400);
+    const reuseSourceActivityId = typeof body.reuse_source_activity_id === "string"
+      ? body.reuse_source_activity_id.trim()
+      : null;
+    const reuseMode = body.reuse_mode === "resend" || body.reuse_mode === "forward"
+      ? body.reuse_mode
+      : null;
+    const isReuse = Boolean(reuseSourceActivityId);
+    if (isReuse !== Boolean(reuseMode)) {
+      return jsonResponse({ success: false, error: "invalid_reuse_request" }, 422);
+    }
     const subject = typeof body.subject === "string" ? body.subject : null;
     const textBody = typeof body.body === "string" ? body.body : null;
     if (subject === null || textBody === null) {
@@ -126,19 +140,48 @@ serve(async (req: Request) => {
     if (leadErr) return jsonResponse({ success: false, error: "lead_lookup_failed" }, 500);
     if (!lead) return jsonResponse({ success: false, error: "lead_not_found" }, 404);
     if (lead.status === "navrzeny") {
-      return jsonResponse({ success: false, error: "proposal_not_approved" }, 409);
+      if (!isReuse) {
+        return jsonResponse({ success: false, error: "proposal_not_approved" }, 409);
+      }
     }
-    if (!INITIAL_EMAIL_ALLOWED_STATUSES.has(lead.status)) {
+    if (!isReuse && !INITIAL_EMAIL_ALLOWED_STATUSES.has(lead.status)) {
       return jsonResponse({ success: false, error: "initial_email_status_not_allowed" }, 409);
     }
 
     // ── 4. Tvrdé bariéry ─────────────────────────────────────────────────────
-    const recipient = (lead.contact_email ?? "").trim().toLowerCase();
-    if (!recipient || lead.email_verified_by_admin !== true) {
+    const recipient = isReuse
+      ? (typeof body.recipient === "string" ? body.recipient.trim().toLowerCase() : "")
+      : (lead.contact_email ?? "").trim().toLowerCase();
+    if (!isReuse && (!recipient || lead.email_verified_by_admin !== true)) {
       return jsonResponse({ success: false, error: "missing_contact_email" }, 422);
+    }
+    if (!isValidRecipient(recipient)) {
+      return jsonResponse({ success: false, error: "invalid_recipient" }, 422);
     }
     if (lead.do_not_contact === true) {
       return jsonResponse({ success: false, error: "do_not_contact" }, 403);
+    }
+
+    let reuseSource: {
+      id: string;
+      metadata: Record<string, unknown> | null;
+    } | null = null;
+    if (isReuse) {
+      const { data: source, error: sourceError } = await supabaseAdmin
+        .from("sales_lead_activities")
+        .select("id, metadata")
+        .eq("id", reuseSourceActivityId)
+        .eq("lead_id", leadId)
+        .eq("activity_type", "email_sent")
+        .eq("direction", "outbound")
+        .maybeSingle();
+      if (sourceError) {
+        return jsonResponse({ success: false, error: "reuse_source_lookup_failed" }, 500);
+      }
+      if (!source) {
+        return jsonResponse({ success: false, error: "reuse_source_not_found" }, 404);
+      }
+      reuseSource = source as typeof reuseSource;
     }
 
     // Poslední bariéra — globální suppression list (§12): přesný e-mail nebo @doména.
@@ -155,20 +198,22 @@ serve(async (req: Request) => {
 
     // Idempotency guard: if Resend succeeded previously but a later DB step
     // failed, the same first e-mail must never be sent again.
-    const { data: previousInitialEmail, error: previousInitialEmailError } = await supabaseAdmin
-      .from("sales_lead_activities")
-      .select("id")
-      .eq("lead_id", leadId)
-      .eq("activity_type", "email_sent")
-      .eq("direction", "outbound")
-      .contains("metadata", { sent_by: "human" })
-      .limit(1)
-      .maybeSingle();
-    if (previousInitialEmailError) {
-      return jsonResponse({ success: false, error: "initial_email_history_check_failed" }, 500);
-    }
-    if (previousInitialEmail) {
-      return jsonResponse({ success: false, error: "initial_email_already_sent" }, 409);
+    if (!isReuse) {
+      const { data: previousInitialEmail, error: previousInitialEmailError } = await supabaseAdmin
+        .from("sales_lead_activities")
+        .select("id")
+        .eq("lead_id", leadId)
+        .eq("activity_type", "email_sent")
+        .eq("direction", "outbound")
+        .contains("metadata", { sent_by: "human" })
+        .limit(1)
+        .maybeSingle();
+      if (previousInitialEmailError) {
+        return jsonResponse({ success: false, error: "initial_email_history_check_failed" }, 500);
+      }
+      if (previousInitialEmail) {
+        return jsonResponse({ success: false, error: "initial_email_already_sent" }, 409);
+      }
     }
 
     // Autoritativní kontrola duplicit těsně před odesláním. Frontend ji nemůže
@@ -224,10 +269,15 @@ serve(async (req: Request) => {
       email_message_id: (emailResponse.data as { id?: string } | null)?.id ?? null,
       performed_by: caller.id,
       metadata: {
-        sent_by: "human",
+        sent_by: isReuse ? (reuseMode === "forward" ? "human_forward" : "human_resend") : "human",
         from: "b2b@onemil.cz",
         reply_to: "b2b@onemil.cz",
         to: recipient,
+        reused_from_activity_id: reuseSource?.id ?? null,
+        reuse_mode: reuseMode,
+        original_recipient: typeof reuseSource?.metadata?.to === "string"
+          ? reuseSource.metadata.to
+          : null,
         resend_email_id: (emailResponse.data as { id?: string } | null)?.id ?? null,
         outbound_capture_id: outboundCapture.id,
         attachments: attachmentResult.metadata,
@@ -239,28 +289,35 @@ serve(async (req: Request) => {
     }
 
     // ── 7. Povinné propsání stavu (§18 spec) ─────────────────────────────────
-    const { data: statusData, error: statusError } = await supabaseAdmin.rpc("sales_lead_mark_emailed", {
-      p_lead_id: leadId,
-      p_performed_by: caller.id,
-    });
-    const statusResult = statusData as {
-      success?: boolean;
-      status_changed?: boolean;
-      new_status?: string;
-      current_status?: string;
-    } | null;
-    const movedToContacted = statusResult?.success === true
-      && statusResult.status_changed === true
-      && statusResult.new_status === "osloveno";
-    const alreadyProgressed = statusResult?.success === true
-      && statusResult.status_changed === false
-      && typeof statusResult.current_status === "string"
-      && ALREADY_CONTACTED_STATUSES.has(statusResult.current_status);
-    if (statusError || (!movedToContacted && !alreadyProgressed)) {
-      return jsonResponse({ success: false, error: "status_sync_failed_after_send", email_sent: true });
+    if (!isReuse) {
+      const { data: statusData, error: statusError } = await supabaseAdmin.rpc("sales_lead_mark_emailed", {
+        p_lead_id: leadId,
+        p_performed_by: caller.id,
+      });
+      const statusResult = statusData as {
+        success?: boolean;
+        status_changed?: boolean;
+        new_status?: string;
+        current_status?: string;
+      } | null;
+      const movedToContacted = statusResult?.success === true
+        && statusResult.status_changed === true
+        && statusResult.new_status === "osloveno";
+      const alreadyProgressed = statusResult?.success === true
+        && statusResult.status_changed === false
+        && typeof statusResult.current_status === "string"
+        && ALREADY_CONTACTED_STATUSES.has(statusResult.current_status);
+      if (statusError || (!movedToContacted && !alreadyProgressed)) {
+        return jsonResponse({ success: false, error: "status_sync_failed_after_send", email_sent: true });
+      }
     }
 
-    return jsonResponse({ success: true, lead_id: leadId, sent_to: recipient });
+    return jsonResponse({
+      success: true,
+      lead_id: leadId,
+      sent_to: recipient,
+      reused_from_activity_id: reuseSource?.id ?? null,
+    });
   } catch (_err) {
     return jsonResponse({ success: false, error: "internal_error" }, 500);
   }
