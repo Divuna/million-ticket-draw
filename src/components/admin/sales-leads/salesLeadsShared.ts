@@ -172,6 +172,8 @@ export interface SalesLeadRow {
   assigned_admin_id: string | null;
   // Fáze 4B — marketingová skupina (návrhy leadů).
   lead_group: string | null;
+  /** Kdy byl koncept e-mailu naposledy uložen. Vyplněno = „Rozpracovaný". */
+  draft_updated_at: string | null;
 }
 
 export interface DuplicateConflict {
