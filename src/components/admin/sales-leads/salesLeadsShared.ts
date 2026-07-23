@@ -274,6 +274,10 @@ export const RPC_ERROR_MESSAGES: Record<string, string> = {
   status_sync_failed_after_send: 'E-mail byl odeslán, ale stav leadu se nepodařilo synchronizovat. E-mail znovu neposílejte.',
   initial_email_history_check_failed: 'Nepodařilo se ověřit historii prvního e-mailu. Nic nebylo odesláno.',
   initial_email_already_sent: 'První e-mail už byl tomuto leadu odeslán a nelze jej odeslat znovu.',
+  invalid_recipient: 'Zadejte platnou e-mailovou adresu příjemce.',
+  invalid_reuse_request: 'Požadavek na opětovné použití e-mailu není platný.',
+  reuse_source_not_found: 'Původní odeslaný e-mail nebyl nalezen.',
+  reuse_source_lookup_failed: 'Původní e-mail se nepodařilo bezpečně ověřit. Nic nebylo odesláno.',
 };
 
 export function rpcErrorMessage(code: string | undefined): string {
