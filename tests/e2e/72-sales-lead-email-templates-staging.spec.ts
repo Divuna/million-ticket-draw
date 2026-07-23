@@ -260,8 +260,20 @@ test.describe.serial('Sales lead email templates – real staging acceptance', (
     await engagementMissing.getByRole('button', { name: 'Uložit koncept' }).click();
     await expect(page.getByText(/Doplňte nevyřešené proměnné/).last()).toBeVisible();
     await expect(engagementMissing.getByRole('button', { name: 'Odeslat e-mail' })).toBeDisabled();
-    const stillUnsaved = await admin.from('sales_leads').select('draft_email_subject,draft_email_body').eq('id', leadIds[0]).single();
-    expect(stillUnsaved.data).toEqual(beforeAssist.data);
+    // Ruční „Uložit koncept" i odeslání zůstávají blokované validací
+    // (nevyřešená proměnná). Tiché autosave ale rozepsaný text ochrání —
+    // v DB proto smí být přesně obsah editoru (a nic jiného).
+    const missingSubject = await page.locator('#sl-draft-subject').inputValue();
+    const missingBody = await page.locator('#sl-draft-body').inputValue();
+    await expect
+      .poll(async () => {
+        const { data } = await admin
+          .from('sales_leads')
+          .select('draft_email_subject,draft_email_body')
+          .eq('id', leadIds[0]).single();
+        return `${data?.draft_email_subject ?? ''} ${data?.draft_email_body ?? ''}`;
+      }, { timeout: 15_000 })
+      .toBe(`${missingSubject} ${missingBody}`);
     await admin.from('sales_leads').update({ contact_role: 'CEO' }).eq('id', leadIds[0]);
     await closeLead(page);
 
