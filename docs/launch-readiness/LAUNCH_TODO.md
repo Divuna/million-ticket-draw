@@ -97,6 +97,8 @@
 | L08 | P0 | 18+ gating | Věkový limit | Vynucen | **PROŠLO 15.06.: spec 49 (49-age-gating.spec.ts) — 6/6 passed (run 27541581559). Ověřeno: /register odmítne věk 17 a 0 let (chybový text zobrazen, zůstane na stránce), přijme věk 18 a 25 (žádná chyba věku); /onboarding/date-of-birth odmítne věk 17 let, přijme věk 18 (age error se nezobrazí; bez session → "Uživatel není přihlášen.").** | /register, /onboarding/date-of-birth | GH run 27541581559 (spec 49, 6 passed) | **prošlo** | spec 49; frontendová validace (validateAge) ověřena na obou vstupních bodech |
 | L09 | P0 | E-maily v právních CMS textech | Sjednocené kontaktní e-maily | Žádný `info@onemil.cz` v aktivních legal CMS; vše `podpora@onemil.cz` | **VYŘEŠENO 15.06. (schválení Pavla): kanonický e-mail = `podpora@onemil.cz`. CMS `content_pages` `info@onemil.cz` → `podpora@onemil.cz` nahrazeno (jen e-mail, beze změny wordingu) ve 3 aktivních legal stránkách: `ochrana-osobnich-udaju`, `cookies`, `autorska-prava` (3. nalezen při precheck — stejný špatný e-mail). Postcheck: 0× `info@` v CMS, 0× `support@`, 5 stránek s `podpora@`. App kód byl už čistý.** | /legal/ochrana-osobnich-udaju, /legal/cookies, /legal/autorska-prava | CMS update + postcheck 15.06. | **prošlo** | L09 uzavřen; právní wording nezměněn (jen e-mail) |
 
+- [ ] Před spuštěním sjednotit a graficky přepracovat všechny automatické odesílací e-maily OneMil. Použít pouze originální logo a schválený vizuální styl OneMil, sjednotit hlavičku, patičku, texty, tlačítka, mobilní zobrazení a otestovat doručení hlavních typů e-mailů.
+
 ## Affiliate / influencer (samostatný program — rozhodnout rozsah pro 1. veřejný test)
 
 | ID | Prio | Oblast | Krok | Očekávaný výsledek | Skutečný | Odkaz | Důkaz | Stav | Pozn. |
