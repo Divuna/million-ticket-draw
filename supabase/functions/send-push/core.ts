@@ -7,10 +7,43 @@ export type PushLogRow = {
   status: string | null;
 };
 
+export type PushLogRecoveryMetadata = {
+  claimed_at: string;
+  recovered_stale_processing: true;
+  recovery_timeout_minutes: number;
+};
+
 export type PushLogClaim =
-  | { state: "claimed"; row: PushLogRow }
+  | {
+    state: "claimed";
+    row: PushLogRow;
+    recovery?: PushLogRecoveryMetadata;
+  }
   | { state: "duplicate"; status: string }
   | { state: "missing" };
+
+export const STALE_PROCESSING_TIMEOUT_MS = 15 * 60 * 1000;
+
+export type PushLogClaimResponse = {
+  ok: null;
+  stage: "processing";
+  claimed_at: string;
+  recovered_stale_processing?: true;
+  recovery_timeout_minutes?: number;
+};
+
+export interface PushLogClaimBackend {
+  claimPending(
+    id: string,
+    response: PushLogClaimResponse,
+  ): Promise<PushLogRow | null>;
+  claimStaleProcessing(
+    id: string,
+    staleBefore: string,
+    response: PushLogClaimResponse,
+  ): Promise<PushLogRow | null>;
+  readStatus(id: string): Promise<string | null | undefined>;
+}
 
 export interface PushLogStore {
   claimPending(id: string): Promise<PushLogClaim>;
@@ -35,6 +68,53 @@ export function normalizePlayerId(playerId: unknown): string | null {
   const value = playerId.trim();
   if (!value || value.length < 10 || !/^[A-Za-z0-9_-]+$/.test(value)) return null;
   return value;
+}
+
+export async function claimPushLogForDelivery(
+  id: string,
+  backend: PushLogClaimBackend,
+  now = new Date(),
+): Promise<PushLogClaim> {
+  const claimedAt = now.toISOString();
+  const pendingRow = await backend.claimPending(id, {
+    ok: null,
+    stage: "processing",
+    claimed_at: claimedAt,
+  });
+  if (pendingRow) {
+    return { state: "claimed", row: pendingRow };
+  }
+
+  const staleBefore = new Date(
+    now.getTime() - STALE_PROCESSING_TIMEOUT_MS,
+  ).toISOString();
+  const recoveredRow = await backend.claimStaleProcessing(
+    id,
+    staleBefore,
+    {
+      ok: null,
+      stage: "processing",
+      claimed_at: claimedAt,
+      recovered_stale_processing: true,
+      recovery_timeout_minutes: STALE_PROCESSING_TIMEOUT_MS / 60_000,
+    },
+  );
+  if (recoveredRow) {
+    return {
+      state: "claimed",
+      row: recoveredRow,
+      recovery: {
+        claimed_at: claimedAt,
+        recovered_stale_processing: true,
+        recovery_timeout_minutes: STALE_PROCESSING_TIMEOUT_MS / 60_000,
+      },
+    };
+  }
+
+  const status = await backend.readStatus(id);
+  return status === null || status === undefined
+    ? { state: "missing" }
+    : { state: "duplicate", status };
 }
 
 function parseServiceResponse(rawBody: string): unknown {
@@ -65,6 +145,7 @@ export async function dispatchPendingPush(
     };
   }
 
+  const recoveryMetadata = claim.recovery ?? {};
   const playerId = normalizePlayerId(claim.row.player_id);
   if (!playerId) {
     const response = {
@@ -72,6 +153,7 @@ export async function dispatchPendingPush(
       stage: "validation",
       error: "Invalid player_id (null/empty/format)",
       player_id: claim.row.player_id,
+      ...recoveryMetadata,
     };
     await dependencies.store.markFailed(pushLogId, response);
     return { status: 200, body: { ...response, push_log_id: pushLogId } };
@@ -82,6 +164,7 @@ export async function dispatchPendingPush(
       ok: false,
       stage: "configuration",
       error: "Missing ONESIGNAL_REST_API_KEY",
+      ...recoveryMetadata,
     };
     await dependencies.store.markFailed(pushLogId, response);
     return { status: 500, body: { ...response, push_log_id: pushLogId } };
@@ -113,6 +196,7 @@ export async function dispatchPendingPush(
       status_code: serviceResponse.status,
       body: parseServiceResponse(rawBody),
       raw_body: rawBody,
+      ...recoveryMetadata,
     };
 
     if (serviceResponse.ok) {
@@ -135,6 +219,7 @@ export async function dispatchPendingPush(
       ok: false,
       stage: "onesignal_request",
       error: error instanceof Error ? error.message : String(error),
+      ...recoveryMetadata,
     };
     await dependencies.store.markFailed(pushLogId, response);
     return { status: 502, body: { ...response, push_log_id: pushLogId } };

@@ -1,7 +1,10 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.57.4";
 import {
+  claimPushLogForDelivery,
   dispatchPendingPush,
   type PushLogClaim,
+  type PushLogClaimResponse,
+  type PushLogRow,
   type PushLogStore,
 } from "./core.ts";
 
@@ -60,29 +63,44 @@ Deno.serve(async (req) => {
 
     const store: PushLogStore = {
       async claimPending(id): Promise<PushLogClaim> {
-        const claimedAt = new Date().toISOString();
-        const { data, error } = await supabase
-          .from("push_log")
-          .update({
-            status: "processing",
-            response: { ok: null, stage: "processing", claimed_at: claimedAt },
-          })
-          .eq("id", id)
-          .eq("status", "pending")
-          .select("id, user_id, player_id, title, message, status")
-          .maybeSingle();
-        if (error) throw error;
-        if (data) return { state: "claimed", row: data };
+        const selectColumns = "id, user_id, player_id, title, message, status";
+        const updateAndReturn = async (
+          status: "pending" | "processing",
+          response: PushLogClaimResponse,
+          staleBefore?: string,
+        ): Promise<PushLogRow | null> => {
+          let query = supabase
+            .from("push_log")
+            .update({ status: "processing", response })
+            .eq("id", id)
+            .eq("status", status);
+          if (staleBefore) {
+            // The stale predicate and claimed_at refresh are one UPDATE.
+            // PostgreSQL rechecks it under the row lock, so only one retry wins.
+            query = query.lte("response->>claimed_at", staleBefore);
+          }
+          const { data, error } = await query
+            .select(selectColumns)
+            .maybeSingle();
+          if (error) throw error;
+          return data;
+        };
 
-        const { data: existing, error: readError } = await supabase
-          .from("push_log")
-          .select("status")
-          .eq("id", id)
-          .maybeSingle();
-        if (readError) throw readError;
-        return existing
-          ? { state: "duplicate", status: existing.status ?? "unknown" }
-          : { state: "missing" };
+        return claimPushLogForDelivery(id, {
+          claimPending: (_claimId, response) =>
+            updateAndReturn("pending", response),
+          claimStaleProcessing: (_claimId, staleBefore, response) =>
+            updateAndReturn("processing", response, staleBefore),
+          async readStatus(claimId) {
+            const { data, error } = await supabase
+              .from("push_log")
+              .select("status")
+              .eq("id", claimId)
+              .maybeSingle();
+            if (error) throw error;
+            return data?.status;
+          },
+        });
       },
       async markSent(id, response) {
         const { error } = await supabase
