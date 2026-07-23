@@ -241,6 +241,7 @@ const handler = async (req: Request): Promise<Response> => {
       .from("email_queue")
       .select("*")
       .eq("status", "pending")
+      .lte("available_at", new Date().toISOString())
       .or("subject.not.ilike.%faktura%,attachment_url.not.is.null,attachment_storage_path.not.is.null")
       .order("created_at", { ascending: true })
       .limit(50);

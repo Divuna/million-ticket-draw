@@ -115,6 +115,10 @@
 | SEC02 | P1 | RLS izolace | Zákazník nevidí cizí data (faktury, invite, wallet) | Own-row scoping drží | spec 43c/43d (partner izolace faktur), spec 55c/55d (referral RLS own-row + anon deny), spec 37 (admin approve RLS — non-admin 403/anon 401) — konzistentní own-row+admin scoping bez USING(true) | různé | GH run 27569039738 | **prošlo** | spec 43, 55, 37 |
 | SEC03 | P2 | Push (OneSignal) | Notifikace pipeline | `notifications`→`push_log`→OneSignal | | — | | neověřeno | interní, P2 pro 1. test |
 
+## E-maily a zákaznická komunikace
+
+- [ ] Před spuštěním sjednotit a graficky přepracovat všechny automatické odesílací e-maily OneMil. Použít pouze originální logo a schválený vizuální styl OneMil, sjednotit hlavičku, patičku, texty, tlačítka, mobilní zobrazení a otestovat doručení hlavních typů e-mailů.
+
 ## Automatika (CI)
 
 | ID | Prio | Oblast | Krok | Očekávaný výsledek | Skutečný | Odkaz | Důkaz | Stav | Pozn. |
