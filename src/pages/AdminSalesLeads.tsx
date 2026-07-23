@@ -5,6 +5,14 @@ import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
+import { Label } from '@/components/ui/label';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import {
@@ -37,6 +45,14 @@ import { SalesLeadOverview } from '@/components/admin/sales-leads/SalesLeadOverv
 import { SalesLeadEmailTemplateManager } from '@/components/admin/sales-leads/SalesLeadEmailTemplateManager';
 import { SalesLeadUnassignedEmails } from '@/components/admin/sales-leads/SalesLeadUnassignedEmails';
 import { SalesLeadToday } from '@/components/admin/sales-leads/SalesLeadToday';
+import {
+  ALL_LEAD_FILTER_VALUE,
+  EMPTY_LEAD_FILTER_VALUE,
+  buildIndustryFilterOptions,
+  buildLeadGroupFilterOptions,
+  filterSalesLeadList,
+  type LeadFilterOption,
+} from '@/components/admin/sales-leads/salesLeadListFilters';
 
 /**
  * Admin modul „Obchod / Leady" — Fáze 3A (ruční přidání, detail, editace, změna stavu)
@@ -91,6 +107,9 @@ const AdminSalesLeads: React.FC = () => {
   const [tableMissing, setTableMissing] = useState(false);
   const [activeTab, setActiveTab] = useState('today');
   const [searchTerm, setSearchTerm] = useState('');
+  const [groupFilter, setGroupFilter] = useState(ALL_LEAD_FILTER_VALUE);
+  const [industryFilter, setIndustryFilter] = useState(ALL_LEAD_FILTER_VALUE);
+  const [leadGroupOptions, setLeadGroupOptions] = useState<LeadFilterOption[]>([]);
   const [addOpen, setAddOpen] = useState(false);
   const [discoverOpen, setDiscoverOpen] = useState(false);
   const [templateManagerOpen, setTemplateManagerOpen] = useState(false);
@@ -110,11 +129,17 @@ const AdminSalesLeads: React.FC = () => {
   const load = useCallback(async () => {
     setLoading(true);
     try {
-      const [leadsRes, unreadRes, tasksRes, plannedRes, unassignedRes] = await Promise.all([
+      const [leadsRes, groupsRes, unreadRes, tasksRes, plannedRes, unassignedRes] = await Promise.all([
         (supabase as any)
           .from('sales_leads')
           .select('id, company_name, industry, city, status, contact_email, updated_at, assigned_admin_id, lead_group')
           .order('updated_at', { ascending: false }),
+        (supabase as any)
+          .from('sales_lead_groups')
+          .select('slug, label')
+          .eq('is_active', true)
+          .order('sort_order', { ascending: true })
+          .order('label', { ascending: true }),
         // Nepřečtené odpovědi napříč všemi leady (RLS pustí jen držitele oprávnění).
         (supabase as any)
           .from('sales_lead_activities')
@@ -125,13 +150,18 @@ const AdminSalesLeads: React.FC = () => {
         (supabase as any).from('sales_lead_activities').select('lead_id,scheduled_for,activity_type').in('activity_status',['naplanovano','rozpracovano']).not('scheduled_for','is',null).in('activity_type',['call_logged','meeting_logged','note_added']).order('scheduled_for'),
         (supabase as any).from('sales_lead_unassigned_emails').select('id', { count: 'exact', head: true }).eq('status', 'unassigned'),
       ]);
+      const loadedLeads = (leadsRes.error ? [] : leadsRes.data ?? []) as SalesLeadRow[];
       if (leadsRes.error) {
         setTableMissing(true);
         setLeads([]);
       } else {
         setTableMissing(false);
-        setLeads((leadsRes.data ?? []) as SalesLeadRow[]);
+        setLeads(loadedLeads);
       }
+      setLeadGroupOptions(buildLeadGroupFilterOptions(
+        groupsRes.error ? null : (groupsRes.data ?? []),
+        loadedLeads,
+      ));
       // Nepřečtené jsou best-effort — chyba (např. chybějící sloupec před migrací)
       // jen znamená „žádná upozornění", nikdy nerozbije seznam.
       const unreadRows = (unreadRes.error ? [] : unreadRes.data ?? []) as { lead_id: string }[];
@@ -143,6 +173,7 @@ const AdminSalesLeads: React.FC = () => {
     } catch {
       setTableMissing(true);
       setLeads([]);
+      setLeadGroupOptions([]);
       setUnreadLeadIds(new Set());
       setUnreadTotal(0);
       setOpenTasks([]);
@@ -303,17 +334,28 @@ const AdminSalesLeads: React.FC = () => {
 
   const visibleLeads = useMemo(() => {
     const tab = TABS.find((t) => t.id === activeTab);
-    const term = searchTerm.trim().toLowerCase();
-    return leads.filter((l) => {
-      if (tab?.statuses && !tab.statuses.includes(l.status)) return false;
-      if (!term) return true;
-      return (
-        l.company_name.toLowerCase().includes(term) ||
-        (l.contact_email ?? '').toLowerCase().includes(term) ||
-        (l.city ?? '').toLowerCase().includes(term)
-      );
+    return filterSalesLeadList(leads, {
+      statuses: tab?.statuses ?? null,
+      searchTerm,
+      group: groupFilter,
+      industry: industryFilter,
     });
-  }, [leads, activeTab, searchTerm]);
+  }, [leads, activeTab, searchTerm, groupFilter, industryFilter]);
+
+  const industryFilterOptions = useMemo(() => buildIndustryFilterOptions(leads), [leads]);
+
+  const resetListFilters = () => {
+    setActiveTab('all');
+    setSearchTerm('');
+    setGroupFilter(ALL_LEAD_FILTER_VALUE);
+    setIndustryFilter(ALL_LEAD_FILTER_VALUE);
+    setSelectedIds(new Set());
+  };
+
+  const hasActiveListFilters = activeTab !== 'all'
+    || searchTerm.trim() !== ''
+    || groupFilter !== ALL_LEAD_FILTER_VALUE
+    || industryFilter !== ALL_LEAD_FILTER_VALUE;
 
   const allVisibleSelected = visibleLeads.length > 0 && visibleLeads.every((l) => selectedIds.has(l.id));
   const someVisibleSelected = visibleLeads.some((l) => selectedIds.has(l.id));
@@ -423,15 +465,6 @@ const AdminSalesLeads: React.FC = () => {
             <CardTitle className="text-base">
               {activeTab === 'today' ? 'Dnes' : activeTab === 'unassigned-emails' ? 'Příchozí pošta bez návaznosti' : 'Seznam leadů'}
             </CardTitle>
-            {!['today', 'unassigned-emails'].includes(activeTab) && <div className="relative w-full sm:w-72">
-              <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" aria-hidden />
-              <Input
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                placeholder="Hledat název, e-mail, město…"
-                className="pl-8"
-              />
-            </div>}
           </div>
           <Tabs value={activeTab} onValueChange={handleTabChange}>
             <TabsList className="h-auto flex-wrap justify-start">
@@ -445,6 +478,63 @@ const AdminSalesLeads: React.FC = () => {
               ))}
             </TabsList>
           </Tabs>
+          {!['today', 'unassigned-emails'].includes(activeTab) && (
+            <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-[minmax(16rem,1fr)_minmax(12rem,0.65fr)_minmax(12rem,0.65fr)_auto] lg:items-end">
+              <div className="space-y-1">
+                <Label htmlFor="sl-search-filter" className="text-xs text-muted-foreground">Hledat</Label>
+                <div className="relative">
+                  <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" aria-hidden />
+                  <Input
+                    id="sl-search-filter"
+                    value={searchTerm}
+                    onChange={(e) => setSearchTerm(e.target.value)}
+                    placeholder="Název, e-mail, město…"
+                    className="pl-8"
+                    data-testid="sl-search-filter"
+                  />
+                </div>
+              </div>
+              <div className="space-y-1">
+                <Label htmlFor="sl-group-filter" className="text-xs text-muted-foreground">Skupina</Label>
+                <Select value={groupFilter} onValueChange={setGroupFilter}>
+                  <SelectTrigger id="sl-group-filter" data-testid="sl-group-filter">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value={ALL_LEAD_FILTER_VALUE}>Všechny</SelectItem>
+                    <SelectItem value={EMPTY_LEAD_FILTER_VALUE}>Bez skupiny</SelectItem>
+                    {leadGroupOptions.map((option) => (
+                      <SelectItem key={option.value} value={option.value}>{option.label}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-1">
+                <Label htmlFor="sl-industry-filter" className="text-xs text-muted-foreground">Obor</Label>
+                <Select value={industryFilter} onValueChange={setIndustryFilter}>
+                  <SelectTrigger id="sl-industry-filter" data-testid="sl-industry-filter">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value={ALL_LEAD_FILTER_VALUE}>Všechny</SelectItem>
+                    <SelectItem value={EMPTY_LEAD_FILTER_VALUE}>Bez oboru</SelectItem>
+                    {industryFilterOptions.map((industry) => (
+                      <SelectItem key={industry} value={industry}>{INDUSTRY_LABEL(industry)}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <Button
+                type="button"
+                variant="outline"
+                onClick={resetListFilters}
+                disabled={!hasActiveListFilters}
+                data-testid="sl-reset-filters"
+              >
+                Zrušit filtry
+              </Button>
+            </div>
+          )}
           {!['today', 'unassigned-emails'].includes(activeTab) && selectedIds.size > 0 && (
             <div className="flex items-center justify-between gap-3 rounded-lg border border-destructive/30 bg-destructive/5 px-3 py-2">
               <span className="text-sm text-muted-foreground">
@@ -484,7 +574,7 @@ const AdminSalesLeads: React.FC = () => {
             <div className="py-12 text-center text-sm text-muted-foreground">
               {leads.length === 0
                 ? 'Zatím žádné leady. Modul je připravený — první firmy přibudou v další fázi.'
-                : 'Žádné leady neodpovídají zvolené záložce nebo hledání.'}
+                : 'Žádné leady neodpovídají zvoleným filtrům. Zkuste změnit výběr nebo filtry zrušit.'}
             </div>
           ) : (
             <Table>
@@ -576,6 +666,7 @@ const AdminSalesLeads: React.FC = () => {
         isRunning={discovery.isRunning}
         onStart={discovery.startJob}
         onStop={discovery.stopJob}
+        onGroupsChanged={load}
       />
       <SalesLeadDetailSheet
         leadId={detailId}

@@ -880,3 +880,13 @@ Stav nasazení 11. 07. 2026: LIVE na stagingu i produkci; migrace `sales_leads_v
 - Každé odeslání vloží nový append-only `email_sent`. Metadata obsahují
   `reused_from_activity_id`, `reuse_mode` a původního příjemce. Zdrojová aktivita ani
   `sales_leads.contact_email` se nemění; jiný příjemce se nikdy nestává hlavním kontaktem.
+
+## 22. Dynamické filtry seznamu
+
+- Seznam leadů lze filtrovat současně podle stavové záložky, textového hledání, skupiny a oboru.
+- Nabídka skupin se načítá z aktivních záznamů `sales_lead_groups`; pokud číselník v daném
+  prostředí není dostupný, použijí se jedinečné neprázdné hodnoty `sales_leads.lead_group`.
+  Nově vytvořená skupina se po uložení načte do filtru bez změny kódu.
+- Nabídka oborů vzniká výhradně z jedinečných neprázdných hodnot `sales_leads.industry`.
+- Oba filtry obsahují volby `Všechny` a `Bez …`. Akce `Zrušit filtry` nastaví stavovou záložku
+  na `Vše`, vymaže hledání a obnoví oba výběry na `Všechny`.

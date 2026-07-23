@@ -33,6 +33,7 @@ interface Props {
   isRunning: boolean;
   onStart: (leadGroup: string, requestedCount: number) => Promise<{ success?: boolean; error?: string; job_id?: string }>;
   onStop: () => Promise<void>;
+  onGroupsChanged?: () => void | Promise<void>;
 }
 
 const LIMIT_OPTIONS = [5, 10, 15, 20, 25];
@@ -54,7 +55,15 @@ const FINISH_REASON_LABEL: Record<string, string> = {
  * a průběh je vidět na stavovém pruhu hlavní stránky. E-mail se při discovery
  * NEsbírá; kontakt dohledá člověk ručně v detailu leadu.
  */
-export function DiscoverLeadsDialog({ open, onOpenChange, job, isRunning, onStart, onStop }: Props) {
+export function DiscoverLeadsDialog({
+  open,
+  onOpenChange,
+  job,
+  isRunning,
+  onStart,
+  onStop,
+  onGroupsChanged,
+}: Props) {
   const [group, setGroup] = useState('');
   const [groups, setGroups] = useState<LeadGroupOption[]>(LEAD_GROUP_OPTIONS);
   const [loadingGroups, setLoadingGroups] = useState(false);
@@ -111,6 +120,7 @@ export function DiscoverLeadsDialog({ open, onOpenChange, job, isRunning, onStar
       toast.success(`Skupina „${res.label ?? label}“ byla přidána.`);
       setNewGroupLabel('');
       await loadGroups();
+      await onGroupsChanged?.();
       if (res.slug) setGroup(res.slug);
     } catch (err: unknown) {
       toast.error(err instanceof Error ? err.message : 'Skupinu se nepodařilo přidat.');
