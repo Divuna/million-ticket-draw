@@ -32,13 +32,22 @@ const claimed = (playerId: string | null): PushLogClaim => ({
 });
 
 test.describe('97 — push_log → send-push → OneSignal', () => {
-  test('SQL obnovuje pouze asynchronní cestu do send-push s tokenem z Vaultu', () => {
-    const migration = fs.readFileSync(
-      'supabase/migrations/20260723190325_restore_push_log_send_push_dispatch.sql',
-      'utf8',
-    );
-    const edgeFunction = fs.readFileSync('supabase/functions/send-push/index.ts', 'utf8');
+  const migration = fs.readFileSync(
+    'supabase/migrations/20260723190325_restore_push_log_send_push_dispatch.sql',
+    'utf8',
+  );
+  const edgeFunction = fs.readFileSync('supabase/functions/send-push/index.ts', 'utf8');
 
+  test('starý pending záznam se při aplikaci migrace nezařadí ani nezmění', () => {
+    expect(migration).not.toMatch(/DO\s+\$\$/);
+    expect(migration).not.toMatch(
+      /SELECT\s+id\s+FROM\s+public\.push_log\s+WHERE\s+status\s*=\s*'pending'/i,
+    );
+    expect(migration).not.toContain('enqueue_send_push_edge_request(v_push_log_id)');
+    expect(migration).toContain('Intentionally no backfill');
+  });
+
+  test('nový pending INSERT se asynchronně odešle přes send-push', () => {
     expect(migration).toContain('AFTER INSERT ON public.push_log');
     expect(migration).toContain("WHEN (NEW.status = 'pending')");
     expect(migration).toContain("'/functions/v1/send-push'");

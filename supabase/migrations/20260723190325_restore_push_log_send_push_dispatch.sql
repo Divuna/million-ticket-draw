@@ -144,18 +144,6 @@ FOR EACH ROW
 WHEN (NEW.status = 'pending')
 EXECUTE FUNCTION public.enqueue_send_push_edge();
 
--- Dispatch the backlog that was created while the trigger was absent.
-DO $$
-DECLARE
-  v_push_log_id uuid;
-BEGIN
-  FOR v_push_log_id IN
-    SELECT id
-    FROM public.push_log
-    WHERE status = 'pending'
-    ORDER BY created_at, id
-  LOOP
-    PERFORM public.enqueue_send_push_edge_request(v_push_log_id);
-  END LOOP;
-END;
-$$;
+-- Intentionally no backfill: rows that were already pending before this
+-- trigger was created remain untouched. Only future INSERT events are
+-- dispatched automatically.
