@@ -1,4 +1,4 @@
-import { mkdir, writeFile } from "node:fs/promises";
+import { mkdir, readdir, unlink, writeFile } from "node:fs/promises";
 import { join } from "node:path";
 import {
   applyOneMilBrandToLegacyAutomaticEmail,
@@ -9,19 +9,16 @@ import {
 
 const outputDir = join(process.cwd(), "docs", "email-previews");
 await mkdir(outputDir, { recursive: true });
+for (const name of await readdir(outputDir)) {
+  if (/^\d{2}-.*\.html$/.test(name)) {
+    await unlink(join(outputDir, name));
+  }
+}
 
 const panel = (rows: Array<{ label: string; value: string }>) =>
   `<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#F7EBDD;border:1px solid #F2A16B;border-radius:12px;border-collapse:separate;overflow:hidden;">${renderOneMilDetailRows(rows)}</table>`;
 
 const previews: Record<string, string> = {
-  "01-onboarding-reminder.html": renderOneMilEmail({
-    preheader: "Dokončete svůj profil a využijte OneMil naplno.",
-    eyebrow: "Dokončení registrace",
-    title: "Ještě jeden malý krok",
-    bodyHtml: `<p style="margin:0 0 16px;">Dobrý den,</p><p style="margin:0;">Registraci na OneMil už máte téměř hotovou. Pro plnohodnotné používání aplikace stačí doplnit datum narození.</p>`,
-    action: { label: "Dokončit registraci", url: "https://onemil.cz/onboarding/date-of-birth" },
-    footerNote: "Pokud jste se na OneMil neregistrovali, můžete tento e-mail bezpečně ignorovat.",
-  }),
   "02-marketing-consent.html": renderOneMilEmail({
     preheader: "Potvrzení změny nastavení marketingových sdělení.",
     eyebrow: "Nastavení účtu",

@@ -107,12 +107,16 @@ export function renderOneMilEmail(options: OneMilEmailOptions): string {
           </tr>
           <tr>
             <td style="padding:22px 40px 26px;background:${ONE_MIL_EMAIL_COLORS.panel};border-top:1px solid ${ONE_MIL_EMAIL_COLORS.line};">
-              <p style="margin:0;color:${ONE_MIL_EMAIL_COLORS.text};font-size:13px;line-height:1.55;font-weight:700;">Tým OneMil</p>
+              <p style="margin:0;color:${ONE_MIL_EMAIL_COLORS.text};font-size:13px;line-height:1.65;">
+                <strong>OneMil</strong><br>
+                <a href="https://onemil.cz" style="color:${ONE_MIL_EMAIL_COLORS.accent};text-decoration:underline;">onemil.cz</a>
+                &nbsp;·&nbsp;
+                <a href="mailto:podpora@onemil.cz" style="color:${ONE_MIL_EMAIL_COLORS.accent};text-decoration:underline;">podpora@onemil.cz</a>
+              </p>
               ${footerNote}
             </td>
           </tr>
         </table>
-        <p style="margin:16px 0 0;color:${ONE_MIL_EMAIL_COLORS.muted};font-size:11px;line-height:1.5;">OneMil · jemně výjimečný svět odměn</p>
       </td>
     </tr>
   </table>
@@ -136,12 +140,17 @@ export function applyOneMilBrandToLegacyAutomaticEmail(html: string): string {
   }
 
   const brandedHeader = `<tr><td align="center" style="background:${ONE_MIL_EMAIL_COLORS.card};padding:26px 32px 20px;border-bottom:1px solid ${ONE_MIL_EMAIL_COLORS.accentSoft};"><img src="${ONE_MIL_EMAIL_LOGO_URL}" width="104" alt="OneMil" style="display:block;width:104px;max-width:42%;height:auto;border:0;"></td></tr>`;
+  const brandedFooter = `<tr><td style="background:${ONE_MIL_EMAIL_COLORS.panel};padding:20px 32px;text-align:center;border-top:1px solid ${ONE_MIL_EMAIL_COLORS.line};"><p style="margin:0;color:${ONE_MIL_EMAIL_COLORS.text};font-size:13px;line-height:1.65;"><strong>OneMil</strong><br><a href="https://onemil.cz" style="color:${ONE_MIL_EMAIL_COLORS.accent};text-decoration:underline;">onemil.cz</a>&nbsp;·&nbsp;<a href="mailto:podpora@onemil.cz" style="color:${ONE_MIL_EMAIL_COLORS.accent};text-decoration:underline;">podpora@onemil.cz</a></p></td></tr>`;
 
   return html
     .replace("<html lang=\"cs\">", '<html lang="cs" data-onemil-email="light-cream">')
     .replace(
       /<tr><td style="background:#0A0B0F;[^"]*"><span[^>]*>One<span style="color:#FF8A00;">Mil<\/span><\/span><\/td><\/tr>/,
       brandedHeader,
+    )
+    .replace(
+      /<tr><td style="background:#f4f5f7;[^"]*">[\s\S]*?<\/td><\/tr>(?=<\/table>)/,
+      brandedFooter,
     )
     .replaceAll("#f4f5f7", ONE_MIL_EMAIL_COLORS.page)
     .replaceAll("#1d2128", ONE_MIL_EMAIL_COLORS.text)

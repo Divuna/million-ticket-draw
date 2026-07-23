@@ -87,9 +87,12 @@ verify_jwt = false
 [functions.upload-ticket-share]
 verify_jwt = false
 
+# Deprecated: kept as a safe tombstone so an existing deployed endpoint cannot
+# send reminders for a field that is no longer required.
 [functions.send-onboarding-reminder]
 verify_jwt = true
 
+# Deprecated: kept as an authenticated no-op for any existing scheduler.
 [functions.daily-onboarding-reminder]
 verify_jwt = false
 
