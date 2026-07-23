@@ -45,50 +45,36 @@ const AdminUsers: React.FC = () => {
     try {
       setLoading(true);
 
-      // Phase 3b: a non-superadmin support viewer (users.view.basic) must never
-      // receive sensitive PII (date_of_birth, street/city/zip/country, avatar).
-      // Fetch only basic-safe columns for them; superadmin keeps the full row.
-      const profileColumns = isSuperAdmin
-        ? '*'
-        : 'id, full_name, first_name, last_name, phone, updated_at';
+      // E-mail is sourced from auth.users through a tightly scoped admin RPC.
+      // This keeps the login address current even when profiles.email is empty.
+      const { data: overview, error: overviewError } = await (supabase as any)
+        .rpc('get_admin_users_overview');
 
-      const { data: profiles, error: profilesError } = await supabase
-        .from('profiles')
-        .select(profileColumns);
-
-      if (profilesError) {
-        console.error('Error fetching users:', profilesError);
+      if (overviewError) {
+        console.error('Error fetching users:', overviewError);
         setUsers([]);
+        toast({
+          title: 'Nepodařilo se načíst uživatele',
+          variant: 'destructive',
+        });
         return;
       }
 
-      const { data: roles, error: rolesError } = await supabase
-        .from('user_roles')
-        .select('user_id, role');
+      const mappedUsers: User[] = (overview || []).map((row: any) => ({
+        id: row.user_id,
+        email: row.email || '',
+        name:
+          row.full_name ||
+          `${row.first_name || ''} ${row.last_name || ''}`.trim(),
+        first_name: row.first_name || undefined,
+        last_name: row.last_name || undefined,
+        role: row.role || 'user',
+        created_at: row.created_at || new Date(0).toISOString(),
+        isPartnerAccount: Boolean(row.is_partner_account),
+        hasUserRole: Boolean(row.has_user_role),
+      }));
 
-      if (rolesError) {
-        console.error('Error fetching roles:', rolesError);
-        setUsers([]);
-        return;
-      }
-
-      const mappedUsers = (profiles || []).map((p: any) => {
-        const role = roles?.find((r: any) => r.user_id === p.id)?.role || 'user';
-
-        return {
-          id: p.id,
-          name: p.full_name || `${p.first_name || ''} ${p.last_name || ''}`.trim(),
-          first_name: p.first_name,
-          last_name: p.last_name,
-          phone: p.phone,
-          email: '',
-          role,
-          // Keep existing UI working (created_at column)
-          created_at: p.updated_at || new Date(0).toISOString(),
-        };
-      });
-
-      setUsers(mappedUsers as any);
+      setUsers(mappedUsers);
     } catch (err) {
       console.error('Unexpected error:', err);
       setUsers([]);
@@ -179,13 +165,15 @@ const AdminUsers: React.FC = () => {
   };
 
   const filteredUsers = users.filter(user => {
-    // Email is not available (we no longer read from auth.users), so search must be name-based.
     const needle = searchTerm.trim().toLowerCase();
     const fullName =
       user.name ||
       [user.first_name, user.last_name].filter(Boolean).join(' ') ||
       '';
-    const matchesSearch = needle.length === 0 || fullName.toLowerCase().includes(needle);
+    const matchesSearch =
+      needle.length === 0 ||
+      fullName.toLowerCase().includes(needle) ||
+      user.email.toLowerCase().includes(needle);
     const matchesRole = roleFilter === 'všechny' || user.role === roleFilter;
     return matchesSearch && matchesRole;
   });
