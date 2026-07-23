@@ -1,5 +1,6 @@
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.57.4";
+import { renderOneMilEmail } from "../_shared/oneMilEmailTemplate.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -163,20 +164,21 @@ function buildConfirmationEmail(params: {
   const companyName = escapeHtml(params.companyName);
   const salesRepName = escapeHtml(params.salesRepName);
 
-  return `
-    <h2>Zadost o registraci firmy do OneMil</h2>
-    <p>Dobry den,</p>
-    <p>obchodnik nebo agentura <strong>${salesRepName}</strong> odeslal(a) zadost o registraci firmy <strong>${companyName}</strong> do OneMil.</p>
-    <p>OneMil je platforma pro souteze, odmeny, vouchery a partnerske spoluprace. Firma se do systemu neposune ke schvaleni administratorem, dokud tuto zadost nepotvrdite.</p>
-    <p>
-      <a href="${confirmUrl}" style="display:inline-block;padding:12px 18px;background:#ff8a00;color:#0a0b0f;text-decoration:none;border-radius:6px;font-weight:700">
-        Potvrzuji zadost
-      </a>
-    </p>
-    <p>Pokud zadost nechcete potvrdit, muzete ji odmitnout zde: <a href="${rejectUrl}">Zamitnout zadost</a>.</p>
-    <p>Pokud jste tuto zadost necekali, muzete ji ignorovat.</p>
-    <p>S pozdravem,<br/>Tym OneMil</p>
-  `;
+  return renderOneMilEmail({
+    preheader: `Potvrďte žádost o registraci firmy ${companyName} do OneMil.`,
+    eyebrow: "Partnerská registrace",
+    title: "Potvrďte žádost o registraci",
+    bodyHtml: `
+      <p style="margin:0 0 16px;">Dobrý den,</p>
+      <p style="margin:0 0 16px;">Obchodník nebo agentura <strong>${salesRepName}</strong> odeslal(a) žádost o registraci firmy <strong>${companyName}</strong> do OneMil.</p>
+      <p style="margin:0;">Firma se ke schválení administrátorem posune až po vašem potvrzení.</p>
+    `,
+    action: {
+      label: "Potvrdit žádost",
+      url: confirmUrl,
+    },
+    footerNote: `Pokud žádost nechcete potvrdit, můžete ji <a href="${rejectUrl}" style="color:#C64F0A;font-weight:700;">zamítnout zde</a>. Pokud jste ji nečekali, e-mail ignorujte.`,
+  });
 }
 
 serve(async (req: Request) => {

@@ -29,6 +29,11 @@
 
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import {
+  escapeEmailHtml,
+  ONE_MIL_EMAIL_COLORS,
+  renderOneMilEmail,
+} from "../_shared/oneMilEmailTemplate.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -56,79 +61,35 @@ function buildEmailHtml(offers: ReminderRow[]): string {
         ? `Platí do: ${new Date(o.valid_to).toLocaleDateString("cs-CZ")}`
         : "Bez expirace";
       return `
-        <li style="margin-bottom:16px;padding-bottom:16px;border-bottom:1px solid #e5e7eb;">
-          <span style="font-size:12px;color:#6b7280;text-transform:uppercase;letter-spacing:.05em;">
-            ${o.partner_display_name}
-          </span><br/>
-          <strong style="font-size:15px;color:#111827;">${o.offer_title}</strong><br/>
+        <div style="margin:0 0 12px;padding:18px;background:${ONE_MIL_EMAIL_COLORS.panel};border:1px solid ${ONE_MIL_EMAIL_COLORS.line};border-radius:12px;">
+          <span style="font-size:11px;color:${ONE_MIL_EMAIL_COLORS.accent};text-transform:uppercase;letter-spacing:.08em;font-weight:800;">
+            ${escapeEmailHtml(o.partner_display_name)}
+          </span><br>
+          <strong style="display:inline-block;margin-top:5px;font-size:16px;color:${ONE_MIL_EMAIL_COLORS.text};">${escapeEmailHtml(o.offer_title)}</strong><br>
           ${
             o.offer_short_text
-              ? `<span style="font-size:13px;color:#4b5563;">${o.offer_short_text}</span><br/>`
+              ? `<span style="font-size:13px;color:${ONE_MIL_EMAIL_COLORS.muted};">${escapeEmailHtml(o.offer_short_text)}</span><br>`
               : ""
           }
-          <span style="font-size:12px;color:#9ca3af;">${validity}</span>
-        </li>`;
+          <span style="display:inline-block;margin-top:8px;font-size:12px;color:${ONE_MIL_EMAIL_COLORS.muted};">${validity}</span>
+        </div>`;
     })
     .join("");
 
-  return `<!DOCTYPE html>
-<html lang="cs">
-<head>
-  <meta charset="UTF-8"/>
-  <meta name="viewport" content="width=device-width,initial-scale=1"/>
-  <title>Vaše nabídky na OneMil</title>
-</head>
-<body style="margin:0;padding:0;background:#f9fafb;font-family:Arial,Helvetica,sans-serif;">
-  <table width="100%" cellpadding="0" cellspacing="0" style="background:#f9fafb;padding:32px 0;">
-    <tr>
-      <td align="center">
-        <table width="600" cellpadding="0" cellspacing="0"
-               style="background:#ffffff;border-radius:8px;overflow:hidden;
-                      box-shadow:0 1px 3px rgba(0,0,0,.1);">
-          <!-- Header -->
-          <tr>
-            <td style="background:#1a1a2e;padding:24px 32px;">
-              <h1 style="margin:0;font-size:20px;color:#f9fafb;">OneMil</h1>
-            </td>
-          </tr>
-          <!-- Body -->
-          <tr>
-            <td style="padding:32px;">
-              <h2 style="margin:0 0 8px;font-size:18px;color:#111827;">
-                Vaše nevyužité nabídky partnerů
-              </h2>
-              <p style="margin:0 0 24px;font-size:14px;color:#6b7280;">
-                Připomínáme vám ${offers.length === 1 ? "nabídku" : `${offers.length} nabídky`},
-                ${offers.length === 1 ? "která čeká" : "které čekají"} na vaše otevření v aplikaci OneMil.
-              </p>
-              <ul style="list-style:none;margin:0;padding:0;">
-                ${listItems}
-              </ul>
-              <div style="margin-top:28px;text-align:center;">
-                <a href="https://onemil.cz"
-                   style="display:inline-block;padding:12px 28px;background:#2563eb;
-                          color:#ffffff;text-decoration:none;border-radius:6px;
-                          font-size:14px;font-weight:600;">
-                  Zobrazit nabídky v aplikaci
-                </a>
-              </div>
-            </td>
-          </tr>
-          <!-- Footer -->
-          <tr>
-            <td style="padding:20px 32px;border-top:1px solid #f3f4f6;">
-              <p style="margin:0;font-size:11px;color:#9ca3af;">
-                Tuto zprávu jste obdrželi, protože máte nevyužité nabídky partnerů OneMil.
-                Nabídky můžete skrýt přímo v aplikaci v sekci&nbsp;<strong>Nabídky</strong>.
-              </p>
-            </td>
-          </tr>
-        </table>
-      </td>
-    </tr>
-  </table>
-</body>
-</html>`;
+  return renderOneMilEmail({
+    preheader: "Vaše nevyužité nabídky partnerů čekají v OneMil.",
+    eyebrow: "Připomenutí nabídek",
+    title: "Vaše nabídky stále čekají",
+    bodyHtml: `
+      <p style="margin:0 0 22px;">Připomínáme vám ${offers.length === 1 ? "nabídku" : `${offers.length} nabídky`}, ${offers.length === 1 ? "která čeká" : "které čekají"} na vaše otevření v aplikaci OneMil.</p>
+      ${listItems}
+    `,
+    action: {
+      label: "Zobrazit nabídky",
+      url: "https://onemil.cz/profile?tab=offers",
+    },
+    footerNote: "Tuto zprávu dostáváte, protože máte nevyužité partnerské nabídky. Nabídku můžete skrýt přímo v aplikaci.",
+  });
 }
 
 serve(async (req) => {

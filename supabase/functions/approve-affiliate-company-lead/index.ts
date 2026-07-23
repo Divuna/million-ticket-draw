@@ -1,5 +1,6 @@
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.57.4";
+import { renderOneMilEmail } from "../_shared/oneMilEmailTemplate.ts";
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 
@@ -77,23 +78,21 @@ function buildApprovalEmail(params: {
   const companyName = escapeHtml(params.companyName);
   // setupLink is an opaque URL — no sensitive content is embedded other than
   // the one-time recovery token Supabase generates. It is never logged here.
-  return `
-    <h2>Vas ucet v OneMil byl schvalen</h2>
-    <p>Dobry den,</p>
-    <p>Firma <strong>${companyName}</strong> byla schvalena administratorem OneMil.</p>
-    <p>Pro aktivaci vaseho partnerskeho uctu a nastaveni hesla kliknete na odkaz nize. Odkaz je platny jen jednou a po kratkou dobu.</p>
-    <p>
-      <a href="${params.setupLink}"
-         style="display:inline-block;padding:12px 18px;background:#ff8a00;color:#0a0b0f;text-decoration:none;border-radius:6px;font-weight:700">
-        Nastavit heslo a aktivovat ucet
-      </a>
-    </p>
-    <p>Pokud se vam odkaz neotvira, zkopirujte a vlozte tuto adresu do prohlizece:<br/>
-       <em>(odkaz je skryt z bezpecnostnich duvodu — pouzijte tlacitko vyse)</em>
-    </p>
-    <p>Heslo nikdy nesdilime v e-mailu. Odkaz vyse je jednorazovy a bezpecny.</p>
-    <p>S pozdravem,<br/>Tym OneMil</p>
-  `;
+  return renderOneMilEmail({
+    preheader: `Partnerský účet firmy ${companyName} byl schválen.`,
+    eyebrow: "Partnerský účet",
+    title: "Váš účet byl schválen",
+    bodyHtml: `
+      <p style="margin:0 0 16px;">Dobrý den,</p>
+      <p style="margin:0 0 16px;">Firma <strong>${companyName}</strong> byla schválena administrátorem OneMil.</p>
+      <p style="margin:0;">Pro aktivaci partnerského účtu a bezpečné nastavení hesla použijte jednorázový odkaz níže.</p>
+    `,
+    action: {
+      label: "Nastavit heslo a aktivovat účet",
+      url: escapeHtml(params.setupLink),
+    },
+    footerNote: "Heslo nikdy neposíláme e-mailem. Aktivační odkaz je jednorázový a platný pouze po omezenou dobu.",
+  });
 }
 
 // ─── Main handler ─────────────────────────────────────────────────────────────

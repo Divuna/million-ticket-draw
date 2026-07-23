@@ -1,4 +1,5 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.57.4';
+import { renderOneMilEmail } from '../_shared/oneMilEmailTemplate.ts';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -146,35 +147,20 @@ Deno.serve(async (req) => {
             app_id: appId,
             include_email_tokens: [targetUser.email],
             email_subject: emailSubject,
-            email_body: `
-              <html>
-                <body style="font-family: Arial, sans-serif; padding: 20px; background-color: #f5f5f5;">
-                  <div style="max-width: 600px; margin: 0 auto; background: white; padding: 30px; border-radius: 10px;">
-                    <h2 style="color: #333; margin-bottom: 20px;">Dokončete prosím registraci</h2>
-                    <p style="color: #555; line-height: 1.6;">
-                      Dobrý den,
-                    </p>
-                    <p style="color: #555; line-height: 1.6;">
-                      zaregistrovali jste se na platformě OneMil, ale zatím jste nedokončili svůj profil. 
-                      Pro plnohodnotné používání aplikace prosím vyplňte své datum narození.
-                    </p>
-                    <p style="text-align: center; margin: 30px 0;">
-                      <a href="${onboardingUrl}" 
-                         style="background-color: #6366f1; color: white; padding: 12px 30px; 
-                                text-decoration: none; border-radius: 6px; font-weight: bold;">
-                        Dokončit registraci
-                      </a>
-                    </p>
-                    <p style="color: #555; line-height: 1.6;">
-                      Těšíme se na vás!
-                    </p>
-                    <p style="color: #888; margin-top: 30px; font-size: 14px;">
-                      Tým OneMil
-                    </p>
-                  </div>
-                </body>
-              </html>
-            `
+            email_body: renderOneMilEmail({
+              preheader: 'Dokončete svůj profil a využijte OneMil naplno.',
+              eyebrow: 'Dokončení registrace',
+              title: 'Ještě jeden malý krok',
+              bodyHtml: `
+                <p style="margin:0 0 16px;">Dobrý den,</p>
+                <p style="margin:0;">registraci na OneMil už máte téměř hotovou. Pro plnohodnotné používání aplikace stačí doplnit datum narození.</p>
+              `,
+              action: {
+                label: 'Dokončit registraci',
+                url: onboardingUrl,
+              },
+              footerNote: 'Pokud jste se na OneMil neregistrovali, můžete tento e-mail bezpečně ignorovat.',
+            })
           })
         });
 

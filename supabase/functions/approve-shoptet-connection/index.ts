@@ -1,4 +1,8 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.57.4";
+import {
+  escapeEmailHtml,
+  renderOneMilEmail,
+} from "../_shared/oneMilEmailTemplate.ts";
 
 // Admin approves or rejects a submitted Shoptet connection request.
 //
@@ -159,7 +163,21 @@ Deno.serve(async (req) => {
           await admin.from("email_queue").insert({
             email: partnerEmail,
             subject: "Váš Shoptet e-shop byl úspěšně zapojen do OneMil",
-            body: `Dobrý den, ${partnerName},\n\nváš Shoptet e-shop byl schválen a aktivován pro automatické vydávání MioCoin kódů zákazníkům.\n\nZákazníci budou dostávat kódy e-mailem od OneMil ihned po vydání.\n\nS pozdravem,\nTým OneMil`,
+            body: renderOneMilEmail({
+              preheader: "Váš Shoptet e-shop je propojený s OneMil.",
+              eyebrow: "Shoptet propojení",
+              title: "E-shop je připravený",
+              bodyHtml: `
+                <p style="margin:0 0 16px;">Dobrý den, <strong>${escapeEmailHtml(partnerName)}</strong>,</p>
+                <p style="margin:0 0 16px;">váš Shoptet e-shop byl schválen a aktivován pro automatické vydávání MioCoin kódů zákazníkům.</p>
+                <p style="margin:0;">Zákazníci budou dostávat kódy e-mailem od OneMil ihned po vydání.</p>
+              `,
+              action: {
+                label: "Otevřít partnerský portál",
+                url: "https://onemil.cz/partner/dashboard",
+              },
+              footerNote: "Nastavení propojení můžete kdykoli zkontrolovat v partnerském portálu.",
+            }),
           });
         }
       }
@@ -209,12 +227,26 @@ Deno.serve(async (req) => {
       const partnerName = partnerRow.name ?? "Partner";
       if (partnerEmail) {
         const reason = typeof rejection_reason === "string" && rejection_reason.trim()
-          ? `\n\nDůvod: ${rejection_reason.trim()}`
+          ? `<div style="margin-top:20px;padding:16px;background:#F7EBDD;border:1px solid #F2A16B;border-radius:12px;"><strong>Důvod:</strong><br>${escapeEmailHtml(rejection_reason.trim())}</div>`
           : "";
         await admin.from("email_queue").insert({
           email: partnerEmail,
           subject: "Váš požadavek na napojení Shoptet e-shopu byl zamítnut",
-          body: `Dobrý den, ${partnerName},\n\nbohužel váš požadavek na napojení Shoptet e-shopu do OneMil byl zamítnut.${reason}\n\nPokud máte dotazy, kontaktujte nás na eshop@onemil.cz.\n\nS pozdravem,\nTým OneMil`,
+          body: renderOneMilEmail({
+            preheader: "Informace k požadavku na propojení Shoptet e-shopu.",
+            eyebrow: "Shoptet propojení",
+            title: "Požadavek potřebuje úpravu",
+            bodyHtml: `
+              <p style="margin:0 0 16px;">Dobrý den, <strong>${escapeEmailHtml(partnerName)}</strong>,</p>
+              <p style="margin:0;">váš požadavek na napojení Shoptet e-shopu do OneMil nyní nemohl být schválen.</p>
+              ${reason}
+            `,
+            action: {
+              label: "Otevřít partnerský portál",
+              url: "https://onemil.cz/partner/dashboard",
+            },
+            footerNote: "Pokud máte dotazy, napište nám na eshop@onemil.cz.",
+          }),
         });
       }
     }

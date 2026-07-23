@@ -1,6 +1,11 @@
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.57.4";
 import { Resend } from "npm:resend@2.0.0";
+import {
+  escapeEmailHtml,
+  renderOneMilDetailRows,
+  renderOneMilEmail,
+} from "../_shared/oneMilEmailTemplate.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -264,14 +269,24 @@ serve(async (req: Request) => {
 function renderEmail(partnerName: string, periodStart: string, periodEnd: string, formattedAmount: string): string {
   // Note: the invoice status is intentionally NOT shown — on the first
   // successful send the invoice is being issued, so "draft" must never appear.
-  return `
-    <h2>Faktura – ${partnerName}</h2>
-    <p>Dobrý den,</p>
-    <p>zasíláme Vám fakturu za období <strong>${periodStart}</strong> – <strong>${periodEnd}</strong>.</p>
-    <table style="border-collapse:collapse;margin:16px 0">
-      <tr><td style="padding:4px 12px 4px 0;color:#666">Celková částka:</td><td style="font-weight:bold">${formattedAmount}</td></tr>
-    </table>
-    <p>PDF faktura je přiložena k tomuto e-mailu.</p>
-    <p>S pozdravem,<br/>Tým OneMil</p>
-  `;
+  return renderOneMilEmail({
+    preheader: `Faktura OneMil za období ${periodStart} až ${periodEnd}.`,
+    eyebrow: "Partnerská fakturace",
+    title: "Vaše faktura OneMil",
+    bodyHtml: `
+      <p style="margin:0 0 18px;">Dobrý den,</p>
+      <p style="margin:0 0 22px;">pro partnera <strong>${escapeEmailHtml(partnerName)}</strong> jsme připravili fakturu. PDF dokument najdete v příloze tohoto e-mailu.</p>
+      <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#F7EBDD;border:1px solid #F2A16B;border-radius:12px;border-collapse:separate;overflow:hidden;">
+        ${renderOneMilDetailRows([
+          { label: "Období", value: `${escapeEmailHtml(periodStart)} – ${escapeEmailHtml(periodEnd)}` },
+          { label: "Celková částka", value: escapeEmailHtml(formattedAmount) },
+        ])}
+      </table>
+    `,
+    action: {
+      label: "Otevřít partnerský portál",
+      url: "https://onemil.cz/partner/dashboard",
+    },
+    footerNote: "PDF faktura je přiložena k tomuto e-mailu.",
+  });
 }
