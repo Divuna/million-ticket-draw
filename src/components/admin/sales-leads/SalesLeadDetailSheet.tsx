@@ -260,12 +260,16 @@ const ActivityGlyph = ({ type }: { type: string }) => {
 const EmailActivityItem = ({
   activity,
   onReply,
+  onReuse,
   replyForm,
+  reuseForm,
 }: {
   activity: ActivityRow;
   onReply?: (activity: ActivityRow) => void;
+  onReuse?: (activity: ActivityRow, mode: 'resend' | 'forward') => void;
   /** Formulář odpovědi — renderuje se přímo pod TOUTO zprávou, jen když je otevřený. */
   replyForm?: ReactNode;
+  reuseForm?: ReactNode;
 }) => {
   const [showFullBody, setShowFullBody] = useState(false);
   const [showQuoted, setShowQuoted] = useState(false);
@@ -367,12 +371,77 @@ const EmailActivityItem = ({
             Odpovědět
           </Button>
         )}
+        {!isInbound && onReuse && !reuseForm && (
+          <div className="mt-2 flex flex-wrap gap-2">
+            <Button type="button" variant="outline" size="sm" onClick={() => onReuse(activity, 'resend')}>
+              Odeslat znovu
+            </Button>
+            <Button type="button" variant="outline" size="sm" onClick={() => onReuse(activity, 'forward')}>
+              Přeposlat na jiný e-mail
+            </Button>
+          </div>
+        )}
         {/* Formulář odpovědi — přímo pod zprávou, na kterou uživatel klikl. */}
         {replyForm}
+        {reuseForm}
       </div>
     </li>
   );
 };
+
+const InlineReuseForm = ({
+  mode,
+  recipient,
+  subject,
+  body,
+  sending,
+  onRecipientChange,
+  onSubjectChange,
+  onBodyChange,
+  onSend,
+  onCancel,
+}: {
+  mode: 'resend' | 'forward';
+  recipient: string;
+  subject: string;
+  body: string;
+  sending: boolean;
+  onRecipientChange: (value: string) => void;
+  onSubjectChange: (value: string) => void;
+  onBodyChange: (value: string) => void;
+  onSend: () => void;
+  onCancel: () => void;
+}) => (
+  <div className="mt-4 space-y-3 rounded-xl border border-primary/30 bg-background/90 p-4 shadow-sm">
+    <div className="flex items-center justify-between gap-2">
+      <div className="text-sm font-medium">
+        {mode === 'forward' ? 'Přeposlat na jiný e-mail' : 'Odeslat e-mail znovu'}
+      </div>
+      <Button type="button" variant="ghost" size="sm" onClick={onCancel} disabled={sending}>Zrušit</Button>
+    </div>
+    <div className="space-y-1">
+      <Label htmlFor="reuse-recipient">Příjemce</Label>
+      <Input id="reuse-recipient" type="email" value={recipient} onChange={(event) => onRecipientChange(event.target.value)} disabled={sending} maxLength={320} />
+    </div>
+    <div className="space-y-1">
+      <Label htmlFor="reuse-subject">Předmět</Label>
+      <Input id="reuse-subject" value={subject} onChange={(event) => onSubjectChange(event.target.value)} disabled={sending} maxLength={300} />
+    </div>
+    <div className="space-y-1">
+      <Label htmlFor="reuse-body">Text e-mailu</Label>
+      <Textarea id="reuse-body" value={body} onChange={(event) => onBodyChange(event.target.value)} disabled={sending} rows={8} maxLength={20000} />
+    </div>
+    <p className="text-xs text-muted-foreground">
+      Nic se neodešle automaticky. Hlavní kontakt leadu se změnou příjemce neupraví.
+    </p>
+    <div className="flex justify-end">
+      <Button type="button" onClick={onSend} disabled={sending} className="gap-1.5">
+        {sending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
+        Odeslat e-mail
+      </Button>
+    </div>
+  </div>
+);
 
 /**
  * Formulář odpovědi zobrazený inline pod vybranou příchozí zprávou.
@@ -560,6 +629,12 @@ export function SalesLeadDetailSheet({ leadId, open, onOpenChange, onMutated }: 
   const [replySending, setReplySending] = useState(false);
   const [replyAiBusy, setReplyAiBusy] = useState(false);
   const [replyAttachments, setReplyAttachments] = useState<SalesLeadEmailAttachment[]>([]);
+  const [reuseActivity, setReuseActivity] = useState<ActivityRow | null>(null);
+  const [reuseMode, setReuseMode] = useState<'resend' | 'forward'>('resend');
+  const [reuseRecipient, setReuseRecipient] = useState('');
+  const [reuseSubject, setReuseSubject] = useState('');
+  const [reuseBody, setReuseBody] = useState('');
+  const [reuseSending, setReuseSending] = useState(false);
   const [templatePickerType, setTemplatePickerType] = useState<SalesLeadEmailTemplateType | null>(null);
 
   const load = useCallback(async () => {
@@ -629,6 +704,7 @@ export function SalesLeadDetailSheet({ leadId, open, onOpenChange, onMutated }: 
       setDuplicateConflicts([]);
       setOverrideReason('');
       setReplyToActivity(null);
+      setReuseActivity(null);
       setAresLoading(false);
       setIcoError('');
       setPendingAresResult(null);
@@ -914,6 +990,67 @@ export function SalesLeadDetailSheet({ leadId, open, onOpenChange, onMutated }: 
     } catch (err: unknown) {
       toast.error(err instanceof Error ? err.message : 'Odpověď se nepodařilo odeslat.');
     } finally { setReplySending(false); }
+  };
+
+  const startReuse = (activity: ActivityRow, mode: 'resend' | 'forward') => {
+    const originalRecipient = typeof activity.metadata?.to === 'string'
+      ? activity.metadata.to
+      : lead?.contact_email ?? '';
+    setReuseActivity(activity);
+    setReuseMode(mode);
+    setReuseRecipient(mode === 'forward' ? '' : originalRecipient);
+    setReuseSubject(activity.subject ?? '');
+    setReuseBody(activity.body_snapshot ?? '');
+  };
+
+  const sendReusedEmail = async () => {
+    if (!lead || !reuseActivity) return;
+    if (lead.do_not_contact) {
+      toast.error('Lead je označený „Nekontaktovat“. E-mail nebyl odeslán.');
+      return;
+    }
+    const recipient = reuseRecipient.trim().toLowerCase();
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(recipient)) {
+      toast.error('Zadejte platnou e-mailovou adresu příjemce.');
+      return;
+    }
+    const validationErrors = validateSalesLeadEmailContent('initial', reuseSubject, reuseBody);
+    if (validationErrors.length > 0) {
+      toast.error(validationErrors[0]);
+      return;
+    }
+    setReuseSending(true);
+    try {
+      const { data, error } = await supabase.functions.invoke('send-sales-lead-email', {
+        body: {
+          lead_id: lead.id,
+          reuse_source_activity_id: reuseActivity.id,
+          reuse_mode: reuseMode,
+          recipient,
+          subject: reuseSubject,
+          body: reuseBody,
+        },
+      });
+      if (error) throw new Error(error.message);
+      const res = (data ?? {}) as { success?: boolean; error?: string; warning?: string; email_sent?: boolean };
+      if (!res.success) {
+        toast.error(rpcErrorMessage(res.error));
+        if (res.email_sent) {
+          setReuseActivity(null);
+          await load();
+          onMutated();
+        }
+        return;
+      }
+      toast.success(reuseMode === 'forward' ? 'E-mail byl přeposlán.' : 'E-mail byl znovu odeslán.');
+      setReuseActivity(null);
+      await load();
+      onMutated();
+    } catch (err: unknown) {
+      toast.error(err instanceof Error ? err.message : 'E-mail se nepodařilo odeslat.');
+    } finally {
+      setReuseSending(false);
+    }
   };
 
   const targets = useMemo(
@@ -2043,6 +2180,7 @@ export function SalesLeadDetailSheet({ leadId, open, onOpenChange, onMutated }: 
                       key={a.id}
                       activity={a}
                       onReply={startReply}
+                      onReuse={startReuse}
                       replyForm={
                         replyToActivity?.id === a.id ? (
                           <InlineReplyForm
@@ -2061,6 +2199,22 @@ export function SalesLeadDetailSheet({ leadId, open, onOpenChange, onMutated }: 
                             validationErrors={replyValidationErrors}
                             attachments={replyAttachments}
                             onAttachmentsChange={setReplyAttachments}
+                          />
+                        ) : undefined
+                      }
+                      reuseForm={
+                        reuseActivity?.id === a.id ? (
+                          <InlineReuseForm
+                            mode={reuseMode}
+                            recipient={reuseRecipient}
+                            subject={reuseSubject}
+                            body={reuseBody}
+                            sending={reuseSending}
+                            onRecipientChange={setReuseRecipient}
+                            onSubjectChange={setReuseSubject}
+                            onBodyChange={setReuseBody}
+                            onSend={() => void sendReusedEmail()}
+                            onCancel={() => setReuseActivity(null)}
                           />
                         ) : undefined
                       }

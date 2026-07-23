@@ -867,3 +867,26 @@ Stav nasazení 11. 07. 2026: LIVE na stagingu i produkci; migrace `sales_leads_v
 - Ostatní kandidáti jsou v `alternative_websites` pouze pro audit a nikdy se nepoužijí k enrichmentu.
 - Zdroj, důvěra 0–100, čas ověření a technické důkazy jsou uložené odděleně. Stejná provenance se ukládá pro nalezený e-mail.
 - `sales-lead-enrich-contact` pracuje jen s ověřeným webem, vyžaduje stejnou doménu zdrojové URL a před uložením musí navržený e-mail fyzicky najít v obsahu stránky.
+
+## 21. Opětovné použití odeslaného e-mailu
+
+- Každá odchozí aktivita `email_sent` nabízí `Odeslat znovu` a `Přeposlat na jiný e-mail`.
+- Obě akce pouze otevřou formulář; nic se neodesílá bez ručního kliknutí uživatele s
+  `sales_leads.manage`. Příjemce, předmět i text jsou před odesláním editovatelné.
+- `Odeslat znovu` předvyplní původního příjemce. `Přeposlat na jiný e-mail` ponechá příjemce
+  prázdného, aby musel být výslovně zadán.
+- Odeslání používá existující Edge Function `send-sales-lead-email` a zachovává její serverové
+  kontroly oprávnění, `do_not_contact`, suppression a duplicit.
+- Každé odeslání vloží nový append-only `email_sent`. Metadata obsahují
+  `reused_from_activity_id`, `reuse_mode` a původního příjemce. Zdrojová aktivita ani
+  `sales_leads.contact_email` se nemění; jiný příjemce se nikdy nestává hlavním kontaktem.
+
+## 22. Dynamické filtry seznamu
+
+- Seznam leadů lze filtrovat současně podle stavové záložky, textového hledání, skupiny a oboru.
+- Nabídka skupin se načítá z aktivních záznamů `sales_lead_groups`; pokud číselník v daném
+  prostředí není dostupný, použijí se jedinečné neprázdné hodnoty `sales_leads.lead_group`.
+  Nově vytvořená skupina se po uložení načte do filtru bez změny kódu.
+- Nabídka oborů vzniká výhradně z jedinečných neprázdných hodnot `sales_leads.industry`.
+- Oba filtry obsahují volby `Všechny` a `Bez …`. Akce `Zrušit filtry` nastaví stavovou záložku
+  na `Vše`, vymaže hledání a obnoví oba výběry na `Všechny`.

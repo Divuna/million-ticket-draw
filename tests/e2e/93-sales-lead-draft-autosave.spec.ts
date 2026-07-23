@@ -40,7 +40,8 @@ test.describe('93 — kontrakt: tiché ukládání konceptů', () => {
     expect(page).toContain("label: 'Rozpracované'");
     expect(page).not.toContain("label: 'Příprava'");
     expect(page).toContain('draftsOnly: true');
-    expect(page).toContain('!l.draft_updated_at');
+    // Rozpracované filtruje podle skutečně uloženého konceptu (draft_updated_at).
+    expect(page).toMatch(/draftsOnly\b[\s\S]{0,200}draft_updated_at/);
     expect(page).toContain('draftCount');
   });
 
