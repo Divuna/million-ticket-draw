@@ -193,9 +193,14 @@ insert into public.partner_invoices (
   21
 );
 
--- Kept last because Supabase CLI 2.84's migration splitter treats a function
--- with this historical name as consuming the remainder of a fixture file.
-create or replace function public.buy_ticket_atomic(p_user_id uuid, p_contest_id uuid)
+-- The name is quoted on purpose. The Supabase CLI migration splitter supports
+-- SQL-standard "BEGIN ATOMIC" bodies by switching to a special state as soon as
+-- the text ends with the word ATOMIC and then scanning for a bare END, so an
+-- unquoted identifier ending in _atomic makes it swallow the remainder of the
+-- file. Quoting keeps those characters inside a quoted identifier; the name is
+-- already lowercase, so nothing changes semantically. With the quotes this
+-- definition no longer has to be the last statement in the fixture.
+create or replace function public."buy_ticket_atomic"(p_user_id uuid, p_contest_id uuid)
 returns jsonb
 language plpgsql
 as 'begin return jsonb_build_object(''success'', false, ''fixture'', true); end';

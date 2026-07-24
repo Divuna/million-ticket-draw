@@ -28,6 +28,16 @@
 -- billable.
 --
 -- Feature-flag gated, OFF by default: merging this does not activate the flow.
+--
+-- NOTE ON QUOTED FUNCTION NAMES: top-level statements below write the function
+-- names as public."..._atomic". The Supabase CLI migration splitter supports
+-- SQL-standard "BEGIN ATOMIC" bodies by switching to a special state as soon as
+-- the text ends with the word ATOMIC, and then scanning for a bare END. An
+-- unquoted identifier ending in _atomic triggers that state, so the splitter
+-- swallows the rest of the file into one chunk and Postgres rejects it with
+-- "cannot insert multiple commands into a prepared statement". Double-quoting
+-- makes the parser read those characters inside a quoted identifier instead.
+-- The names are already lowercase, so quoting changes nothing semantically.
 -- ============================================================================
 
 begin;
@@ -83,7 +93,7 @@ end $$;
 -- truth for winning logic, used by both the classic paid wrapper and the free
 -- benefit bundle. It is intentionally NOT executable by clients (a direct call
 -- would mint a free ticket); only owner/security-definer callers reach it.
-create or replace function public.assign_contest_ticket_atomic(
+create or replace function public."assign_contest_ticket_atomic"(
   p_user_id uuid,
   p_contest_id uuid
 )
@@ -171,17 +181,17 @@ begin
 end;
 $$;
 
-revoke all on function public.assign_contest_ticket_atomic(uuid, uuid)
+revoke all on function public."assign_contest_ticket_atomic"(uuid, uuid)
   from public, anon, authenticated;
-grant execute on function public.assign_contest_ticket_atomic(uuid, uuid) to service_role;
+grant execute on function public."assign_contest_ticket_atomic"(uuid, uuid) to service_role;
 
-comment on function public.assign_contest_ticket_atomic(uuid, uuid) is
+comment on function public."assign_contest_ticket_atomic"(uuid, uuid) is
   'Shared ticket + win-resolution core (no MioCoin charge). Single source of truth for winning logic. Not client-executable; reached only through security-definer callers.';
 
 -- ---------------------------------------------------------------------------
 -- buy_ticket_atomic — thin wrapper, classic paid flow (behavior preserved)
 -- ---------------------------------------------------------------------------
-create or replace function public.buy_ticket_atomic(
+create or replace function public."buy_ticket_atomic"(
   p_user_id uuid,
   p_contest_id uuid
 )
@@ -261,7 +271,7 @@ $$;
 -- ---------------------------------------------------------------------------
 -- purchase_guaranteed_benefit_bundle_atomic — benefit purchase + free ticket
 -- ---------------------------------------------------------------------------
-create or replace function public.purchase_guaranteed_benefit_bundle_atomic(
+create or replace function public."purchase_guaranteed_benefit_bundle_atomic"(
   p_user_id uuid,
   p_contest_id uuid,
   p_idempotency_key uuid
@@ -518,12 +528,12 @@ begin
 end;
 $$;
 
-revoke all on function public.purchase_guaranteed_benefit_bundle_atomic(uuid, uuid, uuid)
+revoke all on function public."purchase_guaranteed_benefit_bundle_atomic"(uuid, uuid, uuid)
   from public, anon;
-grant execute on function public.purchase_guaranteed_benefit_bundle_atomic(uuid, uuid, uuid)
+grant execute on function public."purchase_guaranteed_benefit_bundle_atomic"(uuid, uuid, uuid)
   to authenticated, service_role;
 
-comment on function public.purchase_guaranteed_benefit_bundle_atomic(uuid, uuid, uuid) is
+comment on function public."purchase_guaranteed_benefit_bundle_atomic"(uuid, uuid, uuid) is
   'Atomic garantovaný nákupní benefit purchase: charges customer_price_miocoins as benefit_purchase and creates the contest ticket FREE via assign_contest_ticket_atomic. buy_ticket_atomic is unchanged in behavior and not used here. Feature-flag gated, OFF by default.';
 
 commit;
