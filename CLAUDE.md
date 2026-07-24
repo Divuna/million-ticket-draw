@@ -1,3 +1,13 @@
+# Garantovaný nákupní benefit — datový základ Fáze 1 (24. 07. 2026)
+
+- Produktový název je vždy **„garantovaný nákupní benefit“**. Klasický soutěžní voucher je jiný, dobrovolný a pro partnera zůstává zdarma.
+- Aditivní základ je v migraci `supabase/migrations/20260724140039_guaranteed_purchase_benefit_phase1.sql`; dokud není samostatně zkontrolována a aplikována, není aktivní ani v databázi.
+- Nové nákupy nejsou zapojené: `buy_ticket_atomic`, současné soutěže, `partner_invoices`, PDF/e-mail fakturace a automatická fakturace se nemění.
+- Nové `vat_rate_percent` ukládá procento (`21`) a výpočet dělí `100`. Historické `partners.vat_rate`/`partner_invoices.vat_rate` dál používají zlomek (`0.21`) a jejich funkce se nesmí převádět.
+- Schválené `voucher_versions`, použité ceny objednávek a identity/cenové snapshoty `voucher_issuances` jsou neměnné. `voucher_code_id`, `ticket_id` a fakturační source mají unikátní ochranu.
+- Authenticated klient má na nové workflow/issuance/invoice tabulky pouze RLS-omezené čtení. Schválení, zamítnutí, cena, pozastavení a ukončení jdou jen přes superadmin RPC; vydání a budoucí fakturační zápisy zůstávají service-role/atomickému backendu.
+- `partner_invoice_items` a `partner_invoice_item_sources` jsou jen budoucí základ. Nesmí se napojit do současného cron/PDF/e-mail řetězce bez další samostatné fáze a kontroly.
+
 # Sales Leads CRM — aktuální produkční invarianty (14. 07. 2026)
 
 - Odpovědi zákazníků směřují veřejně na `OneMil obchodní tým <b2b@onemil.cz>`. Technická adresa `reply+<lead_id>@…` se už zákazníkovi nesmí zobrazovat.
