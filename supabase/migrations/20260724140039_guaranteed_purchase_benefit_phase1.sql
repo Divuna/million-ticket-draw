@@ -765,17 +765,22 @@ as $$
 declare
   v_entity_type text;
   v_entity_id uuid;
+  v_new_distribution_mode text := 'classic';
+  v_old_distribution_mode text := 'classic';
 begin
-  if tg_table_name = 'vouchers'
-     and coalesce(
-       case when tg_op = 'DELETE' then old.distribution_mode else new.distribution_mode end,
-       'classic'
-     ) <> 'guaranteed_purchase_benefit'
-     and coalesce(
-       case when tg_op = 'UPDATE' then old.distribution_mode else 'classic' end,
-       'classic'
-     ) <> 'guaranteed_purchase_benefit' then
-    return coalesce(new, old);
+  -- OLD/NEW are table-shaped records. Never dereference a vouchers-only field
+  -- while this shared trigger is running for another audited table.
+  if tg_table_name = 'vouchers' then
+    if tg_op <> 'DELETE' then
+      v_new_distribution_mode := coalesce(new.distribution_mode, 'classic');
+    end if;
+    if tg_op <> 'INSERT' then
+      v_old_distribution_mode := coalesce(old.distribution_mode, 'classic');
+    end if;
+    if v_new_distribution_mode <> 'guaranteed_purchase_benefit'
+       and v_old_distribution_mode <> 'guaranteed_purchase_benefit' then
+      return coalesce(new, old);
+    end if;
   end if;
 
   v_entity_type := case tg_table_name
