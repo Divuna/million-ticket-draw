@@ -68,11 +68,6 @@ language plpgsql
 stable
 as 'begin return false; end';
 
-create or replace function public.buy_ticket_atomic(p_user_id uuid, p_contest_id uuid)
-returns jsonb
-language plpgsql
-as 'begin return jsonb_build_object(''success'', false, ''fixture'', true); end';
-
 grant select on public.partners, public.vouchers, public.partner_invoices
   to authenticated;
 
@@ -105,3 +100,10 @@ insert into public.partner_invoices (
   current_date,
   21
 );
+
+-- Kept last because Supabase CLI 2.84's migration splitter treats a function
+-- with this historical name as consuming the remainder of a fixture file.
+create or replace function public.buy_ticket_atomic(p_user_id uuid, p_contest_id uuid)
+returns jsonb
+language plpgsql
+as 'begin return jsonb_build_object(''success'', false, ''fixture'', true); end';
