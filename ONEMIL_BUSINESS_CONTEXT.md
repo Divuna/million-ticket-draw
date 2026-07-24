@@ -1,7 +1,7 @@
 # OneMil — business context
 
 **Status:** permanent business/product context  
-**Last updated:** 2026-07-14  
+**Last updated:** 2026-07-24  
 **Owner:** Pavel Diviš  
 **Company context:** see `COMPANY_CONTEXT.md`
 
@@ -481,6 +481,160 @@ Placing the partner's own vouchers in the OneMil voucher section or into selecte
 
 The partner defines the voucher value, validity, conditions, quantity, and target offer. Any direct discount or product benefit provided to the customer is covered by the partner, but OneMil does not charge the partner a separate placement fee for inserting these vouchers within the cooperation.
 
+### 17.4 Guaranteed voucher with every paid contest entry — confirmed target model
+
+This is the confirmed priority product and business model for the next contest-system extension.
+
+OneMil will not create a second public voucher section or a separate voucher product. The existing voucher system will be extended so that every paid contest entry includes exactly one guaranteed real voucher and the contest ticket is supplied free as a bonus.
+
+Public presentation must make the purchase clear, for example:
+
+```text
+Voucher + 1 ticket zdarma
+Za 20 MioCoinů
+```
+
+The customer must see before confirmation that MioCoins are used for the guaranteed voucher and that the contest ticket is included free of charge.
+
+After purchase:
+
+- the voucher is stored in the existing purchased-vouchers area,
+- the ticket is stored in the existing contests area,
+- the ticket links to the voucher received with that purchase,
+- partner offers, winning vouchers, bonus prizes, and guaranteed vouchers remain separate concepts.
+
+A paid contest purchase must not complete without an available guaranteed voucher. Voucher assignment, code issue, MioCoin deduction, and ticket creation must succeed together; if any part fails, none of them may be completed.
+
+### 17.5 Partner creation and voucher codes
+
+A partner can create its own voucher in the partner portal and submit it for superadmin approval.
+
+The partner defines:
+
+- voucher name and description,
+- real discount or benefit,
+- minimum purchase if applicable,
+- validity,
+- conditions and method of use,
+- graphics,
+- requested quantity.
+
+The partner has two code options:
+
+1. import its own unique codes from its own system,
+2. ask OneMil to generate the required number of unique codes and download them for import into the partner's own system.
+
+OneMil assigns one available unique code when the voucher is issued. The code is then marked as issued and cannot be issued again.
+
+The partner cannot activate a voucher for distribution without superadmin approval.
+
+### 17.6 Superadmin approval
+
+The superadmin checks that:
+
+- the discount or benefit is real and usable,
+- the value is sufficient for the MioCoin amount connected to the purchase,
+- the minimum purchase and conditions are reasonable,
+- the voucher is not only a formal or misleading substitute,
+- the validity is reasonable,
+- enough valid codes are available.
+
+The superadmin can approve, reject, return for correction, pause, or end the voucher distribution.
+
+Approved voucher terms must not be silently changed. A material partner change requires a new approval while earlier issued vouchers keep their original approved conditions.
+
+### 17.7 Partner distribution orders for contests
+
+After voucher approval, the partner chooses a specific contest and orders a quantity of distribution positions, for example 200 positions.
+
+The partner sees:
+
+- ordered quantity,
+- actually issued quantity,
+- remaining quantity,
+- available code count,
+- price excluding VAT per billable distribution,
+- estimated amount for the next invoice.
+
+The order can be pending approval, active, paused, completed, or cancelled.
+
+One order can be distributed and invoiced gradually across multiple billing periods and multiple invoices until the requested quantity is exhausted or the order is ended.
+
+### 17.8 Distribution rules and fallback
+
+Every paid contest purchase receives exactly one guaranteed voucher.
+
+The system should maximise partner reach and minimise duplicate vouchers for the same customer:
+
+1. prefer a voucher from a company from which the customer has not yet received a voucher,
+2. prefer a voucher variant the customer has not yet received,
+3. then prefer the least-used or longest-not-issued suitable voucher,
+4. distribute active partner orders fairly,
+5. use an approved fallback voucher if no other suitable voucher is available.
+
+The same code must never be issued twice and the ordered quantity must never be exceeded.
+
+If a customer receives the same voucher again, it may receive a new valid code, but the partner is charged only for the first issue of that same voucher to that customer.
+
+Iconic Point will be handled as a standard partner with an individual distribution price of 0 Kč and may provide the approved fallback vouchers that ensure a guaranteed voucher is always available.
+
+### 17.9 Billing for voucher distribution
+
+Voucher distribution is a marketing service provided by OneMil to the partner.
+
+The partner does not pay for the value of the discount. The partner covers the discount or benefit itself and pays OneMil only for the distribution service according to the approved price.
+
+Billing rules:
+
+- only actually issued vouchers are considered,
+- only the first issue of the same voucher to the same customer is billable,
+- repeated issue of that same voucher to that customer is not billed again,
+- only issued and not-yet-invoiced items are added to an invoice,
+- the same issue must never be invoiced twice,
+- one distribution order may appear gradually on several invoices,
+- voucher distribution appears as a separate item on the existing partner invoice,
+- the partner receives one combined invoice for existing services and voucher distribution.
+
+Example invoice item:
+
+```text
+Distribuce voucheru [název] v soutěži [název] – 45 účtovaných vydání × 1 Kč
+```
+
+The superadmin sets the distribution price excluding VAT.
+
+Example:
+
+```text
+1 Kč bez DPH za jedno účtované vydání
++ 21 % DPH
+= 1,21 Kč včetně DPH
+```
+
+The superadmin can:
+
+- set a global price for all partners,
+- set the global price to 0 Kč,
+- set an individual partner price including 0 Kč,
+- change future pricing without changing historical billed amounts.
+
+An individual partner price has priority over the global price. The price used for an approved order and issue must be stored as a historical snapshot so later price changes do not alter older billing.
+
+The standard VAT rate is 21 %. The administration displays and stores the service price excluding VAT, and the invoice automatically adds the partner's applicable VAT rate.
+
+### 17.10 Safe implementation requirement
+
+The target model must be implemented additively and safely:
+
+- existing historical vouchers, tickets, partner offers, winnings, and invoices must remain unchanged,
+- the current ticket purchase must not be directly replaced without a rollback path,
+- the new combined voucher-and-ticket purchase should use a new versioned atomic purchase flow,
+- repeated requests must not cause double deduction, double ticket creation, double code issue, or double billing,
+- approved voucher conditions and prices must be historically preserved,
+- rollout should begin with Iconic Point and one controlled contest before broader activation.
+
+This section describes the confirmed target model. It is not a statement that the full feature is already implemented in production.
+
 ---
 
 ## 18. Partner Offers
@@ -581,7 +735,8 @@ Admin and production actions are sensitive and must follow the existing project 
 - get product and brand exposure
 - use OneMil as a loyalty and marketing channel
 - place their own vouchers in the main OneMil voucher offer for free within the cooperation
-- place their own vouchers into selected contests for free within the cooperation
+- place their own vouchers into selected contests
+- order paid or zero-price guaranteed voucher distribution in selected contests
 - use vouchers to support clearance sales, seasonal campaigns, selected products, and older stock
 
 ### For end users
@@ -589,6 +744,8 @@ Admin and production actions are sensitive and must follow the existing project 
 - get MioCoins
 - activate coupons
 - unlock vouchers
+- receive one guaranteed voucher with each paid contest entry
+- receive the related contest ticket free as a bonus
 - enter contests
 - win physical prizes
 - receive partner offers
@@ -620,13 +777,13 @@ Admin and production actions are sensitive and must follow the existing project 
 
 ## 24. Short official description
 
-OneMil is a B2B reward, partner, and marketing platform for e-shops, companies, brands, influencers, and agencies. It lets companies reward customers with MioCoins, coupons, vouchers, partner offers, and contest experiences. For end users, OneMil works as a premium reward app where they can activate rewards, use MioCoins, open tickets, access partner offers, and join consumer contests for physical prizes.
+OneMil is a B2B reward, partner, and marketing platform for e-shops, companies, brands, influencers, and agencies. It lets companies reward customers with MioCoins, coupons, vouchers, partner offers, and contest experiences. For end users, OneMil works as a premium reward app where they can activate rewards, use MioCoins, receive guaranteed vouchers with contest entries, access partner offers, and join consumer contests for physical prizes.
 
 ---
 
 ## 25. Czech official description
 
-OneMil je B2B odměnová, partnerská a marketingová platforma pro e-shopy, firmy, značky, influencery a agentury. Firmám umožňuje odměňovat zákazníky pomocí MioCoinů, kuponů, voucherů, partnerských nabídek a soutěžních zážitků. Pro koncového uživatele OneMil funguje jako prémiová odměnová aplikace, kde může aktivovat odměny, používat MioCoiny, otevírat tikety, využívat partnerské nabídky a zapojovat se do spotřebitelských soutěží o věcné výhry.
+OneMil je B2B odměnová, partnerská a marketingová platforma pro e-shopy, firmy, značky, influencery a agentury. Firmám umožňuje odměňovat zákazníky pomocí MioCoinů, kuponů, voucherů, partnerských nabídek a soutěžních zážitků. Pro koncového uživatele OneMil funguje jako prémiová odměnová aplikace, kde může aktivovat odměny, používat MioCoiny, získat garantovaný voucher a k němu soutěžní tiket zdarma, využívat partnerské nabídky a zapojovat se do spotřebitelských soutěží o věcné výhry.
 
 ---
 
@@ -649,7 +806,9 @@ Influencers and agencies can be growth and commission channels.
 
 Agencies and sales representatives can receive commission from amounts excluding VAT actually invoiced by OneMil to brought e-shops and can control who receives customer top-up commissions within their approved affiliate structure.
 
-Partners can place their own vouchers in the main OneMil voucher offer or into selected contests free of charge as part of the cooperation. These vouchers can support clearance sales, seasonal campaigns, selected products, and older stock.
+Partners can place their own vouchers in the main OneMil voucher offer or into selected contests. For guaranteed contest voucher distribution, partners may order distribution positions and are billed according to the confirmed issued-voucher rules in section 17.
+
+Every paid contest entry in the target model includes one guaranteed voucher and the contest ticket free as a bonus. This is a confirmed target model, not confirmation that the full feature is already deployed.
 
 Partner Offers, vouchers, coupons, contests, MioCoins, and social campaigns are different parts of the same reward ecosystem.
 
@@ -659,6 +818,8 @@ Partner Offers, vouchers, coupons, contests, MioCoins, and social campaigns are 
 
 - exact billing email
 - exact legal wording for partner contracts
+- exact customer-facing legal wording for the guaranteed voucher + free ticket model
+- final VAT and accounting review for the combined invoice implementation
 - exact influencer commission model if it changes from current implementation
 - exact B2B onboarding flow for e-shops
 - exact API integration package for partners
