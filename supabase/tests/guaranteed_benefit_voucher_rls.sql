@@ -35,11 +35,32 @@ insert into auth.users (
     now(), '{}'::jsonb, '{}'::jsonb, now(), now()
   );
 
-insert into public.users (id) values
-  ('d1000000-0000-0000-0000-000000000001'),
-  ('d1000000-0000-0000-0000-000000000002'),
-  ('d1000000-0000-0000-0000-000000000003'),
-  ('d1000000-0000-0000-0000-000000000004');
+insert into public.users (id, email) values
+  (
+    'd1000000-0000-0000-0000-000000000001',
+    'rls-partner-a@example.test'
+  ),
+  (
+    'd1000000-0000-0000-0000-000000000002',
+    'rls-partner-b@example.test'
+  ),
+  (
+    'd1000000-0000-0000-0000-000000000003',
+    'rls-superadmin@example.test'
+  ),
+  (
+    'd1000000-0000-0000-0000-000000000004',
+    'rls-issued-user@example.test'
+  )
+on conflict (id) do nothing;
+
+delete from public.user_roles
+where user_id = 'd1000000-0000-0000-0000-000000000003';
+
+insert into public.user_roles (user_id, role) values (
+  'd1000000-0000-0000-0000-000000000003',
+  'superadmin'
+);
 
 insert into public.partners (
   id, auth_user_id, name, logo_url, website_url
@@ -103,16 +124,6 @@ insert into public.user_vouchers (
     false,
     'guaranteed_purchase_benefit'
   );
-
-create or replace function public.is_superadmin(p_user_id uuid)
-returns boolean
-language sql
-stable
-security definer
-set search_path = public
-as $$
-  select p_user_id = 'd1000000-0000-0000-0000-000000000003'::uuid
-$$;
 
 select ok(
   exists (
