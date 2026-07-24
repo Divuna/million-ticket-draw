@@ -66,16 +66,12 @@ create or replace function public.is_superadmin(p_user_id uuid)
 returns boolean
 language sql
 stable
-as $$
-  select false;
-$$;
+return false;
 
 create or replace function public.buy_ticket_atomic(p_user_id uuid, p_contest_id uuid)
 returns jsonb
 language sql
-as $$
-  select jsonb_build_object('success', false, 'fixture', true);
-$$;
+return jsonb_build_object('success', false, 'fixture', true);
 
 grant select on public.partners, public.vouchers, public.partner_invoices
   to authenticated;
