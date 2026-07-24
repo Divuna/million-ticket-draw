@@ -6,7 +6,11 @@ on:
     paths:
       - ".github/workflows/guaranteed-purchase-benefit-db.yml"
       - "supabase/migrations/20260724140039_guaranteed_purchase_benefit_phase1.sql"
+      - "supabase/migrations/20260724155213_restrict_guaranteed_benefit_voucher_visibility.sql"
+      - "supabase/migrations/20260724162000_expand_voucher_superadmin_visibility.sql"
       - "supabase/tests/guaranteed_purchase_benefit_phase1.sql"
+      - "supabase/tests/guaranteed_benefit_voucher_rls.sql"
+      - "supabase/tests/fixtures/guaranteed_purchase_benefit_phase1_baseline.sql"
   workflow_dispatch:
 
 env:
@@ -35,21 +39,31 @@ jobs:
             supabase/migrations/20260724140038_phase1_test_baseline.sql
           cp supabase/project-migrations/20260724140039_guaranteed_purchase_benefit_phase1.sql \
             supabase/migrations/
+          cp supabase/project-migrations/20260724155213_restrict_guaranteed_benefit_voucher_visibility.sql \
+            supabase/migrations/
+          cp supabase/project-migrations/20260724162000_expand_voucher_superadmin_visibility.sql \
+            supabase/migrations/
 
       - name: First clean migration pass
         run: supabase start
 
       - name: First full pgTAP pass
-        run: supabase test db supabase/tests/guaranteed_purchase_benefit_phase1.sql --local
+        run: |
+          supabase test db supabase/tests/guaranteed_purchase_benefit_phase1.sql --local
+          supabase test db supabase/tests/guaranteed_benefit_voucher_rls.sql --local
 
       - name: Re-run migration command on the same database
         run: supabase migration up --local
 
       - name: pgTAP after same-database no-op migration run
-        run: supabase test db supabase/tests/guaranteed_purchase_benefit_phase1.sql --local
+        run: |
+          supabase test db supabase/tests/guaranteed_purchase_benefit_phase1.sql --local
+          supabase test db supabase/tests/guaranteed_benefit_voucher_rls.sql --local
 
       - name: Second clean migration pass
         run: supabase db reset --local --no-seed
 
       - name: Second full pgTAP pass
-        run: supabase test db supabase/tests/guaranteed_purchase_benefit_phase1.sql --local
+        run: |
+          supabase test db supabase/tests/guaranteed_purchase_benefit_phase1.sql --local
+          supabase test db supabase/tests/guaranteed_benefit_voucher_rls.sql --local

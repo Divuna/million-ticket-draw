@@ -2,7 +2,19 @@
 -- It models only the existing objects touched by the additive migration.
 
 create table public.users (
-  id uuid primary key references auth.users(id) on delete cascade
+  id uuid primary key references auth.users(id) on delete cascade,
+  email text not null
+);
+
+create type public.app_role as enum ('user', 'admin', 'superadmin');
+
+create table public.user_roles (
+  id uuid primary key default gen_random_uuid(),
+  user_id uuid not null references auth.users(id) on delete cascade,
+  role public.app_role not null,
+  created_at timestamptz not null default now(),
+  unique (user_id),
+  unique (user_id, role)
 );
 
 create table public.partners (
@@ -15,11 +27,24 @@ create table public.partners (
 
 create table public.vouchers (
   id uuid primary key default gen_random_uuid(),
+  user_id uuid references public.users(id) on delete set null,
   name text not null,
   image_url text not null,
   is_public boolean not null default true,
   updated_at timestamptz not null default now()
 );
+
+alter table public.vouchers enable row level security;
+grant select on public.vouchers to anon, authenticated;
+
+-- Reproduce the unsafe production/staging policies that existed before the
+-- corrective migration. The RLS fix must safely replace both.
+create policy "Public read vouchers"
+  on public.vouchers for select to anon, authenticated
+  using (true);
+create policy "Users can view assigned vouchers or unassigned vouchers"
+  on public.vouchers for select to authenticated
+  using ((select auth.uid()) = user_id or user_id is null);
 
 create table public.voucher_codes (
   id uuid primary key default gen_random_uuid(),
@@ -62,11 +87,22 @@ create table public.partner_coin_activations (
   partner_id uuid not null references public.partners(id) on delete restrict
 );
 
-create or replace function public.is_superadmin(p_user_id uuid)
+create or replace function public.is_superadmin(
+  check_user_id uuid default auth.uid()
+)
 returns boolean
-language plpgsql
+language sql
 stable
-as 'begin return false; end';
+security definer
+set search_path = public
+as $$
+  select exists (
+    select 1
+    from public.user_roles ur
+    where ur.user_id = check_user_id
+      and ur.role = 'superadmin'
+  )
+$$;
 
 grant select on public.partners, public.vouchers, public.partner_invoices
   to authenticated;
