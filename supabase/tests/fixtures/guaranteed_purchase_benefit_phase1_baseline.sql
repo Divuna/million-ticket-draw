@@ -64,14 +64,14 @@ create table public.partner_coin_activations (
 
 create or replace function public.is_superadmin(p_user_id uuid)
 returns boolean
-language sql
+language plpgsql
 stable
-return false;
+as 'begin return false; end';
 
 create or replace function public.buy_ticket_atomic(p_user_id uuid, p_contest_id uuid)
 returns jsonb
-language sql
-return jsonb_build_object('success', false, 'fixture', true);
+language plpgsql
+as 'begin return jsonb_build_object(''success'', false, ''fixture'', true); end';
 
 grant select on public.partners, public.vouchers, public.partner_invoices
   to authenticated;
