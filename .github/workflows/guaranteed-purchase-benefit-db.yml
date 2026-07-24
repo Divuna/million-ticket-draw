@@ -8,8 +8,10 @@ on:
       - "supabase/migrations/20260724140039_guaranteed_purchase_benefit_phase1.sql"
       - "supabase/migrations/20260724155213_restrict_guaranteed_benefit_voucher_visibility.sql"
       - "supabase/migrations/20260724162000_expand_voucher_superadmin_visibility.sql"
+      - "supabase/migrations/20260724170000_guaranteed_benefit_purchase_phase2_flow.sql"
       - "supabase/tests/guaranteed_purchase_benefit_phase1.sql"
       - "supabase/tests/guaranteed_benefit_voucher_rls.sql"
+      - "supabase/tests/guaranteed_benefit_purchase_phase2.sql"
       - "supabase/tests/fixtures/guaranteed_purchase_benefit_phase1_baseline.sql"
   workflow_dispatch:
 
@@ -18,7 +20,7 @@ env:
 
 jobs:
   phase1:
-    name: Phase 1 migration and pgTAP
+    name: Phase 1 and Phase 2 migration and pgTAP
     runs-on: ubuntu-latest
     timeout-minutes: 30
 
@@ -43,6 +45,8 @@ jobs:
             supabase/migrations/
           cp supabase/project-migrations/20260724162000_expand_voucher_superadmin_visibility.sql \
             supabase/migrations/
+          cp supabase/project-migrations/20260724170000_guaranteed_benefit_purchase_phase2_flow.sql \
+            supabase/migrations/
 
       - name: First clean migration pass
         run: supabase start
@@ -51,6 +55,7 @@ jobs:
         run: |
           supabase test db supabase/tests/guaranteed_purchase_benefit_phase1.sql --local
           supabase test db supabase/tests/guaranteed_benefit_voucher_rls.sql --local
+          supabase test db supabase/tests/guaranteed_benefit_purchase_phase2.sql --local
 
       - name: Re-run migration command on the same database
         run: supabase migration up --local
@@ -59,6 +64,7 @@ jobs:
         run: |
           supabase test db supabase/tests/guaranteed_purchase_benefit_phase1.sql --local
           supabase test db supabase/tests/guaranteed_benefit_voucher_rls.sql --local
+          supabase test db supabase/tests/guaranteed_benefit_purchase_phase2.sql --local
 
       - name: Second clean migration pass
         run: supabase db reset --local --no-seed
@@ -67,3 +73,4 @@ jobs:
         run: |
           supabase test db supabase/tests/guaranteed_purchase_benefit_phase1.sql --local
           supabase test db supabase/tests/guaranteed_benefit_voucher_rls.sql --local
+          supabase test db supabase/tests/guaranteed_benefit_purchase_phase2.sql --local

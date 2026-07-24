@@ -49,9 +49,12 @@ create policy "Users can view assigned vouchers or unassigned vouchers"
 create table public.voucher_codes (
   id uuid primary key default gen_random_uuid(),
   voucher_id uuid not null references public.vouchers(id) on delete restrict,
+  code text,
   status text not null default 'available',
   issued_to_user_id uuid references public.users(id) on delete set null,
-  issued_user_voucher_id uuid
+  issued_user_voucher_id uuid,
+  issued_at timestamptz,
+  created_at timestamptz not null default now()
 );
 
 create table public.user_vouchers (
@@ -65,13 +68,18 @@ create table public.user_vouchers (
 create table public.contests (
   id uuid primary key default gen_random_uuid(),
   title text not null,
-  main_prize text not null
+  main_prize text not null,
+  status text not null default 'active',
+  ticket_price numeric not null default 10,
+  ticket_count integer not null default 100,
+  next_ticket_number integer not null default 1
 );
 
 create table public.tickets (
   id uuid primary key default gen_random_uuid(),
   user_id uuid not null references public.users(id) on delete restrict,
-  contest_id uuid not null references public.contests(id) on delete restrict
+  contest_id uuid not null references public.contests(id) on delete restrict,
+  number integer
 );
 
 create table public.partner_invoices (
@@ -85,6 +93,54 @@ create table public.partner_invoices (
 create table public.partner_coin_activations (
   id uuid primary key default gen_random_uuid(),
   partner_id uuid not null references public.partners(id) on delete restrict
+);
+
+-- Key/value settings store (used by the Phase 2 feature flags).
+create table public.settings (
+  key text primary key,
+  value text not null,
+  updated_at timestamptz default now()
+);
+
+-- Wallet, ledger and prize tables touched by the classic paid ticket flow and
+-- by the Phase 2 benefit purchase.
+create table public.wallets (
+  id uuid primary key default gen_random_uuid(),
+  user_id uuid not null unique references public.users(id) on delete cascade,
+  balance_coins numeric not null default 0
+);
+
+create table public.wallet_transactions (
+  id uuid primary key default gen_random_uuid(),
+  user_id uuid not null references public.users(id) on delete cascade,
+  wallet_id uuid not null references public.wallets(id) on delete cascade,
+  amount numeric not null check (amount <> 0),
+  balance_after numeric,
+  type text not null,
+  source text,
+  reference_id uuid,
+  metadata jsonb,
+  created_at timestamptz not null default now()
+);
+
+create table public.bonus_prizes (
+  id uuid primary key default gen_random_uuid(),
+  contest_id uuid not null references public.contests(id) on delete cascade,
+  description text,
+  title text,
+  ticket_position integer,
+  status text not null default 'pending',
+  amount integer default 0
+);
+
+create table public.winners (
+  id uuid primary key default gen_random_uuid(),
+  contest_id uuid not null references public.contests(id) on delete restrict,
+  prize_id uuid references public.bonus_prizes(id) on delete set null,
+  user_id uuid not null references public.users(id) on delete restrict,
+  ticket_id uuid references public.tickets(id) on delete set null,
+  type text not null,
+  created_at timestamptz not null default now()
 );
 
 create or replace function public.is_superadmin(
@@ -137,9 +193,14 @@ insert into public.partner_invoices (
   21
 );
 
--- Kept last because Supabase CLI 2.84's migration splitter treats a function
--- with this historical name as consuming the remainder of a fixture file.
-create or replace function public.buy_ticket_atomic(p_user_id uuid, p_contest_id uuid)
+-- The name is quoted on purpose. The Supabase CLI migration splitter supports
+-- SQL-standard "BEGIN ATOMIC" bodies by switching to a special state as soon as
+-- the text ends with the word ATOMIC and then scanning for a bare END, so an
+-- unquoted identifier ending in _atomic makes it swallow the remainder of the
+-- file. Quoting keeps those characters inside a quoted identifier; the name is
+-- already lowercase, so nothing changes semantically. With the quotes this
+-- definition no longer has to be the last statement in the fixture.
+create or replace function public."buy_ticket_atomic"(p_user_id uuid, p_contest_id uuid)
 returns jsonb
 language plpgsql
 as 'begin return jsonb_build_object(''success'', false, ''fixture'', true); end';
