@@ -10,11 +10,50 @@ begin;
 create extension if not exists pgtap with schema extensions;
 set search_path = public, extensions, pg_temp;
 
-select plan(14);
+select plan(20);
 
 select ok(
   to_regprocedure('public.purchase_guaranteed_benefit_bundle_atomic(uuid,uuid,uuid)') is not null,
   'purchase RPC exists with the expected signature'
+);
+
+-- The classic paid ticket flow stays a real function (thin wrapper).
+select ok(
+  to_regprocedure('public.buy_ticket_atomic(uuid,uuid)') is not null,
+  'buy_ticket_atomic still exists as (uuid, uuid)'
+);
+
+-- Shared win-logic helper exists and is NOT client-executable (a direct call
+-- would mint a free ticket). Only owner/security-definer callers reach it.
+select ok(
+  to_regprocedure('public.assign_contest_ticket_atomic(uuid,uuid)') is not null,
+  'shared ticket/win helper exists'
+);
+
+select ok(
+  not has_function_privilege('anon', 'public.assign_contest_ticket_atomic(uuid,uuid)', 'EXECUTE')
+  and not has_function_privilege('authenticated', 'public.assign_contest_ticket_atomic(uuid,uuid)', 'EXECUTE'),
+  'the free-ticket helper is not callable by anon or authenticated clients'
+);
+
+-- Approved customer benefit price column and its positivity guard.
+select ok(
+  exists (
+    select 1 from information_schema.columns
+    where table_schema = 'public'
+      and table_name = 'voucher_versions'
+      and column_name = 'customer_price_miocoins'
+  ),
+  'voucher_versions carries the customer benefit price'
+);
+
+select ok(
+  exists (
+    select 1 from pg_constraint
+    where conrelid = 'public.voucher_versions'::regclass
+      and conname = 'voucher_versions_customer_price_positive_check'
+  ),
+  'the customer benefit price must be positive when set'
 );
 
 select ok(

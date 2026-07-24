@@ -1,28 +1,33 @@
 -- ============================================================================
 -- Garantovaný nákupní benefit — Phase 2: real bundle purchase flow
 -- ============================================================================
--- Additive only. This migration:
---   * adds a NEW versioned atomic purchase RPC
---       public.purchase_guaranteed_benefit_bundle_atomic(uuid, uuid, uuid)
---   * does NOT modify buy_ticket_atomic — it CALLS it, so the current main and
---     bonus winning logic is preserved verbatim with zero drift,
---   * is gated by feature-flag settings that default to OFF, so merging this to
---     production does not activate the flow. Activation is a separate data step,
---     enabled first only on staging.
+-- Additive and behavior-preserving. This migration:
+--
+--   1. adds an approved-term customer price for the benefit
+--      (voucher_versions.customer_price_miocoins),
+--   2. extracts the ticket-creation and win-resolution core of the existing
+--      buy_ticket_atomic into ONE shared helper assign_contest_ticket_atomic
+--      (no MioCoin charge). buy_ticket_atomic becomes a thin wrapper that keeps
+--      the classic paid ticket flow FUNCTIONALLY IDENTICAL — same auth, same
+--      contest lock order, same balance check, same ticket_price charge, same
+--      ticket numbering, same winners/bonus/close rows, same returned JSON.
+--      The winning logic lives in exactly one place; it is not duplicated.
+--   3. adds the versioned atomic purchase RPC
+--      purchase_guaranteed_benefit_bundle_atomic(uuid, uuid, uuid). The customer
+--      pays customer_price_miocoins for the benefit (ledger type
+--      'benefit_purchase'); the contest ticket is created FREE as a bonus by
+--      calling the shared helper. buy_ticket_atomic is not called and never
+--      charges here, so no 'ticket_purchase' record is produced by the bundle.
 --
 -- One purchase, one transaction. If any part fails, nothing is committed:
 -- no ticket, no benefit, no MioCoin deduction, no billable issuance.
 --
--- The customer is charged the contest ticket price (the only MioCoin price in
--- the schema). buy_ticket_atomic performs the balance check, the MioCoin
--- deduction, the ticket creation, and the main/bonus winning logic. This RPC
--- additionally issues exactly one garantovaný nákupní benefit from an approved
--- partner distribution order and records the immutable issuance.
---
 -- The partner distribution price (ex VAT + VAT, in CZK) is an independent
--- billing concern. It is copied as an immutable historical snapshot from the
--- approved distribution order onto the voucher_issuance. Only the first issuance
--- of the same benefit to the same customer is billable.
+-- billing concern copied as an immutable snapshot from the approved order onto
+-- the voucher_issuance. Only the first issuance of a benefit to a customer is
+-- billable.
+--
+-- Feature-flag gated, OFF by default: merging this does not activate the flow.
 -- ============================================================================
 
 begin;
@@ -35,6 +40,7 @@ begin
   if to_regclass('public.contest_bundle_purchases') is null
      or to_regclass('public.voucher_issuances') is null
      or to_regclass('public.voucher_distribution_orders') is null
+     or to_regclass('public.voucher_versions') is null
      or to_regclass('public.voucher_codes') is null
      or to_regclass('public.user_vouchers') is null
      or to_regclass('public.settings') is null then
@@ -43,8 +49,6 @@ begin
 end $$;
 
 -- Feature flags. Default OFF so a production merge does not activate anything.
--- Activation (enable + pilot contest allowlist) is a separate data step run
--- first only on staging.
 insert into public.settings (key, value)
 values ('guaranteed_benefit_purchase_enabled', 'false')
 on conflict (key) do nothing;
@@ -53,8 +57,209 @@ insert into public.settings (key, value)
 values ('guaranteed_benefit_purchase_contest_allowlist', '[]')
 on conflict (key) do nothing;
 
+-- Customer MioCoin price of the benefit, an approved and historically preserved
+-- term. Positive when present; the purchase fails closed if it is not set.
+alter table public.voucher_versions
+  add column if not exists customer_price_miocoins numeric(14,2);
+
+do $$
+begin
+  if not exists (
+    select 1 from pg_constraint
+    where conrelid = 'public.voucher_versions'::regclass
+      and conname = 'voucher_versions_customer_price_positive_check'
+  ) then
+    alter table public.voucher_versions
+      add constraint voucher_versions_customer_price_positive_check
+      check (customer_price_miocoins is null or customer_price_miocoins > 0);
+  end if;
+end $$;
+
 -- ---------------------------------------------------------------------------
--- purchase_guaranteed_benefit_bundle_atomic
+-- assign_contest_ticket_atomic — shared ticket + win core (no wallet charge)
+-- ---------------------------------------------------------------------------
+-- This is the exact ticket-creation and win-resolution logic previously inline
+-- in buy_ticket_atomic, with no MioCoin deduction. It is the single source of
+-- truth for winning logic, used by both the classic paid wrapper and the free
+-- benefit bundle. It is intentionally NOT executable by clients (a direct call
+-- would mint a free ticket); only owner/security-definer callers reach it.
+create or replace function public.assign_contest_ticket_atomic(
+  p_user_id uuid,
+  p_contest_id uuid
+)
+returns jsonb
+language plpgsql
+security definer
+set search_path to 'public'
+as $fn$
+declare
+  v_ticket_count         integer;
+  v_contest_status       text;
+  v_next_ticket          integer;
+  v_new_ticket_id        uuid;
+  v_bonus_prize_id       uuid;
+  v_bonus_title          text;
+  v_next_bonus_position  integer;
+begin
+  select ticket_count, status, next_ticket_number
+  into v_ticket_count, v_contest_status, v_next_ticket
+  from public.contests where id = p_contest_id for update;
+
+  if v_contest_status is null then
+    return jsonb_build_object('success', false, 'error', 'Contest not found');
+  end if;
+  if v_contest_status <> 'active' then
+    return jsonb_build_object('success', false, 'error', 'Contest not active');
+  end if;
+  if v_next_ticket > v_ticket_count then
+    return jsonb_build_object('success', false, 'error', 'Contest full');
+  end if;
+
+  update public.contests set next_ticket_number = next_ticket_number + 1 where id = p_contest_id;
+
+  insert into public.tickets (contest_id, user_id, number)
+  values (p_contest_id, p_user_id, v_next_ticket)
+  returning id into v_new_ticket_id;
+
+  select id, coalesce(title, description)
+  into v_bonus_prize_id, v_bonus_title
+  from public.bonus_prizes
+  where contest_id = p_contest_id
+    and ticket_position = v_next_ticket
+    and status = 'pending'
+  limit 1;
+
+  if v_next_ticket = v_ticket_count then
+    insert into public.winners (user_id, contest_id, ticket_id, type)
+    values (p_user_id, p_contest_id, v_new_ticket_id, 'main');
+    update public.contests set status = 'closed' where id = p_contest_id;
+  end if;
+
+  if v_bonus_prize_id is not null then
+    insert into public.winners (user_id, contest_id, ticket_id, prize_id, type)
+    values (p_user_id, p_contest_id, v_new_ticket_id, v_bonus_prize_id, 'bonus');
+    update public.bonus_prizes set status = 'won' where id = v_bonus_prize_id;
+  end if;
+
+  select ticket_position
+  into v_next_bonus_position
+  from public.bonus_prizes
+  where contest_id = p_contest_id
+    and ticket_position > v_next_ticket
+    and status = 'pending'
+  order by ticket_position asc
+  limit 1;
+
+  return jsonb_build_object(
+    'success',               true,
+    'ticket_row_id',         v_new_ticket_id,
+    'ticket_number',         v_next_ticket,
+    'won_type',              case
+                               when v_next_ticket = v_ticket_count then 'main'
+                               when v_bonus_prize_id is not null   then 'bonus'
+                               else null
+                             end,
+    'won_prize',             case
+                               when v_next_ticket = v_ticket_count then 'Hlavni vyhra'
+                               when v_bonus_prize_id is not null   then v_bonus_title
+                               else null
+                             end,
+    'remaining_tickets',     v_ticket_count - v_next_ticket,
+    'next_bonus_position',   v_next_bonus_position,
+    'distance_to_next_bonus', v_next_bonus_position - v_next_ticket
+  );
+end;
+$fn$;
+
+revoke all on function public.assign_contest_ticket_atomic(uuid, uuid)
+  from public, anon, authenticated;
+grant execute on function public.assign_contest_ticket_atomic(uuid, uuid) to service_role;
+
+comment on function public.assign_contest_ticket_atomic(uuid, uuid) is
+  'Shared ticket + win-resolution core (no MioCoin charge). Single source of truth for winning logic. Not client-executable; reached only through security-definer callers.';
+
+-- ---------------------------------------------------------------------------
+-- buy_ticket_atomic — thin wrapper, classic paid flow (behavior preserved)
+-- ---------------------------------------------------------------------------
+create or replace function public.buy_ticket_atomic(
+  p_user_id uuid,
+  p_contest_id uuid
+)
+returns jsonb
+language plpgsql
+security definer
+set search_path to 'public'
+as $fn$
+declare
+  v_auth_uid       uuid;
+  v_ticket_price   numeric;
+  v_ticket_count   integer;
+  v_contest_status text;
+  v_next_ticket    integer;
+  v_wallet_id      uuid;
+  v_balance        numeric;
+  v_new_balance    numeric;
+  v_result         jsonb;
+begin
+  v_auth_uid := auth.uid();
+  if v_auth_uid is null then
+    return jsonb_build_object('success', false, 'error', 'Unauthorized');
+  end if;
+  if p_user_id is not null and p_user_id <> v_auth_uid then
+    return jsonb_build_object('success', false, 'error', 'Forbidden');
+  end if;
+
+  -- Lock and validate the contest first (unchanged lock order), then the wallet.
+  select ticket_price, ticket_count, status, next_ticket_number
+  into v_ticket_price, v_ticket_count, v_contest_status, v_next_ticket
+  from public.contests where id = p_contest_id for update;
+
+  if v_contest_status is null then
+    return jsonb_build_object('success', false, 'error', 'Contest not found');
+  end if;
+  if v_contest_status <> 'active' then
+    return jsonb_build_object('success', false, 'error', 'Contest not active');
+  end if;
+  if v_next_ticket > v_ticket_count then
+    return jsonb_build_object('success', false, 'error', 'Contest full');
+  end if;
+
+  select id, balance_coins into v_wallet_id, v_balance
+  from public.wallets where user_id = v_auth_uid for update;
+
+  if v_wallet_id is null then
+    return jsonb_build_object('success', false, 'error', 'Wallet not found');
+  end if;
+  if v_balance is null or v_balance < v_ticket_price then
+    return jsonb_build_object('success', false, 'error', 'Nedostatek miocoinu');
+  end if;
+
+  v_new_balance := v_balance - v_ticket_price;
+  update public.wallets set balance_coins = v_new_balance where id = v_wallet_id;
+
+  -- Ticket creation + winning logic through the shared helper.
+  v_result := public.assign_contest_ticket_atomic(v_auth_uid, p_contest_id);
+
+  if v_ticket_price <> 0 then
+    insert into public.wallet_transactions
+      (user_id, wallet_id, amount, balance_after, type, source, reference_id, metadata)
+    values
+      (v_auth_uid,
+       v_wallet_id,
+       -v_ticket_price,
+       v_new_balance,
+       'ticket_purchase',
+       'buy_ticket_atomic',
+       (v_result->>'ticket_row_id')::uuid,
+       jsonb_build_object('contest_id', p_contest_id, 'ticket_number', (v_result->>'ticket_number')::integer));
+  end if;
+
+  return v_result;
+end;
+$fn$;
+
+-- ---------------------------------------------------------------------------
+-- purchase_guaranteed_benefit_bundle_atomic — benefit purchase + free ticket
 -- ---------------------------------------------------------------------------
 create or replace function public.purchase_guaranteed_benefit_bundle_atomic(
   p_user_id uuid,
@@ -65,25 +270,27 @@ returns jsonb
 language plpgsql
 security definer
 set search_path = public, pg_temp
-as $$
+as $fn$
 declare
   v_user            uuid := auth.uid();
   v_flag            text;
   v_allowlist       text;
-  v_ticket_price    numeric;
   v_contest_status  text;
   v_bundle_id       uuid;
   v_existing        public.contest_bundle_purchases%rowtype;
   v_code            record;
+  v_price           numeric;
   v_billable        boolean;
   v_billing_reason  text;
+  v_wallet_id       uuid;
+  v_balance         numeric;
+  v_new_balance     numeric;
   v_uv_id           uuid;
   v_ticket_id       uuid;
   v_issuance_id     uuid;
-  v_bt              jsonb;
+  v_ticket          jsonb;
   v_fail            text;
 begin
-  -- 1. Authenticated caller who owns the purchase.
   if v_user is null then
     return jsonb_build_object('success', false, 'error', 'unauthorized');
   end if;
@@ -94,7 +301,6 @@ begin
     return jsonb_build_object('success', false, 'error', 'idempotency_key_required');
   end if;
 
-  -- 2. Feature flag: disabled by default, enabled first only on staging.
   select value into v_flag
   from public.settings
   where key = 'guaranteed_benefit_purchase_enabled';
@@ -102,7 +308,6 @@ begin
     return jsonb_build_object('success', false, 'error', 'feature_disabled');
   end if;
 
-  -- Optional pilot allowlist. Empty/absent means the flag alone governs.
   select value into v_allowlist
   from public.settings
   where key = 'guaranteed_benefit_purchase_contest_allowlist';
@@ -112,12 +317,9 @@ begin
     return jsonb_build_object('success', false, 'error', 'contest_not_in_pilot');
   end if;
 
-  -- 3. Contest must exist and be active. buy_ticket_atomic re-checks under lock;
-  --    this early read also gives us the customer charge amount.
-  select ticket_price, status
-  into v_ticket_price, v_contest_status
-  from public.contests
-  where id = p_contest_id;
+  -- Lock and validate the contest first (same lock order as the classic flow).
+  select status into v_contest_status
+  from public.contests where id = p_contest_id for update;
   if not found then
     return jsonb_build_object('success', false, 'error', 'contest_not_found');
   end if;
@@ -125,22 +327,17 @@ begin
     return jsonb_build_object('success', false, 'error', 'contest_not_active');
   end if;
 
-  -- Everything that writes runs in one subtransaction. Any failure rolls the
-  -- whole thing back (including the pending idempotency row), so a failed
-  -- attempt leaves no trace and can be safely retried.
   begin
-    -- 4. Idempotency guard.
+    -- Idempotency guard (charged amount is set at completion once the price is known).
     insert into public.contest_bundle_purchases (
       idempotency_key, user_id, contest_id, charged_miocoins, status
     ) values (
-      p_idempotency_key, v_user, p_contest_id, v_ticket_price, 'pending'
+      p_idempotency_key, v_user, p_contest_id, 0, 'pending'
     )
     on conflict (user_id, idempotency_key) do nothing
     returning id into v_bundle_id;
 
     if v_bundle_id is null then
-      -- A committed row for this key can only be a completed purchase, because
-      -- any non-completed attempt rolls its pending row back.
       select * into v_existing
       from public.contest_bundle_purchases
       where user_id = v_user and idempotency_key = p_idempotency_key;
@@ -157,10 +354,9 @@ begin
       raise exception 'GB_FAIL';
     end if;
 
-    -- 5. Select and lock exactly one available code from an approved distribution
-    --    order for this contest with remaining capacity. Fail closed if none.
-    --    Preference: a benefit the customer has not received yet, then the
-    --    least-issued and oldest order.
+    -- Lock one available code from an approved distribution order for this
+    -- contest with remaining capacity. Fail closed if none. Preference: a
+    -- benefit the customer has not received yet, then least-issued / oldest.
     select vc.id                          as code_id,
            o.id                           as order_id,
            o.voucher_id                   as voucher_id,
@@ -196,8 +392,16 @@ begin
       raise exception 'GB_FAIL';
     end if;
 
-    -- 6. Billing: only the first issuance of the same benefit to the same
-    --    customer is billable.
+    -- Customer benefit price (approved term). Fail closed if not set.
+    select customer_price_miocoins into v_price
+    from public.voucher_versions
+    where id = v_code.voucher_version_id;
+    if v_price is null or v_price <= 0 then
+      v_fail := 'benefit_price_not_set';
+      raise exception 'GB_FAIL';
+    end if;
+
+    -- Only the first issuance of the same benefit to the same customer is billable.
     v_billable := not exists (
       select 1 from public.voucher_issuances vi
       where vi.user_id = v_user and vi.voucher_id = v_code.voucher_id
@@ -207,10 +411,21 @@ begin
       else 'repeat_customer_issuance'
     end;
 
-    -- 7. Create the user voucher (stored in the existing purchased-vouchers area).
-    --    A code-bearing user_voucher is redeemed=true by the existing convention
-    --    (see user_vouchers_voucher_code_requires_redeemed): the customer now owns
-    --    the code, exactly like a classic acquired code voucher.
+    -- Charge the customer for the benefit (never the ticket).
+    select id, balance_coins into v_wallet_id, v_balance
+    from public.wallets where user_id = v_user for update;
+    if v_wallet_id is null then
+      v_fail := 'wallet_not_found';
+      raise exception 'GB_FAIL';
+    end if;
+    if v_balance is null or v_balance < v_price then
+      v_fail := 'insufficient_miocoins';
+      raise exception 'GB_FAIL';
+    end if;
+    v_new_balance := v_balance - v_price;
+    update public.wallets set balance_coins = v_new_balance where id = v_wallet_id;
+
+    -- Create the user voucher (owned code voucher: redeemed=true by convention).
     insert into public.user_vouchers (
       user_id, voucher_id, voucher_code_id, acquisition_source, redeemed
     ) values (
@@ -218,7 +433,7 @@ begin
     )
     returning id into v_uv_id;
 
-    -- 8. Mark the code issued. The unique code can never be issued again.
+    -- Mark the code issued. The unique code can never be issued again.
     update public.voucher_codes
     set status = 'issued',
         issued_to_user_id = v_user,
@@ -226,18 +441,15 @@ begin
         issued_at = now()
     where id = v_code.code_id;
 
-    -- 9. Ticket + MioCoin charge + main/bonus winning logic, via the UNCHANGED
-    --    buy_ticket_atomic. A business failure (insufficient balance, contest
-    --    full/closed) returns success=false, which we escalate to roll back.
-    v_bt := public.buy_ticket_atomic(v_user, p_contest_id);
-    if coalesce(v_bt->>'success', 'false') <> 'true' then
-      v_fail := coalesce(v_bt->>'error', 'ticket_purchase_failed');
+    -- FREE ticket + winning logic through the shared helper (no charge here).
+    v_ticket := public.assign_contest_ticket_atomic(v_user, p_contest_id);
+    if coalesce(v_ticket->>'success', 'false') <> 'true' then
+      v_fail := coalesce(v_ticket->>'error', 'ticket_creation_failed');
       raise exception 'GB_FAIL';
     end if;
-    v_ticket_id := (v_bt->>'ticket_row_id')::uuid;
+    v_ticket_id := (v_ticket->>'ticket_row_id')::uuid;
 
-    -- 10. Record the immutable issuance. All links and the historical price
-    --     snapshot are validated by the Phase 1 guard triggers.
+    -- Immutable issuance with the historical partner-price snapshot.
     insert into public.voucher_issuances (
       distribution_order_id, voucher_id, voucher_version_id, voucher_code_id,
       user_id, user_voucher_id, ticket_id, billable, billing_reason,
@@ -250,7 +462,19 @@ begin
     )
     returning id into v_issuance_id;
 
-    -- 11. Advance the order counters (guarded columns are untouched).
+    -- Ledger entry for the benefit purchase (never 'ticket_purchase').
+    insert into public.wallet_transactions
+      (user_id, wallet_id, amount, balance_after, type, source, reference_id, metadata)
+    values
+      (v_user, v_wallet_id, -v_price, v_new_balance, 'benefit_purchase',
+       'purchase_guaranteed_benefit_bundle_atomic', v_ticket_id,
+       jsonb_build_object(
+         'contest_id', p_contest_id,
+         'voucher_id', v_code.voucher_id,
+         'voucher_issuance_id', v_issuance_id,
+         'ticket_number', (v_ticket->>'ticket_number')::integer,
+         'free_ticket', true));
+
     update public.voucher_distribution_orders
     set issued_quantity = issued_quantity + 1,
         billable_issued_quantity =
@@ -258,11 +482,11 @@ begin
         updated_at = now()
     where id = v_code.order_id;
 
-    -- 12. Complete the idempotent bundle record.
     update public.contest_bundle_purchases
     set status = 'completed',
         ticket_id = v_ticket_id,
         voucher_issuance_id = v_issuance_id,
+        charged_miocoins = v_price,
         completed_at = now()
     where id = v_bundle_id;
 
@@ -270,30 +494,29 @@ begin
       'success', true,
       'idempotent', false,
       'ticket_row_id', v_ticket_id,
-      'ticket_number', (v_bt->>'ticket_number')::integer,
-      'won_type', v_bt->'won_type',
-      'won_prize', v_bt->'won_prize',
-      'remaining_tickets', (v_bt->>'remaining_tickets')::integer,
-      'next_bonus_position', v_bt->'next_bonus_position',
-      'distance_to_next_bonus', v_bt->'distance_to_next_bonus',
+      'ticket_number', (v_ticket->>'ticket_number')::integer,
+      'ticket_free', true,
+      'won_type', v_ticket->'won_type',
+      'won_prize', v_ticket->'won_prize',
+      'remaining_tickets', (v_ticket->>'remaining_tickets')::integer,
+      'next_bonus_position', v_ticket->'next_bonus_position',
+      'distance_to_next_bonus', v_ticket->'distance_to_next_bonus',
       'voucher_id', v_code.voucher_id,
       'user_voucher_id', v_uv_id,
       'voucher_issuance_id', v_issuance_id,
       'billable', v_billable,
-      'charged_miocoins', v_ticket_price
+      'charged_miocoins', v_price
     );
 
   exception
     when others then
-      -- Subtransaction rolled back: no ticket, no benefit, no deduction,
-      -- no billable issuance, no pending row. Return a structured error.
       return jsonb_build_object(
         'success', false,
         'error', coalesce(v_fail, sqlerrm)
       );
   end;
 end;
-$$;
+$fn$;
 
 revoke all on function public.purchase_guaranteed_benefit_bundle_atomic(uuid, uuid, uuid)
   from public, anon;
@@ -301,6 +524,6 @@ grant execute on function public.purchase_guaranteed_benefit_bundle_atomic(uuid,
   to authenticated, service_role;
 
 comment on function public.purchase_guaranteed_benefit_bundle_atomic(uuid, uuid, uuid) is
-  'Atomic garantovaný nákupní benefit + free contest ticket purchase. Delegates ticket, MioCoin charge and winning logic to the unchanged buy_ticket_atomic; issues one benefit code from an approved distribution order. Feature-flag gated, OFF by default.';
+  'Atomic garantovaný nákupní benefit purchase: charges customer_price_miocoins as benefit_purchase and creates the contest ticket FREE via assign_contest_ticket_atomic. buy_ticket_atomic is unchanged in behavior and not used here. Feature-flag gated, OFF by default.';
 
 commit;
