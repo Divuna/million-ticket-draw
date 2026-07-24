@@ -118,6 +118,7 @@
 ## E-maily a zákaznická komunikace
 
 - [ ] Před spuštěním sjednotit a graficky přepracovat všechny automatické odesílací e-maily OneMil. Použít pouze originální logo a schválený vizuální styl OneMil, sjednotit hlavičku, patičku, texty, tlačítka, mobilní zobrazení a otestovat doručení hlavních typů e-mailů.
+  - Nové automatické e-maily používají schválenou světlou krémovo-bílou variantu OneMil s oranžovými akcenty; před spuštěním zbývá ověřit doručení v hlavních e-mailových klientech.
 
 ## Automatika (CI)
 

@@ -1,6 +1,7 @@
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.57.4";
 import { Resend } from "npm:resend@2.0.0";
+import { applyOneMilBrandToLegacyAutomaticEmail } from "../_shared/oneMilEmailTemplate.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -290,7 +291,7 @@ const handler = async (req: Request): Promise<Response> => {
           from: "OneMil <noreply@onemil.cz>",
           to: [emailRecord.email],
           subject: emailRecord.subject,
-          html: emailRecord.body,
+          html: applyOneMilBrandToLegacyAutomaticEmail(emailRecord.body),
         };
 
         let attachment: Attachment | null = null;
