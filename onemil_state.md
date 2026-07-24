@@ -1,5 +1,9 @@
 # OneMil – aktuální stav projektu
 
+## GARANTOVANÝ NÁKUPNÍ BENEFIT — DATOVÝ ZÁKLAD PŘIPRAVEN, FUNKCE JEŠTĚ NENÍ AKTIVNÍ (24. 07. 2026)
+
+Na samostatné větvi je připraven pouze aditivní návrh Fáze 1: verze podmínek, distribuční objednávky a ceny, evidence vydání, budoucí idempotence nákupu, audit a budoucí společné položky faktur. Migrace nebyla aplikována na staging ani produkci. Nový nákup není zapojený; `buy_ticket_atomic`, současné soutěže, historická data, existující fakturace, PDF a e-mailový tok zůstávají beze změny.
+
 ## ANDROID APLIKACE — DOKONČENÍ INTEGRACE (19. 07. 2026)
 
 **Android Capacitor projekt byl úspěšně sloučen do `main` (PR #266, merge commit `310e7ff`).** Aplikace OneMil je nyní dostupná jako nativní Android balíček.
