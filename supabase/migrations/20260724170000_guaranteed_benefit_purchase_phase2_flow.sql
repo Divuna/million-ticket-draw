@@ -91,7 +91,7 @@ returns jsonb
 language plpgsql
 security definer
 set search_path to 'public'
-as $fn$
+as $$
 declare
   v_ticket_count         integer;
   v_contest_status       text;
@@ -169,7 +169,7 @@ begin
     'distance_to_next_bonus', v_next_bonus_position - v_next_ticket
   );
 end;
-$fn$;
+$$;
 
 revoke all on function public.assign_contest_ticket_atomic(uuid, uuid)
   from public, anon, authenticated;
@@ -189,7 +189,7 @@ returns jsonb
 language plpgsql
 security definer
 set search_path to 'public'
-as $fn$
+as $$
 declare
   v_auth_uid       uuid;
   v_ticket_price   numeric;
@@ -256,7 +256,7 @@ begin
 
   return v_result;
 end;
-$fn$;
+$$;
 
 -- ---------------------------------------------------------------------------
 -- purchase_guaranteed_benefit_bundle_atomic — benefit purchase + free ticket
@@ -270,7 +270,7 @@ returns jsonb
 language plpgsql
 security definer
 set search_path = public, pg_temp
-as $fn$
+as $$
 declare
   v_user            uuid := auth.uid();
   v_flag            text;
@@ -516,7 +516,7 @@ begin
       );
   end;
 end;
-$fn$;
+$$;
 
 revoke all on function public.purchase_guaranteed_benefit_bundle_atomic(uuid, uuid, uuid)
   from public, anon;
