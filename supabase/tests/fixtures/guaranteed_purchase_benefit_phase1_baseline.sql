@@ -87,6 +87,13 @@ create table public.partner_coin_activations (
   partner_id uuid not null references public.partners(id) on delete restrict
 );
 
+-- Key/value settings store (used by the Phase 2 feature flags).
+create table public.settings (
+  key text primary key,
+  value text not null,
+  updated_at timestamptz default now()
+);
+
 create or replace function public.is_superadmin(
   check_user_id uuid default auth.uid()
 )
