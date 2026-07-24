@@ -4,8 +4,13 @@ import { resolve } from 'node:path';
 
 const migrationPath =
   'supabase/migrations/20260724155213_restrict_guaranteed_benefit_voucher_visibility.sql';
+const followUpMigrationPath =
+  'supabase/migrations/20260724162000_expand_voucher_superadmin_visibility.sql';
 const readMigration = () =>
-  readFileSync(resolve(process.cwd(), migrationPath), 'utf8');
+  [
+    readFileSync(resolve(process.cwd(), migrationPath), 'utf8'),
+    readFileSync(resolve(process.cwd(), followUpMigrationPath), 'utf8'),
+  ].join('\n');
 
 test.describe('guaranteed purchase benefit voucher RLS correction', () => {
   test('keeps public classic vouchers public', () => {
@@ -30,8 +35,9 @@ test.describe('guaranteed purchase benefit voucher RLS correction', () => {
     const migration = readMigration();
 
     expect(migration).toContain('vouchers_partner_own_select');
+    expect(migration).toContain('vouchers_superadmin_select');
     expect(migration).toContain(
-      'vouchers_guaranteed_benefit_superadmin_select',
+      'using ((select public.is_superadmin((select auth.uid()))))',
     );
     expect(migration).toContain(
       'vouchers_guaranteed_benefit_issued_user_select',

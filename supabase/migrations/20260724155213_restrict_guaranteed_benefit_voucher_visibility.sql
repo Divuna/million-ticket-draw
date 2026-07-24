@@ -90,14 +90,13 @@ create policy vouchers_partner_own_select
 
 drop policy if exists vouchers_guaranteed_benefit_superadmin_select
   on public.vouchers;
-create policy vouchers_guaranteed_benefit_superadmin_select
+drop policy if exists vouchers_superadmin_select
+  on public.vouchers;
+create policy vouchers_superadmin_select
   on public.vouchers
   for select
   to authenticated
-  using (
-    distribution_mode = 'guaranteed_purchase_benefit'
-    and (select public.is_superadmin((select auth.uid())))
-  );
+  using ((select public.is_superadmin((select auth.uid()))));
 
 drop policy if exists vouchers_guaranteed_benefit_issued_user_select
   on public.vouchers;

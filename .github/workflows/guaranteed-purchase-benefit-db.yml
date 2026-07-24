@@ -7,6 +7,7 @@ on:
       - ".github/workflows/guaranteed-purchase-benefit-db.yml"
       - "supabase/migrations/20260724140039_guaranteed_purchase_benefit_phase1.sql"
       - "supabase/migrations/20260724155213_restrict_guaranteed_benefit_voucher_visibility.sql"
+      - "supabase/migrations/20260724162000_expand_voucher_superadmin_visibility.sql"
       - "supabase/tests/guaranteed_purchase_benefit_phase1.sql"
       - "supabase/tests/guaranteed_benefit_voucher_rls.sql"
       - "supabase/tests/fixtures/guaranteed_purchase_benefit_phase1_baseline.sql"
@@ -39,6 +40,8 @@ jobs:
           cp supabase/project-migrations/20260724140039_guaranteed_purchase_benefit_phase1.sql \
             supabase/migrations/
           cp supabase/project-migrations/20260724155213_restrict_guaranteed_benefit_voucher_visibility.sql \
+            supabase/migrations/
+          cp supabase/project-migrations/20260724162000_expand_voucher_superadmin_visibility.sql \
             supabase/migrations/
 
       - name: First clean migration pass
