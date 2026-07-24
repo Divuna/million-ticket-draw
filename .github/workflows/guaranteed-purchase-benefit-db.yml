@@ -1,0 +1,43 @@
+name: Guaranteed purchase benefit database
+
+on:
+  pull_request:
+    branches: [main, master]
+    paths:
+      - ".github/workflows/guaranteed-purchase-benefit-db.yml"
+      - "supabase/migrations/20260724140039_guaranteed_purchase_benefit_phase1.sql"
+      - "supabase/tests/guaranteed_purchase_benefit_phase1.sql"
+  workflow_dispatch:
+
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+
+jobs:
+  phase1:
+    name: Phase 1 migration and pgTAP
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install Supabase CLI
+        uses: supabase/setup-cli@v1
+        with:
+          version: 2.84.4
+
+      - name: Start isolated local Supabase
+        run: supabase start
+
+      - name: First clean migration pass
+        run: supabase db reset --local --no-seed
+
+      - name: First full pgTAP pass
+        run: supabase test db supabase/tests/guaranteed_purchase_benefit_phase1.sql --local
+
+      - name: Second clean migration pass
+        run: supabase db reset --local --no-seed
+
+      - name: Second full pgTAP pass
+        run: supabase test db supabase/tests/guaranteed_purchase_benefit_phase1.sql --local
