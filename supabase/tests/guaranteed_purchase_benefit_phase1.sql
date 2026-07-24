@@ -3,7 +3,77 @@ begin;
 create extension if not exists pgtap with schema extensions;
 set search_path = public, extensions, pg_temp;
 
-select plan(15);
+select plan(20);
+
+select ok(
+  to_regclass('public.voucher_versions') is not null
+  and to_regclass('public.voucher_distribution_price_rules') is not null
+  and to_regclass('public.voucher_distribution_orders') is not null
+  and to_regclass('public.voucher_issuances') is not null
+  and to_regclass('public.contest_bundle_purchases') is not null
+  and to_regclass('public.partner_invoice_items') is not null
+  and to_regclass('public.partner_invoice_item_sources') is not null
+  and to_regclass('public.voucher_audit_events') is not null,
+  'all Phase 1 foundation tables exist'
+);
+
+select ok(
+  (
+    select bool_and(c.relrowsecurity)
+    from pg_class c
+    join pg_namespace n on n.oid = c.relnamespace
+    where n.nspname = 'public'
+      and c.relname in (
+        'voucher_versions',
+        'voucher_distribution_price_rules',
+        'voucher_distribution_orders',
+        'voucher_issuances',
+        'contest_bundle_purchases',
+        'partner_invoice_items',
+        'partner_invoice_item_sources',
+        'voucher_audit_events'
+      )
+  ),
+  'RLS is enabled on every new client-visible table'
+);
+
+select ok(
+  to_regprocedure(
+    'public.superadmin_review_guaranteed_benefit_version(uuid,text,integer,text)'
+  ) is not null
+  and to_regprocedure(
+    'public.superadmin_set_voucher_distribution_price(uuid,numeric,numeric,text)'
+  ) is not null
+  and to_regprocedure(
+    'public.superadmin_set_guaranteed_benefit_status(uuid,text,text)'
+  ) is not null
+  and to_regprocedure(
+    'public.superadmin_review_voucher_distribution_order(uuid,text,uuid,text)'
+  ) is not null,
+  'all guarded superadmin RPCs exist'
+);
+
+select results_eq(
+  $$
+    select distribution_mode, workflow_status
+    from public.vouchers
+    where id = '02000000-0000-0000-0000-000000000001'
+  $$,
+  $$ values ('classic'::text, 'legacy'::text) $$,
+  'a voucher row created before the migration remains readable and classic'
+);
+
+select results_eq(
+  $$
+    select c.title, pi.vat_rate
+    from public.contests c
+    cross join public.partner_invoices pi
+    where c.id = '03000000-0000-0000-0000-000000000001'
+      and pi.id = '04000000-0000-0000-0000-000000000001'
+  $$,
+  $$ values ('Pre-existing contest'::text, 21::numeric) $$,
+  'pre-existing contest and invoice rows remain readable'
+);
 
 insert into auth.users (
   instance_id, id, aud, role, email, encrypted_password,
