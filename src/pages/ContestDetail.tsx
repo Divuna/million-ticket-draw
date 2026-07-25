@@ -22,6 +22,7 @@ import {
 import { analytics } from "@/lib/analytics";
 import { buildBuyTicketAtomicRpcPayload } from "@/utils/buyTicketAtomicRpcArgs";
 import { TicketResultModal } from "@/components/TicketResultModal";
+import { GuaranteedBenefitOfferCard } from "@/components/GuaranteedBenefitOfferCard";
 import { BonusPrizeDetailModal } from "@/components/BonusPrizeDetailModal";
 import { usePlacementBanners } from "@/hooks/usePlacementBanners";
 import { isNativeApp } from "@/lib/nativeApp";
@@ -854,6 +855,22 @@ export default function ContestDetail() {
           </div>
         </div>
       </section>
+
+      {/* Garantovaný nákupní benefit — renders only when an offer is really
+          purchasable (feature flag + pilot allowlist + approved benefit with a
+          free code + price set). Classic ticket purchase below is unchanged. */}
+      <GuaranteedBenefitOfferCard
+        contestId={contest.id}
+        userId={user?.id ?? null}
+        contestStatus={contest.status}
+        onBalanceShouldRefresh={() => {
+          if (user?.id) void loadUserBalance(user.id);
+        }}
+        onShowTicketResult={(result) => {
+          setModalContestId(contest.id);
+          setModalResult(result as UnlockTicketResult);
+        }}
+      />
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         {/* Box 1: Stav MioCoinů + akce */}
