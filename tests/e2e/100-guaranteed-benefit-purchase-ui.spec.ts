@@ -416,4 +416,63 @@ test.describe.serial('Spec 100 — garantovaný nákupní benefit (UI)', () => {
 
     expect(await countBundles(admin, customerId)).toBe(bundlesBefore + 1);
   });
+
+  test('100e: nákup posledního kódu — potvrzení zůstane a otevře TicketResultModal', async ({ page }) => {
+    const admin = makeAdmin();
+    await setFlag(admin, true, JSON.stringify([FIXTURE.contestId]));
+    const customerId = ctx.customerAuthId!;
+
+    // Nechat právě JEDEN volný kód, aby po nákupu nabídka zmizela.
+    // Volné kódy nejsou immutable; vydané se nikdy nemažou.
+    await (admin as any)
+      .from('voucher_codes').delete()
+      .eq('distribution_order_id', FIXTURE.orderId).eq('status', 'available');
+    const { error: seedErr } = await (admin as any).from('voucher_codes').insert({
+      voucher_id: FIXTURE.voucherId,
+      code: `SPEC100-LAST-${Date.now()}`,
+      status: 'available',
+      distribution_order_id: FIXTURE.orderId,
+    });
+    if (seedErr) throw new Error(`last-code seed: ${seedErr.message}`);
+
+    const bundlesBefore = await countBundles(admin, customerId);
+    const { data: walletBefore } = await (admin as any)
+      .from('wallets').select('balance_coins').eq('user_id', customerId).single();
+    const balanceBefore = Number(walletBefore.balance_coins);
+
+    await primeConsent(page);
+    await loginViaUI(page, CUSTOMER_EMAIL, PASSWORD);
+    await page.goto(`/contest/${FIXTURE.contestId}`);
+    await expect(page.getByTestId('guaranteed-benefit-offer')).toBeVisible({ timeout: 30_000 });
+
+    await page.getByTestId('guaranteed-benefit-buy').click();
+
+    // Potvrzení benefitu musí zůstat viditelné, i když nabídka mezitím zmizela.
+    const reveal = page.getByTestId('guaranteed-benefit-reveal');
+    await expect(reveal).toBeVisible({ timeout: 30_000 });
+    await expect(reveal).toContainText(BENEFIT_NAME);
+
+    // Read-only RPC už hlásí available:false → nabídka se přestala zobrazovat,
+    // ale potvrzení je pořád na obrazovce (jádro opravované regrese).
+    await expect(page.getByTestId('guaranteed-benefit-offer')).toHaveCount(0);
+    await expect(reveal).toBeVisible();
+    const { count: freeCodes } = await (admin as any)
+      .from('voucher_codes').select('id', { count: 'exact', head: true })
+      .eq('distribution_order_id', FIXTURE.orderId).eq('status', 'available');
+    expect(freeCodes ?? 0).toBe(0);
+
+    // Po zavření potvrzení se MUSÍ otevřít stávající TicketResultModal.
+    // `aria-label="Zavřít"` má jen TicketResultModal, ne shadcn Dialog.
+    await page.getByRole('button', { name: 'Zobrazit tiket' }).click();
+    await expect(reveal).toHaveCount(0);
+    await expect(
+      page.locator('[role="dialog"]:has(button[aria-label="Zavřít"])'),
+    ).toBeVisible({ timeout: 30_000 });
+
+    // Žádný druhý nákup ani další odečet.
+    expect(await countBundles(admin, customerId)).toBe(bundlesBefore + 1);
+    const { data: walletAfter } = await (admin as any)
+      .from('wallets').select('balance_coins').eq('user_id', customerId).single();
+    expect(Number(walletAfter.balance_coins)).toBe(balanceBefore - BENEFIT_PRICE);
+  });
 });

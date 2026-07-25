@@ -184,68 +184,78 @@ export function GuaranteedBenefitOfferCard({
     if (result) onShowTicketResult(result);
   }, [onShowTicketResult]);
 
-  if (!offer?.available) return null;
+  // The reveal has to outlive the offer. After a purchase the re-read can
+  // legitimately report available:false — the customer took the last code, the
+  // order ran out, the free ticket closed the contest (main prize!), or the
+  // flag was switched off. Hiding the offer must never unmount the
+  // confirmation, otherwise the customer loses both the benefit reveal and the
+  // TicketResultModal that opens when it is closed.
+  const activeOffer = offer?.available ? offer : null;
+  const revealOpen = purchasedBenefit !== null;
+  if (!activeOffer && !revealOpen) return null;
 
-  const price = Number(offer.price_miocoins ?? 0);
+  const price = Number(activeOffer?.price_miocoins ?? 0);
 
   return (
     <>
-      <section
-        data-testid="guaranteed-benefit-offer"
-        className="voucher-card-glow bg-[hsl(220_25%_8%)]/80 backdrop-blur rounded-[20px] p-5 border-[2px] border-[rgba(255,138,0,0.35)] flex flex-col gap-4 animate-fade-in"
-      >
-        <div className="flex items-start gap-4">
-          {offer.image_url && (
-            <img
-              src={offer.image_url}
-              alt={offer.benefit_name ?? "Garantovaný nákupní benefit"}
-              className="h-20 w-20 rounded-2xl object-cover flex-shrink-0 border border-[rgba(255,138,0,0.25)]"
-            />
-          )}
-          <div className="flex-1 min-w-0">
-            <p className="text-xs uppercase tracking-wide text-[#FF8A00] font-semibold">
-              Garantovaný nákupní benefit
-            </p>
-            <h3 className="text-xl md:text-2xl font-extrabold text-white leading-tight mt-1 break-words">
-              {offer.benefit_name}
-            </h3>
-            {offer.partner_name && (
-              <p className="text-sm text-gray-300 mt-0.5">od {offer.partner_name}</p>
-            )}
-            {offer.benefit_short_description && (
-              <p className="text-sm text-gray-400 mt-2">{offer.benefit_short_description}</p>
-            )}
-          </div>
-        </div>
-
-        <p className="text-sm text-gray-200">
-          Kupuješ <span className="font-semibold text-white">garantovaný nákupní benefit</span> za{" "}
-          <span className="font-semibold text-white">
-            {price.toLocaleString("cs-CZ")} MioCoinů
-          </span>
-          . Tiket do soutěže dostaneš{" "}
-          <span className="font-semibold text-[#FF8A00]">zdarma jako bonus</span>.
-        </p>
-
-        <Button
-          data-testid="guaranteed-benefit-buy"
-          onClick={handlePurchase}
-          disabled={purchasing}
-          variant="premium"
-          className="h-11 font-semibold px-5 rounded-full whitespace-nowrap mt-auto"
+      {activeOffer && (
+        <section
+          data-testid="guaranteed-benefit-offer"
+          className="voucher-card-glow bg-[hsl(220_25%_8%)]/80 backdrop-blur rounded-[20px] p-5 border-[2px] border-[rgba(255,138,0,0.35)] flex flex-col gap-4 animate-fade-in"
         >
-          {purchasing ? (
-            <span className="inline-flex items-center gap-2">
-              <span className="h-4 w-4 rounded-full border-2 border-current border-t-transparent animate-spin" />
-              Kupuji…
-            </span>
-          ) : (
-            `Získat benefit za ${price.toLocaleString("cs-CZ")} MioCoinů + tiket zdarma`
-          )}
-        </Button>
-      </section>
+          <div className="flex items-start gap-4">
+            {activeOffer.image_url && (
+              <img
+                src={activeOffer.image_url}
+                alt={activeOffer.benefit_name ?? "Garantovaný nákupní benefit"}
+                className="h-20 w-20 rounded-2xl object-cover flex-shrink-0 border border-[rgba(255,138,0,0.25)]"
+              />
+            )}
+            <div className="flex-1 min-w-0">
+              <p className="text-xs uppercase tracking-wide text-[#FF8A00] font-semibold">
+                Garantovaný nákupní benefit
+              </p>
+              <h3 className="text-xl md:text-2xl font-extrabold text-white leading-tight mt-1 break-words">
+                {activeOffer.benefit_name}
+              </h3>
+              {activeOffer.partner_name && (
+                <p className="text-sm text-gray-300 mt-0.5">od {activeOffer.partner_name}</p>
+              )}
+              {activeOffer.benefit_short_description && (
+                <p className="text-sm text-gray-400 mt-2">{activeOffer.benefit_short_description}</p>
+              )}
+            </div>
+          </div>
 
-      <Dialog open={purchasedBenefit !== null} onOpenChange={(open) => { if (!open) closeBenefitReveal(); }}>
+          <p className="text-sm text-gray-200">
+            Kupuješ <span className="font-semibold text-white">garantovaný nákupní benefit</span> za{" "}
+            <span className="font-semibold text-white">
+              {price.toLocaleString("cs-CZ")} MioCoinů
+            </span>
+            . Tiket do soutěže dostaneš{" "}
+            <span className="font-semibold text-[#FF8A00]">zdarma jako bonus</span>.
+          </p>
+
+          <Button
+            data-testid="guaranteed-benefit-buy"
+            onClick={handlePurchase}
+            disabled={purchasing}
+            variant="premium"
+            className="h-11 font-semibold px-5 rounded-full whitespace-nowrap mt-auto"
+          >
+            {purchasing ? (
+              <span className="inline-flex items-center gap-2">
+                <span className="h-4 w-4 rounded-full border-2 border-current border-t-transparent animate-spin" />
+                Kupuji…
+              </span>
+            ) : (
+              `Získat benefit za ${price.toLocaleString("cs-CZ")} MioCoinů + tiket zdarma`
+            )}
+          </Button>
+        </section>
+      )}
+
+      <Dialog open={revealOpen} onOpenChange={(open) => { if (!open) closeBenefitReveal(); }}>
         <DialogContent
           data-testid="guaranteed-benefit-reveal"
           className="bg-[hsl(220_25%_8%)] border-[2px] border-[rgba(255,138,0,0.35)] text-white"
