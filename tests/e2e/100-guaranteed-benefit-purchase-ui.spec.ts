@@ -241,6 +241,8 @@ async function cleanupData(): Promise<void> {
 
 test.describe.serial('Spec 100 — garantovaný nákupní benefit (UI)', () => {
   test.skip(!isStaging, 'Staging-only spec (requires staging Supabase + service role key)');
+  // Login + navigace na detail soutěže se nevejde do výchozích 30 s.
+  test.describe.configure({ timeout: 90_000 });
 
   test.beforeAll(async () => { await setupData(); });
   test.afterAll(async () => { await cleanupData(); });
@@ -254,11 +256,14 @@ test.describe.serial('Spec 100 — garantovaný nákupní benefit (UI)', () => {
     });
     await loginViaUI(page, CUSTOMER_EMAIL, PASSWORD);
     await page.goto(`/contest/${ctx.contestId}`);
-    await page.waitForLoadState('networkidle').catch(() => {});
 
+    // Detail soutěže má realtime + polling, takže `networkidle` nikdy nenastane.
+    // Počkáme na klasické tlačítko — tím je zároveň ověřeno, že nákup tiketu
+    // zůstal beze změny, a teprve pak tvrdíme, že nabídka benefitu chybí.
+    await expect(
+      page.getByRole('button', { name: `Uplatnit ${TICKET_PRICE} MioCoin` }),
+    ).toBeVisible({ timeout: 30_000 });
     await expect(page.getByTestId('guaranteed-benefit-offer')).toHaveCount(0);
-    // Klasický nákup zůstává dostupný beze změny.
-    await expect(page.getByRole('button', { name: `Uplatnit ${TICKET_PRICE} MioCoin` })).toBeVisible();
   });
 
   test('100b: při pilotním nastavení se nabídka zobrazí', async ({ page }) => {
