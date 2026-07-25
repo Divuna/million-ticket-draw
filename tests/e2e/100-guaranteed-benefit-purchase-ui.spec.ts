@@ -127,7 +127,9 @@ async function setupData(): Promise<void> {
       partner_id: ctx.partnerId,
       distribution_mode: 'guaranteed_purchase_benefit',
       workflow_status: 'approved',
+      // vouchers_approval_shape_check: approved rows need both timestamp and actor.
       approved_at: new Date().toISOString(),
+      approved_by: ctx.customerAuthId,
     })
     .select('id').single();
   if (vErr) throw new Error(`vouchers insert: ${vErr.message}`);
@@ -150,7 +152,9 @@ async function setupData(): Promise<void> {
       requested_code_count: 10,
       approved_code_count: 10,
       customer_price_miocoins: BENEFIT_PRICE,
+      // voucher_versions approved check: needs approved_at + approved_by + count.
       approved_at: new Date().toISOString(),
+      approved_by: ctx.customerAuthId,
     })
     .select('id').single();
   if (vvErr) throw new Error(`voucher_versions insert: ${vvErr.message}`);
