@@ -221,9 +221,19 @@ export function MysteryPurchaseResultDialog({
                   </p>
                 </>
               ) : (
-                <p className="text-2xl sm:text-3xl font-extrabold text-white">
-                  Tiket č. {ticket?.ticket_number?.toLocaleString("cs-CZ")}
-                </p>
+                // Nevýherní tiket není chyba ani prázdná obrazovka: zákazník
+                // se dozví, co se stalo, a rovnou i to, co si odnáší.
+                <div data-testid="mystery-result-noprize">
+                  <p className="text-[11px] uppercase tracking-[0.2em] text-gray-400 font-semibold">
+                    Tiket č. {ticket?.ticket_number?.toLocaleString("cs-CZ")} je otevřený
+                  </p>
+                  <p className="text-2xl sm:text-4xl font-black text-white leading-tight mt-2">
+                    Tentokrát bez výhry
+                  </p>
+                  <p className="text-sm text-gray-300 mt-3 break-words">
+                    Ale získáváš garantovaný kupon a tiket zůstává uložený ve tvém účtu.
+                  </p>
+                </div>
               )}
 
               {isWin && (
@@ -263,11 +273,30 @@ export function MysteryPurchaseResultDialog({
             </p>
           </div>
 
+          {/*
+            Kupon má vypadat jako utržený papírový ticket. Výřezy a perforace
+            jsou kolečka v barvě pozadí dialogu, posazená na hranu bloku —
+            proto `overflow-visible`, jinak by se ořízla. Na desktopu dělí
+            ticket svisle, na mobilu vodorovně, a výřezy se přesunou spolu
+            s dělicí čárou.
+          */}
           <section
             data-testid="mystery-coupon-reveal"
-            className="rounded-2xl bg-[#FCF3E4] text-[hsl(220_25%_12%)] overflow-hidden grid grid-cols-1 sm:grid-cols-[1fr_auto] min-w-0"
+            className="relative rounded-2xl bg-[#FCF3E4] text-[hsl(220_25%_12%)] grid grid-cols-1 sm:grid-cols-[1fr_auto] min-w-0"
           >
-            <div className="flex items-center gap-4 p-4 min-w-0">
+            {/* Boční výřezy uprostřed levé a pravé hrany. */}
+            <span
+              data-testid="mystery-coupon-notch-left"
+              aria-hidden="true"
+              className="absolute left-0 top-1/2 -translate-x-1/2 -translate-y-1/2 h-6 w-6 rounded-full bg-[hsl(220_25%_7%)]"
+            />
+            <span
+              data-testid="mystery-coupon-notch-right"
+              aria-hidden="true"
+              className="absolute right-0 top-1/2 translate-x-1/2 -translate-y-1/2 h-6 w-6 rounded-full bg-[hsl(220_25%_7%)]"
+            />
+
+            <div className="flex items-center gap-4 p-4 sm:pl-6 min-w-0">
               {couponImage && (
                 <img
                   src={couponImage}
@@ -292,13 +321,30 @@ export function MysteryPurchaseResultDialog({
             </div>
 
             {coupon?.code && (
-              <div className="flex flex-col items-center justify-center gap-1 p-4 text-center border-t border-dashed border-black/25 sm:border-t-0 sm:border-l sm:min-w-[13rem]">
+              <div
+                data-testid="mystery-coupon-perforation"
+                className="relative flex flex-col items-center justify-center gap-1 p-4 sm:pr-6 text-center border-t-2 border-dashed border-black/25 sm:border-t-0 sm:border-l-2 sm:min-w-[13rem] min-w-0"
+              >
+                {/* Kolečka na koncích perforace: svisle na desktopu, vodorovně na mobilu. */}
+                <span
+                  aria-hidden="true"
+                  className="absolute -top-3 -left-3 sm:-left-3 sm:-top-3 h-6 w-6 rounded-full bg-[hsl(220_25%_7%)]"
+                />
+                <span
+                  aria-hidden="true"
+                  className="absolute -top-3 -right-3 h-6 w-6 rounded-full bg-[hsl(220_25%_7%)] sm:hidden"
+                />
+                <span
+                  aria-hidden="true"
+                  className="hidden sm:block absolute -bottom-3 -left-3 h-6 w-6 rounded-full bg-[hsl(220_25%_7%)]"
+                />
+
                 <p className="text-[10px] uppercase tracking-[0.18em] text-[#C26A00] font-bold">
                   Tvůj kód
                 </p>
                 <p
                   data-testid="mystery-coupon-code"
-                  className="text-lg sm:text-xl font-extrabold break-all leading-tight"
+                  className="text-lg sm:text-xl font-extrabold break-all leading-tight max-w-full"
                 >
                   {coupon.code}
                 </p>

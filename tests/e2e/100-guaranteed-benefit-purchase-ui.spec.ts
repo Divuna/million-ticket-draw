@@ -48,6 +48,8 @@
  *   100j) mobilní zobrazení bez vodorovného posouvání
  *   100k) panel dalšího výherního tiketu + skloňování
  *   100l) bez známé vzdálenosti se panel nezobrazí
+ *   100m) nevýherní tiket — číslo, „Tentokrát bez výhry", žádné „VYHRÁL JSI"
+ *   100n) kupon má perforaci i boční výřezy
  *
  * Vyžaduje env vars (přítomné v playwright-staging.yml):
  *   VITE_SUPABASE_URL               — staging ref dxmowysntemfqfnanxua
@@ -945,6 +947,70 @@ test.describe.serial('Spec 100 — mystery kupon (UI)', () => {
     // Kupon i tlačítko zůstávají.
     await expect(page.getByTestId('mystery-coupon-code')).toBeVisible();
     await expect(page.getByTestId('mystery-result-continue')).toBeVisible();
+  });
+
+  test('100m: nevýherní tiket ukáže číslo a „Tentokrát bez výhry", nikdy „VYHRÁL JSI"', async ({ page }) => {
+    const admin = makeAdmin();
+    await setFlag(admin, true, JSON.stringify([FIXTURE.contestId]));
+    const customerId = ctx.customerAuthId!;
+    await resetMutableState(admin, customerId);
+
+    // Fixture soutěž nemá bonusy a je hluboko pod ticket_count, takže
+    // následující tiket prokazatelně nevyhrává.
+    const { data: contest } = await (admin as any)
+      .from('contests').select('next_ticket_number').eq('id', FIXTURE.contestId).single();
+    const expected = Number(contest.next_ticket_number);
+    await (admin as any).from('bonus_prizes').delete()
+      .eq('contest_id', FIXTURE.contestId).gte('ticket_position', expected);
+
+    await primeConsent(page);
+    await loginViaUI(page, CUSTOMER_EMAIL, PASSWORD);
+    const button = await openContest(page);
+    await button.click();
+
+    const dialog = page.getByTestId('mystery-result-dialog');
+    await expect(dialog).toBeVisible({ timeout: 30_000 });
+
+    const noprize = page.getByTestId('mystery-result-noprize');
+    await expect(noprize).toBeVisible();
+    await expect(noprize).toContainText(`Tiket č. ${expected.toLocaleString('cs-CZ')} je otevřený`);
+    await expect(noprize).toContainText('Tentokrát bez výhry');
+    await expect(noprize).toContainText('Ale získáváš garantovaný kupon');
+
+    // Nevýherní tiket se nesmí tvářit jako výhra.
+    await expect(dialog).not.toContainText('VYHRÁL JSI');
+    await expect(dialog).not.toContainText('GRATULUJEME');
+    await expect(page.getByTestId('mystery-result-prize-title')).toHaveCount(0);
+    await expect(page.getByTestId('mystery-result-miocoin-amount')).toHaveCount(0);
+
+    // Kupon i tak dorazí — to je celá pointa garantovaného bonusu.
+    await expect(page.getByTestId('mystery-coupon-code')).toBeVisible();
+  });
+
+  test('100n: kupon má perforované rozdělení i boční výřezy', async ({ page }) => {
+    const admin = makeAdmin();
+    await setFlag(admin, true, JSON.stringify([FIXTURE.contestId]));
+    await resetMutableState(admin, ctx.customerAuthId!);
+
+    await primeConsent(page);
+    await loginViaUI(page, CUSTOMER_EMAIL, PASSWORD);
+    const button = await openContest(page);
+    await button.click();
+
+    await expect(page.getByTestId('mystery-result-dialog')).toBeVisible({ timeout: 30_000 });
+
+    await expect(page.getByTestId('mystery-coupon-notch-left')).toBeVisible();
+    await expect(page.getByTestId('mystery-coupon-notch-right')).toBeVisible();
+
+    const perforation = page.getByTestId('mystery-coupon-perforation');
+    await expect(perforation).toBeVisible();
+    // Na desktopu dělí ticket svisle přerušovanou čarou.
+    const style = await perforation.evaluate((el) => {
+      const s = getComputedStyle(el);
+      return { leftStyle: s.borderLeftStyle, leftWidth: s.borderLeftWidth };
+    });
+    expect(style.leftStyle).toBe('dashed');
+    expect(parseFloat(style.leftWidth)).toBeGreaterThan(0);
   });
 
   test('100j: mobil — dialog je čitelný bez vodorovného posouvání', async ({ page }) => {
