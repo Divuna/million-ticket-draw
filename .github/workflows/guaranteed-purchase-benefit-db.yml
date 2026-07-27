@@ -11,9 +11,11 @@ on:
       - "supabase/migrations/20260724170000_guaranteed_benefit_purchase_phase2_flow.sql"
       - "supabase/migrations/20260725090000_guaranteed_benefit_offer_read_rpc.sql"
       - "supabase/migrations/20260727120000_mystery_coupon_purchase_model.sql"
+      - "supabase/migrations/20260727170000_user_contest_favorites_own_row_rls.sql"
       - "supabase/tests/guaranteed_purchase_benefit_phase1.sql"
       - "supabase/tests/guaranteed_benefit_voucher_rls.sql"
       - "supabase/tests/guaranteed_benefit_purchase_phase2.sql"
+      - "supabase/tests/user_contest_favorites_rls.sql"
       - "supabase/tests/fixtures/guaranteed_purchase_benefit_phase1_baseline.sql"
   workflow_dispatch:
 
@@ -53,6 +55,8 @@ jobs:
             supabase/migrations/
           cp supabase/project-migrations/20260727120000_mystery_coupon_purchase_model.sql \
             supabase/migrations/
+          cp supabase/project-migrations/20260727170000_user_contest_favorites_own_row_rls.sql \
+            supabase/migrations/
           # Řetězec musí zůstat úplný a ve správném pořadí — pgTAP jinak testuje
           # neúplné schéma (chybějící get_guaranteed_benefit_offer shodí plán).
           ls supabase/migrations/
@@ -65,6 +69,7 @@ jobs:
           supabase test db supabase/tests/guaranteed_purchase_benefit_phase1.sql --local
           supabase test db supabase/tests/guaranteed_benefit_voucher_rls.sql --local
           supabase test db supabase/tests/guaranteed_benefit_purchase_phase2.sql --local
+          supabase test db supabase/tests/user_contest_favorites_rls.sql --local
 
       - name: Re-run migration command on the same database
         run: supabase migration up --local
@@ -74,6 +79,7 @@ jobs:
           supabase test db supabase/tests/guaranteed_purchase_benefit_phase1.sql --local
           supabase test db supabase/tests/guaranteed_benefit_voucher_rls.sql --local
           supabase test db supabase/tests/guaranteed_benefit_purchase_phase2.sql --local
+          supabase test db supabase/tests/user_contest_favorites_rls.sql --local
 
       - name: Second clean migration pass
         run: supabase db reset --local --no-seed
@@ -83,3 +89,4 @@ jobs:
           supabase test db supabase/tests/guaranteed_purchase_benefit_phase1.sql --local
           supabase test db supabase/tests/guaranteed_benefit_voucher_rls.sql --local
           supabase test db supabase/tests/guaranteed_benefit_purchase_phase2.sql --local
+          supabase test db supabase/tests/user_contest_favorites_rls.sql --local
