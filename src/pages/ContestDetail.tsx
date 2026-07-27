@@ -300,6 +300,7 @@ export default function ContestDetail() {
         ticket_number: outcome.ticket_number,
         won_type: outcome.won_type,
         won_prize: outcome.won_prize,
+        distance_to_next_bonus: outcome.distance_to_next_bonus,
       },
       coupon: outcome.coupon,
     });
