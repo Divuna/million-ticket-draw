@@ -10,7 +10,7 @@ begin;
 create extension if not exists pgtap with schema extensions;
 set search_path = public, extensions, pg_temp;
 
-select plan(19);
+select plan(23);
 
 select ok(
   to_regprocedure('public.purchase_guaranteed_benefit_bundle_atomic(uuid,uuid,uuid)') is not null,
@@ -189,6 +189,37 @@ select is(
   ) ->> 'error',
   'contest_not_found',
   'an enabled purchase for a missing contest is refused before any write'
+);
+
+-- ── Mystery kupon: read-only nabídka nesmí nic prozradit ──────────────────
+select ok(
+  to_regprocedure('public.get_guaranteed_benefit_offer(uuid)') is not null,
+  'the read-only offer RPC exists'
+);
+
+select ok(
+  not has_function_privilege('anon', 'public.get_guaranteed_benefit_offer(uuid)', 'EXECUTE')
+  and has_function_privilege('authenticated', 'public.get_guaranteed_benefit_offer(uuid)', 'EXECUTE'),
+  'only authenticated clients can read the offer'
+);
+
+-- The offer must never leak coupon identity: name, partner, image, code or
+-- counts. An unavailable offer therefore carries a single key.
+select is(
+  (select array_agg(k order by k)
+     from jsonb_object_keys(public.get_guaranteed_benefit_offer(gen_random_uuid())) k),
+  array['available'],
+  'an unavailable offer exposes nothing but availability'
+);
+
+-- The purchase price comes from contests.ticket_price, so the RPC body must
+-- not read the legacy per-benefit customer price at all.
+select ok(
+  (select prosrc
+     from pg_proc
+     where oid = 'public.purchase_guaranteed_benefit_bundle_atomic(uuid,uuid,uuid)'::regprocedure)
+  not like '%customer_price_miocoins%',
+  'the mystery purchase ignores the legacy per-benefit customer price'
 );
 
 select * from finish();

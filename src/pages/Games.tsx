@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Header } from '@/components/Header';
 import { Button } from '@/components/ui/button';
@@ -21,6 +21,13 @@ import { analytics } from '@/lib/analytics';
 import { Trophy, Medal } from 'lucide-react';
 import { OneMilHeartIcon, OneMilTrophyIcon } from '@/components/icons/OneMilIcons';
 import { LoggedOutScreen } from '@/components/LoggedOutScreen';
+import { MysteryCouponRevealDialog } from '@/components/MysteryCouponRevealDialog';
+import {
+  isMysteryContestAvailable,
+  mysteryErrorMessage,
+  purchaseMysteryCoupon,
+  type MysteryCoupon,
+} from '@/lib/mysteryCouponPurchase';
 
 interface Contest {
   id: string;
@@ -68,6 +75,9 @@ const Index = () => {
   const [modalContestId, setModalContestId] = useState<string | null>(null);
   const [favorites, setFavorites] = useState<Set<string>>(new Set());
   const [walletBalance, setWalletBalance] = useState<number | undefined>(undefined);
+  const [mysteryCoupon, setMysteryCoupon] = useState<MysteryCoupon | null>(null);
+  // Drží výsledek tiketu, dokud zákazník nezavře odhalení kuponu.
+  const pendingMysteryResultRef = useRef<{ result: UnlockTicketResult; contestId: string } | null>(null);
   const { user } = useAuth();
   const { isAdmin } = useUserRole();
   const navigate = useNavigate();
@@ -197,6 +207,72 @@ const Index = () => {
     };
   }, []);
 
+  const showMysteryTicketResult = () => {
+    const pending = pendingMysteryResultRef.current;
+    pendingMysteryResultRef.current = null;
+    if (!pending) return;
+    setModalResult(pending.result);
+    setModalContestId(pending.contestId);
+  };
+
+  const closeMysteryReveal = () => {
+    setMysteryCoupon(null);
+    showMysteryTicketResult();
+  };
+
+  const runMysteryPurchase = async (contestId: string) => {
+    if (!user) return;
+
+    const outcome = await purchaseMysteryCoupon(user.id, contestId);
+
+    if (!outcome.success) {
+      logTicketPurchaseRejected({
+        userId: user.id,
+        contestId,
+        errorCode: outcome.error.slice(0, 200),
+      });
+      toast.error(mysteryErrorMessage(outcome.error));
+      return;
+    }
+
+    logTicketPurchaseSuccess({
+      userId: user.id,
+      contestId,
+      ticketNumber: outcome.ticket_number,
+    });
+    analytics.ticketPurchase({ contestId, ticketNumber: outcome.ticket_number });
+
+    pendingMysteryResultRef.current = {
+      contestId,
+      result: {
+        ticket_number: outcome.ticket_number,
+        ticket_price: 0, // tiket je v tomhle toku bezplatný bonus
+        next_bonus_position: outcome.next_bonus_position,
+        distance_to_next_bonus: outcome.distance_to_next_bonus,
+        won_prize: outcome.won_prize,
+        won_type: outcome.won_type,
+        bonus_prize_id: null,
+        remaining_tickets: outcome.remaining_tickets ?? undefined,
+        partner_offer: null,
+      },
+    };
+
+    recordLocalTicketPlay();
+    fetchContests();
+    await loadWallet();
+
+    if (outcome.coupon) {
+      setMysteryCoupon(outcome.coupon);
+    } else {
+      // Bez dat kuponu nemá co odhalovat — jdeme rovnou na tiket.
+      showMysteryTicketResult();
+    }
+
+    if (outcome.won_prize) {
+      toast.success(`Gratulujeme! Vyhrál jsi ${outcome.won_prize}!`);
+    }
+  };
+
   const handleUnlockTicket = async (contestId: string) => {
     if (!user) {
       toast.error('Pro koupi tiketu se musíte přihlásit');
@@ -217,8 +293,15 @@ const Index = () => {
     }
 
     setProcessingContestId(contestId);
-    
+
     try {
+      // Mystery kupon: u zapojených soutěží zákazník za stejnou cenu dostane
+      // náhodný kupon a tiket zdarma. Ostatní soutěže jdou beze změny dál.
+      if (await isMysteryContestAvailable(contestId)) {
+        await runMysteryPurchase(contestId);
+        return;
+      }
+
       const built = buildBuyTicketAtomicRpcPayload(contestId, user.id);
       if (!built.ok) {
         toast.error((built as { ok: false; message: string }).message);
@@ -484,6 +567,8 @@ const Index = () => {
           </div>
         )}
       </div>
+
+      <MysteryCouponRevealDialog coupon={mysteryCoupon} onClose={closeMysteryReveal} />
 
       <TicketResultModal
         result={modalResult ? {

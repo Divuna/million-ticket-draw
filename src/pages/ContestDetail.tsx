@@ -22,7 +22,13 @@ import {
 import { analytics } from "@/lib/analytics";
 import { buildBuyTicketAtomicRpcPayload } from "@/utils/buyTicketAtomicRpcArgs";
 import { TicketResultModal } from "@/components/TicketResultModal";
-import { GuaranteedBenefitOfferCard } from "@/components/GuaranteedBenefitOfferCard";
+import { MysteryCouponRevealDialog } from "@/components/MysteryCouponRevealDialog";
+import {
+  isMysteryContestAvailable,
+  mysteryErrorMessage,
+  purchaseMysteryCoupon,
+  type MysteryCoupon,
+} from "@/lib/mysteryCouponPurchase";
 import { BonusPrizeDetailModal } from "@/components/BonusPrizeDetailModal";
 import { usePlacementBanners } from "@/hooks/usePlacementBanners";
 import { isNativeApp } from "@/lib/nativeApp";
@@ -141,6 +147,9 @@ export default function ContestDetail() {
   const [modalResult, setModalResult] = useState<UnlockTicketResult | null>(null);
   const [modalContestId, setModalContestId] = useState<string | null>(null);
   const requestInFlightRef = useRef(false);
+  const [mysteryCoupon, setMysteryCoupon] = useState<MysteryCoupon | null>(null);
+  // Drží výsledek tiketu, dokud zákazník nezavře odhalení kuponu.
+  const pendingMysteryResultRef = useRef<{ result: UnlockTicketResult; contestId: string } | null>(null);
   const [selectedBonusPrize, setSelectedBonusPrize] = useState<BonusPrize | null>(null);
   const [galleryMedia, setGalleryMedia] = useState<{ id: string; contest_id: string; type: string; url: string; sort_order: number | null; created_at: string | null }[]>([]);
   const [activeGalleryIndex, setActiveGalleryIndex] = useState(0);
@@ -254,6 +263,72 @@ export default function ContestDetail() {
     }
   }, []);
 
+  function showMysteryTicketResult() {
+    const pending = pendingMysteryResultRef.current;
+    pendingMysteryResultRef.current = null;
+    if (!pending) return;
+    setModalResult(pending.result);
+    setModalContestId(pending.contestId);
+  }
+
+  function closeMysteryReveal() {
+    setMysteryCoupon(null);
+    showMysteryTicketResult();
+  }
+
+  /**
+   * Mystery kupon: za contests.ticket_price dostane zákazník náhodný dostupný
+   * kupon a tiket zdarma. Celý nákup je jedna atomická transakce — při chybě
+   * se nestrhnou MioCoiny ani nevznikne tiket.
+   */
+  async function runMysteryPurchase(contestId: string, userId: string) {
+    const outcome = await purchaseMysteryCoupon(userId, contestId);
+
+    if (!outcome.success) {
+      logTicketPurchaseRejected({
+        userId,
+        contestId,
+        errorCode: outcome.error.slice(0, 200),
+      });
+      toast.error(mysteryErrorMessage(outcome.error));
+      return;
+    }
+
+    logTicketPurchaseSuccess({ userId, contestId, ticketNumber: outcome.ticket_number });
+    analytics.ticketPurchase({ contestId, ticketNumber: outcome.ticket_number });
+
+    pendingMysteryResultRef.current = {
+      contestId,
+      result: {
+        ticket_number: outcome.ticket_number,
+        ticket_price: 0, // tiket je v tomhle toku bezplatný bonus
+        next_bonus_position: outcome.next_bonus_position,
+        distance_to_next_bonus: outcome.distance_to_next_bonus,
+        won_prize: outcome.won_prize,
+        won_type: outcome.won_type,
+        bonus_prize_id: null,
+        remaining_tickets: outcome.remaining_tickets ?? undefined,
+        partner_offer: null,
+      },
+    };
+
+    recordLocalTicketPlay();
+    await loadUserBalance(userId);
+
+    if (outcome.coupon) {
+      setMysteryCoupon(outcome.coupon);
+    } else {
+      // Bez dat kuponu nemá co odhalovat — jdeme rovnou na tiket.
+      showMysteryTicketResult();
+    }
+
+    if (outcome.won_type === 'main') {
+      toast.success("Gratulujeme! Vyhrál jsi hlavní cenu!");
+    } else if (outcome.won_type === 'bonus') {
+      toast.success("Gratulujeme! Vyhrál jsi bonusovou cenu!");
+    }
+  }
+
   async function handleUseMiocoins() {
     console.log('[DEBUG ContestDetail] handleUseMiocoins called, user:', user?.id, 'contest:', contest?.id);
 
@@ -294,6 +369,13 @@ export default function ContestDetail() {
     setProcessingContestId(contest.id);
 
     try {
+      // Mystery kupon: u zapojených soutěží zákazník za stejnou cenu dostane
+      // náhodný kupon a tiket zdarma. Ostatní soutěže jdou beze změny dál.
+      if (await isMysteryContestAvailable(contest.id)) {
+        await runMysteryPurchase(contest.id, user.id);
+        return;
+      }
+
       const built = buildBuyTicketAtomicRpcPayload(contest.id, user.id);
       if (!built.ok) {
         toast.error((built as { ok: false; message: string }).message);
@@ -856,22 +938,6 @@ export default function ContestDetail() {
         </div>
       </section>
 
-      {/* Garantovaný nákupní benefit — renders only when an offer is really
-          purchasable (feature flag + pilot allowlist + approved benefit with a
-          free code + price set). Classic ticket purchase below is unchanged. */}
-      <GuaranteedBenefitOfferCard
-        contestId={contest.id}
-        userId={user?.id ?? null}
-        contestStatus={contest.status}
-        onBalanceShouldRefresh={() => {
-          if (user?.id) void loadUserBalance(user.id);
-        }}
-        onShowTicketResult={(result) => {
-          setModalContestId(contest.id);
-          setModalResult(result as UnlockTicketResult);
-        }}
-      />
-
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         {/* Box 1: Stav MioCoinů + akce */}
         <section className="voucher-card-glow bg-[hsl(220_25%_8%)]/80 backdrop-blur rounded-[20px] p-5 border-[2px] border-[rgba(255,138,0,0.35)] flex flex-col gap-4 animate-fade-in" style={{ animationDelay: '0.1s' }}>
@@ -1172,6 +1238,7 @@ export default function ContestDetail() {
         prize={selectedBonusPrize}
         backgroundImageUrl={starryBackgroundUrl}
       />
+      <MysteryCouponRevealDialog coupon={mysteryCoupon} onClose={closeMysteryReveal} />
       {/* TICKET RESULT MODAL */}
       <TicketResultModal
         isOpen={modalResult !== null}
