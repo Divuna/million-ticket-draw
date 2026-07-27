@@ -76,6 +76,10 @@ const Index = () => {
   const [favorites, setFavorites] = useState<Set<string>>(new Set());
   const [walletBalance, setWalletBalance] = useState<number | undefined>(undefined);
   const [mysteryCoupon, setMysteryCoupon] = useState<MysteryCoupon | null>(null);
+  // Synchronní zámek nákupu. `processingContestId` je React state, takže se
+  // projeví až po re-renderu — dvě kliknutí ve stejném ticku by jinak obě
+  // prošla a vytvořila dva nákupy (každý s vlastním idempotency key).
+  const purchaseInFlightRef = useRef(false);
   // Drží výsledek tiketu, dokud zákazník nezavře odhalení kuponu.
   const pendingMysteryResultRef = useRef<{ result: UnlockTicketResult; contestId: string } | null>(null);
   const { user } = useAuth();
@@ -274,13 +278,23 @@ const Index = () => {
   };
 
   const handleUnlockTicket = async (contestId: string) => {
+    // Zámek se bere synchronně, ještě před prvním awaitem — druhý klik ve
+    // stejném ticku se tak zahodí dřív, než vznikne jakýkoli idempotency key.
+    // Platí pro mystery i klasický nákup.
+    if (purchaseInFlightRef.current) return;
+    purchaseInFlightRef.current = true;
+
     if (!user) {
       toast.error('Pro koupi tiketu se musíte přihlásit');
+      purchaseInFlightRef.current = false;
       return;
     }
 
     const contest = contests.find((c) => c.id === contestId);
-    if (!contest) return;
+    if (!contest) {
+      purchaseInFlightRef.current = false;
+      return;
+    }
 
     let effectiveBalance = walletBalance;
     if (typeof effectiveBalance !== 'number') {
@@ -289,6 +303,7 @@ const Index = () => {
     if (effectiveBalance < contest.ticket_price) {
       const shortage = Math.max(0, Math.ceil(contest.ticket_price - effectiveBalance));
       toast.error(`Chybí ti ${shortage.toLocaleString('cs-CZ')} MioCoinů`);
+      purchaseInFlightRef.current = false;
       return;
     }
 
@@ -455,6 +470,7 @@ const Index = () => {
       toast.error('Chyba při koupi tiketu');
     } finally {
       setProcessingContestId(null);
+      purchaseInFlightRef.current = false;
     }
   };
 

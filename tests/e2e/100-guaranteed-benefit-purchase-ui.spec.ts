@@ -34,7 +34,10 @@
  *         contests.ticket_price
  *   100c) nákup strhne přesně ticket_price, vytvoří kupon i tiket zdarma,
  *         odhalí kód a NEvznikne žádná ticket_purchase transakce
- *   100d) dvojklik nevytvoří druhý nákup
+ *   100d) dvojklik na detailu nevytvoří druhý nákup
+ *   100d-games) dvojklik z karty v Games → jeden odečet, kupon i tiket
+ *   100d-favorites) dvojklik z karty v Oblíbených → jeden odečet, kupon i tiket
+ *   100d-classic) dvojklik z karty u nezapojené soutěže → jen jeden tiket
  *   100e) nákup posledního kódu — odhalení zůstane a otevře TicketResultModal
  *
  * Vyžaduje env vars (přítomné v playwright-staging.yml):
@@ -324,6 +327,40 @@ async function openContest(page: import('@playwright/test').Page) {
   return button;
 }
 
+/** Fixture soutěž mezi oblíbenými, aby ji `/favorites` vypsal. */
+async function ensureFavorite(admin: SupabaseClient, customerId: string): Promise<void> {
+  const { data } = await (admin as any)
+    .from('user_contest_favorites').select('id')
+    .eq('user_id', customerId).eq('contest_id', FIXTURE.contestId).maybeSingle();
+  if (data?.id) return;
+  const { error } = await (admin as any)
+    .from('user_contest_favorites').insert({ user_id: customerId, contest_id: FIXTURE.contestId });
+  if (error) throw new Error(`user_contest_favorites insert: ${error.message}`);
+}
+
+/**
+ * Najde kartu fixture soutěže v seznamu a vrátí její nákupní tlačítko.
+ * Karty na seznamech mají skrytý titulek, proto se hledá přes contest id.
+ */
+async function openListCard(page: import('@playwright/test').Page, path: string) {
+  await page.goto(path);
+  const card = page.getByTestId(`contest-card-${FIXTURE.contestId}`);
+  await expect(card).toBeVisible({ timeout: 30_000 });
+  const button = card.getByRole('button', { name: BUY_BUTTON });
+  await expect(button).toBeVisible({ timeout: 30_000 });
+  return button;
+}
+
+/** Dvě kliknutí ve stejném ticku — přesně to, co má synchronní zámek zahodit. */
+async function doubleClickSameTick(
+  button: import('@playwright/test').Locator,
+): Promise<void> {
+  await button.evaluate((el: HTMLElement) => {
+    el.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+    el.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+  });
+}
+
 test.describe.serial('Spec 100 — mystery kupon (UI)', () => {
   test.skip(!isStaging, 'Staging-only spec (requires staging Supabase + service role key)');
   // Login + navigace na detail soutěže se nevejde do výchozích 30 s.
@@ -469,16 +506,90 @@ test.describe.serial('Spec 100 — mystery kupon (UI)', () => {
     await primeConsent(page);
     await loginViaUI(page, CUSTOMER_EMAIL, PASSWORD);
     const button = await openContest(page);
-
-    // Dvě kliknutí synchronně za sebou, dřív než dorazí odpověď z RPC.
-    await button.evaluate((el: HTMLElement) => {
-      el.dispatchEvent(new MouseEvent('click', { bubbles: true }));
-      el.dispatchEvent(new MouseEvent('click', { bubbles: true }));
-    });
+    await doubleClickSameTick(button);
 
     await expect(page.getByTestId('mystery-coupon-reveal')).toBeVisible({ timeout: 30_000 });
 
     expect(await countBundles(admin, customerId)).toBe(bundlesBefore + 1);
+  });
+
+  test('100d-games: dvojklik z karty v Games vytvoří jen jeden nákup', async ({ page }) => {
+    const admin = makeAdmin();
+    await setFlag(admin, true, JSON.stringify([FIXTURE.contestId]));
+
+    const customerId = ctx.customerAuthId!;
+    await resetMutableState(admin, customerId);
+    const bundlesBefore    = await countBundles(admin, customerId);
+    const issuancesBefore  = await countIssuances(admin, customerId);
+    const ticketsBefore    = await countTickets(admin, customerId);
+
+    await primeConsent(page);
+    await loginViaUI(page, CUSTOMER_EMAIL, PASSWORD);
+    const button = await openListCard(page, '/games');
+    await doubleClickSameTick(button);
+
+    await expect(page.getByTestId('mystery-coupon-reveal')).toBeVisible({ timeout: 30_000 });
+
+    // Právě jeden odečet, jeden kupon, jeden tiket.
+    expect(await countBundles(admin, customerId)).toBe(bundlesBefore + 1);
+    expect(await countIssuances(admin, customerId)).toBe(issuancesBefore + 1);
+    expect(await countTickets(admin, customerId)).toBe(ticketsBefore + 1);
+    const { data: wallet } = await (admin as any)
+      .from('wallets').select('balance_coins').eq('user_id', customerId).single();
+    expect(Number(wallet.balance_coins)).toBe(START_BALANCE - TICKET_PRICE);
+  });
+
+  test('100d-favorites: dvojklik z karty v Oblíbených vytvoří jen jeden nákup', async ({ page }) => {
+    const admin = makeAdmin();
+    await setFlag(admin, true, JSON.stringify([FIXTURE.contestId]));
+
+    const customerId = ctx.customerAuthId!;
+    await resetMutableState(admin, customerId);
+    await ensureFavorite(admin, customerId);
+    const bundlesBefore   = await countBundles(admin, customerId);
+    const issuancesBefore = await countIssuances(admin, customerId);
+    const ticketsBefore   = await countTickets(admin, customerId);
+
+    await primeConsent(page);
+    await loginViaUI(page, CUSTOMER_EMAIL, PASSWORD);
+    const button = await openListCard(page, '/favorite-games');
+    await doubleClickSameTick(button);
+
+    await expect(page.getByTestId('mystery-coupon-reveal')).toBeVisible({ timeout: 30_000 });
+
+    expect(await countBundles(admin, customerId)).toBe(bundlesBefore + 1);
+    expect(await countIssuances(admin, customerId)).toBe(issuancesBefore + 1);
+    expect(await countTickets(admin, customerId)).toBe(ticketsBefore + 1);
+    const { data: wallet } = await (admin as any)
+      .from('wallets').select('balance_coins').eq('user_id', customerId).single();
+    expect(Number(wallet.balance_coins)).toBe(START_BALANCE - TICKET_PRICE);
+  });
+
+  test('100d-classic: dvojklik z karty u nezapojené soutěže koupí jen jeden tiket', async ({ page }) => {
+    const admin = makeAdmin();
+    // Neprázdný allowlist BEZ této soutěže = klasický nákup.
+    await setFlag(admin, true, JSON.stringify(['f0000100-0000-4000-8000-0000000000ff']));
+
+    const customerId = ctx.customerAuthId!;
+    await resetMutableState(admin, customerId);
+    const ticketsBefore   = await countTickets(admin, customerId);
+    const issuancesBefore = await countIssuances(admin, customerId);
+
+    await primeConsent(page);
+    await loginViaUI(page, CUSTOMER_EMAIL, PASSWORD);
+    const button = await openListCard(page, '/games');
+    await doubleClickSameTick(button);
+
+    await expect(
+      page.locator('[role="dialog"]:has(button[aria-label="Zavřít"])'),
+    ).toBeVisible({ timeout: 30_000 });
+
+    // Jeden tiket, jeden odečet ceny tiketu, žádný kupon.
+    expect(await countTickets(admin, customerId)).toBe(ticketsBefore + 1);
+    expect(await countIssuances(admin, customerId)).toBe(issuancesBefore);
+    const { data: wallet } = await (admin as any)
+      .from('wallets').select('balance_coins').eq('user_id', customerId).single();
+    expect(Number(wallet.balance_coins)).toBe(START_BALANCE - TICKET_PRICE);
   });
 
   test('100e: poslední kód — odhalení zůstane a otevře TicketResultModal', async ({ page }) => {
