@@ -204,3 +204,20 @@ create or replace function public."buy_ticket_atomic"(p_user_id uuid, p_contest_
 returns jsonb
 language plpgsql
 as 'begin return jsonb_build_object(''success'', false, ''fixture'', true); end';
+
+-- Oblíbené soutěže v predmigračním, driftnutém stavu: RLS zapnuté, ale ŽÁDNÁ
+-- policy (tedy deny-all i pro vlastníka) a `anon` s plnými granty. Přesně tenhle
+-- stav měl staging a přesně ten má migrace
+-- 20260727170000_user_contest_favorites_own_row_rls.sql opravit.
+create table public.user_contest_favorites (
+  id uuid primary key default gen_random_uuid(),
+  user_id uuid not null references auth.users(id) on delete cascade,
+  contest_id uuid not null references public.contests(id) on delete cascade,
+  created_at timestamptz not null default now(),
+  unique (user_id, contest_id)
+);
+
+alter table public.user_contest_favorites enable row level security;
+
+grant select, insert, update, delete on public.user_contest_favorites
+  to anon, authenticated, service_role;

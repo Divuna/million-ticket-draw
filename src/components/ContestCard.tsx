@@ -133,7 +133,8 @@ export const ContestCard: React.FC<ContestCardProps> = ({
   const soldForBar = showProgress ? (ticketsSold ?? 0) : 0;
 
   return (
-    <div 
+    <div
+      data-testid={`contest-card-${contest.id}`}
       className={`
         contest-card-glow
         customer-contest-card
