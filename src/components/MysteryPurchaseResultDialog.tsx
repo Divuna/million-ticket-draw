@@ -5,7 +5,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { MIOCOIN_IMAGE_URL } from "@/components/MioCoin";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { Copy, Check } from "lucide-react";
+import { Copy, Check, Gift, Calendar } from "lucide-react";
 import { toast } from "sonner";
 import type { MysteryCoupon } from "@/lib/mysteryCouponPurchase";
 
@@ -13,9 +13,10 @@ import type { MysteryCoupon } from "@/lib/mysteryCouponPurchase";
  * Jeden výsledek mystery nákupu.
  *
  * Dřív se po nákupu otevřelo odhalení kuponu a po jeho zavření ještě
- * TicketResultModal — zákazník tak zavíral dvě okna za sebou a výhra z tiketu
- * se ztrácela za kuponem. Tady je obojí v jednom: nahoře výhra z tiketu jako
- * hlavní sdělení, pod ní kupon jako druhý, garantovaný bonus.
+ * TicketResultModal — zákazník zavíral dvě okna a výhra z tiketu se ztrácela
+ * za kuponem. Tady je obojí v jednom a v pořadí, které odpovídá hodnotě:
+ * nahoře výhra z tiketu jako hlavní sdělení, pod ní kupon jako druhý,
+ * garantovaný bonus.
  *
  * Dialog nic nevytváří ani neukládá. Tiket i kupon už v databázi jsou —
  * `purchase_guaranteed_benefit_bundle_atomic` je zapsal v jedné transakci
@@ -26,6 +27,8 @@ export interface MysteryTicketOutcome {
   ticket_number: number;
   won_type: "bonus" | "main" | null;
   won_prize: string | null;
+  /** Kolik tahů zbývá k dalšímu výhernímu tiketu. Null = údaj není známý. */
+  distance_to_next_bonus?: number | null;
 }
 
 interface BonusPrizeRow {
@@ -55,6 +58,13 @@ function resolveImage(path: string | null | undefined, bucket = "contest-images"
   if (!path) return null;
   if (path.startsWith("http")) return path;
   return supabase.storage.from(bucket).getPublicUrl(path).data.publicUrl;
+}
+
+/** 1 tah · 2–4 tahy · jinak tahů. */
+function tahPlural(n: number): string {
+  if (n === 1) return "tah";
+  if (n >= 2 && n <= 4) return "tahy";
+  return "tahů";
 }
 
 export function MysteryPurchaseResultDialog({
@@ -137,6 +147,12 @@ export function MysteryPurchaseResultDialog({
       : null;
   const isMioCoinWin = miocoinAmount !== null;
 
+  const prizeLabel = isMioCoinWin
+    ? "Získané MioCoiny"
+    : wonType === "main"
+      ? "Hlavní výhra ze soutěže"
+      : "Bonusová výhra ze soutěže";
+
   const prizeTitle =
     isMioCoinWin
       ? `${miocoinAmount.toLocaleString("cs-CZ")} MioCoinů`
@@ -158,11 +174,15 @@ export function MysteryPurchaseResultDialog({
 
   const couponImage = resolveImage(coupon?.image_url, "voucher-images");
 
+  // Panel se ukáže jen když je vzdálenost opravdu známá a kladná.
+  const distance = ticket?.distance_to_next_bonus ?? null;
+  const showNextWin = typeof distance === "number" && Number.isFinite(distance) && distance > 0;
+
   return (
     <Dialog open={open} onOpenChange={(next) => { if (!next) onClose(); }}>
       <DialogContent
         data-testid="mystery-result-dialog"
-        className="bg-[hsl(220_25%_8%)] border-[2px] border-[rgba(255,138,0,0.35)] text-white max-w-lg w-[calc(100vw-2rem)] max-h-[90vh] overflow-y-auto overflow-x-hidden"
+        className="bg-[hsl(220_25%_7%)] border-[2px] border-[rgba(255,138,0,0.35)] text-white max-w-2xl w-[calc(100vw-1.5rem)] max-h-[92vh] overflow-y-auto overflow-x-hidden p-4 sm:p-6"
       >
         {isWin && (
           <Confetti
@@ -175,111 +195,149 @@ export function MysteryPurchaseResultDialog({
           />
         )}
 
-        <DialogHeader>
-          <DialogTitle className="text-center">
-            {isWin ? (
-              <span className="block">
-                <span className="block text-2xl md:text-3xl font-extrabold bg-gradient-to-r from-[#FF8A00] to-[#FFB547] bg-clip-text text-transparent">
-                  🎉 GRATULUJEME!
-                </span>
-                <span className="block text-lg md:text-xl font-extrabold text-white mt-1">
-                  VYHRÁL JSI!
-                </span>
-              </span>
-            ) : (
-              <span className="block text-xl md:text-2xl font-extrabold text-white">
-                Tiket č. {ticket?.ticket_number?.toLocaleString("cs-CZ")}
-              </span>
-            )}
+        <DialogHeader className="sr-only">
+          <DialogTitle>
+            {isWin ? `Vyhrál jsi: ${prizeTitle}` : `Tiket č. ${ticket?.ticket_number}`}
           </DialogTitle>
         </DialogHeader>
 
-        <div className="flex flex-col gap-4 min-w-0">
+        <div className="flex flex-col gap-5 min-w-0">
           {/* ── Hlavní sdělení: výhra z tiketu ─────────────────────────── */}
-          {isWin && (
-            <section data-testid="mystery-result-prize" className="flex flex-col items-center gap-3 text-center">
-              {prizeImage && (
-                <img
-                  src={prizeImage}
-                  alt={prizeTitle}
-                  data-testid="mystery-result-prize-image"
-                  className={
-                    isMioCoinWin
-                      ? "h-24 w-24 object-contain drop-shadow-[0_0_18px_rgba(255,138,0,0.45)]"
-                      : "h-36 w-full max-w-xs rounded-2xl object-cover border border-[rgba(255,138,0,0.3)]"
-                  }
-                />
+          <section
+            data-testid="mystery-result-prize"
+            className="grid grid-cols-1 md:grid-cols-[1fr_auto] gap-4 md:gap-6 items-center min-w-0"
+          >
+            <div className="text-center md:text-left min-w-0 order-2 md:order-1">
+              {isWin ? (
+                <>
+                  <p className="text-xl sm:text-2xl font-extrabold tracking-wide bg-gradient-to-r from-[#FF8A00] to-[#FFB547] bg-clip-text text-transparent">
+                    🎉 GRATULUJEME!
+                  </p>
+                  <p className="text-3xl sm:text-5xl font-black text-white leading-none mt-1">
+                    VYHRÁL JSI!
+                  </p>
+                  <p className="text-[11px] uppercase tracking-[0.2em] text-gray-400 font-semibold mt-4">
+                    {prizeLabel}
+                  </p>
+                </>
+              ) : (
+                <p className="text-2xl sm:text-3xl font-extrabold text-white">
+                  Tiket č. {ticket?.ticket_number?.toLocaleString("cs-CZ")}
+                </p>
               )}
-              <p
-                data-testid={isMioCoinWin ? "mystery-result-miocoin-amount" : "mystery-result-prize-title"}
-                className="text-xl md:text-2xl font-extrabold text-white break-words"
-              >
-                {prizeTitle}
-              </p>
-              {prizeDescription && (
-                <p className="text-sm text-gray-300 break-words">{prizeDescription}</p>
+
+              {isWin && (
+                <>
+                  <p
+                    data-testid={isMioCoinWin ? "mystery-result-miocoin-amount" : "mystery-result-prize-title"}
+                    className="text-2xl sm:text-3xl font-extrabold text-[#FFB547] mt-2 break-words"
+                  >
+                    {prizeTitle}
+                  </p>
+                  {prizeDescription && (
+                    <p className="text-sm text-gray-300 mt-2 break-words">{prizeDescription}</p>
+                  )}
+                </>
               )}
-            </section>
-          )}
+            </div>
+
+            {isWin && prizeImage && (
+              <img
+                src={prizeImage}
+                alt={prizeTitle}
+                data-testid="mystery-result-prize-image"
+                className={
+                  isMioCoinWin
+                    ? "order-1 md:order-2 h-28 w-28 mx-auto object-contain drop-shadow-[0_0_24px_rgba(255,138,0,0.5)]"
+                    : "order-1 md:order-2 h-40 w-40 sm:h-48 sm:w-48 mx-auto object-contain drop-shadow-[0_0_30px_rgba(255,138,0,0.28)]"
+                }
+              />
+            )}
+          </section>
 
           {/* ── Druhý, garantovaný bonus: kupon ────────────────────────── */}
-          <section
-            data-testid="mystery-coupon-reveal"
-            className="rounded-2xl border border-[rgba(255,138,0,0.3)] bg-[rgba(255,138,0,0.06)] p-4 flex flex-col gap-3 min-w-0"
-          >
-            <p className="text-xs uppercase tracking-wide text-[#FF8A00] font-bold text-center">
+          <div className="flex items-center justify-center gap-2 text-[#FF8A00]">
+            <Gift className="h-4 w-4 shrink-0" />
+            <p className="text-[11px] sm:text-xs uppercase tracking-[0.18em] font-bold">
               A navíc získáváš kupon
             </p>
+          </div>
 
-            <div className="flex items-start gap-3 min-w-0">
+          <section
+            data-testid="mystery-coupon-reveal"
+            className="rounded-2xl bg-[#FCF3E4] text-[hsl(220_25%_12%)] overflow-hidden grid grid-cols-1 sm:grid-cols-[1fr_auto] min-w-0"
+          >
+            <div className="flex items-center gap-4 p-4 min-w-0">
               {couponImage && (
                 <img
                   src={couponImage}
                   alt={coupon?.name ?? "Kupon"}
                   data-testid="mystery-coupon-image"
-                  className="h-16 w-16 rounded-xl object-cover flex-shrink-0 border border-[rgba(255,138,0,0.25)]"
+                  className="h-16 w-16 sm:h-20 sm:w-20 rounded-full object-contain bg-white flex-shrink-0 border border-black/10 p-2"
                 />
               )}
               <div className="min-w-0 flex-1">
-                <p data-testid="mystery-coupon-name" className="font-bold text-white break-words">
+                <p data-testid="mystery-coupon-name" className="text-lg sm:text-xl font-extrabold break-words leading-tight">
                   {coupon?.name}
                 </p>
                 {coupon?.partner_name && (
-                  <p data-testid="mystery-coupon-partner" className="text-sm text-gray-300 break-words">
-                    od {coupon.partner_name}
+                  <p data-testid="mystery-coupon-partner" className="text-sm font-semibold text-black/70 break-words">
+                    {coupon.partner_name}
                   </p>
+                )}
+                {coupon?.short_description && (
+                  <p className="text-xs text-black/60 mt-1 break-words">{coupon.short_description}</p>
                 )}
               </div>
             </div>
 
-            {coupon?.short_description && (
-              <p className="text-sm text-gray-300 break-words">{coupon.short_description}</p>
-            )}
-
             {coupon?.code && (
-              <div className="rounded-xl border border-[rgba(255,138,0,0.35)] bg-[hsl(220_25%_6%)] px-3 py-2 flex flex-col gap-2">
-                <p className="text-xs uppercase tracking-wide text-[#FF8A00] font-semibold">Tvůj kód</p>
+              <div className="flex flex-col items-center justify-center gap-1 p-4 text-center border-t border-dashed border-black/25 sm:border-t-0 sm:border-l sm:min-w-[13rem]">
+                <p className="text-[10px] uppercase tracking-[0.18em] text-[#C26A00] font-bold">
+                  Tvůj kód
+                </p>
                 <p
                   data-testid="mystery-coupon-code"
-                  className="text-lg font-extrabold tracking-widest break-all"
+                  className="text-lg sm:text-xl font-extrabold break-all leading-tight"
                 >
                   {coupon.code}
                 </p>
-                <Button
+                <button
+                  type="button"
                   data-testid="mystery-coupon-copy"
                   onClick={handleCopy}
-                  variant="outline"
-                  className="h-9 rounded-full border-[rgba(255,138,0,0.45)] text-white hover:bg-[rgba(255,138,0,0.12)]"
+                  className="inline-flex items-center gap-1.5 text-xs font-semibold text-[#C26A00] hover:text-[#FF8A00] transition-colors mt-1"
                 >
-                  {copied ? (
-                    <><Check className="h-4 w-4 mr-2" />Zkopírováno</>
-                  ) : (
-                    <><Copy className="h-4 w-4 mr-2" />Kopírovat kód</>
-                  )}
-                </Button>
+                  {copied ? <Check className="h-3.5 w-3.5" /> : <Copy className="h-3.5 w-3.5" />}
+                  {copied ? "Zkopírováno" : "Kopírovat kód"}
+                </button>
               </div>
             )}
           </section>
+
+          {/* ── Informační panel: kdy padne další výherní tiket ────────── */}
+          {showNextWin && (
+            <section
+              data-testid="mystery-result-next-win"
+              className="rounded-2xl bg-white/[0.04] border border-white/10 p-4 flex items-center gap-3 min-w-0"
+            >
+              <span className="h-10 w-10 rounded-full bg-white/[0.06] flex items-center justify-center flex-shrink-0">
+                <Calendar className="h-5 w-5 text-[#FF8A00]" />
+              </span>
+              <div className="min-w-0">
+                <p className="text-sm font-semibold text-white break-words">
+                  Další výherní tiket čeká už za{" "}
+                  <span className="text-[#FFB547]">
+                    {distance.toLocaleString("cs-CZ")} {tahPlural(distance)}
+                  </span>
+                  .
+                </p>
+                <p className="text-xs text-gray-400 break-words">
+                  Může obsahovat MioCoiny, bonusovou cenu nebo hlavní výhru.
+                </p>
+              </div>
+            </section>
+          )}
 
           <p data-testid="mystery-result-storage-note" className="text-xs text-gray-400 text-center break-words">
             Kupon najdeš ve <span className="text-gray-200">Voucherech</span>, tiket máš uložený ve svém účtu.
@@ -289,7 +347,7 @@ export function MysteryPurchaseResultDialog({
             data-testid="mystery-result-continue"
             onClick={onClose}
             variant="premium"
-            className="h-11 font-semibold rounded-full w-full"
+            className="h-12 font-bold rounded-full w-full text-base"
           >
             Pokračovat
           </Button>

@@ -46,6 +46,8 @@
  *   100h) název, partner, kód kuponu + kopírování
  *   100i) jediné tlačítko „Pokračovat", žádný druhý modal
  *   100j) mobilní zobrazení bez vodorovného posouvání
+ *   100k) panel dalšího výherního tiketu + skloňování
+ *   100l) bez známé vzdálenosti se panel nezobrazí
  *
  * Vyžaduje env vars (přítomné v playwright-staging.yml):
  *   VITE_SUPABASE_URL               — staging ref dxmowysntemfqfnanxua
@@ -877,6 +879,72 @@ test.describe.serial('Spec 100 — mystery kupon (UI)', () => {
     expect(await countBundles(admin, customerId)).toBe(bundlesBefore + 1);
     expect(await countIssuances(admin, customerId)).toBe(issuancesBefore + 1);
     expect(await countTickets(admin, customerId)).toBe(ticketsBefore + 1);
+  });
+
+  test('100k: panel dalšího výherního tiketu se správným skloňováním', async ({ page }) => {
+    const admin = makeAdmin();
+    await setFlag(admin, true, JSON.stringify([FIXTURE.contestId]));
+    const customerId = ctx.customerAuthId!;
+    await resetMutableState(admin, customerId);
+
+    // Bonus dva tahy za koupeným tiketem → „za 2 tahy".
+    const { data: contest } = await (admin as any)
+      .from('contests').select('next_ticket_number').eq('id', FIXTURE.contestId).single();
+    const bonusAt = Number(contest.next_ticket_number) + 2;
+
+    await (admin as any).from('bonus_prizes').delete()
+      .eq('contest_id', FIXTURE.contestId).eq('ticket_position', bonusAt);
+    const { error } = await (admin as any).from('bonus_prizes').insert({
+      contest_id: FIXTURE.contestId,
+      ticket_position: bonusAt,
+      title: 'E2E budoucí bonus',
+      description: 'E2E budoucí bonus',
+      amount: 10,
+      status: 'pending',
+    });
+    if (error) throw new Error(`bonus_prizes insert: ${error.message}`);
+
+    try {
+      await primeConsent(page);
+      await loginViaUI(page, CUSTOMER_EMAIL, PASSWORD);
+      const button = await openContest(page);
+      await button.click();
+
+      await expect(page.getByTestId('mystery-result-dialog')).toBeVisible({ timeout: 30_000 });
+
+      const panel = page.getByTestId('mystery-result-next-win');
+      await expect(panel).toBeVisible();
+      // 2 tahy — ne „2 tahů", ne „2 tah".
+      await expect(panel).toContainText('za 2 tahy');
+      await expect(panel).toContainText('Může obsahovat MioCoiny, bonusovou cenu nebo hlavní výhru.');
+    } finally {
+      await (admin as any).from('bonus_prizes').delete()
+        .eq('contest_id', FIXTURE.contestId).eq('ticket_position', bonusAt);
+    }
+  });
+
+  test('100l: bez známé vzdálenosti se panel vůbec nezobrazí', async ({ page }) => {
+    const admin = makeAdmin();
+    await setFlag(admin, true, JSON.stringify([FIXTURE.contestId]));
+    await resetMutableState(admin, ctx.customerAuthId!);
+
+    // Ve fixture soutěži nejsou žádné budoucí bonusy → RPC vrátí null.
+    const { data: contest } = await (admin as any)
+      .from('contests').select('next_ticket_number').eq('id', FIXTURE.contestId).single();
+    await (admin as any).from('bonus_prizes').delete()
+      .eq('contest_id', FIXTURE.contestId)
+      .gte('ticket_position', Number(contest.next_ticket_number));
+
+    await primeConsent(page);
+    await loginViaUI(page, CUSTOMER_EMAIL, PASSWORD);
+    const button = await openContest(page);
+    await button.click();
+
+    await expect(page.getByTestId('mystery-result-dialog')).toBeVisible({ timeout: 30_000 });
+    await expect(page.getByTestId('mystery-result-next-win')).toHaveCount(0);
+    // Kupon i tlačítko zůstávají.
+    await expect(page.getByTestId('mystery-coupon-code')).toBeVisible();
+    await expect(page.getByTestId('mystery-result-continue')).toBeVisible();
   });
 
   test('100j: mobil — dialog je čitelný bez vodorovného posouvání', async ({ page }) => {
