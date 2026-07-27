@@ -72,17 +72,20 @@ select is(
 );
 
 -- ── Chování ───────────────────────────────────────────────────────────────
--- Dva vlastníci a jedna soutěž. FK na auth.users se pro seed obchází, aby test
--- nemusel zakládat plnohodnotné auth účty.
+-- Dva skuteční vlastníci a jedna soutěž. Uživatelé musí v `auth.users` reálně
+-- existovat: vlastník si na konci sám vkládá řádek a FK se tou dobou vyhodnotí
+-- pod rolí `authenticated`, která obcházení FK nemá jak zapnout.
+
+insert into auth.users (id, email) values
+  ('a0000001-0000-4000-8000-000000000001', 'rls-owner@onemil.test'),
+  ('b0000002-0000-4000-8000-000000000002', 'rls-other@onemil.test');
 
 insert into public.contests (id, title, main_prize)
 values ('c0000001-0000-4000-8000-000000000001', 'RLS fixture contest', 'RLS fixture prize');
 
-set session_replication_role = replica;
 insert into public.user_contest_favorites (user_id, contest_id) values
   ('a0000001-0000-4000-8000-000000000001', 'c0000001-0000-4000-8000-000000000001'),
   ('b0000002-0000-4000-8000-000000000002', 'c0000001-0000-4000-8000-000000000001');
-set session_replication_role = origin;
 
 set role authenticated;
 select set_config('request.jwt.claim.sub', 'a0000001-0000-4000-8000-000000000001', true);
