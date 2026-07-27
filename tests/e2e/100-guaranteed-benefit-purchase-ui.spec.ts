@@ -40,7 +40,12 @@
  *   100d-classic) dvojklik z karty u nezapojené soutěže → jen jeden tiket
  *   100d-cold) dvojklik na detailu, než dorazí zůstatek → jen jeden nákup
  *   100d-cold-classic) totéž u nezapojené soutěže → jediný ticket_purchase
- *   100e) nákup posledního kódu — odhalení zůstane a otevře TicketResultModal
+ *   100e) nákup posledního kódu — výsledek zůstane, „Pokračovat" ho zavře
+ *   100f) výhra MioCoinů + kupon v jednom dialogu
+ *   100g) věcná výhra + kupon v jednom dialogu
+ *   100h) název, partner, kód kuponu + kopírování
+ *   100i) jediné tlačítko „Pokračovat", žádný druhý modal
+ *   100j) mobilní zobrazení bez vodorovného posouvání
  *
  * Vyžaduje env vars (přítomné v playwright-staging.yml):
  *   VITE_SUPABASE_URL               — staging ref dxmowysntemfqfnanxua
@@ -352,6 +357,40 @@ async function stallWalletReads(
   return () => delivered;
 }
 
+/**
+ * Nastraží bonusovou výhru přesně na tiket, který padne příštímu nákupu.
+ * Vrací úklidovou funkci — nastražený `bonus_prizes` řádek se po testu maže,
+ * aby fixture nerostla.
+ */
+async function armNextTicketWin(
+  admin: SupabaseClient,
+  prize: { title: string; description: string; detailed?: string; amount: number | null; imageUrl?: string },
+): Promise<() => Promise<void>> {
+  const { data: contest } = await (admin as any)
+    .from('contests').select('next_ticket_number').eq('id', FIXTURE.contestId).single();
+  const position = Number(contest.next_ticket_number);
+
+  await (admin as any).from('bonus_prizes').delete()
+    .eq('contest_id', FIXTURE.contestId).eq('ticket_position', position);
+
+  const { error } = await (admin as any).from('bonus_prizes').insert({
+    contest_id: FIXTURE.contestId,
+    ticket_position: position,
+    title: prize.title,
+    description: prize.description,
+    detailed_description: prize.detailed ?? null,
+    image_url: prize.imageUrl ?? null,
+    amount: prize.amount,
+    status: 'pending',
+  });
+  if (error) throw new Error(`bonus_prizes insert: ${error.message}`);
+
+  return async () => {
+    await (admin as any).from('bonus_prizes').delete()
+      .eq('contest_id', FIXTURE.contestId).eq('ticket_position', position);
+  };
+}
+
 /** Fixture soutěž mezi oblíbenými, aby ji `/favorites` vypsal. */
 async function ensureFavorite(admin: SupabaseClient, customerId: string): Promise<void> {
   const { data } = await (admin as any)
@@ -434,7 +473,7 @@ test.describe.serial('Spec 100 — mystery kupon (UI)', () => {
     await expect(
       page.locator('[role="dialog"]:has(button[aria-label="Zavřít"])'),
     ).toBeVisible({ timeout: 30_000 });
-    await expect(page.getByTestId('mystery-coupon-reveal')).toHaveCount(0);
+    await expect(page.getByTestId('mystery-result-dialog')).toHaveCount(0);
 
     expect(await countTickets(admin, customerId)).toBe(ticketsBefore + 1);
     expect(await countIssuances(admin, customerId)).toBe(issuancesBefore);
@@ -461,7 +500,7 @@ test.describe.serial('Spec 100 — mystery kupon (UI)', () => {
     await expect(page.getByRole('button', { name: /Uplatnit 20 MioCoin/ })).toHaveCount(0);
 
     // Žádná samostatná karta ani identita kuponu před nákupem.
-    await expect(page.getByTestId('mystery-coupon-reveal')).toHaveCount(0);
+    await expect(page.getByTestId('mystery-result-dialog')).toHaveCount(0);
     const body = page.locator('body');
     await expect(body).not.toContainText(BENEFIT_NAME);
     await expect(body).not.toContainText(PARTNER_NAME);
@@ -484,7 +523,7 @@ test.describe.serial('Spec 100 — mystery kupon (UI)', () => {
     await button.click();
 
     // Nejdřív se odhalí kupon i s kódem, teprve po zavření výsledek tiketu.
-    const reveal = page.getByTestId('mystery-coupon-reveal');
+    const reveal = page.getByTestId('mystery-result-dialog');
     await expect(reveal).toBeVisible({ timeout: 30_000 });
     await expect(reveal).toContainText(BENEFIT_NAME);
     await expect(page.getByTestId('mystery-coupon-code')).not.toBeEmpty();
@@ -533,7 +572,7 @@ test.describe.serial('Spec 100 — mystery kupon (UI)', () => {
     const button = await openContest(page);
     await doubleClickSameTick(button);
 
-    await expect(page.getByTestId('mystery-coupon-reveal')).toBeVisible({ timeout: 30_000 });
+    await expect(page.getByTestId('mystery-result-dialog')).toBeVisible({ timeout: 30_000 });
 
     expect(await countBundles(admin, customerId)).toBe(bundlesBefore + 1);
   });
@@ -553,7 +592,7 @@ test.describe.serial('Spec 100 — mystery kupon (UI)', () => {
     const button = await openListCard(page, '/games');
     await doubleClickSameTick(button);
 
-    await expect(page.getByTestId('mystery-coupon-reveal')).toBeVisible({ timeout: 30_000 });
+    await expect(page.getByTestId('mystery-result-dialog')).toBeVisible({ timeout: 30_000 });
 
     // Právě jeden odečet, jeden kupon, jeden tiket.
     expect(await countBundles(admin, customerId)).toBe(bundlesBefore + 1);
@@ -583,7 +622,7 @@ test.describe.serial('Spec 100 — mystery kupon (UI)', () => {
     const button = await openListCard(page, '/favorite-games');
     await doubleClickSameTick(button);
 
-    await expect(page.getByTestId('mystery-coupon-reveal')).toBeVisible({ timeout: 30_000 });
+    await expect(page.getByTestId('mystery-result-dialog')).toBeVisible({ timeout: 30_000 });
 
     expect(await countBundles(admin, customerId)).toBe(bundlesBefore + 1);
     expect(await countIssuances(admin, customerId)).toBe(issuancesBefore + 1);
@@ -644,7 +683,7 @@ test.describe.serial('Spec 100 — mystery kupon (UI)', () => {
 
     await doubleClickSameTick(button);
 
-    await expect(page.getByTestId('mystery-coupon-reveal')).toBeVisible({ timeout: 40_000 });
+    await expect(page.getByTestId('mystery-result-dialog')).toBeVisible({ timeout: 40_000 });
 
     expect(await countBundles(admin, customerId)).toBe(bundlesBefore + 1);
     expect(await countIssuances(admin, customerId)).toBe(issuancesBefore + 1);
@@ -693,7 +732,179 @@ test.describe.serial('Spec 100 — mystery kupon (UI)', () => {
     expect(types).toEqual(['ticket_purchase']);
   });
 
-  test('100e: poslední kód — odhalení zůstane a otevře TicketResultModal', async ({ page }) => {
+  test('100f: výhra MioCoinů + kupon v jednom dialogu', async ({ page }) => {
+    const admin = makeAdmin();
+    await setFlag(admin, true, JSON.stringify([FIXTURE.contestId]));
+    const customerId = ctx.customerAuthId!;
+    await resetMutableState(admin, customerId);
+
+    const cleanup = await armNextTicketWin(admin, {
+      title: 'Bonus MioCoiny',
+      description: 'Bonus MioCoiny',
+      amount: 250,
+    });
+
+    try {
+      await primeConsent(page);
+      await loginViaUI(page, CUSTOMER_EMAIL, PASSWORD);
+      const button = await openContest(page);
+      await button.click();
+
+      const dialog = page.getByTestId('mystery-result-dialog');
+      await expect(dialog).toBeVisible({ timeout: 30_000 });
+
+      // Výhra z tiketu je hlavní sdělení.
+      await expect(dialog).toContainText('GRATULUJEME');
+      await expect(dialog).toContainText('VYHRÁL JSI');
+      await expect(page.getByTestId('mystery-result-miocoin-amount')).toContainText('250');
+      // Originální MioCoin obrázek, žádná nová ikona.
+      await expect(page.getByTestId('mystery-result-prize-image'))
+        .toHaveAttribute('src', /storage\/v1\/object\/public\/assets\//);
+
+      // Kupon je pod ní jako druhý, garantovaný bonus.
+      await expect(dialog).toContainText('A navíc získáváš kupon');
+      await expect(page.getByTestId('mystery-coupon-name')).toContainText(BENEFIT_NAME);
+    } finally {
+      await cleanup();
+    }
+  });
+
+  test('100g: věcná výhra + kupon v jednom dialogu', async ({ page }) => {
+    const admin = makeAdmin();
+    await setFlag(admin, true, JSON.stringify([FIXTURE.contestId]));
+    const customerId = ctx.customerAuthId!;
+    await resetMutableState(admin, customerId);
+
+    const PRIZE_TITLE = 'E2E Věcná cena';
+    const PRIZE_DESC  = 'Popis věcné ceny pro E2E';
+    const cleanup = await armNextTicketWin(admin, {
+      title: PRIZE_TITLE,
+      description: PRIZE_TITLE,
+      detailed: PRIZE_DESC,
+      amount: null,
+      imageUrl: 'https://example.invalid/spec100-prize.png',
+    });
+
+    try {
+      await primeConsent(page);
+      await loginViaUI(page, CUSTOMER_EMAIL, PASSWORD);
+      const button = await openContest(page);
+      await button.click();
+
+      const dialog = page.getByTestId('mystery-result-dialog');
+      await expect(dialog).toBeVisible({ timeout: 30_000 });
+
+      await expect(dialog).toContainText('GRATULUJEME');
+      await expect(page.getByTestId('mystery-result-prize-title')).toContainText(PRIZE_TITLE);
+      await expect(dialog).toContainText(PRIZE_DESC);
+      await expect(page.getByTestId('mystery-result-prize-image'))
+        .toHaveAttribute('src', 'https://example.invalid/spec100-prize.png');
+      // Věcná výhra nesmí sklouznout do MioCoinové větve.
+      await expect(page.getByTestId('mystery-result-miocoin-amount')).toHaveCount(0);
+
+      await expect(page.getByTestId('mystery-coupon-name')).toContainText(BENEFIT_NAME);
+    } finally {
+      await cleanup();
+    }
+  });
+
+  test('100h: kupon má název, partnera, kód i funkční kopírování', async ({ page, context }) => {
+    const admin = makeAdmin();
+    await setFlag(admin, true, JSON.stringify([FIXTURE.contestId]));
+    const customerId = ctx.customerAuthId!;
+    await resetMutableState(admin, customerId);
+
+    await context.grantPermissions(['clipboard-read', 'clipboard-write']);
+
+    await primeConsent(page);
+    await loginViaUI(page, CUSTOMER_EMAIL, PASSWORD);
+    const button = await openContest(page);
+    await button.click();
+
+    const dialog = page.getByTestId('mystery-result-dialog');
+    await expect(dialog).toBeVisible({ timeout: 30_000 });
+
+    await expect(page.getByTestId('mystery-coupon-name')).toContainText(BENEFIT_NAME);
+    await expect(page.getByTestId('mystery-coupon-partner')).toContainText(PARTNER_NAME);
+
+    const codeEl = page.getByTestId('mystery-coupon-code');
+    await expect(codeEl).not.toBeEmpty();
+    const shownCode = (await codeEl.textContent())?.trim() ?? '';
+
+    // Kód na obrazovce musí sedět s tím, co je opravdu vydané v databázi.
+    const { data: issuedCode } = await (admin as any)
+      .from('voucher_codes').select('code')
+      .eq('issued_to_user_id', customerId).eq('status', 'issued')
+      .order('issued_at', { ascending: false }).limit(1).maybeSingle();
+    expect(shownCode).toBe(issuedCode.code);
+
+    await page.getByTestId('mystery-coupon-copy').click();
+    const clipboard = await page.evaluate(() => navigator.clipboard.readText());
+    expect(clipboard).toBe(shownCode);
+  });
+
+  test('100i: jediné hlavní tlačítko „Pokračovat", žádný druhý modal', async ({ page }) => {
+    const admin = makeAdmin();
+    await setFlag(admin, true, JSON.stringify([FIXTURE.contestId]));
+    const customerId = ctx.customerAuthId!;
+    await resetMutableState(admin, customerId);
+    const bundlesBefore   = await countBundles(admin, customerId);
+    const issuancesBefore = await countIssuances(admin, customerId);
+    const ticketsBefore   = await countTickets(admin, customerId);
+
+    await primeConsent(page);
+    await loginViaUI(page, CUSTOMER_EMAIL, PASSWORD);
+    const button = await openContest(page);
+    await button.click();
+
+    const dialog = page.getByTestId('mystery-result-dialog');
+    await expect(dialog).toBeVisible({ timeout: 30_000 });
+
+    // Odstraněná tlačítka se nesmí vrátit.
+    await expect(dialog.getByRole('button', { name: /Zobrazit celý tiket/i })).toHaveCount(0);
+    await expect(dialog.getByRole('button', { name: /Zobrazit tiket/i })).toHaveCount(0);
+    await expect(dialog.getByRole('button', { name: /Uložit kupon/i })).toHaveCount(0);
+    await expect(dialog.getByRole('button', { name: 'Pokračovat' })).toHaveCount(1);
+
+    // Informace, kde kupon i tiket najde.
+    await expect(page.getByTestId('mystery-result-storage-note')).toContainText('Voucherech');
+
+    await page.getByTestId('mystery-result-continue').click();
+    await expect(dialog).toHaveCount(0);
+    await expect(page.locator('[role="dialog"]:has(button[aria-label="Zavřít"])')).toHaveCount(0);
+
+    // Zavření nic nevytvořilo ani nezrušilo — vše vzniklo už při nákupu.
+    expect(await countBundles(admin, customerId)).toBe(bundlesBefore + 1);
+    expect(await countIssuances(admin, customerId)).toBe(issuancesBefore + 1);
+    expect(await countTickets(admin, customerId)).toBe(ticketsBefore + 1);
+  });
+
+  test('100j: mobil — dialog je čitelný bez vodorovného posouvání', async ({ page }) => {
+    const admin = makeAdmin();
+    await setFlag(admin, true, JSON.stringify([FIXTURE.contestId]));
+    await resetMutableState(admin, ctx.customerAuthId!);
+
+    await page.setViewportSize({ width: 375, height: 812 });
+    await primeConsent(page);
+    await loginViaUI(page, CUSTOMER_EMAIL, PASSWORD);
+    const button = await openContest(page);
+    await button.click();
+
+    const dialog = page.getByTestId('mystery-result-dialog');
+    await expect(dialog).toBeVisible({ timeout: 30_000 });
+
+    // Výhra i kupon se vejdou pod sebe, stránka se nesmí posouvat do stran.
+    const scrollWidth = await page.evaluate(() => document.documentElement.scrollWidth);
+    expect(scrollWidth).toBeLessThanOrEqual(375);
+
+    const box = await dialog.boundingBox();
+    expect(box!.width).toBeLessThanOrEqual(375);
+
+    await expect(page.getByTestId('mystery-coupon-code')).toBeVisible();
+    await expect(page.getByTestId('mystery-result-continue')).toBeVisible();
+  });
+
+  test('100e: poslední kód — výsledek zůstane a Pokračovat ho zavře', async ({ page }) => {
     const admin = makeAdmin();
     await setFlag(admin, true, JSON.stringify([FIXTURE.contestId]));
     const customerId = ctx.customerAuthId!;
@@ -722,7 +933,7 @@ test.describe.serial('Spec 100 — mystery kupon (UI)', () => {
     await button.click();
 
     // Odhalení musí zůstat viditelné, i když kupony mezitím došly.
-    const reveal = page.getByTestId('mystery-coupon-reveal');
+    const reveal = page.getByTestId('mystery-result-dialog');
     await expect(reveal).toBeVisible({ timeout: 30_000 });
     await expect(reveal).toContainText(BENEFIT_NAME);
 
@@ -731,13 +942,13 @@ test.describe.serial('Spec 100 — mystery kupon (UI)', () => {
       .eq('distribution_order_id', FIXTURE.orderId).eq('status', 'available');
     expect(freeCodes ?? 0).toBe(0);
 
-    // Po zavření odhalení se MUSÍ otevřít stávající TicketResultModal.
-    // `aria-label="Zavřít"` má jen TicketResultModal, ne shadcn Dialog.
-    await page.getByTestId('mystery-coupon-continue').click();
+    // „Pokračovat" zavře celý výsledek a NIC dalšího neotevře — druhý
+    // TicketResultModal už v mystery toku neexistuje.
+    await page.getByTestId('mystery-result-continue').click();
     await expect(reveal).toHaveCount(0);
     await expect(
       page.locator('[role="dialog"]:has(button[aria-label="Zavřít"])'),
-    ).toBeVisible({ timeout: 30_000 });
+    ).toHaveCount(0);
 
     // Žádný druhý nákup ani další odečet.
     expect(await countBundles(admin, customerId)).toBe(bundlesBefore + 1);

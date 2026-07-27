@@ -21,7 +21,10 @@ import { analytics } from '@/lib/analytics';
 import { Trophy, Medal } from 'lucide-react';
 import { OneMilHeartIcon, OneMilTrophyIcon } from '@/components/icons/OneMilIcons';
 import { LoggedOutScreen } from '@/components/LoggedOutScreen';
-import { MysteryCouponRevealDialog } from '@/components/MysteryCouponRevealDialog';
+import {
+  MysteryPurchaseResultDialog,
+  type MysteryTicketOutcome,
+} from '@/components/MysteryPurchaseResultDialog';
 import {
   isMysteryContestAvailable,
   mysteryErrorMessage,
@@ -75,13 +78,15 @@ const Index = () => {
   const [modalContestId, setModalContestId] = useState<string | null>(null);
   const [favorites, setFavorites] = useState<Set<string>>(new Set());
   const [walletBalance, setWalletBalance] = useState<number | undefined>(undefined);
-  const [mysteryCoupon, setMysteryCoupon] = useState<MysteryCoupon | null>(null);
+  const [mysteryResult, setMysteryResult] = useState<{
+    contestId: string;
+    ticket: MysteryTicketOutcome;
+    coupon: MysteryCoupon | null;
+  } | null>(null);
   // Synchronní zámek nákupu. `processingContestId` je React state, takže se
   // projeví až po re-renderu — dvě kliknutí ve stejném ticku by jinak obě
   // prošla a vytvořila dva nákupy (každý s vlastním idempotency key).
   const purchaseInFlightRef = useRef(false);
-  // Drží výsledek tiketu, dokud zákazník nezavře odhalení kuponu.
-  const pendingMysteryResultRef = useRef<{ result: UnlockTicketResult; contestId: string } | null>(null);
   const { user } = useAuth();
   const { isAdmin } = useUserRole();
   const navigate = useNavigate();
@@ -211,19 +216,6 @@ const Index = () => {
     };
   }, []);
 
-  const showMysteryTicketResult = () => {
-    const pending = pendingMysteryResultRef.current;
-    pendingMysteryResultRef.current = null;
-    if (!pending) return;
-    setModalResult(pending.result);
-    setModalContestId(pending.contestId);
-  };
-
-  const closeMysteryReveal = () => {
-    setMysteryCoupon(null);
-    showMysteryTicketResult();
-  };
-
   const runMysteryPurchase = async (contestId: string) => {
     if (!user) return;
 
@@ -246,35 +238,21 @@ const Index = () => {
     });
     analytics.ticketPurchase({ contestId, ticketNumber: outcome.ticket_number });
 
-    pendingMysteryResultRef.current = {
-      contestId,
-      result: {
-        ticket_number: outcome.ticket_number,
-        ticket_price: 0, // tiket je v tomhle toku bezplatný bonus
-        next_bonus_position: outcome.next_bonus_position,
-        distance_to_next_bonus: outcome.distance_to_next_bonus,
-        won_prize: outcome.won_prize,
-        won_type: outcome.won_type,
-        bonus_prize_id: null,
-        remaining_tickets: outcome.remaining_tickets ?? undefined,
-        partner_offer: null,
-      },
-    };
-
     recordLocalTicketPlay();
     fetchContests();
     await loadWallet();
 
-    if (outcome.coupon) {
-      setMysteryCoupon(outcome.coupon);
-    } else {
-      // Bez dat kuponu nemá co odhalovat — jdeme rovnou na tiket.
-      showMysteryTicketResult();
-    }
-
-    if (outcome.won_prize) {
-      toast.success(`Gratulujeme! Vyhrál jsi ${outcome.won_prize}!`);
-    }
+    // Jeden společný výsledek: výhra z tiketu nahoře, kupon jako druhý bonus.
+    // Tiket i kupon už jsou uložené — dialog jen ukazuje, co vzniklo.
+    setMysteryResult({
+      contestId,
+      ticket: {
+        ticket_number: outcome.ticket_number,
+        won_type: outcome.won_type,
+        won_prize: outcome.won_prize,
+      },
+      coupon: outcome.coupon,
+    });
   };
 
   const handleUnlockTicket = async (contestId: string) => {
@@ -584,7 +562,13 @@ const Index = () => {
         )}
       </div>
 
-      <MysteryCouponRevealDialog coupon={mysteryCoupon} onClose={closeMysteryReveal} />
+      <MysteryPurchaseResultDialog
+        open={mysteryResult !== null}
+        contestId={mysteryResult?.contestId ?? null}
+        ticket={mysteryResult?.ticket ?? null}
+        coupon={mysteryResult?.coupon ?? null}
+        onClose={() => setMysteryResult(null)}
+      />
 
       <TicketResultModal
         result={modalResult ? {

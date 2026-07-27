@@ -22,7 +22,10 @@ import {
 import { analytics } from "@/lib/analytics";
 import { buildBuyTicketAtomicRpcPayload } from "@/utils/buyTicketAtomicRpcArgs";
 import { TicketResultModal } from "@/components/TicketResultModal";
-import { MysteryCouponRevealDialog } from "@/components/MysteryCouponRevealDialog";
+import {
+  MysteryPurchaseResultDialog,
+  type MysteryTicketOutcome,
+} from "@/components/MysteryPurchaseResultDialog";
 import {
   isMysteryContestAvailable,
   mysteryErrorMessage,
@@ -147,9 +150,11 @@ export default function ContestDetail() {
   const [modalResult, setModalResult] = useState<UnlockTicketResult | null>(null);
   const [modalContestId, setModalContestId] = useState<string | null>(null);
   const requestInFlightRef = useRef(false);
-  const [mysteryCoupon, setMysteryCoupon] = useState<MysteryCoupon | null>(null);
-  // Drží výsledek tiketu, dokud zákazník nezavře odhalení kuponu.
-  const pendingMysteryResultRef = useRef<{ result: UnlockTicketResult; contestId: string } | null>(null);
+  const [mysteryResult, setMysteryResult] = useState<{
+    contestId: string;
+    ticket: MysteryTicketOutcome;
+    coupon: MysteryCoupon | null;
+  } | null>(null);
   const [selectedBonusPrize, setSelectedBonusPrize] = useState<BonusPrize | null>(null);
   const [galleryMedia, setGalleryMedia] = useState<{ id: string; contest_id: string; type: string; url: string; sort_order: number | null; created_at: string | null }[]>([]);
   const [activeGalleryIndex, setActiveGalleryIndex] = useState(0);
@@ -263,19 +268,6 @@ export default function ContestDetail() {
     }
   }, []);
 
-  function showMysteryTicketResult() {
-    const pending = pendingMysteryResultRef.current;
-    pendingMysteryResultRef.current = null;
-    if (!pending) return;
-    setModalResult(pending.result);
-    setModalContestId(pending.contestId);
-  }
-
-  function closeMysteryReveal() {
-    setMysteryCoupon(null);
-    showMysteryTicketResult();
-  }
-
   /**
    * Mystery kupon: za contests.ticket_price dostane zákazník náhodný dostupný
    * kupon a tiket zdarma. Celý nákup je jedna atomická transakce — při chybě
@@ -297,36 +289,20 @@ export default function ContestDetail() {
     logTicketPurchaseSuccess({ userId, contestId, ticketNumber: outcome.ticket_number });
     analytics.ticketPurchase({ contestId, ticketNumber: outcome.ticket_number });
 
-    pendingMysteryResultRef.current = {
-      contestId,
-      result: {
-        ticket_number: outcome.ticket_number,
-        ticket_price: 0, // tiket je v tomhle toku bezplatný bonus
-        next_bonus_position: outcome.next_bonus_position,
-        distance_to_next_bonus: outcome.distance_to_next_bonus,
-        won_prize: outcome.won_prize,
-        won_type: outcome.won_type,
-        bonus_prize_id: null,
-        remaining_tickets: outcome.remaining_tickets ?? undefined,
-        partner_offer: null,
-      },
-    };
-
     recordLocalTicketPlay();
     await loadUserBalance(userId);
 
-    if (outcome.coupon) {
-      setMysteryCoupon(outcome.coupon);
-    } else {
-      // Bez dat kuponu nemá co odhalovat — jdeme rovnou na tiket.
-      showMysteryTicketResult();
-    }
-
-    if (outcome.won_type === 'main') {
-      toast.success("Gratulujeme! Vyhrál jsi hlavní cenu!");
-    } else if (outcome.won_type === 'bonus') {
-      toast.success("Gratulujeme! Vyhrál jsi bonusovou cenu!");
-    }
+    // Jeden společný výsledek: výhra z tiketu nahoře, kupon jako druhý bonus.
+    // Tiket i kupon už jsou uložené — dialog jen ukazuje, co vzniklo.
+    setMysteryResult({
+      contestId,
+      ticket: {
+        ticket_number: outcome.ticket_number,
+        won_type: outcome.won_type,
+        won_prize: outcome.won_prize,
+      },
+      coupon: outcome.coupon,
+    });
   }
 
   async function handleUseMiocoins() {
@@ -1255,7 +1231,13 @@ export default function ContestDetail() {
         prize={selectedBonusPrize}
         backgroundImageUrl={starryBackgroundUrl}
       />
-      <MysteryCouponRevealDialog coupon={mysteryCoupon} onClose={closeMysteryReveal} />
+      <MysteryPurchaseResultDialog
+        open={mysteryResult !== null}
+        contestId={mysteryResult?.contestId ?? null}
+        ticket={mysteryResult?.ticket ?? null}
+        coupon={mysteryResult?.coupon ?? null}
+        onClose={() => setMysteryResult(null)}
+      />
       {/* TICKET RESULT MODAL */}
       <TicketResultModal
         isOpen={modalResult !== null}
