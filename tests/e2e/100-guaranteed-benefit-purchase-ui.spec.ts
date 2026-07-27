@@ -18,8 +18,12 @@
  *   - soutěž zpět na `active`
  *   - doplnění volných `voucher_codes` (spotřebované zůstávají `issued`)
  *   - zůstatek peněženky testovacího zákazníka na START_BALANCE
- *   - smazání jeho `contest_bundle_purchases` a `wallet_transactions`
+ *   - smazání jeho `contest_bundle_purchases`
  *   - feature flag + allowlist se po běhu VŽDY vrátí na původní hodnoty
+ *
+ * Peněženkový ledger `wallet_transactions` je neměnný (BEFORE DELETE guard),
+ * takže se NIKDY nemaže — účetní typy se tvrdí jen nad řádky, které vznikly
+ * během daného testu.
  *
  * Protože je zákazník stabilní, jsou počty tvrzeny přírůstkově (delta), ne
  * absolutně — opakované vydání téhož kuponu je záměrně neúčtovatelné.
@@ -256,9 +260,29 @@ async function resetMutableState(admin: SupabaseClient, customerId: string): Pro
     .from('wallets').upsert({ user_id: customerId, balance_coins: START_BALANCE }, { onConflict: 'user_id' });
   if (wErr) throw new Error(`wallets upsert: ${wErr.message}`);
 
-  // Bundle řádky a transakce zákazníka (nejsou immutable) — čistý výchozí stav.
+  // Bundle řádky nejsou immutable — čistý výchozí stav.
+  // `wallet_transactions` se ZÁMĚRNĚ nemažou: ledger je neměnný
+  // (trg_wallet_transactions_immutable_delete), proto se účetní typy tvrdí
+  // jen na řádcích vzniklých během testu (viz latestTxnStamp).
   await (admin as any).from('contest_bundle_purchases').delete().eq('user_id', customerId);
-  await (admin as any).from('wallet_transactions').delete().eq('user_id', customerId);
+}
+
+/** Časová hranice pro tvrzení nad neměnným ledgerem — poslední známý řádek. */
+async function latestTxnStamp(admin: SupabaseClient, customerId: string): Promise<string> {
+  const { data } = await (admin as any)
+    .from('wallet_transactions').select('created_at')
+    .eq('user_id', customerId).order('created_at', { ascending: false }).limit(1);
+  return (data?.[0]?.created_at as string | undefined) ?? '1970-01-01T00:00:00Z';
+}
+
+/** Typy transakcí zapsaných po dané hranici. */
+async function txnTypesSince(
+  admin: SupabaseClient, customerId: string, since: string,
+): Promise<string[]> {
+  const { data } = await (admin as any)
+    .from('wallet_transactions').select('type')
+    .eq('user_id', customerId).gt('created_at', since);
+  return ((data ?? []) as { type: string }[]).map((t) => t.type);
 }
 
 async function countIssuances(admin: SupabaseClient, customerId: string): Promise<number> {
@@ -337,6 +361,7 @@ test.describe.serial('Spec 100 — mystery kupon (UI)', () => {
     await resetMutableState(admin, customerId);
     const issuancesBefore = await countIssuances(admin, customerId);
     const ticketsBefore   = await countTickets(admin, customerId);
+    const since           = await latestTxnStamp(admin, customerId);
 
     await primeConsent(page);
     await loginViaUI(page, CUSTOMER_EMAIL, PASSWORD);
@@ -353,9 +378,7 @@ test.describe.serial('Spec 100 — mystery kupon (UI)', () => {
     expect(await countIssuances(admin, customerId)).toBe(issuancesBefore);
 
     // Klasický nákup účtuje ticket_purchase a strhne cenu tiketu.
-    const { data: txns } = await (admin as any)
-      .from('wallet_transactions').select('type').eq('user_id', customerId);
-    const types = (txns ?? []).map((t: { type: string }) => t.type);
+    const types = await txnTypesSince(admin, customerId, since);
     expect(types).toContain('ticket_purchase');
     expect(types).not.toContain('benefit_purchase');
 
@@ -391,6 +414,7 @@ test.describe.serial('Spec 100 — mystery kupon (UI)', () => {
     // Fixture je znovupoužitelná, proto se tvrdí přírůstky, ne absolutní počty.
     const issuancesBefore = await countIssuances(admin, customerId);
     const ticketsBefore   = await countTickets(admin, customerId);
+    const since           = await latestTxnStamp(admin, customerId);
 
     await primeConsent(page);
     await loginViaUI(page, CUSTOMER_EMAIL, PASSWORD);
@@ -430,9 +454,7 @@ test.describe.serial('Spec 100 — mystery kupon (UI)', () => {
     expect(Number(wallet.balance_coins)).toBe(START_BALANCE - TICKET_PRICE);
 
     // Účetně jde o benefit_purchase, nikdy ticket_purchase — tiket je zdarma.
-    const { data: txns } = await (admin as any)
-      .from('wallet_transactions').select('type').eq('user_id', customerId);
-    const types = (txns ?? []).map((t: { type: string }) => t.type);
+    const types = await txnTypesSince(admin, customerId, since);
     expect(types).toContain('benefit_purchase');
     expect(types).not.toContain('ticket_purchase');
   });
