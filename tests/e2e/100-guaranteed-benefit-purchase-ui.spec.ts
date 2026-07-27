@@ -38,6 +38,8 @@
  *   100d-games) dvojklik z karty v Games → jeden odečet, kupon i tiket
  *   100d-favorites) dvojklik z karty v Oblíbených → jeden odečet, kupon i tiket
  *   100d-classic) dvojklik z karty u nezapojené soutěže → jen jeden tiket
+ *   100d-cold) dvojklik na detailu, než dorazí zůstatek → jen jeden nákup
+ *   100d-cold-classic) totéž u nezapojené soutěže → jediný ticket_purchase
  *   100e) nákup posledního kódu — odhalení zůstane a otevře TicketResultModal
  *
  * Vyžaduje env vars (přítomné v playwright-staging.yml):
@@ -327,6 +329,29 @@ async function openContest(page: import('@playwright/test').Page) {
   return button;
 }
 
+/**
+ * Pozdrží každé čtení peněženky, takže `balanceLoaded` na detailu soutěže
+ * zůstane `false` i ve chvíli, kdy je nákupní tlačítko už klikatelné. Přesně
+ * v té chvíli má handler jediný `await` před zamčením — a právě ten dřív
+ * dovolil dvěma klikům ve stejném ticku koupit dvakrát.
+ * Vrací počítadlo dokončených wallet requestů, aby test mohl doložit, že
+ * v okamžiku kliknutí zůstatek opravdu ještě nedorazil.
+ */
+async function stallWalletReads(
+  page: import('@playwright/test').Page,
+  delayMs: number,
+): Promise<() => number> {
+  let delivered = 0;
+  page.on('response', (response) => {
+    if (response.url().includes('/rest/v1/wallets')) delivered += 1;
+  });
+  await page.route('**/rest/v1/wallets*', async (route) => {
+    await new Promise((resolve) => setTimeout(resolve, delayMs));
+    await route.continue();
+  });
+  return () => delivered;
+}
+
 /** Fixture soutěž mezi oblíbenými, aby ji `/favorites` vypsal. */
 async function ensureFavorite(admin: SupabaseClient, customerId: string): Promise<void> {
   const { data } = await (admin as any)
@@ -593,6 +618,79 @@ test.describe.serial('Spec 100 — mystery kupon (UI)', () => {
     const { data: wallet } = await (admin as any)
       .from('wallets').select('balance_coins').eq('user_id', customerId).single();
     expect(Number(wallet.balance_coins)).toBe(START_BALANCE - TICKET_PRICE);
+  });
+
+  test('100d-cold: dvojklik na detailu s nenačteným zůstatkem koupí jen jednou', async ({ page }) => {
+    const admin = makeAdmin();
+    await setFlag(admin, true, JSON.stringify([FIXTURE.contestId]));
+
+    const customerId = ctx.customerAuthId!;
+    await resetMutableState(admin, customerId);
+    const bundlesBefore   = await countBundles(admin, customerId);
+    const issuancesBefore = await countIssuances(admin, customerId);
+    const ticketsBefore   = await countTickets(admin, customerId);
+    const since           = await latestTxnStamp(admin, customerId);
+
+    await primeConsent(page);
+    await loginViaUI(page, CUSTOMER_EMAIL, PASSWORD);
+
+    // Zůstatek dorazí až dlouho po tom, co je tlačítko klikatelné.
+    const walletReads = await stallWalletReads(page, 10_000);
+    const button = await openContest(page);
+
+    // Doklad, že jde opravdu o „studený" stav: peněženka ještě nedorazila,
+    // takže handler má před zamčením await na loadUserBalance.
+    expect(walletReads()).toBe(0);
+
+    await doubleClickSameTick(button);
+
+    await expect(page.getByTestId('mystery-coupon-reveal')).toBeVisible({ timeout: 40_000 });
+
+    expect(await countBundles(admin, customerId)).toBe(bundlesBefore + 1);
+    expect(await countIssuances(admin, customerId)).toBe(issuancesBefore + 1);
+    expect(await countTickets(admin, customerId)).toBe(ticketsBefore + 1);
+
+    const { data: wallet } = await (admin as any)
+      .from('wallets').select('balance_coins').eq('user_id', customerId).single();
+    expect(Number(wallet.balance_coins)).toBe(START_BALANCE - TICKET_PRICE);
+
+    const types = await txnTypesSince(admin, customerId, since);
+    expect(types).toEqual(['benefit_purchase']);
+  });
+
+  test('100d-cold-classic: totéž u nezapojené soutěže — jediný ticket_purchase', async ({ page }) => {
+    const admin = makeAdmin();
+    // Neprázdný allowlist BEZ této soutěže = klasický nákup.
+    await setFlag(admin, true, JSON.stringify(['f0000100-0000-4000-8000-0000000000ff']));
+
+    const customerId = ctx.customerAuthId!;
+    await resetMutableState(admin, customerId);
+    const ticketsBefore   = await countTickets(admin, customerId);
+    const issuancesBefore = await countIssuances(admin, customerId);
+    const since           = await latestTxnStamp(admin, customerId);
+
+    await primeConsent(page);
+    await loginViaUI(page, CUSTOMER_EMAIL, PASSWORD);
+
+    const walletReads = await stallWalletReads(page, 10_000);
+    const button = await openContest(page);
+    expect(walletReads()).toBe(0);
+
+    await doubleClickSameTick(button);
+
+    await expect(
+      page.locator('[role="dialog"]:has(button[aria-label="Zavřít"])'),
+    ).toBeVisible({ timeout: 40_000 });
+
+    expect(await countTickets(admin, customerId)).toBe(ticketsBefore + 1);
+    expect(await countIssuances(admin, customerId)).toBe(issuancesBefore);
+
+    const { data: wallet } = await (admin as any)
+      .from('wallets').select('balance_coins').eq('user_id', customerId).single();
+    expect(Number(wallet.balance_coins)).toBe(START_BALANCE - TICKET_PRICE);
+
+    const types = await txnTypesSince(admin, customerId, since);
+    expect(types).toEqual(['ticket_purchase']);
   });
 
   test('100e: poslední kód — odhalení zůstane a otevře TicketResultModal', async ({ page }) => {

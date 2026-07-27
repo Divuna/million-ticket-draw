@@ -332,39 +332,56 @@ export default function ContestDetail() {
   async function handleUseMiocoins() {
     console.log('[DEBUG ContestDetail] handleUseMiocoins called, user:', user?.id, 'contest:', contest?.id);
 
-    // Strict single-request guard
+    // Zámek se bere synchronně, ještě před prvním awaitem. Načtení zůstatku
+    // níž je await, takže dva kliky ve stejném ticku by při nenačtené peněžence
+    // jinak prošly oba a koupily dvakrát. Platí pro mystery i klasický nákup.
     if (requestInFlightRef.current) {
       console.log('[DEBUG ContestDetail] Request already in flight, ignoring click');
       return;
     }
+    requestInFlightRef.current = true;
 
     if (!user) {
       toast.error("Pro nákup tiketu se musíš přihlásit.");
+      requestInFlightRef.current = false;
       navigate(buildLoginRedirectUrl(location.pathname + location.search));
       return;
     }
 
-    if (!contest) return;
+    if (!contest) {
+      requestInFlightRef.current = false;
+      return;
+    }
 
     if (contest.status !== 'active') {
       toast.error("Soutěž není aktivní");
+      requestInFlightRef.current = false;
       return;
     }
 
     let effectiveBalance: number;
-    if (!balanceLoaded) {
-      effectiveBalance = await loadUserBalance(user.id);
-    } else {
-      effectiveBalance = balance;
+    try {
+      if (!balanceLoaded) {
+        effectiveBalance = await loadUserBalance(user.id);
+      } else {
+        effectiveBalance = balance;
+      }
+    } catch (err) {
+      // loadUserBalance si dnes chyby řeší sám, ale kdyby to někdy přestalo
+      // platit, nesmí nám tu uváznout zámek — tlačítko by zůstalo mrtvé
+      // až do znovunačtení stránky.
+      console.error('[DEBUG ContestDetail] loadUserBalance failed:', err);
+      toast.error("Nepodařilo se načíst zůstatek MioCoinů.");
+      requestInFlightRef.current = false;
+      return;
     }
     if (contest.status === 'active' && effectiveBalance < contest.ticket_price) {
       const shortage = Math.max(0, Math.ceil(contest.ticket_price - effectiveBalance));
       toast.error(`Chybí ti ${shortage.toLocaleString('cs-CZ')} MioCoinů`);
+      requestInFlightRef.current = false;
       return;
     }
 
-    // Lock immediately
-    requestInFlightRef.current = true;
     console.log('[DEBUG ContestDetail] setProcessingContestId:', contest.id);
     setProcessingContestId(contest.id);
 
