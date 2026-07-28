@@ -368,9 +368,9 @@ select is(
 
 reset role;
 
-select is(
-  (
-    select count(*)::integer
+select is_empty(
+  $audit$
+    select p.oid::regprocedure::text
       from pg_proc p
       join pg_namespace n on n.oid = p.pronamespace
      where n.nspname = 'public'
@@ -392,8 +392,8 @@ select is(
          'get_contest_ticket_state_internal',
          'get_contests_json_internal_superadmin'
        )
-  ),
-  0,
+     order by p.oid::regprocedure::text
+  $audit$,
   'no unguarded customer-executable SECURITY DEFINER function exposes internal ticket state'
 );
 
