@@ -109,13 +109,11 @@ export function logTicketPurchaseRejected(params: {
 export function logTicketPurchaseSuccess(params: {
   userId: string;
   contestId: string;
-  ticketNumber?: number;
 }): void {
   logMonitoringEvent('info', 'ticket_purchase_success', {
     user_id: params.userId,
     action: 'buy_ticket_atomic',
     contest_id: params.contestId,
-    ticket_number: params.ticketNumber,
   });
 }
 

@@ -5,7 +5,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { MIOCOIN_IMAGE_URL } from "@/components/MioCoin";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { Copy, Check, Gift, Calendar } from "lucide-react";
+import { Copy, Check, Gift } from "lucide-react";
 import { toast } from "sonner";
 import type { MysteryCoupon } from "@/lib/mysteryCouponPurchase";
 
@@ -14,7 +14,7 @@ import type { MysteryCoupon } from "@/lib/mysteryCouponPurchase";
  *
  * Dřív se po nákupu otevřelo odhalení kuponu a po jeho zavření ještě
  * TicketResultModal — zákazník zavíral dvě okna a výhra z tiketu se ztrácela
- * za kuponem. Tady je obojí v jednom a v pořadí, které odpovídá hodnotě:
+ * za kuponem. Tady je obojí v jednom výsledku podle důležitosti:
  * nahoře výhra z tiketu jako hlavní sdělení, pod ní kupon jako druhý,
  * garantovaný bonus.
  *
@@ -24,11 +24,10 @@ import type { MysteryCoupon } from "@/lib/mysteryCouponPurchase";
  */
 
 export interface MysteryTicketOutcome {
-  ticket_number: number;
+  ticket_row_id: string | null;
+  bonus_prize_id: string | null;
   won_type: "bonus" | "main" | null;
   won_prize: string | null;
-  /** Kolik tahů zbývá k dalšímu výhernímu tiketu. Null = údaj není známý. */
-  distance_to_next_bonus?: number | null;
 }
 
 interface BonusPrizeRow {
@@ -60,13 +59,6 @@ function resolveImage(path: string | null | undefined, bucket = "contest-images"
   return supabase.storage.from(bucket).getPublicUrl(path).data.publicUrl;
 }
 
-/** 1 tah · 2–4 tahy · jinak tahů. */
-function tahPlural(n: number): string {
-  if (n === 1) return "tah";
-  if (n >= 2 && n <= 4) return "tahy";
-  return "tahů";
-}
-
 export function MysteryPurchaseResultDialog({
   open,
   contestId,
@@ -83,7 +75,7 @@ export function MysteryPurchaseResultDialog({
   const isWin = wonType === "bonus" || wonType === "main";
 
   // Detaily výhry se dotahují ze stejných zdrojů jako v TicketResultModal:
-  // bonusová z `bonus_prizes` podle pozice tiketu, hlavní ze soutěže.
+  // bonusová z bezpečného veřejného pohledu podle neprůhledného ID, hlavní ze soutěže.
   useEffect(() => {
     if (!open || !contestId || !ticket) {
       setBonusPrize(null);
@@ -96,11 +88,15 @@ export function MysteryPurchaseResultDialog({
     const load = async () => {
       try {
         if (wonType === "bonus") {
+          if (!ticket.bonus_prize_id) {
+            if (!cancelled) setBonusPrize(null);
+            return;
+          }
           const { data } = await supabase
-            .from("bonus_prizes")
+            .from("public_bonus_prizes")
             .select("title, description, detailed_description, image_url, amount")
             .eq("contest_id", contestId)
-            .eq("ticket_position", ticket.ticket_number)
+            .eq("id", ticket.bonus_prize_id)
             .maybeSingle();
           if (!cancelled) setBonusPrize((data as BonusPrizeRow | null) ?? null);
         } else if (wonType === "main") {
@@ -173,10 +169,6 @@ export function MysteryPurchaseResultDialog({
       : (bonusPrize?.detailed_description ?? bonusPrize?.description ?? null);
 
   const couponImage = resolveImage(coupon?.image_url, "voucher-images");
-
-  // Panel se ukáže jen když je vzdálenost opravdu známá a kladná.
-  const distance = ticket?.distance_to_next_bonus ?? null;
-  const showNextWin = typeof distance === "number" && Number.isFinite(distance) && distance > 0;
 
   return (
     <Dialog open={open} onOpenChange={(next) => { if (!next) onClose(); }}>
@@ -407,30 +399,6 @@ export function MysteryPurchaseResultDialog({
               </div>
             )}
           </section>
-
-          {/* ── Informační panel: kdy padne další výherní tiket ────────── */}
-          {showNextWin && (
-            <section
-              data-testid="mystery-result-next-win"
-              className="rounded-2xl bg-white/[0.04] border border-white/10 p-4 flex items-center gap-3 min-w-0"
-            >
-              <span className="h-10 w-10 rounded-full bg-white/[0.06] flex items-center justify-center flex-shrink-0">
-                <Calendar className="h-5 w-5 text-[#FF8A00]" />
-              </span>
-              <div className="min-w-0">
-                <p className="text-sm font-semibold text-white break-words">
-                  Další výherní tiket čeká už za{" "}
-                  <span className="text-[#FFB547]">
-                    {distance.toLocaleString("cs-CZ")} {tahPlural(distance)}
-                  </span>
-                  .
-                </p>
-                <p className="text-xs text-gray-400 break-words">
-                  Může obsahovat MioCoiny, bonusovou cenu nebo hlavní výhru.
-                </p>
-              </div>
-            </section>
-          )}
 
           <p data-testid="mystery-result-storage-note" className="text-xs text-gray-400 text-center break-words">
             Kupon najdeš ve <span className="text-gray-200">Voucherech</span>, tiket máš uložený ve svém účtu.

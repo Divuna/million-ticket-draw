@@ -760,7 +760,6 @@ const Homepage = () => {
                           prizeImageUrl={winner.prize_image_url}
                           cardStyleImageUrl={WINNER_BG_ROTATION[index % WINNER_BG_ROTATION.length]}
                           userAvatarUrl={winner.user_avatar_url}
-                          ticketNumber={winner.ticket_number}
                           variant="champagne"
                         />
                       ))

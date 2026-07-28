@@ -58,11 +58,8 @@ interface TicketResultModalProps {
   onClose: () => void;
   contestId: string;
   result: {
-    ticket_number: number;
-    distance_to_next_bonus: number | null;
-    next_bonus_position: number | null;
+    ticket_row_id?: string | null;
     won_prize?: string | null;
-    remaining_tickets?: number;
     won_type?: 'bonus' | 'main' | null;
     bonus_prize_id?: string | null;
     won_bonus?: boolean;
@@ -87,20 +84,6 @@ const funnyMessages = [
   "Každý tiket tě přibližuje k výhře! 🎪",
   "Neúspěch je jen začátek úspěchu! 🌟"
 ];
-
-// Czech plural for "tah" (2-4 = tahy, 5+ = tahů)
-const tahPlural = (n: number): string => {
-  if (n >= 2 && n <= 4) return 'tahy';
-  return 'tahů';
-};
-
-// Build the "next winning ticket" message for non-winning results
-const nextWinTicketText = (n: number): string => {
-  if (n === 1) return 'Další výherní ticket čeká už při dalším tahu.';
-  return `Další výherní ticket čeká už za ${n.toLocaleString('cs-CZ')} ${tahPlural(n)}.`;
-};
-
-const NEXT_WIN_EXPLAINER = 'Může jít o bonusovou i hlavní výhru. Kdo výherní ticket otevře první, vyhrává.';
 
 type ShareKind = 'bonus_physical' | 'miocoin' | 'partner_offer' | 'main_prize';
 
@@ -271,15 +254,16 @@ export const TicketResultModal: React.FC<TicketResultModalProps> = ({
   const [previewBlob, setPreviewBlob] = useState<Blob | null>(null);
   const [publicShareUrl, setPublicShareUrl] = useState<string | null>(null);
   const [isUploading, setIsUploading] = useState(false);
-  const generatedForTicketRef = useRef<number | null>(null);
+  const generatedForTicketRef = useRef<string | null>(null);
   const winSoundPlayedForRef = useRef<string | null>(null);
   const prizeTitleFocusRef = useRef<HTMLHeadingElement>(null);
   const [lossRetentionNudge, setLossRetentionNudge] = useState<string | null>(null);
 
   // Query bonus_prizes when modal opens
   useEffect(() => {
-    if (!isOpen || !result || !contestId) {
+    if (!isOpen || !result || !contestId || result.won_type !== 'bonus' || !result.bonus_prize_id) {
       setBonusPrize(null);
+      setIsLoading(false);
       return;
     }
 
@@ -287,10 +271,10 @@ export const TicketResultModal: React.FC<TicketResultModalProps> = ({
       setIsLoading(true);
       try {
         const { data, error } = await supabase
-          .from('bonus_prizes')
+          .from('public_bonus_prizes')
           .select('id, title, description, detailed_description, image_url, amount, status')
           .eq('contest_id', contestId)
-          .eq('ticket_position', result.ticket_number)
+          .eq('id', result.bonus_prize_id)
           .maybeSingle();
 
         if (error) {
@@ -333,7 +317,8 @@ export const TicketResultModal: React.FC<TicketResultModalProps> = ({
     }
 
     // Skip if already generated for this ticket
-    if (generatedForTicketRef.current === result.ticket_number) {
+    const resultKey = result.ticket_row_id ?? `${contestId}:${result.won_type ?? 'none'}`;
+    if (generatedForTicketRef.current === resultKey) {
       return;
     }
 
@@ -403,10 +388,10 @@ export const TicketResultModal: React.FC<TicketResultModalProps> = ({
         setPreviewBlob(blob);
         
         // Mark as generated for this ticket
-        generatedForTicketRef.current = result.ticket_number;
+        generatedForTicketRef.current = resultKey;
 
-        // Generate unique ticket ID for sharing
-        const ticketShareId = `${contestId}-${result.ticket_number}`;
+        // Public share identifiers must be opaque and must never encode a ticket number.
+        const ticketShareId = crypto.randomUUID();
 
         // Convert blob to base64 for upload
         const reader = new FileReader();
@@ -468,7 +453,7 @@ export const TicketResultModal: React.FC<TicketResultModalProps> = ({
   // Memoize random message to prevent re-renders changing it
   const funnyMessage = useMemo(() => {
     return funnyMessages[Math.floor(Math.random() * funnyMessages.length)];
-  }, [result?.ticket_number]);
+  }, [result?.ticket_row_id]);
 
   const handleClaimBonus = async () => {
     if (!bonusPrize || !user) return;
@@ -535,7 +520,7 @@ export const TicketResultModal: React.FC<TicketResultModalProps> = ({
     } else {
       setLossRetentionNudge(null);
     }
-  }, [isOpen, result?.ticket_number, isWinner, isLoading]);
+  }, [isOpen, result?.ticket_row_id, isWinner, isLoading]);
 
   const particleSpec = useMemo(() => {
     if (!shouldCelebrateWin) return [];
@@ -553,15 +538,15 @@ export const TicketResultModal: React.FC<TicketResultModalProps> = ({
               ? 'hsl(195 90% 62%)'
               : 'hsl(25 95% 58%)',
     }));
-  }, [shouldCelebrateWin, result?.ticket_number]);
+  }, [shouldCelebrateWin, result?.ticket_row_id]);
 
   useEffect(() => {
     if (!isOpen || !shouldCelebrateWin || !result) return;
-    const key = `${contestId || 'c'}-${result.ticket_number}`;
+    const key = `${contestId || 'c'}-${result.ticket_row_id ?? result.won_type ?? 'win'}`;
     if (winSoundPlayedForRef.current === key) return;
     winSoundPlayedForRef.current = key;
     playWinChime();
-  }, [isOpen, shouldCelebrateWin, contestId, result?.ticket_number]);
+  }, [isOpen, shouldCelebrateWin, contestId, result?.ticket_row_id, result?.won_type]);
 
   const prizeHeadline = isMainPrize
     ? (result?.won_prize?.trim() || 'Hlavní výhra')
@@ -584,44 +569,27 @@ export const TicketResultModal: React.FC<TicketResultModalProps> = ({
       window.cancelAnimationFrame(outer);
       window.cancelAnimationFrame(inner);
     };
-  }, [isOpen, shouldCelebrateWin, result?.ticket_number, prizeHeadline]);
+  }, [isOpen, shouldCelebrateWin, result?.ticket_row_id, prizeHeadline]);
 
   const prizeValueLine =
     !isMainPrize && bonusPrize?.amount != null && bonusPrize.amount > 0
       ? `${bonusPrize.amount.toLocaleString('cs-CZ')} MioCoinů`
       : null;
 
-  // Distance to the nearest real contest prize (bonus or main), excluding partner offers.
-  // distance_to_next_bonus = next pending bonus_prizes position minus purchased ticket number (from RPC).
-  // remaining_tickets      = ticket_count minus purchased ticket number = distance to main prize (from RPC).
-  const nearestPrizeDistance = useMemo(() => {
-    if (!result || isWinner) return null;
-    const dtb = typeof result.distance_to_next_bonus === 'number' && result.distance_to_next_bonus > 0
-      ? result.distance_to_next_bonus : null;
-    const rem = typeof result.remaining_tickets === 'number' && result.remaining_tickets > 0
-      ? result.remaining_tickets : null;
-    if (dtb !== null && rem !== null) return Math.min(dtb, rem);
-    return dtb ?? rem ?? null;
-  }, [result, isWinner]);
-
-  // Dynamic share text based on result — no ticket number
+  // Dynamic share text contains no ticket number or position.
   const getShareText = () => {
     if (isWinner) {
       return `Vyhrál jsem na OneMil 🎉🎟️ Zkus štěstí taky 👉 onemil.cz`;
     }
-    const motivationalPart = nearestPrizeDistance !== null
-      ? nextWinTicketText(nearestPrizeDistance)
-      : 'Další výhra může být blíž, než si myslíš.';
-    return `Zahrál jsem si na OneMil 🎟️ ${motivationalPart} 👉 onemil.cz`;
+    return `Zahrál jsem si na OneMil 🎟️ Další výhra může být blíž, než si myslíš. 👉 onemil.cz`;
   };
 
   /** Text copied by „Sdílet výhru“ — short viral hook + CTA (clipboard only) */
   const getWinRetentionShareText = () => {
     if (!isWinner || !result) return '';
-    const ticket = result.ticket_number.toLocaleString('cs-CZ');
     if (isMainPrize) {
       const prize = result.won_prize?.trim() || 'hlavní výhru';
-      return `🔥 Vyhrál jsem „${prize}“ na OneMil! Zkus štěstí taky → onemil.cz · tiket #${ticket}`;
+      return `🔥 Vyhrál jsem „${prize}“ na OneMil! Zkus štěstí taky → onemil.cz`;
     }
     if (bonusPrize) {
       const name = bonusPrize.title?.trim() || bonusPrize.description || 'bonus';
@@ -629,7 +597,7 @@ export const TicketResultModal: React.FC<TicketResultModalProps> = ({
         bonusPrize.amount && bonusPrize.amount > 0
           ? ` +${bonusPrize.amount.toLocaleString('cs-CZ')} MC`
           : '';
-      return `🎯 Trefa na OneMil: ${name}${coins}! Hraj i ty → onemil.cz · #${ticket}`;
+      return `🎯 Trefa na OneMil: ${name}${coins}! Hraj i ty → onemil.cz`;
     }
     return getShareText();
   };
@@ -711,7 +679,7 @@ export const TicketResultModal: React.FC<TicketResultModalProps> = ({
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = `onemil-ticket-${result?.ticket_number ?? 0}.png`;
+    a.download = 'onemil-vyhra.png';
     document.body.appendChild(a);
     a.click();
     document.body.removeChild(a);
@@ -777,7 +745,7 @@ export const TicketResultModal: React.FC<TicketResultModalProps> = ({
 
         {shouldCelebrateWin && result && (
           <div
-            key={`win-flash-${contestId}-${result.ticket_number}`}
+            key={`win-flash-${contestId}`}
             className="win-moment-screen-flash"
             aria-hidden
           />
@@ -931,34 +899,6 @@ export const TicketResultModal: React.FC<TicketResultModalProps> = ({
                     {bonusPrize.detailed_description || bonusPrize.description}
                   </p>
                 )}
-                {result?.distance_to_next_bonus != null && result.distance_to_next_bonus > 0 && (() => {
-                  const nextN = Math.min(
-                    result.distance_to_next_bonus,
-                    typeof result.remaining_tickets === 'number' && result.remaining_tickets > 0
-                      ? result.remaining_tickets
-                      : result.distance_to_next_bonus
-                  );
-                  return (
-                    <div className="mx-auto max-w-[360px] rounded-2xl border border-[rgba(255,138,0,0.25)] bg-[hsl(220_40%_13%)] px-5 py-3 text-center space-y-1">
-                      <p className="text-sm text-amber-100/80">
-                        {nextN === 1 ? (
-                          <>Další výherní ticket čeká už při dalším tahu.</>
-                        ) : (
-                          <>
-                            Další výherní ticket čeká už za{' '}
-                            <span className="font-bold bg-gradient-to-r from-[#FFB547] to-[#FF8A00] bg-clip-text text-transparent">
-                              {nextN.toLocaleString('cs-CZ')}
-                            </span>
-                            {' '}{tahPlural(nextN)}.
-                          </>
-                        )}
-                      </p>
-                      <p className="text-[11px] text-amber-100/60">
-                        {NEXT_WIN_EXPLAINER}
-                      </p>
-                    </div>
-                  );
-                })()}
                 <p className="win-moment-cta-hint -mb-1 text-center text-[11px] font-semibold uppercase text-amber-200/75 sm:text-xs">
                   Štěstí frčí —{' '}
                   <span className="text-amber-100">hrát znovu</span> je nejrychlejší cesta k další výhře
@@ -1147,27 +1087,8 @@ export const TicketResultModal: React.FC<TicketResultModalProps> = ({
               )}
               <div className="rounded-2xl p-5 space-y-2 border border-[rgba(255,138,0,0.3)] bg-gradient-to-b from-[#101c33] to-[#0d172b] shadow-xl">
                 <p className="text-sm text-amber-100/85 text-center">
-                  {nearestPrizeDistance !== null ? (
-                    nearestPrizeDistance === 1 ? (
-                      <>Další výherní ticket čeká už při dalším tahu.</>
-                    ) : (
-                      <>
-                        Další výherní ticket čeká už za{' '}
-                        <span className="font-bold bg-gradient-to-r from-[#FFB547] to-[#FF8A00] bg-clip-text text-transparent">
-                          {nearestPrizeDistance.toLocaleString('cs-CZ')}
-                        </span>
-                        {' '}{tahPlural(nearestPrizeDistance)}.
-                      </>
-                    )
-                  ) : (
-                    'Další výhra může být blíž, než si myslíš.'
-                  )}
+                  Další výhra může být blíž, než si myslíš.
                 </p>
-                {nearestPrizeDistance !== null && (
-                  <p className="text-[11px] text-amber-100/60 text-center">
-                    {NEXT_WIN_EXPLAINER}
-                  </p>
-                )}
               </div>
             </div>
           )}

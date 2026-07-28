@@ -25,7 +25,7 @@ test.describe('Partner Offer Assignment', () => {
     const buyButton = page.getByRole('button', { name: /Uplatnit.*MioCoin/i });
     await expect(buyButton).toBeVisible({ timeout: 15_000 });
 
-    // Capture won_type from buy_ticket_atomic RPC response.
+    // Capture won_type from the sanitized public purchase RPC response.
     // Separately track whether user_partner_offers lookup returned an actual row —
     // partner offers are NOT guaranteed after every non-winning ticket because:
     //   - 5-minute cooldown per user
@@ -34,7 +34,7 @@ test.describe('Partner Offer Assignment', () => {
     let hasPartnerOffer = false;
 
     page.on('response', async (res) => {
-      if (res.url().includes('/rest/v1/rpc/buy_ticket_atomic')) {
+      if (res.url().includes('/rest/v1/rpc/buy_ticket_public')) {
         try {
           const body = await res.json();
           const result = Array.isArray(body) ? body[0] : body;
@@ -58,7 +58,7 @@ test.describe('Partner Offer Assignment', () => {
     const resultDialog = page.locator('[role="dialog"]');
     await expect(resultDialog).toBeVisible({ timeout: 20_000 });
 
-    // The partner offer lookup is a separate async call that fires after buy_ticket_atomic
+    // The partner offer lookup is a separate async call that fires after buy_ticket_public
     // succeeds. Give it time to complete so hasPartnerOffer is settled before we check it.
     await page.waitForTimeout(3_000);
 
@@ -91,10 +91,10 @@ test.describe('Partner Offer Assignment', () => {
         description: `won_type='${wonType}' — partner offer branch not exercised on winning ticket`,
       });
     } else {
-      // buy_ticket_atomic response was not captured (URL mismatch or network error)
+      // buy_ticket_public response was not captured (URL mismatch or network error)
       test.info().annotations.push({
         type: 'skip-reason',
-        description: 'buy_ticket_atomic response not captured — cannot determine won_type',
+        description: 'buy_ticket_public response not captured — cannot determine won_type',
       });
     }
   });

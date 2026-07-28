@@ -5462,6 +5462,42 @@ export type Database = {
         }
         Relationships: []
       }
+      public_bonus_prizes: {
+        Row: {
+          amount: number | null
+          contest_id: string
+          description: string
+          detailed_description: string | null
+          guardian_required: boolean
+          id: string
+          image_url: string | null
+          status: string
+          title: string | null
+        }
+        Insert: {
+          amount?: number | null
+          contest_id?: string | null
+          description?: string | null
+          detailed_description?: string | null
+          guardian_required?: boolean | null
+          id?: string | null
+          image_url?: string | null
+          status?: string | null
+          title?: string | null
+        }
+        Update: {
+          amount?: number | null
+          contest_id?: string | null
+          description?: string | null
+          detailed_description?: string | null
+          guardian_required?: boolean | null
+          id?: string | null
+          image_url?: string | null
+          status?: string | null
+          title?: string | null
+        }
+        Relationships: []
+      }
       public_partners: {
         Row: {
           created_at: string | null
@@ -5865,6 +5901,10 @@ export type Database = {
         Args: { p_contest_id: string; p_user_id: string }
         Returns: Json
       }
+      buy_ticket_public: {
+        Args: { p_contest_id: string; p_user_id?: string }
+        Returns: Json
+      }
       buy_voucher_atomic: {
         Args: { p_user_id: string; p_voucher_id: string }
         Returns: Json
@@ -6212,6 +6252,29 @@ export type Database = {
           user_nickname: string
         }[]
       }
+      get_latest_winners_public: {
+        Args: { winners_limit?: number }
+        Returns: {
+          contest_title: string
+          created_at: string
+          prize_image_url: string
+          prize_name: string
+          public_id: string
+          type: string
+          user_avatar_url: string
+          user_name: string
+          user_nickname: string
+        }[]
+      }
+      get_my_tickets_public: {
+        Args: { p_contest_id?: string | null }
+        Returns: {
+          contest_id: string
+          contest_title: string
+          created_at: string
+          id: string
+        }[]
+      }
       get_partner_offer_billing_config: {
         Args: { p_partner_id: string }
         Returns: {
@@ -6414,6 +6477,14 @@ export type Database = {
       }
       record_affiliate_customer_ref: {
         Args: { p_ref_code: string }
+        Returns: Json
+      }
+      purchase_guaranteed_benefit_bundle_public: {
+        Args: {
+          p_contest_id: string
+          p_idempotency_key: string
+          p_user_id: string
+        }
         Returns: Json
       }
       redeem_miocoin: {

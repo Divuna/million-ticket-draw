@@ -1,5 +1,5 @@
 /**
- * Args for PostgREST `public.buy_ticket_atomic(p_contest_id uuid, p_user_id uuid)`.
+ * Args for PostgREST `public.buy_ticket_public(p_contest_id uuid, p_user_id uuid)`.
  * Only UUID strings — never ticket row ids or other types.
  *
  * SECURITY CONTRACT (migration 20260717190000): the server ALWAYS purchases

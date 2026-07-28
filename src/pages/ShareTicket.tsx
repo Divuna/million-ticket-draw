@@ -6,21 +6,24 @@ import { Facebook } from 'lucide-react';
 import logoOnemil from '@/assets/logo-onemil.png';
 import { supabaseUrl } from '@/integrations/supabase/client';
 
+const OPAQUE_SHARE_ID = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+
 const ShareTicket: React.FC = () => {
   const { ticketId } = useParams<{ ticketId: string }>();
+  const isOpaqueShareId = OPAQUE_SHARE_ID.test(ticketId ?? '');
 
   const publicTicketImageUrl = useMemo(() => {
-    if (!ticketId) return null;
+    if (!ticketId || !OPAQUE_SHARE_ID.test(ticketId)) return null;
     return `${supabaseUrl}/storage/v1/object/public/ticket-shares/${ticketId}.png`;
   }, [ticketId]);
 
   const [imageUrl, setImageUrl] = useState<string | null>(publicTicketImageUrl);
   const [isLoading, setIsLoading] = useState(true);
 
-  // Extract ticket number from ticketId (format: contestId-ticketNumber)
-  const ticketNumber = ticketId?.split('-').pop() || ticketId || '';
-  const ogImage = `${supabaseUrl}/functions/v1/og-ticket-share?id=${encodeURIComponent(ticketId)}`;
-  const pageUrl = `https://onemil.cz/share/ticket/${ticketId}`;
+  const ogImage = isOpaqueShareId
+    ? `${supabaseUrl}/functions/v1/og-ticket-share?id=${encodeURIComponent(ticketId!)}`
+    : '';
+  const pageUrl = isOpaqueShareId ? `https://onemil.cz/share/ticket/${ticketId}` : 'https://onemil.cz';
   
   // Keep UI loading state, but compute image URL synchronously for OG crawlers.
   useEffect(() => {
@@ -30,7 +33,7 @@ const ShareTicket: React.FC = () => {
 
   const shareUrl = ogImage;
   const ogTitle = 'Zkusil jsem štěstí na OneMil!';
-  const ogDescription = `Ticket #${ticketNumber} – zkus to taky na onemil.cz`;
+  const ogDescription = 'Zkus štěstí taky na onemil.cz';
 
   const handleShareFacebook = () => {
     window.open(
@@ -97,7 +100,7 @@ const ShareTicket: React.FC = () => {
           ) : imageUrl ? (
             <img 
               src={imageUrl} 
-              alt="Ticket preview" 
+              alt="Náhled výherní karty"
               className="w-full rounded-lg shadow-lg border border-border/30"
               onError={() => setImageUrl(null)}
             />

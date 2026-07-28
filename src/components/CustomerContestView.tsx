@@ -25,7 +25,6 @@ interface Contest {
 interface BonusPrize {
   id: string;
   description: string;
-  ticket_position: number;
   status: string;
   image_url?: string | null;
 }

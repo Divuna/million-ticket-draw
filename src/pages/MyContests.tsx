@@ -9,7 +9,6 @@ import { NavigateToLogin } from '@/components/NavigateToLogin';
 
 interface UserTicket {
   id: string;
-  number: number;
   created_at: string;
   contest_id: string;
   contest_title: string;
@@ -30,34 +29,19 @@ const MyContests: React.FC = () => {
   const fetchMyTickets = async () => {
     try {
       const { data, error } = await supabase
-        .from('tickets')
-        .select(`
-          id,
-          number,
-          created_at,
-          contest_id,
-          contests!inner (
-            title
-          )
-        `)
-        .eq('user_id', user?.id)
-        .order('created_at', { ascending: false });
+        .rpc('get_my_tickets_public', { p_contest_id: null });
 
       if (error) {
         console.error('Error fetching tickets:', error);
         return;
       }
 
-      const userTickets: UserTicket[] = (data ?? []).map((row: any) => {
-        const contest = Array.isArray(row.contests) ? row.contests[0] : row.contests;
-        return {
-          id: row.id,
-          number: row.number,
-          created_at: row.created_at,
-          contest_id: row.contest_id,
-          contest_title: contest?.title ?? '',
-        };
-      });
+      const userTickets: UserTicket[] = (data ?? []).map((row) => ({
+        id: row.id,
+        created_at: row.created_at,
+        contest_id: row.contest_id,
+        contest_title: row.contest_title,
+      }));
 
       setTickets(userTickets);
     } catch (error) {
@@ -155,9 +139,6 @@ const MyContests: React.FC = () => {
                   <CardContent className="pt-6 pb-6">
                     <p className="text-sm font-semibold text-primary mb-1">
                       Soutěž: {ticket.contest_title}
-                    </p>
-                    <p className="text-sm text-foreground mb-1">
-                      Tiket: #{ticket.number.toLocaleString('cs-CZ')}
                     </p>
                     <p className="text-xs text-muted-foreground">
                       Zakoupeno: {formatDate(ticket.created_at)}

@@ -28,12 +28,9 @@ export interface MysteryCoupon {
 export interface MysteryPurchaseSuccess {
   success: true;
   ticket_row_id: string | null;
-  ticket_number: number;
+  bonus_prize_id: string | null;
   won_type: "bonus" | "main" | null;
   won_prize: string | null;
-  remaining_tickets: number | null;
-  next_bonus_position: number | null;
-  distance_to_next_bonus: number | null;
   charged_miocoins: number;
   coupon: MysteryCoupon | null;
 }
@@ -78,7 +75,7 @@ export async function purchaseMysteryCoupon(
 ): Promise<MysteryPurchaseResult> {
   try {
     const { data, error } = await supabase.rpc(
-      "purchase_guaranteed_benefit_bundle_atomic",
+      "purchase_guaranteed_benefit_bundle_public",
       {
         p_user_id: userId,
         p_contest_id: contestId,
@@ -96,12 +93,9 @@ export async function purchaseMysteryCoupon(
     return {
       success: true,
       ticket_row_id: result.ticket_row_id ?? null,
-      ticket_number: result.ticket_number as number,
+      bonus_prize_id: result.bonus_prize_id ?? null,
       won_type: result.won_type ?? null,
       won_prize: result.won_prize ?? null,
-      remaining_tickets: result.remaining_tickets ?? null,
-      next_bonus_position: result.next_bonus_position ?? null,
-      distance_to_next_bonus: result.distance_to_next_bonus ?? null,
       charged_miocoins: Number(result.charged_miocoins ?? 0),
       coupon: (result.coupon as MysteryCoupon | null) ?? null,
     };

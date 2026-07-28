@@ -10,13 +10,7 @@ const corsHeaders = {
 const IMAGE_WIDTH = 1200;
 const IMAGE_HEIGHT = 630;
 
-const escapeText = (s: string) =>
-  s
-    .replace(/&/g, "&amp;")
-    .replace(/</g, "&lt;")
-    .replace(/>/g, "&gt;")
-    .replace(/"/g, "&quot;")
-    .replace(/'/g, "&#039;");
+const OPAQUE_SHARE_ID = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 
 serve(async (req) => {
   if (req.method === "OPTIONS") {
@@ -36,18 +30,15 @@ serve(async (req) => {
       ticketId = (body?.ticketId ?? body?.id ?? "") as string;
     }
 
-    if (!ticketId || typeof ticketId !== "string") {
+    if (!ticketId || typeof ticketId !== "string" || !OPAQUE_SHARE_ID.test(ticketId)) {
       return new Response(
-        JSON.stringify({ ok: false, error: "Missing required parameter: ticketId" }),
+        JSON.stringify({ ok: false, error: "Missing or invalid opaque share id" }),
         {
           status: 400,
           headers: { ...corsHeaders, "Content-Type": "application/json" },
         }
       );
     }
-
-    const ticketNumber = ticketId.split("-").pop() || ticketId;
-    const safeTicketNumber = escapeText(String(ticketNumber));
 
     // Build SVG (1200x630) then render to PNG bytes via Resvg.
     const svg = `<?xml version="1.0" encoding="UTF-8"?>
@@ -142,15 +133,15 @@ serve(async (req) => {
       fill="none" stroke="#ffffff" stroke-opacity="0.10" stroke-width="2"/>
   </g>
 
-  <!-- big gold glowing ticket number (#${safeTicketNumber}) -->
+  <!-- Public share cards never contain a ticket number or position. -->
   <text x="${IMAGE_WIDTH / 2}" y="275"
         text-anchor="middle"
         font-family="Inter, sans-serif"
-        font-size="200"
+        font-size="120"
         font-weight="900"
         fill="#D4AF37"
         filter="url(#goldGlow)">
-    #${safeTicketNumber}
+    OneMil
   </text>
 
   <!-- headline -->
@@ -204,7 +195,7 @@ serve(async (req) => {
     const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
-    const filename = `${ticketId}.png`; // deterministic
+    const filename = `${ticketId}.png`; // opaque deterministic share id
 
     const { error: uploadError } = await supabase.storage
       .from("ticket-shares")

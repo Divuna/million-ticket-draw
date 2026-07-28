@@ -6,6 +6,8 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
 
+const OPAQUE_SHARE_ID = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+
 serve(async (req) => {
   const json = (body: unknown, status = 200) =>
     new Response(JSON.stringify(body), {
@@ -25,7 +27,7 @@ serve(async (req) => {
   try {
     const { ticketId, imageBase64 } = await req.json();
 
-    if (!ticketId || !imageBase64) {
+    if (!ticketId || typeof ticketId !== "string" || !OPAQUE_SHARE_ID.test(ticketId) || !imageBase64) {
       console.error('Missing required fields:', { ticketId: !!ticketId, imageBase64: !!imageBase64 });
       console.warn('upload fail');
       return json({ ok: false }, 200);

@@ -77,6 +77,7 @@ test.describe('contest, ticket, and winner security contract', () => {
 
   test('current buy_ticket_atomic contract keeps purchase, wallet debit, numbering, and winner assignment atomic', () => {
     const migration = read('supabase/migrations/20260717190000_buy_ticket_atomic_auth_and_wallet_tx.sql');
+    const privacy = read('supabase/migrations/20260728103000_hide_public_ticket_numbers.sql');
 
     expect(migration).toContain('auth.uid()');
     expect(migration).toContain('p_user_id IS NOT NULL AND p_user_id <> v_auth_uid');
@@ -90,7 +91,9 @@ test.describe('contest, ticket, and winner security contract', () => {
     expect(migration).toContain('INSERT INTO public.winners');
     expect(migration).toContain("VALUES (v_auth_uid, p_contest_id, v_new_ticket_id, 'main')");
     expect(migration).toContain('REVOKE ALL ON FUNCTION public.buy_ticket_atomic(uuid, uuid) FROM anon');
-    expect(migration).toContain('GRANT EXECUTE ON FUNCTION public.buy_ticket_atomic(uuid, uuid) TO authenticated');
+    expect(privacy).toContain('REVOKE ALL ON FUNCTION public.buy_ticket_atomic(uuid, uuid) FROM authenticated');
+    expect(privacy).toContain('GRANT EXECUTE ON FUNCTION public.buy_ticket_atomic(uuid, uuid) TO service_role');
+    expect(privacy).toContain('GRANT EXECUTE ON FUNCTION public.buy_ticket_public(uuid, uuid) TO authenticated');
   });
 
   test('legacy prize delivery summary RPC is restricted because it exposes internal admin notes', () => {

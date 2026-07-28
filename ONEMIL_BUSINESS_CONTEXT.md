@@ -1,5 +1,9 @@
 # OneMil — business context
 
+## Veřejná důvěrnost čísel tiketů
+
+„Číslo ani pořadí tiketu je přísně interní údaj. Nesmí se zobrazovat ve veřejném rozhraní, výsledcích, přehledu výherců, profilech, e-mailech, notifikacích ani veřejných API odpovědích. Veřejně lze zobrazit pouze výhru, výherce, soutěž a čas. Číslo tiketu smí být dostupné pouze interní administraci, auditu a backendové soutěžní logice.“
+
 **Status:** permanent business/product context  
 **Last updated:** 2026-07-24  
 **Owner:** Pavel Diviš  

@@ -23,7 +23,7 @@
  *   3. The balance decrease is reflected in the same page UI without reload.
  *
  * Assertions that would catch regressions:
- *   - Wallet debit stopped working (buy_ticket_atomic bug).
+ *   - Wallet debit stopped working (public wrapper / buy_ticket_atomic bug).
  *   - UI stopped refreshing balance after purchase (loadUserBalance removed).
  *   - Ticket price changed without updating wallet deduction.
  *   - Balance display formatting broken (parseInt would throw / assert fails).
@@ -136,7 +136,7 @@ test.describe('Wallet Balance — Post-Purchase Decrease', () => {
 
     // ── 4. Arm wallet-refresh interceptor before clicking ─────────────────────
     // ContestDetail calls loadUserBalance(userId) immediately after a successful
-    // buy_ticket_atomic (ContestDetail.tsx ~line 359). This fires a GET to
+    // buy_ticket_public (ContestDetail.tsx). This fires a GET to
     // /rest/v1/wallets. We wait for that response to confirm the DB deduction
     // has been read back before we assert the UI value.
     const walletRefreshResponse = page.waitForResponse(

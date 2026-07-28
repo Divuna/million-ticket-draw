@@ -101,8 +101,7 @@ const TermsConditions = () => {
             <p className="text-muted-foreground mb-4">Spotřebitelské soutěže v Aplikaci OneMil:</p>
             <ul className="list-disc pl-6 text-muted-foreground space-y-2">
               <li>Mají pevně stanovený počet tiketů</li>
-              <li>Tikety se otevírají postupně v pořadí 1, 2, 3 a dále</li>
-              <li>Každý tiket má přiřazeno unikátní číslo</li>
+              <li>Každý zakoupený tiket představuje samostatnou účast v soutěži</li>
               <li>Výherní pozice jsou předem určeny v pravidlech dané soutěže</li>
               <li>Výsledky jsou zveřejněny v Aplikaci a oznámeny výhercům</li>
               <li>Jeden uživatel může vlastnit více tiketů v jedné soutěži</li>

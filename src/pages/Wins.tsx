@@ -300,7 +300,7 @@ const Wins: React.FC = () => {
       let prizesMap = new Map<string, any>();
       if (prizeIds.length > 0) {
         const { data: prizesData } = await supabase
-          .from('bonus_prizes')
+          .from('public_bonus_prizes')
           .select('id, title, image_url, guardian_required')
           .in('id', prizeIds);
 

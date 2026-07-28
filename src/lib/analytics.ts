@@ -24,9 +24,9 @@ export const analytics = {
     console.log('[analytics] voucher_purchase', { sessionId });
     push('voucher_purchase', sessionId ? { transaction_id: sessionId } : undefined);
   },
-  ticketPurchase: (params: { contestId: string; ticketNumber?: number }) => {
+  ticketPurchase: (params: { contestId: string }) => {
     console.log('[analytics] ticket_purchase', params);
-    push('ticket_purchase', { contest_id: params.contestId, ticket_number: params.ticketNumber });
+    push('ticket_purchase', { contest_id: params.contestId });
   },
   voucherRedeem: (voucherId: string, price = 5) => {
     console.log('[analytics] voucher_purchase', { voucherId, price });

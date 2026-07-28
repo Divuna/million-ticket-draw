@@ -274,7 +274,15 @@ serve(async (req) => {
       });
     }
 
-    return new Response(JSON.stringify(data), {
+    const {
+      ticket_number: _ticketNumber,
+      next_bonus_position: _nextBonusPosition,
+      distance_to_next_bonus: _distanceToNextBonus,
+      remaining_tickets: _remainingTickets,
+      ...publicData
+    } = data ?? {};
+
+    return new Response(JSON.stringify(publicData), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
       status: 200,
     });

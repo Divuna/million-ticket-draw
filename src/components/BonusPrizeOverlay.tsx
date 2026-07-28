@@ -15,7 +15,6 @@ import { OneMilGiftIcon, OneMilTrophyIcon, OneMilStarIcon, OneMilDiamondIcon, On
 interface BonusPrize {
   id: string;
   description: string;
-  ticket_position: number;
   status: string;
   display_status?: string;
   contest_id: string;
@@ -44,10 +43,9 @@ export const BonusPrizeOverlay: React.FC<BonusPrizeOverlayProps> = ({
   const fetchBonusPrizes = async () => {
     try {
       const { data, error } = await supabase
-        .from('bonus_prizes')
-        .select('*')
-        .eq('contest_id', contestId)
-        .order('ticket_position', { ascending: true });
+        .from('public_bonus_prizes')
+        .select('id, description, status, contest_id')
+        .eq('contest_id', contestId);
 
       if (error) throw error;
 
@@ -239,12 +237,7 @@ export const BonusPrizeOverlay: React.FC<BonusPrizeOverlayProps> = ({
                   >
                     <CardHeader className="pb-3">
                       <div className="flex items-start justify-between">
-                        <div className="flex items-center gap-2">
-                          <IconComponent className="w-5 h-5" />
-                          <Badge variant="outline" className="text-xs">
-                            Tiket #{bonus.ticket_position.toLocaleString('cs-CZ')}
-                          </Badge>
-                        </div>
+                        <IconComponent className="w-5 h-5" />
                         <Badge 
                           variant={uiStatus === 'pending' ? 'default' : 'secondary'}
                           className="text-xs"
@@ -259,10 +252,6 @@ export const BonusPrizeOverlay: React.FC<BonusPrizeOverlayProps> = ({
                         {bonus.description}
                       </h4>
                       
-                      <div className="text-xs text-muted-foreground mb-3">
-                        Pozice: #{bonus.ticket_position.toLocaleString('cs-CZ')}
-                      </div>
-
                       {/* Action buttons based on user role */}
                       {isClaimable && (
                         <Button 

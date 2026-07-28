@@ -3,6 +3,7 @@ import { render } from "https://deno.land/x/resvg_wasm/mod.ts";
 
 const IMAGE_WIDTH = 1200;
 const IMAGE_HEIGHT = 630;
+const OPAQUE_SHARE_ID = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 
 const headers = {
   "Content-Type": "image/png",
@@ -32,17 +33,13 @@ serve(async (req) => {
   const url = new URL(req.url);
   const ticketId = url.searchParams.get("id") ?? "";
 
-  if (!ticketId) {
-    return new Response("Missing query param: id", { status: 400, headers });
+  if (!ticketId || !OPAQUE_SHARE_ID.test(ticketId)) {
+    return new Response("Missing or invalid opaque share id", { status: 400, headers });
   }
-
-  // Extract ticket number from ticketId (format: contestId-ticketNumber)
-  const ticketNumber = ticketId.split("-").pop() || ticketId;
-  const safeTicketNumber = escapeSvgText(String(ticketNumber));
 
   // Required texts
   const titleText = "Zkusil jsem štěstí na OneMil!";
-  const subtitleText = `Ticket #${ticketNumber}`;
+  const subtitleText = "Zkus štěstí taky";
 
   const safeTitle = escapeSvgText(titleText);
   const safeSubtitle = escapeSvgText(subtitleText);
@@ -95,7 +92,7 @@ serve(async (req) => {
   <text x="${IMAGE_WIDTH / 2}" y="360"
     text-anchor="middle"
     font-family="Inter, sans-serif"
-    font-size="90"
+    font-size="72"
     font-weight="900"
     fill="#D4AF37"
     filter="url(#goldGlow)">

@@ -319,10 +319,10 @@ async function main() {
   const p99 = elapsedTimes[Math.floor(elapsedTimes.length * 0.99)] ?? 0;
   const avgMs = elapsedTimes.length ? Math.round(elapsedTimes.reduce((a, b) => a + b, 0) / elapsedTimes.length) : 0;
 
-  // Check for duplicate ticket numbers among successful purchases
-  const ticketNumbers = successes.map((r) => r.body.ticket_number).filter(Boolean);
-  const uniqueTickets = new Set(ticketNumbers);
-  const duplicateTicketNumbers = ticketNumbers.length - uniqueTickets.size;
+  // Public responses expose only opaque row IDs; ticket numbers stay DB-internal.
+  const ticketRowIds = successes.map((r) => r.body.ticket_row_id).filter(Boolean);
+  const uniqueTicketRows = new Set(ticketRowIds);
+  const duplicateTicketRows = ticketRowIds.length - uniqueTicketRows.size;
 
   // ── 4. DB integrity check ──
   log("Phase 4: Running database integrity verification…");
@@ -351,8 +351,8 @@ async function main() {
   }
 
   console.log(`\nDuplicate Detection (client-side)`);
-  console.log(`  Unique ticket numbers  : ${uniqueTickets.size}`);
-  console.log(`  Duplicate ticket#      : ${duplicateTicketNumbers === 0 ? "NONE ✓" : `${duplicateTicketNumbers} DUPLICATES DETECTED ✗`}`);
+  console.log(`  Unique ticket row IDs  : ${uniqueTicketRows.size}`);
+  console.log(`  Duplicate ticket rows  : ${duplicateTicketRows === 0 ? "NONE ✓" : `${duplicateTicketRows} DUPLICATES DETECTED ✗`}`);
 
   console.log(`\nDatabase Integrity Checks`);
   const checks = [
@@ -371,7 +371,7 @@ async function main() {
     console.log("\n  Negative wallet details:", JSON.stringify(integrity.negativeWalletDetails, null, 2));
   }
 
-  const allPassed = checks.every(([, pass]) => pass) && duplicateTicketNumbers === 0;
+  const allPassed = checks.every(([, pass]) => pass) && duplicateTicketRows === 0;
   console.log(`\n${"═".repeat(60)}`);
   console.log(` Overall: ${allPassed ? "ALL CHECKS PASSED ✓" : "FAILURES DETECTED ✗ — investigate before launch"}`);
   console.log("═".repeat(60) + "\n");

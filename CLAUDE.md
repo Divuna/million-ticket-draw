@@ -1,3 +1,7 @@
+## Veřejná důvěrnost čísel tiketů
+
+„Číslo ani pořadí tiketu je přísně interní údaj. Nesmí se zobrazovat ve veřejném rozhraní, výsledcích, přehledu výherců, profilech, e-mailech, notifikacích ani veřejných API odpovědích. Veřejně lze zobrazit pouze výhru, výherce, soutěž a čas. Číslo tiketu smí být dostupné pouze interní administraci, auditu a backendové soutěžní logice.“
+
 # Garantovaný nákupní benefit — datový základ Fáze 1 (24. 07. 2026)
 
 - Produktový název je vždy **„garantovaný nákupní benefit“**. Klasický soutěžní voucher je jiný, dobrovolný a pro partnera zůstává zdarma.

@@ -62,7 +62,6 @@ type BonusPrize = {
   amount: number | null;
   image?: string | null;
   image_url?: string | null;
-  ticket_position?: number | null;
 };
 
 type Winner = {
@@ -83,12 +82,9 @@ interface PartnerOfferResult {
 }
 
 interface UnlockTicketResult {
-  ticket_number: number;
+  ticket_row_id?: string | null;
   ticket_price: number;
-  next_bonus_position?: number | null;
-  distance_to_next_bonus?: number | null;
   won_prize?: string | null;
-  remaining_tickets?: number;
   won_type?: 'bonus' | 'main' | null;
   bonus_prize_id?: string | null;
   partner_offer?: PartnerOfferResult | null;
@@ -173,8 +169,8 @@ export default function ContestDetail() {
   const LIVE_MESSAGES = [
     'Soutěž je aktivní',
     'Bonusové výherní pozice jsou součástí pravidel soutěže',
-    'Každý další tiket posouvá pořadí soutěže',
-    'Otevři další tiket v pořadí',
+    'Každý další tiket přináší novou šanci',
+    'Otevři další tiket a zkus štěstí',
     'Výherní pozice jsou předem určeny',
   ];
   const [liveMessageIndex, setLiveMessageIndex] = useState(0);
@@ -286,8 +282,8 @@ export default function ContestDetail() {
       return;
     }
 
-    logTicketPurchaseSuccess({ userId, contestId, ticketNumber: outcome.ticket_number });
-    analytics.ticketPurchase({ contestId, ticketNumber: outcome.ticket_number });
+    logTicketPurchaseSuccess({ userId, contestId });
+    analytics.ticketPurchase({ contestId });
 
     recordLocalTicketPlay();
     await loadUserBalance(userId);
@@ -297,10 +293,10 @@ export default function ContestDetail() {
     setMysteryResult({
       contestId,
       ticket: {
-        ticket_number: outcome.ticket_number,
+        ticket_row_id: outcome.ticket_row_id,
+        bonus_prize_id: outcome.bonus_prize_id,
         won_type: outcome.won_type,
         won_prize: outcome.won_prize,
-        distance_to_next_bonus: outcome.distance_to_next_bonus,
       },
       coupon: outcome.coupon,
     });
@@ -381,7 +377,7 @@ export default function ContestDetail() {
       console.log("buy_ticket_atomic RPC payload", payload);
 
       recordTicketPurchaseAttemptForAbuseCheck(user.id);
-      const { data, error } = await supabase.rpc("buy_ticket_atomic", payload);
+      const { data, error } = await supabase.rpc("buy_ticket_public", payload);
 
       if (error) {
         console.error("[DEBUG ContestDetail] RPC error:", error, JSON.stringify(error));
@@ -432,9 +428,8 @@ export default function ContestDetail() {
         logTicketPurchaseSuccess({
           userId: user.id,
           contestId: contest.id,
-          ticketNumber: result.ticket_number,
         });
-        analytics.ticketPurchase({ contestId: contest.id, ticketNumber: result.ticket_number });
+        analytics.ticketPurchase({ contestId: contest.id });
         
         // Refresh balance and progress immediately
         loadUserBalance(user.id);
@@ -479,14 +474,11 @@ export default function ContestDetail() {
         }
 
         const mappedResult: UnlockTicketResult = {
-          ticket_number: result.ticket_number,
+          ticket_row_id: result.ticket_row_id ?? null,
           ticket_price: result.ticket_price ?? 1,
-          next_bonus_position: result.next_bonus_position ?? null,
-          distance_to_next_bonus: result.distance_to_next_bonus ?? null,
           won_prize: result.won_prize ?? null,
           won_type: result.won_type ?? null,
           bonus_prize_id: result.bonus_prize_id ?? null,
-          remaining_tickets: result.remaining_tickets ?? undefined,
           partner_offer: partnerOffer,
         };
 
@@ -575,7 +567,7 @@ export default function ContestDetail() {
         // not capped by the 1000-row PostgREST limit. Partner Offers are NOT in
         // bonus_prizes, so this never includes them.
         const { count: coinCount, error: coinCountError } = await supabase
-          .from("bonus_prizes")
+          .from("public_bonus_prizes")
           .select("id", { count: "exact", head: true })
           .eq("contest_id", id)
           .gt("amount", 0);
@@ -592,11 +584,10 @@ export default function ContestDetail() {
         // Hard safety cap proti nekonečné smyčce (1M řádků = 1000 stránek).
         for (let guard = 0; guard < 1000; guard++) {
           const { data: pageData, error: pageError } = await supabase
-            .from("bonus_prizes")
-            .select("id, contest_id, description, detailed_description, amount, image_url, ticket_position")
+            .from("public_bonus_prizes")
+            .select("id, contest_id, description, detailed_description, amount, image_url")
             .eq("contest_id", id)
             .or("amount.is.null,amount.eq.0")
-            .order("ticket_position", { ascending: true })
             .range(physFrom, physFrom + PHYS_PAGE - 1);
           if (pageError) {
             console.error('[ContestDetail] physical bonus fetch error:', pageError);
@@ -668,21 +659,15 @@ export default function ContestDetail() {
   const stableResult = useMemo(() => {
     if (!modalResult) return undefined;
     return {
-      ticket_number: modalResult.ticket_number,
-      next_bonus_position: modalResult.next_bonus_position ?? null,
-      distance_to_next_bonus: modalResult.distance_to_next_bonus ?? null,
+      ticket_row_id: modalResult.ticket_row_id,
       won_prize: modalResult.won_prize,
-      remaining_tickets: modalResult.remaining_tickets,
       won_type: modalResult.won_type,
       bonus_prize_id: modalResult.bonus_prize_id,
       partner_offer: modalResult.partner_offer ?? null,
     };
   }, [
-    modalResult?.ticket_number,
-    modalResult?.next_bonus_position,
-    modalResult?.distance_to_next_bonus,
+    modalResult?.ticket_row_id,
     modalResult?.won_prize,
-    modalResult?.remaining_tickets,
     modalResult?.won_type,
     modalResult?.bonus_prize_id,
     modalResult?.partner_offer,
@@ -1086,7 +1071,7 @@ export default function ContestDetail() {
           <p className="text-[hsl(0_0%_85%)]/80 text-sm md:text-[15px] leading-relaxed mb-6 max-w-2xl">
             V této soutěži je připraveno celkem{' '}
             <span className="text-[#FFB547] font-semibold">{progressTicketsTotal.toLocaleString('cs-CZ')}</span>{' '}
-            tiketů. Tikety se otevírají postupně v pořadí 1, 2, 3 a dále.
+            tiketů. Každý nákup představuje novou šanci na výhru.
           </p>
 
           {/* Premium animated path */}

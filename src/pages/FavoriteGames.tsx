@@ -58,12 +58,9 @@ interface PartnerOfferResult {
 }
 
 interface UnlockTicketResult {
-  ticket_number: number;
+  ticket_row_id?: string | null;
   ticket_price: number;
-  next_bonus_position?: number | null;
-  distance_to_next_bonus?: number | null;
   won_prize?: string | null;
-  remaining_tickets?: number;
   won_type?: 'bonus' | 'main' | null;
   bonus_prize_id?: string | null;
   partner_offer?: PartnerOfferResult | null;
@@ -207,9 +204,8 @@ const FavoriteGames = () => {
     logTicketPurchaseSuccess({
       userId: user.id,
       contestId,
-      ticketNumber: outcome.ticket_number,
     });
-    analytics.ticketPurchase({ contestId, ticketNumber: outcome.ticket_number });
+    analytics.ticketPurchase({ contestId });
 
     recordLocalTicketPlay();
     fetchFavoriteContests();
@@ -220,10 +216,10 @@ const FavoriteGames = () => {
     setMysteryResult({
       contestId,
       ticket: {
-        ticket_number: outcome.ticket_number,
+        ticket_row_id: outcome.ticket_row_id,
+        bonus_prize_id: outcome.bonus_prize_id,
         won_type: outcome.won_type,
         won_prize: outcome.won_prize,
-        distance_to_next_bonus: outcome.distance_to_next_bonus,
       },
       coupon: outcome.coupon,
     });
@@ -279,7 +275,7 @@ const FavoriteGames = () => {
       console.log('buy_ticket_atomic RPC payload', payload);
 
       recordTicketPurchaseAttemptForAbuseCheck(user.id);
-      const { data, error } = await supabase.rpc('buy_ticket_atomic', payload);
+      const { data, error } = await supabase.rpc('buy_ticket_public', payload);
 
       if (error) {
         console.error('RPC error:', error);
@@ -336,7 +332,7 @@ const FavoriteGames = () => {
       }
 
       console.log('🔥 RPC raw response:', JSON.stringify(rpcResult, null, 2));
-      analytics.ticketPurchase({ contestId: contestId, ticketNumber: rpcResult.ticket_number });
+      analytics.ticketPurchase({ contestId });
 
       // ── Partner Offer lookup ──────────────────────────────────────────────
       let partnerOffer: PartnerOfferResult | null = null;
@@ -374,14 +370,11 @@ const FavoriteGames = () => {
       }
 
       const result: UnlockTicketResult = {
-        ticket_number: rpcResult.ticket_number,
+        ticket_row_id: rpcResult.ticket_row_id ?? null,
         ticket_price: rpcResult.ticket_price ?? 1,
-        next_bonus_position: rpcResult.next_bonus_position ?? null,
-        distance_to_next_bonus: rpcResult.distance_to_next_bonus ?? null,
         won_prize: rpcResult.won_prize ?? null,
         won_type: rpcResult.won_type ?? null,
         bonus_prize_id: rpcResult.bonus_prize_id ?? null,
-        remaining_tickets: rpcResult.remaining_tickets ?? undefined,
         partner_offer: partnerOffer,
       };
 
@@ -490,13 +483,10 @@ const FavoriteGames = () => {
 
       <TicketResultModal
         result={modalResult ? {
-          ticket_number: modalResult.ticket_number,
-          distance_to_next_bonus: modalResult.distance_to_next_bonus,
-          next_bonus_position: modalResult.next_bonus_position,
+          ticket_row_id: modalResult.ticket_row_id,
           won_prize: modalResult.won_prize,
           won_type: modalResult.won_type,
           bonus_prize_id: modalResult.bonus_prize_id,
-          remaining_tickets: modalResult.remaining_tickets,
           partner_offer: modalResult.partner_offer ?? null,
         } : null}
         contestId={modalContestId}
