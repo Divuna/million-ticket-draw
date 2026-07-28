@@ -58,12 +58,16 @@ IS 'Guarded superadmin browser access to internal contest inspection data.';
 -- Atomic purchase implementations return internal ticket allocation state.
 -- Customer clients use the sanitized *_public wrappers introduced by the
 -- preceding privacy migration; only backend callers may execute the internals.
-REVOKE ALL ON FUNCTION public.buy_ticket_atomic(uuid, uuid) FROM PUBLIC;
-REVOKE ALL ON FUNCTION public.buy_ticket_atomic(uuid, uuid) FROM anon;
-REVOKE ALL ON FUNCTION public.buy_ticket_atomic(uuid, uuid) FROM authenticated;
-GRANT EXECUTE ON FUNCTION public.buy_ticket_atomic(uuid, uuid) TO service_role;
+DO $permissions$
+BEGIN
+  EXECUTE 'REVOKE ALL ON FUNCTION public.buy_ticket_atomic(uuid, uuid) FROM PUBLIC';
+  EXECUTE 'REVOKE ALL ON FUNCTION public.buy_ticket_atomic(uuid, uuid) FROM anon';
+  EXECUTE 'REVOKE ALL ON FUNCTION public.buy_ticket_atomic(uuid, uuid) FROM authenticated';
+  EXECUTE 'GRANT EXECUTE ON FUNCTION public.buy_ticket_atomic(uuid, uuid) TO service_role';
 
-REVOKE ALL ON FUNCTION public.purchase_guaranteed_benefit_bundle_atomic(uuid, uuid, uuid) FROM PUBLIC;
-REVOKE ALL ON FUNCTION public.purchase_guaranteed_benefit_bundle_atomic(uuid, uuid, uuid) FROM anon;
-REVOKE ALL ON FUNCTION public.purchase_guaranteed_benefit_bundle_atomic(uuid, uuid, uuid) FROM authenticated;
-GRANT EXECUTE ON FUNCTION public.purchase_guaranteed_benefit_bundle_atomic(uuid, uuid, uuid) TO service_role;
+  EXECUTE 'REVOKE ALL ON FUNCTION public.purchase_guaranteed_benefit_bundle_atomic(uuid, uuid, uuid) FROM PUBLIC';
+  EXECUTE 'REVOKE ALL ON FUNCTION public.purchase_guaranteed_benefit_bundle_atomic(uuid, uuid, uuid) FROM anon';
+  EXECUTE 'REVOKE ALL ON FUNCTION public.purchase_guaranteed_benefit_bundle_atomic(uuid, uuid, uuid) FROM authenticated';
+  EXECUTE 'GRANT EXECUTE ON FUNCTION public.purchase_guaranteed_benefit_bundle_atomic(uuid, uuid, uuid) TO service_role';
+END;
+$permissions$;
