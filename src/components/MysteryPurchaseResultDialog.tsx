@@ -197,7 +197,7 @@ export function MysteryPurchaseResultDialog({
 
         <DialogHeader className="sr-only">
           <DialogTitle>
-            {isWin ? `Vyhrál jsi: ${prizeTitle}` : `Tiket č. ${ticket?.ticket_number}`}
+            {isWin ? `Vyhrál jsi: ${prizeTitle}` : "Tentokrát bez výhry"}
           </DialogTitle>
         </DialogHeader>
 
@@ -224,14 +224,14 @@ export function MysteryPurchaseResultDialog({
                 // Nevýherní tiket není chyba ani prázdná obrazovka: zákazník
                 // se dozví, co se stalo, a rovnou i to, co si odnáší.
                 <div data-testid="mystery-result-noprize">
-                  <p className="text-[11px] uppercase tracking-[0.2em] text-gray-400 font-semibold">
-                    Tiket č. {ticket?.ticket_number?.toLocaleString("cs-CZ")} je otevřený
+                  <p className="text-2xl sm:text-4xl font-black text-white leading-tight tracking-tight">
+                    TENTOKRÁT BEZ VÝHRY
                   </p>
-                  <p className="text-2xl sm:text-4xl font-black text-white leading-tight mt-2">
-                    Tentokrát bez výhry
+                  <p className="text-lg sm:text-xl font-bold text-[#FFB547] mt-2 break-words">
+                    Ale odcházíš s garantovaným kuponem.
                   </p>
                   <p className="text-sm text-gray-300 mt-3 break-words">
-                    Ale získáváš garantovaný kupon a tiket zůstává uložený ve tvém účtu.
+                    Kupon najdeš ve Voucherech a tvůj tiket zůstává bezpečně uložený v účtu.
                   </p>
                 </div>
               )}
@@ -263,6 +263,18 @@ export function MysteryPurchaseResultDialog({
                 }
               />
             )}
+
+            {/* Nevýherní stav dostane jemný dárkový medailon, ať pravá strana
+                nezůstane prázdná. Ikona je stávající lucide Gift — nic nového. */}
+            {!isWin && (
+              <span
+                data-testid="mystery-result-noprize-icon"
+                aria-hidden="true"
+                className="order-1 md:order-2 h-24 w-24 sm:h-28 sm:w-28 mx-auto rounded-full bg-[rgba(255,138,0,0.08)] border border-[rgba(255,138,0,0.28)] flex items-center justify-center"
+              >
+                <Gift className="h-10 w-10 sm:h-12 sm:w-12 text-[#FF8A00]" />
+              </span>
+            )}
           </section>
 
           {/* ── Druhý, garantovaný bonus: kupon ────────────────────────── */}
@@ -284,16 +296,44 @@ export function MysteryPurchaseResultDialog({
             data-testid="mystery-coupon-reveal"
             className="relative rounded-2xl bg-[#FCF3E4] text-[hsl(220_25%_12%)] grid grid-cols-1 sm:grid-cols-[1fr_auto] min-w-0"
           >
-            {/* Boční výřezy uprostřed levé a pravé hrany. */}
+            {/* Velké polokruhové výřezy uprostřed levé a pravé hrany. */}
             <span
               data-testid="mystery-coupon-notch-left"
               aria-hidden="true"
-              className="absolute left-0 top-1/2 -translate-x-1/2 -translate-y-1/2 h-6 w-6 rounded-full bg-[hsl(220_25%_7%)]"
+              className="absolute left-0 top-1/2 -translate-x-1/2 -translate-y-1/2 h-7 w-7 sm:h-9 sm:w-9 rounded-full bg-[hsl(220_25%_7%)]"
             />
             <span
               data-testid="mystery-coupon-notch-right"
               aria-hidden="true"
-              className="absolute right-0 top-1/2 translate-x-1/2 -translate-y-1/2 h-6 w-6 rounded-full bg-[hsl(220_25%_7%)]"
+              className="absolute right-0 top-1/2 translate-x-1/2 -translate-y-1/2 h-7 w-7 sm:h-9 sm:w-9 rounded-full bg-[hsl(220_25%_7%)]"
+            />
+
+            {/*
+              Drobná pravidelná perforace po celé délce obou bočních hran.
+              Půlkolečka v barvě pozadí dialogu — na tmavém podkladu jsou
+              vidět jako skutečné vykousnutí papíru.
+            */}
+            <span
+              data-testid="mystery-coupon-edge-left"
+              aria-hidden="true"
+              className="pointer-events-none absolute inset-y-3 left-0 w-[7px] -translate-x-1/2"
+              style={{
+                backgroundImage:
+                  "radial-gradient(circle at 50% 50%, hsl(220 25% 7%) 3.2px, transparent 3.6px)",
+                backgroundSize: "7px 15px",
+                backgroundRepeat: "repeat-y",
+              }}
+            />
+            <span
+              data-testid="mystery-coupon-edge-right"
+              aria-hidden="true"
+              className="pointer-events-none absolute inset-y-3 right-0 w-[7px] translate-x-1/2"
+              style={{
+                backgroundImage:
+                  "radial-gradient(circle at 50% 50%, hsl(220 25% 7%) 3.2px, transparent 3.6px)",
+                backgroundSize: "7px 15px",
+                backgroundRepeat: "repeat-y",
+              }}
             />
 
             <div className="flex items-center gap-4 p-4 sm:pl-6 min-w-0">
@@ -323,20 +363,27 @@ export function MysteryPurchaseResultDialog({
             {coupon?.code && (
               <div
                 data-testid="mystery-coupon-perforation"
-                className="relative flex flex-col items-center justify-center gap-1 p-4 sm:pr-6 text-center border-t-2 border-dashed border-black/25 sm:border-t-0 sm:border-l-2 sm:min-w-[13rem] min-w-0"
+                className="relative flex flex-col items-center justify-center gap-1 p-4 sm:pr-6 text-center border-t-[3px] border-dashed border-black/35 sm:border-t-0 sm:border-l-[3px] sm:min-w-[13rem] min-w-0"
               >
-                {/* Kolečka na koncích perforace: svisle na desktopu, vodorovně na mobilu. */}
+                {/*
+                  Kruhové zakončení perforace. Na desktopu je čára svislá, takže
+                  výřezy patří na její horní a dolní konec; na mobilu je čára
+                  vodorovná a výřezy jdou na levý a pravý konec.
+                */}
                 <span
+                  data-testid="mystery-coupon-perf-cap-start"
                   aria-hidden="true"
-                  className="absolute -top-3 -left-3 sm:-left-3 sm:-top-3 h-6 w-6 rounded-full bg-[hsl(220_25%_7%)]"
+                  className="absolute -top-3.5 -left-3.5 h-7 w-7 rounded-full bg-[hsl(220_25%_7%)]"
                 />
                 <span
+                  data-testid="mystery-coupon-perf-cap-mobile-end"
                   aria-hidden="true"
-                  className="absolute -top-3 -right-3 h-6 w-6 rounded-full bg-[hsl(220_25%_7%)] sm:hidden"
+                  className="absolute -top-3.5 -right-3.5 h-7 w-7 rounded-full bg-[hsl(220_25%_7%)] sm:hidden"
                 />
                 <span
+                  data-testid="mystery-coupon-perf-cap-desktop-end"
                   aria-hidden="true"
-                  className="hidden sm:block absolute -bottom-3 -left-3 h-6 w-6 rounded-full bg-[hsl(220_25%_7%)]"
+                  className="hidden sm:block absolute -bottom-3.5 -left-3.5 h-7 w-7 rounded-full bg-[hsl(220_25%_7%)]"
                 />
 
                 <p className="text-[10px] uppercase tracking-[0.18em] text-[#C26A00] font-bold">

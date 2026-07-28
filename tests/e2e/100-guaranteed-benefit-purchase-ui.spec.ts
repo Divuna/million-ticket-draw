@@ -50,6 +50,9 @@
  *   100l) bez známé vzdálenosti se panel nezobrazí
  *   100m) nevýherní tiket — číslo, „Tentokrát bez výhry", žádné „VYHRÁL JSI"
  *   100n) kupon má perforaci i boční výřezy
+ *   100o) číslo tiketu se v dialogu nikdy nezobrazí
+ *   100p) boční výřezy jsou opravdu vidět (styl + pozice)
+ *   100q) perforace drží na desktopu i mobilu
  *
  * Vyžaduje env vars (přítomné v playwright-staging.yml):
  *   VITE_SUPABASE_URL               — staging ref dxmowysntemfqfnanxua
@@ -973,9 +976,15 @@ test.describe.serial('Spec 100 — mystery kupon (UI)', () => {
 
     const noprize = page.getByTestId('mystery-result-noprize');
     await expect(noprize).toBeVisible();
-    await expect(noprize).toContainText(`Tiket č. ${expected.toLocaleString('cs-CZ')} je otevřený`);
-    await expect(noprize).toContainText('Tentokrát bez výhry');
-    await expect(noprize).toContainText('Ale získáváš garantovaný kupon');
+    await expect(noprize).toContainText('TENTOKRÁT BEZ VÝHRY');
+    await expect(noprize).toContainText('Ale odcházíš s garantovaným kuponem.');
+    await expect(noprize).toContainText(
+      'Kupon najdeš ve Voucherech a tvůj tiket zůstává bezpečně uložený v účtu.',
+    );
+    // Jemná dárková ikona místo prázdného místa — stávající lucide Gift.
+    await expect(page.getByTestId('mystery-result-noprize-icon')).toBeVisible();
+    // Číslo tiketu se nesmí objevit ani tady.
+    await expect(noprize).not.toContainText('Tiket č.');
 
     // Nevýherní tiket se nesmí tvářit jako výhra.
     await expect(dialog).not.toContainText('VYHRÁL JSI');
@@ -985,6 +994,123 @@ test.describe.serial('Spec 100 — mystery kupon (UI)', () => {
 
     // Kupon i tak dorazí — to je celá pointa garantovaného bonusu.
     await expect(page.getByTestId('mystery-coupon-code')).toBeVisible();
+  });
+
+  test('100o: číslo tiketu se v dialogu nikdy nezobrazí', async ({ page }) => {
+    const admin = makeAdmin();
+    await setFlag(admin, true, JSON.stringify([FIXTURE.contestId]));
+    const customerId = ctx.customerAuthId!;
+    await resetMutableState(admin, customerId);
+
+    const { data: contest } = await (admin as any)
+      .from('contests').select('next_ticket_number').eq('id', FIXTURE.contestId).single();
+    const ticketNumber = Number(contest.next_ticket_number);
+
+    await primeConsent(page);
+    await loginViaUI(page, CUSTOMER_EMAIL, PASSWORD);
+    const button = await openContest(page);
+    await button.click();
+
+    const dialog = page.getByTestId('mystery-result-dialog');
+    await expect(dialog).toBeVisible({ timeout: 30_000 });
+
+    // Ani slovo „tiket č.", ani samotné pořadové číslo.
+    const text = (await dialog.innerText()).toLowerCase();
+    expect(text).not.toContain('tiket č');
+    expect(text).not.toContain(String(ticketNumber));
+
+    // A tiket přesto opravdu vznikl — jen se jeho číslo nikde neukazuje.
+    const { data: latestTicket } = await (admin as any)
+      .from('tickets').select('number')
+      .eq('user_id', customerId).eq('contest_id', FIXTURE.contestId)
+      .order('created_at', { ascending: false }).limit(1).maybeSingle();
+    expect(Number(latestTicket.number)).toBe(ticketNumber);
+  });
+
+  test('100p: boční výřezy jsou opravdu vidět, ne jen v DOM', async ({ page }) => {
+    const admin = makeAdmin();
+    await setFlag(admin, true, JSON.stringify([FIXTURE.contestId]));
+    await resetMutableState(admin, ctx.customerAuthId!);
+
+    await primeConsent(page);
+    await loginViaUI(page, CUSTOMER_EMAIL, PASSWORD);
+    const button = await openContest(page);
+    await button.click();
+
+    const dialog = page.getByTestId('mystery-result-dialog');
+    await expect(dialog).toBeVisible({ timeout: 30_000 });
+
+    const dialogBg = await dialog.evaluate((el) => getComputedStyle(el).backgroundColor);
+    const dialogBox = (await dialog.boundingBox())!;
+    const couponBox = (await page.getByTestId('mystery-coupon-reveal').boundingBox())!;
+
+    for (const side of ['left', 'right'] as const) {
+      const notch = page.getByTestId(`mystery-coupon-notch-${side}`);
+      await expect(notch).toBeVisible();
+
+      const styles = await notch.evaluate((el) => {
+        const s = getComputedStyle(el);
+        return { bg: s.backgroundColor, radius: s.borderTopLeftRadius, opacity: s.opacity };
+      });
+      // Výřez musí mít barvu pozadí dialogu, jinak to není vykousnutí.
+      expect(styles.bg).toBe(dialogBg);
+      expect(parseFloat(styles.opacity)).toBe(1);
+      expect(parseFloat(styles.radius)).toBeGreaterThan(0);
+
+      const box = (await notch.boundingBox())!;
+      expect(box.width).toBeGreaterThanOrEqual(24);
+      // Musí přesahovat hranu kuponu, ale zůstat uvnitř dialogu (jinak by ho
+      // ořízl overflow-x-hidden a zákazník by ho nikdy neviděl).
+      if (side === 'left') {
+        expect(box.x).toBeLessThan(couponBox.x);
+        expect(box.x).toBeGreaterThanOrEqual(dialogBox.x);
+      } else {
+        expect(box.x + box.width).toBeGreaterThan(couponBox.x + couponBox.width);
+        expect(box.x + box.width).toBeLessThanOrEqual(dialogBox.x + dialogBox.width);
+      }
+    }
+
+    // Drobná perforace po celé délce obou hran.
+    await expect(page.getByTestId('mystery-coupon-edge-left')).toBeVisible();
+    await expect(page.getByTestId('mystery-coupon-edge-right')).toBeVisible();
+  });
+
+  test('100q: perforace drží na desktopu i na mobilu', async ({ page }) => {
+    const admin = makeAdmin();
+    await setFlag(admin, true, JSON.stringify([FIXTURE.contestId]));
+    await resetMutableState(admin, ctx.customerAuthId!);
+
+    await primeConsent(page);
+    await loginViaUI(page, CUSTOMER_EMAIL, PASSWORD);
+    const button = await openContest(page);
+    await button.click();
+
+    const perforation = page.getByTestId('mystery-coupon-perforation');
+    await expect(perforation).toBeVisible({ timeout: 30_000 });
+
+    // Desktop: svislá přerušovaná čára s výřezem nahoře i dole.
+    const desktop = await perforation.evaluate((el) => {
+      const s = getComputedStyle(el);
+      return { style: s.borderLeftStyle, width: parseFloat(s.borderLeftWidth) };
+    });
+    expect(desktop.style).toBe('dashed');
+    expect(desktop.width).toBeGreaterThan(0);
+    await expect(page.getByTestId('mystery-coupon-perf-cap-desktop-end')).toBeVisible();
+
+    // Mobil: čára se otočí na vodorovnou a výřezy jdou na její konce.
+    await page.setViewportSize({ width: 375, height: 812 });
+    const mobile = await perforation.evaluate((el) => {
+      const s = getComputedStyle(el);
+      return { style: s.borderTopStyle, width: parseFloat(s.borderTopWidth) };
+    });
+    expect(mobile.style).toBe('dashed');
+    expect(mobile.width).toBeGreaterThan(0);
+    await expect(page.getByTestId('mystery-coupon-perf-cap-mobile-end')).toBeVisible();
+    await expect(page.getByTestId('mystery-coupon-perf-cap-desktop-end')).toBeHidden();
+
+    // A stránka se pořád nesmí posouvat do stran.
+    const scrollWidth = await page.evaluate(() => document.documentElement.scrollWidth);
+    expect(scrollWidth).toBeLessThanOrEqual(375);
   });
 
   test('100n: kupon má perforované rozdělení i boční výřezy', async ({ page }) => {
