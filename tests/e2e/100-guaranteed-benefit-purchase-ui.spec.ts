@@ -1021,10 +1021,10 @@ test.describe.serial('Spec 100 — mystery kupon (UI)', () => {
 
     // A tiket přesto opravdu vznikl — jen se jeho číslo nikde neukazuje.
     const { data: latestTicket } = await (admin as any)
-      .from('tickets').select('ticket_number')
+      .from('tickets').select('number')
       .eq('user_id', customerId).eq('contest_id', FIXTURE.contestId)
       .order('created_at', { ascending: false }).limit(1).maybeSingle();
-    expect(Number(latestTicket.ticket_number)).toBe(ticketNumber);
+    expect(Number(latestTicket.number)).toBe(ticketNumber);
   });
 
   test('100p: boční výřezy jsou opravdu vidět, ne jen v DOM', async ({ page }) => {
