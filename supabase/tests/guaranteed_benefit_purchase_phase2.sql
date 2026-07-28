@@ -73,12 +73,12 @@ select ok(
 );
 
 select ok(
-  has_function_privilege(
+  not has_function_privilege(
     'authenticated',
     'public.purchase_guaranteed_benefit_bundle_atomic(uuid,uuid,uuid)',
     'EXECUTE'
   ),
-  'authenticated can execute the purchase RPC'
+  'authenticated cannot execute the internal purchase RPC'
 );
 
 select ok(
