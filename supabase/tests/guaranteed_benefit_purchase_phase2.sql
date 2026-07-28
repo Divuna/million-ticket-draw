@@ -307,6 +307,7 @@ select set_config(
   'f1000000-0000-4000-8000-000000000001',
   true
 );
+select set_config('request.jwt.claim.role', 'service_role', true);
 
 insert into public.wallets (id, user_id, balance_coins) values
   (
