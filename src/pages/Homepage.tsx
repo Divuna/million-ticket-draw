@@ -186,17 +186,20 @@ const Homepage = () => {
     }
   }, [user]);
 
-  // Subscribe to contest changes for real-time updates
+  // Postgres Changes sends raw table rows. Poll the sanitized public_contests
+  // projection instead so internal contest sequencing never reaches a browser.
   useEffect(() => {
-    const channel = supabase
-      .channel("contest-changes")
-      .on("postgres_changes", { event: "*", schema: "public", table: "contests" }, () => {
-        fetchContests(); // Refresh contests when any contest changes
-      })
-      .subscribe();
+    const refreshVisibleContests = () => {
+      if (document.visibilityState === 'visible') {
+        void fetchContests();
+      }
+    };
+    const intervalId = window.setInterval(refreshVisibleContests, 15_000);
+    window.addEventListener('focus', refreshVisibleContests);
 
     return () => {
-      supabase.removeChannel(channel);
+      window.clearInterval(intervalId);
+      window.removeEventListener('focus', refreshVisibleContests);
     };
   }, []);
 

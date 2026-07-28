@@ -16,6 +16,7 @@ on:
       - "supabase/migrations/20260728153516_restrict_internal_contest_position_rpcs.sql"
       - "supabase/migrations/20260728164924_fix_public_purchase_wrapper_identity.sql"
       - "supabase/migrations/20260728191209_sanitize_public_winner_notes_and_fix_purchase_edge.sql"
+      - "supabase/migrations/20260728204440_harden_public_winner_note_sanitization.sql"
       - "supabase/tests/guaranteed_purchase_benefit_phase1.sql"
       - "supabase/tests/guaranteed_benefit_voucher_rls.sql"
       - "supabase/tests/guaranteed_benefit_purchase_phase2.sql"
@@ -72,6 +73,8 @@ jobs:
           cp supabase/project-migrations/20260728164924_fix_public_purchase_wrapper_identity.sql \
             supabase/migrations/
           cp supabase/project-migrations/20260728191209_sanitize_public_winner_notes_and_fix_purchase_edge.sql \
+            supabase/migrations/
+          cp supabase/project-migrations/20260728204440_harden_public_winner_note_sanitization.sql \
             supabase/migrations/
           # Řetězec musí zůstat úplný a ve správném pořadí — pgTAP jinak testuje
           # neúplné schéma (chybějící get_guaranteed_benefit_offer shodí plán).

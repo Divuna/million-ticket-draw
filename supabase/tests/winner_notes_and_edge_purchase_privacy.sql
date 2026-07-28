@@ -6,7 +6,64 @@ begin;
 create extension if not exists pgtap with schema extensions;
 set search_path = public, extensions, pg_temp;
 
-select plan(24);
+create temporary table winner_note_sanitizer_variants (
+  case_id integer generated always as identity,
+  note_text text not null
+);
+
+insert into winner_note_sanitizer_variants (note_text) values
+  ('Sluchátka #34'),
+  ('Sluchátka # 34'),
+  ('Sluchátka, tiket 34'),
+  ('Sluchátka, TIKET:34'),
+  ('Sluchátka, tiket č. 34'),
+  ('Sluchátka, číslo tiketu 34'),
+  ('Sluchátka, číslo tiketu: 34'),
+  ('Sluchátka, ticket_number=34'),
+  ('Sluchátka, ticket-position 34'),
+  ('Sluchátka, ticket_position:34'),
+  ('Sluchátka, 34. tiket'),
+  ('Sluchátka, 34 tiket'),
+  ('Sluchátka, tiket číslo 34'),
+  ('Sluchátka, pozice 34'),
+  ('Sluchátka, pozici 34'),
+  ('Sluchátka, pořadí 34'),
+  ('Sluchátka, poradi:34'),
+  ('Sluchátka, 34. pozice'),
+  ('Sluchátka, 34 pozici'),
+  ('Výhra na 34. pozici'),
+  ('Výhra – pozice: 34'),
+  ('Sluchátka, 34. pořadí'),
+  ('Sluchátka, pořadové číslo 34'),
+  ('Sluchátka, tiket—34'),
+  ('Sluchátka, ticket34'),
+  ('Headphones, ticket 34'),
+  ('Headphones, ticket #34'),
+  ('Headphones, ticket no. 34'),
+  ('Headphones, ticket number 34'),
+  ('Headphones, ticket-number:34'),
+  ('Headphones, ticket_position 34'),
+  ('Headphones, position 34'),
+  ('Headphones, position: 34'),
+  ('Headphones, 34th position'),
+  ('Headphones, 34 th position'),
+  ('Headphones, 34. position'),
+  ('Prize at position 34'),
+  ('Winner on the 34th position'),
+  ('Headphones, 34th ticket'),
+  ('Headphones, ticket thirty-four'),
+  ('Headphones, thirty-fourth position'),
+  (E'Headphones, TICKET NUMBER:\t34'),
+  ('Sluchátka, Pozice---34'),
+  ('Sluchátka #000034'),
+  ('Sluchátka, tiket 1 234'),
+  ('Headphones, ticket 1,234'),
+  ('Headphones, ticket 1.234'),
+  ('Headphones, ticket 1-234'),
+  ('Sluchátka, číslo   tiketu :: 34'),
+  ('iPhone 15 Pro – výhra na 34. pozici');
+
+select plan(78);
 
 select is(
   public.sanitize_winner_note_public('Sluchátka #34'),
@@ -48,6 +105,58 @@ select is(
   public.sanitize_winner_note_public('Sluchátka, 34. tiket'),
   'Sluchátka',
   'reversed ticket-order format is removed'
+);
+
+select is(
+  public.sanitize_winner_note_public('Výhra na 34. pozici'),
+  'Výhra',
+  'a Czech number-before-position phrase preserves only meaningful public text'
+);
+
+select is(
+  public.sanitize_winner_note_public('position 34'),
+  null,
+  'an English position-before-number phrase cannot expose a numeric value'
+);
+
+select ok(
+  coalesce(
+    public.sanitize_winner_note_public(note_text) !~ '[[:digit:]]'
+    and public.sanitize_winner_note_public(note_text) !~* (
+      'ticket|tiket|pozic|position|pořad|porad|'
+      'ticket_number|ticket_position|číslo|cislo'
+    ),
+    true
+  ),
+  format(
+    'generated Czech/English winner-note variant %s has no public sequence token: %s',
+    case_id,
+    note_text
+  )
+)
+from winner_note_sanitizer_variants
+order by case_id;
+
+select ok(
+  not exists (
+    select 1
+    from pg_publication_tables
+    where pubname = 'supabase_realtime'
+      and schemaname = 'public'
+      and tablename = 'winners'
+  ),
+  'raw winners rows are absent from the public Realtime publication'
+);
+
+select ok(
+  not exists (
+    select 1
+    from pg_publication_tables
+    where pubname = 'supabase_realtime'
+      and schemaname = 'public'
+      and tablename = 'contests'
+  ),
+  'raw contest sequence state is absent from the public Realtime publication'
 );
 
 select ok(

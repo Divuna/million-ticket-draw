@@ -7,6 +7,25 @@ const read = (path: string) => readFileSync(resolve(process.cwd(), path), 'utf8'
 const INVARIANT =
   '„Číslo ani pořadí tiketu je přísně interní údaj. Nesmí se zobrazovat ve veřejném rozhraní, výsledcích, přehledu výherců, profilech, e-mailech, notifikacích ani veřejných API odpovědích. Veřejně lze zobrazit pouze výhru, výherce, soutěž a čas. Číslo tiketu smí být dostupné pouze interní administraci, auditu a backendové soutěžní logice.“';
 
+function listTreeFiles(root: string, extensionPattern: RegExp): string[] {
+  const absoluteRoot = resolve(process.cwd(), root);
+  const result: string[] = [];
+
+  for (const entry of readdirSync(absoluteRoot)) {
+    const absolute = join(absoluteRoot, entry);
+    const relative = absolute.slice(process.cwd().length + 1).replaceAll('\\', '/');
+    const stats = statSync(absolute);
+
+    if (stats.isDirectory()) {
+      result.push(...listTreeFiles(relative, extensionPattern));
+    } else if (extensionPattern.test(relative)) {
+      result.push(relative);
+    }
+  }
+
+  return result;
+}
+
 function listPublicSourceFiles(root: string): string[] {
   const absoluteRoot = resolve(process.cwd(), root);
   const result: string[] = [];
@@ -166,6 +185,51 @@ test.describe('101 — public ticket number privacy invariant', () => {
     expect(admin).toContain('winner.internal_notes');
   });
 
+  test('winner-note sanitizer uses a general fail-closed rule with broad bilingual variants', () => {
+    const hardeningMigration = read(
+      'supabase/migrations/20260728204440_harden_public_winner_note_sanitization.sql',
+    );
+    const databaseTest = read(
+      'supabase/tests/winner_notes_and_edge_purchase_privacy.sql',
+    );
+    const generatedCases = databaseTest.match(
+      /insert into winner_note_sanitizer_variants \(note_text\) values([\s\S]*?);\s*\n\s*select plan/,
+    )?.[1] ?? '';
+    const generatedCaseCount = generatedCases.match(/^\s*\('/gm)?.length ?? 0;
+
+    expect(hardeningMigration).toContain("v_clean ~ '[[:digit:]]'");
+    expect(hardeningMigration).toContain('v_had_sequence_marker AND NOT v_had_numeric_token');
+    expect(hardeningMigration).toContain(
+      "IF v_clean ~ '[[:digit:]]' OR v_clean ~* v_sequence_marker",
+    );
+    expect(hardeningMigration).toContain(
+      'ALTER PUBLICATION supabase_realtime DROP TABLE public.winners',
+    );
+    expect(hardeningMigration).toContain(
+      'ALTER PUBLICATION supabase_realtime DROP TABLE public.contests',
+    );
+    expect(hardeningMigration).not.toMatch(/\bUPDATE\s+public\.winners\b/i);
+
+    expect(generatedCaseCount).toBeGreaterThanOrEqual(40);
+    for (const requiredVariant of [
+      '#34',
+      'tiket 34',
+      'ticket 34',
+      'číslo tiketu: 34',
+      'ticket number 34',
+      '34. tiket',
+      '34. pozice',
+      'Výhra na 34. pozici',
+      'pořadí 34',
+      'position 34',
+      '34th position',
+      'ticket thirty-four',
+      'thirty-fourth position',
+    ]) {
+      expect(generatedCases).toContain(requiredVariant);
+    }
+  });
+
   test('purchase-ticket verifies the JWT and calls the atomic flow only through a service client', () => {
     const edge = read('supabase/functions/purchase-ticket/index.ts');
     const migration = read(
@@ -201,16 +265,36 @@ test.describe('101 — public ticket number privacy invariant', () => {
   });
 
   test('customer email, push, and notification code cannot format ticket identifiers', () => {
-    const customerDeliveryFunctions = [
-      'supabase/functions/check-guardian-notifications/index.ts',
-      'supabase/functions/process-email-queue/index.ts',
-      'supabase/functions/send-marketing-consent-notification/index.ts',
-      'supabase/functions/send-push/index.ts',
-      'supabase/functions/send-support-email/index.ts',
-    ].map(read).join('\n');
+    const deliveryFiles = listTreeFiles('supabase/functions', /index\.ts$/)
+      .filter((file) => /email|notification|push/i.test(file));
+    const customerDeliveryFunctions = deliveryFiles.map(read).join('\n');
 
     expect(customerDeliveryFunctions).not.toMatch(/ticket_(?:number|position)/i);
     expect(customerDeliveryFunctions).not.toMatch(/(?:Tiket|Ticket)\s*#\s*(?:\$\{|\|\|)/i);
+  });
+
+  test('every Edge Function touching internal ticket state is guarded or explicitly sanitized', () => {
+    const sensitiveField = /ticket_number|ticket_position|next_ticket_number|winner_ticket/i;
+    const edgeFiles = listTreeFiles('supabase/functions', /index\.ts$/);
+    const unprotected = edgeFiles
+      .filter((file) => sensitiveField.test(read(file)))
+      .filter((file) => {
+        const source = read(file);
+        const hasInternalToken = source.includes('INTERNAL_FUNCTION_TOKEN');
+        const hasAdminRoleGuard =
+          /\.in\(['"]role['"],\s*\[['"]admin['"]/.test(source)
+          || /\[['"]admin['"],\s*['"]superadmin['"]\]\.includes/.test(source);
+        const isSanitizedPurchase =
+          file === 'supabase/functions/purchase-ticket/index.ts'
+          && source.includes('ticket_number: _ticketNumber')
+          && source.includes('JSON.stringify(publicData)')
+          && source.includes('supabaseAuth.auth.getUser()')
+          && source.includes('const serviceClient = createClient(supabaseUrl, serviceKey)');
+
+        return !hasInternalToken && !hasAdminRoleGuard && !isSanitizedPurchase;
+      });
+
+    expect(unprotected).toEqual([]);
   });
 
   test('future public rendering cannot introduce ticket-number interpolation', () => {
@@ -220,6 +304,7 @@ test.describe('101 — public ticket number privacy invariant', () => {
       /ticketNumber\s*=/,
       /\$\{contestId\}-\$\{result\.ticket_number\}/,
       /\.from\(['"](?:tickets|bonus_prizes|contests)['"]\)/,
+      /postgres_changes[\s\S]{0,500}table:\s*['"](?:tickets|winners|bonus_prizes|contests)['"]/,
     ];
 
     const violations = listPublicSourceFiles('src').flatMap((file) => {
