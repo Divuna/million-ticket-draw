@@ -19,7 +19,7 @@ interface Win {
   type: string;
   status: string | null;
   delivered: boolean;
-  notes: string | null;
+  public_notes: string | null;
   created_at: string;
   contest_id: string;
   prize_id: string | null;
@@ -143,7 +143,7 @@ export const WinDetailModal: React.FC<WinDetailModalProps> = ({ win, open, onClo
 
   const prizeName = win.type === 'main' 
     ? win.contest?.main_prize 
-    : (win.notes || win.bonus_prize?.title || 'Bonusová cena');
+    : (win.public_notes || win.bonus_prize?.title || 'Bonusová cena');
 
   const shareText = `Vyhrál jsem ${prizeName} v soutěži ${win.contest?.title || 'OneMil'}! 🎉🏆`;
   const shareUrl = typeof window !== 'undefined' ? `${window.location.origin}/contest/${win.contest_id}` : '';
@@ -287,11 +287,11 @@ export const WinDetailModal: React.FC<WinDetailModalProps> = ({ win, open, onClo
           </div>
 
           {/* Notes if any */}
-          {win.notes && (
+          {win.public_notes && (
             <div className="bg-muted/30 rounded-lg p-4 border border-border/50">
               <p className="text-sm text-muted-foreground">
                 <span className="font-medium text-foreground">Poznámka: </span>
-                {win.notes}
+                {win.public_notes}
               </p>
             </div>
           )}

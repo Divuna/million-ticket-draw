@@ -63,7 +63,7 @@ setInterval(() => {
 // Catches cases where in-memory state is stale (cold start / new instance).
 // No schema changes required: uses the existing tickets table.
 // ---------------------------------------------------------------------------
-/** Must match public.buy_ticket_atomic(p_contest_id uuid, p_user_id uuid) — strings only. */
+/** UUID validation for the verified customer id and requested contest id. */
 const UUID_RE =
   /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
@@ -123,10 +123,8 @@ serve(async (req) => {
       });
     }
 
-    const authorizationForRpc = `Bearer ${jwt}`;
-
     const supabaseAuth = createClient(supabaseUrl, anonKey, {
-      global: { headers: { Authorization: authorizationForRpc } },
+      global: { headers: { Authorization: `Bearer ${jwt}` } },
     });
 
     const {
@@ -151,7 +149,9 @@ serve(async (req) => {
 
     const userId = user.id;
 
-    const supabase = createClient(supabaseUrl, serviceKey);
+    // This client is never exposed to the caller. It is created only after the
+    // customer JWT has been independently verified above.
+    const serviceClient = createClient(supabaseUrl, serviceKey);
 
     // ── Rate limit check (in-memory, primary) ──────────────────────────────
     if (!allowRequest(userId)) {
@@ -165,7 +165,7 @@ serve(async (req) => {
     }
 
     // ── Rate limit check (DB, secondary — guards against cold-start bypass) ─
-    const recentCount = await dbWindowCount(supabase, userId);
+    const recentCount = await dbWindowCount(serviceClient, userId);
     if (recentCount >= RATE_LIMIT_MAX) {
       // Also update the in-memory store so subsequent requests on this
       // instance are blocked without an extra DB round-trip.
@@ -212,7 +212,7 @@ serve(async (req) => {
     }
 
     // ── Contest status check ───────────────────────────────────────────────
-    const { data: contestRow, error: contestFetchError } = await supabase
+    const { data: contestRow, error: contestFetchError } = await serviceClient
       .from("contests")
       .select("status")
       .eq("id", p_contest_id)
@@ -240,35 +240,27 @@ serve(async (req) => {
       });
     }
 
+    // Only contest_id comes from the body. p_user_id always comes from the
+    // verified JWT, so a body.user_id value cannot select another account.
     const payload = {
       p_contest_id,
       p_user_id,
     };
-    console.log(payload);
 
     // ── Ensure wallet row exists before ticket purchase ───────────────────
-    await supabase.rpc("ensure_wallet_exists", { p_user_id: userId });
+    await serviceClient.rpc("ensure_wallet_exists", { p_user_id: userId });
 
     // ── Ticket purchase ────────────────────────────────────────────────────
-    // Call buy_ticket_atomic via fetch rather than the Supabase JS client.
-    // The JS client's internal auth middleware can override the Authorization
-    // header with the anon key, causing auth.uid() = NULL inside the RPC and
-    // returning Unauthorized even for a fully-authenticated user.
-    // Using fetch directly guarantees that the caller's JWT reaches PostgREST.
-    const rpcRes = await fetch(`${supabaseUrl}/rest/v1/rpc/buy_ticket_atomic`, {
-      method:  "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "apikey":        anonKey,
-        "Authorization": authorizationForRpc,
-      },
-      body: JSON.stringify(payload),
-    });
+    // The internal atomic RPC remains inaccessible to customer roles. The
+    // service-only bridge supplies the verified JWT identity and preserves the
+    // existing atomic contest/wallet logic.
+    const { data, error: purchaseError } = await serviceClient.rpc(
+      "buy_ticket_atomic_service",
+      payload,
+    );
 
-    const data = await rpcRes.json();
-
-    if (!rpcRes.ok) {
-      return new Response(JSON.stringify({ error: data?.message ?? "RPC error" }), {
+    if (purchaseError) {
+      return new Response(JSON.stringify({ error: purchaseError.message ?? "RPC error" }), {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
         status: 400,
       });

@@ -45,7 +45,9 @@ test.describe('102 — public contest ticket-state privacy', () => {
     for (const file of publicContestReaders) {
       const source = read(file);
       expect(source, file).not.toMatch(/\.from\(['"]contests['"]\)/);
-      expect(source, file).toMatch(/\.from\(['"]public_contests['"]\)/);
+      expect(source, file).toMatch(
+        /\.from\(['"]public_contests['"]\)|\.rpc\(['"]get_latest_winners_public['"]/,
+      );
     }
 
     expect(read('src/pages/FavoriteGames.tsx')).not.toMatch(

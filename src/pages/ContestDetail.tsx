@@ -194,29 +194,42 @@ export default function ContestDetail() {
     return () => clearInterval(timer);
   }, [lastWinnersEventAt]);
 
-  // Local realtime channel for status indicator + event tracking (no toasts - handled globally)
+  // Track winner activity through the sanitized public feed. A raw winners
+  // Realtime subscription would transport complete rows, including internal
+  // historical notes, in this client version.
   useEffect(() => {
     if (!id) return;
-    const channel = supabase
-      .channel(`winners-status-${id}`)
-      .on(
-        'postgres_changes',
-        {
-          event: 'INSERT',
-          schema: 'public',
-          table: 'winners',
-          filter: `contest_id=eq.${id}`,
-        },
-        () => {
-          setLastWinnersEventAt(Date.now());
-        }
-      )
-      .subscribe((status) => {
-        setRealtimeStatus(status);
+    let latestPublicId: string | null = null;
+    let initialized = false;
+    setRealtimeStatus('SUBSCRIBED');
+
+    const pollWinnerActivity = async () => {
+      const { data, error } = await supabase.rpc('get_latest_winners_public', {
+        winners_limit: 1,
       });
+      if (error) {
+        setRealtimeStatus('CHANNEL_ERROR');
+        return;
+      }
+      setRealtimeStatus('SUBSCRIBED');
+      const publicId = data?.[0]?.public_id ?? null;
+      if (!initialized) {
+        latestPublicId = publicId;
+        initialized = true;
+        return;
+      }
+      if (publicId && publicId !== latestPublicId) {
+        latestPublicId = publicId;
+        setLastWinnersEventAt(Date.now());
+      }
+    };
+
+    void pollWinnerActivity();
+    const intervalId = window.setInterval(pollWinnerActivity, 15_000);
 
     return () => {
-      supabase.removeChannel(channel);
+      window.clearInterval(intervalId);
+      setRealtimeStatus('CLOSED');
     };
   }, [id]);
 

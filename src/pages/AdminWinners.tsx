@@ -45,6 +45,7 @@ interface WinnerData {
   contest_title: string;
   prize_description: string;
   prize_image: string | null;
+  internal_notes: string | null;
   user_address: UserAddress;
   ticket_number: number | null;
 }
@@ -72,7 +73,7 @@ interface VerificationInfo {
 
 const AdminWinners: React.FC = () => {
   const { user, session } = useAuth();
-  const { isAdmin, loading: roleLoading } = useUserRole();
+  const { isAdmin, isSuperAdmin, loading: roleLoading } = useUserRole();
   const [winners, setWinners] = useState<WinnerData[]>([]);
   const [filteredWinners, setFilteredWinners] = useState<WinnerData[]>([]);
   const [loading, setLoading] = useState(true);
@@ -401,6 +402,19 @@ const AdminWinners: React.FC = () => {
 
       if (error) throw error;
 
+      let internalNoteMap: Record<string, string | null> = {};
+      if (isSuperAdmin && data && data.length > 0) {
+        const { data: internalNotes, error: internalNotesError } = await supabase
+          .rpc('get_winner_internal_notes_superadmin', {
+            p_winner_ids: data.map((winner) => winner.id),
+          });
+        if (internalNotesError) throw internalNotesError;
+        internalNoteMap = (internalNotes || []).reduce((acc, row) => {
+          acc[row.id] = row.notes;
+          return acc;
+        }, {} as Record<string, string | null>);
+      }
+
       // Fetch all user avatars from profiles table
       const userIds = [...new Set((data || []).map(w => w.user_id))];
       let userAvatars: Record<string, string | null> = {};
@@ -473,6 +487,7 @@ const AdminWinners: React.FC = () => {
           contest_title: (winner.contests as any)?.title || 'Neznámá soutěž',
           prize_description: prizeDescription,
           prize_image: prizeImage,
+          internal_notes: internalNoteMap[winner.id] ?? null,
           user_address: {
             first_name: userData?.first_name || null,
             last_name: userData?.last_name || null,
@@ -1238,6 +1253,14 @@ const AdminWinners: React.FC = () => {
                                 </div>
                               ) : (
                                 <span className="text-sm">{winner.prize_description || '—'}</span>
+                              )}
+                              {isSuperAdmin && winner.internal_notes && (
+                                <div className="max-w-[220px] rounded border border-border/50 bg-muted/40 p-2 text-xs">
+                                  <span className="font-medium">Interní poznámka: </span>
+                                  <span className="whitespace-pre-wrap text-muted-foreground">
+                                    {winner.internal_notes}
+                                  </span>
+                                </div>
                               )}
                             </div>
                           </TableCell>

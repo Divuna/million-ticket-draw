@@ -96,7 +96,8 @@ create table public.tickets (
   id uuid primary key default gen_random_uuid(),
   user_id uuid not null references public.users(id) on delete restrict,
   contest_id uuid not null references public.contests(id) on delete restrict,
-  number integer
+  number integer,
+  created_at timestamptz not null default now()
 );
 
 create table public.partner_invoices (
@@ -126,6 +127,20 @@ create table public.wallets (
   user_id uuid not null unique references public.users(id) on delete cascade,
   balance_coins numeric not null default 0
 );
+
+create or replace function public.ensure_wallet_exists(p_user_id uuid)
+returns void
+language sql
+security definer
+set search_path = public
+as $$
+  insert into public.wallets (user_id, balance_coins)
+  values (p_user_id, 0)
+  on conflict (user_id) do nothing
+$$;
+
+revoke all on function public.ensure_wallet_exists(uuid) from public, anon;
+grant execute on function public.ensure_wallet_exists(uuid) to authenticated, service_role;
 
 create table public.wallet_transactions (
   id uuid primary key default gen_random_uuid(),
@@ -157,8 +172,16 @@ create table public.winners (
   user_id uuid not null references public.users(id) on delete restrict,
   ticket_id uuid references public.tickets(id) on delete set null,
   type text not null,
+  status text default 'pending',
+  delivered boolean not null default false,
+  notes text,
+  user_seen boolean not null default false,
   created_at timestamptz not null default now()
 );
+
+alter table public.winners enable row level security;
+grant select, insert, update, delete on public.winners
+  to authenticated, service_role;
 
 create or replace function public.is_superadmin(
   check_user_id uuid default auth.uid()

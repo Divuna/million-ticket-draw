@@ -297,77 +297,67 @@ function isCustomerBlockedRoute(pathname: string): boolean {
 }
 
 function GlobalWinnersRealtimeFeed() {
-  const { user } = useAuth();
-  const currentPublicUserId = user?.id ?? null;
   const lastWinnerToastRef = React.useRef<Record<string, number>>({});
 
   React.useEffect(() => {
-    const channel = supabase
-      .channel('global-winners-feed')
-      .on(
-        'postgres_changes',
-        {
-          event: 'INSERT',
-          schema: 'public',
-          table: 'winners',
+    let latestPublicId: string | null = null;
+    let initialized = false;
+
+    const pollLatestWinner = async () => {
+      const { data } = await supabase.rpc('get_latest_winners_public', {
+        winners_limit: 1,
+      });
+      const latest = data?.[0];
+      if (!latest) return;
+      if (!initialized) {
+        latestPublicId = latest.public_id;
+        initialized = true;
+        return;
+      }
+      if (latest.public_id === latestPublicId) return;
+      latestPublicId = latest.public_id;
+
+      const winType = latest.type;
+      if (!['bonus', 'main', 'miocoin'].includes(winType)) return;
+      const now = Date.now();
+      const cooldown = winType === 'miocoin' ? 60_000 : 120_000;
+      const lastForType = lastWinnerToastRef.current[winType] ?? 0;
+      if (now - lastForType < cooldown) return;
+      lastWinnerToastRef.current = { ...lastWinnerToastRef.current, [winType]: now };
+
+      const prefix = latest.contest_title ? `V soutěži ${latest.contest_title} padla` : 'Padla';
+      const icon = winType === 'main' ? '🏆' : winType === 'miocoin' ? '💰' : '🎁';
+      const label = winType === 'main'
+        ? `${prefix} hlavní výhra`
+        : winType === 'miocoin'
+        ? `${prefix} MioCoin výhra`
+        : `${prefix} bonusová výhra`;
+
+      toast(label, {
+        duration: 10000,
+        icon: <span style={{ fontSize: '1.2em', lineHeight: 1 }}>{icon}</span>,
+        description: <div className="winner-toast-shimmer" />,
+        style: {
+          background: 'linear-gradient(135deg, hsl(222, 47%, 11%), hsl(222, 40%, 16%))',
+          border: '1px solid rgba(255,138,0,0.3)',
+          borderRadius: '0.75rem',
+          boxShadow: '0 8px 24px hsl(222, 50%, 3%, 0.5)',
+          backdropFilter: 'blur(8px)',
+          color: 'hsl(210, 20%, 96%)',
+          fontWeight: 500,
+          maxWidth: '380px',
+          padding: '14px 18px',
         },
-        async (payload) => {
-          const newRow = payload.new as Record<string, unknown>;
-          const winType = (newRow.type ?? newRow.winner_type ?? newRow.prize_type ?? newRow.win_type) as string | undefined;
-          const winnerUserId = (newRow.user_id ?? newRow.winner_user_id ?? newRow.profile_id) as string | undefined;
+      });
+    };
 
-          if (!winType || !['bonus', 'main', 'miocoin'].includes(winType)) return;
-          if (currentPublicUserId && winnerUserId === currentPublicUserId) return;
-
-          const now = Date.now();
-          const cooldown = winType === 'miocoin' ? 60_000 : 120_000;
-          const lastForType = lastWinnerToastRef.current[winType] ?? 0;
-          if (now - lastForType < cooldown) return;
-          lastWinnerToastRef.current = { ...lastWinnerToastRef.current, [winType]: now };
-
-          const contestId = newRow.contest_id as string | undefined;
-          let contestName = '';
-          if (contestId) {
-            const { data } = await supabase
-              .from('public_contests')
-              .select('name')
-              .eq('id', contestId)
-              .maybeSingle();
-            if (data?.name) contestName = data.name;
-          }
-
-          const prefix = contestName ? `V soutěži ${contestName} padla` : 'Padla';
-          const icon = winType === 'main' ? '🏆' : winType === 'miocoin' ? '💰' : '🎁';
-          const label = winType === 'main'
-            ? `${prefix} hlavní výhra`
-            : winType === 'miocoin'
-            ? `${prefix} MioCoin výhra`
-            : `${prefix} bonusová výhra`;
-
-          toast(label, {
-            duration: 10000,
-            icon: <span style={{ fontSize: '1.2em', lineHeight: 1 }}>{icon}</span>,
-            description: <div className="winner-toast-shimmer" />,
-            style: {
-              background: 'linear-gradient(135deg, hsl(222, 47%, 11%), hsl(222, 40%, 16%))',
-              border: '1px solid rgba(255,138,0,0.3)',
-              borderRadius: '0.75rem',
-              boxShadow: '0 8px 24px hsl(222, 50%, 3%, 0.5)',
-              backdropFilter: 'blur(8px)',
-              color: 'hsl(210, 20%, 96%)',
-              fontWeight: 500,
-              maxWidth: '380px',
-              padding: '14px 18px',
-            },
-          });
-        }
-      )
-      .subscribe();
+    void pollLatestWinner();
+    const intervalId = window.setInterval(pollLatestWinner, 15_000);
 
     return () => {
-      supabase.removeChannel(channel);
+      window.clearInterval(intervalId);
     };
-  }, [currentPublicUserId]);
+  }, []);
 
   return null;
 }

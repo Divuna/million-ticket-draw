@@ -1,0 +1,289 @@
+-- Runtime privacy and purchase contracts for historical winner notes and the
+-- service-role Edge purchase bridge.
+
+begin;
+
+create extension if not exists pgtap with schema extensions;
+set search_path = public, extensions, pg_temp;
+
+select plan(24);
+
+select is(
+  public.sanitize_winner_note_public('Sluchátka #34'),
+  'Sluchátka',
+  'hash ticket number is removed from a historical note'
+);
+
+select is(
+  public.sanitize_winner_note_public('Sluchátka, tiket 34'),
+  'Sluchátka',
+  'Czech natural-language ticket number is removed'
+);
+
+select is(
+  public.sanitize_winner_note_public('Sluchátka — ticket no. 34'),
+  'Sluchátka',
+  'English natural-language ticket number is removed'
+);
+
+select is(
+  public.sanitize_winner_note_public('Sluchátka; číslo tiketu: 34'),
+  'Sluchátka',
+  'labelled Czech ticket number is removed'
+);
+
+select is(
+  public.sanitize_winner_note_public('Sluchátka | ticket_number=34'),
+  'Sluchátka',
+  'database field-name format is removed'
+);
+
+select is(
+  public.sanitize_winner_note_public('Sluchátka {"ticket_number":"34"}'),
+  'Sluchátka',
+  'JSON-like historical ticket field is removed'
+);
+
+select is(
+  public.sanitize_winner_note_public('Sluchátka, 34. tiket'),
+  'Sluchátka',
+  'reversed ticket-order format is removed'
+);
+
+select ok(
+  not has_column_privilege('anon', 'public.winners', 'notes', 'SELECT'),
+  'raw winners.notes is not selectable by anon'
+);
+
+select ok(
+  not has_column_privilege('authenticated', 'public.winners', 'notes', 'SELECT'),
+  'raw winners.notes is not selectable by authenticated customers'
+);
+
+select ok(
+  has_column_privilege('authenticated', 'public.winners', 'id', 'SELECT')
+  and has_column_privilege('authenticated', 'public.winners', 'status', 'SELECT'),
+  'safe winner columns remain available for customer count/status operations'
+);
+
+select ok(
+  not exists (
+    select 1
+    from aclexplode(
+      coalesce(
+        (select proacl from pg_proc where oid = 'public.get_my_wins_public()'::regprocedure),
+        acldefault(
+          'f',
+          (select proowner from pg_proc where oid = 'public.get_my_wins_public()'::regprocedure)
+        )
+      )
+    ) acl
+    where acl.grantee = 0 and acl.privilege_type = 'EXECUTE'
+  )
+  and not has_function_privilege('anon', 'public.get_my_wins_public()', 'EXECUTE')
+  and has_function_privilege('authenticated', 'public.get_my_wins_public()', 'EXECUTE'),
+  'only authenticated customers can execute the sanitized own-wins contract'
+);
+
+select ok(
+  not exists (
+    select 1
+    from aclexplode(
+      coalesce(
+        (select proacl from pg_proc where oid = 'public.buy_ticket_atomic_service(uuid,uuid)'::regprocedure),
+        acldefault(
+          'f',
+          (select proowner from pg_proc where oid = 'public.buy_ticket_atomic_service(uuid,uuid)'::regprocedure)
+        )
+      )
+    ) acl
+    where acl.grantee = 0 and acl.privilege_type = 'EXECUTE'
+  )
+  and not has_function_privilege('anon', 'public.buy_ticket_atomic_service(uuid,uuid)', 'EXECUTE')
+  and not has_function_privilege('authenticated', 'public.buy_ticket_atomic_service(uuid,uuid)', 'EXECUTE')
+  and has_function_privilege('service_role', 'public.buy_ticket_atomic_service(uuid,uuid)', 'EXECUTE'),
+  'the Edge purchase bridge is service-role-only'
+);
+
+insert into auth.users (id, email) values
+  ('e1000000-0000-4000-8000-000000000001', 'notes-customer@onemil.test'),
+  ('e1000000-0000-4000-8000-000000000002', 'notes-superadmin@onemil.test');
+
+insert into public.users (id, email) values
+  ('e1000000-0000-4000-8000-000000000001', 'notes-customer@onemil.test'),
+  ('e1000000-0000-4000-8000-000000000002', 'notes-superadmin@onemil.test');
+
+insert into public.user_roles (user_id, role) values
+  ('e1000000-0000-4000-8000-000000000002', 'superadmin');
+
+insert into public.contests (
+  id, title, name, main_prize, status, ticket_price, ticket_count,
+  next_ticket_number
+) values (
+  'e2000000-0000-4000-8000-000000000001',
+  'Edge purchase privacy test',
+  'Edge purchase privacy test',
+  'Main prize',
+  'active',
+  10,
+  100,
+  1
+);
+
+insert into public.wallets (id, user_id, balance_coins) values (
+  'e3000000-0000-4000-8000-000000000001',
+  'e1000000-0000-4000-8000-000000000001',
+  100
+);
+
+insert into public.winners (
+  id, contest_id, user_id, type, notes, status, delivered, user_seen
+) values (
+  'e4000000-0000-4000-8000-000000000001',
+  'e2000000-0000-4000-8000-000000000001',
+  'e1000000-0000-4000-8000-000000000001',
+  'bonus',
+  'Sluchátka — číslo tiketu: 34',
+  'pending',
+  false,
+  false
+);
+
+set role authenticated;
+select set_config('request.jwt.claim.role', 'authenticated', true);
+select set_config('request.jwt.claim.sub', 'e1000000-0000-4000-8000-000000000001', true);
+
+select throws_ok(
+  $$select notes from public.winners where id = 'e4000000-0000-4000-8000-000000000001'$$,
+  '42501',
+  null,
+  'customer cannot project the untouched internal note'
+);
+
+select is(
+  (
+    select public_notes
+    from public.get_my_wins_public()
+    where id = 'e4000000-0000-4000-8000-000000000001'
+  ),
+  'Sluchátka',
+  'customer receives the historical note without its ticket number'
+);
+
+select is(
+  (
+    select count(*)::integer
+    from public.get_my_wins_public()
+    where public_notes ~* (
+      '#[[:space:]]*[0-9]+|ticket_number|ticket_position|'
+      '(ticket|tiket)[^[:digit:]]{0,24}[0-9]+'
+    )
+  ),
+  0,
+  'sanitized customer payload contains no recognised ticket sequence'
+);
+
+select throws_ok(
+  $$select * from public.get_winner_internal_notes_superadmin(
+    array['e4000000-0000-4000-8000-000000000001'::uuid]
+  )$$,
+  '42501',
+  'Superadmin required',
+  'ordinary customer cannot read the internal-note endpoint'
+);
+
+select throws_ok(
+  $$select public.buy_ticket_atomic(
+    'e1000000-0000-4000-8000-000000000001',
+    'e2000000-0000-4000-8000-000000000001'
+  )$$,
+  '42501',
+  null,
+  'customer still cannot execute the internal atomic purchase directly'
+);
+
+select set_config('request.jwt.claim.sub', 'e1000000-0000-4000-8000-000000000002', true);
+
+select is(
+  (
+    select notes
+    from public.get_winner_internal_notes_superadmin(
+      array['e4000000-0000-4000-8000-000000000001'::uuid]
+    )
+  ),
+  'Sluchátka — číslo tiketu: 34',
+  'superadmin sees the untouched original historical note'
+);
+
+reset role;
+select is(
+  (
+    select notes
+    from public.winners
+    where id = 'e4000000-0000-4000-8000-000000000001'
+  ),
+  'Sluchátka — číslo tiketu: 34',
+  'sanitization never overwrites stored audit data'
+);
+
+set role service_role;
+select set_config('request.jwt.claim.role', 'service_role', true);
+select set_config('request.jwt.claim.sub', '', true);
+select set_config('request.jwt.claims', '{"role":"service_role"}', true);
+
+create temporary table edge_purchase_result(result jsonb);
+grant select, insert on edge_purchase_result to service_role;
+
+insert into edge_purchase_result(result)
+select public.buy_ticket_atomic_service(
+  p_user_id => 'e1000000-0000-4000-8000-000000000001',
+  p_contest_id => 'e2000000-0000-4000-8000-000000000001'
+);
+
+select is(
+  (select (result->>'success')::boolean from edge_purchase_result),
+  true,
+  'service-role Edge bridge completes the classic purchase'
+);
+
+select is(
+  (
+    select balance_coins
+    from public.wallets
+    where user_id = 'e1000000-0000-4000-8000-000000000001'
+  ),
+  90::numeric,
+  'Edge bridge deducts exactly the contest ticket price'
+);
+
+select is(
+  (
+    select count(*)::integer
+    from public.tickets
+    where contest_id = 'e2000000-0000-4000-8000-000000000001'
+      and user_id = 'e1000000-0000-4000-8000-000000000001'
+  ),
+  1,
+  'Edge bridge creates exactly one ticket for the verified customer'
+);
+
+select is(
+  current_setting('request.jwt.claim.sub', true),
+  '',
+  'service bridge restores the request identity after the atomic call'
+);
+
+select is(
+  (
+    select notes
+    from public.winners
+    where id = 'e4000000-0000-4000-8000-000000000001'
+  ),
+  'Sluchátka — číslo tiketu: 34',
+  'service role retains direct access to the original internal note'
+);
+
+reset role;
+
+select * from finish();
+rollback;

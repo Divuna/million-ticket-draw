@@ -5964,6 +5964,10 @@ export type Database = {
         Args: { p_contest_id: string; p_user_id: string }
         Returns: Json
       }
+      buy_ticket_atomic_service: {
+        Args: { p_contest_id: string; p_user_id: string }
+        Returns: Json
+      }
       buy_ticket_public: {
         Args: { p_contest_id: string; p_user_id?: string }
         Returns: Json
@@ -6344,6 +6348,27 @@ export type Database = {
           contest_title: string
           created_at: string
           id: string
+        }[]
+      }
+      get_my_wins_public: {
+        Args: never
+        Returns: {
+          contest_id: string
+          created_at: string
+          delivered: boolean
+          id: string
+          prize_id: string | null
+          public_notes: string | null
+          status: string | null
+          type: string
+          user_seen: boolean
+        }[]
+      }
+      get_winner_internal_notes_superadmin: {
+        Args: { p_winner_ids?: string[] | null }
+        Returns: {
+          id: string
+          notes: string | null
         }[]
       }
       get_partner_offer_billing_config: {

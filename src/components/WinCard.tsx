@@ -16,7 +16,7 @@ interface Win {
   type: string;
   status: string | null;
   delivered: boolean;
-  notes: string | null;
+  public_notes: string | null;
   created_at: string;
   contest_id: string;
   prize_id: string | null;
@@ -186,7 +186,7 @@ export const WinCard: React.FC<WinCardProps> = ({ win, onClick, className = '', 
 
         {/* Prize name */}
         <p className="text-sm text-muted-foreground line-clamp-1">
-          {isMainPrize ? win.contest?.main_prize : (win.notes || win.bonus_prize?.title || 'Bonusová cena')}
+          {isMainPrize ? win.contest?.main_prize : (win.public_notes || win.bonus_prize?.title || 'Bonusová cena')}
         </p>
 
         {/* Date */}
