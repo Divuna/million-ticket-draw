@@ -52,12 +52,6 @@ IS 'Service-role-only aggregate derived from internal bonus winning positions.';
 COMMENT ON FUNCTION public.get_contest_bonus_stats_enhanced(uuid)
 IS 'Service-role-only inspection including exact internal bonus winning positions.';
 
-COMMENT ON FUNCTION public.buy_ticket_atomic(uuid, uuid)
-IS 'Service-role-only atomic classic purchase implementation. Customer clients use buy_ticket_public.';
-
-COMMENT ON FUNCTION public.purchase_guaranteed_benefit_bundle_atomic(uuid, uuid, uuid)
-IS 'Service-role-only atomic mystery purchase implementation. Customer clients use purchase_guaranteed_benefit_bundle_public.';
-
 COMMENT ON FUNCTION public.get_contests_json_internal_superadmin()
 IS 'Guarded superadmin browser access to internal contest inspection data.';
 
