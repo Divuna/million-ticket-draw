@@ -388,8 +388,11 @@ select is(
          'buy_ticket_public',
          'purchase_guaranteed_benefit_bundle_public'
        )
-       and pg_get_functiondef(p.oid)
-         !~* 'is_superadmin\s*\(\s*auth\.uid\s*\(\s*\)\s*\)'
+       and not (
+         pg_get_functiondef(p.oid) ~* 'is_superadmin'
+         and pg_get_functiondef(p.oid) ~* 'raise[[:space:]]+exception'
+         and pg_get_functiondef(p.oid) ~* '42501'
+       )
   ),
   0,
   'no unguarded customer-executable SECURITY DEFINER function exposes internal ticket state'
