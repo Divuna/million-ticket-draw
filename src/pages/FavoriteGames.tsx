@@ -149,35 +149,37 @@ const FavoriteGames = () => {
     if (!user) return;
 
     try {
-      // Fetch only favorited contests using JOIN via Supabase's foreign key relationship
-      const { data, error } = await supabase
+      const { data: favorites, error: favoritesError } = await supabase
         .from('user_contest_favorites')
-        .select(`
-          contest_id,
-          contests (
-            id, title, description, main_prize, main_image, banner_image, main_prize_secondary_image, ticket_price, ticket_count, status, created_at, fast_game
-          )
-        `)
+        .select('contest_id')
         .eq('user_id', user.id)
         .order('created_at', { ascending: false });
 
-      if (error) throw error;
+      if (favoritesError) throw favoritesError;
 
-      // Extract contests from the joined data - contests is a single object due to foreign key relationship
-      const contestData: Contest[] = [];
-      data?.forEach(item => {
-        const contest = item.contests as unknown as Contest | null;
-        if (contest) {
-          contestData.push(contest);
-        }
-      });
+      const favoriteIds = favorites?.map(({ contest_id }) => contest_id) ?? [];
 
-      if (contestData.length === 0) {
+      if (favoriteIds.length === 0) {
         setContests([]);
         return;
       }
 
-      setContests(contestData);
+      const { data: publicContests, error: contestsError } = await supabase
+        .from('public_contests')
+        .select('id, title, description, main_prize, main_image, banner_image, main_prize_secondary_image, ticket_price, ticket_count, status, created_at, fast_game')
+        .in('id', favoriteIds);
+
+      if (contestsError) throw contestsError;
+
+      const contestsById = new Map(
+        (publicContests ?? []).map(contest => [contest.id, contest as Contest]),
+      );
+
+      setContests(
+        favoriteIds
+          .map(contestId => contestsById.get(contestId))
+          .filter((contest): contest is Contest => Boolean(contest)),
+      );
     } catch (error) {
       console.error('Error fetching favorite contests:', error);
       toast.error('Chyba při načítání oblíbených soutěží');

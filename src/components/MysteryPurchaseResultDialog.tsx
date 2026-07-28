@@ -101,7 +101,7 @@ export function MysteryPurchaseResultDialog({
           if (!cancelled) setBonusPrize((data as BonusPrizeRow | null) ?? null);
         } else if (wonType === "main") {
           const { data } = await supabase
-            .from("contests")
+            .from("public_contests")
             .select("main_prize, main_image, description")
             .eq("id", contestId)
             .maybeSingle();

@@ -67,13 +67,29 @@ create table public.user_vouchers (
 
 create table public.contests (
   id uuid primary key default gen_random_uuid(),
+  banner_image text,
+  created_at timestamptz not null default now(),
+  description text,
+  fast_game boolean not null default false,
+  generated_poster_url text,
+  main_image text,
   title text not null,
   main_prize text not null,
+  main_prize_secondary_image text,
+  name text not null default '',
+  rules text,
+  rules_pdf_url text,
   status text not null default 'active',
   ticket_price numeric not null default 10,
   ticket_count integer not null default 100,
-  next_ticket_number integer not null default 1
+  next_ticket_number integer not null default 1,
+  total_miocoin_bonus numeric,
+  updated_at timestamptz not null default now()
 );
+
+-- Reproduce the historical table-level public read grant that exposed
+-- next_ticket_number through PostgREST before the corrective migration.
+grant select on public.contests to anon, authenticated, service_role;
 
 create table public.tickets (
   id uuid primary key default gen_random_uuid(),

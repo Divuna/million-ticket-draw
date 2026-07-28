@@ -111,7 +111,7 @@ const Index = () => {
   const fetchContests = async () => {
     try {
       const { data, error } = await supabase
-        .from('contests')
+        .from('public_contests')
         .select(`
           id, title, description, main_prize, main_image, banner_image, main_prize_secondary_image, ticket_price, ticket_count, status, created_at, fast_game
         `)
@@ -199,17 +199,20 @@ const Index = () => {
     }
   };
 
-  // Real-time updates: refresh when contests table changes
+  // Refresh on return to the page. Public clients must not subscribe directly
+  // to raw contest row payloads because those rows contain internal sequencing.
   useEffect(() => {
-    const channel = supabase
-      .channel('contests-realtime')
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'contests' }, () => {
-        fetchContests();
-      })
-      .subscribe();
+    const refreshOnFocus = () => fetchContests();
+    const refreshWhenVisible = () => {
+      if (document.visibilityState === 'visible') fetchContests();
+    };
+
+    window.addEventListener('focus', refreshOnFocus);
+    document.addEventListener('visibilitychange', refreshWhenVisible);
 
     return () => {
-      supabase.removeChannel(channel);
+      window.removeEventListener('focus', refreshOnFocus);
+      document.removeEventListener('visibilitychange', refreshWhenVisible);
     };
   }, []);
 

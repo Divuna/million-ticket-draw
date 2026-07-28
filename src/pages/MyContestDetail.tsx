@@ -68,7 +68,7 @@ const MyContestDetail: React.FC = () => {
       if (!id) return;
       
       const { data, error } = await supabase
-        .from('contests')
+        .from('public_contests')
         .select('id, title, description, main_prize, status, ticket_count, created_at')
         .eq('id', id)
         .single();

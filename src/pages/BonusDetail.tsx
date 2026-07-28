@@ -43,7 +43,7 @@ const BonusDetail: React.FC = () => {
       
       // Fetch contest info
       const { data: contestData, error: contestError } = await supabase
-        .from('contests')
+        .from('public_contests')
         .select('id, title, status')
         .eq('id', id)
         .single();

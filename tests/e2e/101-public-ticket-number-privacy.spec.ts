@@ -155,7 +155,7 @@ test.describe('101 — public ticket number privacy invariant', () => {
       /#\s*\{\s*[^}]*?(?:ticket|tiket|position)/i,
       /ticketNumber\s*=/,
       /\$\{contestId\}-\$\{result\.ticket_number\}/,
-      /\.from\(['"](?:tickets|bonus_prizes)['"]\)/,
+      /\.from\(['"](?:tickets|bonus_prizes|contests)['"]\)/,
     ];
 
     const violations = listPublicSourceFiles('src').flatMap((file) => {

@@ -5498,6 +5498,69 @@ export type Database = {
         }
         Relationships: []
       }
+      public_contests: {
+        Row: {
+          banner_image: string | null
+          created_at: string
+          description: string | null
+          fast_game: boolean
+          generated_poster_url: string | null
+          id: string
+          main_image: string | null
+          main_prize: string
+          main_prize_secondary_image: string | null
+          name: string
+          rules: string | null
+          rules_pdf_url: string | null
+          status: string
+          ticket_count: number
+          ticket_price: number
+          title: string
+          total_miocoin_bonus: number | null
+          updated_at: string
+        }
+        Insert: {
+          banner_image?: string | null
+          created_at?: string | null
+          description?: string | null
+          fast_game?: boolean | null
+          generated_poster_url?: string | null
+          id?: string | null
+          main_image?: string | null
+          main_prize?: string | null
+          main_prize_secondary_image?: string | null
+          name?: string | null
+          rules?: string | null
+          rules_pdf_url?: string | null
+          status?: string | null
+          ticket_count?: number | null
+          ticket_price?: number | null
+          title?: string | null
+          total_miocoin_bonus?: number | null
+          updated_at?: string | null
+        }
+        Update: {
+          banner_image?: string | null
+          created_at?: string | null
+          description?: string | null
+          fast_game?: boolean | null
+          generated_poster_url?: string | null
+          id?: string | null
+          main_image?: string | null
+          main_prize?: string | null
+          main_prize_secondary_image?: string | null
+          name?: string | null
+          rules?: string | null
+          rules_pdf_url?: string | null
+          status?: string | null
+          ticket_count?: number | null
+          ticket_price?: number | null
+          title?: string | null
+          total_miocoin_bonus?: number | null
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
       public_partners: {
         Row: {
           created_at: string | null
@@ -6216,6 +6279,13 @@ export type Database = {
           tickets_remaining: number | null
           tickets_sold: number | null
           tickets_total: number | null
+        }[]
+      }
+      get_contest_ticket_state_internal: {
+        Args: { p_contest_ids?: string[] | null }
+        Returns: {
+          contest_id: string
+          next_ticket_number: number
         }[]
       }
       get_contests_json: { Args: never; Returns: Json }

@@ -329,7 +329,7 @@ function GlobalWinnersRealtimeFeed() {
           let contestName = '';
           if (contestId) {
             const { data } = await supabase
-              .from('contests')
+              .from('public_contests')
               .select('name')
               .eq('id', contestId)
               .maybeSingle();

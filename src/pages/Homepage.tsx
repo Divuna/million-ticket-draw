@@ -100,7 +100,7 @@ const Homepage = () => {
   const fetchContests = async () => {
     try {
       const { data, error } = await supabase
-        .from("contests")
+        .from("public_contests")
         .select("id, title, main_prize, main_image, banner_image, main_prize_secondary_image, status, ticket_count, ticket_price, created_at, fast_game")
         .in("status", ["active", "pending", "paused"])
         .order("created_at", { ascending: false })

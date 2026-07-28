@@ -288,7 +288,7 @@ const Wins: React.FC = () => {
       let contestsMap = new Map<string, any>();
       if (contestIds.length > 0) {
         const { data: contestsData } = await supabase
-          .from('contests')
+          .from('public_contests')
           .select('id, title, main_prize, main_image, main_prize_secondary_image')
           .in('id', contestIds);
 
