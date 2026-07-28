@@ -21,6 +21,7 @@ create table public.partners (
   id uuid primary key default gen_random_uuid(),
   auth_user_id uuid references auth.users(id) on delete set null,
   name text not null,
+  company_name text,
   logo_url text,
   website_url text
 );

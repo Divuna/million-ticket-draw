@@ -145,6 +145,9 @@ test.describe('102 — public contest ticket-state privacy', () => {
     const migration = read(
       'supabase/migrations/20260728153516_restrict_internal_contest_position_rpcs.sql',
     );
+    const wrapperFix = read(
+      'supabase/migrations/20260728164924_fix_public_purchase_wrapper_identity.sql',
+    );
 
     expect(standardPurchase).toMatch(/rpc\(["']buy_ticket_public["']/);
     expect(mysteryPurchase).toContain('"purchase_guaranteed_benefit_bundle_public"');
@@ -160,6 +163,16 @@ test.describe('102 — public contest ticket-state privacy', () => {
     );
     expect(migration).toContain(
       'GRANT EXECUTE ON FUNCTION public.purchase_guaranteed_benefit_bundle_atomic(uuid, uuid, uuid) TO service_role',
+    );
+    expect(wrapperFix).toContain('v_user uuid := auth.uid()');
+    expect(wrapperFix).toMatch(
+      /buy_ticket_atomic\(\s*p_user_id\s*=>\s*v_user,\s*p_contest_id\s*=>\s*p_contest_id\s*\)/,
+    );
+    expect(wrapperFix).toMatch(
+      /purchase_guaranteed_benefit_bundle_atomic\(\s*p_user_id\s*=>\s*v_user,\s*p_contest_id\s*=>\s*p_contest_id,\s*p_idempotency_key\s*=>\s*p_idempotency_key\s*\)/,
+    );
+    expect(wrapperFix).not.toContain(
+      'buy_ticket_atomic(p_contest_id, p_user_id)',
     );
   });
 });
