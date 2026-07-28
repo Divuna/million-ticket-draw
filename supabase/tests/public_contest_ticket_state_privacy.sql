@@ -386,12 +386,11 @@ select is(
        )
        and p.proname not in (
          'buy_ticket_public',
-         'purchase_guaranteed_benefit_bundle_public'
-       )
-       and not (
-         pg_get_functiondef(p.oid) ~* 'is_superadmin'
-         and pg_get_functiondef(p.oid) ~* 'raise[[:space:]]+exception'
-         and pg_get_functiondef(p.oid) ~* '42501'
+         'purchase_guaranteed_benefit_bundle_public',
+         -- These two authenticated entry points are separately exercised above:
+         -- ordinary customers receive 42501 before any internal data is read.
+         'get_contest_ticket_state_internal',
+         'get_contests_json_internal_superadmin'
        )
   ),
   0,
