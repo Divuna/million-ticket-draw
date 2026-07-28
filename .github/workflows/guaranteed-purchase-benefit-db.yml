@@ -13,6 +13,7 @@ on:
       - "supabase/migrations/20260727120000_mystery_coupon_purchase_model.sql"
       - "supabase/migrations/20260727170000_user_contest_favorites_own_row_rls.sql"
       - "supabase/migrations/20260728113000_hide_public_contest_ticket_state.sql"
+      - "supabase/migrations/20260728153516_restrict_internal_contest_position_rpcs.sql"
       - "supabase/tests/guaranteed_purchase_benefit_phase1.sql"
       - "supabase/tests/guaranteed_benefit_voucher_rls.sql"
       - "supabase/tests/guaranteed_benefit_purchase_phase2.sql"
@@ -60,6 +61,8 @@ jobs:
           cp supabase/project-migrations/20260727170000_user_contest_favorites_own_row_rls.sql \
             supabase/migrations/
           cp supabase/project-migrations/20260728113000_hide_public_contest_ticket_state.sql \
+            supabase/migrations/
+          cp supabase/project-migrations/20260728153516_restrict_internal_contest_position_rpcs.sql \
             supabase/migrations/
           # Řetězec musí zůstat úplný a ve správném pořadí — pgTAP jinak testuje
           # neúplné schéma (chybějící get_guaranteed_benefit_offer shodí plán).

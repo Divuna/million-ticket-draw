@@ -176,6 +176,94 @@ as $$
   )
 $$;
 
+-- Reproduce the legacy SECURITY DEFINER inspection RPCs and their unsafe
+-- public grants. The follow-up privacy migration must restrict these without
+-- changing their internal results.
+create or replace function public.get_contests_json()
+returns json
+language sql
+security definer
+set search_path = public
+as $$
+  select coalesce(
+    json_agg(
+      json_build_object(
+        'id', c.id,
+        'main_prize_ticket', c.ticket_count,
+        'bonus_tickets', coalesce(b.bonus_tickets, '[]'::json)
+      )
+      order by c.created_at desc
+    ),
+    '[]'::json
+  )
+  from public.contests c
+  left join lateral (
+    select json_agg(bp.ticket_position order by bp.ticket_position) as bonus_tickets
+      from public.bonus_prizes bp
+     where bp.contest_id = c.id
+  ) b on true
+$$;
+
+create or replace function public.get_contest_bonus_stats(contest_id uuid)
+returns table (
+  total_bonus_units bigint,
+  total_miocoins numeric,
+  physical_items bigint,
+  pending_bonuses bigint,
+  won_bonuses bigint
+)
+language sql
+security definer
+set search_path = public
+as $$
+  select
+    count(distinct bp.ticket_position)::bigint,
+    coalesce(sum(bp.amount), 0)::numeric,
+    count(*) filter (where coalesce(bp.amount, 0) = 0)::bigint,
+    count(*) filter (where bp.status = 'pending')::bigint,
+    count(*) filter (where bp.status = 'won')::bigint
+  from public.bonus_prizes bp
+  where bp.contest_id = get_contest_bonus_stats.contest_id
+$$;
+
+create or replace function public.get_contest_bonus_stats_enhanced(contest_id uuid)
+returns table (
+  total_positions bigint,
+  total_miocoins numeric,
+  pending_count bigint,
+  physical_items bigint,
+  won_count bigint,
+  min_position integer,
+  max_position integer,
+  first_20_positions text
+)
+language sql
+security definer
+set search_path = public
+as $$
+  select
+    count(distinct bp.ticket_position)::bigint,
+    coalesce(sum(bp.amount), 0)::numeric,
+    count(*) filter (where bp.status = 'pending')::bigint,
+    count(*) filter (where coalesce(bp.amount, 0) = 0)::bigint,
+    count(*) filter (where bp.status = 'won')::bigint,
+    min(bp.ticket_position),
+    max(bp.ticket_position),
+    coalesce(
+      string_agg(bp.ticket_position::text, ', ' order by bp.ticket_position),
+      'No bonuses'
+    )
+  from public.bonus_prizes bp
+  where bp.contest_id = get_contest_bonus_stats_enhanced.contest_id
+$$;
+
+grant execute on function public.get_contests_json()
+  to anon, authenticated, service_role;
+grant execute on function public.get_contest_bonus_stats(uuid)
+  to anon, authenticated, service_role;
+grant execute on function public.get_contest_bonus_stats_enhanced(uuid)
+  to anon, authenticated, service_role;
+
 grant select on public.partners, public.vouchers, public.partner_invoices
   to authenticated;
 

@@ -89,6 +89,52 @@ test.describe('102 — public contest ticket-state privacy', () => {
     );
   });
 
+  test('legacy future-position RPCs are service-only and superadmin uses a guarded endpoint', () => {
+    const migration = read(
+      'supabase/migrations/20260728153516_restrict_internal_contest_position_rpcs.sql',
+    );
+    const admin = read('src/components/ContestDetailAdmin.tsx');
+
+    for (const signature of [
+      'public.get_contests_json()',
+      'public.get_contest_bonus_stats(uuid)',
+      'public.get_contest_bonus_stats_enhanced(uuid)',
+    ]) {
+      expect(migration).toContain(`REVOKE ALL ON FUNCTION ${signature} FROM PUBLIC`);
+      expect(migration).toContain(`REVOKE ALL ON FUNCTION ${signature} FROM anon`);
+      expect(migration).toContain(`REVOKE ALL ON FUNCTION ${signature} FROM authenticated`);
+      expect(migration).toContain(`GRANT EXECUTE ON FUNCTION ${signature} TO service_role`);
+    }
+
+    expect(migration).toContain(
+      'CREATE OR REPLACE FUNCTION public.get_contests_json_internal_superadmin()',
+    );
+    expect(migration).toContain('public.is_superadmin(auth.uid())');
+    expect(admin).toContain("rpc('get_contests_json_internal_superadmin')");
+    expect(admin).not.toContain("rpc('get_contests_json')");
+
+    const customerSources = publicContestReaders.map(read).join('\n');
+    expect(customerSources).not.toMatch(
+      /get_contests_json|get_contest_bonus_stats(?:_enhanced)?/,
+    );
+  });
+
+  test('database test dynamically audits customer-executable SECURITY DEFINER leaks', () => {
+    const databaseTest = read('supabase/tests/public_contest_ticket_state_privacy.sql');
+
+    expect(databaseTest).toContain('p.prosecdef');
+    expect(databaseTest).toContain("has_function_privilege('anon', p.oid, 'EXECUTE')");
+    expect(databaseTest).toContain(
+      "has_function_privilege('authenticated', p.oid, 'EXECUTE')",
+    );
+    expect(databaseTest).toContain(
+      'ticket_number|ticket_position|next_ticket_number|',
+    );
+    expect(databaseTest).toContain(
+      'no unguarded customer-executable SECURITY DEFINER function exposes internal ticket state',
+    );
+  });
+
   test('ticket purchase and mystery purchase contracts remain unchanged', () => {
     const standardPurchase = [
       'src/pages/ContestDetail.tsx',

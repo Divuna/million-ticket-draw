@@ -6289,6 +6289,7 @@ export type Database = {
         }[]
       }
       get_contests_json: { Args: never; Returns: Json }
+      get_contests_json_internal_superadmin: { Args: never; Returns: Json }
       get_current_user_role: { Args: never; Returns: string }
       get_due_offer_reminder_rows: {
         Args: never
