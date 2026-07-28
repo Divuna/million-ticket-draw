@@ -302,6 +302,12 @@ insert into public.users (id, email) values
   ('f1000000-0000-4000-8000-000000000001', 'wrapper-customer-a@example.test'),
   ('f1000000-0000-4000-8000-000000000002', 'wrapper-customer-b@example.test');
 
+select set_config(
+  'request.jwt.claim.sub',
+  'f1000000-0000-4000-8000-000000000001',
+  true
+);
+
 insert into public.wallets (id, user_id, balance_coins) values
   (
     'f2000000-0000-4000-8000-000000000001',
