@@ -274,8 +274,8 @@ test.describe('101 — public ticket number privacy invariant', () => {
       'supabase/migrations/20260729065526_close_remaining_public_ticket_inference_paths.sql',
     );
     const viewBody = migration.match(
-      /CREATE VIEW public\.public_bonus_prizes[\s\S]*?\bAS\b([\s\S]*?);/,
-    )?.[1] ?? '';
+      /CREATE VIEW public\.public_bonus_prizes[\s\S]*?FROM public\.bonus_prizes AS bp'/,
+    )?.[0] ?? '';
     const publicConsumers = [
       read('src/components/BonusPrizeOverlay.tsx'),
       read('src/components/TicketResultModal.tsx'),

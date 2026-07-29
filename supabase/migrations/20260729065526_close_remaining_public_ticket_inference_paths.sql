@@ -7,19 +7,52 @@
 
 DROP VIEW IF EXISTS public.public_bonus_prizes;
 
-CREATE VIEW public.public_bonus_prizes
-WITH (security_barrier = true)
-AS
-SELECT
-  bp.id,
-  bp.contest_id,
-  bp.title,
-  bp.description,
-  bp.detailed_description,
-  bp.image_url,
-  bp.amount,
-  bp.guardian_required
-FROM public.bonus_prizes AS bp;
+-- Older clean-test baselines predate optional presentation columns. Build the
+-- same safe contract without changing the underlying table or its data.
+DO $view$
+DECLARE
+  v_detailed_description text :=
+    CASE WHEN EXISTS (
+      SELECT 1 FROM information_schema.columns
+      WHERE table_schema = 'public'
+        AND table_name = 'bonus_prizes'
+        AND column_name = 'detailed_description'
+    ) THEN 'bp.detailed_description' ELSE 'NULL::text' END;
+  v_image_url text :=
+    CASE WHEN EXISTS (
+      SELECT 1 FROM information_schema.columns
+      WHERE table_schema = 'public'
+        AND table_name = 'bonus_prizes'
+        AND column_name = 'image_url'
+    ) THEN 'bp.image_url' ELSE 'NULL::text' END;
+  v_guardian_required text :=
+    CASE WHEN EXISTS (
+      SELECT 1 FROM information_schema.columns
+      WHERE table_schema = 'public'
+        AND table_name = 'bonus_prizes'
+        AND column_name = 'guardian_required'
+    ) THEN 'bp.guardian_required' ELSE 'false::boolean' END;
+BEGIN
+  EXECUTE format(
+    'CREATE VIEW public.public_bonus_prizes
+       WITH (security_barrier = true)
+     AS
+     SELECT
+       bp.id,
+       bp.contest_id,
+       bp.title,
+       bp.description,
+       %s AS detailed_description,
+       %s AS image_url,
+       bp.amount,
+       %s AS guardian_required
+     FROM public.bonus_prizes AS bp',
+    v_detailed_description,
+    v_image_url,
+    v_guardian_required
+  );
+END;
+$view$;
 
 REVOKE ALL ON TABLE public.public_bonus_prizes FROM PUBLIC;
 REVOKE ALL ON TABLE public.public_bonus_prizes FROM anon;
