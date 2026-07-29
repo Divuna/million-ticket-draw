@@ -7,6 +7,9 @@ const getStorageUrl = (path: string | null | undefined): string | null => {
   return `${supabaseUrl}/storage/v1/object/public/contest-images/${path}`;
 };
 
+const hideTicketNumberFromHomepageTitle = (title: string): string =>
+  title.replace(/\s*[·•|-]?\s*#\d+\s*$/u, "").trim();
+
 export interface HomepageWinner {
   id: string;
   user_name: string;
@@ -47,7 +50,7 @@ export const useHomepageLatestWinners = (limit: number = 50) => {
         user_nickname: winner.user_nickname,
         prize_name: winner.prize_name,
         prize_image_url: getStorageUrl(winner.prize_image_url),
-        contest_title: winner.contest_title,
+        contest_title: hideTicketNumberFromHomepageTitle(winner.contest_title),
         created_at: winner.created_at,
         type: winner.type,
         user_avatar_url: winner.user_avatar_url,
