@@ -253,10 +253,9 @@ AS $function$
       ELSE NULL
     END AS prize_image_url,
     COALESCE(public.sanitize_public_display_text(c.title), 'Soutěž') AS contest_title,
-    public.sanitize_public_display_text(p.avatar_url) AS user_avatar_url
+    NULL::text AS user_avatar_url
   FROM public.winners w
   LEFT JOIN public.users u ON u.id = w.user_id
-  LEFT JOIN public.profiles p ON p.id = w.user_id
   LEFT JOIN public.contests c ON c.id = w.contest_id
   LEFT JOIN public.bonus_prizes bp ON bp.id = w.prize_id AND w.type = 'bonus'
   ORDER BY w.created_at DESC
