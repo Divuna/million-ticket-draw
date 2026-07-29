@@ -106,12 +106,30 @@ test.describe('101 — public ticket number privacy invariant', () => {
 
     expect(sharePage).not.toContain('ticketNumber');
     expect(sharePage).not.toMatch(/Ticket #/);
+    expect(sharePage).not.toContain('/storage/v1/object/public/ticket-shares/');
+    expect(sharePage).toContain('/functions/v1/og-ticket-share?id=');
     expect(ogImage).not.toContain('ticketNumber');
     expect(ogImage).not.toMatch(/Ticket #/);
     expect(legacyImage).not.toContain('safeTicketNumber');
     expect(legacyImage).not.toMatch(/#\$\{/);
-    expect(legacyImage).toContain('OPAQUE_SHARE_ID');
-    expect(uploader).toContain('OPAQUE_SHARE_ID');
+    expect(legacyImage).toContain('status: 410');
+    expect(legacyImage).not.toContain('SUPABASE_SERVICE_ROLE_KEY');
+    expect(legacyImage).not.toContain('.storage');
+    expect(uploader).toContain('status: 410');
+    expect(uploader).not.toContain('SUPABASE_SERVICE_ROLE_KEY');
+    expect(uploader).not.toContain('.storage');
+    expect(uploader).not.toContain('.upload(');
+    expect(uploader).not.toContain('upsert');
+    expect(standard).not.toContain('/functions/v1/upload-ticket-share');
+    const closingMigration = read(
+      'supabase/migrations/20260729065526_close_remaining_public_ticket_inference_paths.sql',
+    );
+    expect(closingMigration).toContain(
+      'DROP POLICY IF EXISTS "Public can view ticket share images" ON storage.objects',
+    );
+    expect(closingMigration).toMatch(
+      /UPDATE storage\.buckets[\s\S]*?SET public = false[\s\S]*?id = 'ticket-shares'/,
+    );
   });
 
   test('public winner RPC has no ticket field and customer notifications are sanitized', () => {
@@ -192,10 +210,17 @@ test.describe('101 — public ticket number privacy invariant', () => {
     const databaseTest = read(
       'supabase/tests/winner_notes_and_edge_purchase_privacy.sql',
     );
+    const closingMigration = read(
+      'supabase/migrations/20260729065526_close_remaining_public_ticket_inference_paths.sql',
+    );
     const generatedCases = databaseTest.match(
       /insert into winner_note_sanitizer_variants \(note_text\) values([\s\S]*?);\s*\n\s*select plan/,
     )?.[1] ?? '';
     const generatedCaseCount = generatedCases.match(/^\s*\('/gm)?.length ?? 0;
+    const spelledCases = databaseTest.match(
+      /insert into winner_note_spelled_order_variants \(note_text\) values([\s\S]*?);\s*\n\s*select plan/,
+    )?.[1] ?? '';
+    const spelledCaseCount = spelledCases.match(/^\s*\('/gm)?.length ?? 0;
 
     expect(hardeningMigration).toContain("v_clean ~ '[[:digit:]]'");
     expect(hardeningMigration).toContain('v_had_sequence_marker AND NOT v_had_numeric_token');
@@ -209,8 +234,12 @@ test.describe('101 — public ticket number privacy invariant', () => {
       'ALTER PUBLICATION supabase_realtime DROP TABLE public.contests',
     );
     expect(hardeningMigration).not.toMatch(/\bUPDATE\s+public\.winners\b/i);
+    expect(closingMigration).toContain('v_number_word constant text');
+    expect(closingMigration).toContain('IF p_note ~* v_number_word');
+    expect(closingMigration).not.toMatch(/\bUPDATE\s+public\.winners\b/i);
 
     expect(generatedCaseCount).toBeGreaterThanOrEqual(40);
+    expect(spelledCaseCount).toBeGreaterThanOrEqual(40);
     for (const requiredVariant of [
       '#34',
       'tiket 34',
@@ -228,6 +257,41 @@ test.describe('101 — public ticket number privacy invariant', () => {
     ]) {
       expect(generatedCases).toContain(requiredVariant);
     }
+    for (const requiredVariant of [
+      'Výhra na třicáté čtvrté příčce',
+      'Třicátá čtvrtá pozice',
+      'won at rank thirty-four',
+      'thirty-fourth place',
+      'position thirty four',
+      'thirty fourth position',
+    ]) {
+      expect(spelledCases).toContain(requiredVariant);
+    }
+  });
+
+  test('public bonus catalogue cannot reveal hidden prize lifecycle transitions', () => {
+    const migration = read(
+      'supabase/migrations/20260729065526_close_remaining_public_ticket_inference_paths.sql',
+    );
+    const viewBody = migration.match(
+      /CREATE VIEW public\.public_bonus_prizes[\s\S]*?\bAS\b([\s\S]*?);/,
+    )?.[1] ?? '';
+    const publicConsumers = [
+      read('src/components/BonusPrizeOverlay.tsx'),
+      read('src/components/TicketResultModal.tsx'),
+      read('src/components/MysteryPurchaseResultDialog.tsx'),
+      read('src/pages/BonusDetail.tsx'),
+      read('src/pages/ContestDetail.tsx'),
+      read('src/pages/MyContestDetail.tsx'),
+      read('src/pages/Wins.tsx'),
+    ].join('\n');
+
+    expect(viewBody).not.toContain('ticket_position');
+    expect(viewBody).not.toContain('status');
+    expect(migration).toContain('REVOKE ALL ON TABLE public.public_bonus_prizes FROM PUBLIC');
+    expect(publicConsumers).not.toMatch(
+      /\.from\(['"]public_bonus_prizes['"]\)[\s\S]{0,120}\.select\([^)]*\bstatus\b/,
+    );
   });
 
   test('purchase-ticket verifies the JWT and calls the atomic flow only through a service client', () => {

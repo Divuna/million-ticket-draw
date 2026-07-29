@@ -17,6 +17,7 @@ on:
       - "supabase/migrations/20260728164924_fix_public_purchase_wrapper_identity.sql"
       - "supabase/migrations/20260728191209_sanitize_public_winner_notes_and_fix_purchase_edge.sql"
       - "supabase/migrations/20260728204440_harden_public_winner_note_sanitization.sql"
+      - "supabase/migrations/20260729065526_close_remaining_public_ticket_inference_paths.sql"
       - "supabase/tests/guaranteed_purchase_benefit_phase1.sql"
       - "supabase/tests/guaranteed_benefit_voucher_rls.sql"
       - "supabase/tests/guaranteed_benefit_purchase_phase2.sql"
@@ -24,7 +25,10 @@ on:
       - "supabase/tests/public_contest_ticket_state_privacy.sql"
       - "supabase/tests/winner_notes_and_edge_purchase_privacy.sql"
       - "supabase/functions/purchase-ticket/index.ts"
+      - "supabase/functions/upload-ticket-share/index.ts"
+      - "supabase/functions/generate-ticket-image/index.ts"
       - "tests/edge/purchase-ticket.integration.mjs"
+      - "tests/edge/share-upload-tombstones.integration.mjs"
       - "supabase/tests/fixtures/guaranteed_purchase_benefit_phase1_baseline.sql"
   workflow_dispatch:
 
@@ -76,6 +80,8 @@ jobs:
             supabase/migrations/
           cp supabase/project-migrations/20260728204440_harden_public_winner_note_sanitization.sql \
             supabase/migrations/
+          cp supabase/project-migrations/20260729065526_close_remaining_public_ticket_inference_paths.sql \
+            supabase/migrations/
           # Řetězec musí zůstat úplný a ve správném pořadí — pgTAP jinak testuje
           # neúplné schéma (chybějící get_guaranteed_benefit_offer shodí plán).
           ls supabase/migrations/
@@ -114,6 +120,29 @@ jobs:
             sleep 1
           done
           node tests/edge/purchase-ticket.integration.mjs
+
+      - name: deprecated share upload Edge Functions reject writes
+        run: |
+          supabase status -o env > /tmp/supabase-local.env
+          set -a
+          source /tmp/supabase-local.env
+          set +a
+          supabase functions serve --no-verify-jwt \
+            > /tmp/share-upload-tombstones.log 2>&1 &
+          function_pid=$!
+          trap 'kill "$function_pid" 2>/dev/null || true' EXIT
+          for attempt in $(seq 1 30); do
+            if curl --silent --fail --request OPTIONS \
+              "$API_URL/functions/v1/upload-ticket-share" >/dev/null; then
+              break
+            fi
+            if [ "$attempt" -eq 30 ]; then
+              cat /tmp/share-upload-tombstones.log
+              exit 1
+            fi
+            sleep 1
+          done
+          node tests/edge/share-upload-tombstones.integration.mjs
 
       - name: Re-run migration command on the same database
         run: supabase migration up --local

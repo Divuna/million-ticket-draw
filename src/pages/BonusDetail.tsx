@@ -13,7 +13,6 @@ import { useUserRole } from '@/hooks/useUserRole';
 interface BonusPrize {
   id: string;
   description: string;
-  status: string;
   winner_user_id?: string;
 }
 
@@ -32,10 +31,10 @@ const BonusDetail: React.FC = () => {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    if (id) {
+    if (id && session) {
       fetchData();
     }
-  }, [id]);
+  }, [id, session]);
 
   const fetchData = async () => {
     try {
@@ -58,7 +57,7 @@ const BonusDetail: React.FC = () => {
       // Fetch bonus prizes
       const { data: bonusData, error: bonusError } = await supabase
         .from('public_bonus_prizes')
-        .select('id, description, status')
+        .select('id, description')
         .eq('contest_id', id);
 
       if (bonusError) throw bonusError;
@@ -83,7 +82,7 @@ const BonusDetail: React.FC = () => {
         });
       }
 
-      const processedPrizes = (bonusData || []).map((prize: any) => ({
+      const processedPrizes = (bonusData || []).map((prize) => ({
         ...prize,
         winner_user_id: myWonPrizeIds.has(prize.id) ? uid : null,
       }));

@@ -63,7 +63,54 @@ insert into winner_note_sanitizer_variants (note_text) values
   ('Sluchátka, číslo   tiketu :: 34'),
   ('iPhone 15 Pro – výhra na 34. pozici');
 
-select plan(78);
+create temporary table winner_note_spelled_order_variants (
+  case_id integer generated always as identity,
+  note_text text not null
+);
+
+insert into winner_note_spelled_order_variants (note_text) values
+  ('Výhra na třicáté čtvrté příčce'),
+  ('Výhra na třicátém čtvrtém místě'),
+  ('Třicátá čtvrtá pozice přinesla výhru'),
+  ('Třicátý čtvrtý tiket vyhrál'),
+  ('Tiket třicet čtyři'),
+  ('Tiket třicátý čtvrtý'),
+  ('Pozice třicet čtyři'),
+  ('Pořadí třicet čtyři'),
+  ('Příčka třicátá čtvrtá'),
+  ('Místo třicáté čtvrté'),
+  ('výherní slot třicet čtyři'),
+  ('číslo tiketu třicet čtyři'),
+  ('třicet-čtyři – výherní tiket'),
+  ('třicátá-čtvrtá: výherní příčka'),
+  ('výhra, příčka: třicátá čtvrtá'),
+  ('na místě číslo třicet čtyři'),
+  ('první výherní pozice'),
+  ('druhá výherní příčka'),
+  ('sto dvacátý pátý tiket'),
+  ('tiket tisíc dvě stě třicet čtyři'),
+  ('won at rank thirty-four'),
+  ('thirty-fourth place won'),
+  ('position thirty four'),
+  ('thirty fourth position'),
+  ('ticket thirty-four'),
+  ('thirty-fourth ticket'),
+  ('rank: thirty-four'),
+  ('thirty-four — winning rank'),
+  ('place thirty fourth'),
+  ('thirty fourth place'),
+  ('slot thirty-four'),
+  ('thirty-fourth slot'),
+  ('ticket number thirty four'),
+  ('number thirty-four ticket'),
+  ('the first winning position'),
+  ('second place winner'),
+  ('one hundred twenty-third ticket'),
+  ('ticket one thousand two hundred'),
+  ('winner at the ninetieth rank'),
+  ('eighty eighth place winner');
+
+select plan(124);
 
 select is(
   public.sanitize_winner_note_public('Sluchátka #34'),
@@ -137,6 +184,17 @@ select ok(
 from winner_note_sanitizer_variants
 order by case_id;
 
+select is(
+  public.sanitize_winner_note_public(note_text),
+  null,
+  format(
+    'fully textual Czech/English ordering fails closed: %s',
+    note_text
+  )
+)
+from winner_note_spelled_order_variants
+order by case_id;
+
 select ok(
   not exists (
     select 1
@@ -167,6 +225,56 @@ select ok(
 select ok(
   not has_column_privilege('authenticated', 'public.winners', 'notes', 'SELECT'),
   'raw winners.notes is not selectable by authenticated customers'
+);
+
+select ok(
+  not exists (
+    select 1
+    from information_schema.columns
+    where table_schema = 'public'
+      and table_name = 'public_bonus_prizes'
+      and column_name in ('status', 'ticket_position')
+  ),
+  'public bonus catalogue exposes neither lifecycle status nor ticket position'
+);
+
+select ok(
+  has_table_privilege('anon', 'public.public_bonus_prizes', 'SELECT')
+  and has_table_privilege('authenticated', 'public.public_bonus_prizes', 'SELECT'),
+  'anon and authenticated customers can still read the sanitized bonus catalogue'
+);
+
+select ok(
+  not has_column_privilege('anon', 'public.bonus_prizes', 'status', 'SELECT')
+  and not has_column_privilege('anon', 'public.bonus_prizes', 'ticket_position', 'SELECT'),
+  'anon cannot bypass the catalogue to read internal bonus state'
+);
+
+select ok(
+  not has_column_privilege('authenticated', 'public.bonus_prizes', 'status', 'SELECT')
+  and not has_column_privilege('authenticated', 'public.bonus_prizes', 'ticket_position', 'SELECT'),
+  'authenticated customers cannot bypass the catalogue to read internal bonus state'
+);
+
+select is(
+  (
+    select public
+    from storage.buckets
+    where id = 'ticket-shares'
+  ),
+  false,
+  'historical ticket share objects are no longer in a public bucket'
+);
+
+select ok(
+  not exists (
+    select 1
+    from pg_policies
+    where schemaname = 'storage'
+      and tablename = 'objects'
+      and policyname = 'Public can view ticket share images'
+  ),
+  'historical ticket share objects have no public read policy'
 );
 
 select ok(

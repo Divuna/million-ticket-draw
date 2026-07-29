@@ -5471,7 +5471,6 @@ export type Database = {
           guardian_required: boolean
           id: string
           image_url: string | null
-          status: string
           title: string | null
         }
         Insert: {
@@ -5482,7 +5481,6 @@ export type Database = {
           guardian_required?: boolean | null
           id?: string | null
           image_url?: string | null
-          status?: string | null
           title?: string | null
         }
         Update: {
@@ -5493,7 +5491,6 @@ export type Database = {
           guardian_required?: boolean | null
           id?: string | null
           image_url?: string | null
-          status?: string | null
           title?: string | null
         }
         Relationships: []

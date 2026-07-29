@@ -24,7 +24,6 @@ interface Contest {
 interface BonusPrize {
   id: string;
   description: string;
-  status: string;
   amount?: number;
 }
 
@@ -92,7 +91,7 @@ const MyContestDetail: React.FC = () => {
       
       const { data, error } = await supabase
         .from('public_bonus_prizes')
-        .select('id, description, status, amount')
+        .select('id, description, amount')
         .eq('contest_id', id);
 
       if (error) throw error;
