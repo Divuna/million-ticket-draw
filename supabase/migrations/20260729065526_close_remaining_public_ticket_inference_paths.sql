@@ -7,6 +7,28 @@
 
 DROP VIEW IF EXISTS public.public_bonus_prizes;
 
+ALTER TABLE public.bonus_prizes ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS "Public can view bonus prizes" ON public.bonus_prizes;
+
+DO $admin_policy$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1
+    FROM pg_policies
+    WHERE schemaname = 'public'
+      AND tablename = 'bonus_prizes'
+      AND policyname = 'Allow admin full access to bonus prizes'
+  ) THEN
+    CREATE POLICY "Allow admin full access to bonus prizes"
+      ON public.bonus_prizes
+      FOR ALL
+      TO authenticated
+      USING (public.is_superadmin(auth.uid()))
+      WITH CHECK (public.is_superadmin(auth.uid()));
+  END IF;
+END;
+$admin_policy$;
+
 -- Older clean-test baselines predate optional presentation columns. Build the
 -- same safe contract without changing the underlying table or its data.
 DO $view$
@@ -69,10 +91,22 @@ COMMENT ON VIEW public.public_bonus_prizes IS
 -- read path now that sharing uses the fixed-content OG renderer.
 DROP POLICY IF EXISTS "Public can view ticket share images" ON storage.objects;
 
-UPDATE storage.buckets
-SET public = false
-WHERE id = 'ticket-shares'
-  AND public = true;
+INSERT INTO storage.buckets (
+  id,
+  name,
+  public,
+  file_size_limit,
+  allowed_mime_types
+)
+VALUES (
+  'ticket-shares',
+  'ticket-shares',
+  false,
+  5242880,
+  ARRAY['image/png', 'image/jpeg']
+)
+ON CONFLICT (id) DO UPDATE
+SET public = false;
 
 -- Historical internal winner notes may spell an order entirely in words. Such
 -- text has no numeric token that can be safely separated from prose, so the

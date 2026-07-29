@@ -245,15 +245,30 @@ select ok(
 );
 
 select ok(
-  not has_column_privilege('anon', 'public.bonus_prizes', 'status', 'SELECT')
-  and not has_column_privilege('anon', 'public.bonus_prizes', 'ticket_position', 'SELECT'),
-  'anon cannot bypass the catalogue to read internal bonus state'
+  (
+    select relrowsecurity
+    from pg_class
+    where oid = 'public.bonus_prizes'::regclass
+  ),
+  'raw bonus prize state is protected by row-level security'
 );
 
 select ok(
-  not has_column_privilege('authenticated', 'public.bonus_prizes', 'status', 'SELECT')
-  and not has_column_privilege('authenticated', 'public.bonus_prizes', 'ticket_position', 'SELECT'),
-  'authenticated customers cannot bypass the catalogue to read internal bonus state'
+  not exists (
+    select 1
+    from pg_policies
+    where schemaname = 'public'
+      and tablename = 'bonus_prizes'
+      and policyname = 'Public can view bonus prizes'
+  )
+  and exists (
+    select 1
+    from pg_policies
+    where schemaname = 'public'
+      and tablename = 'bonus_prizes'
+      and policyname = 'Allow admin full access to bonus prizes'
+  ),
+  'raw bonus state has an internal admin policy and no public policy'
 );
 
 select is(

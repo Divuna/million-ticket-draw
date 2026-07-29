@@ -128,7 +128,7 @@ test.describe('101 — public ticket number privacy invariant', () => {
       'DROP POLICY IF EXISTS "Public can view ticket share images" ON storage.objects',
     );
     expect(closingMigration).toMatch(
-      /UPDATE storage\.buckets[\s\S]*?SET public = false[\s\S]*?id = 'ticket-shares'/,
+      /INSERT INTO storage\.buckets[\s\S]*?'ticket-shares'[\s\S]*?false[\s\S]*?ON CONFLICT \(id\) DO UPDATE[\s\S]*?SET public = false/,
     );
   });
 
