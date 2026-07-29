@@ -217,6 +217,7 @@ DO $winner_rpc$
 DECLARE
   v_user_name_expression text := '''Výherce''::text';
   v_user_nickname_expression text := 'NULL::text';
+  v_bonus_image_expression text := 'NULL::text';
 BEGIN
   -- Older isolated schemas contain only users.id/email. Build the same safe
   -- public contract without assuming optional presentation columns exist.
@@ -260,6 +261,17 @@ BEGIN
     );
   END IF;
 
+  IF EXISTS (
+    SELECT 1
+    FROM information_schema.columns
+    WHERE table_schema = 'public'
+      AND table_name = 'bonus_prizes'
+      AND column_name = 'image_url'
+  ) THEN
+    v_bonus_image_expression :=
+      'public.sanitize_public_display_text(bp.image_url)';
+  END IF;
+
   EXECUTE format(
     $function_sql$
       CREATE FUNCTION public.get_latest_winners_public(winners_limit integer DEFAULT 50)
@@ -294,7 +306,7 @@ BEGIN
           END AS prize_name,
           CASE
             WHEN w.type = 'main' THEN public.sanitize_public_display_text(c.main_image)
-            WHEN w.type = 'bonus' THEN public.sanitize_public_display_text(bp.image_url)
+            WHEN w.type = 'bonus' THEN %s
             ELSE NULL
           END AS prize_image_url,
           COALESCE(public.sanitize_public_display_text(c.title), 'Soutěž') AS contest_title,
@@ -308,7 +320,8 @@ BEGIN
       $function$;
     $function_sql$,
     v_user_name_expression,
-    v_user_nickname_expression
+    v_user_nickname_expression,
+    v_bonus_image_expression
   );
 END;
 $winner_rpc$;
