@@ -213,54 +213,105 @@ GRANT SELECT ON TABLE public.public_bonus_prizes TO anon, authenticated, service
 -- Public winner rows use only sanitized structured presentation fields.
 DROP FUNCTION IF EXISTS public.get_latest_winners_public(integer);
 
-CREATE FUNCTION public.get_latest_winners_public(winners_limit integer DEFAULT 50)
-RETURNS TABLE(
-  public_id text,
-  type text,
-  created_at timestamptz,
-  user_name text,
-  user_nickname text,
-  prize_name text,
-  prize_image_url text,
-  contest_title text,
-  user_avatar_url text
-)
-LANGUAGE sql
-SECURITY DEFINER
-SET search_path TO 'public'
-AS $function$
-  SELECT
-    md5(w.id::text) AS public_id,
-    w.type,
-    w.created_at,
-    COALESCE(
-      public.sanitize_public_display_text(NULLIF(u.nickname, '')),
-      public.sanitize_public_display_text(NULLIF(u.first_name, '')),
-      'Výherce'
-    ) AS user_name,
-    public.sanitize_public_display_text(NULLIF(u.nickname, '')) AS user_nickname,
-    CASE
-      WHEN w.type = 'main' THEN
-        COALESCE(public.sanitize_public_display_text(c.main_prize), 'Hlavní výhra')
-      WHEN w.type = 'bonus' AND bp.amount IS NOT NULL THEN bp.amount || ' MioCoins'
-      WHEN w.type = 'bonus' THEN
-        COALESCE(public.sanitize_public_display_text(bp.description), 'Bonusová výhra')
-      ELSE 'Výhra'
-    END AS prize_name,
-    CASE
-      WHEN w.type = 'main' THEN public.sanitize_public_display_text(c.main_image)
-      WHEN w.type = 'bonus' THEN public.sanitize_public_display_text(bp.image_url)
-      ELSE NULL
-    END AS prize_image_url,
-    COALESCE(public.sanitize_public_display_text(c.title), 'Soutěž') AS contest_title,
-    NULL::text AS user_avatar_url
-  FROM public.winners w
-  LEFT JOIN public.users u ON u.id = w.user_id
-  LEFT JOIN public.contests c ON c.id = w.contest_id
-  LEFT JOIN public.bonus_prizes bp ON bp.id = w.prize_id AND w.type = 'bonus'
-  ORDER BY w.created_at DESC
-  LIMIT LEAST(GREATEST(COALESCE(winners_limit, 50), 1), 100);
-$function$;
+DO $winner_rpc$
+DECLARE
+  v_user_name_expression text := '''Výherce''::text';
+  v_user_nickname_expression text := 'NULL::text';
+BEGIN
+  -- Older isolated schemas contain only users.id/email. Build the same safe
+  -- public contract without assuming optional presentation columns exist.
+  IF EXISTS (
+    SELECT 1
+    FROM information_schema.columns
+    WHERE table_schema = 'public'
+      AND table_name = 'users'
+      AND column_name = 'name'
+  ) THEN
+    v_user_name_expression :=
+      'COALESCE(public.sanitize_public_display_text(NULLIF(u.name, '''')), ''Výherce'')';
+  END IF;
+
+  IF EXISTS (
+    SELECT 1
+    FROM information_schema.columns
+    WHERE table_schema = 'public'
+      AND table_name = 'users'
+      AND column_name = 'first_name'
+  ) THEN
+    v_user_name_expression := format(
+      'COALESCE(public.sanitize_public_display_text(NULLIF(u.first_name, '''')), %s)',
+      v_user_name_expression
+    );
+  END IF;
+
+  IF EXISTS (
+    SELECT 1
+    FROM information_schema.columns
+    WHERE table_schema = 'public'
+      AND table_name = 'users'
+      AND column_name = 'nickname'
+  ) THEN
+    v_user_nickname_expression :=
+      'public.sanitize_public_display_text(NULLIF(u.nickname, ''''))';
+    v_user_name_expression := format(
+      'COALESCE(%s, %s)',
+      v_user_nickname_expression,
+      v_user_name_expression
+    );
+  END IF;
+
+  EXECUTE format(
+    $function_sql$
+      CREATE FUNCTION public.get_latest_winners_public(winners_limit integer DEFAULT 50)
+      RETURNS TABLE(
+        public_id text,
+        type text,
+        created_at timestamptz,
+        user_name text,
+        user_nickname text,
+        prize_name text,
+        prize_image_url text,
+        contest_title text,
+        user_avatar_url text
+      )
+      LANGUAGE sql
+      SECURITY DEFINER
+      SET search_path TO 'public'
+      AS $function$
+        SELECT
+          md5(w.id::text) AS public_id,
+          w.type,
+          w.created_at,
+          %s AS user_name,
+          %s AS user_nickname,
+          CASE
+            WHEN w.type = 'main' THEN
+              COALESCE(public.sanitize_public_display_text(c.main_prize), 'Hlavní výhra')
+            WHEN w.type = 'bonus' AND bp.amount IS NOT NULL THEN bp.amount || ' MioCoins'
+            WHEN w.type = 'bonus' THEN
+              COALESCE(public.sanitize_public_display_text(bp.description), 'Bonusová výhra')
+            ELSE 'Výhra'
+          END AS prize_name,
+          CASE
+            WHEN w.type = 'main' THEN public.sanitize_public_display_text(c.main_image)
+            WHEN w.type = 'bonus' THEN public.sanitize_public_display_text(bp.image_url)
+            ELSE NULL
+          END AS prize_image_url,
+          COALESCE(public.sanitize_public_display_text(c.title), 'Soutěž') AS contest_title,
+          NULL::text AS user_avatar_url
+        FROM public.winners w
+        LEFT JOIN public.users u ON u.id = w.user_id
+        LEFT JOIN public.contests c ON c.id = w.contest_id
+        LEFT JOIN public.bonus_prizes bp ON bp.id = w.prize_id AND w.type = 'bonus'
+        ORDER BY w.created_at DESC
+        LIMIT LEAST(GREATEST(COALESCE(winners_limit, 50), 1), 100);
+      $function$;
+    $function_sql$,
+    v_user_name_expression,
+    v_user_nickname_expression
+  );
+END;
+$winner_rpc$;
 
 REVOKE ALL ON FUNCTION public.get_latest_winners_public(integer) FROM PUBLIC, anon, authenticated;
 GRANT EXECUTE ON FUNCTION public.get_latest_winners_public(integer) TO anon, authenticated, service_role;
