@@ -57,8 +57,8 @@ $function$;
 
 REVOKE ALL ON FUNCTION public.contains_private_ticket_sequence(text) FROM PUBLIC, anon, authenticated;
 REVOKE ALL ON FUNCTION public.sanitize_public_display_text(text) FROM PUBLIC, anon, authenticated;
-GRANT EXECUTE ON FUNCTION public.contains_private_ticket_sequence(text) TO service_role;
-GRANT EXECUTE ON FUNCTION public.sanitize_public_display_text(text) TO service_role;
+GRANT EXECUTE ON FUNCTION public.contains_private_ticket_sequence(text) TO anon, authenticated, service_role;
+GRANT EXECUTE ON FUNCTION public.sanitize_public_display_text(text) TO anon, authenticated, service_role;
 
 -- Historical winners.notes is an internal audit field with open-ended prose.
 -- No finite redaction grammar can prove arbitrary free text safe. The public
