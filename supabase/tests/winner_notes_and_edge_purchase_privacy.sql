@@ -418,8 +418,8 @@ select is(
     from public.get_my_wins_public()
     where id = 'e4000000-0000-4000-8000-000000000001'
   ),
-  'Sluchátka',
-  'customer receives the historical note without its ticket number'
+  null,
+  'customer receives no historical internal note'
 );
 
 select is(
@@ -572,9 +572,9 @@ select ok(
   'the public contest projection omits rules, PDFs, update timing, and generated filenames'
 );
 
-select like(
-  pg_get_viewdef('public.public_contests'::regclass, true),
-  '%WHERE c.status = ANY%',
+select ok(
+  pg_get_viewdef('public.public_contests'::regclass, true)
+    like '%WHERE c.status = ANY%',
   'the public contest projection excludes unpublished draft rows'
 );
 
