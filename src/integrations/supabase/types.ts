@@ -5462,90 +5462,6 @@ export type Database = {
         }
         Relationships: []
       }
-      public_bonus_prizes: {
-        Row: {
-          amount: number | null
-          contest_id: string
-          description: string
-          detailed_description: string | null
-          guardian_required: boolean
-          id: string
-          image_url: string | null
-          title: string | null
-        }
-        Insert: {
-          amount?: number | null
-          contest_id?: string | null
-          description?: string | null
-          detailed_description?: string | null
-          guardian_required?: boolean | null
-          id?: string | null
-          image_url?: string | null
-          title?: string | null
-        }
-        Update: {
-          amount?: number | null
-          contest_id?: string | null
-          description?: string | null
-          detailed_description?: string | null
-          guardian_required?: boolean | null
-          id?: string | null
-          image_url?: string | null
-          title?: string | null
-        }
-        Relationships: []
-      }
-      public_contests: {
-        Row: {
-          banner_image: string | null
-          created_at: string
-          description: string | null
-          fast_game: boolean
-          id: string
-          main_image: string | null
-          main_prize: string
-          main_prize_secondary_image: string | null
-          name: string
-          status: string
-          ticket_count: number
-          ticket_price: number
-          title: string
-          total_miocoin_bonus: number | null
-        }
-        Insert: {
-          banner_image?: string | null
-          created_at?: string | null
-          description?: string | null
-          fast_game?: boolean | null
-          id?: string | null
-          main_image?: string | null
-          main_prize?: string | null
-          main_prize_secondary_image?: string | null
-          name?: string | null
-          status?: string | null
-          ticket_count?: number | null
-          ticket_price?: number | null
-          title?: string | null
-          total_miocoin_bonus?: number | null
-        }
-        Update: {
-          banner_image?: string | null
-          created_at?: string | null
-          description?: string | null
-          fast_game?: boolean | null
-          id?: string | null
-          main_image?: string | null
-          main_prize?: string | null
-          main_prize_secondary_image?: string | null
-          name?: string | null
-          status?: string | null
-          ticket_count?: number | null
-          ticket_price?: number | null
-          title?: string | null
-          total_miocoin_bonus?: number | null
-        }
-        Relationships: []
-      }
       public_partners: {
         Row: {
           created_at: string | null
@@ -5823,11 +5739,6 @@ export type Database = {
         Args: { p_api_key: string; p_partner_id: string; p_reward_code: string }
         Returns: Json
       }
-      can_manage_internal_contest_assets: { Args: never; Returns: boolean }
-      contains_private_ticket_sequence: {
-        Args: { p_text: string }
-        Returns: boolean
-      }
       admin_append_miocoin_chunk: {
         Args: { p_bonuses: Json; p_contest_id: string }
         Returns: Json
@@ -5952,14 +5863,6 @@ export type Database = {
       bump_user_last_seen: { Args: never; Returns: undefined }
       buy_ticket_atomic: {
         Args: { p_contest_id: string; p_user_id: string }
-        Returns: Json
-      }
-      buy_ticket_atomic_service: {
-        Args: { p_contest_id: string; p_user_id: string }
-        Returns: Json
-      }
-      buy_ticket_public: {
-        Args: { p_contest_id: string; p_user_id?: string }
         Returns: Json
       }
       buy_voucher_atomic: {
@@ -6275,15 +6178,7 @@ export type Database = {
           tickets_total: number | null
         }[]
       }
-      get_contest_ticket_state_internal: {
-        Args: { p_contest_ids?: string[] | null }
-        Returns: {
-          contest_id: string
-          next_ticket_number: number
-        }[]
-      }
       get_contests_json: { Args: never; Returns: Json }
-      get_contests_json_internal_superadmin: { Args: never; Returns: Json }
       get_current_user_role: { Args: never; Returns: string }
       get_due_offer_reminder_rows: {
         Args: never
@@ -6315,58 +6210,6 @@ export type Database = {
           user_id: string
           user_name: string
           user_nickname: string
-        }[]
-      }
-      get_latest_winners_public: {
-        Args: { winners_limit?: number }
-        Returns: {
-          contest_title: string
-          created_at: string
-          prize_image_url: string
-          prize_name: string
-          public_id: string
-          type: string
-          user_avatar_url: string
-          user_name: string
-          user_nickname: string
-        }[]
-      }
-      get_my_tickets_public: {
-        Args: { p_contest_id?: string | null }
-        Returns: {
-          contest_id: string
-          contest_title: string
-          created_at: string
-          id: string
-        }[]
-      }
-      get_my_wins_public: {
-        Args: never
-        Returns: {
-          contest_id: string
-          created_at: string
-          delivered: boolean
-          id: string
-          prize_id: string | null
-          public_notes: string | null
-          status: string | null
-          type: string
-          user_seen: boolean
-        }[]
-      }
-      sanitize_public_display_text: {
-        Args: { p_text: string }
-        Returns: string | null
-      }
-      sanitize_winner_note_public: {
-        Args: { p_note: string }
-        Returns: string | null
-      }
-      get_winner_internal_notes_superadmin: {
-        Args: { p_winner_ids?: string[] | null }
-        Returns: {
-          id: string
-          notes: string | null
         }[]
       }
       get_partner_offer_billing_config: {
@@ -6571,14 +6414,6 @@ export type Database = {
       }
       record_affiliate_customer_ref: {
         Args: { p_ref_code: string }
-        Returns: Json
-      }
-      purchase_guaranteed_benefit_bundle_public: {
-        Args: {
-          p_contest_id: string
-          p_idempotency_key: string
-          p_user_id: string
-        }
         Returns: Json
       }
       redeem_miocoin: {

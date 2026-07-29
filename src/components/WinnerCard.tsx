@@ -15,6 +15,7 @@ interface WinnerCardProps {
   prizeImageUrl?: string | null;
   cardStyleImageUrl?: string | null;
   userAvatarUrl?: string | null;
+  ticketNumber?: number | null;
   variant?: 'dark' | 'champagne';
 }
 
@@ -27,6 +28,7 @@ export const WinnerCard = ({
   prizeImageUrl,
   cardStyleImageUrl,
   userAvatarUrl,
+  ticketNumber,
   variant = 'dark',
 }: WinnerCardProps) => {
   const isChampagne = variant === 'champagne';
@@ -155,10 +157,13 @@ export const WinnerCard = ({
                 {displayName}
               </span>
 
-              {/* Contest + time row. Ticket identifiers are strictly internal. */}
+              {/* Contest + ticket + time row */}
               <div className="flex items-center gap-2 min-w-0">
                 <span className="text-xs truncate flex-1" style={{ color: isChampagne ? '#64748b' : '#8E98A6' }}>
                   {contestTitle}
+                  {ticketNumber != null && (
+                    <span className="ml-1.5" style={{ color: isChampagne ? '#8b5e2d' : '#BFC6CF' }}>· #{ticketNumber.toLocaleString('cs-CZ')}</span>
+                  )}
                 </span>
                 <span className="text-xs whitespace-nowrap flex-shrink-0" style={{ color: isChampagne ? '#8b5e2d' : '#8E98A6' }}>
                   {timeAgo}

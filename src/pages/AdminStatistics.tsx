@@ -67,12 +67,12 @@ const AdminStatistics: React.FC = () => {
         { count: incompleteOnboardingCount }
       ] = await Promise.all([
         supabase.from('users').select('*', { count: 'exact', head: true }),
-        supabase.from('public_contests').select('id', { count: 'exact', head: true }),
+        supabase.from('contests').select('*', { count: 'exact', head: true }),
         supabase.from('tickets').select('*', { count: 'exact', head: true }),
         supabase.from('payments').select('*', { count: 'exact', head: true }),
         supabase.from('vouchers').select('*', { count: 'exact', head: true }),
         supabase.from('bonus_prizes').select('*', { count: 'exact', head: true }),
-        supabase.from('public_contests').select('id', { count: 'exact', head: true }).eq('status', 'active'),
+        supabase.from('contests').select('*', { count: 'exact', head: true }).eq('status', 'active'),
         supabase
           .from('payments')
           .select('amount')

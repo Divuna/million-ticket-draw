@@ -386,7 +386,7 @@ export const ComprehensiveAdminTestDashboard: React.FC = () => {
       if (sampleBonuses && sampleBonuses.length > 0) {
         const uniqueContestIds = [...new Set(sampleBonuses.map(b => b.contest_id))];
         const { data: matchingContests } = await supabase
-          .from('public_contests')
+          .from('contests')
           .select('id')
           .in('id', uniqueContestIds);
         const validContestIds = new Set(matchingContests?.map(c => c.id) || []);

@@ -31,6 +31,7 @@ const playCelebrationSound = () => {
 let _unseenCount = 0;
 let _listeners: (() => void)[] = [];
 let _initialized = false;
+let _channel: ReturnType<typeof supabase.channel> | null = null;
 
 const notifyListeners = () => {
   _listeners.forEach((l) => l());
@@ -47,7 +48,7 @@ const fetchCount = async () => {
   // Count unseen wins for current user (admins can also see their wins)
   const { count, error } = await supabase
     .from("winners")
-    .select("id", { count: "exact", head: true })
+    .select("*", { count: "exact", head: true })
     .eq("user_id", user.id)
     .eq("user_seen", false);
 
@@ -65,24 +66,63 @@ const startUnseenWinsStore = () => {
   supabase.auth.onAuthStateChange((event) => {
     if (event === "SIGNED_IN") {
       fetchCount();
+      setupRealtimeSubscription();
     } else if (event === "SIGNED_OUT") {
       _unseenCount = 0;
       notifyListeners();
+      if (_channel) {
+        supabase.removeChannel(_channel);
+        _channel = null;
+      }
     }
   });
 
   // Initial fetch
   fetchCount();
-  // The installed Realtime client sends full winner rows, including internal
-  // notes. Poll only the safe count projection so those rows never reach the
-  // browser transport.
-  window.setInterval(async () => {
-    const previousCount = _unseenCount;
-    await fetchCount();
-    if (_unseenCount > previousCount) {
-      playCelebrationSound();
-    }
-  }, 15_000);
+  setupRealtimeSubscription();
+};
+
+const setupRealtimeSubscription = async () => {
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return;
+
+  if (_channel) {
+    supabase.removeChannel(_channel);
+  }
+
+  _channel = supabase
+    .channel("unseen-wins-changes")
+    .on(
+      "postgres_changes",
+      {
+        event: "INSERT",
+        schema: "public",
+        table: "winners",
+        filter: `user_id=eq.${user.id}`,
+      },
+      (payload) => {
+        // New win added - play celebration sound and refetch count
+        // Verify this is truly for the current user (defense in depth)
+        if (payload.new && (payload.new as { user_id?: string }).user_id === user.id) {
+          playCelebrationSound();
+        }
+        fetchCount();
+      }
+    )
+    .on(
+      "postgres_changes",
+      {
+        event: "UPDATE",
+        schema: "public",
+        table: "winners",
+        filter: `user_id=eq.${user.id}`,
+      },
+      () => {
+        // Win updated (user_seen changed) - refetch count only, no sound
+        fetchCount();
+      }
+    )
+    .subscribe();
 };
 
 const subscribe = (listener: () => void) => {

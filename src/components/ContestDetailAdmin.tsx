@@ -219,7 +219,7 @@ const ContestDetailAdmin: React.FC = () => {
 
   const fetchContestData = async () => {
     try {
-      const { data, error } = await supabase.rpc('get_contests_json_internal_superadmin');
+      const { data, error } = await supabase.rpc('get_contests_json');
       
       if (error) throw error;
       

@@ -51,7 +51,7 @@ export const AdminBonusOverview: React.FC = () => {
       
       // Get all contests
       const { data: contests, error: contestsError } = await supabase
-        .from('public_contests')
+        .from('contests')
         .select('id, title');
 
       if (contestsError) throw contestsError;

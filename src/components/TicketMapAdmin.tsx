@@ -49,7 +49,7 @@ export const TicketMapAdmin: React.FC = () => {
     try {
       // 1. Base contest list
       const { data: contestRows, error: contestError } = await supabase
-        .from('public_contests')
+        .from('contests')
         .select('id, title, status')
         .in('status', ['active', 'closed', 'pending', 'paused'])
         .order('created_at', { ascending: false });

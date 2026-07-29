@@ -24,6 +24,8 @@ interface Contest {
 interface BonusPrize {
   id: string;
   description: string;
+  ticket_position: number;
+  status: string;
   amount?: number;
 }
 
@@ -67,7 +69,7 @@ const MyContestDetail: React.FC = () => {
       if (!id) return;
       
       const { data, error } = await supabase
-        .from('public_contests')
+        .from('contests')
         .select('id, title, description, main_prize, status, ticket_count, created_at')
         .eq('id', id)
         .single();
@@ -90,9 +92,10 @@ const MyContestDetail: React.FC = () => {
       if (!id) return;
       
       const { data, error } = await supabase
-        .from('public_bonus_prizes')
-        .select('id, description, amount')
-        .eq('contest_id', id);
+        .from('bonus_prizes')
+        .select('id, description, ticket_position, status, amount')
+        .eq('contest_id', id)
+        .order('ticket_position', { ascending: true });
 
       if (error) throw error;
       setBonusPrizes(data || []);
@@ -159,10 +162,13 @@ const MyContestDetail: React.FC = () => {
     try {
       if (!id || !user) return;
 
-      const { data } = await supabase
-        .rpc('get_my_tickets_public', { p_contest_id: id });
+      const { count: userCount } = await supabase
+        .from('tickets')
+        .select('*', { count: 'exact', head: true })
+        .eq('contest_id', id)
+        .eq('user_id', user.id);
 
-      setUserTickets(data?.length || 0);
+      setUserTickets(userCount || 0);
     } catch (error) {
       console.error('Error fetching ticket data:', error);
     }

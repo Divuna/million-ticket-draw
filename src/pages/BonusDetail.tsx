@@ -13,6 +13,8 @@ import { useUserRole } from '@/hooks/useUserRole';
 interface BonusPrize {
   id: string;
   description: string;
+  ticket_position: number;
+  status: string;
   winner_user_id?: string;
 }
 
@@ -31,10 +33,10 @@ const BonusDetail: React.FC = () => {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    if (id && session) {
+    if (id) {
       fetchData();
     }
-  }, [id, session]);
+  }, [id]);
 
   const fetchData = async () => {
     try {
@@ -42,7 +44,7 @@ const BonusDetail: React.FC = () => {
       
       // Fetch contest info
       const { data: contestData, error: contestError } = await supabase
-        .from('public_contests')
+        .from('contests')
         .select('id, title, status')
         .eq('id', id)
         .single();
@@ -56,9 +58,10 @@ const BonusDetail: React.FC = () => {
 
       // Fetch bonus prizes
       const { data: bonusData, error: bonusError } = await supabase
-        .from('public_bonus_prizes')
-        .select('id, description')
-        .eq('contest_id', id);
+        .from('bonus_prizes')
+        .select('*')
+        .eq('contest_id', id)
+        .order('ticket_position', { ascending: true });
 
       if (bonusError) throw bonusError;
 
@@ -82,7 +85,7 @@ const BonusDetail: React.FC = () => {
         });
       }
 
-      const processedPrizes = (bonusData || []).map((prize) => ({
+      const processedPrizes = (bonusData || []).map((prize: any) => ({
         ...prize,
         winner_user_id: myWonPrizeIds.has(prize.id) ? uid : null,
       }));
@@ -93,6 +96,11 @@ const BonusDetail: React.FC = () => {
         console.log('👤 Current user ID:', session?.user?.id);
         console.log('🎯 User won prizes:', processedPrizes.filter(p => p.winner_user_id === session?.user?.id));
         
+        // Verify winner display logic
+        processedPrizes.forEach(prize => {
+          const isCurrentUserWinner = prize.winner_user_id === session?.user?.id;
+          console.log(`🏅 Prize ${prize.description} (position ${prize.ticket_position}): winner_user_id=${prize.winner_user_id}, current_user=${session?.user?.id}, will_show_won=${isCurrentUserWinner}`);
+        });
       }
       
       setBonusPrizes(processedPrizes);
@@ -168,9 +176,17 @@ const BonusDetail: React.FC = () => {
               {bonusPrizes.map((prize) => (
                 <Card key={prize.id} className="relative overflow-hidden">
                   <CardHeader className="pb-3">
-                    {prize.winner_user_id === session?.user?.id && (
-                      <Badge variant="destructive" className="w-fit text-xs">Vyhráno</Badge>
-                    )}
+                    <div className="flex justify-between items-start">
+                      <Badge 
+                        variant={prize.winner_user_id === session?.user?.id ? 'destructive' : 'default'}
+                        className="text-xs"
+                      >
+                        #{prize.ticket_position.toLocaleString('cs-CZ')}
+                      </Badge>
+                      {prize.winner_user_id === session?.user?.id && (
+                        <span className="text-xs text-muted-foreground">Vyhráno</span>
+                      )}
+                    </div>
                   </CardHeader>
                   <CardContent>
                     <div className="space-y-3">
@@ -181,6 +197,9 @@ const BonusDetail: React.FC = () => {
                       
                       <div>
                         <h3 className="font-semibold text-sm mb-1">{prize.description}</h3>
+                        <p className="text-xs text-muted-foreground">
+                          Pozice tiketu #{prize.ticket_position.toLocaleString('cs-CZ')}
+                        </p>
                       </div>
                     </div>
                   </CardContent>

@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect, useState, useMemo } from 'react';
 import { useParams } from 'react-router-dom';
 import { Helmet } from 'react-helmet-async';
 import { Button } from '@/components/ui/button';
@@ -6,20 +6,31 @@ import { Facebook } from 'lucide-react';
 import logoOnemil from '@/assets/logo-onemil.png';
 import { supabaseUrl } from '@/integrations/supabase/client';
 
-const OPAQUE_SHARE_ID = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
-
 const ShareTicket: React.FC = () => {
   const { ticketId } = useParams<{ ticketId: string }>();
-  const isOpaqueShareId = OPAQUE_SHARE_ID.test(ticketId ?? '');
 
-  const ogImage = isOpaqueShareId
-    ? `${supabaseUrl}/functions/v1/og-ticket-share?id=${encodeURIComponent(ticketId!)}`
-    : '';
-  const pageUrl = isOpaqueShareId ? `https://onemil.cz/share/ticket/${ticketId}` : 'https://onemil.cz';
+  const publicTicketImageUrl = useMemo(() => {
+    if (!ticketId) return null;
+    return `${supabaseUrl}/storage/v1/object/public/ticket-shares/${ticketId}.png`;
+  }, [ticketId]);
+
+  const [imageUrl, setImageUrl] = useState<string | null>(publicTicketImageUrl);
+  const [isLoading, setIsLoading] = useState(true);
+
+  // Extract ticket number from ticketId (format: contestId-ticketNumber)
+  const ticketNumber = ticketId?.split('-').pop() || ticketId || '';
+  const ogImage = `${supabaseUrl}/functions/v1/og-ticket-share?id=${encodeURIComponent(ticketId)}`;
+  const pageUrl = `https://onemil.cz/share/ticket/${ticketId}`;
   
+  // Keep UI loading state, but compute image URL synchronously for OG crawlers.
+  useEffect(() => {
+    setImageUrl(publicTicketImageUrl);
+    setIsLoading(false);
+  }, [publicTicketImageUrl]);
+
   const shareUrl = ogImage;
   const ogTitle = 'Zkusil jsem štěstí na OneMil!';
-  const ogDescription = 'Zkus štěstí taky na onemil.cz';
+  const ogDescription = `Ticket #${ticketNumber} – zkus to taky na onemil.cz`;
 
   const handleShareFacebook = () => {
     window.open(
@@ -79,11 +90,16 @@ const ShareTicket: React.FC = () => {
 
         {/* Ticket Image Preview */}
         <div className="w-full max-w-md mb-8">
-          {ogImage ? (
+          {isLoading ? (
+            <div className="aspect-[1200/630] bg-muted/30 rounded-lg flex items-center justify-center">
+              <div className="text-sm text-muted-foreground">Načítám...</div>
+            </div>
+          ) : imageUrl ? (
             <img 
-              src={ogImage}
-              alt="Náhled výherní karty"
+              src={imageUrl} 
+              alt="Ticket preview" 
               className="w-full rounded-lg shadow-lg border border-border/30"
+              onError={() => setImageUrl(null)}
             />
           ) : (
             <div className="aspect-[1200/630] bg-muted/30 rounded-lg flex items-center justify-center">

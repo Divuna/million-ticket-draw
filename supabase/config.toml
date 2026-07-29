@@ -85,10 +85,7 @@ verify_jwt = false
 verify_jwt = false
 
 [functions.upload-ticket-share]
-verify_jwt = true
-
-[functions.generate-ticket-image]
-verify_jwt = true
+verify_jwt = false
 
 # Deprecated: kept as a safe tombstone so an existing deployed endpoint cannot
 # send reminders for a field that is no longer required.

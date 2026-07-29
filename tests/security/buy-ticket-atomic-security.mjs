@@ -1,5 +1,5 @@
 /**
- * buy_ticket_public / buy_ticket_atomic security verification — STAGING ONLY.
+ * buy_ticket_atomic security verification — STAGING ONLY.
  *
  * Covers (migration 20260717190000_buy_ticket_atomic_auth_and_wallet_tx):
  *   1. anon (no JWT) cannot call the RPC (EXECUTE revoked from anon)
@@ -60,7 +60,7 @@ async function signIn(email) {
 }
 
 async function rpc(jwt, payload) {
-  const res = await fetch(`${URL_BASE}/rest/v1/rpc/buy_ticket_public`, {
+  const res = await fetch(`${URL_BASE}/rest/v1/rpc/buy_ticket_atomic`, {
     method: 'POST',
     headers: {
       apikey: ANON,
@@ -104,13 +104,7 @@ const jwtB = await signIn(USER_B.email);
 // ── 3+7. happy path on MAIN contest: plain, bonus, main win ─────────────────
 {
   const r1 = await rpc(jwtA, { p_contest_id: C_MAIN, p_user_id: USER_A.id });
-  check('ticket 1 success, no win', r1.body?.success === true && r1.body?.won_type === null, r1);
-  check('public response hides ticket number and ordering',
-    !('ticket_number' in (r1.body ?? {}))
-      && !('next_bonus_position' in (r1.body ?? {}))
-      && !('distance_to_next_bonus' in (r1.body ?? {}))
-      && !('remaining_tickets' in (r1.body ?? {})),
-    r1);
+  check('ticket 1 success, no win', r1.body?.success === true && r1.body?.ticket_number === 1 && r1.body?.won_type === null, r1);
 
   const r2 = await rpc(jwtA, { p_contest_id: C_MAIN, p_user_id: USER_A.id });
   check('ticket 2 is BONUS win', r2.body?.success === true && r2.body?.won_type === 'bonus', r2);
@@ -183,15 +177,9 @@ const jwtB = await signIn(USER_B.email);
     Array.from({ length: 5 }, () => rpc(jwtA, { p_contest_id: C_CONC, p_user_id: USER_A.id })),
   );
   const oks = results.filter((r) => r.body?.success === true);
-  const opaqueTicketIds = oks.map((r) => r.body.ticket_row_id);
+  const numbers = oks.map((r) => r.body.ticket_number);
   check('5 concurrent purchases all succeed', oks.length === 5, results.map((r) => r.body));
-  check('opaque ticket row ids unique',
-    opaqueTicketIds.every((id) => typeof id === 'string')
-      && new Set(opaqueTicketIds).size === opaqueTicketIds.length,
-    opaqueTicketIds);
-  check('concurrent public responses hide ticket numbers',
-    oks.every((r) => !('ticket_number' in r.body)),
-    results.map((r) => r.body));
+  check('ticket numbers unique', new Set(numbers).size === numbers.length, numbers);
 
   const after = await rest(jwtA, `wallets?user_id=eq.${USER_A.id}&select=balance_coins`);
   check(`exactly ${oks.length} MioCoins deducted concurrently`,

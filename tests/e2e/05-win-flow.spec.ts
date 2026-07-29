@@ -28,7 +28,7 @@ test.describe('Win Flow', () => {
     // Capture won_type from the RPC response before asserting UI
     let wonType: string | null = null;
     page.on('response', async (res) => {
-      if (res.url().includes('/rest/v1/rpc/buy_ticket_public')) {
+      if (res.url().includes('/rest/v1/rpc/buy_ticket_atomic')) {
         try {
           const body = await res.json();
           const result = Array.isArray(body) ? body[0] : body;

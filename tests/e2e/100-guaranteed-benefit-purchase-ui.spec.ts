@@ -46,9 +46,9 @@
  *   100h) název, partner, kód kuponu + kopírování
  *   100i) jediné tlačítko „Pokračovat", žádný druhý modal
  *   100j) mobilní zobrazení bez vodorovného posouvání
- *   100k) dialog nezobrazuje pořadí ani vzdálenost dalšího výherního tiketu
+ *   100k) panel dalšího výherního tiketu + skloňování
  *   100l) bez známé vzdálenosti se panel nezobrazí
- *   100m) nevýherní tiket — bez čísla, „Tentokrát bez výhry", žádné „VYHRÁL JSI"
+ *   100m) nevýherní tiket — číslo, „Tentokrát bez výhry", žádné „VYHRÁL JSI"
  *   100n) kupon má perforaci i boční výřezy
  *   100o) číslo tiketu se v dialogu nikdy nezobrazí
  *   100p) boční výřezy jsou opravdu vidět (styl + pozice)
@@ -886,7 +886,7 @@ test.describe.serial('Spec 100 — mystery kupon (UI)', () => {
     expect(await countTickets(admin, customerId)).toBe(ticketsBefore + 1);
   });
 
-  test('100k: dialog nezobrazí pořadí ani vzdálenost dalšího výherního tiketu', async ({ page }) => {
+  test('100k: panel dalšího výherního tiketu se správným skloňováním', async ({ page }) => {
     const admin = makeAdmin();
     await setFlag(admin, true, JSON.stringify([FIXTURE.contestId]));
     const customerId = ctx.customerAuthId!;
@@ -917,10 +917,11 @@ test.describe.serial('Spec 100 — mystery kupon (UI)', () => {
 
       await expect(page.getByTestId('mystery-result-dialog')).toBeVisible({ timeout: 30_000 });
 
-      await expect(page.getByTestId('mystery-result-next-win')).toHaveCount(0);
-      const dialogText = await page.getByTestId('mystery-result-dialog').innerText();
-      expect(dialogText).not.toContain('za 2 tahy');
-      expect(dialogText).not.toContain('Další výherní tiket');
+      const panel = page.getByTestId('mystery-result-next-win');
+      await expect(panel).toBeVisible();
+      // 2 tahy — ne „2 tahů", ne „2 tah".
+      await expect(panel).toContainText('za 2 tahy');
+      await expect(panel).toContainText('Může obsahovat MioCoiny, bonusovou cenu nebo hlavní výhru.');
     } finally {
       await (admin as any).from('bonus_prizes').delete()
         .eq('contest_id', FIXTURE.contestId).eq('ticket_position', bonusAt);
@@ -951,7 +952,7 @@ test.describe.serial('Spec 100 — mystery kupon (UI)', () => {
     await expect(page.getByTestId('mystery-result-continue')).toBeVisible();
   });
 
-  test('100m: nevýherní tiket skryje číslo a ukáže „Tentokrát bez výhry", nikdy „VYHRÁL JSI"', async ({ page }) => {
+  test('100m: nevýherní tiket ukáže číslo a „Tentokrát bez výhry", nikdy „VYHRÁL JSI"', async ({ page }) => {
     const admin = makeAdmin();
     await setFlag(admin, true, JSON.stringify([FIXTURE.contestId]));
     const customerId = ctx.customerAuthId!;
@@ -1017,7 +1018,6 @@ test.describe.serial('Spec 100 — mystery kupon (UI)', () => {
     const text = (await dialog.innerText()).toLowerCase();
     expect(text).not.toContain('tiket č');
     expect(text).not.toContain(String(ticketNumber));
-    expect(text).not.toMatch(/#\s*\d+/);
 
     // A tiket přesto opravdu vznikl — jen se jeho číslo nikde neukazuje.
     const { data: latestTicket } = await (admin as any)

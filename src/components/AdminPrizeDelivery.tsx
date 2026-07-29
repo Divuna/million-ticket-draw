@@ -99,7 +99,7 @@ export const AdminPrizeDelivery: React.FC = () => {
   const fetchContests = async () => {
     try {
       const { data, error } = await supabase
-        .from('public_contests')
+        .from('contests')
         .select('id, title, status')
         .order('created_at', { ascending: false });
 

@@ -1,107 +1,151 @@
-import React, { useEffect, useState } from 'react';
+import React, { useState, useEffect } from 'react';
+import { useNavigate, useLocation } from 'react-router-dom';
+import { buildLoginRedirectUrl } from '@/lib/loginRedirect';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
+import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Card, CardContent, CardHeader } from '@/components/ui/card';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { useAuth } from '@/hooks/useAuth';
+import { useUserRole } from '@/hooks/useUserRole';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import { Target } from 'lucide-react';
-import {
-  OneMilCrownIcon,
-  OneMilDiamondIcon,
-  OneMilGiftIcon,
-  OneMilStarIcon,
-  OneMilTrophyIcon,
-} from '@/components/icons/OneMilIcons';
+import { OneMilGiftIcon, OneMilTrophyIcon, OneMilStarIcon, OneMilDiamondIcon, OneMilCrownIcon } from '@/components/icons/OneMilIcons';
 
 interface BonusPrize {
   id: string;
   description: string;
+  ticket_position: number;
+  status: string;
+  display_status?: string;
   contest_id: string;
-  display_status?: 'won' | 'shipped' | 'delivered';
 }
 
 interface BonusPrizeOverlayProps {
   contestId: string;
   contestTitle: string;
-  children: React.ReactNode;
+  children: React.ReactNode; // Trigger element
 }
 
-export const BonusPrizeOverlay: React.FC<BonusPrizeOverlayProps> = ({
-  contestId,
-  contestTitle,
-  children,
+export const BonusPrizeOverlay: React.FC<BonusPrizeOverlayProps> = ({ 
+  contestId, 
+  contestTitle, 
+  children 
 }) => {
   const [bonusPrizes, setBonusPrizes] = useState<BonusPrize[]>([]);
   const [loading, setLoading] = useState(true);
+  const [claimingBonus, setClaimingBonus] = useState<string | null>(null);
   const [isOpen, setIsOpen] = useState(false);
   const { user } = useAuth();
-  const userId = user?.id;
+  const { isAdmin } = useUserRole();
+  const navigate = useNavigate();
+  const location = useLocation();
 
-  useEffect(() => {
-    if (!isOpen) return;
+  const fetchBonusPrizes = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('bonus_prizes')
+        .select('*')
+        .eq('contest_id', contestId)
+        .order('ticket_position', { ascending: true });
 
-    const fetchBonusPrizes = async () => {
-      setLoading(true);
-      try {
-        const { data, error } = await supabase
-          .from('public_bonus_prizes')
-          .select('id, description, contest_id')
-          .eq('contest_id', contestId);
+      if (error) throw error;
 
-        if (error) throw error;
+      const bonusPrizeIds = (data || []).map((prize) => prize.id);
+      let myWinnerByPrizeId = new Map<string, { status: string | null; delivered: boolean }>();
 
-        const bonusPrizeIds = (data || []).map((prize) => prize.id);
-        let myWinnerByPrizeId = new Map<string, { status: string | null; delivered: boolean }>();
+      if (user && bonusPrizeIds.length > 0) {
+        const { data: winnersData, error: winnersError } = await supabase
+          .from('winners')
+          .select('prize_id, status, delivered')
+          .eq('contest_id', contestId)
+          .eq('type', 'bonus')
+          .eq('user_id', user.id)
+          .in('prize_id', bonusPrizeIds);
 
-        // Fulfilment state is visible only for the current customer's own win.
-        // Global bonus status is internal because its transition reveals draw
-        // progress and therefore a hidden winning position.
-        if (userId && bonusPrizeIds.length > 0) {
-          const { data: winnersData, error: winnersError } = await supabase
-            .from('winners')
-            .select('prize_id, status, delivered')
-            .eq('contest_id', contestId)
-            .eq('type', 'bonus')
-            .eq('user_id', userId)
-            .in('prize_id', bonusPrizeIds);
+        if (winnersError) throw winnersError;
 
-          if (winnersError) throw winnersError;
+        myWinnerByPrizeId = new Map(
+          (winnersData || [])
+            .filter((w) => !!w.prize_id)
+            .map((w) => [
+              w.prize_id as string,
+              { status: w.status ?? null, delivered: !!w.delivered },
+            ])
+        );
+      }
 
-          myWinnerByPrizeId = new Map(
-            (winnersData || [])
-              .filter((winner) => !!winner.prize_id)
-              .map((winner) => [
-                winner.prize_id as string,
-                { status: winner.status ?? null, delivered: !!winner.delivered },
-              ]),
-          );
+      const normalized = (data || []).map((bonus) => {
+        const myWinner = user ? myWinnerByPrizeId.get(bonus.id) : undefined;
+        const prizeTaken = bonus.status === 'won';
+
+        if (myWinner) {
+          const display_status =
+            myWinner.delivered || myWinner.status === 'delivered'
+              ? 'delivered'
+              : myWinner.status === 'shipped'
+                ? 'shipped'
+                : 'won';
+          return { ...bonus, display_status };
         }
 
-        setBonusPrizes(
-          (data || []).map((bonus) => {
-            const myWinner = myWinnerByPrizeId.get(bonus.id);
-            if (!myWinner) return bonus;
+        if (prizeTaken) {
+          return { ...bonus, display_status: 'won' as const };
+        }
 
-            const display_status =
-              myWinner.delivered || myWinner.status === 'delivered'
-                ? 'delivered'
-                : myWinner.status === 'shipped'
-                  ? 'shipped'
-                  : 'won';
-            return { ...bonus, display_status };
-          }),
-        );
-      } catch (error) {
-        console.error('Error fetching bonus prizes:', error);
-        toast.error('Chyba při načítání bonusových cen');
-      } finally {
-        setLoading(false);
+        return { ...bonus, display_status: 'pending' as const };
+      });
+
+      setBonusPrizes(normalized);
+    } catch (error) {
+      console.error('Error fetching bonus prizes:', error);
+      toast.error('Chyba při načítání bonusových cen');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    if (isOpen) {
+      fetchBonusPrizes();
+    }
+  }, [contestId, isOpen, user?.id]);
+
+  const handleClaimBonus = async (bonusId: string, bonusDescription: string) => {
+    // Non-logged-in users get login prompt
+    if (!user) {
+      toast.error('Pro uplatnění bonusu se musíte přihlásit');
+      navigate(buildLoginRedirectUrl(location.pathname + location.search));
+      return;
+    }
+
+
+    setClaimingBonus(bonusId);
+
+    try {
+      // This would typically call an edge function to claim the bonus
+      // For now, we'll show a placeholder implementation
+      const { data, error } = await supabase.rpc('claim_bonus_prize' as any, {
+        bonus_prize_id: bonusId,
+        user_id: user.id
+      });
+
+      if (error) {
+        console.error('Error claiming bonus:', error);
+        toast.error('Chyba při uplatňování bonusu');
+        return;
       }
-    };
 
-    void fetchBonusPrizes();
-  }, [contestId, isOpen, userId]);
+      // Refresh bonus prizes
+      fetchBonusPrizes();
+      toast.success(`Bonus "${bonusDescription}" byl úspěšně uplatněn!`);
+    } catch (error: any) {
+      console.error('Error claiming bonus:', error);
+      toast.error('Chyba při uplatňování bonusu');
+    } finally {
+      setClaimingBonus(null);
+    }
+  };
 
   const getBonusIcon = (description: string) => {
     const lowerDesc = description.toLowerCase();
@@ -113,11 +157,14 @@ export const BonusPrizeOverlay: React.FC<BonusPrizeOverlayProps> = ({
     return OneMilGiftIcon;
   };
 
-  const getBonusStyles = (status?: BonusPrize['display_status']) => {
+  const getBonusStyles = (status: string) => {
     switch (status) {
+      case 'pending':
+        return 'bg-green-50 border-green-200 text-green-800 dark:bg-green-900/20 dark:border-green-700 dark:text-green-400';
       case 'shipped':
         return 'bg-amber-50 border-amber-200 text-amber-800 dark:bg-amber-900/20 dark:border-amber-700 dark:text-amber-400';
       case 'delivered':
+      case 'claimed':
         return 'bg-[rgba(255,138,0,0.08)] border-[rgba(255,138,0,0.3)] text-[#FF8A00] dark:bg-[rgba(255,138,0,0.1)] dark:border-[rgba(255,138,0,0.3)] dark:text-[#FFB547]';
       case 'won':
         return 'bg-purple-50 border-purple-200 text-purple-800 dark:bg-purple-900/20 dark:border-purple-700 dark:text-purple-400';
@@ -126,27 +173,41 @@ export const BonusPrizeOverlay: React.FC<BonusPrizeOverlayProps> = ({
     }
   };
 
-  const getStatusText = (status: NonNullable<BonusPrize['display_status']>) => {
+  const getStatusText = (status: string) => {
     switch (status) {
+      case 'pending':
+        return 'Dostupný';
       case 'shipped':
         return 'Odesláno';
       case 'delivered':
-        return 'Doručeno';
+      case 'claimed':
+        return 'Uplatněný';
       case 'won':
-        return 'Tvoje výhra';
+        return 'Vyhrán';
+      default:
+        return 'Neznámý';
     }
   };
 
   return (
     <Dialog open={isOpen} onOpenChange={setIsOpen}>
-      <DialogTrigger asChild>{children}</DialogTrigger>
-
+      <DialogTrigger asChild>
+        {children}
+      </DialogTrigger>
+      
       <DialogContent className="max-w-4xl max-h-[80vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <OneMilGiftIcon size={20} className="w-5 h-5 text-primary" />
             Bonusové ceny - {contestTitle}
           </DialogTitle>
+          
+          
+          {!user && (
+            <Badge variant="outline" className="w-fit">
+              Přihlaste se pro uplatnění bonusů
+            </Badge>
+          )}
         </DialogHeader>
 
         <div className="space-y-4">
@@ -165,30 +226,103 @@ export const BonusPrizeOverlay: React.FC<BonusPrizeOverlayProps> = ({
             <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
               {bonusPrizes.map((bonus) => {
                 const IconComponent = getBonusIcon(bonus.description);
+                const uiStatus = bonus.display_status || 'pending';
+                const isClaimable = uiStatus === 'pending' && user && !isAdmin;
+                
                 return (
-                  <Card
-                    key={bonus.id}
-                    className={`transition-all duration-200 ${getBonusStyles(bonus.display_status)}`}
+                  <Card 
+                    key={bonus.id} 
+                    className={`transition-all duration-200 ${getBonusStyles(uiStatus)} ${
+                      isClaimable ? 'hover:scale-105 cursor-pointer' : ''
+                    }`}
+                    onClick={() => isClaimable && handleClaimBonus(bonus.id, bonus.description)}
                   >
                     <CardHeader className="pb-3">
                       <div className="flex items-start justify-between">
-                        <IconComponent className="w-5 h-5" />
-                        {bonus.display_status && (
-                          <Badge variant="secondary" className="text-xs">
-                            {getStatusText(bonus.display_status)}
+                        <div className="flex items-center gap-2">
+                          <IconComponent className="w-5 h-5" />
+                          <Badge variant="outline" className="text-xs">
+                            Tiket #{bonus.ticket_position.toLocaleString('cs-CZ')}
                           </Badge>
-                        )}
+                        </div>
+                        <Badge 
+                          variant={uiStatus === 'pending' ? 'default' : 'secondary'}
+                          className="text-xs"
+                        >
+                          {getStatusText(uiStatus)}
+                        </Badge>
                       </div>
                     </CardHeader>
+                    
                     <CardContent>
                       <h4 className="font-semibold mb-2 text-sm leading-tight">
                         {bonus.description}
                       </h4>
+                      
+                      <div className="text-xs text-muted-foreground mb-3">
+                        Pozice: #{bonus.ticket_position.toLocaleString('cs-CZ')}
+                      </div>
+
+                      {/* Action buttons based on user role */}
+                      {isClaimable && (
+                        <Button 
+                          variant="default" 
+                          size="sm" 
+                          className="w-full"
+                          disabled={claimingBonus === bonus.id}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleClaimBonus(bonus.id, bonus.description);
+                          }}
+                        >
+                          {claimingBonus === bonus.id ? (
+                            <>
+                              <div className="w-3 h-3 border border-current border-t-transparent rounded-full animate-spin mr-2" />
+                              Uplatňuji...
+                            </>
+                          ) : (
+                            'Uplatnit bonus'
+                          )}
+                        </Button>
+                      )}
+
+                      {!user && uiStatus === 'pending' && (
+                        <Button 
+                          variant="outline" 
+                          size="sm" 
+                          className="w-full"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            navigate(buildLoginRedirectUrl(location.pathname + location.search));
+                          }}
+                        >
+                          Přihlásit se
+                        </Button>
+                      )}
+
+                      {uiStatus !== 'pending' && (
+                        <div className="text-center text-xs text-muted-foreground py-2">
+                          {(uiStatus === 'claimed' || uiStatus === 'delivered') && 'Bonus již byl uplatněn'}
+                          {uiStatus === 'shipped' && 'Bonus byl odeslán'}
+                          {uiStatus === 'won' && 'Bonus byl vyhrán'}
+                        </div>
+                      )}
                     </CardContent>
                   </Card>
                 );
               })}
             </div>
+          )}
+
+          {/* Instructions for non-admin users */}
+          {user && !isAdmin && bonusPrizes.some(b => (b.display_status || 'pending') === 'pending') && (
+            <Card className="bg-muted/50">
+              <CardContent className="pt-4">
+                <div className="text-sm text-muted-foreground text-center">
+                  💡 Klikněte na dostupný bonus pro jeho uplatnění
+                </div>
+              </CardContent>
+            </Card>
           )}
         </div>
       </DialogContent>

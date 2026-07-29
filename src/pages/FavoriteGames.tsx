@@ -58,9 +58,12 @@ interface PartnerOfferResult {
 }
 
 interface UnlockTicketResult {
-  ticket_row_id?: string | null;
+  ticket_number: number;
   ticket_price: number;
+  next_bonus_position?: number | null;
+  distance_to_next_bonus?: number | null;
   won_prize?: string | null;
+  remaining_tickets?: number;
   won_type?: 'bonus' | 'main' | null;
   bonus_prize_id?: string | null;
   partner_offer?: PartnerOfferResult | null;
@@ -149,37 +152,35 @@ const FavoriteGames = () => {
     if (!user) return;
 
     try {
-      const { data: favorites, error: favoritesError } = await supabase
+      // Fetch only favorited contests using JOIN via Supabase's foreign key relationship
+      const { data, error } = await supabase
         .from('user_contest_favorites')
-        .select('contest_id')
+        .select(`
+          contest_id,
+          contests (
+            id, title, description, main_prize, main_image, banner_image, main_prize_secondary_image, ticket_price, ticket_count, status, created_at, fast_game
+          )
+        `)
         .eq('user_id', user.id)
         .order('created_at', { ascending: false });
 
-      if (favoritesError) throw favoritesError;
+      if (error) throw error;
 
-      const favoriteIds = favorites?.map(({ contest_id }) => contest_id) ?? [];
+      // Extract contests from the joined data - contests is a single object due to foreign key relationship
+      const contestData: Contest[] = [];
+      data?.forEach(item => {
+        const contest = item.contests as unknown as Contest | null;
+        if (contest) {
+          contestData.push(contest);
+        }
+      });
 
-      if (favoriteIds.length === 0) {
+      if (contestData.length === 0) {
         setContests([]);
         return;
       }
 
-      const { data: publicContests, error: contestsError } = await supabase
-        .from('public_contests')
-        .select('id, title, description, main_prize, main_image, banner_image, main_prize_secondary_image, ticket_price, ticket_count, status, created_at, fast_game')
-        .in('id', favoriteIds);
-
-      if (contestsError) throw contestsError;
-
-      const contestsById = new Map(
-        (publicContests ?? []).map(contest => [contest.id, contest as Contest]),
-      );
-
-      setContests(
-        favoriteIds
-          .map(contestId => contestsById.get(contestId))
-          .filter((contest): contest is Contest => Boolean(contest)),
-      );
+      setContests(contestData);
     } catch (error) {
       console.error('Error fetching favorite contests:', error);
       toast.error('Chyba při načítání oblíbených soutěží');
@@ -206,8 +207,9 @@ const FavoriteGames = () => {
     logTicketPurchaseSuccess({
       userId: user.id,
       contestId,
+      ticketNumber: outcome.ticket_number,
     });
-    analytics.ticketPurchase({ contestId });
+    analytics.ticketPurchase({ contestId, ticketNumber: outcome.ticket_number });
 
     recordLocalTicketPlay();
     fetchFavoriteContests();
@@ -218,10 +220,10 @@ const FavoriteGames = () => {
     setMysteryResult({
       contestId,
       ticket: {
-        ticket_row_id: outcome.ticket_row_id,
-        bonus_prize_id: outcome.bonus_prize_id,
+        ticket_number: outcome.ticket_number,
         won_type: outcome.won_type,
         won_prize: outcome.won_prize,
+        distance_to_next_bonus: outcome.distance_to_next_bonus,
       },
       coupon: outcome.coupon,
     });
@@ -277,7 +279,7 @@ const FavoriteGames = () => {
       console.log('buy_ticket_atomic RPC payload', payload);
 
       recordTicketPurchaseAttemptForAbuseCheck(user.id);
-      const { data, error } = await supabase.rpc('buy_ticket_public', payload);
+      const { data, error } = await supabase.rpc('buy_ticket_atomic', payload);
 
       if (error) {
         console.error('RPC error:', error);
@@ -334,7 +336,7 @@ const FavoriteGames = () => {
       }
 
       console.log('🔥 RPC raw response:', JSON.stringify(rpcResult, null, 2));
-      analytics.ticketPurchase({ contestId });
+      analytics.ticketPurchase({ contestId: contestId, ticketNumber: rpcResult.ticket_number });
 
       // ── Partner Offer lookup ──────────────────────────────────────────────
       let partnerOffer: PartnerOfferResult | null = null;
@@ -372,11 +374,14 @@ const FavoriteGames = () => {
       }
 
       const result: UnlockTicketResult = {
-        ticket_row_id: rpcResult.ticket_row_id ?? null,
+        ticket_number: rpcResult.ticket_number,
         ticket_price: rpcResult.ticket_price ?? 1,
+        next_bonus_position: rpcResult.next_bonus_position ?? null,
+        distance_to_next_bonus: rpcResult.distance_to_next_bonus ?? null,
         won_prize: rpcResult.won_prize ?? null,
         won_type: rpcResult.won_type ?? null,
         bonus_prize_id: rpcResult.bonus_prize_id ?? null,
+        remaining_tickets: rpcResult.remaining_tickets ?? undefined,
         partner_offer: partnerOffer,
       };
 
@@ -485,10 +490,13 @@ const FavoriteGames = () => {
 
       <TicketResultModal
         result={modalResult ? {
-          ticket_row_id: modalResult.ticket_row_id,
+          ticket_number: modalResult.ticket_number,
+          distance_to_next_bonus: modalResult.distance_to_next_bonus,
+          next_bonus_position: modalResult.next_bonus_position,
           won_prize: modalResult.won_prize,
           won_type: modalResult.won_type,
           bonus_prize_id: modalResult.bonus_prize_id,
+          remaining_tickets: modalResult.remaining_tickets,
           partner_offer: modalResult.partner_offer ?? null,
         } : null}
         contestId={modalContestId}

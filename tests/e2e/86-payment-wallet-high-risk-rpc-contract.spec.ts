@@ -60,7 +60,7 @@ test.describe('high-risk payment and wallet RPC contract', () => {
     expect(migration).toContain('GRANT EXECUTE ON FUNCTION public.ensure_wallet_exists(uuid) TO service_role');
   });
 
-  test('application ticket purchases use the sanitized wrapper around buy_ticket_atomic', () => {
+  test('application ticket purchases use buy_ticket_atomic instead of legacy unlock_ticket', () => {
     const directCallers = listFiles('.').filter((file) => {
       if (
         file === migrationPath
@@ -79,9 +79,9 @@ test.describe('high-risk payment and wallet RPC contract', () => {
 
     expect(directCallers).toEqual([]);
 
-    expect(read('src/pages/ContestDetail.tsx')).toContain('buy_ticket_public');
-    expect(read('src/pages/Games.tsx')).toContain('buy_ticket_public');
-    expect(read('src/pages/FavoriteGames.tsx')).toContain('buy_ticket_public');
+    expect(read('src/pages/ContestDetail.tsx')).toContain('buy_ticket_atomic');
+    expect(read('src/pages/Games.tsx')).toContain('buy_ticket_atomic');
+    expect(read('src/pages/FavoriteGames.tsx')).toContain('buy_ticket_atomic');
     expect(read('supabase/functions/purchase-ticket/index.ts')).toContain('buy_ticket_atomic');
   });
 

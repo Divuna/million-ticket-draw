@@ -59,9 +59,12 @@ interface PartnerOfferResult {
 }
 
 interface UnlockTicketResult {
-  ticket_row_id?: string | null;
+  ticket_number: number;
   ticket_price: number;
+  next_bonus_position?: number | null;
+  distance_to_next_bonus?: number | null;
   won_prize?: string | null;
+  remaining_tickets?: number;
   won_type?: 'bonus' | 'main' | null;
   bonus_prize_id?: string | null;
   partner_offer?: PartnerOfferResult | null;
@@ -111,7 +114,7 @@ const Index = () => {
   const fetchContests = async () => {
     try {
       const { data, error } = await supabase
-        .from('public_contests')
+        .from('contests')
         .select(`
           id, title, description, main_prize, main_image, banner_image, main_prize_secondary_image, ticket_price, ticket_count, status, created_at, fast_game
         `)
@@ -199,20 +202,17 @@ const Index = () => {
     }
   };
 
-  // Refresh on return to the page. Public clients must not subscribe directly
-  // to raw contest row payloads because those rows contain internal sequencing.
+  // Real-time updates: refresh when contests table changes
   useEffect(() => {
-    const refreshOnFocus = () => fetchContests();
-    const refreshWhenVisible = () => {
-      if (document.visibilityState === 'visible') fetchContests();
-    };
-
-    window.addEventListener('focus', refreshOnFocus);
-    document.addEventListener('visibilitychange', refreshWhenVisible);
+    const channel = supabase
+      .channel('contests-realtime')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'contests' }, () => {
+        fetchContests();
+      })
+      .subscribe();
 
     return () => {
-      window.removeEventListener('focus', refreshOnFocus);
-      document.removeEventListener('visibilitychange', refreshWhenVisible);
+      supabase.removeChannel(channel);
     };
   }, []);
 
@@ -234,8 +234,9 @@ const Index = () => {
     logTicketPurchaseSuccess({
       userId: user.id,
       contestId,
+      ticketNumber: outcome.ticket_number,
     });
-    analytics.ticketPurchase({ contestId });
+    analytics.ticketPurchase({ contestId, ticketNumber: outcome.ticket_number });
 
     recordLocalTicketPlay();
     fetchContests();
@@ -246,10 +247,10 @@ const Index = () => {
     setMysteryResult({
       contestId,
       ticket: {
-        ticket_row_id: outcome.ticket_row_id,
-        bonus_prize_id: outcome.bonus_prize_id,
+        ticket_number: outcome.ticket_number,
         won_type: outcome.won_type,
         won_prize: outcome.won_prize,
+        distance_to_next_bonus: outcome.distance_to_next_bonus,
       },
       coupon: outcome.coupon,
     });
@@ -304,7 +305,7 @@ const Index = () => {
       const payload = built.payload;
       console.log('buy_ticket_atomic RPC payload', payload);
 
-      const { data, error } = await supabase.rpc('buy_ticket_public', payload);
+      const { data, error } = await supabase.rpc('buy_ticket_atomic', payload);
 
       if (error) {
         console.error('RPC error:', error);
@@ -357,8 +358,9 @@ const Index = () => {
       logTicketPurchaseSuccess({
         userId: user.id,
         contestId: contestId,
+        ticketNumber: rpcResult.ticket_number,
       });
-      analytics.ticketPurchase({ contestId });
+      analytics.ticketPurchase({ contestId: contestId, ticketNumber: rpcResult.ticket_number });
 
       // ── Partner Offer lookup ──────────────────────────────────────────────
       let partnerOffer: PartnerOfferResult | null = null;
@@ -396,11 +398,14 @@ const Index = () => {
       }
 
       const result: UnlockTicketResult = {
-        ticket_row_id: rpcResult.ticket_row_id ?? null,
+        ticket_number: rpcResult.ticket_number,
         ticket_price: rpcResult.ticket_price ?? 1,
+        next_bonus_position: rpcResult.next_bonus_position ?? null,
+        distance_to_next_bonus: rpcResult.distance_to_next_bonus ?? null,
         won_prize: rpcResult.won_prize ?? null,
         won_type: rpcResult.won_type ?? null,
         bonus_prize_id: rpcResult.bonus_prize_id ?? null,
+        remaining_tickets: rpcResult.remaining_tickets ?? undefined,
         partner_offer: partnerOffer,
       };
 
@@ -412,6 +417,7 @@ const Index = () => {
             user_id: user.id,
             contest_id: contestId,
             metadata: {
+              ticket_number: result.ticket_number,
               ticket_price: result.ticket_price
             }
           }
@@ -495,7 +501,7 @@ const Index = () => {
                 >
                   Soutěže
                 </h1>
-                <p className="text-sm text-slate-600 mt-1">Vyberte si soutěž a otevřete tiket.</p>
+                <p className="text-sm text-slate-600 mt-1">Vyberte si soutěž a otevřete další tiket v pořadí.</p>
               </div>
             </div>
             {(() => {
@@ -567,10 +573,13 @@ const Index = () => {
 
       <TicketResultModal
         result={modalResult ? {
-          ticket_row_id: modalResult.ticket_row_id,
+          ticket_number: modalResult.ticket_number,
+          distance_to_next_bonus: modalResult.distance_to_next_bonus,
+          next_bonus_position: modalResult.next_bonus_position,
           won_prize: modalResult.won_prize,
           won_type: modalResult.won_type,
           bonus_prize_id: modalResult.bonus_prize_id,
+          remaining_tickets: modalResult.remaining_tickets,
           partner_offer: modalResult.partner_offer ?? null,
         } : null}
         contestId={modalContestId}

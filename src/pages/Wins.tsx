@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { Header } from '@/components/Header';
 import { useUserRole } from '@/hooks/useUserRole';
 import { useAuth } from '@/hooks/useAuth';
@@ -12,6 +12,7 @@ import { WinDetailModal } from '@/components/WinDetailModal';
 import { OfferCard, type UserOffer } from '@/components/OfferCard';
 import { OfferDetailModal } from '@/components/OfferDetailModal';
 import { toast } from '@/hooks/use-toast';
+import { useNotificationSettings } from '@/hooks/useNotificationSettings';
 import { Badge } from '@/components/ui/badge';
 import { useUnseenWinsCount } from '@/hooks/useUnseenWinsCount';
 
@@ -22,7 +23,7 @@ interface Win {
   type: string;
   status: string | null;
   delivered: boolean;
-  public_notes: string | null;
+  notes: string | null;
   created_at: string;
   contest_id: string;
   prize_id: string | null;
@@ -43,16 +44,15 @@ interface Win {
 }
 
 // Helper to derive ui_status from win data
-// Uses backend status values first, then the already-sanitized public note for
-// legacy rows. Raw winners.notes never reaches this component.
+// Uses backend status values first, then falls back to notes markers for older rows.
 const deriveUiStatus = (
   delivered: boolean,
   status: string | null,
-  publicNotes: string | null
+  notes: string | null
 ): UiStatus => {
   if (delivered || status === 'delivered') return 'doručeno';
   if (status === 'shipped') return 'odesláno';
-  if (publicNotes && publicNotes.toLowerCase().includes('shipped')) return 'odesláno';
+  if (notes && notes.toLowerCase().includes('shipped')) return 'odesláno';
   return 'čeká';
 };
 
@@ -65,6 +65,7 @@ const Wins: React.FC = () => {
   const { isAdmin } = useUserRole();
   const { user } = useAuth();
   const navigate = useNavigate();
+  const { soundEnabled } = useNotificationSettings();
   const { refresh: refreshUnseenWins } = useUnseenWinsCount();
 
   // ── Tab state ──────────────────────────────────────────────────────────────
@@ -73,7 +74,7 @@ const Wins: React.FC = () => {
   // ── Wins state ─────────────────────────────────────────────────────────────
   const [wins, setWins] = useState<Win[]>([]);
   const [loading, setLoading] = useState(true);
-  const [highlightedWins] = useState<Set<string>>(new Set());
+  const [highlightedWins, setHighlightedWins] = useState<Set<string>>(new Set());
   const [selectedWin, setSelectedWin] = useState<Win | null>(null);
   const [filter, setFilter] = useState<FilterStatus>('all');
   const [typeFilter, setTypeFilter] = useState<FilterType>('all');
@@ -121,6 +122,29 @@ const Wins: React.FC = () => {
     main: wins.filter(w => w.type === 'main').length,
     bonus: wins.filter(w => w.type === 'bonus').length,
   }), [wins]);
+
+  // ── Notification sound ─────────────────────────────────────────────────────
+  const playNotificationSound = useCallback(() => {
+    try {
+      const audioContext = new (window.AudioContext || (window as any).webkitAudioContext)();
+      const oscillator = audioContext.createOscillator();
+      const gainNode = audioContext.createGain();
+
+      oscillator.connect(gainNode);
+      gainNode.connect(audioContext.destination);
+
+      oscillator.frequency.value = 800;
+      oscillator.type = 'sine';
+
+      gainNode.gain.setValueAtTime(0.3, audioContext.currentTime);
+      gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.3);
+
+      oscillator.start(audioContext.currentTime);
+      oscillator.stop(audioContext.currentTime + 0.3);
+    } catch (error) {
+      console.log('Could not play notification sound:', error);
+    }
+  }, []);
 
   // ── Init ───────────────────────────────────────────────────────────────────
   useEffect(() => {
@@ -180,13 +204,77 @@ const Wins: React.FC = () => {
     }
   };
 
+  // ── Realtime: win status updates ───────────────────────────────────────────
+  useEffect(() => {
+    if (!user) return;
+
+    const channel = supabase
+      .channel('wins-status-changes')
+      .on(
+        'postgres_changes',
+        {
+          event: 'UPDATE',
+          schema: 'public',
+          table: 'winners',
+          filter: `user_id=eq.${user.id}`
+        },
+        (payload) => {
+          const winId = payload.new.id as string;
+          const newStatus = payload.new.status as string;
+
+          const newDelivered = payload.new.delivered as boolean;
+          const newNotes = payload.new.notes as string | null;
+          setWins(prev => prev.map(win =>
+            win.id === winId
+              ? { ...win, status: newStatus, delivered: newDelivered, notes: newNotes, ui_status: deriveUiStatus(newDelivered, newStatus, newNotes) }
+              : win
+          ));
+
+          if (soundEnabled) {
+            playNotificationSound();
+          }
+
+          toast({
+            title: "Stav výhry aktualizován",
+            description: `Nový stav: ${
+              newStatus === 'pending'
+                ? 'Čeká'
+                : newStatus === 'shipped'
+                  ? 'Odesláno'
+                  : newStatus === 'delivered'
+                    ? 'Předáno'
+                    : newStatus || 'Čeká'
+            }`,
+          });
+
+          setHighlightedWins(prev => new Set(prev).add(winId));
+
+          setTimeout(() => {
+            setHighlightedWins(prev => {
+              const next = new Set(prev);
+              next.delete(winId);
+              return next;
+            });
+          }, 2000);
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [user]);
+
   // ── Fetch wins ─────────────────────────────────────────────────────────────
   const fetchWins = async () => {
     if (!user) return;
 
     try {
       const { data: winsData, error: winsError } = await supabase
-        .rpc('get_my_wins_public');
+        .from('winners')
+        .select('id, type, status, delivered, notes, created_at, contest_id, prize_id')
+        .eq('user_id', user.id)
+        .order('created_at', { ascending: false });
 
       if (winsError) throw winsError;
       if (!winsData || winsData.length === 0) {
@@ -200,7 +288,7 @@ const Wins: React.FC = () => {
       let contestsMap = new Map<string, any>();
       if (contestIds.length > 0) {
         const { data: contestsData } = await supabase
-          .from('public_contests')
+          .from('contests')
           .select('id, title, main_prize, main_image, main_prize_secondary_image')
           .in('id', contestIds);
 
@@ -212,7 +300,7 @@ const Wins: React.FC = () => {
       let prizesMap = new Map<string, any>();
       if (prizeIds.length > 0) {
         const { data: prizesData } = await supabase
-          .from('public_bonus_prizes')
+          .from('bonus_prizes')
           .select('id, title, image_url, guardian_required')
           .in('id', prizeIds);
 
@@ -225,7 +313,7 @@ const Wins: React.FC = () => {
         ...win,
         contest: contestsMap.get(win.contest_id) || null,
         bonus_prize: win.prize_id ? prizesMap.get(win.prize_id) || null : null,
-        ui_status: deriveUiStatus(win.delivered, win.status ?? null, win.public_notes)
+        ui_status: deriveUiStatus(win.delivered, win.status ?? null, win.notes)
       }));
 
       setWins(transformedWins);
@@ -235,25 +323,6 @@ const Wins: React.FC = () => {
       setLoading(false);
     }
   };
-
-  // The installed Realtime client sends full rows for Postgres Changes. Poll
-  // the sanitized RPC instead so internal notes never enter a browser payload.
-  useEffect(() => {
-    if (!user) return;
-
-    const refreshVisibleWins = () => {
-      if (document.visibilityState === 'visible') {
-        void fetchWins();
-      }
-    };
-    const intervalId = window.setInterval(refreshVisibleWins, 15_000);
-    window.addEventListener('focus', refreshVisibleWins);
-
-    return () => {
-      window.clearInterval(intervalId);
-      window.removeEventListener('focus', refreshVisibleWins);
-    };
-  }, [user]);
 
   // ── Fetch offers ───────────────────────────────────────────────────────────
   // Reads user_partner_offers joined with partner_offers and partners.

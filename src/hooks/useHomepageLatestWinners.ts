@@ -3,11 +3,11 @@ import { supabase, supabaseUrl } from "@/integrations/supabase/client";
 
 const getStorageUrl = (path: string | null | undefined): string | null => {
   if (!path) return null;
-  if (path.startsWith('http')) return path;
+  if (path.startsWith("http")) return path;
   return `${supabaseUrl}/storage/v1/object/public/contest-images/${path}`;
 };
 
-export interface Winner {
+export interface HomepageWinner {
   id: string;
   user_name: string;
   user_nickname: string | null;
@@ -17,21 +17,21 @@ export interface Winner {
   created_at: string;
   type: string;
   user_avatar_url: string | null;
-  ticket_number: number | null;
 }
 
-export const useLatestWinners = (limit: number = 50) => {
+export const useHomepageLatestWinners = (limit: number = 50) => {
   return useQuery({
-    queryKey: ["latest-winners", limit],
+    queryKey: ["homepage-latest-winners", limit],
     queryFn: async () => {
-      const { data, error } = await supabase.rpc("get_latest_winners_public", {
-        winners_limit: limit,
-      });
+      const { data, error } = await supabase.rpc(
+        "get_latest_winners_homepage_public",
+        { winners_limit: limit },
+      );
 
       if (error) throw error;
       if (!data || data.length === 0) return [];
 
-      const result: Winner[] = data.map((winner: {
+      return data.map((winner: {
         public_id: string;
         type: string;
         created_at: string;
@@ -41,8 +41,7 @@ export const useLatestWinners = (limit: number = 50) => {
         prize_image_url: string | null;
         contest_title: string;
         user_avatar_url: string | null;
-        ticket_number: number | null;
-      }) => ({
+      }): HomepageWinner => ({
         id: winner.public_id,
         user_name: winner.user_name,
         user_nickname: winner.user_nickname,
@@ -52,10 +51,7 @@ export const useLatestWinners = (limit: number = 50) => {
         created_at: winner.created_at,
         type: winner.type,
         user_avatar_url: winner.user_avatar_url,
-        ticket_number: winner.ticket_number ?? null,
       }));
-
-      return result;
     },
   });
 };

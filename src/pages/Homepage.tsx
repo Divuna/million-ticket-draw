@@ -18,7 +18,7 @@ import { useMegajackpotBanners } from "@/hooks/useMegajackpotBanners";
 import { useHomepageBanners } from "@/hooks/useHomepageBanners";
 import { usePartners } from "@/hooks/usePartners";
 import { useHomepageVideoSimple } from "@/hooks/useHomepageVideoSimple";
-import { useLatestWinners } from "@/hooks/useLatestWinners";
+import { useHomepageLatestWinners } from "@/hooks/useHomepageLatestWinners";
 import { useComingSoonBanners } from "@/hooks/useComingSoonBanners";
 import { usePlacementBanners, PlacementKey } from "@/hooks/usePlacementBanners";
 import { WinnerCard } from "@/components/WinnerCard";
@@ -67,7 +67,7 @@ const Homepage = () => {
   const { voucherBanner, gamesBanner, loading: homepageBannersLoading } = useHomepageBanners();
   const { partners, loading: partnersLoading } = usePartners();
   const { videoUrl, isActive: isVideoActive, loading: videoLoading } = useHomepageVideoSimple();
-  const { data: latestWinners, isLoading: winnersLoading } = useLatestWinners(50);
+  const { data: latestWinners, isLoading: winnersLoading } = useHomepageLatestWinners(50);
   const { banners: comingSoonBanners, loading: comingSoonLoading } = useComingSoonBanners();
   
   // Placement banners for MioCoin packages and action boxes
@@ -100,7 +100,7 @@ const Homepage = () => {
   const fetchContests = async () => {
     try {
       const { data, error } = await supabase
-        .from("public_contests")
+        .from("contests")
         .select("id, title, main_prize, main_image, banner_image, main_prize_secondary_image, status, ticket_count, ticket_price, created_at, fast_game")
         .in("status", ["active", "pending", "paused"])
         .order("created_at", { ascending: false })
@@ -186,20 +186,17 @@ const Homepage = () => {
     }
   }, [user]);
 
-  // Postgres Changes sends raw table rows. Poll the sanitized public_contests
-  // projection instead so internal contest sequencing never reaches a browser.
+  // Subscribe to contest changes for real-time updates
   useEffect(() => {
-    const refreshVisibleContests = () => {
-      if (document.visibilityState === 'visible') {
-        void fetchContests();
-      }
-    };
-    const intervalId = window.setInterval(refreshVisibleContests, 15_000);
-    window.addEventListener('focus', refreshVisibleContests);
+    const channel = supabase
+      .channel("contest-changes")
+      .on("postgres_changes", { event: "*", schema: "public", table: "contests" }, () => {
+        fetchContests(); // Refresh contests when any contest changes
+      })
+      .subscribe();
 
     return () => {
-      window.clearInterval(intervalId);
-      window.removeEventListener('focus', refreshVisibleContests);
+      supabase.removeChannel(channel);
     };
   }, []);
 

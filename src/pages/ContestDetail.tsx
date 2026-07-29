@@ -42,6 +42,8 @@ type Contest = {
   id: string;
   title: string;
   description: string | null;
+  rules: string | null;
+  rules_pdf_url: string | null;
   main_prize: string | null;
   ticket_price: number;
   ticket_count: number;
@@ -60,6 +62,7 @@ type BonusPrize = {
   amount: number | null;
   image?: string | null;
   image_url?: string | null;
+  ticket_position?: number | null;
 };
 
 type Winner = {
@@ -80,9 +83,12 @@ interface PartnerOfferResult {
 }
 
 interface UnlockTicketResult {
-  ticket_row_id?: string | null;
+  ticket_number: number;
   ticket_price: number;
+  next_bonus_position?: number | null;
+  distance_to_next_bonus?: number | null;
   won_prize?: string | null;
+  remaining_tickets?: number;
   won_type?: 'bonus' | 'main' | null;
   bonus_prize_id?: string | null;
   partner_offer?: PartnerOfferResult | null;
@@ -166,9 +172,10 @@ export default function ContestDetail() {
   // Live activity rotating messages
   const LIVE_MESSAGES = [
     'Soutěž je aktivní',
-    'Každý další tiket přináší novou šanci',
-    'Otevři další tiket a zkus štěstí',
-    'Každý nákup představuje samostatnou šanci',
+    'Bonusové výherní pozice jsou součástí pravidel soutěže',
+    'Každý další tiket posouvá pořadí soutěže',
+    'Otevři další tiket v pořadí',
+    'Výherní pozice jsou předem určeny',
   ];
   const [liveMessageIndex, setLiveMessageIndex] = useState(0);
   const [liveVisible, setLiveVisible] = useState(true);
@@ -191,42 +198,29 @@ export default function ContestDetail() {
     return () => clearInterval(timer);
   }, [lastWinnersEventAt]);
 
-  // Track winner activity through the sanitized public feed. A raw winners
-  // Realtime subscription would transport complete rows, including internal
-  // historical notes, in this client version.
+  // Local realtime channel for status indicator + event tracking (no toasts - handled globally)
   useEffect(() => {
     if (!id) return;
-    let latestPublicId: string | null = null;
-    let initialized = false;
-    setRealtimeStatus('SUBSCRIBED');
-
-    const pollWinnerActivity = async () => {
-      const { data, error } = await supabase.rpc('get_latest_winners_public', {
-        winners_limit: 1,
+    const channel = supabase
+      .channel(`winners-status-${id}`)
+      .on(
+        'postgres_changes',
+        {
+          event: 'INSERT',
+          schema: 'public',
+          table: 'winners',
+          filter: `contest_id=eq.${id}`,
+        },
+        () => {
+          setLastWinnersEventAt(Date.now());
+        }
+      )
+      .subscribe((status) => {
+        setRealtimeStatus(status);
       });
-      if (error) {
-        setRealtimeStatus('CHANNEL_ERROR');
-        return;
-      }
-      setRealtimeStatus('SUBSCRIBED');
-      const publicId = data?.[0]?.public_id ?? null;
-      if (!initialized) {
-        latestPublicId = publicId;
-        initialized = true;
-        return;
-      }
-      if (publicId && publicId !== latestPublicId) {
-        latestPublicId = publicId;
-        setLastWinnersEventAt(Date.now());
-      }
-    };
-
-    void pollWinnerActivity();
-    const intervalId = window.setInterval(pollWinnerActivity, 15_000);
 
     return () => {
-      window.clearInterval(intervalId);
-      setRealtimeStatus('CLOSED');
+      supabase.removeChannel(channel);
     };
   }, [id]);
 
@@ -292,8 +286,8 @@ export default function ContestDetail() {
       return;
     }
 
-    logTicketPurchaseSuccess({ userId, contestId });
-    analytics.ticketPurchase({ contestId });
+    logTicketPurchaseSuccess({ userId, contestId, ticketNumber: outcome.ticket_number });
+    analytics.ticketPurchase({ contestId, ticketNumber: outcome.ticket_number });
 
     recordLocalTicketPlay();
     await loadUserBalance(userId);
@@ -303,10 +297,10 @@ export default function ContestDetail() {
     setMysteryResult({
       contestId,
       ticket: {
-        ticket_row_id: outcome.ticket_row_id,
-        bonus_prize_id: outcome.bonus_prize_id,
+        ticket_number: outcome.ticket_number,
         won_type: outcome.won_type,
         won_prize: outcome.won_prize,
+        distance_to_next_bonus: outcome.distance_to_next_bonus,
       },
       coupon: outcome.coupon,
     });
@@ -387,7 +381,7 @@ export default function ContestDetail() {
       console.log("buy_ticket_atomic RPC payload", payload);
 
       recordTicketPurchaseAttemptForAbuseCheck(user.id);
-      const { data, error } = await supabase.rpc("buy_ticket_public", payload);
+      const { data, error } = await supabase.rpc("buy_ticket_atomic", payload);
 
       if (error) {
         console.error("[DEBUG ContestDetail] RPC error:", error, JSON.stringify(error));
@@ -438,8 +432,9 @@ export default function ContestDetail() {
         logTicketPurchaseSuccess({
           userId: user.id,
           contestId: contest.id,
+          ticketNumber: result.ticket_number,
         });
-        analytics.ticketPurchase({ contestId: contest.id });
+        analytics.ticketPurchase({ contestId: contest.id, ticketNumber: result.ticket_number });
         
         // Refresh balance and progress immediately
         loadUserBalance(user.id);
@@ -484,11 +479,14 @@ export default function ContestDetail() {
         }
 
         const mappedResult: UnlockTicketResult = {
-          ticket_row_id: result.ticket_row_id ?? null,
+          ticket_number: result.ticket_number,
           ticket_price: result.ticket_price ?? 1,
+          next_bonus_position: result.next_bonus_position ?? null,
+          distance_to_next_bonus: result.distance_to_next_bonus ?? null,
           won_prize: result.won_prize ?? null,
           won_type: result.won_type ?? null,
           bonus_prize_id: result.bonus_prize_id ?? null,
+          remaining_tickets: result.remaining_tickets ?? undefined,
           partner_offer: partnerOffer,
         };
 
@@ -536,8 +534,8 @@ export default function ContestDetail() {
 
       try {
         const { data: contestData, error: contestError } = await supabase
-          .from("public_contests")
-          .select("id, title, description, main_prize, ticket_price, ticket_count, status, main_prize_secondary_image, main_image, banner_image, fast_game, total_miocoin_bonus")
+          .from("contests")
+          .select("id, title, description, rules, rules_pdf_url, main_prize, ticket_price, ticket_count, status, main_prize_secondary_image, main_image, banner_image, fast_game, total_miocoin_bonus")
           .eq("id", id)
           .maybeSingle();
 
@@ -577,7 +575,7 @@ export default function ContestDetail() {
         // not capped by the 1000-row PostgREST limit. Partner Offers are NOT in
         // bonus_prizes, so this never includes them.
         const { count: coinCount, error: coinCountError } = await supabase
-          .from("public_bonus_prizes")
+          .from("bonus_prizes")
           .select("id", { count: "exact", head: true })
           .eq("contest_id", id)
           .gt("amount", 0);
@@ -594,10 +592,11 @@ export default function ContestDetail() {
         // Hard safety cap proti nekonečné smyčce (1M řádků = 1000 stránek).
         for (let guard = 0; guard < 1000; guard++) {
           const { data: pageData, error: pageError } = await supabase
-            .from("public_bonus_prizes")
-            .select("id, contest_id, description, detailed_description, amount, image_url")
+            .from("bonus_prizes")
+            .select("id, contest_id, description, detailed_description, amount, image_url, ticket_position")
             .eq("contest_id", id)
             .or("amount.is.null,amount.eq.0")
+            .order("ticket_position", { ascending: true })
             .range(physFrom, physFrom + PHYS_PAGE - 1);
           if (pageError) {
             console.error('[ContestDetail] physical bonus fetch error:', pageError);
@@ -669,15 +668,21 @@ export default function ContestDetail() {
   const stableResult = useMemo(() => {
     if (!modalResult) return undefined;
     return {
-      ticket_row_id: modalResult.ticket_row_id,
+      ticket_number: modalResult.ticket_number,
+      next_bonus_position: modalResult.next_bonus_position ?? null,
+      distance_to_next_bonus: modalResult.distance_to_next_bonus ?? null,
       won_prize: modalResult.won_prize,
+      remaining_tickets: modalResult.remaining_tickets,
       won_type: modalResult.won_type,
       bonus_prize_id: modalResult.bonus_prize_id,
       partner_offer: modalResult.partner_offer ?? null,
     };
   }, [
-    modalResult?.ticket_row_id,
+    modalResult?.ticket_number,
+    modalResult?.next_bonus_position,
+    modalResult?.distance_to_next_bonus,
     modalResult?.won_prize,
+    modalResult?.remaining_tickets,
     modalResult?.won_type,
     modalResult?.bonus_prize_id,
     modalResult?.partner_offer,
@@ -1081,7 +1086,7 @@ export default function ContestDetail() {
           <p className="text-[hsl(0_0%_85%)]/80 text-sm md:text-[15px] leading-relaxed mb-6 max-w-2xl">
             V této soutěži je připraveno celkem{' '}
             <span className="text-[#FFB547] font-semibold">{progressTicketsTotal.toLocaleString('cs-CZ')}</span>{' '}
-            tiketů. Každý nákup představuje novou šanci na výhru.
+            tiketů. Tikety se otevírají postupně v pořadí 1, 2, 3 a dále.
           </p>
 
           {/* Premium animated path */}
@@ -1190,6 +1195,32 @@ export default function ContestDetail() {
           </div>
         )}
       </section>
+
+      {/* CONTEST RULES */}
+      {(contest.rules_pdf_url || (contest.rules && contest.rules.trim())) && (
+        <section className="relative z-10 px-4 py-12 max-w-4xl mx-auto">
+          <div className="rounded-2xl border border-white/10 bg-black/40 backdrop-blur-sm p-6 md:p-8">
+            <h2 className="customer-premium-orange-heading text-2xl md:text-3xl font-bold mb-4 text-heading-gold">
+              Pravidla soutěže
+            </h2>
+            {contest.rules_pdf_url && (
+              <a
+                href={contest.rules_pdf_url}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex items-center gap-2 rounded-full bg-gradient-to-r from-[#FF8A00] to-[#FFB547] px-5 py-2.5 text-sm font-semibold text-[#111] shadow-lg hover:brightness-105 transition mb-4"
+              >
+                📄 Zobrazit pravidla soutěže
+              </a>
+            )}
+            {contest.rules && contest.rules.trim() && (
+              <div className="text-white/80 whitespace-pre-wrap leading-relaxed">
+                {contest.rules}
+              </div>
+            )}
+          </div>
+        </section>
+      )}
 
       {/* BONUS PRIZE DETAIL MODAL */}
       <BonusPrizeDetailModal
