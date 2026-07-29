@@ -18,7 +18,7 @@ import { useMegajackpotBanners } from "@/hooks/useMegajackpotBanners";
 import { useHomepageBanners } from "@/hooks/useHomepageBanners";
 import { usePartners } from "@/hooks/usePartners";
 import { useHomepageVideoSimple } from "@/hooks/useHomepageVideoSimple";
-import { useLatestWinners } from "@/hooks/useLatestWinners";
+import { useHomepageLatestWinners } from "@/hooks/useHomepageLatestWinners";
 import { useComingSoonBanners } from "@/hooks/useComingSoonBanners";
 import { usePlacementBanners, PlacementKey } from "@/hooks/usePlacementBanners";
 import { WinnerCard } from "@/components/WinnerCard";
@@ -67,7 +67,7 @@ const Homepage = () => {
   const { voucherBanner, gamesBanner, loading: homepageBannersLoading } = useHomepageBanners();
   const { partners, loading: partnersLoading } = usePartners();
   const { videoUrl, isActive: isVideoActive, loading: videoLoading } = useHomepageVideoSimple();
-  const { data: latestWinners, isLoading: winnersLoading } = useLatestWinners(50);
+  const { data: latestWinners, isLoading: winnersLoading } = useHomepageLatestWinners(50);
   const { banners: comingSoonBanners, loading: comingSoonLoading } = useComingSoonBanners();
   
   // Placement banners for MioCoin packages and action boxes
@@ -760,7 +760,6 @@ const Homepage = () => {
                           prizeImageUrl={winner.prize_image_url}
                           cardStyleImageUrl={WINNER_BG_ROTATION[index % WINNER_BG_ROTATION.length]}
                           userAvatarUrl={winner.user_avatar_url}
-                          ticketNumber={winner.ticket_number}
                           variant="champagne"
                         />
                       ))
