@@ -41,6 +41,22 @@ test.describe('102 — public contest ticket-state privacy', () => {
     );
   });
 
+  test('final public view cannot expose raw prose, drafts, rules PDFs, or purchase timing', () => {
+    const migration = read(
+      'supabase/migrations/20260729083000_fail_closed_public_sequence_text.sql',
+    );
+    const view = migration.match(
+      /CREATE VIEW public\.public_contests[\s\S]*?FROM public\.contests AS c[\s\S]*?;/,
+    )?.[0] ?? '';
+
+    expect(view).toContain('sanitize_public_display_text(c.description)');
+    expect(view).toContain("WHERE c.status IN ('active', 'pending', 'paused', 'closed')");
+    expect(view).not.toMatch(/\brules\b|rules_pdf_url|updated_at|generated_poster_url/);
+    expect(migration).toContain(
+      'REVOKE SELECT ON TABLE public.contests FROM PUBLIC, anon, authenticated',
+    );
+  });
+
   test('every customer contest reader uses only the sanitized view', () => {
     for (const file of publicContestReaders) {
       const source = read(file);
@@ -66,6 +82,7 @@ test.describe('102 — public contest ticket-state privacy', () => {
 
     expect(publicView).toContain('ticket_count: number');
     expect(publicView).not.toContain('next_ticket_number');
+    expect(publicView).not.toMatch(/rules_pdf_url|updated_at|generated_poster_url/);
     expect(types).toContain('get_contest_ticket_state_internal:');
     expect(types).toContain('next_ticket_number: number');
   });

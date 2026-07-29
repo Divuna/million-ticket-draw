@@ -15,13 +15,13 @@ select has_view(
 
 select ok(
   coalesce(
-    (select 'security_invoker=true' = any(c.reloptions)
+    (select 'security_barrier=true' = any(c.reloptions)
        from pg_class c
        join pg_namespace n on n.oid = c.relnamespace
       where n.nspname = 'public' and c.relname = 'public_contests'),
     false
   ),
-  'the public view executes with caller privileges'
+  'the public view is a constrained security-barrier projection'
 );
 
 select ok(
@@ -58,13 +58,13 @@ select ok(
 );
 
 select ok(
-  has_column_privilege('anon', 'public.contests', 'id', 'SELECT'),
-  'anon has the safe source-column privilege needed by the public view'
+  not has_column_privilege('anon', 'public.contests', 'id', 'SELECT'),
+  'anon has no direct base-table contest projection'
 );
 
 select ok(
-  has_column_privilege('authenticated', 'public.contests', 'id', 'SELECT'),
-  'authenticated has the safe source-column privilege needed by the public view'
+  not has_column_privilege('authenticated', 'public.contests', 'id', 'SELECT'),
+  'authenticated customers have no direct base-table contest projection'
 );
 
 select ok(
@@ -189,12 +189,14 @@ insert into public.contests (
   title,
   main_prize,
   name,
+  status,
   next_ticket_number
 ) values (
   'd0000003-0000-4000-8000-000000000003',
   'Privacy contract contest',
   'Privacy contract prize',
   'Privacy contract contest',
+  'active',
   37
 );
 

@@ -170,6 +170,9 @@ test.describe('101 — public ticket number privacy invariant', () => {
     const migration = read(
       'supabase/migrations/20260728191209_sanitize_public_winner_notes_and_fix_purchase_edge.sql',
     );
+    const failClosedMigration = read(
+      'supabase/migrations/20260729083000_fail_closed_public_sequence_text.sql',
+    );
     const wins = read('src/pages/Wins.tsx');
     const card = read('src/components/WinCard.tsx');
     const detail = read('src/components/WinDetailModal.tsx');
@@ -188,6 +191,10 @@ test.describe('101 — public ticket number privacy invariant', () => {
     expect(migration.match(/GRANT SELECT \(([\s\S]*?)\) ON TABLE public\.winners/)?.[1])
       .not.toContain('notes');
     expect(migration).not.toMatch(/\bUPDATE\s+public\.winners\b/i);
+    expect(failClosedMigration).toMatch(
+      /CREATE OR REPLACE FUNCTION public\.sanitize_winner_note_public[\s\S]*?SELECT NULL::text/,
+    );
+    expect(failClosedMigration).not.toMatch(/\bUPDATE\s+public\.winners\b/i);
 
     expect(wins).toContain(".rpc('get_my_wins_public')");
     expect(wins).not.toContain(".select('id, type, status, delivered, notes");
@@ -201,6 +208,27 @@ test.describe('101 — public ticket number privacy invariant', () => {
     expect(migration).toContain('get_winner_internal_notes_superadmin');
     expect(admin).toContain("rpc('get_winner_internal_notes_superadmin'");
     expect(admin).toContain('winner.internal_notes');
+  });
+
+  test('public contest prose, rules, PDFs, timing and Roman-numeral sequences fail closed', () => {
+    const migration = read(
+      'supabase/migrations/20260729083000_fail_closed_public_sequence_text.sql',
+    );
+    const contestDetail = read('src/pages/ContestDetail.tsx');
+
+    expect(migration).toContain('contains_private_ticket_sequence');
+    expect(migration).toContain('[ivxlcdm]+');
+    expect(migration).toContain("WHERE c.status IN ('active', 'pending', 'paused', 'closed')");
+    expect(migration).toContain(
+      'REVOKE SELECT ON TABLE public.contests FROM PUBLIC, anon, authenticated',
+    );
+    expect(migration).toContain('DROP POLICY IF EXISTS "Public can read contest rules PDFs"');
+    expect(migration).toMatch(
+      /INSERT INTO storage\.buckets[\s\S]*?'contest-rules'[\s\S]*?false[\s\S]*?ON CONFLICT \(id\) DO UPDATE[\s\S]*?SET public = false/,
+    );
+    expect(contestDetail).not.toContain('rules_pdf_url');
+    expect(contestDetail).not.toMatch(/\bcontest\.rules\b/);
+    expect(contestDetail).not.toMatch(/výherní pozic/i);
   });
 
   test('winner-note sanitizer uses a general fail-closed rule with broad bilingual variants', () => {

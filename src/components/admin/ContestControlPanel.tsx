@@ -55,7 +55,7 @@ export const ContestControlPanel: React.FC = () => {
     setLoading(true);
     try {
       const { data: contestRows, error: contestError } = await supabase
-        .from('contests')
+        .from('public_contests')
         .select('id, title, status, ticket_count')
         .order('created_at', { ascending: false });
 

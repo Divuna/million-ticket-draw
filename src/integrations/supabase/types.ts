@@ -5501,60 +5501,48 @@ export type Database = {
           created_at: string
           description: string | null
           fast_game: boolean
-          generated_poster_url: string | null
           id: string
           main_image: string | null
           main_prize: string
           main_prize_secondary_image: string | null
           name: string
-          rules: string | null
-          rules_pdf_url: string | null
           status: string
           ticket_count: number
           ticket_price: number
           title: string
           total_miocoin_bonus: number | null
-          updated_at: string
         }
         Insert: {
           banner_image?: string | null
           created_at?: string | null
           description?: string | null
           fast_game?: boolean | null
-          generated_poster_url?: string | null
           id?: string | null
           main_image?: string | null
           main_prize?: string | null
           main_prize_secondary_image?: string | null
           name?: string | null
-          rules?: string | null
-          rules_pdf_url?: string | null
           status?: string | null
           ticket_count?: number | null
           ticket_price?: number | null
           title?: string | null
           total_miocoin_bonus?: number | null
-          updated_at?: string | null
         }
         Update: {
           banner_image?: string | null
           created_at?: string | null
           description?: string | null
           fast_game?: boolean | null
-          generated_poster_url?: string | null
           id?: string | null
           main_image?: string | null
           main_prize?: string | null
           main_prize_secondary_image?: string | null
           name?: string | null
-          rules?: string | null
-          rules_pdf_url?: string | null
           status?: string | null
           ticket_count?: number | null
           ticket_price?: number | null
           title?: string | null
           total_miocoin_bonus?: number | null
-          updated_at?: string | null
         }
         Relationships: []
       }
@@ -5834,6 +5822,11 @@ export type Database = {
       activate_partner_reward_sql: {
         Args: { p_api_key: string; p_partner_id: string; p_reward_code: string }
         Returns: Json
+      }
+      can_manage_internal_contest_assets: { Args: never; Returns: boolean }
+      contains_private_ticket_sequence: {
+        Args: { p_text: string }
+        Returns: boolean
       }
       admin_append_miocoin_chunk: {
         Args: { p_bonuses: Json; p_contest_id: string }
@@ -6360,6 +6353,14 @@ export type Database = {
           type: string
           user_seen: boolean
         }[]
+      }
+      sanitize_public_display_text: {
+        Args: { p_text: string }
+        Returns: string | null
+      }
+      sanitize_winner_note_public: {
+        Args: { p_note: string }
+        Returns: string | null
       }
       get_winner_internal_notes_superadmin: {
         Args: { p_winner_ids?: string[] | null }

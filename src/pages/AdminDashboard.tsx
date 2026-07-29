@@ -201,7 +201,7 @@ const AdminDashboard: React.FC = () => {
     try {
       // First get all contests
       const { data: contestsData, error: contestsError } = await supabase
-        .from('contests')
+        .from('public_contests')
         .select('id, title, description, main_prize, main_image, status, ticket_count, ticket_price, created_at')
         .order('created_at', { ascending: false });
 

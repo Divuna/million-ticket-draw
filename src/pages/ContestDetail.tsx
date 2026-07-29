@@ -42,8 +42,6 @@ type Contest = {
   id: string;
   title: string;
   description: string | null;
-  rules: string | null;
-  rules_pdf_url: string | null;
   main_prize: string | null;
   ticket_price: number;
   ticket_count: number;
@@ -168,10 +166,9 @@ export default function ContestDetail() {
   // Live activity rotating messages
   const LIVE_MESSAGES = [
     'Soutěž je aktivní',
-    'Bonusové výherní pozice jsou součástí pravidel soutěže',
     'Každý další tiket přináší novou šanci',
     'Otevři další tiket a zkus štěstí',
-    'Výherní pozice jsou předem určeny',
+    'Každý nákup představuje samostatnou šanci',
   ];
   const [liveMessageIndex, setLiveMessageIndex] = useState(0);
   const [liveVisible, setLiveVisible] = useState(true);
@@ -540,7 +537,7 @@ export default function ContestDetail() {
       try {
         const { data: contestData, error: contestError } = await supabase
           .from("public_contests")
-          .select("id, title, description, rules, rules_pdf_url, main_prize, ticket_price, ticket_count, status, main_prize_secondary_image, main_image, banner_image, fast_game, total_miocoin_bonus")
+          .select("id, title, description, main_prize, ticket_price, ticket_count, status, main_prize_secondary_image, main_image, banner_image, fast_game, total_miocoin_bonus")
           .eq("id", id)
           .maybeSingle();
 
@@ -1193,32 +1190,6 @@ export default function ContestDetail() {
           </div>
         )}
       </section>
-
-      {/* CONTEST RULES */}
-      {(contest.rules_pdf_url || (contest.rules && contest.rules.trim())) && (
-        <section className="relative z-10 px-4 py-12 max-w-4xl mx-auto">
-          <div className="rounded-2xl border border-white/10 bg-black/40 backdrop-blur-sm p-6 md:p-8">
-            <h2 className="customer-premium-orange-heading text-2xl md:text-3xl font-bold mb-4 text-heading-gold">
-              Pravidla soutěže
-            </h2>
-            {contest.rules_pdf_url && (
-              <a
-                href={contest.rules_pdf_url}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="inline-flex items-center gap-2 rounded-full bg-gradient-to-r from-[#FF8A00] to-[#FFB547] px-5 py-2.5 text-sm font-semibold text-[#111] shadow-lg hover:brightness-105 transition mb-4"
-              >
-                📄 Zobrazit pravidla soutěže
-              </a>
-            )}
-            {contest.rules && contest.rules.trim() && (
-              <div className="text-white/80 whitespace-pre-wrap leading-relaxed">
-                {contest.rules}
-              </div>
-            )}
-          </div>
-        </section>
-      )}
 
       {/* BONUS PRIZE DETAIL MODAL */}
       <BonusPrizeDetailModal

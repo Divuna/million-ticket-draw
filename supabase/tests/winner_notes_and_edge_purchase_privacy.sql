@@ -108,56 +108,76 @@ insert into winner_note_spelled_order_variants (note_text) values
   ('one hundred twenty-third ticket'),
   ('ticket one thousand two hundred'),
   ('winner at the ninetieth rank'),
-  ('eighty eighth place winner');
+  ('eighty eighth place winner'),
+  ('won at spot XXXIV'),
+  ('spot XXXIV winner'),
+  ('position XXXIV'),
+  ('XXXIVth position'),
+  ('ticket XXXIV'),
+  ('XXXIV ticket'),
+  ('rank IX'),
+  ('place XLII'),
+  ('slot C'),
+  ('order MMXXVI'),
+  ('výhra na pozici XXXIV'),
+  ('pozice XXXIV'),
+  ('XXXIV. pozice'),
+  ('tiket XXXIV'),
+  ('XXXIV. tiket'),
+  ('pořadí IX'),
+  ('místo XLII'),
+  ('příčka C'),
+  ('výherní slot MMXXVI'),
+  ('číslo tiketu XXXIV');
 
-select plan(124);
+select plan(156);
 
 select is(
   public.sanitize_winner_note_public('Sluchátka #34'),
-  'Sluchátka',
-  'hash ticket number is removed from a historical note'
+  null,
+  'historical notes fail closed instead of exposing a hash ticket number'
 );
 
 select is(
   public.sanitize_winner_note_public('Sluchátka, tiket 34'),
-  'Sluchátka',
-  'Czech natural-language ticket number is removed'
+  null,
+  'historical notes fail closed for a Czech ticket number'
 );
 
 select is(
   public.sanitize_winner_note_public('Sluchátka — ticket no. 34'),
-  'Sluchátka',
-  'English natural-language ticket number is removed'
+  null,
+  'historical notes fail closed for an English ticket number'
 );
 
 select is(
   public.sanitize_winner_note_public('Sluchátka; číslo tiketu: 34'),
-  'Sluchátka',
-  'labelled Czech ticket number is removed'
+  null,
+  'historical notes fail closed for a labelled Czech ticket number'
 );
 
 select is(
   public.sanitize_winner_note_public('Sluchátka | ticket_number=34'),
-  'Sluchátka',
-  'database field-name format is removed'
+  null,
+  'historical notes fail closed for a database field-name format'
 );
 
 select is(
   public.sanitize_winner_note_public('Sluchátka {"ticket_number":"34"}'),
-  'Sluchátka',
-  'JSON-like historical ticket field is removed'
+  null,
+  'historical notes fail closed for JSON-like internal data'
 );
 
 select is(
   public.sanitize_winner_note_public('Sluchátka, 34. tiket'),
-  'Sluchátka',
-  'reversed ticket-order format is removed'
+  null,
+  'historical notes fail closed for reversed ticket-order text'
 );
 
 select is(
   public.sanitize_winner_note_public('Výhra na 34. pozici'),
-  'Výhra',
-  'a Czech number-before-position phrase preserves only meaningful public text'
+  null,
+  'historical notes fail closed for a Czech number-before-position phrase'
 );
 
 select is(
@@ -516,6 +536,93 @@ select is(
 );
 
 reset role;
+
+select ok(
+  not has_column_privilege('anon', 'public.contests', 'updated_at', 'SELECT'),
+  'anon cannot poll the purchase-coupled contest update timestamp'
+);
+
+select ok(
+  not has_column_privilege('authenticated', 'public.contests', 'updated_at', 'SELECT'),
+  'authenticated customers cannot poll the purchase-coupled contest update timestamp'
+);
+
+select ok(
+  not has_column_privilege('anon', 'public.contests', 'description', 'SELECT')
+  and not has_column_privilege('anon', 'public.contests', 'rules', 'SELECT')
+  and not has_column_privilege('anon', 'public.contests', 'rules_pdf_url', 'SELECT'),
+  'anon cannot read raw contest prose or rule documents'
+);
+
+select ok(
+  not has_column_privilege('authenticated', 'public.contests', 'description', 'SELECT')
+  and not has_column_privilege('authenticated', 'public.contests', 'rules', 'SELECT')
+  and not has_column_privilege('authenticated', 'public.contests', 'rules_pdf_url', 'SELECT'),
+  'authenticated customers cannot read raw contest prose or rule documents'
+);
+
+select ok(
+  not exists (
+    select 1
+    from information_schema.columns
+    where table_schema = 'public'
+      and table_name = 'public_contests'
+      and column_name in ('rules', 'rules_pdf_url', 'updated_at', 'generated_poster_url')
+  ),
+  'the public contest projection omits rules, PDFs, update timing, and generated filenames'
+);
+
+select like(
+  pg_get_viewdef('public.public_contests'::regclass, true),
+  '%WHERE c.status = ANY%',
+  'the public contest projection excludes unpublished draft rows'
+);
+
+select is(
+  public.sanitize_public_display_text('Výhra na pozici XXXIV'),
+  null,
+  'the shared public-text guard rejects a Czech Roman-numeral position'
+);
+
+select is(
+  public.sanitize_public_display_text('Won at spot XXXIV'),
+  null,
+  'the shared public-text guard rejects an English Roman-numeral position'
+);
+
+select is(
+  public.sanitize_public_display_text('Bonus 100 MioCoinů'),
+  'Bonus 100 MioCoinů',
+  'the shared guard preserves meaningful public numbers without sequence semantics'
+);
+
+select is(
+  (select public from storage.buckets where id = 'contest-rules'),
+  false,
+  'historical contest rules PDFs are no longer in a public bucket'
+);
+
+select ok(
+  not exists (
+    select 1
+    from pg_policies
+    where schemaname = 'storage'
+      and tablename = 'objects'
+      and policyname = 'Public can read contest rules PDFs'
+  ),
+  'the anonymous contest-rules storage policy is removed'
+);
+
+select ok(
+  exists (
+    select 1
+    from pg_policies
+    where schemaname = 'storage'
+      and tablename = 'objects'
+      and policyname = 'Admins can read contest rules PDFs'
+  ),
+  'administrators retain an authenticated internal rules-PDF read path'
+);
 
 select * from finish();
 rollback;
