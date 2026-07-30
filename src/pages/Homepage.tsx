@@ -451,21 +451,23 @@ const Homepage = () => {
                   <p className="text-sm text-text-silver">Nejnovější výhry z našich soutěží</p>
                 </div>
 
-                <div className="space-y-4 flex-1 overflow-y-auto">
+                {/* 6 nejnovějších výherců: mobil 1 sloupec, desktop 2 sloupce × 3 řady.
+                    Žádné vnitřní rolování — všech 6 karet musí být vidět. */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4 flex-1">
                   {winnersLoading ? (
                     // Loading placeholders
-                    Array.from({ length: 3 }).map((_, index) => (
+                    Array.from({ length: 6 }).map((_, index) => (
                       <div key={index} className="rounded-xl h-[112px] animate-pulse" style={{ background: '#f1f5f9', border: '1px solid rgba(15,23,42,0.08)' }} />
                     ))
                   ) : !latestWinners || latestWinners.length === 0 ? (
-                    <div className="text-center py-12 space-y-3">
+                    <div className="text-center py-12 space-y-3 sm:col-span-2">
                       <OneMilTrophyIcon size={48} className="w-12 h-12 mx-auto text-muted-foreground/50" />
                       <h3 className="text-lg font-bold text-foreground">Zatím žádní výherci</h3>
                       <p className="text-sm text-muted-foreground">Momentálně nejsou k dispozici žádné výhry</p>
                     </div>
                   ) : (
                     latestWinners
-                      .slice(0, 3)
+                      .slice(0, 6)
                       .map((winner, index) => (
                         <WinnerCard
                           key={winner.id}
