@@ -1,3 +1,14 @@
+# 30. 07. 2026 — Issue #289 část A, druhý krok: samostatná stránka /top-up (připraveno ve worktree, nenasazeno)
+
+- **Samostatná stránka `/top-up` připravena ve worktree, zatím není dostupná ze spodního menu, není v PR ani nasazena.**
+- Nový `src/pages/TopUp.tsx` vykresluje sdílenou komponentu `MioCoinTopUpSection` ve stejném obalu jako panel na Homepage: `homepage-light-page` → `homepage-light-content` → `homepage-light-panel homepage-miocoin-panel`, pod zákaznickým motivem `public-customer-theme` (nastavuje `src/App.tsx` na layout wrapperu). Ověřeno v dev serveru: computed styly panelu, dlaždice i tlačítka jsou na `/top-up` shodné s Homepage; světlé pozadí `rgb(251, 250, 247)`; 4 balíčky, 4 tlačítka `Dobít`, odznaky `+10/+25/+80`; žádný horizontální overflow na 1280 px ani 375 px; 0 chyb v konzoli.
+- `src/App.tsx`: přidán import `TopUp`, zákaznická route `/top-up` a `/top-up` do `CUSTOMER_BLOCKED_ROUTES` (zakázaná pro partnera i affiliate).
+- Nativní Android/iOS: `TopUp.tsx` při `isNativeApp() === true` okamžitě přesměruje na `/profile` (`replace: true`) a nevykreslí nic — stejný vzor jako `PaymentSuccess`/`PaymentCancel`. Detekce výhradně přes `src/lib/nativeApp.ts`, žádná nová platformní logika. Ověřeno code review, ne v emulátoru.
+- `tests/e2e/54-mobile-layout-customer-pages.spec.ts`: do stávajícího seznamu zákaznických stránek doplněna route `/top-up` (jeden řádek, beze změny struktury testu).
+- Homepage záměrně nezměněna — dobíjecí komponenta zůstává dočasně i na původním místě; odstranění patří k dalšímu kroku spolu s partnerským blokem.
+- Bez zásahu: spodní navigace, Profil, Stripe backend (`create-stripe-checkout`, `stripe-webhook`), `/payment-success`, `/payment-cancel`, databáze, migrace, Supabase.
+- Kontroly: `npx tsc --noEmit` exit 0, `npm run build` exit 0. Commit zůstává jen ve worktree — bez push, bez PR, bez nasazení.
+
 # 30. 07. 2026 — Issue #289 část A, první krok: extrakce dobíjecího panelu (připraveno ve worktree, nenasazeno)
 
 - Vytvořen `src/components/MioCoinTopUpSection.tsx` — 1:1 přesun dobíjecího panelu z `src/pages/Homepage.tsx` (nadpis a popis „Dobijte si MioCoiny", čtyři balíčky, jejich placement bannery, `handleCoinPurchase`, `topUpLoading`, Stripe monitoring `logMonitoringEvent`/`logStripeCheckoutClientFailure`, `setPendingPaymentSuccessContext`, guard `isNativeApp()`).

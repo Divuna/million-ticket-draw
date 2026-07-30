@@ -8,8 +8,10 @@
 - Homepage komponentu vykresluje na stejném místě uvnitř karty; markup, třídy, texty ani částky se nezměnily. Ověřeno v dev serveru: pořadí sourozenců uvnitř panelu zůstalo `homepage-miocoin-header` → mřížka balíčků → dva navigační boxy, 4 balíčky, 4 tlačítka `Dobít`, bonusové odznaky `+10/+25/+80`.
 - Guard `isNativeApp()` (`src/lib/nativeApp.ts`) je zachován beze změny — v nativní aplikaci komponenta nerenderuje nic a nespouští checkout.
 - Boxy „Probíhající soutěže" a „Koupit voucher se slevou" zůstávají zatím na Homepage, nebyly přesunuty ani smazány.
-- **Zatím neprovedeno (další kroky issue #289):** stránka `/top-up`, změna spodního menu, vstup do Zpráv v profilu, partnerský blok na Homepage.
-- Bez zásahu: routy, `src/App.tsx`, Profil, spodní navigace, databáze, migrace, Edge Function `create-stripe-checkout`, `stripe-webhook`, nativní logika. Kontroly: `npx tsc --noEmit` exit 0, `npm run build` exit 0.
+- **Druhý krok — samostatná stránka `/top-up` připravena ve worktree, zatím není dostupná ze spodního menu, není v PR ani nasazena.** Nový `src/pages/TopUp.tsx` vykresluje sdílenou `MioCoinTopUpSection` ve stejném obalu jako Homepage (`homepage-light-page` → `homepage-light-content` → `homepage-light-panel homepage-miocoin-panel`), pod zákaznickým motivem `public-customer-theme`, který nastavuje `src/App.tsx`. Route `/top-up` přidána mezi zákaznické routy a do `CUSTOMER_BLOCKED_ROUTES` (zakázaná pro partnera a affiliate). Do spec 54 doplněna route `/top-up`.
+- **Nativní aplikace:** `TopUp.tsx` při `isNativeApp() === true` okamžitě přesměruje na `/profile` (`navigate('/profile', { replace: true })`) a nevykreslí nic — stejný vzor jako `PaymentSuccess`/`PaymentCancel`. Detekce výhradně přes `src/lib/nativeApp.ts`.
+- **Zatím neprovedeno (další kroky issue #289):** změna spodního menu (`Zprávy` → `Dobít`), vstup do Zpráv v profilu, odstranění panelu z Homepage, partnerský blok na Homepage. Dobíjecí komponenta je dočasně na obou místech (Homepage i `/top-up`) — jeden sdílený zdroj.
+- Bez zásahu: Homepage, spodní navigace, Profil, databáze, migrace, Supabase, Edge Function `create-stripe-checkout`, `stripe-webhook`, `/payment-success` i `/payment-cancel`. Kontroly: `npx tsc --noEmit` exit 0, `npm run build` exit 0.
 
 ## GARANTOVANÝ NÁKUPNÍ BENEFIT — DATOVÝ ZÁKLAD PŘIPRAVEN, FUNKCE JEŠTĚ NENÍ AKTIVNÍ (24. 07. 2026)
 

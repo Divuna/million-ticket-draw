@@ -30,6 +30,7 @@ import MyContests from "@/pages/MyContests";
 import MyContestDetail from "@/pages/MyContestDetail";
 import BonusDetail from "@/pages/BonusDetail";
 import Vouchers from "@/pages/Vouchers";
+import TopUp from "@/pages/TopUp";
 import Messages from "@/pages/Messages";
 import MessageDetail from "@/pages/MessageDetail";
 import PaymentSuccess from "@/pages/PaymentSuccess";
@@ -286,7 +287,7 @@ const queryClient = new QueryClient();
 // List of routes blocked for partner accounts
 const CUSTOMER_BLOCKED_ROUTES = [
   '/', '/games', '/favorite-games', '/contest', '/my-contests', '/my-contest', 
-  '/vouchers', '/messages', '/wins', '/winners', '/profile', '/bonus', 
+  '/vouchers', '/top-up', '/messages', '/wins', '/winners', '/profile', '/bonus',
   '/payment', '/payment-success', '/payment-cancel', '/share/ticket'
 ];
 
@@ -614,6 +615,8 @@ function AppContent() {
           <Route path="/my-contest/:id" element={<MyContestDetail />} />
           <Route path="/bonus/:id" element={<BonusDetail />} />
           <Route path="/vouchers" element={<Vouchers />} />
+          {/* Dobíjení MioCoinů — v nativní aplikaci se stránka sama přesměruje na /profile. */}
+          <Route path="/top-up" element={<TopUp />} />
           <Route path="/messages" element={<Messages />} />
           <Route path="/messages/:id" element={<MessageDetail />} />
           <Route path="/payment/success" element={<PaymentSuccess />} />
