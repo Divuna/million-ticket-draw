@@ -83,7 +83,7 @@ export const PartnerRecruitmentCard = () => {
         </ul>
 
         {/* CTA */}
-        <div className="mt-6 space-y-2">
+        <div className="mt-6">
           <Button
             asChild
             size="lg"
@@ -91,9 +91,6 @@ export const PartnerRecruitmentCard = () => {
           >
             <Link to="/partner/register">Zjistit více o partnerství</Link>
           </Button>
-          <p className="text-center text-xs text-text-silver/80">
-            Nezávazné — podmínky spolupráce najdete na stránce partnerství.
-          </p>
         </div>
       </CardContent>
     </Card>
