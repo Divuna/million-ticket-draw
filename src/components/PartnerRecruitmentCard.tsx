@@ -3,74 +3,93 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import {
   OneMilCartIcon,
-  OneMilMioCoinIcon,
-  OneMilZapIcon,
-  OneMilWalletIcon,
+  OneMilGiftIcon,
   OneMilVoucherIcon,
-  OneMilDiamondIcon,
+  OneMilZapIcon,
 } from "@/components/icons/OneMilIcons";
 
 /**
- * Partnerský náborový blok na Homepage — část B issue #289.
+ * Partnerská upoutávka na Homepage.
  *
- * Nahrazuje dřívější dobíjecí panel v levém sloupci. Dobíjení má vlastní
- * stránku `/top-up` a položku `Dobít` ve spodním menu.
+ * Záměrně je to **teaser, ne seznam podmínek** — má jen zaujmout a poslat
+ * návštěvníka na stránku partnerství. Detailní podmínky patří tam, ne sem.
  *
  * Pravidla (neměnit):
- * - Blok je čistě informativní odkaz na `/partner/register`. Nevolá Stripe,
- *   Supabase ani žádné platby, proto je viditelný i v nativní aplikaci
- *   (žádný `isNativeApp()` guard).
- * - Text nesmí slibovat automatickou provizi — používá se formulace
- *   „sjednanou provizi“ (schválené znění vlastníka).
- * - Používají se výhradně existující OneMil ikony; žádné nové logo ani cizí
- *   grafika.
+ * - Žádné zmínky o provizi, placených dobitích, cenách ani o aktivovaných či
+ *   použitých MioCoinech. Obchodní podmínky se na Homepage neslibují.
+ * - Blok je čistě odkaz na `/partner/register`. Nevolá Stripe, Supabase ani
+ *   žádné platby, proto je viditelný i v nativní aplikaci (bez `isNativeApp()`).
+ * - Používají se výhradně existující OneMil ikony; žádné nové logo, obrázek
+ *   ani cizí grafika. Světelné efekty jsou čisté CSS gradienty.
  */
 
-const PARTNER_BENEFITS = [
-  { icon: OneMilMioCoinIcon, text: "Nastavíte si, kolik MioCoinů zákazník získá." },
-  { icon: OneMilZapIcon, text: "Odměny lze posílat automaticky po nákupu." },
-  { icon: OneMilWalletIcon, text: "Platíte pouze za skutečně aktivované nebo použité MioCoiny." },
-  { icon: OneMilVoucherIcon, text: "Můžete přidávat vlastní vouchery a partnerské nabídky." },
-  {
-    icon: OneMilDiamondIcon,
-    text:
-      "Ze zákazníků registrovaných přes vás můžete získávat sjednanou provizi z jejich budoucích placených dobití.",
-  },
+const PARTNER_TEASERS = [
+  { icon: OneMilGiftIcon, text: "Odměna navíc ke každému nákupu" },
+  { icon: OneMilVoucherIcon, text: "Vlastní vouchery a nabídky" },
+  { icon: OneMilZapIcon, text: "Jednoduché zapojení pro váš obchod" },
 ] as const;
 
 export const PartnerRecruitmentCard = () => {
   return (
-    <Card className="homepage-light-panel homepage-miocoin-panel rounded-xl overflow-hidden bg-[hsl(220_45%_6%)] border border-[rgba(255,138,0,0.2)] shadow-[0_4px_16px_hsl(222_50%_3%/0.5)] h-full">
-      <CardContent className="p-5 md:p-6 h-full flex flex-col">
-        <div className="space-y-4 flex-1 flex flex-col">
-          <div className="space-y-2">
-            <h2 className="homepage-premium-orange-heading text-xl md:text-2xl font-bold text-heading-gold flex items-center gap-2">
-              <OneMilCartIcon size={24} className="w-6 h-6 md:w-7 md:h-7" />
-              Staňte se partnerem OneMil
-            </h2>
-            <p className="text-sm md:text-base font-semibold text-text-silver">
-              Odměňte své zákazníky za nákup. Zaslouží si něco navíc.
-            </p>
-          </div>
+    <Card className="homepage-light-panel homepage-miocoin-panel group relative isolate overflow-hidden rounded-xl border border-[rgba(255,138,0,0.2)] bg-[hsl(220_45%_6%)] shadow-[0_4px_16px_hsl(222_50%_3%/0.5)] h-full">
+      {/* Světelné efekty — čisté CSS, bez obrázků */}
+      <div
+        aria-hidden="true"
+        className="pointer-events-none absolute -top-24 -right-16 h-64 w-64 rounded-full bg-[radial-gradient(circle,rgba(255,181,71,0.30),transparent_70%)] blur-2xl transition-opacity duration-700 group-hover:opacity-90 opacity-70"
+      />
+      <div
+        aria-hidden="true"
+        className="pointer-events-none absolute -bottom-28 -left-20 h-64 w-64 rounded-full bg-[radial-gradient(circle,rgba(226,99,5,0.18),transparent_70%)] blur-2xl"
+      />
+      <div
+        aria-hidden="true"
+        className="pointer-events-none absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-[rgba(255,181,71,0.85)] to-transparent"
+      />
 
-          <ul className="space-y-2.5 flex-1">
-            {PARTNER_BENEFITS.map(({ icon: Icon, text }) => (
-              <li
-                key={text}
-                className="homepage-light-tile rounded-xl bg-[hsl(220_45%_6%)] border border-[rgba(255,138,0,0.18)] px-3.5 py-3 flex items-start gap-3"
-              >
-                <Icon size={20} className="w-5 h-5 mt-0.5 shrink-0 text-[#FF8A00]" />
-                <span className="text-sm text-text-silver leading-relaxed">{text}</span>
-              </li>
-            ))}
-          </ul>
+      <CardContent className="relative z-10 flex h-full flex-col p-5 md:p-7">
+        {/* Hlavní sdělení */}
+        <div className="space-y-3">
+          <span className="inline-flex items-center gap-2 rounded-full border border-[rgba(255,138,0,0.28)] bg-[rgba(255,138,0,0.08)] px-3 py-1 text-[11px] font-bold uppercase tracking-[0.14em] text-[#e26305]">
+            <OneMilCartIcon size={14} className="h-3.5 w-3.5" />
+            Pro obchody a e-shopy
+          </span>
 
+          <h2 className="homepage-premium-orange-heading text-xl md:text-2xl font-bold text-heading-gold">
+            Staňte se partnerem OneMil
+          </h2>
+
+          <p className="text-2xl md:text-[2rem] md:leading-[1.15] font-extrabold tracking-tight text-foreground">
+            Nabídněte zákazníkům víc než ostatní.
+          </p>
+
+          <p className="text-sm md:text-base text-text-silver max-w-[46ch]">
+            Proměňte každý nákup v důvod, proč se k vám zákazníci vrátí.
+          </p>
+        </div>
+
+        {/* Tři výhody — na mobilu pod sebou, od sm vedle sebe */}
+        <ul className="mt-6 grid flex-1 content-center grid-cols-1 gap-3 sm:grid-cols-3">
+          {PARTNER_TEASERS.map(({ icon: Icon, text }) => (
+            <li
+              key={text}
+              className="homepage-light-tile flex items-center gap-3 rounded-xl border border-[rgba(255,138,0,0.18)] bg-[hsl(220_45%_6%)] px-4 py-4 transition-all duration-300 hover:-translate-y-0.5 hover:border-[rgba(255,138,0,0.42)] hover:shadow-[0_14px_30px_-16px_rgba(226,99,5,0.45)] sm:flex-col sm:items-start sm:gap-2.5"
+            >
+              <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-[#FFB547] to-[#FF8A00] shadow-[0_6px_16px_-6px_rgba(226,99,5,0.55)] transition-transform duration-300 group-hover:scale-[1.03]">
+                <Icon size={20} className="h-5 w-5 text-black" />
+              </span>
+              <span className="text-sm font-semibold leading-snug text-foreground">{text}</span>
+            </li>
+          ))}
+        </ul>
+
+        {/* CTA */}
+        <div className="mt-6">
           <Button
             asChild
             size="lg"
-            className="w-full bg-gradient-to-r from-[#FF8A00] to-[#FFB547] hover:from-[#FFB547] hover:to-[#FF8A00] text-black font-bold shadow-[0_8px_24px_rgba(255,138,0,0.22)] transition-all duration-200"
+            className="w-full bg-gradient-to-r from-[#FF8A00] to-[#FFB547] text-black font-bold shadow-[0_10px_28px_-10px_rgba(226,99,5,0.6)] transition-all duration-300 hover:from-[#FFB547] hover:to-[#FF8A00] hover:shadow-[0_14px_34px_-10px_rgba(226,99,5,0.7)] hover:-translate-y-0.5"
           >
-            <Link to="/partner/register">Chci se stát partnerem</Link>
+            <Link to="/partner/register">Zjistit více o partnerství</Link>
           </Button>
         </div>
       </CardContent>
