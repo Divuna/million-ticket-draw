@@ -89,7 +89,7 @@ export const PartnerRecruitmentCard = () => {
             size="lg"
             className="w-full bg-gradient-to-r from-[#FF8A00] to-[#FFB547] text-black font-bold shadow-[0_10px_28px_-10px_rgba(226,99,5,0.6)] transition-all duration-300 hover:from-[#FFB547] hover:to-[#FF8A00] hover:shadow-[0_14px_34px_-10px_rgba(226,99,5,0.7)] hover:-translate-y-0.5"
           >
-            <Link to="/partner/register">Zjistit více o partnerství</Link>
+            <Link to="/partnerstvi">Zjistit více o partnerství</Link>
           </Button>
         </div>
       </CardContent>

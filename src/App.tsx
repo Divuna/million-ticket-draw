@@ -30,6 +30,7 @@ import MyContests from "@/pages/MyContests";
 import MyContestDetail from "@/pages/MyContestDetail";
 import BonusDetail from "@/pages/BonusDetail";
 import Vouchers from "@/pages/Vouchers";
+import PartnerPartnership from "@/pages/PartnerPartnership";
 import TopUp from "@/pages/TopUp";
 import Messages from "@/pages/Messages";
 import MessageDetail from "@/pages/MessageDetail";
@@ -378,7 +379,9 @@ function AppContent() {
   const { isAdmin, isPartner, isPartnerAccount, isInfluencerAccount, isAffiliateAccount, loading: roleLoading } = useUserRole();
   const location = useLocation();
   const navigate = useNavigate();
-  const isPartnerRoute = location.pathname.startsWith('/partner');
+  // Pozor: veřejná stránka `/partnerstvi` NENÍ partnerská routa — všechny
+  // partnerské routy jsou `/partner/...`, proto se porovnává i s lomítkem.
+  const isPartnerRoute = location.pathname.startsWith('/partner/');
   const isInfluencerRoute = location.pathname.startsWith('/influencer');
 
   // All hooks MUST be called unconditionally (React rules of hooks).
@@ -578,9 +581,11 @@ function AppContent() {
     return <BottomNavigation />;
   };
 
+  // `/partnerstvi` je veřejná zákaznická stránka, proto se vylučuje jen
+  // `/partner/...` (partnerský portál), ne celý prefix `/partner`.
   const isPublicCustomerThemeRoute =
     !location.pathname.startsWith('/admin') &&
-    !location.pathname.startsWith('/partner') &&
+    !location.pathname.startsWith('/partner/') &&
     !location.pathname.startsWith('/affiliate') &&
     !location.pathname.startsWith('/influencer');
 
@@ -615,6 +620,8 @@ function AppContent() {
           <Route path="/my-contest/:id" element={<MyContestDetail />} />
           <Route path="/bonus/:id" element={<BonusDetail />} />
           <Route path="/vouchers" element={<Vouchers />} />
+          {/* Veřejný přehled možností partnerství — registrace zůstává na /partner/register. */}
+          <Route path="/partnerstvi" element={<PartnerPartnership />} />
           {/* Dobíjení MioCoinů — v nativní aplikaci se stránka sama přesměruje na /profile. */}
           <Route path="/top-up" element={<TopUp />} />
           <Route path="/messages" element={<Messages />} />
