@@ -2,21 +2,33 @@ import { useNavigate, useLocation } from "react-router-dom";
 import { useUnreadMessagesCount } from "@/hooks/useUnreadMessagesCount";
 import { useUnseenWinsCount } from "@/hooks/useUnseenWinsCount";
 import { useUserRole } from "@/hooks/useUserRole";
+import { isNativeApp } from "@/lib/nativeApp";
 import {
   OneMilHomeIcon,
   OneMilTicketIcon,
   OneMilTrophyIcon,
   OneMilMedalIcon,
-  OneMilMessageIcon,
+  OneMilMioCoinIcon,
   OneMilProfileIcon,
 } from "@/components/icons/OneMilIcons";
 
+/**
+ * Zákaznické spodní menu.
+ *
+ * Pravidla (neměnit):
+ * - Položka `Dobít` (`/top-up`) je jen pro web a PWA. V nativní Android/iOS
+ *   aplikaci se nezobrazuje (Apple/Google pravidla) — detekce výhradně přes
+ *   `isNativeApp()` ze `src/lib/nativeApp.ts`. Samotná stránka `/top-up` má
+ *   vlastní guard, tohle je jen skrytí vstupu.
+ * - Vstup do Zpráv je v `Můj profil`; badge nepřečtených zpráv se proto
+ *   zobrazuje na položce `/profile`. Badge Výher zůstává na `/wins`.
+ */
 const CUSTOMER_NAV_ITEMS = [
   { path: "/", label: "Domů", icon: OneMilHomeIcon },
   { path: "/vouchers", label: "Vouchery", icon: OneMilTicketIcon },
   { path: "/games", label: "Soutěže", icon: OneMilTrophyIcon },
   { path: "/wins", label: "Výhry", icon: OneMilMedalIcon },
-  { path: "/messages", label: "Zprávy", icon: OneMilMessageIcon },
+  { path: "/top-up", label: "Dobít", icon: OneMilMioCoinIcon },
   { path: "/profile", label: "Můj profil", icon: OneMilProfileIcon },
 ] as const;
 
@@ -28,6 +40,11 @@ export const BottomNavigation = () => {
   const { unseenCount: unseenWinsCount } = useUnseenWinsCount();
 
   const onAdminShell = isAdmin && location.pathname.startsWith("/admin");
+
+  // Dobíjení není v nativní aplikaci dostupné — položku vůbec nevykreslujeme.
+  const navItems = CUSTOMER_NAV_ITEMS.filter(
+    (item) => !(item.path === "/top-up" && isNativeApp()),
+  );
 
   // Admin naviguje výhradně přes AdminLayout (AdminPrimaryNav + AdminContextSubNav) — žádná druhá lišta.
   if (onAdminShell) {
@@ -41,13 +58,14 @@ export const BottomNavigation = () => {
       role="navigation"
       aria-label="Hlavní menu"
     >
-      {CUSTOMER_NAV_ITEMS.map((item) => {
+      {navItems.map((item) => {
         const Icon = item.icon;
         const isActive = location.pathname === item.path;
-        const showMessagesBadge = item.path === "/messages" && unreadCount > 0;
+        // Zprávy mají vstup v profilu → badge nepřečtených zpráv patří na /profile.
+        const showMessagesBadge = item.path === "/profile" && unreadCount > 0;
         const showWinsBadge = item.path === "/wins" && unseenWinsCount > 0;
         const badgeCount =
-          item.path === "/messages" ? unreadCount : item.path === "/wins" ? unseenWinsCount : 0;
+          item.path === "/profile" ? unreadCount : item.path === "/wins" ? unseenWinsCount : 0;
 
         return (
           <button

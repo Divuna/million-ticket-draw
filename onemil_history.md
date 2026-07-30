@@ -1,3 +1,52 @@
+# 30. 07. 2026 — Issue #289 části A a B: Draft PR #290 otevřen
+
+- **Části A a B issue #289 jsou připravené v Draft PR #290, zatím nejsou mergnuté ani nasazené.**
+- Větev `feat/miocoin-topup-section-extract` (HEAD `cf9198e5`, 4 commity) pushnuta a otevřena jako **Draft** PR #290 do `main` (`84352a02`): https://github.com/Divuna/million-ticket-draw/pull/290
+- Obsah PR: nová stránka `/top-up` (web/PWA), položka `Dobít` ve spodním menu jen pro web/PWA, přesun vstupu do Zpráv do Profilu, badge nepřečtených zpráv na `Můj profil` i v Profilu, partnerský náborový blok na Homepage. Skrytí dobíjení v nativní aplikaci zachováno na třech místech, vždy přes existující `isNativeApp()`.
+- Diff je výhradně frontendový (8 souborů v `src/` + spec 54 + dokumentace). **Žádná změna databáze, Supabase migrací, Edge Functions, Stripe backendu ani platební logiky.**
+- CI na PR: Smoke E2E (Chromium) **pass** (run `30559565243`). Plný staging E2E na této větvi zatím neproběhl.
+- Do issue #289 přidán komentář s odkazem na PR a označením částí A a B jako „připraveno v Draft PR, čeká na kontrolu". **Část C není součástí PR #290.**
+- Nic nemergnuto, nic nenasazeno; po případném merge bude aktivace na produkčním webu vyžadovat ruční Lovable `Share → Publish`.
+
+# 30. 07. 2026 — Issue #289 část B: partnerský náborový blok na Homepage (součást Draft PR #290)
+
+- **Partnerský náborový blok nahradil dobíjení na Homepage; změna je v Draft PR #290, zatím nemergnutá a nenasazená.**
+- Z `src/pages/Homepage.tsx` odstraněn `MioCoinTopUpSection`, box „Probíhající soutěže", box „Koupit voucher se slevou", hook `usePlacementBanners` i s klíči (`miocoin_50/310/525/1280`, `probihajici_souteze`, `koupit_voucher`, `vzhled_karta_vyher` — Homepage už žádný z nich nepoužívala; `vzhled_karta_vyher` si dál načítá `ContestDetail.tsx` samostatně) a nepoužívaný import `MioCoinTopUpSection`.
+- Nový `src/components/PartnerRecruitmentCard.tsx` se schváleným zněním: nadpis „Staňte se partnerem OneMil", hlavní text „Odměňte své zákazníky za nákup. Zaslouží si něco navíc.", pět odrážek (nastavení počtu MioCoinů, automatické odměny po nákupu, platba jen za aktivované/použité MioCoiny, vlastní vouchery a partnerské nabídky, sjednaná provize z budoucích placených dobití registrovaných zákazníků) a CTA „Chci se stát partnerem" → `/partner/register`. Formulace „sjednanou provizi" je závazná — neslibovat automatickou provizi.
+- Blok používá výhradně existující OneMil ikony (`OneMilCartIcon`, `OneMilMioCoinIcon`, `OneMilZapIcon`, `OneMilWalletIcon`, `OneMilVoucherIcon`, `OneMilDiamondIcon`), žádné nové logo ani cizí grafiku (0 `<img>`), a je viditelný i v nativní Android/iOS aplikaci — neobsahuje platby, proto bez `isNativeApp()` guardu.
+- Ověřeno v dev serveru: desktop 1280 px → dva sloupce vedle sebe (x 16 a 641, shodná šířka 609 px i výška 552 px), mobil 375 px → oba bloky pod sebou ve správném pořadí, `scrollWidth` 375 (žádný horizontální overflow). Světlý prémiový vzhled sedí s původním panelem (teplý radiální gradient, border `rgba(200,155,80,0.22)`, bílé dlaždice, oranžový nadpis `rgb(226,99,5)`). CTA prokliknuto — vede na `/partner/register`, formulář „Registrace e-shopu" se načte, 0 chyb v konzoli.
+- Pravý panel `Poslední výherci` beze změny. Bez zásahu: `/top-up`, `MioCoinTopUpSection`, spodní menu, Profil, Stripe backend, platební návratové stránky, databáze, Supabase, platby, soutěže, vouchery.
+- Kontroly: `npx tsc --noEmit` exit 0, `npm run build` exit 0. Commit je součástí Draft PR #290 — nemergnuto, nenasazeno.
+
+# 30. 07. 2026 — Issue #289 část A, třetí krok: spodní menu Dobít + vstup do Zpráv v profilu (součást Draft PR #290)
+
+- **Spodní menu a přesun vstupu do Zpráv jsou v Draft PR #290, zatím nemergnuté a nenasazené.**
+- `src/components/BottomNavigation.tsx`: položka `Zprávy` (`/messages`, `OneMilMessageIcon`) nahrazena položkou `Dobít` (`/top-up`, `OneMilMioCoinIcon`). V nativní Android/iOS aplikaci se položka `Dobít` vůbec nevykresluje — filtr přes existující `isNativeApp()` ze `src/lib/nativeApp.ts`, žádná nová platformní logika. Výsledek: web/PWA `Domů · Vouchery · Soutěže · Výhry · Dobít · Můj profil`, nativní aplikace `Domů · Vouchery · Soutěže · Výhry · Můj profil`.
+- Badge nepřečtených zpráv přesunut z položky `/messages` na `/profile`; zdroj zůstává `useUnreadMessagesCount` (globální store), takže číslo je stejné jako dřív. Badge Výher (`useUnseenWinsCount` na `/wins`) beze změny.
+- `src/pages/Profile.tsx`: nad `RedeemMioCoinCard` přidána karta `Zprávy` (`PremiumCard` + `SectionTile` s `OneMilMessageIcon`), s počtem nepřečtených na dlaždici i v tlačítku a s popisem „Máte N nepřečtených zpráv“ / „Konverzace s podporou OneMil“. Tlačítko `Otevřít zprávy` vede na `/messages` a je dostupné na webu, v PWA i v nativní aplikaci (bez native guardu). Dobíjecí tlačítko `Dobít MioCoiny` a jeho modal zůstaly beze změny včetně stávajícího `isNativeApp()` guardu.
+- Ověřeno v dev serveru: spodní menu na webu vrací přesně `Domů · Vouchery · Soutěže · Výhry · Dobít · Můj profil`, klik na `Dobít` naviguje na `/top-up` (panel + 4 balíčky, aktivní stav na položce `Dobít`), 0 chyb v konzoli. Nativní filtr a runtime badge ověřeny code review — lokální dev míří na produkční Supabase a nepřihlašoval jsem se do něj.
+- Bez zásahu: Homepage, `/top-up`, Stripe backend, platební návratové stránky, databáze, Supabase, migrace, platby, soutěže, vouchery.
+- Kontroly: `npx tsc --noEmit` exit 0, `npm run build` exit 0. Commit je součástí Draft PR #290 — nemergnuto, nenasazeno.
+
+# 30. 07. 2026 — Issue #289 část A, druhý krok: samostatná stránka /top-up (součást Draft PR #290)
+
+- **Samostatná stránka `/top-up` je v Draft PR #290, zatím nemergnutá a nenasazená.** V tomto kroku ještě nebyla dostupná ze spodního menu — vstup `Dobít` přidal až třetí krok.
+- Nový `src/pages/TopUp.tsx` vykresluje sdílenou komponentu `MioCoinTopUpSection` ve stejném obalu jako panel na Homepage: `homepage-light-page` → `homepage-light-content` → `homepage-light-panel homepage-miocoin-panel`, pod zákaznickým motivem `public-customer-theme` (nastavuje `src/App.tsx` na layout wrapperu). Ověřeno v dev serveru: computed styly panelu, dlaždice i tlačítka jsou na `/top-up` shodné s Homepage; světlé pozadí `rgb(251, 250, 247)`; 4 balíčky, 4 tlačítka `Dobít`, odznaky `+10/+25/+80`; žádný horizontální overflow na 1280 px ani 375 px; 0 chyb v konzoli.
+- `src/App.tsx`: přidán import `TopUp`, zákaznická route `/top-up` a `/top-up` do `CUSTOMER_BLOCKED_ROUTES` (zakázaná pro partnera i affiliate).
+- Nativní Android/iOS: `TopUp.tsx` při `isNativeApp() === true` okamžitě přesměruje na `/profile` (`replace: true`) a nevykreslí nic — stejný vzor jako `PaymentSuccess`/`PaymentCancel`. Detekce výhradně přes `src/lib/nativeApp.ts`, žádná nová platformní logika. Ověřeno code review, ne v emulátoru.
+- `tests/e2e/54-mobile-layout-customer-pages.spec.ts`: do stávajícího seznamu zákaznických stránek doplněna route `/top-up` (jeden řádek, beze změny struktury testu).
+- Homepage záměrně nezměněna — dobíjecí komponenta zůstává dočasně i na původním místě; odstranění patří k dalšímu kroku spolu s partnerským blokem.
+- Bez zásahu: spodní navigace, Profil, Stripe backend (`create-stripe-checkout`, `stripe-webhook`), `/payment-success`, `/payment-cancel`, databáze, migrace, Supabase.
+- Kontroly: `npx tsc --noEmit` exit 0, `npm run build` exit 0. Commit je součástí Draft PR #290 — nemergnuto, nenasazeno.
+
+# 30. 07. 2026 — Issue #289 část A, první krok: extrakce dobíjecího panelu (součást Draft PR #290)
+
+- Vytvořen `src/components/MioCoinTopUpSection.tsx` — 1:1 přesun dobíjecího panelu z `src/pages/Homepage.tsx` (nadpis a popis „Dobijte si MioCoiny", čtyři balíčky, jejich placement bannery, `handleCoinPurchase`, `topUpLoading`, Stripe monitoring `logMonitoringEvent`/`logStripeCheckoutClientFailure`, `setPendingPaymentSuccessContext`, guard `isNativeApp()`).
+- Homepage komponentu vykresluje na stejném místě; vzhled, texty, částky i chování beze změny. DOM ověřen v dev serveru — uvnitř panelu zůstaly tři sourozenci ve stejném pořadí, žádný obalový element navíc.
+- Boxy „Probíhající soutěže" a „Koupit voucher se slevou" záměrně ponechány na Homepage; nebyly přesunuty ani smazány.
+- Nevytvořeno a nezměněno: `/top-up`, spodní menu, Profil, routy, `src/App.tsx`, databáze, migrace, Stripe backend (`create-stripe-checkout`, `stripe-webhook`), nativní logika.
+- Kontroly: `npx tsc --noEmit` exit 0, `npm run build` exit 0. Commit je součástí Draft PR #290 — nemergnuto, není na stagingu ani produkci.
+
 # 18. 07. 2026 — Cron auth fix: process-email-queue a send-offer-reminders (PR #241) LIVE na produkci
 
 - PR #241 (`fix/cron-internal-token-auth`) mergnut do `main` a nasazen na produkci `xkzhjldrojjlrkezorey`. Řeší opakované HTTP 401 plánovaných automatů.

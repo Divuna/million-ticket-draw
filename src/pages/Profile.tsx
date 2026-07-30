@@ -25,6 +25,7 @@ import {
   OneMilWalletIcon,
   OneMilShieldIcon,
   OneMilInfoIcon,
+  OneMilMessageIcon,
 } from '@/components/icons/OneMilIcons';
 import ReferralSection from '@/components/ReferralSection';
 import { RedeemMioCoinCard } from '@/components/RedeemMioCoinCard';
@@ -35,6 +36,7 @@ import { setPendingPaymentSuccessContext, isSafeInternalPath } from '@/lib/payme
 import { isNativeApp } from '@/lib/nativeApp';
 import { logStripeCheckoutClientFailure } from '@/lib/monitoring';
 import { useUserRole } from '@/hooks/useUserRole';
+import { useUnreadMessagesCount } from '@/hooks/useUnreadMessagesCount';
 import { useNotificationSettings } from '@/hooks/useNotificationSettings';
 import { Switch } from '@/components/ui/switch';
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
@@ -146,6 +148,8 @@ const SectionTile: React.FC<{ icon: React.ReactNode }> = ({ icon }) => (
 const Profile: React.FC = () => {
   const { user, session } = useAuth();
   const { isAdmin } = useUserRole();
+  // Vstup do Zpráv je nově v profilu — stejný zdroj počtu jako spodní menu.
+  const { unreadCount } = useUnreadMessagesCount();
   const { soundEnabled, messageSoundEnabled, winSoundEnabled, toggleSound, toggleMessageSound, toggleWinSound } = useNotificationSettings();
   const navigate = useNavigate();
   const location = useLocation();
@@ -877,6 +881,48 @@ const Profile: React.FC = () => {
                     ))}
                   </div>
                 )}
+              </div>
+            </div>
+          </PremiumCard>
+
+          {/* Zprávy — hlavní vstup do konverzace s podporou (web, PWA i nativní aplikace). */}
+          <PremiumCard>
+            <div className="p-6">
+              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+                <div className="flex items-center gap-4 min-w-0">
+                  <div className="relative shrink-0">
+                    <SectionTile icon={<OneMilMessageIcon size={24} className="w-6 h-6 text-black" />} />
+                    {unreadCount > 0 && (
+                      <span
+                        className="absolute -top-2 -right-2 bg-red-500 text-white text-[11px] font-bold rounded-full px-[7px] py-[1px] shadow-lg"
+                        aria-hidden="true"
+                      >
+                        {unreadCount}
+                      </span>
+                    )}
+                  </div>
+                  <div className="min-w-0">
+                    <h2 className="text-xl font-bold text-[#E7EBF0]">Zprávy</h2>
+                    <p className="text-sm text-gray-400">
+                      {unreadCount > 0
+                        ? `Máte ${unreadCount} nepřečtených zpráv`
+                        : 'Konverzace s podporou OneMil'}
+                    </p>
+                  </div>
+                </div>
+                <Button
+                  onClick={() => navigate('/messages')}
+                  size="lg"
+                  className="w-full sm:w-auto bg-gradient-to-r from-[#FF8A00] to-[#FFB547] hover:from-[#FFB547] hover:to-[#FF8A00] text-black font-bold shadow-lg shadow-[rgba(255,138,0,0.2)] transition-all duration-200"
+                >
+                  <OneMilMessageIcon size={20} className="h-5 w-5 mr-2" />
+                  Otevřít zprávy
+                  {unreadCount > 0 && (
+                    <span className="ml-2 rounded-full bg-black/20 px-2 py-0.5 text-xs font-bold tabular-nums">
+                      {unreadCount}
+                    </span>
+                  )}
+                </Button>
               </div>
             </div>
           </PremiumCard>
