@@ -1,3 +1,13 @@
+# 30. 07. 2026 — Issue #289 část B: partnerský náborový blok na Homepage (připraveno ve worktree, nenasazeno)
+
+- **Partnerský náborový blok nahradil dobíjení na Homepage ve worktree; změna zatím není v PR ani nasazena.**
+- Z `src/pages/Homepage.tsx` odstraněn `MioCoinTopUpSection`, box „Probíhající soutěže", box „Koupit voucher se slevou", hook `usePlacementBanners` i s klíči (`miocoin_50/310/525/1280`, `probihajici_souteze`, `koupit_voucher`, `vzhled_karta_vyher` — Homepage už žádný z nich nepoužívala; `vzhled_karta_vyher` si dál načítá `ContestDetail.tsx` samostatně) a nepoužívaný import `MioCoinTopUpSection`.
+- Nový `src/components/PartnerRecruitmentCard.tsx` se schváleným zněním: nadpis „Staňte se partnerem OneMil", hlavní text „Odměňte své zákazníky za nákup. Zaslouží si něco navíc.", pět odrážek (nastavení počtu MioCoinů, automatické odměny po nákupu, platba jen za aktivované/použité MioCoiny, vlastní vouchery a partnerské nabídky, sjednaná provize z budoucích placených dobití registrovaných zákazníků) a CTA „Chci se stát partnerem" → `/partner/register`. Formulace „sjednanou provizi" je závazná — neslibovat automatickou provizi.
+- Blok používá výhradně existující OneMil ikony (`OneMilCartIcon`, `OneMilMioCoinIcon`, `OneMilZapIcon`, `OneMilWalletIcon`, `OneMilVoucherIcon`, `OneMilDiamondIcon`), žádné nové logo ani cizí grafiku (0 `<img>`), a je viditelný i v nativní Android/iOS aplikaci — neobsahuje platby, proto bez `isNativeApp()` guardu.
+- Ověřeno v dev serveru: desktop 1280 px → dva sloupce vedle sebe (x 16 a 641, shodná šířka 609 px i výška 552 px), mobil 375 px → oba bloky pod sebou ve správném pořadí, `scrollWidth` 375 (žádný horizontální overflow). Světlý prémiový vzhled sedí s původním panelem (teplý radiální gradient, border `rgba(200,155,80,0.22)`, bílé dlaždice, oranžový nadpis `rgb(226,99,5)`). CTA prokliknuto — vede na `/partner/register`, formulář „Registrace e-shopu" se načte, 0 chyb v konzoli.
+- Pravý panel `Poslední výherci` beze změny. Bez zásahu: `/top-up`, `MioCoinTopUpSection`, spodní menu, Profil, Stripe backend, platební návratové stránky, databáze, Supabase, platby, soutěže, vouchery.
+- Kontroly: `npx tsc --noEmit` exit 0, `npm run build` exit 0. Commit zůstává jen ve worktree — bez push, bez PR, bez nasazení.
+
 # 30. 07. 2026 — Issue #289 část A, třetí krok: spodní menu Dobít + vstup do Zpráv v profilu (připraveno ve worktree, nenasazeno)
 
 - **Spodní menu a přesun vstupu do Zpráv jsou připravené ve worktree, zatím nejsou v PR ani nasazené.**

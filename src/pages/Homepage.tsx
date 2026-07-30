@@ -5,7 +5,7 @@ import { isNativeApp } from "@/lib/nativeApp";
 import { Header } from "@/components/Header";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { MioCoinTopUpSection } from "@/components/MioCoinTopUpSection";
+import { PartnerRecruitmentCard } from "@/components/PartnerRecruitmentCard";
 import { VoucherDetailDialog, VoucherShowcaseCard } from "@/components/VoucherShowcase";
 import { supabase } from "@/integrations/supabase/client";
 import { useUserRole } from "@/hooks/useUserRole";
@@ -19,7 +19,6 @@ import { usePartners } from "@/hooks/usePartners";
 import { useHomepageVideoSimple } from "@/hooks/useHomepageVideoSimple";
 import { useHomepageLatestWinners } from "@/hooks/useHomepageLatestWinners";
 import { useComingSoonBanners } from "@/hooks/useComingSoonBanners";
-import { usePlacementBanners, PlacementKey } from "@/hooks/usePlacementBanners";
 import { WinnerCard } from "@/components/WinnerCard";
 import winnerBgTrophy from "@/assets/winner-backgrounds/winner-card-bg-trophy.png";
 import winnerBgCrown from "@/assets/winner-backgrounds/winner-card-bg-crown.png";
@@ -67,10 +66,7 @@ const Homepage = () => {
   const { videoUrl, isActive: isVideoActive, loading: videoLoading } = useHomepageVideoSimple();
   const { data: latestWinners, isLoading: winnersLoading } = useHomepageLatestWinners(50);
   const { banners: comingSoonBanners, loading: comingSoonLoading } = useComingSoonBanners();
-  
-  // Placement banners for MioCoin packages and action boxes
-  const placementKeys: PlacementKey[] = ['miocoin_50', 'miocoin_310', 'miocoin_525', 'miocoin_1280', 'probihajici_souteze', 'koupit_voucher', 'vzhled_karta_vyher'];
-  const { banners: placementBanners } = usePlacementBanners(placementKeys);
+
   const contestsCarouselRef = useRef<HTMLDivElement>(null);
   const vouchersCarouselRef = useRef<HTMLDivElement>(null);
   const megajackpotCarouselRef = useRef<HTMLDivElement>(null);
@@ -438,59 +434,10 @@ const Homepage = () => {
 
       {/* Page content — constrained container */}
       <div className="homepage-light-content container mx-auto px-4 py-8 space-y-8">
-        {/* Coin Top-up Section */}
+        {/* Partner recruitment + Poslední výherci */}
         <section className="w-full overflow-x-hidden grid grid-cols-1 lg:grid-cols-2 gap-4">
-          {/* Left Column - Dobijte si MioCoiny */}
-          <Card className="homepage-light-panel homepage-miocoin-panel rounded-xl overflow-hidden bg-[hsl(220_45%_6%)] border border-[rgba(255,138,0,0.2)] shadow-[0_4px_16px_hsl(222_50%_3%/0.5)] h-full">
-            <CardContent className="p-5 md:p-6 h-full flex flex-col">
-              <div className="space-y-4 flex-1 flex flex-col">
-                <MioCoinTopUpSection placementBanners={placementBanners} />
-
-                {/* Two Boxes Below */}
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mt-3">
-                  {/* Box 1: Probíhající soutěže */}
-                  <div
-                    className="homepage-light-tile homepage-miocoin-link-tile rounded-xl p-4 min-h-[88px] md:min-h-[96px] bg-[hsl(220_45%_6%)] border-2 border-[rgba(255,138,0,0.3)] cursor-pointer hover:border-[rgba(255,138,0,0.5)] transition-all duration-200 flex flex-col items-center justify-center text-center shadow-[inset_0_1px_12px_rgba(255,138,0,0.05)] relative overflow-hidden"
-                    onClick={() => navigate("/games")}
-                  >
-                    {placementBanners.probihajici_souteze?.image_url && (
-                      <img
-                        src={placementBanners.probihajici_souteze.image_url}
-                        alt="Probíhající soutěže"
-                        className="absolute inset-0 w-full h-full object-cover"
-                      />
-                    )}
-                    {!placementBanners.probihajici_souteze?.image_url && (
-                      <>
-                        <OneMilTrophyIcon size={32} className="w-8 h-8 mb-2 relative z-10 text-[#FF8A00]" />
-                        <div className="text-sm font-semibold text-foreground relative z-10">Probíhající soutěže</div>
-                      </>
-                    )}
-                  </div>
-
-                  {/* Box 2: Koupit voucher se slevou */}
-                  <div
-                    className="homepage-light-tile homepage-miocoin-link-tile rounded-xl p-4 min-h-[88px] md:min-h-[96px] bg-[hsl(220_45%_6%)] border-2 border-rose-400/30 cursor-pointer hover:border-rose-400/50 transition-all duration-200 flex flex-col items-center justify-center text-center shadow-[inset_0_1px_12px_hsl(350_60%_50%/0.06)] relative overflow-hidden"
-                    onClick={() => navigate("/vouchers")}
-                  >
-                    {placementBanners.koupit_voucher?.image_url && (
-                      <img
-                        src={placementBanners.koupit_voucher.image_url}
-                        alt="Koupit voucher se slevou"
-                        className="absolute inset-0 w-full h-full object-cover"
-                      />
-                    )}
-                    {!placementBanners.koupit_voucher?.image_url && (
-                      <>
-                        <OneMilVoucherIcon size={32} className="w-8 h-8 text-rose-400 mb-2 relative z-10" />
-                        <div className="text-sm font-semibold text-foreground relative z-10">Koupit voucher se slevou</div>
-                      </>
-                    )}
-                  </div>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
+          {/* Left Column - Staňte se partnerem OneMil */}
+          <PartnerRecruitmentCard />
 
           {/* Right Column - Poslední výherci */}
           <Card className="homepage-light-panel homepage-latest-winners-panel rounded-xl overflow-hidden bg-[hsl(220_45%_6%)] border border-[rgba(255,138,0,0.2)] shadow-[0_4px_16px_hsl(222_50%_3%/0.5)] h-full relative">
