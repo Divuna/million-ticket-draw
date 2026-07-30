@@ -1,3 +1,11 @@
+# 30. 07. 2026 — Issue #289 část A, první krok: extrakce dobíjecího panelu (připraveno ve worktree, nenasazeno)
+
+- Vytvořen `src/components/MioCoinTopUpSection.tsx` — 1:1 přesun dobíjecího panelu z `src/pages/Homepage.tsx` (nadpis a popis „Dobijte si MioCoiny", čtyři balíčky, jejich placement bannery, `handleCoinPurchase`, `topUpLoading`, Stripe monitoring `logMonitoringEvent`/`logStripeCheckoutClientFailure`, `setPendingPaymentSuccessContext`, guard `isNativeApp()`).
+- Homepage komponentu vykresluje na stejném místě; vzhled, texty, částky i chování beze změny. DOM ověřen v dev serveru — uvnitř panelu zůstaly tři sourozenci ve stejném pořadí, žádný obalový element navíc.
+- Boxy „Probíhající soutěže" a „Koupit voucher se slevou" záměrně ponechány na Homepage; nebyly přesunuty ani smazány.
+- Nevytvořeno a nezměněno: `/top-up`, spodní menu, Profil, routy, `src/App.tsx`, databáze, migrace, Stripe backend (`create-stripe-checkout`, `stripe-webhook`), nativní logika.
+- Kontroly: `npx tsc --noEmit` exit 0, `npm run build` exit 0. Commit zůstává jen ve worktree — bez push, bez PR, bez nasazení na staging i produkci.
+
 # 18. 07. 2026 — Cron auth fix: process-email-queue a send-offer-reminders (PR #241) LIVE na produkci
 
 - PR #241 (`fix/cron-internal-token-auth`) mergnut do `main` a nasazen na produkci `xkzhjldrojjlrkezorey`. Řeší opakované HTTP 401 plánovaných automatů.

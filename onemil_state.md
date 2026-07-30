@@ -1,5 +1,16 @@
 # OneMil – aktuální stav projektu
 
+## DOBÍJENÍ MIOCOINŮ — PRVNÍ KROK ISSUE #289 PŘIPRAVEN VE WORKTREE, ZATÍM NENASAZEN (30. 07. 2026)
+
+**První implementační krok části A issue #289 je připraven pouze ve worktree. Není v PR, není v `main`, není na stagingu ani produkci.**
+
+- Dobíjecí panel MioCoinů (nadpis, popis, čtyři balíčky, jejich placement bannery, `handleCoinPurchase`, `topUpLoading`, Stripe monitoring, `setPendingPaymentSuccessContext`) byl 1:1 přesunut z `src/pages/Homepage.tsx` do nového `src/components/MioCoinTopUpSection.tsx`.
+- Homepage komponentu vykresluje na stejném místě uvnitř karty; markup, třídy, texty ani částky se nezměnily. Ověřeno v dev serveru: pořadí sourozenců uvnitř panelu zůstalo `homepage-miocoin-header` → mřížka balíčků → dva navigační boxy, 4 balíčky, 4 tlačítka `Dobít`, bonusové odznaky `+10/+25/+80`.
+- Guard `isNativeApp()` (`src/lib/nativeApp.ts`) je zachován beze změny — v nativní aplikaci komponenta nerenderuje nic a nespouští checkout.
+- Boxy „Probíhající soutěže" a „Koupit voucher se slevou" zůstávají zatím na Homepage, nebyly přesunuty ani smazány.
+- **Zatím neprovedeno (další kroky issue #289):** stránka `/top-up`, změna spodního menu, vstup do Zpráv v profilu, partnerský blok na Homepage.
+- Bez zásahu: routy, `src/App.tsx`, Profil, spodní navigace, databáze, migrace, Edge Function `create-stripe-checkout`, `stripe-webhook`, nativní logika. Kontroly: `npx tsc --noEmit` exit 0, `npm run build` exit 0.
+
 ## GARANTOVANÝ NÁKUPNÍ BENEFIT — DATOVÝ ZÁKLAD PŘIPRAVEN, FUNKCE JEŠTĚ NENÍ AKTIVNÍ (24. 07. 2026)
 
 Na samostatné větvi je připraven pouze aditivní návrh Fáze 1: verze podmínek, distribuční objednávky a ceny, evidence vydání, budoucí idempotence nákupu, audit a budoucí společné položky faktur. Migrace nebyla aplikována na staging ani produkci. Nový nákup není zapojený; `buy_ticket_atomic`, současné soutěže, historická data, existující fakturace, PDF a e-mailový tok zůstávají beze změny.
