@@ -1,3 +1,13 @@
+# 30. 07. 2026 — Issue #289 část A, třetí krok: spodní menu Dobít + vstup do Zpráv v profilu (připraveno ve worktree, nenasazeno)
+
+- **Spodní menu a přesun vstupu do Zpráv jsou připravené ve worktree, zatím nejsou v PR ani nasazené.**
+- `src/components/BottomNavigation.tsx`: položka `Zprávy` (`/messages`, `OneMilMessageIcon`) nahrazena položkou `Dobít` (`/top-up`, `OneMilMioCoinIcon`). V nativní Android/iOS aplikaci se položka `Dobít` vůbec nevykresluje — filtr přes existující `isNativeApp()` ze `src/lib/nativeApp.ts`, žádná nová platformní logika. Výsledek: web/PWA `Domů · Vouchery · Soutěže · Výhry · Dobít · Můj profil`, nativní aplikace `Domů · Vouchery · Soutěže · Výhry · Můj profil`.
+- Badge nepřečtených zpráv přesunut z položky `/messages` na `/profile`; zdroj zůstává `useUnreadMessagesCount` (globální store), takže číslo je stejné jako dřív. Badge Výher (`useUnseenWinsCount` na `/wins`) beze změny.
+- `src/pages/Profile.tsx`: nad `RedeemMioCoinCard` přidána karta `Zprávy` (`PremiumCard` + `SectionTile` s `OneMilMessageIcon`), s počtem nepřečtených na dlaždici i v tlačítku a s popisem „Máte N nepřečtených zpráv“ / „Konverzace s podporou OneMil“. Tlačítko `Otevřít zprávy` vede na `/messages` a je dostupné na webu, v PWA i v nativní aplikaci (bez native guardu). Dobíjecí tlačítko `Dobít MioCoiny` a jeho modal zůstaly beze změny včetně stávajícího `isNativeApp()` guardu.
+- Ověřeno v dev serveru: spodní menu na webu vrací přesně `Domů · Vouchery · Soutěže · Výhry · Dobít · Můj profil`, klik na `Dobít` naviguje na `/top-up` (panel + 4 balíčky, aktivní stav na položce `Dobít`), 0 chyb v konzoli. Nativní filtr a runtime badge ověřeny code review — lokální dev míří na produkční Supabase a nepřihlašoval jsem se do něj.
+- Bez zásahu: Homepage, `/top-up`, Stripe backend, platební návratové stránky, databáze, Supabase, migrace, platby, soutěže, vouchery.
+- Kontroly: `npx tsc --noEmit` exit 0, `npm run build` exit 0. Commit zůstává jen ve worktree — bez push, bez PR, bez nasazení.
+
 # 30. 07. 2026 — Issue #289 část A, druhý krok: samostatná stránka /top-up (připraveno ve worktree, nenasazeno)
 
 - **Samostatná stránka `/top-up` připravena ve worktree, zatím není dostupná ze spodního menu, není v PR ani nasazena.**
