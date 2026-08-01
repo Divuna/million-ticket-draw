@@ -59,6 +59,8 @@ interface TicketResultModalProps {
   contestId: string;
   result: {
     ticket_number: number;
+    /** UUID řádku v `tickets` z `buy_ticket_atomic`. Nutné pro upload sdíleného obrázku. */
+    ticket_row_id?: string | null;
     distance_to_next_bonus: number | null;
     next_bonus_position: number | null;
     won_prize?: string | null;
@@ -405,8 +407,11 @@ export const TicketResultModal: React.FC<TicketResultModalProps> = ({
         // Mark as generated for this ticket
         generatedForTicketRef.current = result.ticket_number;
 
-        // Generate unique ticket ID for sharing
+        // Veřejná sdílecí URL zůstává beze změny — `og-ticket-share` má vlastní
+        // identifikátor `${contestId}-${ticket_number}`, není to UUID tiketu.
         const ticketShareId = `${contestId}-${result.ticket_number}`;
+        // Upload obrázku naopak vyžaduje UUID řádku `tickets` (ověření vlastnictví).
+        const ticketRowId = result.ticket_row_id ?? null;
 
         // Convert blob to base64 for upload
         const reader = new FileReader();
@@ -419,6 +424,12 @@ export const TicketResultModal: React.FC<TicketResultModalProps> = ({
 
           const base64 = reader.result as string;
 
+          if (!ticketRowId) {
+            // Bez UUID tiketu nelze ověřit vlastnictví — upload bezpečně přeskočíme.
+            console.warn('Upload skipped: missing ticket_row_id');
+            return;
+          }
+
           // Upload via edge function (non-blocking; no awaits)
           supabase.auth.getSession().then(({ data: sessionData }) => {
             const session = sessionData.session;
@@ -430,7 +441,7 @@ export const TicketResultModal: React.FC<TicketResultModalProps> = ({
                 Authorization: `Bearer ${session?.access_token ?? ''}`,
               },
               body: JSON.stringify({
-                ticketId: ticketShareId,
+                ticketId: ticketRowId,
                 imageBase64: base64,
               }),
             })
