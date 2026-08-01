@@ -1,15 +1,8 @@
-import { useState } from "react";
-import { useNavigate, useLocation } from "react-router-dom";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { supabase } from "@/integrations/supabase/client";
-import { useAuth } from "@/hooks/useAuth";
-import { buildLoginRedirectUrl } from "@/lib/loginRedirect";
-import { setPendingPaymentSuccessContext } from "@/lib/paymentSuccessContext";
 import { isNativeApp } from "@/lib/nativeApp";
-import { logMonitoringEvent, logStripeCheckoutClientFailure } from "@/lib/monitoring";
+import { useMioCoinCheckout } from "@/hooks/useMioCoinCheckout";
 import { OneMilMioCoinIcon } from "@/components/icons/OneMilIcons";
-import { toast } from "sonner";
 
 /**
  * Dobíjecí panel MioCoinů (nadpis + čtyři balíčky + Stripe checkout).
@@ -21,8 +14,8 @@ import { toast } from "sonner";
  * Pravidla (neměnit):
  * - Nativní aplikace (Apple/Google pravidla) panel nerenderuje ani nespouští
  *   checkout — detekce výhradně přes `isNativeApp()` z `src/lib/nativeApp.ts`.
- * - Redirect na Stripe musí zůstat `window.location.href` ve stejné záložce,
- *   jinak se ztratí `sessionStorage` kontext z `setPendingPaymentSuccessContext`.
+ * - Samotné spuštění platby je ve sdíleném `useMioCoinCheckout`, který sdílí
+ *   i rychlé dobíjení v hlavičce. Nezakládat tady druhou platební cestu.
  */
 
 type MioCoinPlacementKey = "miocoin_50" | "miocoin_310" | "miocoin_525" | "miocoin_1280";
@@ -32,89 +25,9 @@ interface MioCoinTopUpSectionProps {
 }
 
 export const MioCoinTopUpSection = ({ placementBanners }: MioCoinTopUpSectionProps) => {
-  const { user } = useAuth();
-  const navigate = useNavigate();
-  const location = useLocation();
-
-  const [topUpLoading, setTopUpLoading] = useState(false);
-
-  const handleCoinPurchase = async (priceInCzk: number, totalCoins: number) => {
-    // Nativní aplikace nesmí spustit Stripe checkout (Apple/Google pravidla).
-    if (isNativeApp()) return;
-    if (!user) {
-      toast.error("Pro nákup MioCoinů se musíte přihlásit");
-      navigate(buildLoginRedirectUrl(location.pathname + location.search));
-      return;
-    }
-
-    if (topUpLoading) return; // Prevent double-clicks
-
-    // Ensure clean numbers
-    const cleanPrice = Number(priceInCzk);
-    const cleanCoins = Number(totalCoins);
-
-    if (isNaN(cleanPrice) || cleanPrice < 50) {
-      toast.error("Neplatná částka");
-      return;
-    }
-
-    setTopUpLoading(true);
-
-    try {
-      toast.loading("Otevírám platební bránu...", { id: "topup-loading" });
-
-      // Wait for session to be ready
-      const { data: sessionData } = await supabase.auth.getSession();
-      if (!sessionData?.session?.user?.id) {
-        logMonitoringEvent("warn", "stripe_checkout_no_session", {
-          user_id: user?.id ?? null,
-          action: "create_stripe_checkout",
-          price_czk: cleanPrice,
-        });
-        toast.dismiss("topup-loading");
-        toast.error("Nepodařilo se ověřit uživatele. Zkuste se znovu přihlásit.");
-        setTopUpLoading(false);
-        return;
-      }
-
-      console.log("Sending to Stripe:", { priceInCzk: cleanPrice, totalCoins: cleanCoins });
-
-      const { data, error } = await supabase.functions.invoke("create-stripe-checkout", {
-        body: {
-          priceInCzk: cleanPrice,
-          totalCoins: cleanCoins
-        },
-      });
-
-      if (error) throw error;
-
-      if (data?.checkout_url) {
-        setPendingPaymentSuccessContext({ kind: "miocoin" });
-        // Redirect to Stripe - page will unload
-        window.location.href = data.checkout_url;
-        // Don't reset loading state as page is redirecting
-      } else {
-        throw new Error("Nepodařilo se získat platební odkaz");
-      }
-    } catch (error) {
-      console.error("Error creating checkout:", error);
-      if (user) {
-        const phase =
-          error instanceof Error && error.message.includes("platební odkaz")
-            ? "response"
-            : "invoke";
-        logStripeCheckoutClientFailure({
-          userId: user.id,
-          priceInCzk: cleanPrice,
-          error,
-          phase,
-        });
-      }
-      toast.dismiss("topup-loading");
-      toast.error("Nepodařilo se otevřít platební bránu");
-      setTopUpLoading(false);
-    }
-  };
+  // Jediný společný Stripe postup — sdílený s rychlým dobíjením v hlavičce.
+  const { startCheckout, loading: topUpLoading } = useMioCoinCheckout();
+  const handleCoinPurchase = startCheckout;
 
   // Dobíjecí sekce se v nativní aplikaci nerenderuje (Apple/Google pravidla).
   if (isNativeApp()) return null;
