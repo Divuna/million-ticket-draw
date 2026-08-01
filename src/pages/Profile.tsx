@@ -756,7 +756,7 @@ const Profile: React.FC = () => {
                       <OneMilCoinsIcon size={32} className="h-8 w-8 text-black" />
                     </div>
                     <div className="min-w-0">
-                      <p className="text-xs text-[rgba(255,138,0,0.7)] uppercase tracking-wider mb-0.5">MioCoiny</p>
+                      <p className="text-xs text-[#c2570a] uppercase tracking-wider mb-0.5">MioCoiny</p>
                       <p className="text-4xl lg:text-5xl font-black text-[#FFB547] tabular-nums tracking-tight truncate">
                         {animatedBalance.toLocaleString('cs-CZ', { minimumFractionDigits: 0, maximumFractionDigits: 1 })}
                       </p>
@@ -771,7 +771,7 @@ const Profile: React.FC = () => {
                       </div>
                       <div className="min-w-0">
                         <div className="flex items-center gap-2 mb-0.5">
-                          <p className="text-xs text-green-500/80 uppercase tracking-wider">Bonusové</p>
+                          <p className="text-xs text-green-700 uppercase tracking-wider">Bonusové</p>
                           <TooltipProvider>
                             <Tooltip>
                               <TooltipTrigger asChild>
@@ -783,7 +783,7 @@ const Profile: React.FC = () => {
                             </Tooltip>
                           </TooltipProvider>
                         </div>
-                        <p className="text-2xl font-bold text-green-500 tabular-nums truncate">
+                        <p className="text-2xl font-bold text-green-600 tabular-nums truncate">
                           {animatedBonusBalance.toLocaleString('cs-CZ', { minimumFractionDigits: 0, maximumFractionDigits: 1 })}
                         </p>
                       </div>
@@ -855,7 +855,7 @@ const Profile: React.FC = () => {
                           <span className="text-sm text-foreground">Převod bonusových MioCoinů</span>
                         </div>
                         <div className="flex items-center gap-4 pl-8 sm:pl-0">
-                          <span className="text-sm font-bold text-green-500">+{transfer.amount} MioCoinů</span>
+                          <span className="text-sm font-bold text-green-700">+{transfer.amount} MioCoinů</span>
                           <span className="text-xs text-muted-foreground">
                             {new Date(transfer.created_at).toLocaleString('cs-CZ', {
                               day: '2-digit',
@@ -937,7 +937,7 @@ const Profile: React.FC = () => {
                     size="default" 
                     type="button"
                     onClick={() => setEditMode(true)}
-                    className="relative z-20 border-[rgba(255,138,0,0.3)] bg-[rgba(255,138,0,0.04)] hover:bg-[rgba(255,138,0,0.08)] hover:border-[rgba(255,138,0,0.5)] text-[#FF8A00] hover:text-[#FFB547] transition-all duration-300 font-semibold px-6 rounded-xl hover:shadow-lg hover:shadow-[rgba(255,138,0,0.08)] hover:scale-[1.02]"
+                    className="relative z-20 border-[rgba(255,138,0,0.3)] bg-[rgba(255,138,0,0.04)] hover:bg-[rgba(255,138,0,0.08)] hover:border-[rgba(255,138,0,0.5)] text-[#c2570a] hover:text-[#e26305] transition-all duration-300 font-semibold px-6 rounded-xl hover:shadow-lg hover:shadow-[rgba(255,138,0,0.08)] hover:scale-[1.02]"
                   >
                     <OneMilDiamondIcon size={16} className="h-4 w-4 mr-2" />
                     Upravit
@@ -1179,7 +1179,7 @@ const Profile: React.FC = () => {
                   </div>
                   <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-green-500/10 border border-green-500/20 shrink-0">
                     <CheckCircle className="h-3 w-3 text-green-500" />
-                    <span className="text-xs font-medium text-green-500">Ověřeno</span>
+                    <span className="text-xs font-medium text-green-700">Ověřeno</span>
                   </div>
                 </div>
                 {wallet?.name && (
