@@ -46,9 +46,9 @@ export const PartnerRecruitmentCard = () => {
         className="pointer-events-none absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-[rgba(255,181,71,0.85)] to-transparent"
       />
 
-      <CardContent className="relative z-10 flex h-full flex-col p-5 md:p-7">
+      <CardContent className="relative z-10 flex h-full flex-col p-4 md:p-5">
         {/* Hlavní sdělení */}
-        <div className="space-y-3">
+        <div className="space-y-2">
           <span className="inline-flex items-center gap-2 rounded-full border border-[rgba(255,138,0,0.28)] bg-[rgba(255,138,0,0.08)] px-3 py-1 text-[11px] font-bold uppercase tracking-[0.14em] text-[#e26305]">
             <OneMilCartIcon size={14} className="h-3.5 w-3.5" />
             Pro obchody a e-shopy
@@ -58,32 +58,32 @@ export const PartnerRecruitmentCard = () => {
             Staňte se partnerem OneMil
           </h2>
 
-          <p className="text-2xl md:text-[2rem] md:leading-[1.15] font-extrabold tracking-tight text-foreground">
+          <p className="text-xl md:text-2xl md:leading-[1.15] font-extrabold tracking-tight text-foreground">
             Nabídněte zákazníkům víc než ostatní.
           </p>
 
-          <p className="text-sm md:text-base text-text-silver max-w-[46ch]">
+          <p className="text-xs md:text-sm text-text-silver max-w-[52ch]">
             Proměňte každý nákup v důvod, proč se k vám zákazníci vrátí.
           </p>
         </div>
 
         {/* Tři výhody — na mobilu pod sebou, od sm vedle sebe */}
-        <ul className="mt-6 grid flex-1 content-center grid-cols-1 gap-3 sm:grid-cols-3">
+        <ul className="mt-4 grid flex-1 content-center grid-cols-1 gap-2 sm:grid-cols-3">
           {PARTNER_TEASERS.map(({ icon: Icon, text }) => (
             <li
               key={text}
-              className="homepage-light-tile flex items-center gap-3 rounded-xl border border-[rgba(255,138,0,0.18)] bg-[hsl(220_45%_6%)] px-4 py-4 transition-all duration-300 hover:-translate-y-0.5 hover:border-[rgba(255,138,0,0.42)] hover:shadow-[0_14px_30px_-16px_rgba(226,99,5,0.45)] sm:flex-col sm:items-start sm:gap-2.5"
+              className="homepage-light-tile flex items-center gap-2.5 rounded-xl border border-[rgba(255,138,0,0.18)] bg-[hsl(220_45%_6%)] px-3 py-2.5 transition-all duration-300 hover:-translate-y-0.5 hover:border-[rgba(255,138,0,0.42)] hover:shadow-[0_14px_30px_-16px_rgba(226,99,5,0.45)] sm:flex-col sm:items-start sm:gap-1.5"
             >
-              <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-[#FFB547] to-[#FF8A00] shadow-[0_6px_16px_-6px_rgba(226,99,5,0.55)] transition-transform duration-300 group-hover:scale-[1.03]">
-                <Icon size={20} className="h-5 w-5 text-black" />
+              <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-[#FFB547] to-[#FF8A00] shadow-[0_6px_16px_-6px_rgba(226,99,5,0.55)] transition-transform duration-300 group-hover:scale-[1.03]">
+                <Icon size={16} className="h-4 w-4 text-black" />
               </span>
-              <span className="text-sm font-semibold leading-snug text-foreground">{text}</span>
+              <span className="text-xs font-semibold leading-snug text-foreground">{text}</span>
             </li>
           ))}
         </ul>
 
         {/* CTA */}
-        <div className="mt-6">
+        <div className="mt-4">
           <Button
             asChild
             size="lg"

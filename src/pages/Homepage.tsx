@@ -441,23 +441,23 @@ const Homepage = () => {
 
           {/* Right Column - Poslední výherci */}
           <Card className="homepage-light-panel homepage-latest-winners-panel rounded-xl overflow-hidden bg-[hsl(220_45%_6%)] border border-[rgba(255,138,0,0.2)] shadow-[0_4px_16px_hsl(222_50%_3%/0.5)] h-full relative">
-            <CardContent className="p-5 h-full flex flex-col relative z-10">
-              <div className="space-y-4 flex-1 flex flex-col">
+            <CardContent className="p-4 md:p-5 h-full flex flex-col relative z-10">
+              <div className="space-y-3 flex-1 flex flex-col">
                 <div className="space-y-2">
-                  <h2 className="homepage-premium-orange-heading text-xl md:text-2xl font-bold text-heading-gold flex items-center gap-2">
-                    <OneMilTrophyIcon size={24} className="w-6 h-6 md:w-7 md:h-7" />
+                  <h2 className="homepage-premium-orange-heading text-lg md:text-xl font-bold text-heading-gold flex items-center gap-2">
+                    <OneMilTrophyIcon size={22} className="w-5 h-5 md:w-6 md:h-6" />
                     Poslední výherci
                   </h2>
-                  <p className="text-sm text-text-silver">Nejnovější výhry z našich soutěží</p>
+                  <p className="text-xs text-text-silver">Nejnovější výhry z našich soutěží</p>
                 </div>
 
                 {/* 6 nejnovějších výherců: mobil 1 sloupec, desktop 2 sloupce × 3 řady.
                     Žádné vnitřní rolování — všech 6 karet musí být vidět. */}
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4 flex-1">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 sm:gap-2.5 flex-1">
                   {winnersLoading ? (
                     // Loading placeholders
                     Array.from({ length: 6 }).map((_, index) => (
-                      <div key={index} className="rounded-xl h-[112px] animate-pulse" style={{ background: '#f1f5f9', border: '1px solid rgba(15,23,42,0.08)' }} />
+                      <div key={index} className="rounded-xl h-[72px] animate-pulse" style={{ background: '#f1f5f9', border: '1px solid rgba(15,23,42,0.08)' }} />
                     ))
                   ) : !latestWinners || latestWinners.length === 0 ? (
                     <div className="text-center py-12 space-y-3 sm:col-span-2">
@@ -481,12 +481,13 @@ const Homepage = () => {
                           cardStyleImageUrl={WINNER_BG_ROTATION[index % WINNER_BG_ROTATION.length]}
                           userAvatarUrl={winner.user_avatar_url}
                           variant="champagne"
+                          compact
                         />
                       ))
                   )}
                 </div>
 
-                <Button variant="ghost" size="lg" className="w-full gap-2 mt-2 text-muted-foreground hover:text-foreground hover:bg-muted/30" onClick={() => navigate("/winners")}>
+                <Button variant="ghost" size="sm" className="w-full gap-2 mt-1 text-muted-foreground hover:text-foreground hover:bg-muted/30" onClick={() => navigate("/winners")}>
                   Zobrazit všechny
                   <ChevronRight className="w-4 h-4" />
                 </Button>
