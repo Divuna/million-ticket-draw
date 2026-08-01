@@ -60,6 +60,8 @@ interface PartnerOfferResult {
 
 interface UnlockTicketResult {
   ticket_number: number;
+  /** UUID řádku v `tickets` z `buy_ticket_atomic` — nutné pro upload sdíleného obrázku. */
+  ticket_row_id?: string | null;
   ticket_price: number;
   next_bonus_position?: number | null;
   distance_to_next_bonus?: number | null;
@@ -399,6 +401,7 @@ const Index = () => {
 
       const result: UnlockTicketResult = {
         ticket_number: rpcResult.ticket_number,
+        ticket_row_id: ticketRowId ?? null,
         ticket_price: rpcResult.ticket_price ?? 1,
         next_bonus_position: rpcResult.next_bonus_position ?? null,
         distance_to_next_bonus: rpcResult.distance_to_next_bonus ?? null,
@@ -574,6 +577,7 @@ const Index = () => {
       <TicketResultModal
         result={modalResult ? {
           ticket_number: modalResult.ticket_number,
+          ticket_row_id: modalResult.ticket_row_id ?? null,
           distance_to_next_bonus: modalResult.distance_to_next_bonus,
           next_bonus_position: modalResult.next_bonus_position,
           won_prize: modalResult.won_prize,

@@ -84,6 +84,8 @@ interface PartnerOfferResult {
 
 interface UnlockTicketResult {
   ticket_number: number;
+  /** UUID řádku v `tickets` z `buy_ticket_atomic` — nutné pro upload sdíleného obrázku. */
+  ticket_row_id?: string | null;
   ticket_price: number;
   next_bonus_position?: number | null;
   distance_to_next_bonus?: number | null;
@@ -480,6 +482,7 @@ export default function ContestDetail() {
 
         const mappedResult: UnlockTicketResult = {
           ticket_number: result.ticket_number,
+          ticket_row_id: ticketRowId ?? null,
           ticket_price: result.ticket_price ?? 1,
           next_bonus_position: result.next_bonus_position ?? null,
           distance_to_next_bonus: result.distance_to_next_bonus ?? null,
@@ -669,6 +672,7 @@ export default function ContestDetail() {
     if (!modalResult) return undefined;
     return {
       ticket_number: modalResult.ticket_number,
+      ticket_row_id: modalResult.ticket_row_id ?? null,
       next_bonus_position: modalResult.next_bonus_position ?? null,
       distance_to_next_bonus: modalResult.distance_to_next_bonus ?? null,
       won_prize: modalResult.won_prize,
@@ -679,6 +683,7 @@ export default function ContestDetail() {
     };
   }, [
     modalResult?.ticket_number,
+    modalResult?.ticket_row_id,
     modalResult?.next_bonus_position,
     modalResult?.distance_to_next_bonus,
     modalResult?.won_prize,
