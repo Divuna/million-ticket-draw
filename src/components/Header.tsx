@@ -6,11 +6,14 @@ import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
+  DropdownMenuLabel,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { useAuth } from '@/hooks/useAuth';
 import { useUserRole } from '@/hooks/useUserRole';
+import { isNativeApp } from '@/lib/nativeApp';
+import { MIOCOIN_PACKAGES, useMioCoinCheckout } from '@/hooks/useMioCoinCheckout';
 import { useAdminRealtimeContext } from '@/components/AdminRealtimeProvider';
 import { AdminSoundIndicator } from '@/components/AdminSoundIndicator';
 import { OneMilMioCoinIcon } from '@/components/icons/OneMilIcons';
@@ -47,6 +50,9 @@ export const Header: React.FC = () => {
   const { user, signOut } = useAuth();
   const { isAdmin } = useUserRole();
   const { soundEnabled, toggleSound, realtimeConnected, lastRealtimeEvent } = useAdminRealtimeContext();
+  // Rychlé dobití používá stejný Stripe postup jako dobíjecí panel.
+  const { startCheckout, loading: checkoutLoading } = useMioCoinCheckout();
+  const nativeApp = isNativeApp();
 
   const [account, setAccount] = useState<HeaderAccountState>({ balance: null, displayName: null });
 
@@ -137,6 +143,16 @@ export const Header: React.FC = () => {
   const formattedBalance =
     account.balance != null ? account.balance.toLocaleString('cs-CZ', { maximumFractionDigits: 1 }) : null;
 
+  const balanceChipClass =
+    'public-customer-header-balance flex items-center gap-1.5 rounded-full border border-[rgba(255,138,0,0.28)] bg-[rgba(255,138,0,0.08)] px-2.5 py-1.5 sm:px-3';
+  const balanceChipContent = (
+    <>
+      <OneMilMioCoinIcon size={18} className="h-[18px] w-[18px] shrink-0" />
+      <span className="text-sm font-bold tabular-nums text-foreground">{formattedBalance}</span>
+      <span className="hidden text-xs font-medium text-muted-foreground sm:inline">MioCoinů</span>
+    </>
+  );
+
   return (
     <>
     <header className="public-customer-header sticky top-0 z-50 h-16 md:h-20 bg-background/70 backdrop-blur-xl border-b border-white/10 flex items-center justify-between px-4">
@@ -164,13 +180,65 @@ export const Header: React.FC = () => {
         <nav className="flex shrink-0 items-center gap-2 sm:gap-3">
           {user ? (
             <>
-              {formattedBalance !== null && (
-                <div className="public-customer-header-balance flex items-center gap-1.5 rounded-full border border-[rgba(255,138,0,0.28)] bg-[rgba(255,138,0,0.08)] px-2.5 py-1.5 sm:px-3">
-                  <OneMilMioCoinIcon size={18} className="h-[18px] w-[18px] shrink-0" />
-                  <span className="text-sm font-bold tabular-nums text-foreground">{formattedBalance}</span>
-                  <span className="hidden text-xs font-medium text-muted-foreground sm:inline">MioCoinů</span>
-                </div>
-              )}
+              {formattedBalance !== null &&
+                (nativeApp ? (
+                  // V nativní aplikaci zůstatek zůstává vidět, ale neotevírá dobíjení.
+                  <div className={balanceChipClass}>{balanceChipContent}</div>
+                ) : (
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                      <button
+                        type="button"
+                        aria-label="Rychlé dobití MioCoinů"
+                        disabled={checkoutLoading}
+                        className={`${balanceChipClass} transition-colors hover:border-[rgba(255,138,0,0.5)] hover:bg-[rgba(255,138,0,0.14)] disabled:cursor-wait disabled:opacity-70`}
+                      >
+                        {balanceChipContent}
+                      </button>
+                    </DropdownMenuTrigger>
+
+                    <DropdownMenuContent align="end" className="w-64 bg-popover">
+                      <DropdownMenuLabel className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                        Rychlé dobití
+                      </DropdownMenuLabel>
+                      {MIOCOIN_PACKAGES.map((pkg) => (
+                        <DropdownMenuItem
+                          key={pkg.priceInCzk}
+                          disabled={checkoutLoading}
+                          onSelect={(event) => {
+                            event.preventDefault();
+                            void startCheckout(pkg.priceInCzk, pkg.totalCoins);
+                          }}
+                          className="flex items-center justify-between gap-3"
+                        >
+                          <span className="text-sm font-bold text-foreground">
+                            {pkg.priceInCzk.toLocaleString('cs-CZ')} Kč
+                          </span>
+                          <span className="flex items-center gap-1.5">
+                            {pkg.bonusLabel && (
+                              <span className="rounded-full bg-[rgba(255,138,0,0.14)] px-1.5 py-0.5 text-[10px] font-bold text-[#e26305]">
+                                {pkg.bonusLabel}
+                              </span>
+                            )}
+                            <OneMilMioCoinIcon size={14} className="h-3.5 w-3.5 shrink-0" />
+                            <span className="text-sm font-semibold tabular-nums text-foreground">
+                              {pkg.totalCoins.toLocaleString('cs-CZ')}
+                            </span>
+                          </span>
+                        </DropdownMenuItem>
+                      ))}
+                      {checkoutLoading && (
+                        <div className="px-2 py-1.5 text-xs text-muted-foreground">
+                          Otevírám platební bránu…
+                        </div>
+                      )}
+                      <DropdownMenuSeparator />
+                      <DropdownMenuItem onSelect={() => navigate('/top-up')}>
+                        Všechny možnosti dobíjení
+                      </DropdownMenuItem>
+                    </DropdownMenuContent>
+                  </DropdownMenu>
+                ))}
 
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
