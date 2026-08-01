@@ -1,5 +1,38 @@
 # OneMil – aktuální stav projektu
 
+## BEZPEČNOSTNÍ AUDIT — STAV NÁLEZŮ A1–A6 A P1–P8 (01. 08. 2026, ověřeno proti produkci)
+
+Read-only audit z 01. 08. 2026 nad `main` a produkcí `xkzhjldrojjlrkezorey`. Následující stav byl nezávisle ověřen dotazy do produkční DB, přes Edge Function API a externími HTTP/DNS dotazy.
+
+| ID | Nález | Stav |
+|----|-------|------|
+| A1 | `get_admin_activation_summary()` — SECURITY DEFINER s `anon` EXECUTE bez guardu; veřejně čitelné názvy partnerů, `billing_mode`, `price_per_activation`, nevyfakturované částky | **opraveno v produkci** |
+| A2 | `create_partner_offer_invoices_for_period(date,date)` — neautentizované vytvoření partnerských faktur | **opraveno v produkci** |
+| A3 | `assign_partner_offer_to_ticket(uuid,uuid,uuid)` — přijímala cizí `p_user_id` bez ověření volajícího | **opraveno v produkci** |
+| A4 | `sync_partner_offer_activations()` — hromadná materializace fakturačních řádků kýmkoli | **opraveno v produkci** |
+| A5 | Edge Function `upload-ticket-share` — bez autentizace, service-role, `upsert: true`, neověřený `ticketId` | **opraveno a nasazeno** |
+| A6 | `activate_partner_reward_sql(text,text,uuid)` — mrtvá funkce, jen spočítá hash a vrátí `success: true`; stále má `anon`/`authenticated` EXECUTE | otevřeno, informativní, bez praktického rizika |
+| P1–P8 | Veřejné hlavičky a DNS `onemil.cz` (chybí CSP, ochrana proti iframe, CORP; `www` přesměrovává přes HTTP; `security.txt` 404; chybí CAA a AAAA; HSTS bez `preload`) | **otevřeno** — opravy jsou mimo repo (hosting/Cloudflare a DNS Active24/Websupport) |
+
+**Ověřený stav oprávnění v produkci (01. 08. 2026):**
+
+| Funkce | PUBLIC | anon | authenticated | service_role | Poznámka |
+|--------|--------|------|---------------|--------------|----------|
+| `get_admin_activation_summary()` | false | false | true | true | uvnitř `WHERE public.is_admin()` — ne-admin dostane 0 řádků, admin vidí data |
+| `create_partner_offer_invoices_for_period(date,date)` | false | false | false | true | |
+| `assign_partner_offer_to_ticket(uuid,uuid,uuid)` | false | false | false | true | |
+| `sync_partner_offer_activations()` | false | false | false | true | |
+
+Anonymní volání A1 i A2 přes `/rest/v1/rpc/…` vrací `42501 permission denied`; dřív A1 vracela HTTP 200 a 12 řádků s cenami partnerů.
+
+**A5 v produkci:** Edge Function `upload-ticket-share` je **verze 177, ACTIVE, `verify_jwt = true`**; nasazený zdroj vyžaduje JWT, validuje `ticketId` jako UUID, ověřuje `tickets.user_id` proti přihlášenému uživateli, přijímá jen PNG (prefix + skutečná signatura), drží limit 1,5 MB a ukládá s `upsert: false`. Volání bez tokenu vrací 401. Frontend je publikovaný — živý bundle `index-Cb5mBKjT.js` obsahuje `ticket_row_id` i větev „missing ticket_row_id". Veřejná URL `og-ticket-share` je beze změny (bucket `ticket-shares` vůbec nečte, obrázek generuje za běhu).
+
+**Provedené migrace:** A3 `20260801181421_revoke_public_execute_assign_partner_offer_to_ticket.sql` (PR #298, merge `b7155665`), A4 `20260801185927_revoke_public_execute_sync_partner_offer_activations.sql` (PR #300, merge `e09733ce`). A5 kód v PR #299 (merge `e67ff359`).
+
+**⚠️ Otevřený nesoulad repo × produkce:** migrace `20260801180617_secure_admin_activation_summary` (A1) a `20260801180912_secure_partner_offer_invoice_creation` (A2) jsou aplikované v produkci, ale **nejsou v `supabase/migrations/`**. Čisté nasazení z repozitáře by tyto dvě opravy neobsahovalo. Doporučení: doplnit odpovídající migrační soubory do repa (samostatný krok, vyžaduje schválení).
+
+**Pravidlo (neměnit):** funkcím `assign_partner_offer_to_ticket`, `sync_partner_offer_activations`, `create_partner_offer_invoices_for_period` a `get_admin_activation_summary` už nevracet `anon`/`PUBLIC` EXECUTE; `upload-ticket-share` nevracet na `verify_jwt = false` ani na `upsert: true`.
+
 ## DOBÍJENÍ MIOCOINŮ A PARTNERSKÝ BLOK — ČÁSTI A A B ISSUE #289 V DRAFT PR #290 (30. 07. 2026)
 
 **Části A a B issue #289 jsou připravené v Draft PR #290, zatím nejsou mergnuté ani nasazené.** Větev `feat/miocoin-topup-section-extract` (HEAD `cf9198e5`) míří do `main`; není v `main`, na stagingu ani na produkci. Část C (Shoptet) není součástí PR #290.

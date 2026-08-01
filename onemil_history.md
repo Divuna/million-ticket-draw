@@ -1,3 +1,14 @@
+# 01. 08. 2026 — Bezpečnostní audit: A1–A5 opraveny v produkci, A6 a P1–P8 otevřené
+
+- Read-only audit nad `main` a produkcí `xkzhjldrojjlrkezorey` našel šest aplikačních nálezů (A1–A6) a osm veřejných (P1–P8). A1 byl potvrzen reálným exploitem: anonymní volání `get_admin_activation_summary()` vracelo HTTP 200 a 12 řádků s názvy partnerů, `billing_mode`, `price_per_activation` a odhadem nevyfakturovaných částek.
+- **A3** `assign_partner_offer_to_ticket(uuid,uuid,uuid)` — migrace `20260801181421_revoke_public_execute_assign_partner_offer_to_ticket.sql`, PR #298 (merge `b7155665`). Po opravě jen `service_role`. Data beze změny: `user_partner_offers` 101 → 101, `partner_offer_activations` 93 → 93, checksumy identické.
+- **A4** `sync_partner_offer_activations()` — migrace `20260801185927_revoke_public_execute_sync_partner_offer_activations.sql`, PR #300 (merge `e09733ce`). Po opravě jen `service_role`, data beze změny.
+- **A5** `upload-ticket-share` — PR #299 (merge `e67ff359`), produkční Edge Function **verze 177, ACTIVE, `verify_jwt = true`**: JWT, UUID validace, ověření `tickets.user_id`, jen PNG (prefix + signatura), limit 1,5 MB, `upsert: false`. Frontend publikován přes Lovable (bundle `index-Cb5mBKjT.js` obsahuje `ticket_row_id`). `og-ticket-share` beze změny.
+- **A1 a A2** opraveny v produkci migracemi `20260801180617_secure_admin_activation_summary` a `20260801180912_secure_partner_offer_invoice_creation`. A1 má nově `WHERE public.is_admin()` (ne-admin 0 řádků), `anon` bez EXECUTE; A2 má EXECUTE jen `service_role`. Anonymní volání obou vrací `42501 permission denied`.
+- **Otevřený nesoulad:** obě migrace A1/A2 jsou v produkci, ale chybí v `supabase/migrations/` — čisté nasazení z repa by je neobsahovalo. K doplnění samostatným schváleným krokem.
+- **A6** `activate_partner_reward_sql` zůstává jen informativní (mrtvá funkce vracející `success: true`). **P1–P8** (CSP, ochrana proti iframe, CORP, `www` přes HTTP, `security.txt`, CAA, AAAA, HSTS preload) zůstávají otevřené a řeší se mimo repo — u hostingu/Cloudflare a v DNS Active24/Websupport.
+- Bez nálezu naopak zůstaly: RLS peněženek/plateb/tiketů/výher (vše own-row, nikde `USING (true)`), ochrana proti dvojímu Stripe creditu (`UNIQUE(stripe_session_id)`), souběžný nákup (`FOR UPDATE` + `UNIQUE(contest_id, number)`) a dvojí výherce (parciální unikátní indexy). Živá integrita produkce: 0 záporných peněženek, 0 duplicit session/tiketů/výherců, 0 tiketů nad kapacitu.
+
 # 30. 07. 2026 — Issue #289 části A a B: Draft PR #290 otevřen
 
 - **Části A a B issue #289 jsou připravené v Draft PR #290, zatím nejsou mergnuté ani nasazené.**

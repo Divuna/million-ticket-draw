@@ -1,3 +1,10 @@
+# Bezpečnostní invarianty po auditu A1–A5 (01. 08. 2026)
+
+- Funkcím `get_admin_activation_summary()`, `create_partner_offer_invoices_for_period(date,date)`, `assign_partner_offer_to_ticket(uuid,uuid,uuid)` a `sync_partner_offer_activations()` **nevracet `anon` ani `PUBLIC` EXECUTE**. První má vnitřní guard `WHERE public.is_admin()`, zbylé tři smí volat jen `service_role` / interní backend.
+- `upload-ticket-share` nevracet na `verify_jwt = false` ani na `upsert: true`. Vyžaduje JWT, `ticketId` jako UUID, shodu `tickets.user_id` s přihlášeným uživatelem a jen PNG (prefix + skutečná signatura). Produkce běží verze 177.
+- Klient posílá do `upload-ticket-share` výhradně `ticket_row_id` z `buy_ticket_atomic`; veřejná URL `og-ticket-share?id=${contestId}-${ticket_number}` je na bucketu nezávislá a nemění se.
+- Otevřené: migrace A1 (`20260801180617_secure_admin_activation_summary`) a A2 (`20260801180912_secure_partner_offer_invoice_creation`) jsou v produkci, ale chybí v `supabase/migrations/` — doplnit samostatným schváleným krokem.
+
 # Garantovaný nákupní benefit — datový základ Fáze 1 (24. 07. 2026)
 
 - Produktový název je vždy **„garantovaný nákupní benefit“**. Klasický soutěžní voucher je jiný, dobrovolný a pro partnera zůstává zdarma.
