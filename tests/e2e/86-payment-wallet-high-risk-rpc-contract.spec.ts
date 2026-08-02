@@ -94,6 +94,9 @@ test.describe('high-risk payment and wallet RPC contract', () => {
 
     expect(migration).not.toContain('CREATE OR REPLACE FUNCTION public.deduct_wallet_for_refund');
     expect(stripeRefund).toContain("Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')");
-    expect(stripeRefund).toContain("'deduct_wallet_for_refund'");
+
+    // Po zpevnění refundací odečítá MioCoiny jen prepare_stripe_refund.
+    expect(stripeRefund).not.toContain('deduct_wallet_for_refund');
+    expect(stripeRefund).toContain("'prepare_stripe_refund'");
   });
 });

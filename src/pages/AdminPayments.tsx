@@ -39,6 +39,8 @@ const AdminPayments: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState<string>('všechny');
+  // ID platby, na které právě běží požadavek — brání opakovanému klikání.
+  const [refundingPaymentId, setRefundingPaymentId] = useState<string | null>(null);
 
   useEffect(() => {
     if (isAdmin) {
@@ -73,10 +75,20 @@ const AdminPayments: React.FC = () => {
     }
   };
 
-  const handleRefundPayment = async (paymentId: string) => {
-    if (!confirm('Opravdu chcete provést refundaci této platby? Tato akce nelze vrátit.')) {
+  const handleRefundPayment = async (paymentId: string, isRetry: boolean) => {
+    if (refundingPaymentId) {
       return;
     }
+
+    const question = isRetry
+      ? 'Tato refundace je rozpracovaná — MioCoiny už byly odečteny. Chcete ji bezpečně dokončit? Druhá refundace ani druhý odečet nevzniknou.'
+      : 'Opravdu chcete provést refundaci této platby? Tato akce nelze vrátit.';
+
+    if (!confirm(question)) {
+      return;
+    }
+
+    setRefundingPaymentId(paymentId);
 
     try {
       const { data: sessionData } = await supabase.auth.getSession();
@@ -104,7 +116,7 @@ const AdminPayments: React.FC = () => {
 
       toast({
         title: 'Refundace úspěšná',
-        description: 'Platba byla úspěšně refundována.',
+        description: 'Platba byla refundována a MioCoiny odečteny.',
       });
 
       await fetchPayments();
@@ -116,6 +128,10 @@ const AdminPayments: React.FC = () => {
         description: message,
         variant: 'destructive',
       });
+      // Rozpracovaná refundace se musí v seznamu ukázat jako „Refundace čeká“.
+      await fetchPayments();
+    } finally {
+      setRefundingPaymentId(null);
     }
   };
 
@@ -136,6 +152,8 @@ const AdminPayments: React.FC = () => {
         return <Badge variant="pending">Čekající</Badge>;
       case "failed":
         return <Badge variant="destructive">Neúspěšné</Badge>;
+      case "refund_pending":
+        return <Badge variant="pending">Refundace čeká</Badge>;
       case "refunded":
         return <Badge variant="warning">Vráceno</Badge>;
       default:
@@ -228,6 +246,7 @@ const AdminPayments: React.FC = () => {
                   <SelectItem value="completed">Dokončeno</SelectItem>
                   <SelectItem value="pending">Čekající</SelectItem>
                   <SelectItem value="failed">Neúspěšné</SelectItem>
+                  <SelectItem value="refund_pending">Refundace čeká</SelectItem>
                   <SelectItem value="refunded">Vráceno</SelectItem>
                 </SelectContent>
               </Select>
@@ -265,14 +284,21 @@ const AdminPayments: React.FC = () => {
                           {new Date(payment.created_at).toLocaleDateString('cs-CZ')}
                         </TableCell>
                         <TableCell>
-                          {payment.status === 'completed' && (
+                          {(payment.status === 'completed' || payment.status === 'refund_pending') && (
                             <Button
                               variant="outline"
                               size="sm"
-                              onClick={() => handleRefundPayment(payment.id)}
+                              disabled={refundingPaymentId !== null}
+                              onClick={() =>
+                                handleRefundPayment(payment.id, payment.status === 'refund_pending')
+                              }
                             >
                               <AlertTriangle className="h-4 w-4 mr-1" />
-                              Vrátit
+                              {refundingPaymentId === payment.id
+                                ? 'Zpracovává se…'
+                                : payment.status === 'refund_pending'
+                                  ? 'Dokončit refundaci'
+                                  : 'Vrátit'}
                             </Button>
                           )}
                         </TableCell>

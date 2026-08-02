@@ -53,15 +53,20 @@ test.describe('wallet mutation RPC grant contract', () => {
     }
   });
 
-  test('stripe refund remains the only direct application caller and uses service role', () => {
+  test('stripe refund no longer uses the clamping deduct RPC and stays on service role', () => {
     const refundFunction = read('supabase/functions/stripe-refund/index.ts');
     expect(refundFunction).toContain("Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')");
-    expect(refundFunction).toContain("'deduct_wallet_for_refund'");
+
+    // Zpevnění refundací: odečet MioCoinů dělá výhradně prepare_stripe_refund,
+    // které vyžaduje celý zůstatek. Legacy deduct_wallet_for_refund ořezával
+    // odečet na nulu, takže se už z Edge Function nesmí volat.
+    expect(refundFunction).not.toContain('deduct_wallet_for_refund');
+    expect(refundFunction).toContain("'prepare_stripe_refund'");
 
     const allowedDirectCallers = new Set([
-      'supabase/functions/stripe-refund/index.ts',
       'tests/e2e/83-wallet-rpc-grants-contract.spec.ts',
       'tests/e2e/86-payment-wallet-high-risk-rpc-contract.spec.ts',
+      'tests/e2e/87-stripe-refund-hardening-contract.spec.ts',
     ]);
     const filesWithDeductRpc = listFiles('.').filter((file) => (
       read(file).includes('deduct_wallet_for_refund') && !allowedDirectCallers.has(file)
@@ -69,10 +74,13 @@ test.describe('wallet mutation RPC grant contract', () => {
 
     expect(filesWithDeductRpc).toEqual([
       'docs/launch-readiness/PAY01_PAYMENTS_TEST_MODE_NOTE.md',
+      'onemil_history.md',
+      'onemil_state.md',
       'src/integrations/supabase/types.ts',
       'supabase/migrations/20260315140000_audit_improvements_close_wallet.sql',
       'supabase/migrations/20260315201000_wallet_hardening_functions.sql',
       'supabase/migrations/20260718150358_restrict_wallet_rpc_execute.sql',
+      'supabase/migrations/20260803090000_harden_stripe_refund_flow.sql',
       'supabase/migrations/README_20260315140000.md',
     ]);
   });

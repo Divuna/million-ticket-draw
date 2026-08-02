@@ -1,5 +1,29 @@
 # OneMil – aktuální stav projektu
 
+## STRIPE REFUNDACE — ZPEVNĚNÍ PŘIPRAVENO V DRAFT PR, NENASAZENO (03. 08. 2026)
+
+**Jde pouze o Draft PR. Produkce `xkzhjldrojjlrkezorey` nebyla změněna** — migrace `20260803090000_harden_stripe_refund_flow.sql` není aplikovaná na žádné databázi, Edge Function `stripe-refund` zůstává na produkci ve verzi **135** s původním kódem, žádná skutečná refundace neproběhla a žádná testovací platba nevznikla.
+
+**Potvrzený současný (rozbitý) tok — read-only ověřeno na produkci:**
+1. `/admin/payments` → tlačítko „Vrátit" → `fetch` na Edge Function `stripe-refund` (v135, `verify_jwt = true`; nasazený kód je znak po znaku shodný s repem).
+2. EF ověří JWT + roli, načte platbu, **zavolá Stripe refund** a teprve potom nastaví `status = 'refunded'` a zavolá `deduct_wallet_for_refund`.
+3. `deduct_wallet_for_refund` odečte `GREATEST(0, balance − amount)` — **při nedostatku MioCoinů odečte jen zbytek a zůstatek srazí na nulu**. Zákazník tak může MioCoiny utratit a přesto dostat celou platbu zpět.
+4. Selhání odečtu i selhání zápisu stavu se pouze zaloguje — EF stejně vrátí `success: true`.
+5. Stará `admin_manage_payment(uuid, text, text)` má v refundní větvi opačné znaménko: MioCoiny **přičítá** a zapisuje `admin_refund_credit`. Má `EXECUTE` pro `PUBLIC`/`anon`/`authenticated` (vnitřní guard vyžaduje admin roli). **Aktuální administrace ani žádná Edge Function ji nevolá** — v repu je jen v generovaných typech a v testech; v produkci 0 řádků `admin_refund_credit`.
+
+**Nové obchodní pravidlo:** refundaci lze zahájit jen tehdy, má-li uživatel v běžném zůstatku alespoň celý počet MioCoinů z dané platby. Jinak se zastaví **před** voláním Stripe s hláškou `Refundaci nelze provést, protože část MioCoinů z této platby již byla použita.`
+
+**Co Draft PR mění:**
+- **Migrace `supabase/migrations/20260803090000_harden_stripe_refund_flow.sql`** — parciální unikátní index `uniq_wallet_tx_refund_debit_per_payment` (jedna platba = nejvýše jeden `refund_debit`); nová `prepare_stripe_refund(uuid)` (zámek platby i peněženky, povolen jen stav `completed`/`refund_pending`, kontrola celého zůstatku, jednorázový odečet přesné částky, právě jeden záporný `refund_debit` se `source = 'prepare_stripe_refund'` a `reference_id = payment.id`, posun na `refund_pending`); nová `finalize_stripe_refund(uuid)` (jen `refund_pending → refunded`, idempotentní, nikdy nesahá na peníze); obě **jen pro `service_role`** (revoke `PUBLIC`/`anon`/`authenticated`). `admin_manage_payment` má refundní větev **natvrdo zablokovanou** (`RAISE EXCEPTION`), větev `update_status` beze změny, a odebrané granty pro `PUBLIC`/`anon`/`authenticated`. `deduct_wallet_for_refund` zůstává beze změny těla a jen pro `service_role`, označená jako legacy — **Edge Function ji už nevolá**.
+- **Edge Function `stripe-refund`** — nejdřív `prepare_stripe_refund`, teprve pak Stripe; refund se vytváří s `idempotencyKey = onemil-refund-<payment_id>`; po `succeeded`/`pending` následuje `finalize_stripe_refund`; při nejasné síťové chybě zůstává stav `refund_pending` pro bezpečné zopakování; **úspěch se nikdy nevrací, pokud selhal odečet nebo uložení stavu**; logy ani audit už neobsahují Stripe session ID.
+- **`src/pages/AdminPayments.tsx`** — nový stav `refund_pending` s názvem „Refundace čeká" (badge + filtr), tlačítko „Dokončit refundaci" pro bezpečné zopakování, blokace opakovaného klikání během požadavku, chyba ze serveru se zobrazí beze změny textu.
+
+**Poznámky ke schématu (ověřeno proti produkci):** `payments.status` je `text` bez CHECK constraintu → `refund_pending` nevyžaduje změnu schématu; v produkci neexistuje žádný řádek `refund_debit`, takže nový unikátní index nemůže selhat na historických datech. Trigger `trg_payments_referral_reverse` provede reverzi odměny za doporučení nově už při `completed → refund_pending`; následné `refund_pending → refunded` už nic nereverzuje (podmínka `OLD.status = 'completed'`), reverze tedy proběhne právě jednou.
+
+**Otevřené pozorování (nezměněno v tomto PR):** EF kontroluje roli přes `user_roles.role = 'admin'`, takže účet pouze se `superadmin` rolí dostane 403 — autorizaci jsem záměrně neměnil.
+
+**Kontroly:** `npx tsc --noEmit` exit 0, `npm run build` exit 0, statické kontraktní specy 83/86/87 zelené. Databázový spec 88 je staging-only a opt-in (`E2E_REFUND_HARDENING=1`) — **zatím neproběhl**, protože migrace není aplikovaná na žádné databázi. Stripe se v testech nevolá vůbec.
+
 ## PLATEBNÍ TRIGGER — OPRAVA `update_wallet_after_payment()` APLIKOVÁNA NA PRODUKCI (02. 08. 2026, schválení Pavla)
 
 **PR #308 mergnut do `main` (merge commit `2f607232`) a migrace `20260802120000_restore_wallet_payment_ledger.sql` byla aplikována na produkci `xkzhjldrojjlrkezorey`.** Nové dokončené platby už zakládají řádek účetní historie.
