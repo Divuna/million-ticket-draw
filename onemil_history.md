@@ -1,3 +1,12 @@
+# 02. 08. 2026 — Přidán security.txt (bezpečnostní kontakt)
+
+- Přidán **`public/.well-known/security.txt`** s kontaktem `mailto:podpora@onemil.cz`, `Expires: 2027-08-01T00:00:00.000Z`, `Preferred-Languages: cs, en` a `Canonical: https://onemil.cz/.well-known/security.txt`. Reaguje na nález externího skeneru „chybí soubor pro hlášení bezpečnostních problémů" — před změnou vracely `/.well-known/security.txt` i `/security.txt` HTTP 404.
+- Build ověřen: `npm run build` exit 0, vzniká `dist/.well-known/security.txt` (150 B, shodný obsah). `npx tsc --noEmit` exit 0, ESLint 0 chyb.
+- **Po Lovable Publish má být soubor dostupný na `https://onemil.cz/.well-known/security.txt`;** do publishe zůstává 404.
+- **`Expires` je nutné obnovit před 1. 8. 2027** — dle RFC 9116 je pole povinné a po vypršení je soubor neplatný.
+- **P2 (iframe), P3 (CORP) i SRI zůstávají beze změny.** SRI se u `googletagmanager.com/gtag/js` a `cdn.onesignal.com` záměrně nepoužívá (obě služby mění obsah, hash by je rozbil); protiváhou je CSP allowlist. **CSP zůstává aktivní přes meta tag** z PR #304.
+- Změna se nedotkla bezpečnostních hlaviček, DNS, Lovable, Supabase, produkce ani aplikačního kódu.
+
 # 02. 08. 2026 — Kontrola bezpečnostního stavu: A1–A5, P1 a SPF v pořádku, P2/P3 odložené
 
 - Znovu ověřeno přímo v GitHubu, produkci a veřejném DNS. **PR #302 mergnut** (`a59bd674`) — migrace `20260801180617_secure_admin_activation_summary.sql` a `20260801180912_secure_partner_offer_invoice_creation.sql` jsou v `main`, takže dřívější závěr o chybějících migracích A1/A2 v repu **už neplatí**.
