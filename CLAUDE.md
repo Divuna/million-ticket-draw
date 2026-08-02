@@ -1,3 +1,11 @@
+# Bezpečnostní invarianty — ověřeno 02. 08. 2026
+
+- Funkcím `get_admin_activation_summary()`, `create_partner_offer_invoices_for_period(date,date)`, `assign_partner_offer_to_ticket(uuid,uuid,uuid)` a `sync_partner_offer_activations()` **nevracet `anon` ani `PUBLIC` EXECUTE**. První má vnitřní guard `WHERE public.is_admin()`, zbylé tři smí volat jen `service_role` / interní backend. Odpovídající migrace jsou v `supabase/migrations/` (`20260801180617`, `20260801180912`, `20260801181421`, `20260801185927`).
+- `upload-ticket-share` nevracet na `verify_jwt = false` ani na `upsert: true`; vyžaduje JWT, `ticketId` jako UUID, shodu `tickets.user_id` s přihlášeným uživatelem a jen PNG. Klient posílá výhradně `ticket_row_id` z `buy_ticket_atomic`; veřejná URL `og-ticket-share?id=${contestId}-${ticket_number}` je na bucketu nezávislá.
+- **P1 (CSP)** je na produkci aktivní přes meta tag v `index.html`. Při přidání nové externí služby je nutné doplnit její doménu do allowlistu, jinak ji prohlížeč zablokuje. `vercel.json` produkční hosting (Lovable) **nepoužívá** — hlavičky se přes něj nastavit nedají.
+- **P2 (iframe) a P3 (CORP)** jsou vědomě odložené a nekritické; šly by nastavit jen na edge vrstvě (vlastní Cloudflare), což by znamenalo migraci celé DNS zóny včetně pošty. **Cloudflare se nyní nezavádí.**
+- Apex `onemil.cz` musí mít vždy **právě jeden** SPF (`v=spf1 a mx include:_spf.websupport.cz -all`); SES/Resend odesílání patří na `send.onemil.cz`. Dva SPF na jednom jménu = `permerror` dle RFC 7208.
+
 # Garantovaný nákupní benefit — datový základ Fáze 1 (24. 07. 2026)
 
 - Produktový název je vždy **„garantovaný nákupní benefit“**. Klasický soutěžní voucher je jiný, dobrovolný a pro partnera zůstává zdarma.

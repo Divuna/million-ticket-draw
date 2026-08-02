@@ -1,5 +1,27 @@
 # OneMil – aktuální stav projektu
 
+## BEZPEČNOSTNÍ STAV — A1–A5, P1 A SPF V POŘÁDKU, P2/P3 VĚDOMĚ ODLOŽENÉ (02. 08. 2026)
+
+Znovu ověřeno 2. 8. 2026 přímo v GitHubu, produkční databázi a veřejném DNS. **Aplikační nálezy A1–A5, webový nález P1 i SPF jsou v pořádku.**
+
+| Nález | Stav | Doklad |
+|-------|------|--------|
+| A1 `get_admin_activation_summary()` | ✅ opraveno | `anon`/`PUBLIC` bez EXECUTE, uvnitř `WHERE public.is_admin()`; migrace `20260801180617_secure_admin_activation_summary.sql` je v `main` (PR #302, merge `a59bd674`) |
+| A2 `create_partner_offer_invoices_for_period(date,date)` | ✅ opraveno | jen `service_role`; migrace `20260801180912_secure_partner_offer_invoice_creation.sql` je v `main` (PR #302) |
+| A3 `assign_partner_offer_to_ticket(uuid,uuid,uuid)` | ✅ opraveno | jen `service_role`; migrace `20260801181421…` (PR #298, merge `b7155665`) |
+| A4 `sync_partner_offer_activations()` | ✅ opraveno | jen `service_role`; migrace `20260801185927…` (PR #300, merge `e09733ce`) |
+| A5 `upload-ticket-share` | ✅ opraveno a nasazeno | Edge Function verze 177 ACTIVE, `verify_jwt = true`, ověření vlastníka tiketu, jen PNG, `upsert: false` (PR #299, merge `e67ff359`) |
+| A6 `activate_partner_reward_sql` | ℹ️ informativní | mrtvá funkce bez praktického rizika |
+| **P1** Content-Security-Policy | ✅ **aktivní na produkci** | meta tag v HTML `https://onemil.cz` (PR #304, merge `93e18dc6`) |
+| **P2** ochrana proti iframu, **P3** `Cross-Origin-Resource-Policy` | 🟡 **vědomě odložené, nekritické** | hlavičky na produkci chybí; opravitelné jen na edge vrstvě |
+| SPF / pošta | ✅ v pořádku | viz sekce níže |
+
+**Migrace A1 a A2 jsou v repozitáři.** Dřívější závěr o nesouladu repo × produkce („migrace A1/A2 chybí v `supabase/migrations/`") **už neplatí** — doplnil je PR #302. V `main` jsou všechny čtyři bezpečnostní migrace z 1. 8. 2026.
+
+**P2/P3 se teď neřeší.** Nejsou vyhodnoceny jako kritické a jediná cesta k nim vede přes předřazení vlastní Cloudflare vrstvy, tedy migraci celé DNS zóny včetně pošty — to riziko aktuálně nevyváží. Plán zůstává jen jako návrh; **Cloudflare se nyní nezavádí**.
+
+**Zbylé větve nejsou otevřená chyba.** `fix/add-missing-a1-a2-migrations` je plně obsažená v `main` (PR #302 mergnut) a `fix/web-security-headers-p1-p3` patří k **uzavřenému PR #303** (měnila jen `vercel.json`, který produkční Lovable hosting nepoužívá). Obě jsou neškodné zbytky po uzavřených PR, ne aktivní řešení.
+
 ## DNS A POŠTA — SPF OPRAVENO A VEŘEJNĚ OVĚŘENO (02. 08. 2026)
 
 **SPF `onemil.cz` je v pořádku a bylo 2. 8. 2026 veřejně ověřeno.** Doména má právě jeden SPF záznam a odesílání přes Amazon SES / Resend je odděleno na `send.onemil.cz`.
@@ -22,9 +44,11 @@ Na apexu se `include:amazonses.com` **nevyskytuje** — ověřeno negativním te
 
 **Pravidlo (neměnit bez samostatného ověření):** apex `onemil.cz` musí mít vždy **právě jeden** SPF záznam; SES/Resend odesílání patří na `send.onemil.cz`. Dva SPF na jednom jménu znamenají podle RFC 7208 `permerror` a rozbily by vyhodnocení SPF u příjemců.
 
-## DOBÍJENÍ MIOCOINŮ A PARTNERSKÝ BLOK — ČÁSTI A A B ISSUE #289 V DRAFT PR #290 (30. 07. 2026)
+## DOBÍJENÍ MIOCOINŮ A PARTNERSKÝ BLOK — ČÁSTI A A B ISSUE #289 MERGNUTÉ A NASAZENÉ (30. 07. 2026, aktualizováno 02. 08. 2026)
 
-**Části A a B issue #289 jsou připravené v Draft PR #290, zatím nejsou mergnuté ani nasazené.** Větev `feat/miocoin-topup-section-extract` (HEAD `cf9198e5`) míří do `main`; není v `main`, na stagingu ani na produkci. Část C (Shoptet) není součástí PR #290.
+**Části A a B issue #289 jsou mergnuté v `main` a publikované na produkci.** PR #290 (merge `2c53a162`) a navazující PR #291–#297 jsou všechny mergnuté; produkční bundle obsahuje `/top-up`, `ticket_row_id` i stránku `/partnerstvi`. Část C (Shoptet) není součástí těchto PR a zůstává neprovedená.
+
+> Poznámka k historii: text níže vznikl v době otevřeného Draft PR #290 a popisuje průběh práce. Formulace typu „připraveno ve worktree / zatím nemergnuto / čeká na Lovable Publish" jsou **překonané** — vše je mergnuté a publikované.
 
 Jednotlivé kroky v pořadí, jak vznikly:
 
