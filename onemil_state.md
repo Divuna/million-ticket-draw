@@ -1,8 +1,8 @@
 # OneMil – aktuální stav projektu
 
-## PLATEBNÍ TRIGGER — OPRAVA `update_wallet_after_payment()` PŘIPRAVENA V DRAFT PR, NENASAZENA (02. 08. 2026)
+## PLATEBNÍ TRIGGER — OPRAVA `update_wallet_after_payment()` APLIKOVÁNA NA PRODUKCI (02. 08. 2026, schválení Pavla)
 
-**Migrace `20260802120000_restore_wallet_payment_ledger.sql` je zatím jen v Draft PR. Na produkci `xkzhjldrojjlrkezorey` nebyla aplikována; produkční funkce je stále v původním nesouladném stavu.**
+**PR #308 mergnut do `main` (merge commit `2f607232`) a migrace `20260802120000_restore_wallet_payment_ledger.sql` byla aplikována na produkci `xkzhjldrojjlrkezorey`.** Nové dokončené platby už zakládají řádek účetní historie.
 
 **Zjištěný nesoulad (read-only audit 02. 08. 2026):** produkční `public.update_wallet_after_payment()` byla zjednodušená na pouhé `UPDATE wallets SET balance_coins = balance_coins + NEW.amount` — bez kontroly stavu platby, bez `SECURITY DEFINER` a **bez zápisu do `wallet_transactions`**. Zpevněná verze z `20260315200000_wallet_hardening.sql` aplikovaná byla a 16.–21. 3. 2026 fungovala (71 řádků `payment_credit`), pak ji ale někdo přepsal přímo v databázi mimo migraci. Důvod: původní verze zapisovala do `wallets.balance_vouchers`, který v produkčním schématu **neexistuje** → každá dokončená platba končila chybou a Stripe webhook vracel 500 (incident PAY03, 30. 06. 2026).
 
@@ -24,7 +24,13 @@
 | Uživatel bez peněženky | vznikla nová peněženka se zůstatkem 50,00 a **1** ledger řádek |
 | Nekladná částka | **nešlo testovat** — databáze ji blokuje přes `CHECK (amount > 0)` na `payments`; guard ve funkci zůstává jako neaktivní pojistka |
 
-**Po testu je produkce beze změny:** 135 plateb, 775 peněženek, 3 723 ledger řádků, součet zůstatků 139 891,41 MC, funkce `update_wallet_after_payment` stále původní (`md5 = b041fde2a405d34f9b67acb5208dad1c`, 139 znaků, bez `SECURITY DEFINER`). Cílené kontroly: 0 testovacích plateb, 0 testovacích ledger řádků. **Migrace `20260802120000` stále není aplikovaná** a produkční funkce je stále v původním nesouladném stavu.
+**Po testu zůstala produkce beze změny** (135 plateb, 775 peněženek, 3 723 ledger řádků, 139 891,41 MC, 0 testovacích reziduí), teprve pak proběhlo ostré nasazení.
+
+**Produkční apply (02. 08. 2026, výslovné schválení Pavla):** migrace aplikována přes `apply_migration`, zapsána do `supabase_migrations.schema_migrations` jako **`20260802205656` / `restore_wallet_payment_ledger`** (apply nástroj razítkuje vlastní čas, ne číslo souboru `20260802120000` — repozitářní verze proto v `schema_migrations` není; `db push` se na tomto projektu stejně nepoužívá).
+
+**Postcheck ✅:** funkce má `SECURITY DEFINER`, `search_path=public`, tělo 1 393 znaků, **0× `balance_vouchers`**, zapisuje `payment_credit`, upsertuje peněženku přes `ON CONFLICT (user_id)`, komentář nastaven, owner `postgres`. Trigger beze změny: `CREATE TRIGGER trg_update_wallet_after_payment AFTER INSERT ON public.payments FOR EACH ROW`. Data nedotčena: 135 plateb, 775 peněženek, 3 723 ledger řádků, 90 `payment_credit`, součet zůstatků 139 891,41 MC — **před i po apply identické**. Integrita: 0 záporných peněženek, 0 dvojích ledger kreditů. 58 historických `completed` plateb zůstává bez ledger řádku — backfill se vědomě nedělá.
+
+**Poznámka k ACL:** funkce má `EXECUTE` pro `anon`/`authenticated` (výchozí `PUBLIC` grant, existoval i před opravou). Není to expozice — Postgres odmítá přímé volání funkce vracející `trigger` a PostgREST takové funkce nevystavuje.
 
 Dále ověřeno: `npx tsc --noEmit` exit 0, `npm run build` exit 0, read-only integritní kontroly bez nálezu, shoda všech odkazovaných sloupců se skutečným produkčním schématem.
 
