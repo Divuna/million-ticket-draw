@@ -1,5 +1,22 @@
 # OneMil – aktuální stav projektu
 
+## BEZPEČNOSTNÍ KONTAKT — `security.txt` PŘIDÁN (02. 08. 2026)
+
+Do repozitáře byl přidán **`public/.well-known/security.txt`** — jediný soubor, nic dalšího.
+
+```
+Contact: mailto:podpora@onemil.cz
+Expires: 2027-08-01T00:00:00.000Z
+Preferred-Languages: cs, en
+Canonical: https://onemil.cz/.well-known/security.txt
+```
+
+- Build ho kopíruje do `dist/.well-known/security.txt` (ověřeno, 150 B) — Vite bere `public/` jako statický kořen, žádná konfigurace nebyla potřeba.
+- **Po Lovable Publish má být dostupný na `https://onemil.cz/.well-known/security.txt`.** Do publishe vrací adresa 404.
+- **`Expires` je nutné obnovit před 1. 8. 2027.** Podle RFC 9116 je pole povinné a po vypršení se soubor považuje za neplatný; při obnově stačí posunout datum o rok.
+- **Beze změny zůstávají P2 (ochrana proti iframu), P3 (`Cross-Origin-Resource-Policy`) i SRI u externích skriptů.** SRI se u `googletagmanager.com/gtag/js` a `cdn.onesignal.com` záměrně nepoužívá — obě služby obsah průběžně mění a hash by je rozbil; roli protiváhy plní CSP allowlist.
+- **CSP zůstává aktivní přes meta tag** v `index.html` (P1, PR #304) — tato změna se jí nijak nedotýká.
+
 ## BEZPEČNOSTNÍ STAV — A1–A5, P1 A SPF V POŘÁDKU, P2/P3 VĚDOMĚ ODLOŽENÉ (02. 08. 2026)
 
 Znovu ověřeno 2. 8. 2026 přímo v GitHubu, produkční databázi a veřejném DNS. **Aplikační nálezy A1–A5, webový nález P1 i SPF jsou v pořádku.**
