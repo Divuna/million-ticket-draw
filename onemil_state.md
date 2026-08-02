@@ -1,5 +1,27 @@
 # OneMil – aktuální stav projektu
 
+## DNS A POŠTA — SPF OPRAVENO A VEŘEJNĚ OVĚŘENO (02. 08. 2026)
+
+**SPF `onemil.cz` je v pořádku a bylo 2. 8. 2026 veřejně ověřeno.** Doména má právě jeden SPF záznam a odesílání přes Amazon SES / Resend je odděleno na `send.onemil.cz`.
+
+| Záznam | Typ | Ověřená hodnota |
+|--------|-----|-----------------|
+| `onemil.cz` | TXT (SPF) | `v=spf1 a mx include:_spf.websupport.cz -all` — **právě jeden SPF** |
+| `send.onemil.cz` | TXT (SPF) | `v=spf1 include:amazonses.com ~all` |
+| `onemil.cz` | MX | `10 mx10.active24.cz`, `100 mx20.active24.cz` |
+| `_dmarc.onemil.cz` | TXT | `v=DMARC1; p=quarantine` |
+| `resend._domainkey.onemil.cz` | TXT (DKIM) | `p=MIGfMA0GCSqGSIb3DQEBAQU…` (aktivní) |
+
+Na apexu se `include:amazonses.com` **nevyskytuje** — ověřeno negativním testem. MX, DKIM i DMARC jsou aktivní beze změny.
+
+**Ověřeno ze tří nezávislých zdrojů:** Google Public DNS (`dns.google`), Cloudflare DNS (`cloudflare-dns.com`) a autoritativní nameserver `ns1.websupport.cz`. Všechny tři vracejí shodné hodnoty. (Quad9 DoH endpoint byl v době kontroly nedostupný, proto ho nahradil autoritativní dotaz — ten je pro tento účel průkaznější.)
+
+**Zastaralá analýza:** dřívější zjištění, že `onemil.cz` má **dva SPF záznamy** (druhý s `include:amazonses.com`), **už neplatí**. Popisovalo stav před opravou; SES SPF byl mezitím správně přesunut na `send.onemil.cz`. Tuto zastaralou informaci dál nepoužívat.
+
+**Cloudflare se zatím nezavádí.** Připravený plán předřazení vlastní Cloudflare vrstvy zůstává jen jako návrh — nálezy **P2** (ochrana proti vložení do iframu) a **P3** (`Cross-Origin-Resource-Policy`) nejsou vyhodnoceny jako kritické a nevyváží riziko migrace celé DNS zóny včetně pošty. **P1 (CSP) je od 2. 8. 2026 aktivní na produkci** přes meta tag z PR #304, takže hlavní část webové ochrany je pokrytá bez zásahu do DNS.
+
+**Pravidlo (neměnit bez samostatného ověření):** apex `onemil.cz` musí mít vždy **právě jeden** SPF záznam; SES/Resend odesílání patří na `send.onemil.cz`. Dva SPF na jednom jménu znamenají podle RFC 7208 `permerror` a rozbily by vyhodnocení SPF u příjemců.
+
 ## DOBÍJENÍ MIOCOINŮ A PARTNERSKÝ BLOK — ČÁSTI A A B ISSUE #289 V DRAFT PR #290 (30. 07. 2026)
 
 **Části A a B issue #289 jsou připravené v Draft PR #290, zatím nejsou mergnuté ani nasazené.** Větev `feat/miocoin-topup-section-extract` (HEAD `cf9198e5`) míří do `main`; není v `main`, na stagingu ani na produkci. Část C (Shoptet) není součástí PR #290.
