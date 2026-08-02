@@ -1,3 +1,14 @@
+# 02. 08. 2026 — Kontrola bezpečnostního stavu: A1–A5, P1 a SPF v pořádku, P2/P3 odložené
+
+- Znovu ověřeno přímo v GitHubu, produkci a veřejném DNS. **PR #302 mergnut** (`a59bd674`) — migrace `20260801180617_secure_admin_activation_summary.sql` a `20260801180912_secure_partner_offer_invoice_creation.sql` jsou v `main`, takže dřívější závěr o chybějících migracích A1/A2 v repu **už neplatí**.
+- **PR #303 uzavřen bez merge** — měnil `vercel.json`, který produkční Lovable hosting nepoužívá; jeho větev `fix/web-security-headers-p1-p3` není aktivní řešení.
+- **PR #304 mergnut** (`93e18dc6`) — P1 CSP je publikované a ověřené na `https://onemil.cz` (meta tag v HTML). **PR #305 mergnut** (`c172d5aaf316d165661c50256d7a3d35cc54ce82`).
+- **DNS znovu ověřeno na dvou veřejných resolverech** (Google Public DNS, Cloudflare DNS): `send.onemil.cz` TXT `v=spf1 include:amazonses.com ~all`; `onemil.cz` právě jeden SPF `v=spf1 a mx include:_spf.websupport.cz -all`; MX `10 mx10.active24.cz` / `100 mx20.active24.cz`, DKIM `resend._domainkey` i DMARC `v=DMARC1; p=quarantine` aktivní.
+- **P2 a P3 zůstávají vědomě odložené a nekritické**; hlavičky na produkci chybí a šlo by je nastavit jen na edge vrstvě. **Cloudflare se nyní nezavádí.**
+- **Zbylé větve `fix/add-missing-a1-a2-migrations` a `fix/web-security-headers-p1-p3` nejsou otevřená chyba** — první je plně obsažená v `main`, druhá patří k uzavřenému PR #303. Jde o neškodné zbytky.
+- Opraven zastaralý stavový popis issue #289 v `onemil_state.md`: PR #290–#297 jsou všechny mergnuté a publikované, takže formulace „připraveno ve worktree / zatím nemergnuto" už neplatí.
+- Kontrola byla čistě read-only: žádná změna v DNS, Active24, Lovable, Supabase, produkci ani v kódu.
+
 # 02. 08. 2026 — DNS: SPF oprava veřejně ověřena, Cloudflare se zatím nezavádí
 
 - **SPF oprava byla 2. 8. 2026 veřejně ověřena.** `onemil.cz` má **právě jeden** SPF záznam `v=spf1 a mx include:_spf.websupport.cz -all`; odesílání přes Amazon SES / Resend je odděleno na `send.onemil.cz` s `v=spf1 include:amazonses.com ~all`. Negativní test potvrdil, že `include:amazonses.com` se na apexu už nevyskytuje.
