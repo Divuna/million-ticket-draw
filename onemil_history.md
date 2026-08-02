@@ -1,3 +1,12 @@
+# 02. 08. 2026 — DNS: SPF oprava veřejně ověřena, Cloudflare se zatím nezavádí
+
+- **SPF oprava byla 2. 8. 2026 veřejně ověřena.** `onemil.cz` má **právě jeden** SPF záznam `v=spf1 a mx include:_spf.websupport.cz -all`; odesílání přes Amazon SES / Resend je odděleno na `send.onemil.cz` s `v=spf1 include:amazonses.com ~all`. Negativní test potvrdil, že `include:amazonses.com` se na apexu už nevyskytuje.
+- **Pošta zůstala aktivní beze změny:** MX `10 mx10.active24.cz` a `100 mx20.active24.cz`, DKIM `resend._domainkey.onemil.cz` (`p=MIGfMA0GCSqGSIb3DQEBAQU…`), DMARC `v=DMARC1; p=quarantine`.
+- Ověřeno ze tří nezávislých zdrojů: Google Public DNS, Cloudflare DNS a autoritativní `ns1.websupport.cz` — shodné hodnoty. Quad9 DoH byl v době kontroly nedostupný a nahradil ho autoritativní dotaz.
+- **Zastaralá analýza opravena:** dřívější zjištění o **dvou SPF záznamech** na `onemil.cz` (druhý s `include:amazonses.com`) popisovalo stav před opravou a **už neplatí**.
+- **Cloudflare se zatím nezavádí.** Plán předřazení vlastní Cloudflare vrstvy zůstává jen návrhem; **P2** (iframe) a **P3** (CORP) nejsou vyhodnoceny jako kritické a nevyváží riziko migrace celé DNS zóny včetně pošty. **P1 (CSP)** je od 2. 8. 2026 aktivní na produkci přes meta tag z PR #304 (merge `93e18dc6`).
+- Kontrola byla čistě read-only: žádná změna v DNS, Active24, Lovable, Supabase ani produkci; změněna pouze dokumentace.
+
 # 30. 07. 2026 — Issue #289 části A a B: Draft PR #290 otevřen
 
 - **Části A a B issue #289 jsou připravené v Draft PR #290, zatím nejsou mergnuté ani nasazené.**
