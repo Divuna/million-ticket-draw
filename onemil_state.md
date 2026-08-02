@@ -1,5 +1,19 @@
 # OneMil – aktuální stav projektu
 
+## PLATEBNÍ TRIGGER — OPRAVA `update_wallet_after_payment()` PŘIPRAVENA V DRAFT PR, NENASAZENA (02. 08. 2026)
+
+**Migrace `20260802120000_restore_wallet_payment_ledger.sql` je zatím jen v Draft PR. Na produkci `xkzhjldrojjlrkezorey` nebyla aplikována; produkční funkce je stále v původním nesouladném stavu.**
+
+**Zjištěný nesoulad (read-only audit 02. 08. 2026):** produkční `public.update_wallet_after_payment()` byla zjednodušená na pouhé `UPDATE wallets SET balance_coins = balance_coins + NEW.amount` — bez kontroly stavu platby, bez `SECURITY DEFINER` a **bez zápisu do `wallet_transactions`**. Zpevněná verze z `20260315200000_wallet_hardening.sql` aplikovaná byla a 16.–21. 3. 2026 fungovala (71 řádků `payment_credit`), pak ji ale někdo přepsal přímo v databázi mimo migraci. Důvod: původní verze zapisovala do `wallets.balance_vouchers`, který v produkčním schématu **neexistuje** → každá dokončená platba končila chybou a Stripe webhook vracel 500 (incident PAY03, 30. 06. 2026).
+
+**Dopad:** peníze jsou v pořádku, chybí účetní historie. **15 dokončených plateb od 22. 3. 2026 nemá řádek v `wallet_transactions`** (dalších 43 je z doby před vznikem ledgeru, což není regrese). Ověřeno: 0 záporných peněženek, 0 duplicitních `stripe_session_id`, 0 dvojích připsání, 0 plateb bez peněženky; bonusové balíčky 50/310/525/1280 se připisují správně.
+
+**Co migrace dělá:** mění **pouze** tělo funkce. Připíše jen platbu se `status = 'completed'`, `SECURITY DEFINER` + `SET search_path TO 'public'`, upsert peněženky (založí ji, když chybí), přičte jen `balance_coins`, **nikdy nesahá na `balance_vouchers`**, vloží právě jeden řádek `payment_credit` / `update_wallet_after_payment` / `reference_id = NEW.id` a je idempotentní (existující ledger řádek zastaví připsání i zápis). Do `metadata` jde jen metoda, stav a čas vzniku platby — **žádné `stripe_session_id`**. Nově se ignoruje nekladná nebo chybějící částka.
+
+**Co se vědomě nedělá:** žádný zpětný doplněk historie starých plateb, žádná změna zůstatků, žádná změna refundní logiky (`admin_manage_payment` dál při refundu částku **připisuje** místo odečtení — samostatný otevřený nález), žádné přejmenování ani opětovné spuštění kolidujících migrací `20260315290000` / `20260315300000`, žádný UPDATE trigger pro přechod `pending → completed`.
+
+**Neověřeno spuštěním:** migrace nebyla aplikována na žádnou databázi — lokálně chybí Docker i `psql`, Supabase branch je zpoplatněná a staging nebyl schválený. Ověřen je build, TypeScript, read-only integritní kontroly a shoda všech odkazovaných sloupců se skutečným produkčním schématem. Runtime scénáře je nutné projet při aplikaci.
+
 ## BEZPEČNOSTNÍ KONTAKT — `security.txt` PŘIDÁN (02. 08. 2026)
 
 Do repozitáře byl přidán **`public/.well-known/security.txt`** — jediný soubor, nic dalšího.
