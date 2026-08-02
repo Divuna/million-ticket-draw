@@ -12,7 +12,21 @@
 
 **Co se vědomě nedělá:** žádný zpětný doplněk historie starých plateb, žádná změna zůstatků, žádná změna refundní logiky (`admin_manage_payment` dál při refundu částku **připisuje** místo odečtení — samostatný otevřený nález), žádné přejmenování ani opětovné spuštění kolidujících migrací `20260315290000` / `20260315300000`, žádný UPDATE trigger pro přechod `pending → completed`.
 
-**Neověřeno spuštěním:** migrace nebyla aplikována na žádnou databázi — lokálně chybí Docker i `psql`, Supabase branch je zpoplatněná a staging nebyl schválený. Ověřen je build, TypeScript, read-only integritní kontroly a shoda všech odkazovaných sloupců se skutečným produkčním schématem. Runtime scénáře je nutné projet při aplikaci.
+**Runtime ověřeno rollback-only testem proti produkčnímu schématu (02. 08. 2026, schválení Pavla).** Test běžel jako jediný `DO` blok zakončený `RAISE EXCEPTION`, takže se dočasné nasazení funkce i všechny vložené řádky vrátily zpět jako jedna atomická operace. Výsledky:
+
+| Scénář | Výsledek |
+|--------|----------|
+| `completed` platba 310 MC | zůstatek **+310** (10 152,91 → 10 462,91) a **přesně 1** ledger řádek |
+| Metadata ledger řádku | obsahují pouze `method`, `payment_status`, `payment_created_at` — **žádné `stripe_session_id`** |
+| Opakované zpracování téže platby | **žádné druhé připsání** (rozdíl zůstatku 0,00, ledger zůstal 1) |
+| `pending` platba | nepřipsala nic (rozdíl 0,00, ledger 0) |
+| `refunded` platba | nepřipsala nic (rozdíl 0,00, ledger 0) |
+| Uživatel bez peněženky | vznikla nová peněženka se zůstatkem 50,00 a **1** ledger řádek |
+| Nekladná částka | **nešlo testovat** — databáze ji blokuje přes `CHECK (amount > 0)` na `payments`; guard ve funkci zůstává jako neaktivní pojistka |
+
+**Po testu je produkce beze změny:** 135 plateb, 775 peněženek, 3 723 ledger řádků, součet zůstatků 139 891,41 MC, funkce `update_wallet_after_payment` stále původní (`md5 = b041fde2a405d34f9b67acb5208dad1c`, 139 znaků, bez `SECURITY DEFINER`). Cílené kontroly: 0 testovacích plateb, 0 testovacích ledger řádků. **Migrace `20260802120000` stále není aplikovaná** a produkční funkce je stále v původním nesouladném stavu.
+
+Dále ověřeno: `npx tsc --noEmit` exit 0, `npm run build` exit 0, read-only integritní kontroly bez nálezu, shoda všech odkazovaných sloupců se skutečným produkčním schématem.
 
 ## BEZPEČNOSTNÍ KONTAKT — `security.txt` PŘIDÁN (02. 08. 2026)
 
