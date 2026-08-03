@@ -152,13 +152,25 @@ async function handleRefundEvent(
   }
 
   if (refundStatus === 'failed' || refundStatus === 'canceled') {
+    // Pozdní `failed` po dokončené refundaci se nesmí projevit. RPC to samo
+    // odmítne (`already_refunded`) a peníze zůstanou beze změny.
     const { data: reversed, error: reverseError } = await supabaseClient.rpc(
       'reverse_failed_stripe_refund',
       { p_payment_id: paymentId, p_stripe_status: refundStatus },
     )
-    const rev = reversed as { ok?: boolean; code?: string } | null
+    const rev = reversed as { ok?: boolean; code?: string; referral_reward_restored?: boolean } | null
 
     if (reverseError || !rev || rev.ok !== true) {
+      // `already_refunded` = pozdní událost po dokončené refundaci. Není to
+      // chyba, opakování by nic nezměnilo — událost se jen potvrdí.
+      if (!reverseError && rev?.code === 'already_refunded') {
+        omLog('info', 'refund_late_failure_ignored', {
+          action: 'stripe_webhook',
+          payment_id: paymentId,
+        })
+        return { handled: true }
+      }
+
       omLog('error', 'refund_event_reverse_failed', {
         action: 'stripe_webhook',
         payment_id: paymentId,
@@ -167,7 +179,12 @@ async function handleRefundEvent(
       return { handled: false, reason: 'reverse_failed' }
     }
 
-    omLog('info', 'refund_reversed', { action: 'stripe_webhook', payment_id: paymentId })
+    // Platba se vrací mezi dokončené; MioCoiny i odměna za doporučení jsou zpět.
+    omLog('info', 'refund_reversed', {
+      action: 'stripe_webhook',
+      payment_id: paymentId,
+      referral_reward_restored: rev.referral_reward_restored === true,
+    })
     return { handled: true }
   }
 

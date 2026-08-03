@@ -246,7 +246,7 @@ test.describe('stripe refund database flow', () => {
     expect(await refundReversalRows(db, paymentId)).toHaveLength(0);
   });
 
-  test('88j stripe failed restores the MioCoins exactly once and sets refund_failed', async () => {
+  test('88j stripe failed restores the MioCoins once and returns the payment to completed', async () => {
     const db = admin();
     const { userId, paymentId } = await seedPayment(db, 500, 310);
 
@@ -257,8 +257,10 @@ test.describe('stripe refund database flow', () => {
     await applyStripeStatus(db, paymentId, refundId, 'failed');
 
     const fields = await paymentRefundFields(db, paymentId);
-    expect(fields?.status).toBe('refund_failed');
+    // Peníze zákazníkovi vráceny nebyly → platba zůstává ekonomicky dokončená.
+    expect(fields?.status).toBe('completed');
     expect(fields?.stripe_refund_status).toBe('failed');
+    expect(fields?.stripe_refund_id).toBe(refundId);
 
     expect(await balanceOf(db, userId)).toBe(500);
     const reversal = await refundReversalRows(db, paymentId);
@@ -271,11 +273,12 @@ test.describe('stripe refund database flow', () => {
     expect(await balanceOf(db, userId)).toBe(500);
     expect(await refundReversalRows(db, paymentId)).toHaveLength(1);
 
-    // Z refund_failed se nesmí automaticky spustit nová refundace.
+    // Nová automatická refundace je zablokovaná uloženým failed refundem.
     const { data: retry } = await db.rpc('prepare_stripe_refund', { p_payment_id: paymentId });
     expect(retry.ok).toBe(false);
     expect(retry.code).toBe('refund_failed_needs_manual_review');
     expect(await balanceOf(db, userId)).toBe(500);
+    expect(await paymentStatus(db, paymentId)).toBe('completed');
   });
 
   test('88k stripe canceled restores the MioCoins exactly once', async () => {
@@ -287,11 +290,109 @@ test.describe('stripe refund database flow', () => {
     await applyStripeStatus(db, paymentId, refundId, 'canceled');
 
     const fields = await paymentRefundFields(db, paymentId);
-    expect(fields?.status).toBe('refund_failed');
+    expect(fields?.status).toBe('completed');
     expect(fields?.stripe_refund_status).toBe('canceled');
 
     expect(await balanceOf(db, userId)).toBe(500);
     expect(await refundReversalRows(db, paymentId)).toHaveLength(1);
+  });
+
+  test('88n a failed refund restores the referral reward and credits the referrer once', async () => {
+    const db = admin();
+    const { userId, paymentId } = await seedPayment(db, 500, 310);
+    const { userId: referrerId } = await seedPayment(db, 1000, 50);
+
+    // Odměna za doporučení stornovaná přechodem completed -> refund_pending.
+    const { error: rewardError } = await db.from('referral_rewards').insert({
+      referrer_user_id: referrerId,
+      referred_user_id: userId,
+      payment_id: paymentId,
+      paid_amount_mc: 310,
+      commission_rate: 0.1,
+      reward_mc: 31,
+      status: 'earned',
+    });
+    expect(rewardError).toBeNull();
+
+    const referrerBefore = await balanceOf(db, referrerId);
+
+    // Příprava refundace → produkční trigger odměnu stornuje a odečte ji.
+    await db.rpc('prepare_stripe_refund', { p_payment_id: paymentId });
+
+    const { data: afterPrepare } = await db
+      .from('referral_rewards')
+      .select('status, reverse_reason')
+      .eq('payment_id', paymentId)
+      .single();
+    expect(afterPrepare?.status).toBe('reversed');
+    expect(afterPrepare?.reverse_reason).toBe('payment_status_changed:refund_pending');
+
+    // Stripe refundace selže → odměna se musí obnovit.
+    const refundId = `re_spec88_reward_${Date.now()}`;
+    await applyStripeStatus(db, paymentId, refundId, 'failed');
+
+    const { data: afterReverse } = await db
+      .from('referral_rewards')
+      .select('status, reversed_at, reverse_reason')
+      .eq('payment_id', paymentId)
+      .single();
+    expect(afterReverse?.status).toBe('earned');
+    expect(afterReverse?.reversed_at).toBeNull();
+    expect(afterReverse?.reverse_reason).toBeNull();
+
+    const referrerAfter = await balanceOf(db, referrerId);
+    expect(referrerAfter).toBe(referrerBefore);
+
+    // Opakovaná událost nesmí odměnu připsat podruhé.
+    await applyStripeStatus(db, paymentId, refundId, 'failed');
+    expect(await balanceOf(db, referrerId)).toBe(referrerAfter);
+    expect(await refundReversalRows(db, paymentId)).toHaveLength(1);
+    expect(await paymentStatus(db, paymentId)).toBe('completed');
+  });
+
+  test('88o a late failed event after succeeded changes nothing', async () => {
+    const db = admin();
+    const { userId, paymentId } = await seedPayment(db, 500, 310);
+
+    await db.rpc('prepare_stripe_refund', { p_payment_id: paymentId });
+    const refundId = `re_spec88_late_${Date.now()}`;
+    await applyStripeStatus(db, paymentId, refundId, 'succeeded');
+    expect(await paymentStatus(db, paymentId)).toBe('refunded');
+
+    // Pozdní `failed` — Stripe negarantuje pořadí doručení událostí.
+    await applyStripeStatus(db, paymentId, refundId, 'failed');
+
+    const fields = await paymentRefundFields(db, paymentId);
+    expect(fields?.status).toBe('refunded');
+    expect(fields?.stripe_refund_status).toBe('succeeded');
+
+    expect(await balanceOf(db, userId)).toBe(190);
+    expect(await refundReversalRows(db, paymentId)).toHaveLength(0);
+  });
+
+  test('88p finalize refuses a refund that is not succeeded at stripe', async () => {
+    const db = admin();
+    const { userId, paymentId } = await seedPayment(db, 500, 310);
+
+    await db.rpc('prepare_stripe_refund', { p_payment_id: paymentId });
+
+    // Bez uloženého refund ID.
+    const noId = await db.rpc('finalize_stripe_refund', { p_payment_id: paymentId });
+    expect(noId.data.ok).toBe(false);
+    expect(noId.data.code).toBe('missing_stripe_refund_id');
+
+    // S refundem, který je teprve `pending`.
+    await db.rpc('record_stripe_refund_status', {
+      p_payment_id: paymentId,
+      p_refund_id: `re_spec88_notdone_${Date.now()}`,
+      p_status: 'pending',
+    });
+    const notSucceeded = await db.rpc('finalize_stripe_refund', { p_payment_id: paymentId });
+    expect(notSucceeded.data.ok).toBe(false);
+    expect(notSucceeded.data.code).toBe('stripe_refund_not_succeeded');
+
+    expect(await paymentStatus(db, paymentId)).toBe('refund_pending');
+    expect(await balanceOf(db, userId)).toBe(190);
   });
 
   test('88l a repeated succeeded webhook does not change the balance twice', async () => {
@@ -347,6 +448,12 @@ test.describe('stripe refund database flow', () => {
     const { userId, paymentId } = await seedPayment(db, 500, 310);
 
     await db.rpc('prepare_stripe_refund', { p_payment_id: paymentId });
+    // Dokončit lze jen refundaci, kterou Stripe potvrdil jako `succeeded`.
+    await db.rpc('record_stripe_refund_status', {
+      p_payment_id: paymentId,
+      p_refund_id: `re_spec88_final_${Date.now()}`,
+      p_status: 'succeeded',
+    });
 
     const first = await db.rpc('finalize_stripe_refund', { p_payment_id: paymentId });
     expect(first.error).toBeNull();
@@ -369,7 +476,7 @@ test.describe('stripe refund database flow', () => {
     const { userId, paymentId } = await seedPayment(db, 500, 310);
 
     await db.rpc('prepare_stripe_refund', { p_payment_id: paymentId });
-    await db.rpc('finalize_stripe_refund', { p_payment_id: paymentId });
+    await applyStripeStatus(db, paymentId, `re_spec88_done_${Date.now()}`, 'succeeded');
 
     const { data, error } = await db.rpc('prepare_stripe_refund', { p_payment_id: paymentId });
     expect(error).toBeNull();

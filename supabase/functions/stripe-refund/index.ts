@@ -75,7 +75,8 @@ serve(async (req) => {
     // 2. Příprava refundace PŘED jakýmkoli voláním Stripe.
     //    Jediná operace, která odečítá MioCoiny. Zamkne platbu i peněženku,
     //    vyžaduje celý zůstatek z dané platby a je idempotentní.
-    //    Ze stavu `refund_failed` odmítne pokračovat — ten vyžaduje ruční kontrolu.
+    //    Platbu s už evidovanou selhanou refundací (`stripe_refund_status`
+    //    failed/canceled) odmítne — ta vyžaduje ruční kontrolu.
     const { data: prepared, error: prepareError } = await supabaseClient.rpc(
       'prepare_stripe_refund',
       { p_payment_id: paymentId },
@@ -226,12 +227,15 @@ serve(async (req) => {
         )
       }
 
+      // Platba se vrací mezi dokončené — peníze zákazníkovi vráceny nebyly.
+      // Selhání je vidět přes `stripe_refund_status`, ne přes stav platby.
       return json(
         {
           success: false,
-          error: 'Stripe refundace selhala. MioCoiny byly vráceny zpět, platba je označená jako Refundace selhala a vyžaduje ruční kontrolu.',
+          error: 'Stripe refundace selhala. MioCoiny i odměna za doporučení byly vráceny zpět a platba zůstává dokončená. Je nutná ruční kontrola.',
           code: 'stripe_refund_failed',
-          status: 'refund_failed',
+          status: 'completed',
+          stripe_refund_status: refundStatus,
         },
         409,
       )

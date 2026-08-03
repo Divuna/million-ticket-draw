@@ -25,6 +25,8 @@ interface Payment {
   status: string;
   method: string;
   stripe_session_id?: string;
+  stripe_refund_id?: string | null;
+  stripe_refund_status?: string | null;
   created_at: string;
   users?: {
     email: string;
@@ -146,12 +148,32 @@ const AdminPayments: React.FC = () => {
     const matchesSearch =
       email.toLowerCase().includes(searchTerm.toLowerCase()) ||
       payment.id.toLowerCase().includes(searchTerm.toLowerCase());
-    const matchesStatus = statusFilter === 'všechny' || payment.status === statusFilter;
+    // Selhaná refundace není samostatný stav platby — filtruje se přes Stripe stav.
+    const matchesStatus =
+      statusFilter === 'všechny'
+        ? true
+        : statusFilter === 'refund_failed'
+          ? payment.status === 'completed' &&
+            (payment.stripe_refund_status === 'failed' || payment.stripe_refund_status === 'canceled')
+          : payment.status === statusFilter;
     return matchesSearch && matchesStatus;
   });
 
-  const getStatusBadge = (status: string) => {
-    switch (status) {
+  /**
+   * Selhaná Stripe refundace NEMÁ vlastní stav platby. Platba se vrací na
+   * `completed`, protože zákazníkovi peníze vráceny nebyly — pozná se podle
+   * uloženého Stripe stavu refundace.
+   */
+  const isFailedRefund = (payment: Payment) =>
+    payment.status === 'completed' &&
+    (payment.stripe_refund_status === 'failed' || payment.stripe_refund_status === 'canceled');
+
+  const getStatusBadge = (payment: Payment) => {
+    if (isFailedRefund(payment)) {
+      return <Badge variant="destructive">Refundace selhala</Badge>;
+    }
+
+    switch (payment.status) {
       case "completed":
         return <Badge variant="success">Dokončeno</Badge>;
       case "pending":
@@ -160,12 +182,10 @@ const AdminPayments: React.FC = () => {
         return <Badge variant="destructive">Neúspěšné</Badge>;
       case "refund_pending":
         return <Badge variant="pending">Refundace čeká</Badge>;
-      case "refund_failed":
-        return <Badge variant="destructive">Refundace selhala</Badge>;
       case "refunded":
         return <Badge variant="warning">Vráceno</Badge>;
       default:
-        return <Badge variant="outline">{status}</Badge>;
+        return <Badge variant="outline">{payment.status}</Badge>;
     }
   };
 
@@ -287,13 +307,14 @@ const AdminPayments: React.FC = () => {
                         <TableCell>{payment.users?.email}</TableCell>
                         <TableCell className="font-medium">{formatDerivedPaidCzk(payment.amount)}</TableCell>
                         <TableCell>{formatCreditedMiocoins(payment.amount)}</TableCell>
-                        <TableCell>{getStatusBadge(payment.status)}</TableCell>
+                        <TableCell>{getStatusBadge(payment)}</TableCell>
                         <TableCell>{payment.method}</TableCell>
                         <TableCell>
                           {new Date(payment.created_at).toLocaleDateString('cs-CZ')}
                         </TableCell>
                         <TableCell>
-                          {(payment.status === 'completed' || payment.status === 'refund_pending') && (
+                          {!isFailedRefund(payment) &&
+                            (payment.status === 'completed' || payment.status === 'refund_pending') && (
                             <Button
                               variant="outline"
                               size="sm"
@@ -310,9 +331,9 @@ const AdminPayments: React.FC = () => {
                                   : 'Vrátit'}
                             </Button>
                           )}
-                          {payment.status === 'refund_failed' && (
+                          {isFailedRefund(payment) && (
                             <span className="text-xs text-destructive">
-                              Nutná ruční kontrola. MioCoiny byly vráceny, novou refundaci systém sám nespustí.
+                              Nutná ruční kontrola. MioCoiny i odměna za doporučení byly vráceny, platba zůstává dokončená a novou refundaci systém sám nespustí.
                             </span>
                           )}
                         </TableCell>

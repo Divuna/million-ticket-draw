@@ -23,10 +23,25 @@
 --     -> refund_pending   (prepare_stripe_refund: odečet MioCoinů, ještě před Stripe)
 --        -> refunded      (finalize_stripe_refund: JEN po Stripe stavu `succeeded`)
 --        -> refund_pending (Stripe `pending` / `requires_action` — čeká se dál)
---        -> refund_failed (reverse_failed_stripe_refund: Stripe `failed` / `canceled`,
---                          MioCoiny se právě jednou vrátí zpět)
---   Ze stavu `refund_failed` se NIKDY nepokračuje automaticky — vyžaduje ruční
---   rozhodnutí administrátora.
+--        -> completed     (reverse_failed_stripe_refund: Stripe `failed` / `canceled`)
+--
+--   Neúspěšná refundace vrací platbu zpět na `completed`, protože zákazníkovi
+--   peníze vráceny NEBYLY — platba je pořád ekonomicky dokončená. Zároveň se
+--   právě jednou vrátí zákazníkovy MioCoiny i doporučovací odměna a na platbě
+--   zůstane `stripe_refund_id` + `stripe_refund_status = failed|canceled`.
+--   Podle těchto polí administrace pozná „Refundace selhala"; nový automatický
+--   pokus je zablokovaný a vyžaduje ruční rozhodnutí.
+--
+-- PROČ SE PLATBA VRACÍ NA `completed` (účetní důvod):
+--   Produkční trigger `trg_payments_referral_reverse` volá
+--   `reverse_referral_reward_on_payment_status_change()`, která při přechodu
+--   `completed -> cokoli jiného` označí `referral_rewards` jako `reversed`
+--   a odečte odměnu doporučujícímu. Při přípravě refundace je to správně.
+--   Pokud ale Stripe refundace selže, musí se odměna vrátit a platba se musí
+--   chovat jako dokončená — jinak by doporučující přišel o odměnu za platbu,
+--   která nikdy vrácena nebyla. Zpětný přechod `refund_pending -> completed`
+--   trigger neaktivuje (podmínka `OLD.status = 'completed'`), takže obnovu
+--   odměny provádí přímo `reverse_failed_stripe_refund`.
 --
 -- ROZSAH TÉTO MIGRACE:
 --   1. sloupce `payments.stripe_refund_id` / `stripe_refund_status` / `refund_updated_at`
@@ -41,8 +56,9 @@
 --   8. `deduct_wallet_for_refund(...)` — beze změny těla, jen označena jako legacy
 --
 -- POZNÁMKY KE SCHÉMATU (ověřeno proti produkci):
---   * `payments.status` je `text` BEZ CHECK constraintu → nové stavy
---     `refund_pending` a `refund_failed` nevyžadují změnu schématu.
+--   * `payments.status` je `text` BEZ CHECK constraintu → nový přechodný stav
+--     `refund_pending` nevyžaduje změnu schématu. Trvalý stav `refund_failed`
+--     ZÁMĚRNĚ NEEXISTUJE — selhaná refundace se pozná z `stripe_refund_status`.
 --   * `wallet_transactions.amount` má `CHECK (amount <> 0)` → záporná i kladná
 --     částka je povolená, nulová ne.
 --   * V produkci neexistuje ani jeden řádek `refund_debit`, takže nové unikátní
@@ -50,8 +66,9 @@
 --   * Na `payments` je trigger `trg_payments_referral_reverse`
 --     (AFTER UPDATE OF status). Reverzi odměny za doporučení provede při
 --     přechodu `completed → refund_pending`; následné `refund_pending → refunded`
---     ani `refund_pending → refund_failed` už nic nereverzuje (podmínka
---     `OLD.status = 'completed'`). Reverze tedy proběhne právě jednou.
+--     ani `refund_pending → completed` už nic nereverzuje (podmínka
+--     `OLD.status = 'completed'`). Reverze proběhne právě jednou a případnou
+--     obnovu dělá `reverse_failed_stripe_refund`.
 -- =============================================================================
 
 -- -----------------------------------------------------------------------------
@@ -137,11 +154,13 @@ BEGIN
   END IF;
 
   -- Neúspěšná Stripe refundace se NIKDY nespouští znovu automaticky.
-  IF v_payment.status = 'refund_failed' THEN
+  -- Platba je sice zpátky `completed`, ale evidovaná refundace to prozradí.
+  IF v_payment.stripe_refund_id IS NOT NULL
+     AND v_payment.stripe_refund_status IN ('failed', 'canceled') THEN
     RETURN jsonb_build_object(
       'ok', false,
       'code', 'refund_failed_needs_manual_review',
-      'message', 'Předchozí refundace selhala. Je nutná ruční kontrola, automatické opakování není povolené.'
+      'message', 'Předchozí refundace u Stripe selhala. Je nutná ruční kontrola, automatické opakování není povolené.'
     );
   END IF;
 
@@ -284,6 +303,21 @@ BEGIN
     );
   END IF;
 
+  -- `succeeded` je konečný stav. Pozdní nebo přeházená událost (Stripe
+  -- negarantuje pořadí doručení) nesmí dokončenou refundaci přepsat zpět na
+  -- pending / requires_action / failed / canceled.
+  IF p_status <> 'succeeded'
+     AND (v_payment.status = 'refunded' OR v_payment.stripe_refund_status = 'succeeded') THEN
+    RETURN jsonb_build_object(
+      'ok', true,
+      'ignored', true,
+      'code', 'terminal_state',
+      'payment_id', p_payment_id,
+      'stripe_refund_status', v_payment.stripe_refund_status,
+      'status', v_payment.status
+    );
+  END IF;
+
   UPDATE public.payments
   SET stripe_refund_id     = p_refund_id,
       stripe_refund_status = p_status,
@@ -300,7 +334,7 @@ END;
 $$;
 
 COMMENT ON FUNCTION public.record_stripe_refund_status(uuid, text, text) IS
-  'Uloží na platbu ID Stripe refundace, její aktuální stav a čas změny. Nikdy nemění stav platby ani zůstatky. Určeno výhradně pro service_role.';
+  'Uloží na platbu ID Stripe refundace, její aktuální stav a čas změny. Nikdy nemění stav platby ani zůstatky. Stav succeeded je konečný — pozdní pending/requires_action/failed/canceled ho nepřepíše. Určeno výhradně pro service_role.';
 
 -- -----------------------------------------------------------------------------
 -- 5. Dokončení refundace — pouze změna stavu, nikdy peníze.
@@ -337,10 +371,23 @@ BEGIN
     RETURN jsonb_build_object('ok', false, 'code', 'invalid_status', 'status', v_payment.status);
   END IF;
 
+  -- Databáze nedůvěřuje volajícímu: dokončit lze jen refundaci, která je
+  -- skutečně evidovaná a u Stripe skončila jako `succeeded`.
+  IF v_payment.stripe_refund_id IS NULL THEN
+    RETURN jsonb_build_object('ok', false, 'code', 'missing_stripe_refund_id');
+  END IF;
+
+  IF v_payment.stripe_refund_status IS DISTINCT FROM 'succeeded' THEN
+    RETURN jsonb_build_object(
+      'ok', false,
+      'code', 'stripe_refund_not_succeeded',
+      'stripe_refund_status', v_payment.stripe_refund_status
+    );
+  END IF;
+
   UPDATE public.payments
-  SET status               = 'refunded',
-      stripe_refund_status = COALESCE(v_payment.stripe_refund_status, 'succeeded'),
-      refund_updated_at    = now()
+  SET status            = 'refunded',
+      refund_updated_at = now()
   WHERE id = p_payment_id;
 
   RETURN jsonb_build_object('ok', true, 'already_final', false, 'status', 'refunded');
@@ -363,14 +410,28 @@ CREATE OR REPLACE FUNCTION public.reverse_failed_stripe_refund(
   SET search_path TO 'public'
 AS $$
 DECLARE
-  v_payment      public.payments%rowtype;
-  v_debited      numeric;
-  v_wallet_id    uuid;
-  v_new_balance  numeric;
-  v_already      boolean := false;
+  v_payment       public.payments%rowtype;
+  v_debited       numeric;
+  v_wallet_id     uuid;
+  v_new_balance   numeric;
+  v_already       boolean := false;
+  v_reward_id     uuid;
+  v_referrer      uuid;
+  v_reward_mc     numeric;
+  v_credit_ok     boolean;
+  v_reward_restored boolean := false;
 BEGIN
   IF p_payment_id IS NULL THEN
     RETURN jsonb_build_object('ok', false, 'code', 'invalid_input');
+  END IF;
+
+  -- Přijímají se výhradně skutečné neúspěšné Stripe stavy.
+  IF p_stripe_status IS NULL OR p_stripe_status NOT IN ('failed', 'canceled') THEN
+    RETURN jsonb_build_object(
+      'ok', false,
+      'code', 'invalid_stripe_status',
+      'stripe_refund_status', p_stripe_status
+    );
   END IF;
 
   SELECT * INTO v_payment
@@ -387,6 +448,27 @@ BEGIN
     RETURN jsonb_build_object('ok', false, 'code', 'already_refunded');
   END IF;
 
+  -- Opakovaná událost po už provedené reverzi: bezpečné potvrzení bez
+  -- jakékoli další změny zůstatků nebo doporučovací odměny.
+  SELECT true INTO v_already
+  FROM public.wallet_transactions
+  WHERE reference_id = p_payment_id
+    AND type = 'refund_reversal'
+  LIMIT 1;
+
+  IF COALESCE(v_already, false) THEN
+    RETURN jsonb_build_object(
+      'ok',               true,
+      'already_reversed', true,
+      'status',           v_payment.status
+    );
+  END IF;
+
+  -- První reverze smí proběhnout jen z rozpracované refundace.
+  IF v_payment.status <> 'refund_pending' THEN
+    RETURN jsonb_build_object('ok', false, 'code', 'invalid_status', 'status', v_payment.status);
+  END IF;
+
   -- Vrací se jen to, co bylo skutečně odečteno.
   SELECT ABS(amount) INTO v_debited
   FROM public.wallet_transactions
@@ -398,65 +480,92 @@ BEGIN
     RETURN jsonb_build_object('ok', false, 'code', 'nothing_to_reverse');
   END IF;
 
-  SELECT true INTO v_already
-  FROM public.wallet_transactions
-  WHERE reference_id = p_payment_id
-    AND type = 'refund_reversal'
-  LIMIT 1;
+  -- 1) Vrácení zákaznických MioCoinů — právě jeden kladný ledger řádek.
+  SELECT id INTO v_wallet_id
+  FROM public.wallets
+  WHERE user_id = v_payment.user_id
+  FOR UPDATE;
 
-  v_already := COALESCE(v_already, false);
-
-  IF NOT v_already THEN
-    SELECT id INTO v_wallet_id
-    FROM public.wallets
-    WHERE user_id = v_payment.user_id
-    FOR UPDATE;
-
-    IF v_wallet_id IS NULL THEN
-      INSERT INTO public.wallets (user_id, balance_coins, created_at)
-      VALUES (v_payment.user_id, v_debited, now())
-      RETURNING id, balance_coins INTO v_wallet_id, v_new_balance;
-    ELSE
-      UPDATE public.wallets
-      SET balance_coins = balance_coins + v_debited
-      WHERE id = v_wallet_id
-      RETURNING balance_coins INTO v_new_balance;
-    END IF;
-
-    INSERT INTO public.wallet_transactions (
-      user_id, wallet_id, amount, balance_after, type, source, reference_id, metadata
-    ) VALUES (
-      v_payment.user_id,
-      v_wallet_id,
-      v_debited,
-      v_new_balance,
-      'refund_reversal',
-      'reverse_failed_stripe_refund',
-      p_payment_id,
-      jsonb_build_object(
-        'stripe_refund_status', p_stripe_status,
-        'restored',             v_debited
-      )
-    );
+  IF v_wallet_id IS NULL THEN
+    INSERT INTO public.wallets (user_id, balance_coins, created_at)
+    VALUES (v_payment.user_id, v_debited, now())
+    RETURNING id, balance_coins INTO v_wallet_id, v_new_balance;
+  ELSE
+    UPDATE public.wallets
+    SET balance_coins = balance_coins + v_debited
+    WHERE id = v_wallet_id
+    RETURNING balance_coins INTO v_new_balance;
   END IF;
 
+  INSERT INTO public.wallet_transactions (
+    user_id, wallet_id, amount, balance_after, type, source, reference_id, metadata
+  ) VALUES (
+    v_payment.user_id,
+    v_wallet_id,
+    v_debited,
+    v_new_balance,
+    'refund_reversal',
+    'reverse_failed_stripe_refund',
+    p_payment_id,
+    jsonb_build_object(
+      'stripe_refund_status', p_stripe_status,
+      'restored',             v_debited
+    )
+  );
+
+  -- 2) Obnova doporučovací odměny, kterou při `completed -> refund_pending`
+  --    stornoval trigger `trg_payments_referral_reverse`. Obnovuje se výhradně
+  --    řádek stornovaný právě tímto přechodem.
+  SELECT id, referrer_user_id, reward_mc
+  INTO v_reward_id, v_referrer, v_reward_mc
+  FROM public.referral_rewards
+  WHERE payment_id = p_payment_id
+    AND status = 'reversed'
+    AND reverse_reason = 'payment_status_changed:refund_pending'
+  LIMIT 1
+  FOR UPDATE;
+
+  IF v_reward_id IS NOT NULL THEN
+    UPDATE public.referral_rewards
+    SET status         = 'earned',
+        reversed_at    = NULL,
+        reverse_reason = NULL
+    WHERE id = v_reward_id;
+
+    -- Stejný bezpečný mechanismus, jakým odměnu odečítá produkční trigger.
+    -- Funkce vrací boolean; při neúspěchu se musí vrátit CELÁ transakce.
+    SELECT public.try_credit_wallet_mc(v_referrer, v_reward_mc) INTO v_credit_ok;
+
+    IF COALESCE(v_credit_ok, false) IS NOT TRUE THEN
+      RAISE EXCEPTION
+        'Nepodařilo se vrátit doporučovací odměnu pro platbu %; reverze refundace byla zrušena.',
+        p_payment_id;
+    END IF;
+
+    v_reward_restored := true;
+  END IF;
+
+  -- 3) Platba se vrací mezi dokončené — peníze zákazníkovi vráceny NEBYLY.
+  --    Evidence selhané refundace zůstává v `stripe_refund_*`.
   UPDATE public.payments
-  SET status               = 'refund_failed',
+  SET status               = 'completed',
       stripe_refund_status = p_stripe_status,
       refund_updated_at    = now()
   WHERE id = p_payment_id;
 
   RETURN jsonb_build_object(
-    'ok',              true,
-    'already_reversed', v_already,
-    'restored',        v_debited,
-    'status',          'refund_failed'
+    'ok',                     true,
+    'already_reversed',       false,
+    'restored',               v_debited,
+    'referral_reward_restored', v_reward_restored,
+    'status',                 'completed',
+    'stripe_refund_status',   p_stripe_status
   );
 END;
 $$;
 
 COMMENT ON FUNCTION public.reverse_failed_stripe_refund(uuid, text) IS
-  'Po neúspěšné nebo zrušené Stripe refundaci vrátí přesně odečtené MioCoiny zpět (právě jeden kladný řádek refund_reversal) a nastaví platbu na refund_failed. Idempotentní, jištěné unikátním indexem. Dokončenou refundaci (refunded) odmítá. Určeno výhradně pro service_role.';
+  'Po neúspěšné nebo zrušené Stripe refundaci v jedné transakci vrátí přesně odečtené MioCoiny (právě jeden kladný řádek refund_reversal), obnoví doporučovací odměnu stornovanou přechodem completed -> refund_pending a vrátí platbu na completed (peníze zákazníkovi vráceny nebyly). Na platbě zůstane stripe_refund_id a stripe_refund_status = failed|canceled, podle kterých administrace pozná selhanou refundaci. Přijímá jen failed/canceled, dokončenou refundaci odmítá, opakované volání nic nepřipíše podruhé. Určeno výhradně pro service_role.';
 
 -- -----------------------------------------------------------------------------
 -- 7. Granty nových funkcí — jen service_role a vlastník
