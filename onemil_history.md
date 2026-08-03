@@ -1,3 +1,10 @@
+# 03. 08. 2026 — Reverze odměny za doporučení opravena na produkci
+
+- **Migrace `20260803120000_fix_referral_reversal_ambiguous_call.sql` aplikována na produkci `xkzhjldrojjlrkezorey`** (schválení Pavla), zapsána jako `20260803120000` / `fix_referral_reversal_ambiguous_call`.
+- **Problém:** `reverse_referral_reward_on_payment_status_change()` volala `try_credit_wallet_mc(v_referrer, (0 - v_reward))` pozičně. Kvůli overloadu `(uuid, numeric, text DEFAULT 'topup')` bylo volání nejednoznačné (`42725`) a výjimka z triggeru rušila celou transakci — každá změna stavu platby z `completed` u platby s odměnou `earned` se vrátila zpět. Produkce měla 16 odměn `earned` a 0 `reversed`, reverzní větev nikdy neproběhla. Defekt odhalil rollback-only test PR #309.
+- **Oprava:** změněn výhradně ten jeden řádek na pojmenované argumenty `p_user_id => …, p_amount_mc => …`. Ostatní logika, `SECURITY DEFINER`, absence `SET search_path`, owner i trigger beze změny.
+- **Ověřeno rollback-only testem před nasazením** (před opravou selhání `42725`, po opravě všechny kontroly PASS) a **produkčním postcheckem po nasazení**: data nedotčena — 135 plateb, 775 peněženek, 139 856,41 MC, 3 733 ledger řádků, 17 odměn, checksum `referral_rewards` identický. Žádný zpětný doplněk nestornovaných odměn se vědomě nedělá.
+
 # 02. 08. 2026 — Platební trigger: oprava update_wallet_after_payment nasazena na produkci
 
 - Read-only audit toku Stripe → `payments` → `wallets` → `wallet_transactions` odhalil produkční nesoulad: funkce `public.update_wallet_after_payment()` byla zjednodušená na `UPDATE wallets SET balance_coins = balance_coins + NEW.amount`, tedy bez kontroly `status`, bez `SECURITY DEFINER` a bez zápisu do účetní historie.

@@ -1,5 +1,17 @@
 # OneMil – aktuální stav projektu
 
+## REVERZE ODMĚNY ZA DOPORUČENÍ — OPRAVENA NA PRODUKCI (03. 08. 2026, schválení Pavla)
+
+**Migrace `supabase/migrations/20260803120000_fix_referral_reversal_ambiguous_call.sql` aplikována na produkci `xkzhjldrojjlrkezorey`.** Zapsána do `schema_migrations` jako `20260803120000` / `fix_referral_reversal_ambiguous_call`.
+
+**Problém (odhalen rollback-only testem PR #309):** `reverse_referral_reward_on_payment_status_change()` volala `PERFORM public.try_credit_wallet_mc(v_referrer, (0 - v_reward))`. V produkci existují tři overloady — `(uuid)`, `(uuid, numeric) → boolean` a `(uuid, numeric, text DEFAULT 'topup')` — takže **poziční dvouargumentové volání vyhovuje dvěma kandidátům** a Postgres ho odmítne chybou `42725: function ... is not unique`. Výjimka z triggeru rušila celou transakci, takže **každá změna stavu platby z `completed` na jiný u platby s odměnou `earned` se vrátila zpět**. Odpovídal tomu i produkční stav: 16 odměn `earned`, 0 `reversed` — reverzní větev nikdy neproběhla.
+
+**Oprava:** změněn **výhradně** ten jeden řádek na pojmenované argumenty `p_user_id => v_referrer, p_amount_mc => (0 - v_reward)`, které váží právě booleanovou variantu `(uuid, numeric)`. Podmínky, výběr odměny, zápis `reversed`/`reversed_at`/`reverse_reason`, návratová hodnota, `SECURITY DEFINER`, absence `SET search_path` i trigger samotný zůstávají beze změny.
+
+**Ověřeno rollback-only testem před ostrým nasazením:** před opravou UPDATE selhal (`42725`, platba zůstala `completed`, odměna `earned`), po opravě prošly všechny kontroly — `completed → refund_pending` i `completed → refunded` stornuje odměnu se správným `reverse_reason` a odečte `reward_mc` doporučujícímu, zákazníkův zůstatek trigger nemění, počet triggerů na `payments` zůstal 4.
+
+**Produkční postcheck ✅:** funkce používá pojmenované argumenty, poziční volání zmizelo, `SECURITY DEFINER` + owner `postgres` + `proconfig = null` beze změny, trigger `trg_payments_referral_reverse` (AFTER UPDATE OF status) beze změny. **Data nedotčena:** 135 plateb, 775 peněženek, 139 856,41 MC, 3 733 ledger řádků, 17 odměn, checksum `referral_rewards` **identický před i po** (`3d32ff33…`). Žádný zpětný doplněk odměn, které kvůli defektu nebyly stornovány, se **vědomě nedělá**.
+
 ## PLATEBNÍ TRIGGER — OPRAVA `update_wallet_after_payment()` APLIKOVÁNA NA PRODUKCI (02. 08. 2026, schválení Pavla)
 
 **PR #308 mergnut do `main` (merge commit `2f607232`) a migrace `20260802120000_restore_wallet_payment_ledger.sql` byla aplikována na produkci `xkzhjldrojjlrkezorey`.** Nové dokončené platby už zakládají řádek účetní historie.
