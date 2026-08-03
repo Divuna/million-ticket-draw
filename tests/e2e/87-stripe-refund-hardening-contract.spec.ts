@@ -8,7 +8,10 @@ import { expect, test } from '@playwright/test';
 import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 
-const read = (path: string) => readFileSync(resolve(process.cwd(), path), 'utf8');
+// Konce řádků se normalizují — na Windows git checkoutuje CRLF a víceřádkové
+// aserce by kvůli tomu selhaly.
+const read = (path: string) =>
+  readFileSync(resolve(process.cwd(), path), 'utf8').replace(/\r\n/g, '\n');
 
 const MIGRATION = 'supabase/migrations/20260803090000_harden_stripe_refund_flow.sql';
 const EDGE_FUNCTION = 'supabase/functions/stripe-refund/index.ts';
