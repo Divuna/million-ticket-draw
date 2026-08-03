@@ -1,3 +1,10 @@
+# 03. 08. 2026 — Zpevnění Stripe refundací: PR #309 mergnut, DB migrace na produkci
+
+- **PR #309 mergnut do `main`** (merge commit `e0f7514d`) po převodu z Draft na Ready; CI Smoke E2E zelené.
+- **Migrace `20260803090000_harden_stripe_refund_flow.sql` aplikována na produkci `xkzhjldrojjlrkezorey`** (schválení Pavla), v `schema_migrations` jako **`20260803201005`** (apply nástroj razítkuje vlastní čas).
+- **Postcheck ✅:** 3 nové sloupce `payments.stripe_refund_*`/`refund_updated_at`, 3 unikátní indexy, 4 nové funkce (`SECURITY DEFINER` + `search_path=public`, 0 grantů pro `anon`/`authenticated`, EXECUTE jen `service_role`), `admin_manage_payment` s blokovanou refundní větví a bez `admin_refund_credit`, `reverse_failed_stripe_refund` s pojmenovanými argumenty. Data nedotčena: 135 plateb, 139 856,41 MC, 3 733 ledger řádků, checksum `referral_rewards` identický, 0 řádků s vyplněnými refundními poli.
+- **Vědomě NEPROVEDENO:** deploy Edge Functions (`stripe-refund` stále **v135**, `stripe-webhook` stále **v337**), Lovable Publish frontendu a rozšíření Stripe webhook endpointu o `refund.*` události. **Do doby deploye refundace stále běží po staré cestě** — nové DB funkce zatím nikdo nevolá.
+
 # 03. 08. 2026 — Reverze odměny za doporučení opravena na produkci
 
 - **Migrace `20260803120000_fix_referral_reversal_ambiguous_call.sql` aplikována na produkci `xkzhjldrojjlrkezorey`** (schválení Pavla). V `schema_migrations` je zapsaná jako **`20260803192609`** — apply nástroj razítkuje vlastní čas, takže se produkční verze liší od čísla souboru v repu (stejně jako `restore_wallet_payment_ledger`: soubor `20260802120000`, produkce `20260802205656`).

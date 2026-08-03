@@ -12,9 +12,20 @@
 
 **Produkční postcheck ✅:** funkce používá pojmenované argumenty, poziční volání zmizelo, `SECURITY DEFINER` + owner `postgres` + `proconfig = null` beze změny, trigger `trg_payments_referral_reverse` (AFTER UPDATE OF status) beze změny. **Data nedotčena:** 135 plateb, 775 peněženek, 139 856,41 MC, 3 733 ledger řádků, 17 odměn, checksum `referral_rewards` **identický před i po** (`3d32ff33…`). Žádný zpětný doplněk odměn, které kvůli defektu nebyly stornovány, se **vědomě nedělá**.
 
-## STRIPE REFUNDACE — ZPEVNĚNÍ PŘIPRAVENO V DRAFT PR, NENASAZENO (03. 08. 2026)
+## STRIPE REFUNDACE — DB VRSTVA NA PRODUKCI, KÓD JEŠTĚ NENASAZEN (03. 08. 2026)
 
-**Jde pouze o Draft PR #309. Produkce `xkzhjldrojjlrkezorey` nebyla změněna** — migrace `20260803090000_harden_stripe_refund_flow.sql` **není aplikovaná na žádné databázi** (proběhl jen rollback-only test proti produkčnímu schématu, viz níže), Edge Functions `stripe-refund` (produkce v135) ani `stripe-webhook` **nebyly nasazené**, **Stripe webhook konfigurace nebyla změněna** (dodnes jen `checkout.session.completed`), žádná skutečná refundace neproběhla a žádná testovací platba nevznikla.
+**PR #309 mergnut do `main`** (merge commit `e0f7514d`) a **migrace `20260803090000_harden_stripe_refund_flow.sql` aplikována na produkci `xkzhjldrojjlrkezorey`** (schválení Pavla). V `schema_migrations` je zapsaná jako **`20260803201005` / `harden_stripe_refund_flow`** — apply nástroj razítkuje vlastní čas, takže se produkční verze liší od čísla souboru v repu.
+
+**Zbývající kroky (vědomě NEPROVEDENY, každý vyžaduje samostatné schválení):**
+1. deploy Edge Functions `stripe-refund` (produkce stále **v135**, původní kód) a `stripe-webhook` (stále **v337**, bez refundních událostí),
+2. Lovable Publish frontendu (`AdminPayments.tsx`),
+3. přidání `refund.created` / `refund.updated` / `refund.failed` do produkčního Stripe webhook endpointu (dnes jen `checkout.session.completed`).
+
+**Stav mezitím:** nové funkce a sloupce v databázi existují, ale **nikdo je nevolá** — produkční `stripe-refund` v135 jede dál po staré cestě (Stripe nejdřív, pak ořezaný odečet přes `deduct_wallet_for_refund`). Refundace tedy zatím **nejsou zpevněné**; dokud neproběhne deploy Edge Functions, platí staré chování. Nová `admin_manage_payment` už refundaci odmítá, ale tu stejně nic nevolá.
+
+**Produkční postcheck po apply ✅:** 3 nové sloupce, 3 unikátní indexy, 4 nové funkce (všechny `SECURITY DEFINER` + `search_path=public`), 0 grantů pro `anon`/`authenticated`, 4× EXECUTE pro `service_role`; `admin_manage_payment` má refundní větev blokovanou, žádný `admin_refund_credit`, `anon`/`authenticated` bez EXECUTE; `reverse_failed_stripe_refund` používá pojmenované argumenty. **Data nedotčena:** 135 plateb, 139 856,41 MC, 3 733 ledger řádků, checksum `referral_rewards` identický, 0 plateb v jiném než `completed`/`refunded` stavu, 0 řádků s vyplněnými refundními poli. Žádná skutečná refundace neproběhla, žádná testovací platba nevznikla.
+
+Popis samotné změny (proč a co dělá) zůstává níže.
 
 **Potvrzený současný (rozbitý) tok — read-only ověřeno na produkci:**
 1. `/admin/payments` → tlačítko „Vrátit" → `fetch` na Edge Function `stripe-refund` (v135, `verify_jwt = true`; nasazený kód je znak po znaku shodný s repem).
