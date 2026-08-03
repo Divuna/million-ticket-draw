@@ -12,18 +12,21 @@
 
 **Produkční postcheck ✅:** funkce používá pojmenované argumenty, poziční volání zmizelo, `SECURITY DEFINER` + owner `postgres` + `proconfig = null` beze změny, trigger `trg_payments_referral_reverse` (AFTER UPDATE OF status) beze změny. **Data nedotčena:** 135 plateb, 775 peněženek, 139 856,41 MC, 3 733 ledger řádků, 17 odměn, checksum `referral_rewards` **identický před i po** (`3d32ff33…`). Žádný zpětný doplněk odměn, které kvůli defektu nebyly stornovány, se **vědomě nedělá**.
 
-## STRIPE REFUNDACE — DB VRSTVA NA PRODUKCI, KÓD JEŠTĚ NENASAZEN (03. 08. 2026)
+## STRIPE REFUNDACE — DB I EDGE FUNCTIONS NA PRODUKCI (03. 08. 2026)
 
-**PR #309 mergnut do `main`** (merge commit `e0f7514d`) a **migrace `20260803090000_harden_stripe_refund_flow.sql` aplikována na produkci `xkzhjldrojjlrkezorey`** (schválení Pavla). V `schema_migrations` je zapsaná jako **`20260803201005` / `harden_stripe_refund_flow`** — apply nástroj razítkuje vlastní čas, takže se produkční verze liší od čísla souboru v repu.
+**PR #309 mergnut do `main`** (merge commit `e0f7514d`), **migrace `20260803090000_harden_stripe_refund_flow.sql` aplikována na produkci `xkzhjldrojjlrkezorey`** (v `schema_migrations` jako **`20260803201005`**) a **obě Edge Functions nasazené z aktuálního `main`** (schválení Pavla):
+- `stripe-refund` **v135 → v136**, `verify_jwt = true` zachováno,
+- `stripe-webhook` **v337 → v338**, `verify_jwt = false` zachováno (ověřuje se Stripe podpis).
+
+**Smoke po deployi ✅:** `stripe-refund` bez JWT → **401**; `stripe-webhook` bez Stripe podpisu → **`No Stripe signature found`** (podpis zůstává povinný).
 
 **Zbývající kroky (vědomě NEPROVEDENY, každý vyžaduje samostatné schválení):**
-1. deploy Edge Functions `stripe-refund` (produkce stále **v135**, původní kód) a `stripe-webhook` (stále **v337**, bez refundních událostí),
-2. Lovable Publish frontendu (`AdminPayments.tsx`),
-3. přidání `refund.created` / `refund.updated` / `refund.failed` do produkčního Stripe webhook endpointu (dnes jen `checkout.session.completed`).
+1. **Lovable Publish frontendu** (`AdminPayments.tsx`) — administrace zatím nezobrazí „Refundace čeká" / „Refundace selhala" ani tlačítko „Ověřit stav refundace"; starý build volá stejný endpoint a chybové hlášky zobrazí, ale nové stavy nepozná.
+2. **Rozšíření Stripe webhook endpointu** o `refund.created` / `refund.updated` / `refund.failed` (dnes jen `checkout.session.completed`). Do té doby Stripe refundní události neposílá, takže refundace se `pending`/`requires_action` zůstane v `refund_pending`, dokud ji administrátor ručně neověří.
 
-**Stav mezitím:** nové funkce a sloupce v databázi existují, ale **nikdo je nevolá** — produkční `stripe-refund` v135 jede dál po staré cestě (Stripe nejdřív, pak ořezaný odečet přes `deduct_wallet_for_refund`). Refundace tedy zatím **nejsou zpevněné**; dokud neproběhne deploy Edge Functions, platí staré chování. Nová `admin_manage_payment` už refundaci odmítá, ale tu stejně nic nevolá.
+**Co už platí:** refundace spuštěná z administrace jde novou cestou — nejdřív `prepare_stripe_refund` (kontrola celého zůstatku + odečet), teprve pak Stripe, a `finalize_stripe_refund` jen po `succeeded`. Zákazník už nemůže utratit MioCoiny a přesto dostat celou platbu zpět.
 
-**Produkční postcheck po apply ✅:** 3 nové sloupce, 3 unikátní indexy, 4 nové funkce (všechny `SECURITY DEFINER` + `search_path=public`), 0 grantů pro `anon`/`authenticated`, 4× EXECUTE pro `service_role`; `admin_manage_payment` má refundní větev blokovanou, žádný `admin_refund_credit`, `anon`/`authenticated` bez EXECUTE; `reverse_failed_stripe_refund` používá pojmenované argumenty. **Data nedotčena:** 135 plateb, 139 856,41 MC, 3 733 ledger řádků, checksum `referral_rewards` identický, 0 plateb v jiném než `completed`/`refunded` stavu, 0 řádků s vyplněnými refundními poli. Žádná skutečná refundace neproběhla, žádná testovací platba nevznikla.
+**Produkční postcheck ✅:** 3 nové sloupce, 3 unikátní indexy, 4 nové funkce (`SECURITY DEFINER` + `search_path=public`), 0 grantů pro `anon`/`authenticated`, 4× EXECUTE pro `service_role`; `admin_manage_payment` má refundní větev blokovanou, žádný `admin_refund_credit`, `anon`/`authenticated` bez EXECUTE; `reverse_failed_stripe_refund` používá pojmenované argumenty. **Data nedotčena:** 135 plateb (129 `completed`, 6 `refunded`, 0 `refund_pending`), 139 856,41 MC, 3 733 ledger řádků, 0 řádků `refund_debit`/`refund_reversal`, 0 plateb s `stripe_refund_id`, checksum `referral_rewards` identický. Žádná skutečná refundace neproběhla, žádná testovací platba nevznikla, Stripe konfigurace nezměněna.
 
 Popis samotné změny (proč a co dělá) zůstává níže.
 

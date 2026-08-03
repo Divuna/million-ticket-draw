@@ -3,7 +3,9 @@
 - **PR #309 mergnut do `main`** (merge commit `e0f7514d`) po převodu z Draft na Ready; CI Smoke E2E zelené.
 - **Migrace `20260803090000_harden_stripe_refund_flow.sql` aplikována na produkci `xkzhjldrojjlrkezorey`** (schválení Pavla), v `schema_migrations` jako **`20260803201005`** (apply nástroj razítkuje vlastní čas).
 - **Postcheck ✅:** 3 nové sloupce `payments.stripe_refund_*`/`refund_updated_at`, 3 unikátní indexy, 4 nové funkce (`SECURITY DEFINER` + `search_path=public`, 0 grantů pro `anon`/`authenticated`, EXECUTE jen `service_role`), `admin_manage_payment` s blokovanou refundní větví a bez `admin_refund_credit`, `reverse_failed_stripe_refund` s pojmenovanými argumenty. Data nedotčena: 135 plateb, 139 856,41 MC, 3 733 ledger řádků, checksum `referral_rewards` identický, 0 řádků s vyplněnými refundními poli.
-- **Vědomě NEPROVEDENO:** deploy Edge Functions (`stripe-refund` stále **v135**, `stripe-webhook` stále **v337**), Lovable Publish frontendu a rozšíření Stripe webhook endpointu o `refund.*` události. **Do doby deploye refundace stále běží po staré cestě** — nové DB funkce zatím nikdo nevolá.
+- **Edge Functions nasazené z `main` (03. 08. 2026, schválení Pavla):** `stripe-refund` **v135 → v136** (`verify_jwt = true` zachováno), `stripe-webhook` **v337 → v338** (`verify_jwt = false` zachováno kvůli Stripe podpisu). Smoke: refund bez JWT → 401, webhook bez podpisu → `No Stripe signature found`. Refundace z administrace tím jde novou cestou (kontrola zůstatku a odečet PŘED Stripe, `finalize` jen po `succeeded`).
+- **Vědomě NEPROVEDENO:** Lovable Publish frontendu (`AdminPayments.tsx` — administrace zatím nezná nové stavy) a rozšíření Stripe webhook endpointu o `refund.created`/`refund.updated`/`refund.failed` (dnes jen `checkout.session.completed`, takže zpožděné refundace zůstanou v `refund_pending` do ručního ověření).
+- **Data po deployi nedotčena:** 135 plateb (129 completed, 6 refunded, 0 refund_pending), 139 856,41 MC, 3 733 ledger řádků, 0 řádků `refund_debit`/`refund_reversal`, checksum `referral_rewards` identický.
 
 # 03. 08. 2026 — Reverze odměny za doporučení opravena na produkci
 
