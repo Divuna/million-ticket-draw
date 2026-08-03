@@ -1,5 +1,17 @@
 # OneMil – aktuální stav projektu
 
+## REVERZE ODMĚNY ZA DOPORUČENÍ — OPRAVENA NA PRODUKCI (03. 08. 2026, schválení Pavla)
+
+**Migrace `supabase/migrations/20260803120000_fix_referral_reversal_ambiguous_call.sql` aplikována na produkci `xkzhjldrojjlrkezorey`.** V `schema_migrations` je zapsaná jako **`20260803192609` / `fix_referral_reversal_ambiguous_call`** — apply nástroj razítkuje vlastní čas, takže se produkční verze **liší od čísla souboru v repu** (`20260803120000`). Stejně je na tom `restore_wallet_payment_ledger` (soubor `20260802120000`, produkce `20260802205656`). Repozitářní čísla proto v `schema_migrations` nejsou; `db push` se na tomto projektu nepoužívá, takže to nic neblokuje.
+
+**Problém (odhalen rollback-only testem PR #309):** `reverse_referral_reward_on_payment_status_change()` volala `PERFORM public.try_credit_wallet_mc(v_referrer, (0 - v_reward))`. V produkci existují tři overloady — `(uuid)`, `(uuid, numeric) → boolean` a `(uuid, numeric, text DEFAULT 'topup')` — takže **poziční dvouargumentové volání vyhovuje dvěma kandidátům** a Postgres ho odmítne chybou `42725: function ... is not unique`. Výjimka z triggeru rušila celou transakci, takže **každá změna stavu platby z `completed` na jiný u platby s odměnou `earned` se vrátila zpět**. Odpovídal tomu i produkční stav: 16 odměn `earned`, 0 `reversed` — reverzní větev nikdy neproběhla.
+
+**Oprava:** změněn **výhradně** ten jeden řádek na pojmenované argumenty `p_user_id => v_referrer, p_amount_mc => (0 - v_reward)`, které váží právě booleanovou variantu `(uuid, numeric)`. Podmínky, výběr odměny, zápis `reversed`/`reversed_at`/`reverse_reason`, návratová hodnota, `SECURITY DEFINER`, absence `SET search_path` i trigger samotný zůstávají beze změny.
+
+**Ověřeno rollback-only testem před ostrým nasazením:** před opravou UPDATE selhal (`42725`, platba zůstala `completed`, odměna `earned`), po opravě prošly všechny kontroly — `completed → refund_pending` i `completed → refunded` stornuje odměnu se správným `reverse_reason` a odečte `reward_mc` doporučujícímu, zákazníkův zůstatek trigger nemění, počet triggerů na `payments` zůstal 4.
+
+**Produkční postcheck ✅:** funkce používá pojmenované argumenty, poziční volání zmizelo, `SECURITY DEFINER` + owner `postgres` + `proconfig = null` beze změny, trigger `trg_payments_referral_reverse` (AFTER UPDATE OF status) beze změny. **Data nedotčena:** 135 plateb, 775 peněženek, 139 856,41 MC, 3 733 ledger řádků, 17 odměn, checksum `referral_rewards` **identický před i po** (`3d32ff33…`). Žádný zpětný doplněk odměn, které kvůli defektu nebyly stornovány, se **vědomě nedělá**.
+
 ## STRIPE REFUNDACE — ZPEVNĚNÍ PŘIPRAVENO V DRAFT PR, NENASAZENO (03. 08. 2026)
 
 **Jde pouze o Draft PR #309. Produkce `xkzhjldrojjlrkezorey` nebyla změněna** — migrace `20260803090000_harden_stripe_refund_flow.sql` **není aplikovaná na žádné databázi** (proběhl jen rollback-only test proti produkčnímu schématu, viz níže), Edge Functions `stripe-refund` (produkce v135) ani `stripe-webhook` **nebyly nasazené**, **Stripe webhook konfigurace nebyla změněna** (dodnes jen `checkout.session.completed`), žádná skutečná refundace neproběhla a žádná testovací platba nevznikla.
@@ -53,9 +65,9 @@ Test běžel jako **jediný `DO` blok zakončený `RAISE EXCEPTION`** — migrac
 
 ### ✅ Pre-existující produkční defekt odhalený testem — OPRAVEN NA PRODUKCI (03. 08. 2026)
 
-Migrace `20260803120000_fix_referral_reversal_ambiguous_call.sql` je aplikovaná na produkci (schválení Pavla, samostatně od tohoto PR). Blokátor popsaný níže tím **odpadl** — `prepare_stripe_refund` u platby s odměnou `earned` už neselže.
+Migrace `20260803120000_fix_referral_reversal_ambiguous_call.sql` je aplikovaná na produkci (schválení Pavla, samostatně od tohoto PR; v `schema_migrations` jako **`20260803192609`**). Blokátor popsaný níže tím **odpadl** — `prepare_stripe_refund` u platby s odměnou `earned` už neselže.
 
-Produkční trigger funkce `reverse_referral_reward_on_payment_status_change()` volá `PERFORM public.try_credit_wallet_mc(v_referrer, (0 - v_reward))` — tedy **stejné nejednoznačné poziční volání**. Test to potvrdil: jakákoli změna stavu platby z `completed` na jiný, u které existuje `referral_rewards` se `status = 'earned'`, skončí chybou `42725` a **UPDATE se vrátí zpět**. V produkci je 16 odměn ve stavu `earned` a 0 ve stavu `reversed`, což s tím sedí — reverzní větev nikdy úspěšně neproběhla. **Důsledek pro tento PR:** dokud se defekt neopraví, `prepare_stripe_refund` u platby s odměnou `earned` vyhodí výjimku a refundace takové platby vůbec nezačne. Navržená oprava je jednořádková (stejná pojmenovaná notace), ale je to zásah do produkční funkce mimo zadání PR — **čeká na samostatné schválení**.
+Původní stav: produkční trigger funkce `reverse_referral_reward_on_payment_status_change()` volala `PERFORM public.try_credit_wallet_mc(v_referrer, (0 - v_reward))` — tedy **stejné nejednoznačné poziční volání**. Test to potvrdil: jakákoli změna stavu platby z `completed` na jiný, u které existovala `referral_rewards` se `status = 'earned'`, skončila chybou `42725` a **UPDATE se vrátil zpět**. V produkci bylo 16 odměn ve stavu `earned` a 0 ve stavu `reversed`, což s tím sedělo — reverzní větev nikdy úspěšně neproběhla.
 
 **Produkce po testu beze změny:** 135 plateb, 775 peněženek, 3 733 ledger řádků, součet zůstatků 139 856,41 MC, checksum `referral_rewards` shodný, 0 nových sloupců/funkcí/indexů, migrace stále nezapsaná v `schema_migrations`, `admin_manage_payment` md5 `96955099709e26fafacb10138d4a8adf` beze změny, 0 testovacích uživatelů, 0 testovacích plateb, 0 řádků `refund_debit`/`refund_reversal`. (Mezi dřívějším a testovacím baseline se čísla posunula o −35 MC a +10 ledger řádků kvůli **souběžné reálné aktivitě aplikace** — 7× `benefit_purchase` a 3× `bonus_credit` v 16:35–16:40 UTC; s testem to nesouvisí.)
 
