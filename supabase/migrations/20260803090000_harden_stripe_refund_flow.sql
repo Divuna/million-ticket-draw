@@ -284,6 +284,15 @@ BEGIN
     RETURN jsonb_build_object('ok', false, 'code', 'invalid_input');
   END IF;
 
+  -- Přijímají se jen skutečné Stripe stavy refundace.
+  IF p_status NOT IN ('pending', 'requires_action', 'succeeded', 'failed', 'canceled') THEN
+    RETURN jsonb_build_object(
+      'ok', false,
+      'code', 'invalid_stripe_status',
+      'stripe_refund_status', p_status
+    );
+  END IF;
+
   SELECT * INTO v_payment
   FROM public.payments
   WHERE id = p_payment_id
@@ -303,11 +312,14 @@ BEGIN
     );
   END IF;
 
-  -- `succeeded` je konečný stav. Pozdní nebo přeházená událost (Stripe
-  -- negarantuje pořadí doručení) nesmí dokončenou refundaci přepsat zpět na
-  -- pending / requires_action / failed / canceled.
-  IF p_status <> 'succeeded'
-     AND (v_payment.status = 'refunded' OR v_payment.stripe_refund_status = 'succeeded') THEN
+  -- Terminální Stripe stavy jsou `succeeded`, `failed` i `canceled`. Stripe
+  -- negarantuje pořadí doručení událostí, takže starší nebo přeházená událost
+  -- nesmí uložený terminální stav přepsat jiným stavem. Bez této ochrany by
+  -- pozdní `pending` smazal informaci o selhané refundaci a `prepare_stripe_refund`
+  -- by povolil nový automatický pokus.
+  IF (v_payment.stripe_refund_status IN ('succeeded', 'failed', 'canceled')
+        AND p_status IS DISTINCT FROM v_payment.stripe_refund_status)
+     OR (v_payment.status = 'refunded' AND p_status <> 'succeeded') THEN
     RETURN jsonb_build_object(
       'ok', true,
       'ignored', true,
@@ -326,6 +338,7 @@ BEGIN
 
   RETURN jsonb_build_object(
     'ok', true,
+    'ignored', false,
     'payment_id', p_payment_id,
     'stripe_refund_status', p_status,
     'status', v_payment.status
@@ -334,7 +347,7 @@ END;
 $$;
 
 COMMENT ON FUNCTION public.record_stripe_refund_status(uuid, text, text) IS
-  'Uloží na platbu ID Stripe refundace, její aktuální stav a čas změny. Nikdy nemění stav platby ani zůstatky. Stav succeeded je konečný — pozdní pending/requires_action/failed/canceled ho nepřepíše. Určeno výhradně pro service_role.';
+  'Uloží na platbu ID Stripe refundace, její aktuální stav a čas změny. Nikdy nemění stav platby ani zůstatky. Přijímá jen pending/requires_action/succeeded/failed/canceled. Terminální stavy succeeded, failed i canceled už žádná pozdější událost nepřepíše — vrátí ok:true, ignored:true, code:terminal_state a skutečně uložený stav. Určeno výhradně pro service_role.';
 
 -- -----------------------------------------------------------------------------
 -- 5. Dokončení refundace — pouze změna stavu, nikdy peníze.
@@ -448,8 +461,10 @@ BEGIN
     RETURN jsonb_build_object('ok', false, 'code', 'already_refunded');
   END IF;
 
-  -- Opakovaná událost po už provedené reverzi: bezpečné potvrzení bez
-  -- jakékoli další změny zůstatků nebo doporučovací odměny.
+  -- Opakovaná událost po už provedené reverzi: **žádná** další změna peněženky
+  -- ani doporučovací odměny. Platba ale nesmí zůstat viset v `refund_pending` —
+  -- pokud tam po dřívějším částečném běhu je, dorovná se na `completed`
+  -- a zachová se terminální Stripe stav.
   SELECT true INTO v_already
   FROM public.wallet_transactions
   WHERE reference_id = p_payment_id
@@ -457,10 +472,24 @@ BEGIN
   LIMIT 1;
 
   IF COALESCE(v_already, false) THEN
+    IF v_payment.status <> 'completed' THEN
+      UPDATE public.payments
+      SET status               = 'completed',
+          stripe_refund_status = CASE
+                                   WHEN v_payment.stripe_refund_status IN ('failed', 'canceled')
+                                     THEN v_payment.stripe_refund_status
+                                   ELSE p_stripe_status
+                                 END,
+          refund_updated_at    = now()
+      WHERE id = p_payment_id
+      RETURNING status, stripe_refund_status INTO v_payment.status, v_payment.stripe_refund_status;
+    END IF;
+
     RETURN jsonb_build_object(
-      'ok',               true,
-      'already_reversed', true,
-      'status',           v_payment.status
+      'ok',                 true,
+      'already_reversed',   true,
+      'status',             v_payment.status,
+      'stripe_refund_status', v_payment.stripe_refund_status
     );
   END IF;
 

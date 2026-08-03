@@ -370,6 +370,151 @@ test.describe('stripe refund database flow', () => {
     expect(await refundReversalRows(db, paymentId)).toHaveLength(0);
   });
 
+  test('88q a late pending after failed keeps everything terminal', async () => {
+    const db = admin();
+    const { userId, paymentId } = await seedPayment(db, 500, 310);
+    const { userId: referrerId } = await seedPayment(db, 1000, 50);
+
+    await db.from('referral_rewards').insert({
+      referrer_user_id: referrerId,
+      referred_user_id: userId,
+      payment_id: paymentId,
+      paid_amount_mc: 310,
+      commission_rate: 0.1,
+      reward_mc: 31,
+      status: 'earned',
+    });
+
+    await db.rpc('prepare_stripe_refund', { p_payment_id: paymentId });
+    const refundId = `re_spec88_terminal_${Date.now()}`;
+    await applyStripeStatus(db, paymentId, refundId, 'failed');
+
+    const balanceAfterFailure = await balanceOf(db, userId);
+    const referrerAfterFailure = await balanceOf(db, referrerId);
+
+    // Starší událost doručená až teď (Stripe negarantuje pořadí).
+    const { data: late } = await db.rpc('record_stripe_refund_status', {
+      p_payment_id: paymentId,
+      p_refund_id: refundId,
+      p_status: 'pending',
+    });
+    expect(late.ok).toBe(true);
+    expect(late.ignored).toBe(true);
+    expect(late.code).toBe('terminal_state');
+    expect(late.stripe_refund_status).toBe('failed');
+    expect(late.status).toBe('completed');
+
+    const fields = await paymentRefundFields(db, paymentId);
+    expect(fields?.status).toBe('completed');
+    expect(fields?.stripe_refund_status).toBe('failed');
+
+    expect(await balanceOf(db, userId)).toBe(balanceAfterFailure);
+    expect(await balanceOf(db, referrerId)).toBe(referrerAfterFailure);
+    expect(await refundReversalRows(db, paymentId)).toHaveLength(1);
+
+    const { data: reward } = await db
+      .from('referral_rewards')
+      .select('status')
+      .eq('payment_id', paymentId)
+      .single();
+    expect(reward?.status).toBe('earned');
+
+    // Nový automatický pokus zůstává zablokovaný.
+    const { data: retry } = await db.rpc('prepare_stripe_refund', { p_payment_id: paymentId });
+    expect(retry.ok).toBe(false);
+    expect(retry.code).toBe('refund_failed_needs_manual_review');
+  });
+
+  test('88r a late requires_action after canceled keeps everything terminal', async () => {
+    const db = admin();
+    const { paymentId } = await seedPayment(db, 500, 310);
+
+    await db.rpc('prepare_stripe_refund', { p_payment_id: paymentId });
+    const refundId = `re_spec88_cancel_terminal_${Date.now()}`;
+    await applyStripeStatus(db, paymentId, refundId, 'canceled');
+
+    const { data: late } = await db.rpc('record_stripe_refund_status', {
+      p_payment_id: paymentId,
+      p_refund_id: refundId,
+      p_status: 'requires_action',
+    });
+    expect(late.ignored).toBe(true);
+
+    const fields = await paymentRefundFields(db, paymentId);
+    expect(fields?.status).toBe('completed');
+    expect(fields?.stripe_refund_status).toBe('canceled');
+  });
+
+  test('88s a late succeeded after failed does not resurrect the refund', async () => {
+    const db = admin();
+    const { userId, paymentId } = await seedPayment(db, 500, 310);
+
+    await db.rpc('prepare_stripe_refund', { p_payment_id: paymentId });
+    const refundId = `re_spec88_failed_then_ok_${Date.now()}`;
+    await applyStripeStatus(db, paymentId, refundId, 'failed');
+
+    const { data: late } = await db.rpc('record_stripe_refund_status', {
+      p_payment_id: paymentId,
+      p_refund_id: refundId,
+      p_status: 'succeeded',
+    });
+    expect(late.ok).toBe(true);
+    expect(late.ignored).toBe(true);
+    expect(late.stripe_refund_status).toBe('failed');
+
+    // Efektivní stav je pořád `failed`, takže finalize nesmí projít.
+    const finalize = await db.rpc('finalize_stripe_refund', { p_payment_id: paymentId });
+    expect(finalize.data.ok).toBe(false);
+
+    const fields = await paymentRefundFields(db, paymentId);
+    expect(fields?.status).toBe('completed');
+    expect(fields?.stripe_refund_status).toBe('failed');
+    expect(await balanceOf(db, userId)).toBe(500);
+  });
+
+  test('88t an existing refund_reversal never leaves the payment in refund_pending', async () => {
+    const db = admin();
+    const { userId, paymentId } = await seedPayment(db, 500, 310);
+
+    await db.rpc('prepare_stripe_refund', { p_payment_id: paymentId });
+    const refundId = `re_spec88_reversal_${Date.now()}`;
+    await applyStripeStatus(db, paymentId, refundId, 'failed');
+
+    // Simulace dřívějšího částečného běhu: platba zpět v refund_pending,
+    // ale reverzní ledger řádek už existuje.
+    await db.from('payments').update({ status: 'refund_pending' }).eq('id', paymentId);
+
+    const { data: repeat } = await db.rpc('reverse_failed_stripe_refund', {
+      p_payment_id: paymentId,
+      p_stripe_status: 'failed',
+    });
+    expect(repeat.ok).toBe(true);
+    expect(repeat.already_reversed).toBe(true);
+    expect(repeat.status).toBe('completed');
+    expect(repeat.stripe_refund_status).toBe('failed');
+
+    expect(await paymentStatus(db, paymentId)).toBe('completed');
+    expect(await balanceOf(db, userId)).toBe(500);
+    expect(await refundReversalRows(db, paymentId)).toHaveLength(1);
+  });
+
+  test('88u record_stripe_refund_status rejects an unknown stripe status', async () => {
+    const db = admin();
+    const { paymentId } = await seedPayment(db, 500, 310);
+
+    await db.rpc('prepare_stripe_refund', { p_payment_id: paymentId });
+
+    const { data } = await db.rpc('record_stripe_refund_status', {
+      p_payment_id: paymentId,
+      p_refund_id: `re_spec88_bogus_${Date.now()}`,
+      p_status: 'something_else',
+    });
+
+    expect(data.ok).toBe(false);
+    expect(data.code).toBe('invalid_stripe_status');
+    expect((await paymentRefundFields(db, paymentId))?.stripe_refund_id).toBeNull();
+  });
+
   test('88p finalize refuses a refund that is not succeeded at stripe', async () => {
     const db = admin();
     const { userId, paymentId } = await seedPayment(db, 500, 310);

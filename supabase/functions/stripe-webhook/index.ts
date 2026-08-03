@@ -119,7 +119,12 @@ async function handleRefundEvent(
     { p_payment_id: paymentId, p_refund_id: refundId, p_status: refundStatus ?? 'unknown' },
   )
 
-  const rec = recorded as { ok?: boolean; code?: string } | null
+  const rec = recorded as {
+    ok?: boolean
+    code?: string
+    ignored?: boolean
+    stripe_refund_status?: string | null
+  } | null
 
   if (recordError || !rec || rec.ok !== true) {
     omLog('error', 'refund_event_record_failed', {
@@ -131,7 +136,24 @@ async function handleRefundEvent(
     return { handled: false, reason: 'record_failed' }
   }
 
-  if (refundStatus === 'succeeded') {
+  // Dál se pokračuje podle EFEKTIVNÍHO stavu uloženého v databázi, ne podle
+  // stavu z právě doručené události. Terminální `succeeded`/`failed`/`canceled`
+  // databáze chrání, takže starší nebo přeházená událost nespustí špatnou větev
+  // a webhook se kvůli ní nezacyklí na chybě 500.
+  const effectiveStatus = rec.stripe_refund_status ?? refundStatus
+
+  if (rec.ignored === true) {
+    omLog('info', 'refund_event_ignored_terminal', {
+      action: 'stripe_webhook',
+      event_type: eventType,
+      payment_id: paymentId,
+      incoming_status: refundStatus,
+      effective_status: effectiveStatus,
+    })
+    return { handled: true }
+  }
+
+  if (effectiveStatus === 'succeeded') {
     const { data: finalized, error: finalizeError } = await supabaseClient.rpc(
       'finalize_stripe_refund',
       { p_payment_id: paymentId },
@@ -151,12 +173,12 @@ async function handleRefundEvent(
     return { handled: true }
   }
 
-  if (refundStatus === 'failed' || refundStatus === 'canceled') {
+  if (effectiveStatus === 'failed' || effectiveStatus === 'canceled') {
     // Pozdní `failed` po dokončené refundaci se nesmí projevit. RPC to samo
     // odmítne (`already_refunded`) a peníze zůstanou beze změny.
     const { data: reversed, error: reverseError } = await supabaseClient.rpc(
       'reverse_failed_stripe_refund',
-      { p_payment_id: paymentId, p_stripe_status: refundStatus },
+      { p_payment_id: paymentId, p_stripe_status: effectiveStatus },
     )
     const rev = reversed as { ok?: boolean; code?: string; referral_reward_restored?: boolean } | null
 
@@ -192,7 +214,7 @@ async function handleRefundEvent(
   omLog('info', 'refund_still_pending', {
     action: 'stripe_webhook',
     payment_id: paymentId,
-    stripe_refund_status: refundStatus,
+    stripe_refund_status: effectiveStatus,
   })
   return { handled: true }
 }

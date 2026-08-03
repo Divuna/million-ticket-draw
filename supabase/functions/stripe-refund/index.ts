@@ -186,7 +186,12 @@ serve(async (req) => {
       { p_payment_id: paymentId, p_refund_id: refundId, p_status: refundStatus ?? 'unknown' },
     )
 
-    const rec = recorded as { ok?: boolean; code?: string } | null
+    const rec = recorded as {
+      ok?: boolean
+      code?: string
+      ignored?: boolean
+      stripe_refund_status?: string | null
+    } | null
 
     if (recordError || !rec || rec.ok !== true) {
       console.error('record_stripe_refund_status failed', {
@@ -203,11 +208,23 @@ serve(async (req) => {
       )
     }
 
-    // 4. Rozpad podle skutečného Stripe stavu.
-    if (refundStatus === 'failed' || refundStatus === 'canceled') {
+    // 4. Rozpad podle EFEKTIVNÍHO stavu uloženého v databázi, ne podle stavu,
+    //    který právě přišel. Terminální `succeeded`/`failed`/`canceled` databáze
+    //    chrání, takže ignorovaná starší událost nesmí spustit špatnou větev.
+    const effectiveStatus = rec.stripe_refund_status ?? refundStatus
+
+    if (rec.ignored === true) {
+      console.warn('stripe refund status ignored as terminal', {
+        payment_id: paymentId,
+        incoming: refundStatus,
+        effective: effectiveStatus,
+      })
+    }
+
+    if (effectiveStatus === 'failed' || effectiveStatus === 'canceled') {
       const { data: reversed, error: reverseError } = await supabaseClient.rpc(
         'reverse_failed_stripe_refund',
-        { p_payment_id: paymentId, p_stripe_status: refundStatus },
+        { p_payment_id: paymentId, p_stripe_status: effectiveStatus },
       )
 
       const rev = reversed as { ok?: boolean; code?: string } | null
@@ -235,13 +252,13 @@ serve(async (req) => {
           error: 'Stripe refundace selhala. MioCoiny i odměna za doporučení byly vráceny zpět a platba zůstává dokončená. Je nutná ruční kontrola.',
           code: 'stripe_refund_failed',
           status: 'completed',
-          stripe_refund_status: refundStatus,
+          stripe_refund_status: effectiveStatus,
         },
         409,
       )
     }
 
-    if (refundStatus === 'pending' || refundStatus === 'requires_action') {
+    if (effectiveStatus === 'pending' || effectiveStatus === 'requires_action') {
       // Platba zůstává `refund_pending`. Dokončí ji buď webhook, nebo další
       // ruční ověření stavu z administrace.
       return json(
@@ -251,17 +268,17 @@ serve(async (req) => {
           message: 'Refundace byla přijata a čeká na dokončení u Stripe.',
           refund_id: refundId,
           status: 'refund_pending',
-          stripe_refund_status: refundStatus,
+          stripe_refund_status: effectiveStatus,
         },
         202,
       )
     }
 
-    if (refundStatus !== 'succeeded') {
-      console.error('unexpected Stripe refund status', { payment_id: paymentId, refund_status: refundStatus })
+    if (effectiveStatus !== 'succeeded') {
+      console.error('unexpected Stripe refund status', { payment_id: paymentId, refund_status: effectiveStatus })
       return json(
         {
-          error: `Stripe refundace je ve stavu: ${refundStatus ?? 'neznámý'}. Refundace zůstává rozpracovaná.`,
+          error: `Stripe refundace je ve stavu: ${effectiveStatus ?? 'neznámý'}. Refundace zůstává rozpracovaná.`,
           code: 'stripe_refund_unexpected_status',
           status: 'refund_pending',
         },

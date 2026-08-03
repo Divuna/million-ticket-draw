@@ -82,11 +82,48 @@ test.describe('stripe refund hardening contract', () => {
     expect(recordBody).not.toContain("SET status =");
     expect(recordBody).toContain("'refund_id_conflict'");
 
-    // `succeeded` je konečný stav — pozdní událost ho nesmí přepsat.
-    expect(recordBody).toContain("IF p_status <> 'succeeded'");
-    expect(recordBody).toContain("v_payment.status = 'refunded' OR v_payment.stripe_refund_status = 'succeeded'");
+    // Přijímají se jen skutečné Stripe stavy.
+    expect(recordBody).toContain("IF p_status NOT IN ('pending', 'requires_action', 'succeeded', 'failed', 'canceled') THEN");
+    expect(recordBody).toContain("'invalid_stripe_status'");
+
+    // Terminální jsou VŠECHNY tři stavy — succeeded, failed i canceled.
+    expect(recordBody).toContain("v_payment.stripe_refund_status IN ('succeeded', 'failed', 'canceled')");
+    expect(recordBody).toContain('p_status IS DISTINCT FROM v_payment.stripe_refund_status');
+    expect(recordBody).toContain("v_payment.status = 'refunded' AND p_status <> 'succeeded'");
     expect(recordBody).toContain("'terminal_state'");
     expect(recordBody).toContain("'ignored', true");
+
+    // Ignorovaná událost vrací skutečně uložený stav, ne ten příchozí.
+    expect(recordBody).toContain("'stripe_refund_status', v_payment.stripe_refund_status");
+    expect(recordBody).toContain("'status', v_payment.status");
+  });
+
+  test('both edge functions branch on the effective status returned by the database', () => {
+    const edge = read(EDGE_FUNCTION);
+    const webhook = read(WEBHOOK);
+
+    for (const source of [edge, webhook]) {
+      expect(source).toContain('const effectiveStatus = rec.stripe_refund_status ?? refundStatus');
+      expect(source).toContain("effectiveStatus === 'failed' || effectiveStatus === 'canceled'");
+      expect(source).toContain('p_stripe_status: effectiveStatus');
+    }
+
+    // Po uložení stavu se už nikde nevětví podle příchozí proměnné.
+    const edgeAfterRecord = edge.slice(edge.indexOf('const effectiveStatus'));
+    expect(edgeAfterRecord).not.toContain("refundStatus === 'failed'");
+    expect(edgeAfterRecord).not.toContain("refundStatus === 'pending'");
+    expect(edgeAfterRecord).not.toContain("refundStatus !== 'succeeded'");
+
+    const webhookAfterRecord = webhook.slice(
+      webhook.indexOf('const effectiveStatus'),
+      webhook.indexOf('serve(async (req)'),
+    );
+    expect(webhookAfterRecord).not.toContain("refundStatus === 'succeeded'");
+    expect(webhookAfterRecord).not.toContain("refundStatus === 'failed'");
+
+    // Ignorovaná starší událost se jen potvrdí, webhook kvůli ní nevrací 500.
+    expect(webhook).toContain('refund_event_ignored_terminal');
+    expect(webhook).toContain('return { handled: true }');
   });
 
   test('finalize refuses to complete without a succeeded stripe refund', () => {
@@ -122,8 +159,19 @@ test.describe('stripe refund hardening contract', () => {
     expect(reverseBody).toContain("'refund_reversal'");
     expect(reverseBody).toContain("'reverse_failed_stripe_refund'");
 
-    // Opakovaná událost končí bezpečným ok:true bez další změny.
-    expect(reverseBody).toContain("'already_reversed', true");
+    // Opakovaná událost končí bezpečným ok:true bez další změny peněz i odměny,
+    // ale platbu nikdy nenechá viset v `refund_pending`.
+    expect(reverseBody).toContain("'already_reversed',   true");
+    const alreadyBranch = reverseBody.slice(
+      reverseBody.indexOf('IF COALESCE(v_already, false) THEN'),
+      reverseBody.indexOf("-- První reverze smí proběhnout"),
+    );
+    expect(alreadyBranch).toContain("IF v_payment.status <> 'completed' THEN");
+    expect(alreadyBranch).toContain("SET status               = 'completed'");
+    expect(alreadyBranch).toContain("WHEN v_payment.stripe_refund_status IN ('failed', 'canceled')");
+    expect(alreadyBranch).not.toContain('wallet_transactions');
+    expect(alreadyBranch).not.toContain('referral_rewards');
+    expect(alreadyBranch).not.toContain('try_credit_wallet_mc');
 
     // První reverze smí proběhnout jen z rozpracované refundace.
     expect(reverseBody).toContain("IF v_payment.status <> 'refund_pending' THEN");
@@ -265,12 +313,12 @@ test.describe('stripe refund hardening contract', () => {
     expect(finalizeIndex).toBeLessThan(successIndex);
 
     // pending / requires_action → 202, bez finalize.
-    expect(edge).toContain("if (refundStatus === 'pending' || refundStatus === 'requires_action')");
+    expect(edge).toContain("if (effectiveStatus === 'pending' || effectiveStatus === 'requires_action')");
     expect(edge).toContain('Refundace byla přijata a čeká na dokončení u Stripe.');
     expect(edge).toContain('202,');
 
     // failed / canceled → vrácení MioCoinů, platba zpět na completed, nikdy refunded.
-    expect(edge).toContain("if (refundStatus === 'failed' || refundStatus === 'canceled')");
+    expect(edge).toContain("if (effectiveStatus === 'failed' || effectiveStatus === 'canceled')");
     expect(edge).toContain("'reverse_failed_stripe_refund'");
     expect(edge).toContain("code: 'stripe_refund_failed'");
     expect(edge).toContain("status: 'completed'");
@@ -318,9 +366,10 @@ test.describe('stripe refund hardening contract', () => {
     expect(webhook).toContain("'finalize_stripe_refund'");
     expect(webhook).toContain("'reverse_failed_stripe_refund'");
 
-    // Rozpad podle stavu: succeeded finalizuje, failed/canceled vrací, ostatní jen aktualizuje.
-    expect(webhook).toContain("if (refundStatus === 'succeeded')");
-    expect(webhook).toContain("if (refundStatus === 'failed' || refundStatus === 'canceled')");
+    // Rozpad podle EFEKTIVNÍHO stavu: succeeded finalizuje, failed/canceled vrací,
+    // ostatní jen aktualizuje.
+    expect(webhook).toContain("if (effectiveStatus === 'succeeded')");
+    expect(webhook).toContain("if (effectiveStatus === 'failed' || effectiveStatus === 'canceled')");
     expect(webhook).toContain('refund_still_pending');
 
     // Refundační větev nesmí sahat na peněženku přímo — jen přes jištěné RPC.
