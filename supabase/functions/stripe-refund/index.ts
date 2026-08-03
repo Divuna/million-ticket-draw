@@ -14,6 +14,7 @@ const PREPARE_ERROR_STATUS: Record<string, number> = {
   invalid_input: 400,
   not_found: 404,
   already_refunded: 409,
+  refund_failed_needs_manual_review: 409,
   invalid_status: 400,
   missing_stripe_session: 400,
   invalid_amount: 400,
@@ -74,6 +75,7 @@ serve(async (req) => {
     // 2. Příprava refundace PŘED jakýmkoli voláním Stripe.
     //    Jediná operace, která odečítá MioCoiny. Zamkne platbu i peněženku,
     //    vyžaduje celý zůstatek z dané platby a je idempotentní.
+    //    Ze stavu `refund_failed` odmítne pokračovat — ten vyžaduje ruční kontrolu.
     const { data: prepared, error: prepareError } = await supabaseClient.rpc(
       'prepare_stripe_refund',
       { p_payment_id: paymentId },
@@ -95,6 +97,7 @@ serve(async (req) => {
       already_prepared?: boolean
       amount?: number
       stripe_session_id?: string
+      stripe_refund_id?: string | null
     } | null
 
     if (!prep || prep.ok !== true) {
@@ -111,6 +114,7 @@ serve(async (req) => {
     // bezpečně zopakovat bez druhého odečtu.
     const sessionId = prep.stripe_session_id as string
     const amount = prep.amount as number
+    const knownRefundId = prep.stripe_refund_id ?? null
 
     const stripe = new Stripe(Deno.env.get('STRIPE_SECRET_KEY') || '', {
       apiVersion: '2023-10-16',
@@ -120,33 +124,45 @@ serve(async (req) => {
     let refundStatus: string | null
 
     try {
-      const session = await stripe.checkout.sessions.retrieve(sessionId)
+      if (knownRefundId) {
+        // Refundace už existuje — jen si přečteme její AKTUÁLNÍ stav.
+        // Opakovaný create se stejným idempotency key by vrátil původní
+        // uloženou odpověď, takže by aktuální stav neukázal.
+        const existing = await stripe.refunds.retrieve(knownRefundId)
+        refundId = existing.id
+        refundStatus = existing.status ?? null
+      } else {
+        const session = await stripe.checkout.sessions.retrieve(sessionId)
 
-      if (!session.payment_intent) {
-        console.error('no payment intent on session', { payment_id: paymentId })
-        return json(
+        if (!session.payment_intent) {
+          console.error('no payment intent on session', { payment_id: paymentId })
+          return json(
+            {
+              error: 'Ke Stripe platbě se nepodařilo dohledat platební záměr. Refundace zůstává rozpracovaná.',
+              code: 'stripe_payment_intent_missing',
+              status: 'refund_pending',
+            },
+            502,
+          )
+        }
+
+        const paymentIntentId = typeof session.payment_intent === 'string'
+          ? session.payment_intent
+          : session.payment_intent.id
+
+        // Idempotency key odvozený z payment_id — pokud předchozí pokus skončil
+        // síťovou chybou, tentýž request Stripe nevytvoří druhou refundaci.
+        const refund = await stripe.refunds.create(
           {
-            error: 'Ke Stripe platbě se nepodařilo dohledat platební záměr. Refundace zůstává rozpracovaná.',
-            code: 'stripe_payment_intent_missing',
-            status: 'refund_pending',
+            payment_intent: paymentIntentId,
+            metadata: { onemil_payment_id: paymentId },
           },
-          502,
+          { idempotencyKey: `onemil-refund-${paymentId}` },
         )
+
+        refundId = refund.id
+        refundStatus = refund.status ?? null
       }
-
-      const paymentIntentId = typeof session.payment_intent === 'string'
-        ? session.payment_intent
-        : session.payment_intent.id
-
-      // Idempotency key odvozený z payment_id — opakované volání nikdy
-      // nevytvoří druhou Stripe refundaci.
-      const refund = await stripe.refunds.create(
-        { payment_intent: paymentIntentId },
-        { idempotencyKey: `onemil-refund-${paymentId}` },
-      )
-
-      refundId = refund.id
-      refundStatus = refund.status ?? null
     } catch (stripeError) {
       // Nejasný výsledek (síť, timeout, výpadek Stripe) — stav zůstává
       // `refund_pending`, aby šlo akci bezpečně zopakovat.
@@ -162,19 +178,95 @@ serve(async (req) => {
       )
     }
 
-    if (refundStatus !== 'succeeded' && refundStatus !== 'pending') {
-      console.error('Stripe refund not accepted', { payment_id: paymentId, refund_status: refundStatus })
+    // 3. Okamžité uložení ID a stavu refundace, aby další pokus mohl použít
+    //    `retrieve` místo `create`.
+    const { data: recorded, error: recordError } = await supabaseClient.rpc(
+      'record_stripe_refund_status',
+      { p_payment_id: paymentId, p_refund_id: refundId, p_status: refundStatus ?? 'unknown' },
+    )
+
+    const rec = recorded as { ok?: boolean; code?: string } | null
+
+    if (recordError || !rec || rec.ok !== true) {
+      console.error('record_stripe_refund_status failed', {
+        payment_id: paymentId,
+        code: recordError?.code ?? rec?.code ?? 'unknown',
+      })
       return json(
         {
-          error: `Stripe refundace skončila ve stavu: ${refundStatus ?? 'neznámý'}. Refundace zůstává rozpracovaná.`,
-          code: 'stripe_refund_not_accepted',
+          error: 'Stripe refundaci se nepodařilo uložit k platbě. Refundace zůstává rozpracovaná, akci lze bezpečně zopakovat.',
+          code: 'record_failed',
+          status: 'refund_pending',
+        },
+        500,
+      )
+    }
+
+    // 4. Rozpad podle skutečného Stripe stavu.
+    if (refundStatus === 'failed' || refundStatus === 'canceled') {
+      const { data: reversed, error: reverseError } = await supabaseClient.rpc(
+        'reverse_failed_stripe_refund',
+        { p_payment_id: paymentId, p_stripe_status: refundStatus },
+      )
+
+      const rev = reversed as { ok?: boolean; code?: string } | null
+
+      if (reverseError || !rev || rev.ok !== true) {
+        console.error('reverse_failed_stripe_refund failed', {
+          payment_id: paymentId,
+          code: reverseError?.code ?? rev?.code ?? 'unknown',
+        })
+        return json(
+          {
+            error: 'Stripe refundace selhala a MioCoiny se nepodařilo vrátit. Je nutná ruční kontrola.',
+            code: 'reverse_failed',
+            status: 'refund_pending',
+          },
+          500,
+        )
+      }
+
+      return json(
+        {
+          success: false,
+          error: 'Stripe refundace selhala. MioCoiny byly vráceny zpět, platba je označená jako Refundace selhala a vyžaduje ruční kontrolu.',
+          code: 'stripe_refund_failed',
+          status: 'refund_failed',
+        },
+        409,
+      )
+    }
+
+    if (refundStatus === 'pending' || refundStatus === 'requires_action') {
+      // Platba zůstává `refund_pending`. Dokončí ji buď webhook, nebo další
+      // ruční ověření stavu z administrace.
+      return json(
+        {
+          success: true,
+          pending: true,
+          message: 'Refundace byla přijata a čeká na dokončení u Stripe.',
+          refund_id: refundId,
+          status: 'refund_pending',
+          stripe_refund_status: refundStatus,
+        },
+        202,
+      )
+    }
+
+    if (refundStatus !== 'succeeded') {
+      console.error('unexpected Stripe refund status', { payment_id: paymentId, refund_status: refundStatus })
+      return json(
+        {
+          error: `Stripe refundace je ve stavu: ${refundStatus ?? 'neznámý'}. Refundace zůstává rozpracovaná.`,
+          code: 'stripe_refund_unexpected_status',
           status: 'refund_pending',
         },
         502,
       )
     }
 
-    // 3. Dokončení stavu. Bez úspěšného uložení se NIKDY nevrací úspěch.
+    // 5. Dokončení stavu — jen po `succeeded`.
+    //    Bez úspěšného uložení se NIKDY nevrací úspěch.
     const { data: finalized, error: finalizeError } = await supabaseClient.rpc(
       'finalize_stripe_refund',
       { p_payment_id: paymentId },
@@ -197,7 +289,7 @@ serve(async (req) => {
       )
     }
 
-    // 4. Audit — bez Stripe session ID, bez tokenů a bez osobních údajů.
+    // 6. Audit — bez Stripe session ID, bez tokenů a bez osobních údajů.
     const { error: auditError } = await supabaseClient
       .from('audit_logs')
       .insert({

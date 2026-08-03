@@ -12,6 +12,7 @@ const read = (path: string) => readFileSync(resolve(process.cwd(), path), 'utf8'
 
 const MIGRATION = 'supabase/migrations/20260803090000_harden_stripe_refund_flow.sql';
 const EDGE_FUNCTION = 'supabase/functions/stripe-refund/index.ts';
+const WEBHOOK = 'supabase/functions/stripe-webhook/index.ts';
 const ADMIN_PAGE = 'src/pages/AdminPayments.tsx';
 
 const INSUFFICIENT_MESSAGE =
@@ -59,12 +60,68 @@ test.describe('stripe refund hardening contract', () => {
     expect(migration).toContain("WHERE type = 'refund_debit' AND reference_id IS NOT NULL");
   });
 
+  test('payments table stores the stripe refund id, status and timestamp', () => {
+    const migration = read(MIGRATION);
+
+    expect(migration).toContain('ADD COLUMN IF NOT EXISTS stripe_refund_id text');
+    expect(migration).toContain('ADD COLUMN IF NOT EXISTS stripe_refund_status text');
+    expect(migration).toContain('ADD COLUMN IF NOT EXISTS refund_updated_at timestamptz');
+
+    // Stripe refund ID musí být unikátní, pokud není NULL.
+    expect(migration).toContain('CREATE UNIQUE INDEX IF NOT EXISTS uniq_payments_stripe_refund_id');
+    expect(migration).toContain('WHERE stripe_refund_id IS NOT NULL');
+
+    // Uložení stavu nikdy nesmí sáhnout na peníze ani na stav platby.
+    expect(migration).toContain('CREATE OR REPLACE FUNCTION public.record_stripe_refund_status(');
+    const recordBody = migration.slice(
+      migration.indexOf('CREATE OR REPLACE FUNCTION public.record_stripe_refund_status('),
+      migration.indexOf('COMMENT ON FUNCTION public.record_stripe_refund_status'),
+    );
+    expect(recordBody).not.toContain('public.wallets');
+    expect(recordBody).not.toContain('wallet_transactions');
+    expect(recordBody).not.toContain("SET status =");
+    expect(recordBody).toContain("'refund_id_conflict'");
+  });
+
+  test('failed or canceled stripe refunds restore the MioCoins exactly once', () => {
+    const migration = read(MIGRATION);
+
+    expect(migration).toContain('CREATE OR REPLACE FUNCTION public.reverse_failed_stripe_refund(');
+
+    const reverseBody = migration.slice(
+      migration.indexOf('CREATE OR REPLACE FUNCTION public.reverse_failed_stripe_refund('),
+      migration.indexOf('COMMENT ON FUNCTION public.reverse_failed_stripe_refund'),
+    );
+
+    // Právě jeden kladný ledger řádek se správným typem, zdrojem a referencí.
+    expect(reverseBody).toContain("'refund_reversal'");
+    expect(reverseBody).toContain("'reverse_failed_stripe_refund'");
+    expect(reverseBody).toContain('IF NOT v_already THEN');
+    expect(reverseBody).toContain("SET status               = 'refund_failed'");
+
+    // Vrací se přesně to, co bylo odečteno, a jen když odečet existoval.
+    expect(reverseBody).toContain("AND type = 'refund_debit'");
+    expect(reverseBody).toContain("'nothing_to_reverse'");
+
+    // Dokončenou refundaci nelze vzít zpět.
+    expect(reverseBody).toContain("IF v_payment.status = 'refunded' THEN");
+
+    // Databázová pojistka proti dvojímu vrácení.
+    expect(migration).toContain('CREATE UNIQUE INDEX IF NOT EXISTS uniq_wallet_tx_refund_reversal_per_payment');
+    expect(migration).toContain("WHERE type = 'refund_reversal' AND reference_id IS NOT NULL");
+
+    // Z refund_failed se nikdy nepokračuje automaticky.
+    expect(migration).toContain("'refund_failed_needs_manual_review'");
+  });
+
   test('refund helper functions are restricted to service role', () => {
     const migration = read(MIGRATION);
 
     for (const signature of [
       'public.prepare_stripe_refund(uuid)',
+      'public.record_stripe_refund_status(uuid, text, text)',
       'public.finalize_stripe_refund(uuid)',
+      'public.reverse_failed_stripe_refund(uuid, text)',
     ]) {
       expect(migration).toContain(`REVOKE ALL ON FUNCTION ${signature} FROM PUBLIC`);
       expect(migration).toContain(`REVOKE ALL ON FUNCTION ${signature} FROM anon`);
@@ -80,13 +137,14 @@ test.describe('stripe refund hardening contract', () => {
     expect(migration).toContain("IF v_payment.status = 'refunded' THEN");
     expect(migration).toContain("'already_final', true");
     expect(migration).toContain("IF v_payment.status <> 'refund_pending' THEN");
-    expect(migration).toContain("SET status = 'refunded'");
 
-    // Dokončení nesmí sahat na peníze.
+    // Dokončení mění jen stav a nesmí sahat na peníze.
     const finalizeBody = migration.slice(
       migration.indexOf('CREATE OR REPLACE FUNCTION public.finalize_stripe_refund'),
-      migration.indexOf('-- 4. Granty nových funkcí'),
+      migration.indexOf('COMMENT ON FUNCTION public.finalize_stripe_refund'),
     );
+    expect(finalizeBody).toContain('UPDATE public.payments');
+    expect(finalizeBody).toContain("'refunded'");
     expect(finalizeBody).not.toContain('public.wallets');
     expect(finalizeBody).not.toContain('wallet_transactions');
   });
@@ -128,18 +186,100 @@ test.describe('stripe refund hardening contract', () => {
     expect(edge).toContain('idempotencyKey: `onemil-refund-${paymentId}`');
     expect(edge).toContain("'finalize_stripe_refund'");
 
+    // Metadata obsahují jen ID platby — žádné osobní údaje ani session ID.
+    expect(edge).toContain('metadata: { onemil_payment_id: paymentId }');
+
     // Autorizace zůstává: JWT + role administrátora.
     expect(edge).toContain('supabaseClient.auth.getUser(token)');
     expect(edge).toContain("'Forbidden: admin role required'");
   });
 
+  test('edge function branches on every stripe refund status', () => {
+    const edge = read(EDGE_FUNCTION);
+
+    // succeeded → uložit stav, dokončit, teprve pak 200.
+    const recordIndex = edge.indexOf("'record_stripe_refund_status'");
+    const finalizeIndex = edge.indexOf("'finalize_stripe_refund'");
+    const successIndex = edge.indexOf("status: 'refunded'");
+    expect(recordIndex).toBeGreaterThan(-1);
+    expect(recordIndex).toBeLessThan(finalizeIndex);
+    expect(finalizeIndex).toBeLessThan(successIndex);
+
+    // pending / requires_action → 202, bez finalize.
+    expect(edge).toContain("if (refundStatus === 'pending' || refundStatus === 'requires_action')");
+    expect(edge).toContain('Refundace byla přijata a čeká na dokončení u Stripe.');
+    expect(edge).toContain('202,');
+
+    // failed / canceled → vrácení MioCoinů, refund_failed, nikdy refunded.
+    expect(edge).toContain("if (refundStatus === 'failed' || refundStatus === 'canceled')");
+    expect(edge).toContain("'reverse_failed_stripe_refund'");
+    expect(edge).toContain("status: 'refund_failed'");
+
+    const failedBranch = edge.slice(
+      edge.indexOf("if (refundStatus === 'failed' || refundStatus === 'canceled')"),
+      edge.indexOf("if (refundStatus === 'pending' || refundStatus === 'requires_action')"),
+    );
+    expect(failedBranch).not.toContain("'finalize_stripe_refund'");
+  });
+
+  test('a known stripe refund id is retrieved instead of created again', () => {
+    const edge = read(EDGE_FUNCTION);
+
+    expect(edge).toContain('const knownRefundId = prep.stripe_refund_id ?? null');
+    expect(edge).toContain('if (knownRefundId) {');
+    expect(edge).toContain('stripe.refunds.retrieve(knownRefundId)');
+
+    // Nový create běží jen ve větvi bez známého refund ID.
+    const createBranch = edge.slice(edge.indexOf('} else {'), edge.indexOf('} catch (stripeError)'));
+    expect(createBranch).toContain('stripe.refunds.create');
+    expect(createBranch).toContain('idempotencyKey');
+
+    const retrieveBranch = edge.slice(edge.indexOf('if (knownRefundId) {'), edge.indexOf('} else {'));
+    expect(retrieveBranch).not.toContain('stripe.refunds.create');
+  });
+
+  test('webhook handles refund events idempotently and keeps checkout flow intact', () => {
+    const webhook = read(WEBHOOK);
+
+    // Podpis zůstává povinný.
+    expect(webhook).toContain('stripe.webhooks.constructEventAsync(body, signature, webhookSecret)');
+    expect(webhook).toContain('Webhook signature verification failed');
+
+    // Původní tok checkout.session.completed beze změny.
+    expect(webhook).toContain("if (event.type === 'checkout.session.completed')");
+    expect(webhook).toContain('Payment already processed');
+    expect(webhook).toContain("status: 'completed'");
+
+    // Nové refundační události.
+    expect(webhook).toContain("REFUND_EVENT_TYPES = new Set(['refund.created', 'refund.updated', 'refund.failed'])");
+    expect(webhook).toContain('refund.metadata?.onemil_payment_id');
+    expect(webhook).toContain("'record_stripe_refund_status'");
+    expect(webhook).toContain("'finalize_stripe_refund'");
+    expect(webhook).toContain("'reverse_failed_stripe_refund'");
+
+    // Rozpad podle stavu: succeeded finalizuje, failed/canceled vrací, ostatní jen aktualizuje.
+    expect(webhook).toContain("if (refundStatus === 'succeeded')");
+    expect(webhook).toContain("if (refundStatus === 'failed' || refundStatus === 'canceled')");
+    expect(webhook).toContain('refund_still_pending');
+
+    // Refundační větev nesmí sahat na peněženku přímo — jen přes jištěné RPC.
+    const refundHandler = webhook.slice(
+      webhook.indexOf('async function handleRefundEvent('),
+      webhook.indexOf('serve(async (req)'),
+    );
+    expect(refundHandler).not.toContain("from('wallets')");
+    expect(refundHandler).not.toContain("from('wallet_transactions')");
+  });
+
   test('edge function never reports success when the wallet or status step fails', () => {
     const edge = read(EDGE_FUNCTION);
 
-    const successIndex = edge.indexOf('success: true');
+    // Finální 200 odpověď smí přijít až po úspěšném finalize.
+    const finalSuccessIndex = edge.indexOf("message: 'Platba byla refundována a MioCoiny odečteny.'");
     const finalizeFailIndex = edge.indexOf("code: 'finalize_failed'");
+    expect(finalSuccessIndex).toBeGreaterThan(-1);
     expect(finalizeFailIndex).toBeGreaterThan(-1);
-    expect(finalizeFailIndex).toBeLessThan(successIndex);
+    expect(finalizeFailIndex).toBeLessThan(finalSuccessIndex);
 
     // Nejasná Stripe chyba nechává platbu rozpracovanou pro bezpečné zopakování.
     expect(edge).toContain("code: 'stripe_call_failed'");
@@ -170,13 +310,25 @@ test.describe('stripe refund hardening contract', () => {
     expect(auditBlock).toContain('stripe_refund_id');
   });
 
-  test('admin payments page exposes refund_pending and blocks repeated clicks', () => {
+  test('admin payments page exposes both refund states and blocks repeated clicks', () => {
     const page = read(ADMIN_PAGE);
 
     expect(page).toContain("case \"refund_pending\":");
     expect(page).toContain('Refundace čeká');
+    expect(page).toContain("case \"refund_failed\":");
+    expect(page).toContain('Refundace selhala');
+
     expect(page).toContain("payment.status === 'refund_pending'");
-    expect(page).toContain('Dokončit refundaci');
+    expect(page).toContain('Ověřit stav refundace');
+
+    // U selhané refundace nesmí být žádné tlačítko pro novou refundaci.
+    const failedBlock = page.slice(
+      page.indexOf("{payment.status === 'refund_failed' && ("),
+      page.indexOf('</TableCell>', page.indexOf("{payment.status === 'refund_failed' && (")),
+    );
+    expect(failedBlock).not.toContain('<Button');
+    expect(failedBlock).toContain('Nutná ruční kontrola');
+
     expect(page).toContain('disabled={refundingPaymentId !== null}');
     expect(page).toContain('setRefundingPaymentId(paymentId)');
     expect(page).toContain('setRefundingPaymentId(null)');

@@ -81,7 +81,7 @@ const AdminPayments: React.FC = () => {
     }
 
     const question = isRetry
-      ? 'Tato refundace je rozpracovaná — MioCoiny už byly odečteny. Chcete ji bezpečně dokončit? Druhá refundace ani druhý odečet nevzniknou.'
+      ? 'Tato refundace je rozpracovaná — MioCoiny už byly odečteny. Chcete u Stripe ověřit její aktuální stav? Druhá refundace ani druhý odečet nevzniknou.'
       : 'Opravdu chcete provést refundaci této platby? Tato akce nelze vrátit.';
 
     if (!confirm(question)) {
@@ -114,9 +114,15 @@ const AdminPayments: React.FC = () => {
         throw new Error(result.error || 'Nepodařilo se provést refundaci.');
       }
 
+      // HTTP 202 = Stripe refundaci přijal, ale ještě ji nedokončil.
+      const stillPending = response.status === 202 || result.pending === true;
+
       toast({
-        title: 'Refundace úspěšná',
-        description: 'Platba byla refundována a MioCoiny odečteny.',
+        title: stillPending ? 'Refundace čeká na Stripe' : 'Refundace úspěšná',
+        description:
+          typeof result.message === 'string'
+            ? result.message
+            : 'Platba byla refundována a MioCoiny odečteny.',
       });
 
       await fetchPayments();
@@ -154,6 +160,8 @@ const AdminPayments: React.FC = () => {
         return <Badge variant="destructive">Neúspěšné</Badge>;
       case "refund_pending":
         return <Badge variant="pending">Refundace čeká</Badge>;
+      case "refund_failed":
+        return <Badge variant="destructive">Refundace selhala</Badge>;
       case "refunded":
         return <Badge variant="warning">Vráceno</Badge>;
       default:
@@ -247,6 +255,7 @@ const AdminPayments: React.FC = () => {
                   <SelectItem value="pending">Čekající</SelectItem>
                   <SelectItem value="failed">Neúspěšné</SelectItem>
                   <SelectItem value="refund_pending">Refundace čeká</SelectItem>
+                  <SelectItem value="refund_failed">Refundace selhala</SelectItem>
                   <SelectItem value="refunded">Vráceno</SelectItem>
                 </SelectContent>
               </Select>
@@ -297,9 +306,14 @@ const AdminPayments: React.FC = () => {
                               {refundingPaymentId === payment.id
                                 ? 'Zpracovává se…'
                                 : payment.status === 'refund_pending'
-                                  ? 'Dokončit refundaci'
+                                  ? 'Ověřit stav refundace'
                                   : 'Vrátit'}
                             </Button>
+                          )}
+                          {payment.status === 'refund_failed' && (
+                            <span className="text-xs text-destructive">
+                              Nutná ruční kontrola. MioCoiny byly vráceny, novou refundaci systém sám nespustí.
+                            </span>
                           )}
                         </TableCell>
                       </TableRow>
