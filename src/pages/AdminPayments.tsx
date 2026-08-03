@@ -25,6 +25,8 @@ interface Payment {
   status: string;
   method: string;
   stripe_session_id?: string;
+  stripe_refund_id?: string | null;
+  stripe_refund_status?: string | null;
   created_at: string;
   users?: {
     email: string;
@@ -39,6 +41,8 @@ const AdminPayments: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState<string>('všechny');
+  // ID platby, na které právě běží požadavek — brání opakovanému klikání.
+  const [refundingPaymentId, setRefundingPaymentId] = useState<string | null>(null);
 
   useEffect(() => {
     if (isAdmin) {
@@ -73,10 +77,20 @@ const AdminPayments: React.FC = () => {
     }
   };
 
-  const handleRefundPayment = async (paymentId: string) => {
-    if (!confirm('Opravdu chcete provést refundaci této platby? Tato akce nelze vrátit.')) {
+  const handleRefundPayment = async (paymentId: string, isRetry: boolean) => {
+    if (refundingPaymentId) {
       return;
     }
+
+    const question = isRetry
+      ? 'Tato refundace je rozpracovaná — MioCoiny už byly odečteny. Chcete u Stripe ověřit její aktuální stav? Druhá refundace ani druhý odečet nevzniknou.'
+      : 'Opravdu chcete provést refundaci této platby? Tato akce nelze vrátit.';
+
+    if (!confirm(question)) {
+      return;
+    }
+
+    setRefundingPaymentId(paymentId);
 
     try {
       const { data: sessionData } = await supabase.auth.getSession();
@@ -102,9 +116,15 @@ const AdminPayments: React.FC = () => {
         throw new Error(result.error || 'Nepodařilo se provést refundaci.');
       }
 
+      // HTTP 202 = Stripe refundaci přijal, ale ještě ji nedokončil.
+      const stillPending = response.status === 202 || result.pending === true;
+
       toast({
-        title: 'Refundace úspěšná',
-        description: 'Platba byla úspěšně refundována.',
+        title: stillPending ? 'Refundace čeká na Stripe' : 'Refundace úspěšná',
+        description:
+          typeof result.message === 'string'
+            ? result.message
+            : 'Platba byla refundována a MioCoiny odečteny.',
       });
 
       await fetchPayments();
@@ -116,6 +136,10 @@ const AdminPayments: React.FC = () => {
         description: message,
         variant: 'destructive',
       });
+      // Rozpracovaná refundace se musí v seznamu ukázat jako „Refundace čeká“.
+      await fetchPayments();
+    } finally {
+      setRefundingPaymentId(null);
     }
   };
 
@@ -124,22 +148,44 @@ const AdminPayments: React.FC = () => {
     const matchesSearch =
       email.toLowerCase().includes(searchTerm.toLowerCase()) ||
       payment.id.toLowerCase().includes(searchTerm.toLowerCase());
-    const matchesStatus = statusFilter === 'všechny' || payment.status === statusFilter;
+    // Selhaná refundace není samostatný stav platby — filtruje se přes Stripe stav.
+    const matchesStatus =
+      statusFilter === 'všechny'
+        ? true
+        : statusFilter === 'refund_failed'
+          ? payment.status === 'completed' &&
+            (payment.stripe_refund_status === 'failed' || payment.stripe_refund_status === 'canceled')
+          : payment.status === statusFilter;
     return matchesSearch && matchesStatus;
   });
 
-  const getStatusBadge = (status: string) => {
-    switch (status) {
+  /**
+   * Selhaná Stripe refundace NEMÁ vlastní stav platby. Platba se vrací na
+   * `completed`, protože zákazníkovi peníze vráceny nebyly — pozná se podle
+   * uloženého Stripe stavu refundace.
+   */
+  const isFailedRefund = (payment: Payment) =>
+    payment.status === 'completed' &&
+    (payment.stripe_refund_status === 'failed' || payment.stripe_refund_status === 'canceled');
+
+  const getStatusBadge = (payment: Payment) => {
+    if (isFailedRefund(payment)) {
+      return <Badge variant="destructive">Refundace selhala</Badge>;
+    }
+
+    switch (payment.status) {
       case "completed":
         return <Badge variant="success">Dokončeno</Badge>;
       case "pending":
         return <Badge variant="pending">Čekající</Badge>;
       case "failed":
         return <Badge variant="destructive">Neúspěšné</Badge>;
+      case "refund_pending":
+        return <Badge variant="pending">Refundace čeká</Badge>;
       case "refunded":
         return <Badge variant="warning">Vráceno</Badge>;
       default:
-        return <Badge variant="outline">{status}</Badge>;
+        return <Badge variant="outline">{payment.status}</Badge>;
     }
   };
 
@@ -228,6 +274,8 @@ const AdminPayments: React.FC = () => {
                   <SelectItem value="completed">Dokončeno</SelectItem>
                   <SelectItem value="pending">Čekající</SelectItem>
                   <SelectItem value="failed">Neúspěšné</SelectItem>
+                  <SelectItem value="refund_pending">Refundace čeká</SelectItem>
+                  <SelectItem value="refund_failed">Refundace selhala</SelectItem>
                   <SelectItem value="refunded">Vráceno</SelectItem>
                 </SelectContent>
               </Select>
@@ -259,21 +307,34 @@ const AdminPayments: React.FC = () => {
                         <TableCell>{payment.users?.email}</TableCell>
                         <TableCell className="font-medium">{formatDerivedPaidCzk(payment.amount)}</TableCell>
                         <TableCell>{formatCreditedMiocoins(payment.amount)}</TableCell>
-                        <TableCell>{getStatusBadge(payment.status)}</TableCell>
+                        <TableCell>{getStatusBadge(payment)}</TableCell>
                         <TableCell>{payment.method}</TableCell>
                         <TableCell>
                           {new Date(payment.created_at).toLocaleDateString('cs-CZ')}
                         </TableCell>
                         <TableCell>
-                          {payment.status === 'completed' && (
+                          {!isFailedRefund(payment) &&
+                            (payment.status === 'completed' || payment.status === 'refund_pending') && (
                             <Button
                               variant="outline"
                               size="sm"
-                              onClick={() => handleRefundPayment(payment.id)}
+                              disabled={refundingPaymentId !== null}
+                              onClick={() =>
+                                handleRefundPayment(payment.id, payment.status === 'refund_pending')
+                              }
                             >
                               <AlertTriangle className="h-4 w-4 mr-1" />
-                              Vrátit
+                              {refundingPaymentId === payment.id
+                                ? 'Zpracovává se…'
+                                : payment.status === 'refund_pending'
+                                  ? 'Ověřit stav refundace'
+                                  : 'Vrátit'}
                             </Button>
+                          )}
+                          {isFailedRefund(payment) && (
+                            <span className="text-xs text-destructive">
+                              Nutná ruční kontrola. MioCoiny i odměna za doporučení byly vráceny, platba zůstává dokončená a novou refundaci systém sám nespustí.
+                            </span>
                           )}
                         </TableCell>
                       </TableRow>
