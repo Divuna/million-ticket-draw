@@ -51,7 +51,9 @@ Test běžel jako **jediný `DO` blok zakončený `RAISE EXCEPTION`** — migrac
 
 **Oprava odhalená testem (v migraci již provedena):** poziční volání `try_credit_wallet_mc(v_referrer, v_reward_mc)` je v produkci **nejednoznačné** (`42725`), protože vedle booleanové `(uuid, numeric)` existuje i `(uuid, numeric, text DEFAULT 'topup')`. Migrace proto používá pojmenované argumenty `p_user_id => …, p_amount_mc => …`, které váží právě booleanovou variantu.
 
-### ⚠️ Pre-existující produkční defekt odhalený testem (mimo rozsah PR #309, NEOPRAVENO)
+### ✅ Pre-existující produkční defekt odhalený testem — OPRAVEN NA PRODUKCI (03. 08. 2026)
+
+Migrace `20260803120000_fix_referral_reversal_ambiguous_call.sql` je aplikovaná na produkci (schválení Pavla, samostatně od tohoto PR). Blokátor popsaný níže tím **odpadl** — `prepare_stripe_refund` u platby s odměnou `earned` už neselže.
 
 Produkční trigger funkce `reverse_referral_reward_on_payment_status_change()` volá `PERFORM public.try_credit_wallet_mc(v_referrer, (0 - v_reward))` — tedy **stejné nejednoznačné poziční volání**. Test to potvrdil: jakákoli změna stavu platby z `completed` na jiný, u které existuje `referral_rewards` se `status = 'earned'`, skončí chybou `42725` a **UPDATE se vrátí zpět**. V produkci je 16 odměn ve stavu `earned` a 0 ve stavu `reversed`, což s tím sedí — reverzní větev nikdy úspěšně neproběhla. **Důsledek pro tento PR:** dokud se defekt neopraví, `prepare_stripe_refund` u platby s odměnou `earned` vyhodí výjimku a refundace takové platby vůbec nezačne. Navržená oprava je jednořádková (stejná pojmenovaná notace), ale je to zásah do produkční funkce mimo zadání PR — **čeká na samostatné schválení**.
 
