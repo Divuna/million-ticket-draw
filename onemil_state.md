@@ -2,7 +2,7 @@
 
 ## REVERZE ODMĚNY ZA DOPORUČENÍ — OPRAVENA NA PRODUKCI (03. 08. 2026, schválení Pavla)
 
-**Migrace `supabase/migrations/20260803120000_fix_referral_reversal_ambiguous_call.sql` aplikována na produkci `xkzhjldrojjlrkezorey`.** Zapsána do `schema_migrations` jako `20260803120000` / `fix_referral_reversal_ambiguous_call`.
+**Migrace `supabase/migrations/20260803120000_fix_referral_reversal_ambiguous_call.sql` aplikována na produkci `xkzhjldrojjlrkezorey`.** V `schema_migrations` je zapsaná jako **`20260803192609` / `fix_referral_reversal_ambiguous_call`** — apply nástroj razítkuje vlastní čas, takže se produkční verze **liší od čísla souboru v repu** (`20260803120000`). Stejně je na tom `restore_wallet_payment_ledger` (soubor `20260802120000`, produkce `20260802205656`). Repozitářní čísla proto v `schema_migrations` nejsou; `db push` se na tomto projektu nepoužívá, takže to nic neblokuje.
 
 **Problém (odhalen rollback-only testem PR #309):** `reverse_referral_reward_on_payment_status_change()` volala `PERFORM public.try_credit_wallet_mc(v_referrer, (0 - v_reward))`. V produkci existují tři overloady — `(uuid)`, `(uuid, numeric) → boolean` a `(uuid, numeric, text DEFAULT 'topup')` — takže **poziční dvouargumentové volání vyhovuje dvěma kandidátům** a Postgres ho odmítne chybou `42725: function ... is not unique`. Výjimka z triggeru rušila celou transakci, takže **každá změna stavu platby z `completed` na jiný u platby s odměnou `earned` se vrátila zpět**. Odpovídal tomu i produkční stav: 16 odměn `earned`, 0 `reversed` — reverzní větev nikdy neproběhla.
 
