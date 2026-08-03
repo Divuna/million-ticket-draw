@@ -191,7 +191,10 @@ test.describe('stripe refund hardening contract', () => {
     expect(reverseBody).toContain("SET status         = 'earned'");
     expect(reverseBody).toContain('reversed_at    = NULL');
     expect(reverseBody).toContain('reverse_reason = NULL');
-    expect(reverseBody).toContain('public.try_credit_wallet_mc(v_referrer, v_reward_mc)');
+    // Poziční dvouargumentové volání je v produkci nejednoznačné (42725) —
+    // pojmenovaný argument váže právě booleanovou variantu (uuid, numeric).
+    expect(reverseBody).toContain('public.try_credit_wallet_mc(p_user_id => v_referrer, p_amount_mc => v_reward_mc)');
+    expect(reverseBody).not.toContain('try_credit_wallet_mc(v_referrer, v_reward_mc)');
     expect(reverseBody).toContain('RAISE EXCEPTION');
 
     // Platba se vrací mezi dokončené — peníze zákazníkovi vráceny nebyly.

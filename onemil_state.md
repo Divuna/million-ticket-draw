@@ -2,7 +2,7 @@
 
 ## STRIPE REFUNDACE — ZPEVNĚNÍ PŘIPRAVENO V DRAFT PR, NENASAZENO (03. 08. 2026)
 
-**Jde pouze o Draft PR #309. Produkce `xkzhjldrojjlrkezorey` nebyla změněna** — migrace `20260803090000_harden_stripe_refund_flow.sql` **není aplikovaná na žádné databázi**, Edge Functions `stripe-refund` (produkce v135) ani `stripe-webhook` **nebyly nasazené**, **Stripe webhook konfigurace nebyla změněna** (dodnes jen `checkout.session.completed`), žádná skutečná refundace neproběhla a žádná testovací platba nevznikla.
+**Jde pouze o Draft PR #309. Produkce `xkzhjldrojjlrkezorey` nebyla změněna** — migrace `20260803090000_harden_stripe_refund_flow.sql` **není aplikovaná na žádné databázi** (proběhl jen rollback-only test proti produkčnímu schématu, viz níže), Edge Functions `stripe-refund` (produkce v135) ani `stripe-webhook` **nebyly nasazené**, **Stripe webhook konfigurace nebyla změněna** (dodnes jen `checkout.session.completed`), žádná skutečná refundace neproběhla a žádná testovací platba nevznikla.
 
 **Potvrzený současný (rozbitý) tok — read-only ověřeno na produkci:**
 1. `/admin/payments` → tlačítko „Vrátit" → `fetch` na Edge Function `stripe-refund` (v135, `verify_jwt = true`; nasazený kód je znak po znaku shodný s repem).
@@ -43,7 +43,19 @@ completed
 
 **Otevřené pozorování (nezměněno v tomto PR):** EF kontroluje roli přes `user_roles.role = 'admin'`, takže účet pouze se `superadmin` rolí dostane 403 — autorizaci jsem záměrně neměnil.
 
-**Kontroly:** `npx tsc --noEmit` exit 0, `npm run build` exit 0, ESLint změněných souborů 0 chyb, statické kontraktní specy 83/86/87 zelené (**24 passed**), CI Smoke E2E zelený. Databázový spec 88 (**21 scénářů**, nově i obnova doporučovací odměny, ochrana všech tří terminálních stavů proti přeházeným událostem a odmítnutí `finalize` bez `succeeded`) je staging-only a opt-in (`E2E_REFUND_HARDENING=1`) — **zatím neproběhl**, protože migrace není aplikovaná na žádné databázi a runtime test zatím nebyl schválen. **Stripe se v testech nevolá vůbec, žádná skutečná refundace neproběhla.**
+**Kontroly:** `npx tsc --noEmit` exit 0, `npm run build` exit 0, ESLint změněných souborů 0 chyb, statické kontraktní specy 83/86/87 zelené (**24 passed**), CI Smoke E2E zelený. Databázový spec 88 (**21 scénářů**) je staging-only a opt-in (`E2E_REFUND_HARDENING=1`) — neproběhl, protože migrace není aplikovaná na žádné databázi. **Stripe se v testech nevolá vůbec, žádná skutečná refundace neproběhla.**
+
+### ✅ Rollback-only test proti produkčnímu schématu — PROŠEL (03. 08. 2026, schválení Pavla)
+
+Test běžel jako **jediný `DO` blok zakončený `RAISE EXCEPTION`** — migrace i všechna testovací data se vrátily zpět jako jedna atomická operace. **23 z 23 kontrol PASS:** přesný odečet celé částky + jeden `refund_debit` s `reference_id`; opakovaná příprava bez druhého odečtu; neplatný Stripe stav nic nezapíše; `finalize` odmítnut bez refund ID i při `pending`; `succeeded` → `refunded` a opakovaný `finalize` bezpečný; pozdní `failed` po `succeeded` ignorován (`terminal_state`, zůstává `refunded`/`succeeded`); reverze dokončené refundace odmítnuta; nedostatek MioCoinů zastaví refundaci **před** Stripe přesnou hláškou; `failed` i `canceled` vrátí MioCoiny právě jednou a platbu na `completed` se zachovaným `stripe_refund_status`; **doporučovací odměna obnovena na `earned` s prázdným `reversed_at`/`reverse_reason` a `reward_mc` připsán právě jednou**; opakovaná reverze nic nepřipíše podruhé; pozdní `pending` i `succeeded` po `failed` ignorovány; nový automatický pokus zablokován; existující `refund_reversal` dorovná platbu na `completed`; žádná nová funkce nemá `anon`/`authenticated` EXECUTE a `service_role` má EXECUTE na všech čtyřech; všechny tři unikátní indexy existují.
+
+**Oprava odhalená testem (v migraci již provedena):** poziční volání `try_credit_wallet_mc(v_referrer, v_reward_mc)` je v produkci **nejednoznačné** (`42725`), protože vedle booleanové `(uuid, numeric)` existuje i `(uuid, numeric, text DEFAULT 'topup')`. Migrace proto používá pojmenované argumenty `p_user_id => …, p_amount_mc => …`, které váží právě booleanovou variantu.
+
+### ⚠️ Pre-existující produkční defekt odhalený testem (mimo rozsah PR #309, NEOPRAVENO)
+
+Produkční trigger funkce `reverse_referral_reward_on_payment_status_change()` volá `PERFORM public.try_credit_wallet_mc(v_referrer, (0 - v_reward))` — tedy **stejné nejednoznačné poziční volání**. Test to potvrdil: jakákoli změna stavu platby z `completed` na jiný, u které existuje `referral_rewards` se `status = 'earned'`, skončí chybou `42725` a **UPDATE se vrátí zpět**. V produkci je 16 odměn ve stavu `earned` a 0 ve stavu `reversed`, což s tím sedí — reverzní větev nikdy úspěšně neproběhla. **Důsledek pro tento PR:** dokud se defekt neopraví, `prepare_stripe_refund` u platby s odměnou `earned` vyhodí výjimku a refundace takové platby vůbec nezačne. Navržená oprava je jednořádková (stejná pojmenovaná notace), ale je to zásah do produkční funkce mimo zadání PR — **čeká na samostatné schválení**.
+
+**Produkce po testu beze změny:** 135 plateb, 775 peněženek, 3 733 ledger řádků, součet zůstatků 139 856,41 MC, checksum `referral_rewards` shodný, 0 nových sloupců/funkcí/indexů, migrace stále nezapsaná v `schema_migrations`, `admin_manage_payment` md5 `96955099709e26fafacb10138d4a8adf` beze změny, 0 testovacích uživatelů, 0 testovacích plateb, 0 řádků `refund_debit`/`refund_reversal`. (Mezi dřívějším a testovacím baseline se čísla posunula o −35 MC a +10 ledger řádků kvůli **souběžné reálné aktivitě aplikace** — 7× `benefit_purchase` a 3× `bonus_credit` v 16:35–16:40 UTC; s testem to nesouvisí.)
 
 ## PLATEBNÍ TRIGGER — OPRAVA `update_wallet_after_payment()` APLIKOVÁNA NA PRODUKCI (02. 08. 2026, schválení Pavla)
 

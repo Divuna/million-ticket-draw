@@ -562,8 +562,13 @@ BEGIN
     WHERE id = v_reward_id;
 
     -- Stejný bezpečný mechanismus, jakým odměnu odečítá produkční trigger.
+    -- POZOR: `try_credit_wallet_mc` má v produkci tři overloady a poziční
+    -- dvouargumentové volání je NEJEDNOZNAČNÉ (`42725`), protože
+    -- `(uuid, numeric, text DEFAULT 'topup')` je také kandidát. Pojmenovaný
+    -- argument `p_amount_mc` váže právě booleanovou variantu `(uuid, numeric)`.
     -- Funkce vrací boolean; při neúspěchu se musí vrátit CELÁ transakce.
-    SELECT public.try_credit_wallet_mc(v_referrer, v_reward_mc) INTO v_credit_ok;
+    SELECT public.try_credit_wallet_mc(p_user_id => v_referrer, p_amount_mc => v_reward_mc)
+    INTO v_credit_ok;
 
     IF COALESCE(v_credit_ok, false) IS NOT TRUE THEN
       RAISE EXCEPTION
