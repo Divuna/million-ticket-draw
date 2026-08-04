@@ -40,7 +40,7 @@ serve(async (req) => {
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '',
     )
 
-    // 1. Ověření JWT a role administrátora (beze změny oproti původní verzi).
+    // 1. Ověření JWT a role administrátora.
     const authHeader = req.headers.get('Authorization')
     if (!authHeader) {
       return json({ error: 'Unauthorized' }, 401)
@@ -57,11 +57,11 @@ serve(async (req) => {
       .from('user_roles')
       .select('role')
       .eq('user_id', user.id)
-      .eq('role', 'admin')
+      .in('role', ['admin', 'superadmin'])
       .maybeSingle()
 
     if (!roleData) {
-      return json({ error: 'Forbidden: admin role required' }, 403)
+      return json({ error: 'Forbidden: admin or superadmin role required' }, 403)
     }
 
     const body = await req.json().catch(() => ({}))
