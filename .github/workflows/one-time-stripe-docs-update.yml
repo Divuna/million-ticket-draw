@@ -1,6 +1,7 @@
 name: One-time Stripe documentation update
 
 on:
+  workflow_dispatch:
   push:
     branches: [main]
     paths:
@@ -97,7 +98,6 @@ jobs:
           prepend(history, HISTORY_MARKER, history_section)
           prepend(claude, CLAUDE_MARKER, claude_section)
 
-          # Oprava nejdůležitějších zastaralých tvrzení ve starší sekci stavu.
           state_text = state.read_text(encoding='utf-8')
           state_text = state_text.replace(
               '- `stripe-refund` **v135 → v136**, `verify_jwt = true` zachováno,',
