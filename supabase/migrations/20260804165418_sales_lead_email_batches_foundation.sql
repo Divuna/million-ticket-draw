@@ -35,6 +35,7 @@ CREATE TABLE public.sales_lead_email_batches (
   window_end time NOT NULL DEFAULT time '16:30',
   daily_limit smallint NOT NULL DEFAULT 20 CHECK (daily_limit BETWEEN 1 AND 20),
   idempotency_key text NOT NULL CHECK (length(btrim(idempotency_key)) BETWEEN 8 AND 200),
+  request_fingerprint text NOT NULL CHECK (request_fingerprint ~ '^[0-9a-f]{64}$'),
   scheduled_count smallint NOT NULL DEFAULT 0 CHECK (scheduled_count BETWEEN 0 AND 20),
   skipped_count integer NOT NULL DEFAULT 0 CHECK (skipped_count >= 0),
   cancelled_at timestamptz,
@@ -82,16 +83,25 @@ CREATE TABLE public.sales_lead_email_batch_items (
   )
 );
 
+CREATE TABLE public.sales_lead_email_batch_skips (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  batch_id uuid NOT NULL REFERENCES public.sales_lead_email_batches(id) ON DELETE RESTRICT,
+  requested_lead_id uuid NOT NULL,
+  company_name_snapshot text,
+  reason text NOT NULL CHECK (length(btrim(reason)) BETWEEN 1 AND 200),
+  created_at timestamptz NOT NULL DEFAULT now()
+);
+
 -- These partial unique indexes are the final, race-safe enrollment barrier.
 -- An advisory lock in the creation RPC makes the expected failure deterministic;
 -- the indexes still protect correctness if a future caller omits that lock.
 CREATE UNIQUE INDEX sales_lead_email_batch_items_active_lead_unique
   ON public.sales_lead_email_batch_items (lead_id)
-  WHERE status IN ('pending', 'processing');
+  WHERE status IN ('pending', 'processing', 'sent', 'failed');
 
 CREATE UNIQUE INDEX sales_lead_email_batch_items_active_recipient_unique
   ON public.sales_lead_email_batch_items (lower(btrim(recipient_snapshot)))
-  WHERE status IN ('pending', 'processing');
+  WHERE status IN ('pending', 'processing', 'sent', 'failed');
 
 CREATE INDEX sales_lead_email_batches_status_date_idx
   ON public.sales_lead_email_batches (status, scheduled_date, created_at);
@@ -101,10 +111,13 @@ CREATE INDEX sales_lead_email_batch_items_batch_status_schedule_idx
   ON public.sales_lead_email_batch_items (batch_id, status, scheduled_for);
 CREATE INDEX sales_lead_email_batch_items_lead_idx
   ON public.sales_lead_email_batch_items (lead_id, created_at DESC);
+CREATE INDEX sales_lead_email_batch_skips_batch_idx
+  ON public.sales_lead_email_batch_skips (batch_id, created_at);
 
 ALTER TABLE public.sales_lead_email_automation_settings ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.sales_lead_email_batches ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.sales_lead_email_batch_items ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.sales_lead_email_batch_skips ENABLE ROW LEVEL SECURITY;
 
 CREATE FUNCTION public.sales_lead_email_batch_item_preserve_snapshot()
 RETURNS trigger
@@ -145,13 +158,18 @@ CREATE POLICY sales_lead_email_batches_select
 CREATE POLICY sales_lead_email_batch_items_select
   ON public.sales_lead_email_batch_items FOR SELECT TO authenticated
   USING ((SELECT public.has_admin_permission('sales_leads.manage', auth.uid())));
+CREATE POLICY sales_lead_email_batch_skips_select
+  ON public.sales_lead_email_batch_skips FOR SELECT TO authenticated
+  USING ((SELECT public.has_admin_permission('sales_leads.manage', auth.uid())));
 
 REVOKE ALL ON TABLE public.sales_lead_email_automation_settings FROM PUBLIC, anon, authenticated;
 REVOKE ALL ON TABLE public.sales_lead_email_batches FROM PUBLIC, anon, authenticated;
 REVOKE ALL ON TABLE public.sales_lead_email_batch_items FROM PUBLIC, anon, authenticated;
+REVOKE ALL ON TABLE public.sales_lead_email_batch_skips FROM PUBLIC, anon, authenticated;
 GRANT SELECT ON TABLE public.sales_lead_email_automation_settings TO authenticated;
 GRANT SELECT ON TABLE public.sales_lead_email_batches TO authenticated;
 GRANT SELECT ON TABLE public.sales_lead_email_batch_items TO authenticated;
+GRANT SELECT ON TABLE public.sales_lead_email_batch_skips TO authenticated;
 
 -- Helpers below are deliberately not executable by API roles. They run only as
 -- implementation details of the guarded public RPCs.
@@ -189,24 +207,59 @@ AS $$
     '^\s*[-•]\s+', '• ', 'gm');
 $$;
 
+CREATE FUNCTION public.sales_lead_email_batch_render_emphasis_html(p_value text)
+RETURNS text
+LANGUAGE sql IMMUTABLE
+SET search_path = ''
+AS $$
+  SELECT regexp_replace(
+    regexp_replace(
+      replace(replace(replace(replace(replace(coalesce(p_value, ''),
+        '&', '&amp;'), '<', '&lt;'), '>', '&gt;'), '"', '&quot;'), '''', '&#39;'),
+      '\*\*([^*\r\n]+)\*\*', '<strong>\1</strong>', 'g'),
+    '(^|[^*])\*([^*\r\n]+)\*(?!\*)', '\1<em>\2</em>', 'g');
+$$;
+
 CREATE FUNCTION public.sales_lead_email_batch_render_inline_html(p_value text)
 RETURNS text
 LANGUAGE plpgsql IMMUTABLE
 SET search_path = ''
 AS $$
 DECLARE
-  v_html text := replace(replace(replace(replace(replace(coalesce(p_value, ''),
-    '&', '&amp;'), '<', '&lt;'), '>', '&gt;'), '"', '&quot;'), '''', '&#39;');
+  v_remaining text := coalesce(p_value, '');
+  v_output text := '';
+  v_match text[];
+  v_full_match text;
+  v_position integer;
+  v_href text;
+  v_external_attributes text;
 BEGIN
-  v_html := regexp_replace(
-    v_html,
-    '\[([^]\r\n]+)\]\(((https?://|mailto:)[^)[:space:]]+)\)',
-    '<a href="\2" target="_blank" rel="noopener noreferrer nofollow" style="color:#d97706;text-decoration:underline">\1</a>',
-    'gi'
-  );
-  v_html := regexp_replace(v_html, '\*\*([^*\r\n]+)\*\*', '<strong>\1</strong>', 'g');
-  v_html := regexp_replace(v_html, '(^|[^*])\*([^*\r\n]+)\*(?!\*)', '\1<em>\2</em>', 'g');
-  RETURN v_html;
+  LOOP
+    v_match := regexp_match(
+      v_remaining,
+      '\[([^]\r\n]+)\]\(((https?://|mailto:)[^)[:space:]]+)\)',
+      'i'
+    );
+    EXIT WHEN v_match IS NULL;
+    v_href := v_match[2];
+    v_full_match := '[' || v_match[1] || '](' || v_href || ')';
+    v_position := strpos(v_remaining, v_full_match);
+    v_external_attributes := CASE WHEN v_href ~* '^https?://'
+      THEN ' target="_blank" rel="noopener noreferrer nofollow"'
+      ELSE ''
+    END;
+    v_output := v_output
+      || public.sales_lead_email_batch_render_emphasis_html(left(v_remaining, v_position - 1))
+      || '<a href="'
+      || replace(replace(replace(replace(replace(v_href,
+           '&', '&amp;'), '<', '&lt;'), '>', '&gt;'), '"', '&quot;'), '''', '&#39;')
+      || '"' || v_external_attributes
+      || ' style="color:#d97706;text-decoration:underline">'
+      || public.sales_lead_email_batch_render_emphasis_html(v_match[1])
+      || '</a>';
+    v_remaining := substring(v_remaining FROM v_position + length(v_full_match));
+  END LOOP;
+  RETURN v_output || public.sales_lead_email_batch_render_emphasis_html(v_remaining);
 END;
 $$;
 
@@ -221,7 +274,9 @@ DECLARE
   v_list_type text := NULL;
   v_item text;
 BEGIN
-  FOR v_line IN SELECT regexp_split_to_table(replace(coalesce(p_value, ''), E'\r', ''), E'\n') LOOP
+  FOR v_line IN
+    SELECT regexp_split_to_table(regexp_replace(coalesce(p_value, ''), E'\r\n?', E'\n', 'g'), E'\n')
+  LOOP
     IF v_line ~ '^\s*[-•]\s+(.+)$' THEN
       IF v_list_type IS DISTINCT FROM 'ul' THEN
         IF v_list_type IS NOT NULL THEN v_html := v_html || '</' || v_list_type || '>'; END IF;
@@ -342,7 +397,7 @@ BEGIN
 
   IF EXISTS (
     SELECT 1 FROM public.sales_lead_email_batch_items i
-    WHERE i.status IN ('pending', 'processing')
+    WHERE i.status IN ('pending', 'processing', 'sent', 'failed')
       AND (i.lead_id = p_lead_id OR lower(btrim(i.recipient_snapshot)) = v_recipient)
   ) THEN
     RETURN jsonb_build_object('eligible', false, 'lead_id', p_lead_id, 'company_name', v_lead.company_name, 'reason', 'already_in_active_batch');
@@ -381,12 +436,61 @@ BEGIN
 END;
 $$;
 
+CREATE FUNCTION public.sales_lead_email_batch_schedule_window(
+  p_scheduled_date date,
+  p_timezone text,
+  p_window_start time,
+  p_window_end time,
+  p_item_count integer,
+  p_now timestamptz DEFAULT clock_timestamp()
+) RETURNS jsonb
+LANGUAGE plpgsql
+SET search_path = ''
+AS $$
+DECLARE
+  v_local_now timestamp;
+  v_local_start timestamp;
+  v_local_end timestamp;
+  v_start timestamptz;
+  v_end timestamptz;
+BEGIN
+  IF p_scheduled_date IS NULL OR p_timezone IS DISTINCT FROM 'Europe/Prague'
+     OR p_window_start IS NULL OR p_window_end IS NULL OR p_window_start >= p_window_end
+     OR p_item_count IS NULL OR p_item_count < 1 THEN
+    RETURN jsonb_build_object('success', false, 'error', 'invalid_scheduling_window');
+  END IF;
+  v_local_now := p_now AT TIME ZONE p_timezone;
+  IF p_scheduled_date < v_local_now::date THEN
+    RETURN jsonb_build_object('success', false, 'error', 'invalid_scheduled_date');
+  END IF;
+  v_local_end := p_scheduled_date + p_window_end;
+  v_local_start := p_scheduled_date + p_window_start;
+  IF p_scheduled_date = v_local_now::date THEN
+    v_local_start := greatest(v_local_start, v_local_now + interval '5 minutes');
+  END IF;
+  -- Five minutes per item is the minimum safe remaining distribution window.
+  IF v_local_start >= v_local_end
+     OR v_local_end - v_local_start < p_item_count * interval '5 minutes' THEN
+    RETURN jsonb_build_object('success', false, 'error', 'scheduling_window_closed');
+  END IF;
+  v_start := v_local_start AT TIME ZONE p_timezone;
+  v_end := v_local_end AT TIME ZONE p_timezone;
+  RETURN jsonb_build_object(
+    'success', true,
+    'window_start', v_start,
+    'window_end', v_end,
+    'window_start_local', v_local_start,
+    'window_end_local', v_local_end
+  );
+END;
+$$;
+
 CREATE FUNCTION public.sales_lead_email_batch_preview(
   p_lead_ids uuid[],
   p_template_id uuid,
   p_scheduled_date date
 ) RETURNS jsonb
-LANGUAGE plpgsql STABLE SECURITY DEFINER
+LANGUAGE plpgsql SECURITY DEFINER
 SET search_path = ''
 AS $$
 DECLARE
@@ -399,6 +503,7 @@ DECLARE
   v_settings public.sales_lead_email_automation_settings%ROWTYPE;
   v_active_today integer;
   v_available integer;
+  v_window jsonb;
 BEGIN
   IF v_caller IS NULL OR NOT public.has_admin_permission('sales_leads.manage', v_caller) THEN
     RETURN jsonb_build_object('success', false, 'error', 'access_denied');
@@ -416,7 +521,7 @@ BEGIN
   SELECT count(*) INTO v_active_today
   FROM public.sales_lead_email_batch_items i
   JOIN public.sales_lead_email_batches b ON b.id = i.batch_id
-  WHERE b.scheduled_date = p_scheduled_date AND i.status IN ('pending', 'processing');
+  WHERE b.scheduled_date = p_scheduled_date AND i.status IN ('pending', 'processing', 'sent', 'failed');
   v_available := greatest(v_settings.daily_limit - v_active_today, 0);
 
   FOR v_lead_id IN SELECT DISTINCT x FROM unnest(p_lead_ids) AS selected(x) WHERE x IS NOT NULL ORDER BY x LOOP
@@ -434,11 +539,21 @@ BEGIN
     END IF;
   END LOOP;
 
+  v_window := public.sales_lead_email_batch_schedule_window(
+    p_scheduled_date, v_settings.timezone, v_settings.window_start, v_settings.window_end,
+    greatest(jsonb_array_length(v_eligible), 1)
+  );
+  IF coalesce((v_window->>'success')::boolean, false) IS NOT TRUE THEN
+    RETURN jsonb_build_object('success', false, 'error', v_window->>'error');
+  END IF;
+
   RETURN jsonb_build_object(
     'success', true,
     'automation_enabled', v_settings.enabled,
     'daily_limit', v_settings.daily_limit,
     'daily_remaining', v_available,
+    'window_start', v_window->'window_start',
+    'window_end', v_window->'window_end',
     'eligible_count', jsonb_array_length(v_eligible),
     'ineligible_count', jsonb_array_length(v_ineligible),
     'eligible', v_eligible,
@@ -474,6 +589,11 @@ DECLARE
   v_index integer := 0;
   v_window_seconds numeric;
   v_scheduled_for timestamptz;
+  v_request_fingerprint text;
+  v_window jsonb;
+  v_actual_window_start timestamptz;
+  v_actual_window_end timestamptz;
+  v_inserted_skips integer;
 BEGIN
   IF v_caller IS NULL OR NOT public.has_admin_permission('sales_leads.manage', v_caller) THEN
     RETURN jsonb_build_object('success', false, 'error', 'access_denied');
@@ -492,9 +612,22 @@ BEGIN
     RETURN jsonb_build_object('success', false, 'error', 'invalid_scheduled_date');
   END IF;
 
+  SELECT encode(extensions.digest(convert_to(
+    coalesce(string_agg(selected_id::text, ',' ORDER BY selected_id), '')
+    || '|' || coalesce(p_template_id::text, '')
+    || '|' || p_scheduled_date::text,
+    'UTF8'
+  ), 'sha256'), 'hex') INTO v_request_fingerprint
+  FROM (
+    SELECT DISTINCT x AS selected_id
+    FROM unnest(p_lead_ids) AS requested(x)
+    WHERE x IS NOT NULL
+  ) fingerprint_input;
+
   SELECT * INTO v_existing FROM public.sales_lead_email_batches WHERE idempotency_key = btrim(p_idempotency_key);
   IF FOUND THEN
-    IF v_existing.created_by IS DISTINCT FROM v_caller THEN
+    IF v_existing.created_by IS DISTINCT FROM v_caller
+       OR v_existing.request_fingerprint IS DISTINCT FROM v_request_fingerprint THEN
       RETURN jsonb_build_object('success', false, 'error', 'idempotency_key_conflict');
     END IF;
     RETURN jsonb_build_object(
@@ -532,7 +665,7 @@ BEGIN
   SELECT count(*) INTO v_active_today
   FROM public.sales_lead_email_batch_items i
   JOIN public.sales_lead_email_batches b ON b.id = i.batch_id
-  WHERE b.scheduled_date = p_scheduled_date AND i.status IN ('pending', 'processing');
+  WHERE b.scheduled_date = p_scheduled_date AND i.status IN ('pending', 'processing', 'sent', 'failed');
   v_available := greatest(v_settings.daily_limit - v_active_today, 0);
 
   FOR v_lead_id IN SELECT DISTINCT x FROM unnest(p_lead_ids) AS selected(x) WHERE x IS NOT NULL ORDER BY x LOOP
@@ -558,24 +691,45 @@ BEGIN
     RETURN jsonb_build_object('success', false, 'error', 'batch_limit_exceeded');
   END IF;
 
+  v_window := public.sales_lead_email_batch_schedule_window(
+    p_scheduled_date, v_settings.timezone, v_settings.window_start, v_settings.window_end, v_count
+  );
+  IF coalesce((v_window->>'success')::boolean, false) IS NOT TRUE THEN
+    RETURN jsonb_build_object('success', false, 'error', v_window->>'error');
+  END IF;
+  v_actual_window_start := (v_window->>'window_start')::timestamptz;
+  v_actual_window_end := (v_window->>'window_end')::timestamptz;
+
   INSERT INTO public.sales_lead_email_batches (
     status, template_id, template_name_snapshot, created_by, scheduled_date,
-    timezone, window_start, window_end, daily_limit, idempotency_key,
+    timezone, window_start, window_end, daily_limit, idempotency_key, request_fingerprint,
     scheduled_count, skipped_count
   ) VALUES (
     'scheduled', v_template.id, v_template.name, v_caller, p_scheduled_date,
-    v_settings.timezone, v_settings.window_start, v_settings.window_end,
-    v_settings.daily_limit, btrim(p_idempotency_key), v_count, jsonb_array_length(v_ineligible)
+    v_settings.timezone, (v_actual_window_start AT TIME ZONE v_settings.timezone)::time,
+    (v_actual_window_end AT TIME ZONE v_settings.timezone)::time,
+    v_settings.daily_limit, btrim(p_idempotency_key), v_request_fingerprint,
+    v_count, jsonb_array_length(v_ineligible)
   ) RETURNING id INTO v_batch_id;
 
-  v_window_seconds := extract(epoch FROM (v_settings.window_end - v_settings.window_start));
+  INSERT INTO public.sales_lead_email_batch_skips (
+    batch_id, requested_lead_id, company_name_snapshot, reason
+  )
+  SELECT
+    v_batch_id,
+    (skipped.value->>'lead_id')::uuid,
+    nullif(skipped.value->>'company_name', ''),
+    skipped.value->>'reason'
+  FROM jsonb_array_elements(v_ineligible) AS skipped(value);
+  GET DIAGNOSTICS v_inserted_skips = ROW_COUNT;
+  IF v_inserted_skips IS DISTINCT FROM jsonb_array_length(v_ineligible) THEN
+    RAISE EXCEPTION USING ERRCODE = '23514', MESSAGE = 'sales_lead_email_batch_skip_audit_mismatch';
+  END IF;
+
+  v_window_seconds := extract(epoch FROM (v_actual_window_end - v_actual_window_start));
   FOR v_result IN SELECT value FROM jsonb_array_elements(v_eligible) LOOP
-    v_scheduled_for := (
-      p_scheduled_date + v_settings.window_start
-      + CASE WHEN v_count = 1 THEN interval '0 seconds'
-             ELSE make_interval(secs => (v_index * v_window_seconds / (v_count - 1))::double precision)
-        END
-    ) AT TIME ZONE v_settings.timezone;
+    v_scheduled_for := v_actual_window_start
+      + make_interval(secs => (v_index * v_window_seconds / v_count)::double precision);
     INSERT INTO public.sales_lead_email_batch_items (
       batch_id, lead_id, status, scheduled_for, recipient_snapshot,
       email_source_snapshot, email_verification_method_snapshot, email_verified_at_snapshot,
@@ -600,11 +754,15 @@ BEGIN
 EXCEPTION
   WHEN unique_violation THEN
     SELECT * INTO v_existing FROM public.sales_lead_email_batches WHERE idempotency_key = btrim(p_idempotency_key);
-    IF FOUND AND v_existing.created_by = v_caller THEN
+    IF FOUND AND v_existing.created_by = v_caller
+       AND v_existing.request_fingerprint = v_request_fingerprint THEN
       RETURN jsonb_build_object(
         'success', true, 'idempotent_replay', true, 'batch_id', v_existing.id,
         'scheduled_count', v_existing.scheduled_count, 'skipped_count', v_existing.skipped_count
       );
+    END IF;
+    IF FOUND THEN
+      RETURN jsonb_build_object('success', false, 'error', 'idempotency_key_conflict');
     END IF;
     RETURN jsonb_build_object('success', false, 'error', 'concurrent_enrollment_conflict');
 END;
@@ -635,6 +793,12 @@ BEGIN
   END IF;
   IF v_batch.status NOT IN ('scheduled', 'paused') THEN
     RETURN jsonb_build_object('success', false, 'error', 'batch_not_cancellable');
+  END IF;
+  IF EXISTS (
+    SELECT 1 FROM public.sales_lead_email_batch_items
+    WHERE batch_id = p_batch_id AND status = 'processing'
+  ) THEN
+    RETURN jsonb_build_object('success', false, 'error', 'batch_processing');
   END IF;
 
   UPDATE public.sales_lead_email_batch_items
@@ -674,14 +838,18 @@ $$;
 
 REVOKE ALL ON FUNCTION public.sales_lead_email_batch_render_source(text,text,text,text,text,text) FROM PUBLIC, anon, authenticated;
 REVOKE ALL ON FUNCTION public.sales_lead_email_batch_render_text(text) FROM PUBLIC, anon, authenticated;
+REVOKE ALL ON FUNCTION public.sales_lead_email_batch_render_emphasis_html(text) FROM PUBLIC, anon, authenticated;
 REVOKE ALL ON FUNCTION public.sales_lead_email_batch_render_inline_html(text) FROM PUBLIC, anon, authenticated;
 REVOKE ALL ON FUNCTION public.sales_lead_email_batch_render_html(text) FROM PUBLIC, anon, authenticated;
+REVOKE ALL ON FUNCTION public.sales_lead_email_batch_schedule_window(date,text,time,time,integer,timestamptz) FROM PUBLIC, anon, authenticated;
 REVOKE ALL ON FUNCTION public.sales_lead_email_batch_check_one(uuid,uuid) FROM PUBLIC, anon, authenticated;
 REVOKE ALL ON FUNCTION public.sales_lead_email_batch_item_preserve_snapshot() FROM PUBLIC, anon, authenticated;
 GRANT EXECUTE ON FUNCTION public.sales_lead_email_batch_render_source(text,text,text,text,text,text) TO service_role;
 GRANT EXECUTE ON FUNCTION public.sales_lead_email_batch_render_text(text) TO service_role;
+GRANT EXECUTE ON FUNCTION public.sales_lead_email_batch_render_emphasis_html(text) TO service_role;
 GRANT EXECUTE ON FUNCTION public.sales_lead_email_batch_render_inline_html(text) TO service_role;
 GRANT EXECUTE ON FUNCTION public.sales_lead_email_batch_render_html(text) TO service_role;
+GRANT EXECUTE ON FUNCTION public.sales_lead_email_batch_schedule_window(date,text,time,time,integer,timestamptz) TO service_role;
 GRANT EXECUTE ON FUNCTION public.sales_lead_email_batch_check_one(uuid,uuid) TO service_role;
 
 REVOKE ALL ON FUNCTION public.sales_lead_email_batch_preview(uuid[],uuid,date) FROM PUBLIC, anon;
@@ -699,6 +867,8 @@ COMMENT ON TABLE public.sales_lead_email_batches IS
   'Audit header for manually created first-sales-email batches. Rows never send email by themselves.';
 COMMENT ON TABLE public.sales_lead_email_batch_items IS
   'Frozen recipient/template/render snapshots for future dispatch. PR 1 creates pending or cancelled items only.';
+COMMENT ON TABLE public.sales_lead_email_batch_skips IS
+  'Narrow immutable audit of selected leads rejected while a batch was created; contains no message content.';
 COMMENT ON FUNCTION public.sales_lead_email_batch_create(uuid[],uuid,date,text) IS
   'Atomically rechecks eligibility and stores a passive batch of at most 20 frozen first-email items. Performs no network or send operation.';
 

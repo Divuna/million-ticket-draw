@@ -30,6 +30,7 @@ test.describe('sales lead email batch database foundation', () => {
       'sales_lead_email_automation_settings',
       'sales_lead_email_batches',
       'sales_lead_email_batch_items',
+      'sales_lead_email_batch_skips',
     ]) {
       expect(migration).toContain(`CREATE TABLE public.${table}`);
       expect(migration).toContain(`ALTER TABLE public.${table} ENABLE ROW LEVEL SECURITY`);
@@ -45,7 +46,7 @@ test.describe('sales lead email batch database foundation', () => {
   });
 
   test('allows read only to sales-lead managers and blocks direct client writes', () => {
-    expect(migration.match(/FOR SELECT TO authenticated/g)).toHaveLength(3);
+    expect(migration.match(/FOR SELECT TO authenticated/g)).toHaveLength(4);
     expect(migration.match(/has_admin_permission\('sales_leads\.manage'/g)?.length).toBeGreaterThanOrEqual(6);
     expect(migration).not.toMatch(/CREATE POLICY .*_(?:insert|update|delete)/i);
     expect(migration).not.toMatch(/GRANT (?:INSERT|UPDATE|DELETE|ALL) ON TABLE .* TO authenticated/i);
@@ -65,7 +66,11 @@ test.describe('sales lead email batch database foundation', () => {
     expect(create).toContain('FOR UPDATE');
     expect(create).toContain('pg_advisory_xact_lock');
     expect(create).toContain('idempotent_replay');
+    expect(create).toContain('request_fingerprint');
+    expect(create).toContain('idempotency_key_conflict');
     expect(cancel).toContain("WHERE batch_id = p_batch_id AND status = 'pending'");
+    expect(cancel).toContain("status = 'processing'");
+    expect(cancel).toContain("'batch_processing'");
     expect(cancel).not.toMatch(/DELETE\s+FROM/i);
   });
 
@@ -75,9 +80,26 @@ test.describe('sales lead email batch database foundation', () => {
     expect(migration).toContain('sales_lead_email_batch_items_active_recipient_unique');
     expect(migration).toContain('lower(btrim(recipient_snapshot))');
     expect(migration).toContain('sales_lead_email_batches_idempotency_unique');
+    expect(migration).toContain("WHERE status IN ('pending', 'processing', 'sent', 'failed')");
     expect(migration).toContain('daily_limit smallint NOT NULL DEFAULT 20 CHECK (daily_limit BETWEEN 1 AND 20)');
     expect(migration).toContain("'daily_limit_exceeded'");
     expect(migration).toContain("'duplicate_recipient_in_selection'");
+    expect(migration).toContain('sales_lead_email_batch_skips');
+    expect(migration).toContain('GET DIAGNOSTICS v_inserted_skips = ROW_COUNT');
+  });
+
+  test('uses a real remaining-day window and never creates catch-up slots', () => {
+    const schedule = functionBody('sales_lead_email_batch_schedule_window');
+    const preview = functionBody('sales_lead_email_batch_preview');
+    const create = functionBody('sales_lead_email_batch_create');
+    expect(schedule).toContain("v_local_now + interval '5 minutes'");
+    expect(schedule).toContain("'scheduling_window_closed'");
+    expect(schedule).toContain("p_item_count * interval '5 minutes'");
+    expect(preview).toContain('sales_lead_email_batch_schedule_window');
+    expect(preview).toContain("'window_start'");
+    expect(preview).toContain("'window_end'");
+    expect(create).toContain('sales_lead_email_batch_schedule_window');
+    expect(create).toContain('v_index * v_window_seconds / v_count');
   });
 
   test('rechecks every current first-email eligibility barrier', () => {

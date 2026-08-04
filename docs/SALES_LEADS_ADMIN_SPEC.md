@@ -931,22 +931,31 @@ databázovou vrstvu. Není aplikovaná na staging ani produkci a neobsahuje work
 volání ani odesílací cestu. Globální nastavení vzniká s `enabled=false`.
 
 - `sales_lead_email_batches` je auditní hlavička ručně potvrzené dávky. Uchovává snapshot názvu
-  šablony, den a pracovní okno `08:30–16:30 Europe/Prague`, limit nejvýše 20, idempotency key,
-  počty a audit zrušení.
+  šablony, den a skutečně použité pracovní okno v `Europe/Prague`, limit nejvýše 20, idempotency key,
+  deterministický otisk požadavku, počty a audit zrušení.
 - `sales_lead_email_batch_items` ukládá neměnné snapshoty příjemce, zdroje a metody ověření,
   předmětu, zdrojového formátovaného těla, plain-text a bezpečného HTML, verze šablony a názvu
   firmy. Změna leadu nebo šablony proto již naplánovaný obsah nepřepíše.
+- `sales_lead_email_batch_skips` trvale eviduje každý vybraný, ale nezařazený lead, snapshot názvu
+  firmy a důvod. Neobsahuje předmět ani tělo zprávy a klient do ní nesmí zapisovat.
 - Read-only RPC `sales_lead_email_batch_preview` vrací způsobilé a nezpůsobilé leady s důvodem.
   `sales_lead_email_batch_create` provede stejné kontroly znovu pod zámky a atomicky uloží jen
-  způsobilé položky. `sales_lead_email_batch_cancel` pouze označí čekající položky a zachová audit.
+  způsobilé položky. `sales_lead_email_batch_cancel` odmítne celý požadavek chybou
+  `batch_processing`, pokud se již některá položka zpracovává; jinak označí pouze čekající položky
+  a zachová audit.
   Kill switch smí měnit jen superadmin přes `sales_lead_email_automation_set_enabled`.
 - Kontrola používá stejné povolené stavy jako současný první sender (`novy`, `priprava`,
   `schvaleni_ceka`), stávající suppression list a `sales_lead_email_send_guard`. Navíc vyžaduje
   platný, manuálně nebo backendem ověřený e-mail se zdrojem a časem ověření, absenci předchozího
   prvního `email_sent`, aktivní šablonu typu `initial`, vyřešené proměnné a stejné obsahové limity.
-- Souběh chrání deterministické transakční/advisory zámky a částečné unikátní indexy pro aktivní
-  `lead_id` i normalizovaného příjemce. Idempotency key je unikátní a vstupní UUID se sjednotí.
-  Globální denní kapacita je serializována přes jediný řádek nastavení a nepřesáhne 20.
+- Souběh chrání deterministické transakční/advisory zámky a částečné unikátní indexy pro
+  `pending`, `processing`, `sent` a `failed`, a to pro `lead_id` i normalizovaného příjemce.
+  Idempotency key je unikátní a je svázán s SHA-256 otiskem seřazených unikátních leadů, šablony a data.
+  Globální denní kapacita je serializována přes jediný řádek nastavení; spotřebovávají ji
+  `pending`, `processing`, `sent` a `failed`, takže během dne nikdy nepřesáhne 20.
+- Pro dnešní den se okno otevírá nejdříve pět minut po aktuálním čase a položky se rovnoměrně
+  rozloží do zbývajícího času před `16:30`. Pokud nezbývá bezpečný čas, RPC vrátí
+  `scheduling_window_closed`; žádná catch-up dávka ani čas v minulosti nevznikne.
 - Přímé klientské zápisy jsou zakázané. Tabulky jsou přes RLS čitelné pouze s
   `sales_leads.manage`; interní pomocné funkce nejsou dostupné rolím `anon` ani `authenticated`.
 

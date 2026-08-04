@@ -2089,8 +2089,12 @@ Zbývá ručně ověřit na telefonu: Android Chrome native install dialog, Andr
 - Do not add or enable a worker, cron, automatic lead selection, follow-up, reply, catch-up burst,
   sender call, backfill, or deployment in PR 1. No code in this PR may create `sent` items.
 - Direct client writes remain forbidden. Reads require `sales_leads.manage`; batch creation must
-  recheck eligibility under deterministic locks and preserve the partial unique active lead/email
-  indexes and idempotency key.
+  recheck eligibility under deterministic locks. Daily capacity and partial unique lead/e-mail
+  indexes cover `pending`, `processing`, `sent`, and `failed`; only `cancelled`/`skipped` release
+  capacity or allow re-enrollment. Idempotency keys are bound to a SHA-256 request fingerprint.
+- Rejected selections are persisted in `sales_lead_email_batch_skips`. Today's first slot is at
+  least five minutes in the future and all slots are before 16:30 Prague time; insufficient time
+  returns `scheduling_window_closed`. Cancellation fails closed while any item is `processing`.
 - PR 2 must add UI preview/manual confirmation and a narrowly scoped internal worker with a fresh
   pre-send recheck, atomic claim/recovery and one-item-at-a-time dispatch. It must ship disabled and
   require separate rollout approval.

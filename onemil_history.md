@@ -5161,6 +5161,10 @@ Rozsah role: jen `/admin/partner-offers` (moderace nabídek + per-offer billing 
   První obchodní e-mail ale dnes používá přímý Resend sender, nikoli obecnou frontu.
 - Připravena jediná pasivní migrace se settings (`enabled=false`), batch a frozen-item tabulkou,
   RLS/privileges, read-only preview RPC, atomickým create RPC, cancel RPC a superadmin kill switchem.
+- Bezpečnostní revize před stagingem doplnila trvalý audit přeskočených leadů, skutečný denní limit
+  přes `pending`/`processing`/`sent`/`failed`, stejné stavy do unikátní ochrany leadu a příjemce,
+  fingerprint idempotentního požadavku, dnešní okno s rezervou pěti minut a fail-closed cancel při
+  `processing`. SQL text/HTML renderer je regresně porovnáván se sdíleným TypeScript rendererem.
 - Způsobilost znovu používá současné stavy, suppression a duplicitní guard; doplňuje ověření
   zdroje/metody/času, historii prvního odeslání na lead i adresu, aktivní dávku, šablonu a proměnné.
 - Žádný worker, cron, Edge Function, sender ani administrační UI nebyly přidány nebo změněny.

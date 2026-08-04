@@ -2,6 +2,10 @@ import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import test from 'node:test';
 import { PGlite } from '@electric-sql/pglite';
+import {
+  renderSalesLeadEmailHtml,
+  renderSalesLeadEmailText,
+} from '../../supabase/functions/_shared/salesLeadEmailRendering.ts';
 
 const migration = fs.readFileSync('supabase/migrations/20260804165418_sales_lead_email_batches_foundation.sql', 'utf8');
 const db = new PGlite();
@@ -12,7 +16,9 @@ const lead = '30000000-0000-4000-8000-000000000001';
 
 const baseline = `
 create role anon nologin; create role authenticated nologin; create role service_role nologin;
-create schema auth;
+create schema auth; create schema extensions;
+create function extensions.digest(value bytea, algorithm text) returns bytea language sql immutable as $$
+  select decode(md5(encode(value,'hex')) || md5(algorithm || encode(value,'hex')),'hex') $$;
 create table auth.users(id uuid primary key);
 create function auth.uid() returns uuid language sql stable as $$
   select nullif(current_setting('request.jwt.claim.sub',true),'')::uuid $$;
@@ -79,6 +85,7 @@ test('migration is passive, empty, and disabled', async () => {
 test('outsider cannot read, write, or create a batch', async () => {
   await asUser(outsider);
   assert.equal((await db.query('select count(*)::int n from public.sales_lead_email_automation_settings')).rows[0].n, 0);
+  assert.equal((await db.query('select count(*)::int n from public.sales_lead_email_batch_skips')).rows[0].n, 0);
   await assert.rejects(db.query(`insert into public.sales_lead_email_batches
     (template_name_snapshot,created_by,scheduled_date,idempotency_key)
     values('x',$1,current_date,'outsider-key')`, [outsider]), /permission denied|row-level security/i);
@@ -113,6 +120,9 @@ test('manager gets atomic, frozen, idempotent enrollment and audited cancellatio
     [[lead], template, 'batch-idempotency-1']);
   assert.equal(replay.idempotent_replay, true);
   assert.equal(replay.batch_id, created.batch_id);
+  const conflict = await value('select public.sales_lead_email_batch_create($1::uuid[],$2::uuid,current_date+2,$3)',
+    [[lead], template, 'batch-idempotency-1']);
+  assert.equal(conflict.error, 'idempotency_key_conflict');
   const snapshot = (await db.query(`select recipient_snapshot,subject_snapshot,body_html_snapshot,company_name_snapshot
     from public.sales_lead_email_batch_items where batch_id=$1`, [created.batch_id])).rows[0];
   assert.equal(snapshot.recipient_snapshot, 'alfa@example.cz');
@@ -213,4 +223,106 @@ test('daily capacity and partial unique indexes cap active enrollment', async ()
   assert.equal(result.scheduled_count,20);
   assert.equal(result.skipped_count,1);
   assert.equal(result.ineligible[0].reason,'daily_limit_exceeded');
+  await asOwner();
+  const skips = (await db.query(`select requested_lead_id,company_name_snapshot,reason
+    from public.sales_lead_email_batch_skips where batch_id=$1`, [result.batch_id])).rows;
+  assert.equal(skips.length, result.skipped_count);
+  assert.deepEqual(skips[0], {
+    requested_lead_id: ids[20], company_name_snapshot: 'Bulk 120', reason: 'daily_limit_exceeded',
+  });
+  await db.query(`update public.sales_lead_email_batch_items
+    set status=case when lead_id=any($1::uuid[]) then 'sent' else 'failed' end,
+        error_code=case when lead_id=any($1::uuid[]) then null else 'provider_outcome_unknown' end
+    where batch_id=$2`, [ids.slice(0, 10), result.batch_id]);
+  const extra = '30000000-0000-4000-8000-000000000121';
+  await db.query(`insert into public.sales_leads(id,company_name,contact_email,email_source,email_verified_by_admin,
+    email_verification_method,email_verified_at,status,created_by) values($1,'Bulk 121','bulk-121@domain-121.cz',
+    'https://domain-121.cz/kontakt',true,'admin_manual',now(),'novy',$2)`, [extra, manager]);
+  await asUser(manager);
+  const preview = await value('select public.sales_lead_email_batch_preview($1::uuid[],$2::uuid,current_date+3)',
+    [[extra], template]);
+  assert.equal(preview.ineligible[0].reason, 'daily_limit_exceeded');
+  const blocked = await value('select public.sales_lead_email_batch_create($1::uuid[],$2::uuid,current_date+3,$3)',
+    [[extra], template, 'batch-capacity-terminal']);
+  assert.equal(blocked.error, 'no_eligible_leads');
+  assert.equal(blocked.ineligible[0].reason, 'daily_limit_exceeded');
+
+  for (const [id, status, key, offset] of [
+    [ids[0], 'sent', 'batch-repeat-sent', 4],
+    [ids[15], 'failed', 'batch-repeat-failed', 5],
+  ]) {
+    const repeated = await value(
+      `select public.sales_lead_email_batch_create($1::uuid[],$2::uuid,current_date+$4::integer,$3)`,
+      [[id], template, key, offset],
+    );
+    assert.equal(repeated.error, 'no_eligible_leads');
+    assert.equal(repeated.ineligible[0].reason, 'already_in_active_batch', status);
+  }
+});
+
+test('cancellation is fail-closed and atomic while an item is processing', async () => {
+  await asOwner();
+  const ids = ['30000000-0000-4000-8000-000000000130','30000000-0000-4000-8000-000000000131'];
+  for (const [index,id] of ids.entries()) await db.query(`insert into public.sales_leads(
+    id,company_name,contact_email,email_source,email_verified_by_admin,email_verification_method,
+    email_verified_at,status,created_by) values($1,$2,$3,$4,true,'admin_manual',now(),'novy',$5)`,
+    [id,`Cancel ${index}`,`cancel-${index}@cancel-${index}.cz`,`https://cancel-${index}.cz/kontakt`,manager]);
+  await asUser(manager);
+  const created = await value('select public.sales_lead_email_batch_create($1::uuid[],$2::uuid,current_date+6,$3)',
+    [ids, template, 'batch-cancel-processing']);
+  await asOwner();
+  await db.query("update public.sales_lead_email_batch_items set status='processing' where batch_id=$1 and lead_id=$2",
+    [created.batch_id, ids[0]]);
+  await asUser(manager);
+  const cancelled = await value('select public.sales_lead_email_batch_cancel($1::uuid,$2)',
+    [created.batch_id, 'Pokus během zpracování']);
+  assert.equal(cancelled.error, 'batch_processing');
+  await asOwner();
+  const batch = (await db.query('select status,cancelled_at,cancelled_by,cancel_reason from public.sales_lead_email_batches where id=$1',
+    [created.batch_id])).rows[0];
+  assert.deepEqual(batch, { status: 'scheduled', cancelled_at: null, cancelled_by: null, cancel_reason: null });
+  const states = (await db.query('select status,count(*)::int count from public.sales_lead_email_batch_items where batch_id=$1 group by status order by status',
+    [created.batch_id])).rows;
+  assert.deepEqual(states, [{ status: 'pending', count: 1 }, { status: 'processing', count: 1 }]);
+});
+
+test('afternoon scheduling uses the remaining Prague window without past or catch-up slots', async () => {
+  await asOwner();
+  const window = await value(`select public.sales_lead_email_batch_schedule_window(
+    date '2026-08-04','Europe/Prague',time '08:30',time '16:30',4,
+    timestamptz '2026-08-04 12:00:00+00')`);
+  assert.equal(window.success, true);
+  const start = new Date(window.window_start);
+  const end = new Date(window.window_end);
+  const now = new Date('2026-08-04T12:00:00.000Z');
+  assert.equal(start.toISOString(), '2026-08-04T12:05:00.000Z');
+  assert.equal(end.toISOString(), '2026-08-04T14:30:00.000Z');
+  const slots = Array.from({ length: 4 }, (_, index) =>
+    new Date(start.getTime() + index * (end.getTime() - start.getTime()) / 4));
+  assert.ok(slots.every((slot) => slot.getTime() >= now.getTime() + 5 * 60_000));
+  assert.ok(slots.every((slot) => slot.getTime() < end.getTime()));
+  assert.ok(slots.slice(1).every((slot, index) => slot.getTime() > slots[index].getTime()));
+  const closed = await value(`select public.sales_lead_email_batch_schedule_window(
+    date '2026-08-04','Europe/Prague',time '08:30',time '16:30',2,
+    timestamptz '2026-08-04 14:24:00+00')`);
+  assert.equal(closed.error, 'scheduling_window_closed');
+});
+
+test('database rendering exactly matches the shared TypeScript renderer', async () => {
+  await asOwner();
+  const inputs = [`Dobrý den **Alfa & <Beta>** 🙂
+
+*Kurzíva* a [HTTPS **odkaz**](https://example.cz/a?x=1&y=2).
+- první položka
+• druhá *položka*
+1. první krok
+2) [Napište nám](mailto:b2b+test@onemil.cz)
+
+Konec "nabídky".`, 'Řádek s CRLF\r\n\r\nPoslední\r\n', ''];
+  for (const input of inputs) {
+    const sqlText = (await db.query('select public.sales_lead_email_batch_render_text($1) rendered', [input])).rows[0].rendered;
+    const sqlHtml = (await db.query('select public.sales_lead_email_batch_render_html($1) rendered', [input])).rows[0].rendered;
+    assert.equal(sqlText, renderSalesLeadEmailText(input));
+    assert.equal(sqlHtml, renderSalesLeadEmailHtml(input));
+  }
 });
