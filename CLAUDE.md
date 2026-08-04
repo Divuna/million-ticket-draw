@@ -1,3 +1,16 @@
+# Stripe refundace — invarianty (ověřeno Sandbox testy 04. 08. 2026)
+
+- **Refundaci lze zahájit jen tehdy, když má uživatel k dispozici celý počet MioCoinů připsaný danou platbou.** Kontrola je v `prepare_stripe_refund` a běží **před** jakýmkoli voláním Stripe.
+- **Refundace odečítá celý připsaný počet včetně balíčkového bonusu** — u balíčku 300 Kč se odečítá 310 MioCoinů, ne 300.
+- **Nedostatečný zůstatek musí refundaci zastavit před Stripe.** Platba zůstane `completed`, `stripe_refund_id` i `stripe_refund_status` prázdné a nesmí vzniknout `refund_debit` ani `refund_reversal`.
+- **Refundaci smí spustit role `admin` i `superadmin`** (`stripe-refund`, oprava v commitu `ffc0aac8`). Nevracet kontrolu jen na `admin`.
+- **Terminální Stripe stavy `succeeded`, `failed` a `canceled` se nesmí přepisovat staršími webhooky.** `record_stripe_refund_status` je chrání a vrací `ok: true, ignored: true, code: 'terminal_state'`; obě Edge Functions větví podle efektivního stavu z databáze, ne podle příchozí události.
+- **Jedna platba smí mít nejvýše jeden `refund_debit` a nejvýše jeden `refund_reversal`** — jištěno unikátními parciálními indexy `uniq_wallet_tx_refund_debit_per_payment` a `uniq_wallet_tx_refund_reversal_per_payment`.
+- **Stripe Sandbox webhook** pro `https://xkzhjldrojjlrkezorey.supabase.co/functions/v1/stripe-webhook` má právě čtyři události: `checkout.session.completed`, `refund.created`, `refund.updated`, `refund.failed`.
+- **Live Stripe webhook (zatím jen `checkout.session.completed`) se nesmí měnit bez výslovného schválení Pavla.**
+- **Stripe konektor připojený k live režimu se nesmí používat pro testovací refundace ani jakékoli změny** — testovat výhradně v Sandboxu.
+- **Nikdy nezobrazovat ani neukládat Stripe secret key ani webhook signing secret** (do kódu, logů, dokumentace, commitů ani odpovědí).
+
 # Bezpečnostní invarianty — ověřeno 02. 08. 2026
 
 - Funkcím `get_admin_activation_summary()`, `create_partner_offer_invoices_for_period(date,date)`, `assign_partner_offer_to_ticket(uuid,uuid,uuid)` a `sync_partner_offer_activations()` **nevracet `anon` ani `PUBLIC` EXECUTE**. První má vnitřní guard `WHERE public.is_admin()`, zbylé tři smí volat jen `service_role` / interní backend. Odpovídající migrace jsou v `supabase/migrations/` (`20260801180617`, `20260801180912`, `20260801181421`, `20260801185927`).

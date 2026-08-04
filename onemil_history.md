@@ -1,10 +1,20 @@
+# 04. 08. 2026 — Stripe refundace: v137, superadmin, Publish, Sandbox webhook a ověřené testy
+
+- **`stripe-refund` nasazena ve verzi v137** (`verify_jwt = true`); `stripe-webhook` zůstává **v338** (`verify_jwt = false`, ověřuje Stripe podpis).
+- **Oprava role (commit `ffc0aac8`):** refundaci smí spustit **`admin` i `superadmin`** — původní kontrola pouštěla jen `admin`, takže superadmin dostával 403.
+- **Lovable Publish proběhl** — administrace zobrazuje dokončené, čekající i selhané refundace.
+- **Stripe Sandbox webhook** pro `https://xkzhjldrojjlrkezorey.supabase.co/functions/v1/stripe-webhook` nastaven přesně na `checkout.session.completed`, `refund.created`, `refund.updated`, `refund.failed`. **Live webhook zůstává jen na `checkout.session.completed`.**
+- **Test 50 Kč:** platba připsala 50 MioCoinů, právě jeden `payment_credit` +50; refundace skončila jako `refunded` se `stripe_refund_status = succeeded`, právě jeden `refund_debit` −50, žádný `refund_reversal`.
+- **Test 300 Kč:** platba připsala 310 MioCoinů včetně balíčkového bonusu; refundace odečetla přesně 310 včetně bonusu; právě jeden `payment_credit` +310 a jeden `refund_debit` −310; Stripe stav `succeeded`; bez duplicity.
+- **Test ochrany proti utraceným MioCoinům:** účet `kutil@opravo.cz` nastaven pro test z 1 427 MioCoinů na 0 (účetní záznam −1 427), poté koupen balíček 50 Kč a utraceno 5 MioCoinů → zůstatek 45. Refundace byla **správně odmítnuta ještě před voláním Stripe**: platba zůstala `completed`, `stripe_refund_id` i `stripe_refund_status` prázdné, nevznikl `refund_debit` ani `refund_reversal`.
+
 # 03. 08. 2026 — Zpevnění Stripe refundací: PR #309 mergnut, DB migrace na produkci
 
 - **PR #309 mergnut do `main`** (merge commit `e0f7514d`) po převodu z Draft na Ready; CI Smoke E2E zelené.
 - **Migrace `20260803090000_harden_stripe_refund_flow.sql` aplikována na produkci `xkzhjldrojjlrkezorey`** (schválení Pavla), v `schema_migrations` jako **`20260803201005`** (apply nástroj razítkuje vlastní čas).
 - **Postcheck ✅:** 3 nové sloupce `payments.stripe_refund_*`/`refund_updated_at`, 3 unikátní indexy, 4 nové funkce (`SECURITY DEFINER` + `search_path=public`, 0 grantů pro `anon`/`authenticated`, EXECUTE jen `service_role`), `admin_manage_payment` s blokovanou refundní větví a bez `admin_refund_credit`, `reverse_failed_stripe_refund` s pojmenovanými argumenty. Data nedotčena: 135 plateb, 139 856,41 MC, 3 733 ledger řádků, checksum `referral_rewards` identický, 0 řádků s vyplněnými refundními poli.
-- **Edge Functions nasazené z `main` (03. 08. 2026, schválení Pavla):** `stripe-refund` **v135 → v136** (`verify_jwt = true` zachováno), `stripe-webhook` **v337 → v338** (`verify_jwt = false` zachováno kvůli Stripe podpisu). Smoke: refund bez JWT → 401, webhook bez podpisu → `No Stripe signature found`. Refundace z administrace tím jde novou cestou (kontrola zůstatku a odečet PŘED Stripe, `finalize` jen po `succeeded`).
-- **Vědomě NEPROVEDENO:** Lovable Publish frontendu (`AdminPayments.tsx` — administrace zatím nezná nové stavy) a rozšíření Stripe webhook endpointu o `refund.created`/`refund.updated`/`refund.failed` (dnes jen `checkout.session.completed`, takže zpožděné refundace zůstanou v `refund_pending` do ručního ověření).
+- **Edge Functions nasazené z `main` (03. 08. 2026, schválení Pavla):** `stripe-refund` **v135 → v136** (`verify_jwt = true` zachováno; **aktuální produkční verze je od 04. 08. 2026 v137**, viz záznam výše), `stripe-webhook` **v337 → v338** (`verify_jwt = false` zachováno kvůli Stripe podpisu). Smoke: refund bez JWT → 401, webhook bez podpisu → `No Stripe signature found`. Refundace z administrace tím jde novou cestou (kontrola zůstatku a odečet PŘED Stripe, `finalize` jen po `succeeded`).
+- **Tehdy ještě neprovedeno (dokončeno 04. 08. 2026, viz záznam výše):** Lovable Publish frontendu a rozšíření Stripe Sandbox webhooku o `refund.created`/`refund.updated`/`refund.failed`.
 - **Data po deployi nedotčena:** 135 plateb (129 completed, 6 refunded, 0 refund_pending), 139 856,41 MC, 3 733 ledger řádků, 0 řádků `refund_debit`/`refund_reversal`, checksum `referral_rewards` identický.
 
 # 03. 08. 2026 — Reverze odměny za doporučení opravena na produkci

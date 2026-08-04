@@ -1,5 +1,23 @@
 # OneMil – aktuální stav projektu
 
+## AKTUÁLNÍ STAV — SANDBOX TOK DOBÍJENÍ A REFUNDACÍ OTESTOVÁN A FUNKČNÍ (04. 08. 2026)
+
+**Celý tok Stripe dobití → připsání MioCoinů → refundace je ve Stripe Sandboxu ověřený a funguje.** Backend i frontend jsou nasazené, Sandbox webhook posílá refundní události, ochrana proti refundaci již utracených MioCoinů je potvrzená reálným testem.
+
+- **Backend:** PR #309 mergnut do `main` (commit `e0f7514d`); produkční migrace refundací evidována jako **`20260803201005` / `harden_stripe_refund_flow`**; `stripe-refund` běží ve **v137** (`verify_jwt = true`), `stripe-webhook` ve **v338** (`verify_jwt = false`, ověřuje Stripe podpis).
+- **Role:** `stripe-refund` povoluje spuštění refundace rolím **`admin` i `superadmin`** (oprava v commitu **`ffc0aac8`**).
+- **Frontend:** **Lovable Publish proběhl** — administrace zobrazuje dokončené, čekající i selhané refundace.
+- **Stripe Sandbox webhook** pro `https://xkzhjldrojjlrkezorey.supabase.co/functions/v1/stripe-webhook` poslouchá přesně `checkout.session.completed`, `refund.created`, `refund.updated` a `refund.failed`.
+- **Live Stripe webhook** zůstává zatím pouze na `checkout.session.completed`.
+
+**Ověřené Sandbox testy:**
+
+| Test | Výsledek |
+|---|---|
+| **50 Kč** | platba připsala 50 MioCoinů; právě jeden `payment_credit` **+50**; refundace skončila jako `refunded`, `stripe_refund_status = succeeded`; právě jeden `refund_debit` **−50**; **žádný** `refund_reversal` |
+| **300 Kč (balíček s bonusem)** | platba připsala **310** MioCoinů včetně bonusu; refundace odečetla přesně **310** včetně bonusu; právě jeden `payment_credit` **+310**; právě jeden `refund_debit` **−310**; Stripe stav `succeeded`; bez duplicity |
+| **Ochrana proti utraceným MioCoinům** | účet `kutil@opravo.cz` byl pro test nastaven z 1 427 MioCoinů na 0 (odpovídající účetní záznam **−1 427**), pak koupen balíček 50 Kč a utraceno 5 MioCoinů → zůstatek 45. **Refundace byla správně odmítnuta ještě před voláním Stripe**: platba zůstala `completed`, `stripe_refund_id` i `stripe_refund_status` prázdné, nevznikl `refund_debit` ani `refund_reversal` |
+
 ## REVERZE ODMĚNY ZA DOPORUČENÍ — OPRAVENA NA PRODUKCI (03. 08. 2026, schválení Pavla)
 
 **Migrace `supabase/migrations/20260803120000_fix_referral_reversal_ambiguous_call.sql` aplikována na produkci `xkzhjldrojjlrkezorey`.** V `schema_migrations` je zapsaná jako **`20260803192609` / `fix_referral_reversal_ambiguous_call`** — apply nástroj razítkuje vlastní čas, takže se produkční verze **liší od čísla souboru v repu** (`20260803120000`). Stejně je na tom `restore_wallet_payment_ledger` (soubor `20260802120000`, produkce `20260802205656`). Repozitářní čísla proto v `schema_migrations` nejsou; `db push` se na tomto projektu nepoužívá, takže to nic neblokuje.
@@ -14,19 +32,19 @@
 
 ## STRIPE REFUNDACE — DB I EDGE FUNCTIONS NA PRODUKCI (03. 08. 2026)
 
-**PR #309 mergnut do `main`** (merge commit `e0f7514d`), **migrace `20260803090000_harden_stripe_refund_flow.sql` aplikována na produkci `xkzhjldrojjlrkezorey`** (v `schema_migrations` jako **`20260803201005`**) a **obě Edge Functions nasazené z aktuálního `main`** (schválení Pavla):
-- `stripe-refund` **v135 → v136**, `verify_jwt = true` zachováno,
-- `stripe-webhook` **v337 → v338**, `verify_jwt = false` zachováno (ověřuje se Stripe podpis).
+**PR #309 mergnut do `main`** (merge commit `e0f7514d`), **migrace `20260803090000_harden_stripe_refund_flow.sql` aplikována na produkci `xkzhjldrojjlrkezorey`** (v `schema_migrations` jako **`20260803201005` / `harden_stripe_refund_flow`**) a **obě Edge Functions nasazené z `main`** (schválení Pavla):
+- `stripe-refund` — aktuálně **v137**, `verify_jwt = true`; povoluje role **`admin` i `superadmin`** (oprava role v commitu `ffc0aac8`),
+- `stripe-webhook` — aktuálně **v338**, `verify_jwt = false`, ověřuje Stripe podpis.
 
 **Smoke po deployi ✅:** `stripe-refund` bez JWT → **401**; `stripe-webhook` bez Stripe podpisu → **`No Stripe signature found`** (podpis zůstává povinný).
 
-**Zbývající kroky (vědomě NEPROVEDENY, každý vyžaduje samostatné schválení):**
-1. **Lovable Publish frontendu** (`AdminPayments.tsx`) — administrace zatím nezobrazí „Refundace čeká" / „Refundace selhala" ani tlačítko „Ověřit stav refundace"; starý build volá stejný endpoint a chybové hlášky zobrazí, ale nové stavy nepozná.
-2. **Rozšíření Stripe webhook endpointu** o `refund.created` / `refund.updated` / `refund.failed` (dnes jen `checkout.session.completed`). Do té doby Stripe refundní události neposílá, takže refundace se `pending`/`requires_action` zůstane v `refund_pending`, dokud ji administrátor ručně neověří.
+**Frontend:** Lovable Publish proběhl — administrace zobrazuje dokončené, čekající i selhané refundace.
 
-**Co už platí:** refundace spuštěná z administrace jde novou cestou — nejdřív `prepare_stripe_refund` (kontrola celého zůstatku + odečet), teprve pak Stripe, a `finalize_stripe_refund` jen po `succeeded`. Zákazník už nemůže utratit MioCoiny a přesto dostat celou platbu zpět.
+**Stripe webhooky:** Sandbox endpoint poslouchá `checkout.session.completed`, `refund.created`, `refund.updated`, `refund.failed`. **Live webhook zůstává zatím jen na `checkout.session.completed`** a bez výslovného schválení Pavla se nemění.
 
-**Produkční postcheck ✅:** 3 nové sloupce, 3 unikátní indexy, 4 nové funkce (`SECURITY DEFINER` + `search_path=public`), 0 grantů pro `anon`/`authenticated`, 4× EXECUTE pro `service_role`; `admin_manage_payment` má refundní větev blokovanou, žádný `admin_refund_credit`, `anon`/`authenticated` bez EXECUTE; `reverse_failed_stripe_refund` používá pojmenované argumenty. **Data nedotčena:** 135 plateb (129 `completed`, 6 `refunded`, 0 `refund_pending`), 139 856,41 MC, 3 733 ledger řádků, 0 řádků `refund_debit`/`refund_reversal`, 0 plateb s `stripe_refund_id`, checksum `referral_rewards` identický. Žádná skutečná refundace neproběhla, žádná testovací platba nevznikla, Stripe konfigurace nezměněna.
+**Co platí:** refundace spuštěná z administrace jde novou cestou — nejdřív `prepare_stripe_refund` (kontrola celého zůstatku + odečet), teprve pak Stripe, a `finalize_stripe_refund` jen po `succeeded`. Zákazník nemůže utratit MioCoiny a přesto dostat celou platbu zpět; ověřeno reálným Sandbox testem (viz sekce nahoře).
+
+**Produkční postcheck po nasazení DB vrstvy ✅:** 3 nové sloupce, 3 unikátní indexy, 4 nové funkce (`SECURITY DEFINER` + `search_path=public`), 0 grantů pro `anon`/`authenticated`, 4× EXECUTE pro `service_role`; `admin_manage_payment` má refundní větev blokovanou, žádný `admin_refund_credit`, `anon`/`authenticated` bez EXECUTE; `reverse_failed_stripe_refund` používá pojmenované argumenty. Stav dat bezprostředně po tomto nasazení (tj. **před** Sandbox testy popsanými nahoře): 135 plateb, 139 856,41 MC, 3 733 ledger řádků, 0 řádků `refund_debit`/`refund_reversal`, checksum `referral_rewards` identický.
 
 Popis samotné změny (proč a co dělá) zůstává níže.
 
@@ -63,7 +81,7 @@ completed
 - **Edge Function `stripe-webhook`** — celý tok `checkout.session.completed` **beze změny**. Nově zpracovává `refund.created` / `refund.updated` / `refund.failed`: platbu hledá primárně přes `refund.metadata.onemil_payment_id` (záloha: `payments.stripe_refund_id`), uloží Stripe stav a podle **efektivního** stavu z databáze buď dokončí `refund_pending → refunded`, nebo jednou vrátí MioCoiny i odměnu za doporučení a vrátí platbu na `completed`, nebo jen aktualizuje stav. Ignorovanou starší událost (terminální stav) webhook jen potvrdí a nevrací kvůli ní chybu 500; pozdní `failed` po dokončené refundaci RPC navíc odmítne (`already_refunded`). Ověření podpisu zůstává povinné. Idempotence stojí na unikátních indexech v databázi, takže opakovaná událost nezmění zůstatek podruhé, nevytvoří druhý ledger řádek, nepřipíše odměnu podruhé a `refunded` se nevrací zpět.
 - **`src/pages/AdminPayments.tsx`** — stav „Refundace čeká" (`refund_pending`) a **„Refundace selhala" odvozená z `payment.status === 'completed'` + `stripe_refund_status IN ('failed','canceled')`** (badge i filtr); u `refund_pending` tlačítko **„Ověřit stav refundace"**; u selhané refundace **žádné tlačítko** pro novou refundaci, jen informace, že je nutná ruční kontrola a že MioCoiny i odměna za doporučení byly vráceny; platba se **dál počítá mezi dokončené platby a tržby**; blokace opakovaného klikání během požadavku; HTTP 202 se zobrazí jako „Refundace čeká na Stripe".
 
-**Nutná samostatná změna Stripe konfigurace (zatím NEPROVEDENA):** produkční webhook endpoint je dnes přihlášený pouze k `checkout.session.completed`. Po nasazení kódu bude potřeba přidat `refund.created`, `refund.updated` a `refund.failed`. Bez toho zůstanou zpožděné refundace ve stavu `refund_pending`, dokud je administrátor ručně neověří tlačítkem.
+**Stripe konfigurace:** Sandbox endpoint už poslouchá `checkout.session.completed` + `refund.created` + `refund.updated` + `refund.failed`. **Live endpoint zůstává jen na `checkout.session.completed`** — jeho rozšíření vyžaduje výslovné schválení Pavla. Dokud live webhook refundní události neposílá, zůstane tam refundace ve stavu `pending`/`requires_action` v `refund_pending`, dokud ji administrátor ručně neověří tlačítkem.
 
 **Poznámky ke schématu (ověřeno proti produkci):** `payments.status` je `text` bez CHECK constraintu → přechodný `refund_pending` nevyžaduje změnu schématu; v produkci neexistuje žádný řádek `refund_debit`, takže nové unikátní indexy nemohou selhat na historických datech. Trigger `trg_payments_referral_reverse` provede reverzi odměny za doporučení při `completed → refund_pending`; následné `refund_pending → refunded` ani `refund_pending → completed` už nic nereverzuje (podmínka `OLD.status = 'completed'`), reverze tedy proběhne právě jednou a obnovu při selhání dělá `reverse_failed_stripe_refund`. Produkční `try_credit_wallet_mc(uuid, numeric)` vrací `boolean` (existují ještě overloady `(uuid)` a `(uuid, numeric, text)` vracející `void` — používá se ta booleanová).
 
