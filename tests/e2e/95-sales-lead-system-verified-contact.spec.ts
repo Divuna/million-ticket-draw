@@ -7,6 +7,9 @@ const migration = fs.readFileSync(
   'utf8',
 );
 const enrich = fs.readFileSync('supabase/functions/sales-lead-enrich-contact/index.ts', 'utf8');
+const discoveryContactRpc = migration
+  .split('CREATE OR REPLACE FUNCTION public.sales_lead_propose_with_contact')[1]
+  ?.split('-- Historický AI návrh')[0] ?? '';
 
 const officialWebsite = 'https://firma.example.cz';
 const sourceUrl = `${officialWebsite}/kontakt`;
@@ -120,7 +123,8 @@ test.describe('atomické uložení a zákaz neověřených AI návrhů', () => {
     expect(migration).toContain("p_proposed_by IS DISTINCT FROM 'admin'");
     expect(migration).toContain("'backend_verification_required'");
     expect(migration).toContain("proposed_contact_by IS DISTINCT FROM 'admin'");
-    expect(migration).toMatch(/REVOKE ALL ON FUNCTION public\.sales_lead_propose_with_contact\([\s\S]*service_role;/);
+    expect(migration).toContain("p_proposed_by IS DISTINCT FROM 'backend_verified_official_website'");
+    expect(discoveryContactRpc).not.toMatch(/proposed_contact_email\s*=\s*v_email/);
   });
 
   test('testovací sada nemá žádnou cestu k odeslání produkčnímu leadu', () => {

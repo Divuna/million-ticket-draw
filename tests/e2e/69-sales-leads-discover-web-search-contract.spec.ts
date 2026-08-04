@@ -5,6 +5,11 @@ const worker = fs.readFileSync('supabase/functions/sales-lead-discover/index.ts'
 const candidates = fs.readFileSync('supabase/functions/_shared/companyCandidateSearch.ts', 'utf8');
 const registry = fs.readFileSync('supabase/functions/_shared/companyRegistryEnrich.ts', 'utf8');
 const verifier = fs.readFileSync('supabase/functions/_shared/companyWebsiteVerifier.ts', 'utf8');
+const emailCrawler = fs.readFileSync('supabase/functions/_shared/companyEmailCrawler.ts', 'utf8');
+const verifiedContactMigration = fs.readFileSync('supabase/migrations/20260804141916_sales_lead_system_verified_contact.sql', 'utf8');
+const discoveryContactRpc = verifiedContactMigration
+  .split('CREATE OR REPLACE FUNCTION public.sales_lead_propose_with_contact')[1]
+  ?.split('-- Historický AI návrh')[0] ?? '';
 const dialog = fs.readFileSync('src/components/admin/sales-leads/DiscoverLeadsDialog.tsx', 'utf8');
 // Sledování jobu žije nad dialogem (aby zavření okna nezastavilo průběh),
 // proto se tabulka i RPC volají z hooku — kontrakt platí pro celý modul.
@@ -13,7 +18,7 @@ const discoveryUi = `${dialog}\n${discoveryHook}`;
 const migJobs = fs.readFileSync('supabase/migrations/20260712120000_sales_lead_discovery_jobs.sql', 'utf8');
 const migCron = fs.readFileSync('supabase/migrations/20260712130000_sales_lead_discovery_worker_cron.sql', 'utf8');
 
-test.describe('Discovery Jobs — worker, kandidáti z web search, bez e-mailu', () => {
+test.describe('Discovery Jobs — worker, kandidáti z web search, bezpečný volitelný e-mail', () => {
   test('kandidáti se získávají AKTIVNÍM web search (ne AI generuje seznam)', () => {
     expect(candidates).toContain('web_search_preview');
     expect(candidates).toContain('api.openai.com/v1/responses');
@@ -42,12 +47,32 @@ test.describe('Discovery Jobs — worker, kandidáti z web search, bez e-mailu',
     expect(migJobs).toContain('requested_count = počet uložených firem');
   });
 
-  test('discovery NIKDY nesbírá ani neukládá e-mail', () => {
-    expect(worker).not.toContain('crawlCompanyWebsite');
-    expect(worker).not.toContain('sales_lead_propose_with_contact');
-    expect(worker).not.toContain('p_email');
-    expect(worker).not.toContain('proposed_contact');
-    expect(worker).toContain('supabaseAdmin.rpc("sales_lead_propose"');
+  test('ověřený e-mail vznikne jen přes sdílený backend verifier a atomické RPC', () => {
+    expect(worker).toContain('crawlCompanyWebsite');
+    expect(worker).toContain('verifyEmailOnOfficialSourcePage');
+    expect(worker).toContain('sales_lead_propose_with_contact');
+    expect(worker).toContain('backend_verified_official_website');
+    expect(emailCrawler).toContain('redirect_left_verified_website');
+    expect(verifiedContactMigration).toContain("email_verification_method = 'backend_verified_official_website'");
+    expect(verifiedContactMigration).toContain('contact_email = v_email');
+  });
+
+  test('bez důkazu vznikne lead přes původní RPC bez e-mailu a bez AI návrhu', () => {
+    expect(worker).toContain('verifiedContact ? "sales_lead_propose_with_contact" : "sales_lead_propose"');
+    expect(worker).not.toContain('proposed_contact_email');
+    expect(worker).not.toContain('sales_lead_propose_contact');
+    expect(discoveryContactRpc).not.toMatch(/proposed_contact_email\s*=\s*v_email/);
+  });
+
+  test('service_role oprávnění zůstává a současný discovery tok nedostane permission error', () => {
+    expect(verifiedContactMigration).toMatch(/GRANT EXECUTE ON FUNCTION public\.sales_lead_propose_with_contact\([\s\S]*?TO service_role;/);
+    expect(verifiedContactMigration).not.toMatch(/FROM PUBLIC, anon, authenticated, service_role/);
+    expect(worker).toContain('const rpcName = verifiedContact');
+  });
+
+  test('discovery ani jeho databázová cesta nevolá e-mailové sendery', () => {
+    expect(worker).not.toMatch(/resend|email_queue|send-sales-lead-email|send-sales-lead-reply|send-sales-lead-follow-up/i);
+    expect(verifiedContactMigration).not.toMatch(/resend|email_queue|net\.http/i);
   });
 
   test('enrichment jen doložitelných údajů z ARES/webu (nic se nehádá)', () => {
@@ -90,13 +115,14 @@ test.describe('Discovery Jobs — worker, kandidáti z web search, bez e-mailu',
     expect(migJobs).toContain('ENABLE ROW LEVEL SECURITY');
   });
 
-  test('UI: job + živý progress + cíl uložených, bez e-mailu', () => {
+  test('UI: job + živý progress + cíl uložených, e-mail je jen ověřený bonus', () => {
     expect(discoveryUi).toContain('sales_lead_discovery_job_create');
     expect(discoveryUi).toContain('sales_lead_discovery_jobs');
     expect(dialog).toContain('Počet uložených firem (cíl)');
     expect(dialog).toContain('Prověřeno kandidátů');
     expect(dialog).toContain('Uloženo do segmentu');
     expect(dialog).toContain('běží dál');
-    expect(dialog).toContain('E-mail se NEsbírá');
+    expect(dialog).toContain('Veřejný e-mail se uloží jen po přesném backendovém ověření');
+    expect(dialog).toContain('jinak vznikne lead bez e-mailu');
   });
 });
