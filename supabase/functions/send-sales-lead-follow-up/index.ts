@@ -1,7 +1,7 @@
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.57.4";
 import { Resend } from "npm:resend@6.17.2";
-import { markdownLinksToVisibleText } from "../_shared/salesLeadEmailRendering.ts";
+import { renderSalesLeadEmailHtml, renderSalesLeadEmailText } from "../_shared/salesLeadEmailRendering.ts";
 import { parseSalesLeadEmailAttachments } from "../_shared/salesLeadEmailAttachments.ts";
 import { buildReplyHeaders, createOutboundCapture, referencesFromMetadata } from "../_shared/salesLeadEmailThreading.ts";
 
@@ -15,13 +15,6 @@ const json = (body: Record<string, unknown>, status = 200) => new Response(JSON.
   status,
   headers: { ...corsHeaders, "Content-Type": "application/json" },
 });
-
-const escapeHtml = (value: string) => value
-  .replaceAll("&", "&amp;")
-  .replaceAll("<", "&lt;")
-  .replaceAll(">", "&gt;")
-  .replaceAll('"', "&quot;")
-  .replaceAll("'", "&#39;");
 
 serve(async (req) => {
   if (req.method === "OPTIONS") return json({ success: true });
@@ -89,7 +82,8 @@ serve(async (req) => {
     const key = Deno.env.get("RESEND_API_KEY");
     if (!key) return json({ success: false, error: "email_not_configured" }, 503);
 
-    const renderedBody = markdownLinksToVisibleText(body);
+    const renderedText = renderSalesLeadEmailText(body);
+    const renderedHtml = renderSalesLeadEmailHtml(body);
     const parentMessageId = lastSent?.rfc_message_id ?? null;
     const outboundCapture = createOutboundCapture();
     const threadHeaders = buildReplyHeaders(parentMessageId, referencesFromMetadata(lastSent?.metadata));
@@ -99,8 +93,8 @@ serve(async (req) => {
       bcc: [outboundCapture.address],
       replyTo: "OneMil obchodní tým <b2b@onemil.cz>",
       subject,
-      text: renderedBody,
-      html: `<div style="white-space:pre-wrap;font-family:Arial,sans-serif">${escapeHtml(renderedBody)}</div>`,
+      text: renderedText,
+      html: renderedHtml,
       headers: threadHeaders,
     };
     if (attachmentResult.attachments.length > 0) emailPayload.attachments = attachmentResult.attachments;

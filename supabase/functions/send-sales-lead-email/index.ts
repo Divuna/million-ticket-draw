@@ -1,7 +1,7 @@
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.57.4";
 import { Resend } from "npm:resend@2.0.0";
-import { markdownLinksToVisibleText } from "../_shared/salesLeadEmailRendering.ts";
+import { renderSalesLeadEmailHtml, renderSalesLeadEmailText } from "../_shared/salesLeadEmailRendering.ts";
 import { createOutboundCapture } from "../_shared/salesLeadEmailThreading.ts";
 import { parseSalesLeadEmailAttachments } from "../_shared/salesLeadEmailAttachments.ts";
 
@@ -48,15 +48,6 @@ function jsonResponse(body: Record<string, unknown>, status = 200): Response {
     status,
     headers: { ...corsHeaders, "Content-Type": "application/json" },
   });
-}
-
-function escapeHtml(v: string): string {
-  return v
-    .replaceAll("&", "&amp;")
-    .replaceAll("<", "&lt;")
-    .replaceAll(">", "&gt;")
-    .replaceAll('"', "&quot;")
-    .replaceAll("'", "&#39;");
 }
 
 function validateEmailContent(subject: string, body: string): string | null {
@@ -237,8 +228,8 @@ serve(async (req: Request) => {
       return jsonResponse({ success: false, error: "email_not_configured" }, 503);
     }
 
-    const renderedBody = markdownLinksToVisibleText(textBody);
-    const htmlBody = `<div style="white-space:pre-wrap;font-family:Arial,sans-serif;font-size:14px;line-height:1.5">${escapeHtml(renderedBody)}</div>`;
+    const renderedText = renderSalesLeadEmailText(textBody);
+    const renderedHtml = renderSalesLeadEmailHtml(textBody);
     const outboundCapture = createOutboundCapture();
 
     const resend = new Resend(resendApiKey);
@@ -248,8 +239,8 @@ serve(async (req: Request) => {
       bcc: [outboundCapture.address],
       reply_to: REPLY_TO,
       subject,
-      text: renderedBody,
-      html: htmlBody,
+      text: renderedText,
+      html: renderedHtml,
     };
     if (attachmentResult.attachments.length > 0) {
       emailPayload.attachments = attachmentResult.attachments;
