@@ -527,6 +527,36 @@ Fáze 4 využívá stávající pole a přidává:
 - **UI (detail leadu):** sekce „Kontaktní e-mail" — „Dohledat e-mail", panel
   „Navržený e-mail" + zdroj + „Schválit e-mail"/„Zamítnout e-mail".
 
+#### 17.8.1a Systémové ověření kontaktu na oficiálním webu
+
+Tato část nahrazuje pro `sales-lead-enrich-contact` původní ukládání
+neověřeného AI návrhu. Historická pole `proposed_contact_*` zůstávají kvůli
+kompatibilitě ručních návrhů a auditu, ale AI do nich už nesmí zapisovat.
+
+- AI poskytne pouze kandidátní e-mail a přesnou zdrojovou URL. Bez obou hodnot
+  se nic neukládá.
+- Backend zdroj sám stáhne. Počáteční URL i každý redirect musí zůstat na
+  hostname dříve ověřeného oficiálního webu (toleruje se pouze rozdíl `www`).
+  Katalogy, sociální sítě, cizí weby, nebezpečné URL a netextové odpovědi se
+  odmítají.
+- Přesně stejná normalizovaná adresa musí být nalezena ve viditelném textu nebo
+  `mailto:` odkazu stažené stránky. Text ve skriptech, stylech, komentářích a
+  `noscript` není důkaz.
+- Ověřený kontakt ukládá pouze service-role RPC
+  `sales_lead_store_backend_verified_contact`. Pod řádkovým zámkem znovu ověří,
+  že lead stále nemá kontakt, `updated_at` odpovídá snapshotu před dohledáním a
+  ověřený web ani čas jeho ověření se nezměnily. Zároveň provede existující
+  kontrolu duplicit.
+- Jeden atomický zápis nastaví `contact_email`, přesný `email_source`,
+  `email_verified_by_admin=true` (zpětná kompatibilita odesílacích guardů),
+  `email_verification_method='backend_verified_official_website'`,
+  `email_verified_at`, provenance a aktivitu `contact_approved`.
+- Ručně změněný kontakt trigger označí jako `admin_manual`. Starý AI návrh lze
+  zamítnout, nikoli schválit bez nového backendového důkazu.
+- Nepoužívané historické RPC `sales_lead_propose_with_contact`, které umělo
+  zapsat AI návrh bez této kontroly, je odebráno roli `service_role` (fail closed).
+- Změna nemá backfill ani plánovač a sama nevolá žádnou odesílací funkci.
+
 #### 17.8.2 Fáze 5C — automatický discovery vyžaduje veřejný e-mail (implementováno jako soubory)
 - **Tvrdá bariéra:** tlačítko „Najít nové firmy" (EF `sales-lead-discover`)
   nesmí vytvořit lead bez veřejně dohledaného kontaktního e-mailu. AI v jednom

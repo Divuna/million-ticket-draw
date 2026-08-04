@@ -1,6 +1,7 @@
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.57.4";
 import { verifyCompanyWebsite } from "../_shared/companyWebsiteVerifier.ts";
+import { verifyEmailOnOfficialSourcePage } from "../_shared/companyEmailCrawler.ts";
 
 // ============================================================================
 // sales-lead-enrich-contact — bezpečné dohledání VEŘEJNÉHO kontaktu (Fáze 5B)
@@ -9,8 +10,9 @@ import { verifyCompanyWebsite } from "../_shared/companyWebsiteVerifier.ts";
 // AI dohledá VEŘEJNĚ uvedený kontaktní e-mail firmy a vrátí ho i se zdrojovou
 // URL. Tvrdá pravidla:
 //   • AI e-mail NIKDY nevymýšlí. Pokud veřejný e-mail nezná, vrátí null.
-//   • E-mail se ukládá jen jako NEOVĚŘENÝ návrh přes RPC sales_lead_propose_contact
-//     (nikdy nepřepíše odesílací contact_email — to udělá teprve člověk schválením).
+//   • AI je pouze navigace. Backend znovu otevře zdrojovou URL a ověří přesnou
+//     shodu e-mailu na stejné, dříve ověřené firemní doméně.
+//   • Uložení důkazu a kontaktu proběhne atomicky; neověřený AI návrh se neukládá.
 //   • Funkce NIKDY neodesílá e-mail a nemění stav leadu.
 //
 // Auth: JWT → getUser → has_admin_permission('sales_leads.manage') (superadmin
@@ -88,11 +90,14 @@ serve(async (req: Request) => {
     // ── 3. Load lead ─────────────────────────────────────────────────────────
     const { data: lead, error: leadErr } = await supabaseAdmin
       .from("sales_leads")
-      .select("id, company_name, website, ico, city, industry, website_verification_status")
+      .select("id, company_name, website, ico, city, industry, website_verification_status, website_verified_at, contact_email, updated_at")
       .eq("id", leadId)
       .maybeSingle();
     if (leadErr) return jsonResponse({ success: false, error: "lead_lookup_failed" }, 500);
     if (!lead) return jsonResponse({ success: false, error: "lead_not_found" }, 404);
+    if (lead.contact_email) {
+      return jsonResponse({ success: true, found: false, reason: "contact_already_present" });
+    }
     if (!lead.website || lead.website_verification_status !== "overeny") {
       return jsonResponse({ success: true, found: false, reason: "verified_website_required" });
     }
@@ -162,67 +167,56 @@ Dohledej veřejně uvedený kontaktní e-mail této firmy dle pravidel. Pokud ho
     const sourceUrl = typeof parsed.source_url === "string" ? parsed.source_url.trim() : "";
     const emailValid = email.length > 0 && /^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email);
 
-    // Nenalezeno / nejisté / bez zdroje → NIC neuloží (AI nehádá).
-    if (!emailValid || sourceUrl.length === 0 || parsed.confidence === "low") {
+    // Nenalezeno nebo bez zdroje → NIC neuloží. Confidence AI není důkaz;
+    // jediným důkazem je následná kontrola backendem.
+    if (!emailValid || sourceUrl.length === 0) {
       return jsonResponse({ success: true, found: false });
     }
 
-    // AI je pouze navigace. Zdroj musí být na již ověřené firemní doméně a backend
-    // musí navržený e-mail skutečně najít ve staženém obsahu stránky.
-    let source: URL; let official: URL;
-    try { source = new URL(sourceUrl); official = new URL(verifiedWebsite); }
-    catch { return jsonResponse({ success: true, found: false, reason: "invalid_source_url" }); }
-    const host = (u: URL) => u.hostname.toLowerCase().replace(/^www\./, "");
-    if (!['https:', 'http:'].includes(source.protocol) || host(source) !== host(official)) {
-      return jsonResponse({ success: true, found: false, reason: "source_not_on_verified_website" });
-    }
-    const fetchController = new AbortController();
-    const fetchTimer = setTimeout(() => fetchController.abort(), 8_000);
-    let sourceBody = "";
-    try {
-      const page = await fetch(source.toString(), { signal: fetchController.signal, redirect: 'follow', headers: { 'User-Agent': 'OneMilContactVerifier/2.0' } });
-      if (page.status !== 200 || host(new URL(page.url)) !== host(official)) {
-        return jsonResponse({ success: true, found: false, reason: "source_fetch_failed" });
-      }
-      sourceBody = (await page.text()).toLowerCase().replace(/&#64;|&commat;/gi, '@').replace(/&#46;|&period;/gi, '.');
-    } catch { return jsonResponse({ success: true, found: false, reason: "source_fetch_failed" }); }
-    finally { clearTimeout(fetchTimer); }
-    if (!sourceBody.includes(email)) {
-      return jsonResponse({ success: true, found: false, reason: "email_not_found_on_verified_website" });
+    const sourceVerification = await verifyEmailOnOfficialSourcePage({
+      officialWebsite: verifiedWebsite,
+      candidateEmail: email,
+      sourceUrl,
+    });
+    if (!sourceVerification.verified) {
+      return jsonResponse({ success: true, found: false, reason: sourceVerification.reason });
     }
 
-    // ── 6. Uložit jako NEOVĚŘENÝ návrh (nikdy nepřepíše contact_email) ───────
-    const { data: proposeRes, error: proposeErr } = await supabaseAdmin.rpc(
-      "sales_lead_propose_contact",
+    // ── 6. Atomicky uložit backendem ověřený kontakt ─────────────────────────
+    const { data: storeResult, error: storeError } = await supabaseAdmin.rpc(
+      "sales_lead_store_backend_verified_contact",
       {
         p_lead_id: leadId,
         p_created_by: caller.id,
-        p_email: email,
-        p_source_url: sourceUrl,
-        p_proposed_by: "ai",
+        p_email: sourceVerification.email,
+        p_source_url: sourceVerification.sourceUrl,
+        p_expected_updated_at: lead.updated_at,
+        p_expected_website: lead.website,
+        p_expected_website_verified_at: lead.website_verified_at,
       },
     );
-    if (proposeErr) return jsonResponse({ success: false, error: "propose_failed" }, 500);
-    const res = proposeRes as { success?: boolean; error?: string } | null;
+    if (storeError) return jsonResponse({ success: false, error: "store_verified_contact_failed" }, 500);
+    const res = storeResult as { success?: boolean; error?: string; verified_at?: string } | null;
     if (!res?.success) {
-      return jsonResponse({ success: false, error: res?.error ?? "propose_failed" }, 400);
+      const raceErrors = new Set([
+        "contact_already_present",
+        "contact_changed_since_lookup",
+        "verified_website_changed_since_lookup",
+      ]);
+      if (res?.error && raceErrors.has(res.error)) {
+        return jsonResponse({ success: true, found: false, reason: res.error });
+      }
+      return jsonResponse({ success: false, error: res?.error ?? "store_verified_contact_failed" }, 400);
     }
-
-    const verifiedAt = new Date().toISOString();
-    await supabaseAdmin.from("sales_leads").update({
-      contact_data_provenance: {
-        email: { source: sourceUrl, confidence: 95, verified_at: verifiedAt },
-      },
-    }).eq("id", leadId);
 
     return jsonResponse({
       success: true,
       found: true,
-      proposed_email: email,
-      source_url: sourceUrl,
-      status: "neovereny",
-      confidence: 95,
-      verified_at: verifiedAt,
+      contact_email: sourceVerification.email,
+      source_url: sourceVerification.sourceUrl,
+      status: "system_verified",
+      verification_method: "backend_verified_official_website",
+      verified_at: res.verified_at,
     });
   } catch (_err) {
     return jsonResponse({ success: false, error: "internal_error" }, 500);

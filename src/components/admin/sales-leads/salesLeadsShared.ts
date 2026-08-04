@@ -205,6 +205,8 @@ export interface SalesLeadDetail extends SalesLeadRow {
   contact_phone: string | null;
   email_source: string | null;
   email_verified_by_admin: boolean;
+  email_verification_method: 'admin_manual' | 'backend_verified_official_website' | null;
+  email_verified_at: string | null;
   do_not_contact: boolean;
   do_not_contact_reason: string | null;
   notes: string | null;
@@ -254,6 +256,20 @@ export const RPC_ERROR_MESSAGES: Record<string, string> = {
   ai_request_failed: 'AI požadavek se nezdařil, zkuste to znovu.',
   ai_empty_response: 'AI nevrátila žádný obsah, zkuste to znovu.',
   ai_invalid_format: 'AI vrátila neočekávaný formát, zkuste to znovu.',
+  backend_verification_required: 'AI návrh bez důkazu backendu nelze uložit ani schválit.',
+  contact_already_present: 'Lead už má uložený kontaktní e-mail.',
+  contact_changed_since_lookup: 'Kontakt se během ověřování změnil. Novější údaje nebyly přepsány.',
+  verified_website_changed_since_lookup: 'Ověřený web se během kontroly změnil. Kontakt nebyl uložen.',
+  store_verified_contact_failed: 'Ověřený kontakt se nepodařilo bezpečně uložit.',
+  verified_website_required: 'Nejdřív musí být backendem ověřen oficiální web firmy.',
+  verified_website_revalidation_failed: 'Oficiální web se nepodařilo znovu ověřit. Nic nebylo uloženo.',
+  invalid_email: 'Nalezený e-mail nemá platný formát.',
+  invalid_source_url: 'AI nevrátila platnou přesnou zdrojovou URL.',
+  source_not_on_verified_website: 'Zdrojová stránka není na ověřeném oficiálním webu firmy.',
+  non_official_third_party: 'Katalog, sociální síť ani jiný cizí web nelze použít jako důkaz.',
+  source_fetch_failed: 'Zdrojovou stránku se nepodařilo bezpečně načíst.',
+  redirect_left_verified_website: 'Zdrojová stránka přesměrovala mimo ověřený web firmy.',
+  email_not_found_on_verified_website: 'Backend na zdrojové stránce přesně stejný e-mail nenašel.',
   forbidden_wording_detected: 'Návrh obsahoval nepovolené výrazy a nebyl uložen.',
   // Fáze 3C — odeslání konceptu člověkem.
   email_not_configured: 'Odesílání e-mailů zatím není v tomto prostředí nakonfigurované.',
