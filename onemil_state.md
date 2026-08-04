@@ -1,5 +1,16 @@
 # OneMil – aktuální stav projektu
 
+## DENNÍ DÁVKY PRVNÍCH OBCHODNÍCH E-MAILŮ — PR 1 POUZE V DRAFTU (04. 08. 2026)
+
+V samostatné větvi je připraven pasivní databázový základ: tabulky
+`sales_lead_email_automation_settings`, `sales_lead_email_batches` a
+`sales_lead_email_batch_items` plus guardované RPC pro náhled, atomické vytvoření a zrušení.
+Výchozí `enabled=false`; maximum 20 za den; zmrazené recipient/source/verification/template/text/HTML
+snapshoty; RLS jen `sales_leads.manage`; přímé klientské zápisy zakázané; souběh chrání zámky a
+unikátní aktivní lead/e-mail indexy. Návrh nepoužívá obecnou `email_queue`, protože aktuální první
+obchodní sender posílá přímo přes Resend. V PR 1 není worker, cron, UI ani odesílací volání.
+Migrace nebyla nikde aplikována, staging ani produkce nebyly změněny a žádný e-mail nebyl odeslán.
+
 ## AKTUÁLNÍ STAV — SANDBOX TOK DOBÍJENÍ A REFUNDACÍ OTESTOVÁN A FUNKČNÍ (04. 08. 2026)
 
 **Celý tok Stripe dobití → připsání MioCoinů → refundace je ve Stripe Sandboxu ověřený a funguje.** Backend i frontend jsou nasazené, Sandbox webhook posílá refundní události, ochrana proti refundaci již utracených MioCoinů je potvrzená reálným testem.

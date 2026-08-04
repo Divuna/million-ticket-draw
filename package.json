@@ -20,7 +20,8 @@
     "functions:serve": "supabase functions serve",
     "deploy:ai": "supabase functions deploy ai-chat --project-ref xkzhjldrojjlrkezorey",
     "auto-deploy:ai": "node scripts/auto-deploy-on-save.mjs",
-    "test:smoke": "playwright test"
+    "test:smoke": "playwright test",
+    "test:sales-email-batches-db": "node --test tests/db/sales-lead-email-batches-foundation.test.mjs"
   },
   "dependencies": {
     "@capacitor/android": "^8.4.2",
@@ -88,6 +89,7 @@
   },
   "devDependencies": {
     "@capacitor/cli": "^8.4.2",
+    "@electric-sql/pglite": "^0.3.14",
     "@eslint/js": "^9.32.0",
     "@tailwindcss/typography": "^0.5.16",
     "@types/node": "^22.18.6",

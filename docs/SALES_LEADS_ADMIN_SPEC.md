@@ -923,3 +923,35 @@ Stav nasazení 11. 07. 2026: LIVE na stagingu i produkci; migrace `sales_leads_v
 - Nabídka oborů vzniká výhradně z jedinečných neprázdných hodnot `sales_leads.industry`.
 - Oba filtry obsahují volby `Všechny` a `Bez …`. Akce `Zrušit filtry` nastaví stavovou záložku
   na `Vše`, vymaže hledání a obnoví oba výběry na `Všechny`.
+
+## 23. Databázový základ denních dávek prvního e-mailu (PR 1, návrh)
+
+Migrace `20260804165418_sales_lead_email_batches_foundation.sql` připravuje pouze pasivní
+databázovou vrstvu. Není aplikovaná na staging ani produkci a neobsahuje worker, cron, síťové
+volání ani odesílací cestu. Globální nastavení vzniká s `enabled=false`.
+
+- `sales_lead_email_batches` je auditní hlavička ručně potvrzené dávky. Uchovává snapshot názvu
+  šablony, den a pracovní okno `08:30–16:30 Europe/Prague`, limit nejvýše 20, idempotency key,
+  počty a audit zrušení.
+- `sales_lead_email_batch_items` ukládá neměnné snapshoty příjemce, zdroje a metody ověření,
+  předmětu, zdrojového formátovaného těla, plain-text a bezpečného HTML, verze šablony a názvu
+  firmy. Změna leadu nebo šablony proto již naplánovaný obsah nepřepíše.
+- Read-only RPC `sales_lead_email_batch_preview` vrací způsobilé a nezpůsobilé leady s důvodem.
+  `sales_lead_email_batch_create` provede stejné kontroly znovu pod zámky a atomicky uloží jen
+  způsobilé položky. `sales_lead_email_batch_cancel` pouze označí čekající položky a zachová audit.
+  Kill switch smí měnit jen superadmin přes `sales_lead_email_automation_set_enabled`.
+- Kontrola používá stejné povolené stavy jako současný první sender (`novy`, `priprava`,
+  `schvaleni_ceka`), stávající suppression list a `sales_lead_email_send_guard`. Navíc vyžaduje
+  platný, manuálně nebo backendem ověřený e-mail se zdrojem a časem ověření, absenci předchozího
+  prvního `email_sent`, aktivní šablonu typu `initial`, vyřešené proměnné a stejné obsahové limity.
+- Souběh chrání deterministické transakční/advisory zámky a částečné unikátní indexy pro aktivní
+  `lead_id` i normalizovaného příjemce. Idempotency key je unikátní a vstupní UUID se sjednotí.
+  Globální denní kapacita je serializována přes jediný řádek nastavení a nepřesáhne 20.
+- Přímé klientské zápisy jsou zakázané. Tabulky jsou přes RLS čitelné pouze s
+  `sales_leads.manage`; interní pomocné funkce nejsou dostupné rolím `anon` ani `authenticated`.
+
+Navazující PR 2 smí přidat administrační výběr, náhled a ruční potvrzení dávky a samostatný interní
+worker, který před každým pokusem znovu provede ochrany, bezpečně claimne jednu položku a odešle ji
+přes sjednocenou obchodní odesílací logiku. Teprve PR 2 řeší pause/resume, průběžný stav a recovery;
+nesmí přidat ranní automatický výběr, follow-upy, odpovědi ani dohánění zmeškaných položek velkou
+dávkou. Zapnutí zůstane samostatným, výslovně schváleným krokem.
