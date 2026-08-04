@@ -138,7 +138,7 @@ interface ActivityRow {
 const DETAIL_COLUMNS =
   'id, company_name, industry, city, address, status, contact_email, updated_at, assigned_admin_id, ' +
   'ico, dic, website, company_size, contact_person, contact_role, contact_phone, email_source, ' +
-  'email_verified_by_admin, do_not_contact, do_not_contact_reason, notes, created_at, ' +
+  'email_verified_by_admin, email_verification_method, email_verified_at, do_not_contact, do_not_contact_reason, notes, created_at, ' +
   'ai_research_summary, ai_research_at, draft_email_subject, draft_email_body, draft_prepared_by, draft_updated_at, ' +
   'lead_group, lead_quality, discovery_source, discovery_meta, website_verification_status, website_verification_source, website_confidence, website_verified_at, website_verification_evidence, alternative_websites, contact_data_provenance, ' +
   'proposed_contact_email, proposed_contact_source_url, proposed_contact_at, ' +
@@ -1310,10 +1310,9 @@ export function SalesLeadDetailSheet({ leadId, open, onOpenChange, onMutated }: 
     }
   };
 
-  // ── Dohledání veřejného kontaktu (Fáze 5B) — AI nevymýšlí, jen návrh ──────
-  // EF sales-lead-enrich-contact najde VEŘEJNÝ e-mail a uloží ho jen jako
-  // NEOVĚŘENÝ návrh (proposed_contact_*). Odesílací contact_email zůstává beze
-  // změny — vyplní ho teprve člověk schválením níže.
+  // ── Dohledání veřejného kontaktu ──────────────────────────────────────────
+  // AI vrátí pouze kandidáta a přesnou URL. Teprve backendové nalezení přesně
+  // stejné adresy na ověřeném oficiálním webu dovolí atomické uložení kontaktu.
   const runEnrich = async () => {
     if (!lead) return;
     setEnrichBusy(true);
@@ -1322,16 +1321,16 @@ export function SalesLeadDetailSheet({ leadId, open, onOpenChange, onMutated }: 
         body: { lead_id: lead.id },
       });
       if (error) throw new Error(error.message);
-      const res = (data ?? {}) as { success?: boolean; error?: string; found?: boolean };
+      const res = (data ?? {}) as { success?: boolean; error?: string; found?: boolean; reason?: string };
       if (!res.success) {
         toast.error(rpcErrorMessage(res.error));
         return;
       }
       if (res.found === false) {
-        toast.info('Veřejný e-mail se nepodařilo dohledat. AI nic nevymýšlí.');
+        toast.info(res.reason ? rpcErrorMessage(res.reason) : 'Veřejný e-mail se nepodařilo bezpečně ověřit. Nic nebylo uloženo.');
         return;
       }
-      toast.success('Návrh e-mailu uložen — schvalte ho ručně níže.');
+      toast.success('E-mail byl systémově ověřen na oficiálním webu a uložen.');
       await load();
       onMutated();
     } catch (err: unknown) {
@@ -1763,8 +1762,13 @@ export function SalesLeadDetailSheet({ leadId, open, onOpenChange, onMutated }: 
                 <ReadRow label="Funkce" value={lead.contact_role} />
                 <ReadRow label="E-mail" value={lead.contact_email} />
                 <ReadRow label="Telefon" value={lead.contact_phone} />
-                <ReadRow label="Zdroj e-mailu" value={lead.email_source} />
-                <ReadRow label="E-mail ověřen" value={lead.email_verified_by_admin ? 'Ano' : 'Ne'} />
+                <ReadRow label="Zdroj e-mailu" value={lead.email_source} href={lead.email_source} />
+                <ReadRow label="E-mail ověřen" value={
+                  lead.email_verification_method === 'backend_verified_official_website'
+                    ? 'Systémově ověřeno'
+                    : lead.email_verified_by_admin ? 'Ručně ověřeno' : 'Ne'
+                } />
+                <ReadRow label="Datum ověření e-mailu" value={lead.email_verified_at ? formatDateTime(lead.email_verified_at) : null} />
                 <ReadRow label="Poznámka" value={lead.notes} />
               </div>
             ) : (
@@ -1903,8 +1907,8 @@ export function SalesLeadDetailSheet({ leadId, open, onOpenChange, onMutated }: 
               </Button>
             </div>
             <p className="text-xs text-muted-foreground mb-3">
-              AI dohledá jen <strong>veřejně uvedený</strong> firemní e-mail a uloží ho jako <strong>neověřený návrh</strong>.
-              E-mail se nikdy nevymýšlí. Odesílací kontakt se vyplní teprve po vašem ručním schválení.
+              AI pouze navrhne veřejný firemní e-mail a přesnou zdrojovou stránku. Kontakt se uloží jen tehdy,
+              když backend najde stejnou adresu na již ověřeném oficiálním webu firmy.
             </p>
 
             {lead.proposed_contact_status === 'neovereny' && lead.proposed_contact_email ? (
@@ -1934,7 +1938,9 @@ export function SalesLeadDetailSheet({ leadId, open, onOpenChange, onMutated }: 
                   </div>
                 )}
                 <p className="text-[11px] text-muted-foreground">
-                  Ověřte, že e-mail patří firmě. Schválením se vyplní odesílací kontakt a označí jako ověřený člověkem.
+                  {lead.proposed_contact_by === 'ai'
+                    ? 'Starý AI návrh nelze schválit bez backendového důkazu. Zamítněte ho a spusťte ověření znovu.'
+                    : 'Ručně vložený návrh můžete po vlastní kontrole schválit.'}
                 </p>
                 <div className="flex justify-end gap-2">
                   <Button
@@ -1947,15 +1953,17 @@ export function SalesLeadDetailSheet({ leadId, open, onOpenChange, onMutated }: 
                     {contactReviewBusy ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <X className="h-3.5 w-3.5" />}
                     Zamítnout e-mail
                   </Button>
-                  <Button
-                    size="sm"
-                    onClick={() => reviewContact('approve')}
-                    disabled={contactReviewBusy}
-                    className="gap-1.5"
-                  >
-                    {contactReviewBusy ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Save className="h-3.5 w-3.5" />}
-                    Schválit e-mail
-                  </Button>
+                  {lead.proposed_contact_by !== 'ai' && (
+                    <Button
+                      size="sm"
+                      onClick={() => reviewContact('approve')}
+                      disabled={contactReviewBusy}
+                      className="gap-1.5"
+                    >
+                      {contactReviewBusy ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Save className="h-3.5 w-3.5" />}
+                      Schválit e-mail
+                    </Button>
+                  )}
                 </div>
               </div>
             ) : (
@@ -1963,7 +1971,10 @@ export function SalesLeadDetailSheet({ leadId, open, onOpenChange, onMutated }: 
                 {lead.contact_email ? (
                   <>
                     Kontaktní e-mail: <strong className="text-foreground break-all">{lead.contact_email}</strong>
-                    {lead.email_verified_by_admin ? ' · ověřeno člověkem' : ' · neověřeno'}
+                    {lead.email_verification_method === 'backend_verified_official_website'
+                      ? ' · systémově ověřeno'
+                      : lead.email_verified_by_admin ? ' · ručně ověřeno' : ' · neověřeno'}
+                    {lead.email_verified_at ? ` · ${formatDateTime(lead.email_verified_at)}` : ''}
                   </>
                 ) : lead.proposed_contact_status === 'zamitnuty' ? (
                   'Poslední návrh e-mailu byl zamítnut. Můžete zkusit dohledat znovu.'

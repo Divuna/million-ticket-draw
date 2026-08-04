@@ -3804,6 +3804,8 @@ export type Database = {
           draft_email_subject: string | null
           draft_prepared_by: string | null
           email_source: string | null
+          email_verification_method: string | null
+          email_verified_at: string | null
           email_verified_by_admin: boolean
           ico: string | null
           id: string
@@ -3850,6 +3852,8 @@ export type Database = {
           draft_email_subject?: string | null
           draft_prepared_by?: string | null
           email_source?: string | null
+          email_verification_method?: string | null
+          email_verified_at?: string | null
           email_verified_by_admin?: boolean
           ico?: string | null
           id?: string
@@ -3896,6 +3900,8 @@ export type Database = {
           draft_email_subject?: string | null
           draft_prepared_by?: string | null
           email_source?: string | null
+          email_verification_method?: string | null
+          email_verified_at?: string | null
           email_verified_by_admin?: boolean
           ico?: string | null
           id?: string
@@ -6570,6 +6576,18 @@ export type Database = {
           p_email: string
           p_lead_id: string
           p_proposed_by?: string
+          p_source_url: string
+        }
+        Returns: Json
+      }
+      sales_lead_store_backend_verified_contact: {
+        Args: {
+          p_created_by: string
+          p_email: string
+          p_expected_updated_at: string
+          p_expected_website: string
+          p_expected_website_verified_at: string
+          p_lead_id: string
           p_source_url: string
         }
         Returns: Json

@@ -3,6 +3,11 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2.57.4";
 import { verifyCompanyWebsite, verifyDiscoveredCompanySite } from "../_shared/companyWebsiteVerifier.ts";
 import { generateCandidateUrls } from "../_shared/companyCandidateSearch.ts";
 import { aresByIco, aresByName, type RegistryRecord } from "../_shared/companyRegistryEnrich.ts";
+import {
+  crawlCompanyWebsite,
+  verifyEmailOnOfficialSourcePage,
+  type VerifiedSourceEmailResult,
+} from "../_shared/companyEmailCrawler.ts";
 
 // ============================================================================
 // sales-lead-discover — WORKER Discovery Jobu (dávkové zpracování).
@@ -13,7 +18,9 @@ import { aresByIco, aresByName, type RegistryRecord } from "../_shared/companyRe
 // PRINCIP: kandidáti z AKTIVNÍHO web search (companyCandidateSearch) — AI
 // nevymýšlí seznam firem. Web se přísně ověří (verifyDiscoveredCompanySite),
 // IČO/DIČ/adresa z ARES (autoritativně), AI JEN klasifikuje obor/relevanci.
-// E-mail se NIKDY nehledá ani neukládá. Nic se neposílá.
+// Veřejný e-mail hledá backendový crawler až na ověřeném oficiálním webu.
+// Přesný nález a URL se ještě jednou ověří sdíleným verifierem; bez důkazu
+// vznikne lead bez e-mailu a bez návrhu. Nic se neposílá.
 // ============================================================================
 
 const AI_MODEL = Deno.env.get("SALES_LEADS_AI_MODEL") ?? "gpt-4o-mini";
@@ -43,6 +50,24 @@ function normName(v: string): string {
 }
 
 interface Classification { slug: string | null; relevant: boolean; summary: string }
+
+type VerifiedDiscoveryContact = Extract<VerifiedSourceEmailResult, { verified: true }>;
+
+async function findVerifiedDiscoveryContact(
+  website: string,
+  companyName: string,
+): Promise<VerifiedDiscoveryContact | null> {
+  // Crawler je zdroj kandidáta, nikoli důkaz. Důkaz vznikne až druhým stažením
+  // přesné stránky přes stejný verifier jako v sales-lead-enrich-contact.
+  const candidate = await crawlCompanyWebsite(website, companyName, "", "");
+  if (!candidate.found) return null;
+  const verified = await verifyEmailOnOfficialSourcePage({
+    officialWebsite: website,
+    candidateEmail: candidate.email,
+    sourceUrl: candidate.sourceUrl,
+  });
+  return verified.verified ? verified : null;
+}
 
 async function classify(
   name: string, snippet: string, groups: { slug: string; label: string }[], openaiKey: string,
@@ -189,6 +214,10 @@ serve(async (req: Request) => {
     if (!targetGroup) { counters.wrong_category++; continue; }
     const isTargetSegment = targetGroup === leadGroup;
 
+    // E-mail je volitelný bonus. Nedoložený výsledek se nikam neukládá a
+    // nebrání vytvoření jinak platného leadu.
+    const verifiedContact = await findVerifiedDiscoveryContact(official.website, name);
+
     const nowIso = new Date().toISOString();
     const discoveryMeta = {
       model: AI_MODEL, run_at: nowIso, job_id: jobId, lead_group_label: groups.find((g) => g.slug === targetGroup)?.label ?? null,
@@ -199,7 +228,7 @@ serve(async (req: Request) => {
       },
     };
 
-    const { data: rpcData, error: rpcErr } = await supabaseAdmin.rpc("sales_lead_propose", {
+    const baseRpcArgs = {
       p_created_by: job.created_by,
       p_company_name: name,
       p_lead_group: targetGroup,
@@ -210,9 +239,25 @@ serve(async (req: Request) => {
       p_ico: ico,
       p_city: reg?.city ?? null,
       p_industry: groups.find((g) => g.slug === targetGroup)?.label ?? null,
-    });
+    };
+    const rpcName = verifiedContact ? "sales_lead_propose_with_contact" : "sales_lead_propose";
+    const rpcArgs = verifiedContact
+      ? {
+        ...baseRpcArgs,
+        p_email: verifiedContact.email,
+        p_email_source_url: verifiedContact.sourceUrl,
+        p_proposed_by: "backend_verified_official_website",
+      }
+      : baseRpcArgs;
+    const { data: rpcData, error: rpcErr } = await supabaseAdmin.rpc(rpcName, rpcArgs);
     if (rpcErr) { dbg("rpc_error", { url, error: rpcErr.message }); continue; }
-    const res = (rpcData ?? {}) as { outcome?: string; reason?: string; lead_id?: string };
+    const res = (rpcData ?? {}) as {
+      outcome?: string;
+      reason?: string;
+      lead_id?: string;
+      contact_stored?: boolean;
+      verified_at?: string;
+    };
 
     if (res.outcome !== "created") {
       if (res.outcome === "skipped") counters.duplicates++;
@@ -229,6 +274,14 @@ serve(async (req: Request) => {
     if (reg?.city) provenance.city = { value: reg.city, source: "ARES", verified_at: nowIso };
     if (site.phone) provenance.phone = { value: site.phone, source: "website", verified_at: nowIso };
     if (site.contactFormUrl) provenance.contact_form = { value: site.contactFormUrl, source: "website", verified_at: nowIso };
+    if (verifiedContact && res.contact_stored === true) {
+      provenance.email = {
+        value: verifiedContact.email,
+        source_url: verifiedContact.sourceUrl,
+        method: "backend_verified_official_website",
+        verified_at: res.verified_at,
+      };
+    }
 
     const leadId = res.lead_id;
     if (leadId) {
@@ -245,7 +298,13 @@ serve(async (req: Request) => {
     if (reg?.dic) counters.with_dic++;
     if (reg?.address) counters.with_address++;
     if (site.phone) counters.with_phone++;
-    dbg("saved", { company: name, website: official.website, group: targetGroup, target: isTargetSegment });
+    dbg("saved", {
+      company: name,
+      website: official.website,
+      group: targetGroup,
+      target: isTargetSegment,
+      email_verified: res.contact_stored === true,
+    });
   }
 
   // ── Rozhodni finish stav ───────────────────────────────────────────────────

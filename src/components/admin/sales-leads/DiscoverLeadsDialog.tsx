@@ -52,8 +52,8 @@ const FINISH_REASON_LABEL: Record<string, string> = {
  * webem, nedojdou kandidáti nebo se nedosáhne bezpečnostního limitu.
  *
  * Okno lze kdykoli zavřít — sledování běží dál nad dialogem (useDiscoveryJob)
- * a průběh je vidět na stavovém pruhu hlavní stránky. E-mail se při discovery
- * NEsbírá; kontakt dohledá člověk ručně v detailu leadu.
+ * a průběh je vidět na stavovém pruhu hlavní stránky. Veřejný e-mail je jen
+ * volitelný bonus a uloží se výhradně po backendovém důkazu na oficiálním webu.
  */
 export function DiscoverLeadsDialog({
   open,
@@ -157,7 +157,7 @@ export function DiscoverLeadsDialog({
           <DialogDescription>
             {finished
               ? 'Nové firmy najdete v záložce „Návrhy". Seznam i počty už jsou obnovené.'
-              : 'Kandidáti se hledají aktivním webovým vyhledáváním (ne AI). Ukládají se jen firmy s nezávisle ověřeným oficiálním webem. „Počet" = kolik ověřených firem se má uložit. Běží na pozadí — okno můžete zavřít. E-mail se NEsbírá.'}
+              : 'Kandidáti se hledají aktivním webovým vyhledáváním (ne AI). Ukládají se jen firmy s nezávisle ověřeným oficiálním webem. „Počet" = kolik ověřených firem se má uložit. Běží na pozadí — okno můžete zavřít. Veřejný e-mail se uloží jen po přesném backendovém ověření; jeho nenalezení firmu nezahodí.'}
           </DialogDescription>
         </DialogHeader>
 
@@ -201,7 +201,8 @@ export function DiscoverLeadsDialog({
                   <strong className="text-foreground">Cíl = počet ULOŽENÝCH firem s ověřeným webem</strong>, ne počet
                   prověřených kandidátů — systém prověří i desítky firem, dokud cíl nedodá (nebo nedojdou
                   kandidáti / nedosáhne bezpečnostního limitu). IČO/DIČ/adresa se doplní z ARES,
-                  telefon/kontaktní formulář z ověřeného webu — nic se nehádá. E-mail se NEsbírá.
+                  telefon/kontaktní formulář z ověřeného webu — nic se nehádá. E-mail se uloží pouze tehdy,
+                  když jej backend přesně najde na stránce stejného ověřeného webu; jinak vznikne lead bez e-mailu.
                 </span>
               </div>
             </>
@@ -236,8 +237,8 @@ export function DiscoverLeadsDialog({
                 </p>
               )}
               <p className="mt-2 text-[11px] text-muted-foreground">
-                Nové firmy najdete v záložce „Návrhy". Ze stavu „Navržený" ručně „Schválit návrh";
-                kontaktní e-mail dohledáte ručně v detailu tlačítkem „Dohledat e-mail".
+                Nové firmy najdete v záložce „Návrhy". Ze stavu „Navržený" ručně „Schválit návrh".
+                Pokud systém veřejný e-mail bezpečně neověřil, lze jej později dohledat v detailu leadu.
               </p>
             </div>
           )}

@@ -527,6 +527,44 @@ Fáze 4 využívá stávající pole a přidává:
 - **UI (detail leadu):** sekce „Kontaktní e-mail" — „Dohledat e-mail", panel
   „Navržený e-mail" + zdroj + „Schválit e-mail"/„Zamítnout e-mail".
 
+#### 17.8.1a Systémové ověření kontaktu na oficiálním webu
+
+Tato část nahrazuje pro `sales-lead-enrich-contact` původní ukládání
+neověřeného AI návrhu. Historická pole `proposed_contact_*` zůstávají kvůli
+kompatibilitě ručních návrhů a auditu, ale AI do nich už nesmí zapisovat.
+
+- AI poskytne pouze kandidátní e-mail a přesnou zdrojovou URL. Bez obou hodnot
+  se nic neukládá.
+- Backend zdroj sám stáhne. Počáteční URL i každý redirect musí zůstat na
+  hostname dříve ověřeného oficiálního webu (toleruje se pouze rozdíl `www`).
+  Katalogy, sociální sítě, cizí weby, nebezpečné URL a netextové odpovědi se
+  odmítají.
+- Přesně stejná normalizovaná adresa musí být nalezena ve viditelném textu nebo
+  `mailto:` odkazu stažené stránky. Text ve skriptech, stylech, komentářích a
+  `noscript` není důkaz.
+- Ověřený kontakt ukládá pouze service-role RPC
+  `sales_lead_store_backend_verified_contact`. Pod řádkovým zámkem znovu ověří,
+  že lead stále nemá kontakt, `updated_at` odpovídá snapshotu před dohledáním a
+  ověřený web ani čas jeho ověření se nezměnily. Zároveň provede existující
+  kontrolu duplicit.
+- Jeden atomický zápis nastaví `contact_email`, přesný `email_source`,
+  `email_verified_by_admin=true` (zpětná kompatibilita odesílacích guardů),
+  `email_verification_method='backend_verified_official_website'`,
+  `email_verified_at`, provenance a aktivitu `contact_approved`.
+- Ručně změněný kontakt trigger označí jako `admin_manual`. Starý AI návrh lze
+  zamítnout, nikoli schválit bez nového backendového důkazu.
+- Existující RPC `sales_lead_propose_with_contact` zůstává dostupné pouze
+  `service_role`, ale je předefinováno fail closed: přijme jen metodu
+  `backend_verified_official_website`, nikdy nevyplňuje `proposed_contact_*`
+  a atomicky vytvoří lead i systémově ověřený kontakt. Starý caller s metodou
+  `ai` nic nezapíše.
+- `sales-lead-discover` používá stejný přesný backend verifier jako enrichment
+  existujícího leadu. Kandidáta najde backendový crawler pouze na již ověřeném
+  oficiálním webu; přesná stránka se znovu stáhne a ověří. Při úspěchu vznikne
+  lead přímo s `contact_email`, zdrojem, metodou a datem. Při neúspěchu vznikne
+  lead přes stávající `sales_lead_propose` bez e-mailu a bez AI návrhu.
+- Změna nemá backfill ani plánovač a sama nevolá žádnou odesílací funkci.
+
 #### 17.8.2 Fáze 5C — automatický discovery vyžaduje veřejný e-mail (implementováno jako soubory)
 - **Tvrdá bariéra:** tlačítko „Najít nové firmy" (EF `sales-lead-discover`)
   nesmí vytvořit lead bez veřejně dohledaného kontaktního e-mailu. AI v jednom
@@ -647,31 +685,26 @@ Fáze 4 využívá stávající pole a přidává:
   segmentu. **Každá firma s vyplněným názvem je „použitelná" a vždy se uloží**
   jako lead ve stavu `navrzeny` — bez ohledu na to, jestli se u ní podaří
   dohledat e-mail:
-  - Pokud website existuje a crawler (Fáze 5D/5E logika beze změny) najde
-    veřejný e-mail na webu firmy, lead se vytvoří přes
-    `sales_lead_propose_with_contact` (Fáze 5C/5D/5E RPC beze změny) —
-    `proposed_contact_email`/`proposed_contact_source_url` vyplněné,
-    `proposed_contact_status='neovereny'`.
+  - Pokud backendový crawler najde kandidáta a sdílený verifier jej na přesné
+    stránce stejného ověřeného webu znovu potvrdí, lead se vytvoří přes
+    `sales_lead_propose_with_contact` přímo s `contact_email`, přesným
+    `email_source`, `email_verified_at` a metodou
+    `backend_verified_official_website`. Žádný `proposed_contact_*` nevzniká.
   - Pokud website chybí, nebo crawler e-mail nenajde, lead se **i tak vytvoří**
     přes `sales_lead_propose` (Fáze 5A RPC beze změny) — bez navrženého
     kontaktu; e-mail lze doplnit ručně později (Fáze 5B ruční dohledání nebo
     ruční editace v detailu leadu).
-  - `contact_email` zůstává vždy `NULL`, `email_verified_by_admin=false` —
-    v obou větvích, beze změny oproti předchozím fázím.
+  - Bez úspěšného backendového důkazu zůstává `contact_email=NULL` a
+    `email_verified_by_admin=false`; neověřený kandidát ani jeho URL se neuloží.
   - Jediný důvod, proč lead vůbec nevznikne, je dedup/blokace na úrovni RPC
     (existující partner, suppression, duplicitní IČO/doména — Fáze 5A/5C
     beze změny) — **nikdy** jen proto, že se e-mail nenašel.
-  - Žádné auto-schválení, žádný auto-send, žádný Resend, žádný zápis do
-    `email_queue`. Žádná nová DB migrace pro tuto změnu chování — jen úprava
-    EF `sales-lead-discover` (existující RPC `sales_lead_propose` a
-    `sales_lead_propose_with_contact` se používají beze změny signatur).
-- **Odpověď EF rozšířena o `created_with_email` a `created_without_email`**
-  (součet dává `created`) — nahrazuje dřívější `skipped_missing_email` /
-  `skipped_email_not_found_on_website`, které už neznamenají přeskočení, ale
-  jen „bez navrženého e-mailu".
-- **UI (`DiscoverLeadsDialog.tsx`):** text už netvrdí, že se uloží jen firmy
-  s dohledaným e-mailem; výsledek běhu ukazuje: kolik firem vzniklo celkem,
-  kolik z nich má navržený e-mail, kolik je bez e-mailu k ručnímu doplnění.
+  - Systémové potvrzení kontaktu není obchodní schválení leadu a nic neodesílá:
+    žádný Resend ani zápis do `email_queue`. Existující RPC se používají se
+    stejnými signaturami; `sales_lead_propose_with_contact` má novou bezpečnou
+    implementaci.
+- **UI (`DiscoverLeadsDialog.tsx`):** vysvětluje, že e-mail je volitelný bonus,
+  uloží se jen po přesném backendovém ověření a jeho nenalezení firmu nezahodí.
 - **Mazání leadů (nová funkcionalita, ne oprava discovery):** aby šlo snadno
   odstranit duplicitní/nepoužitelné návrhy vzniklé masovým always-save
   chováním, přidány dvě nové SECURITY DEFINER RPC (migrace jako soubor,
