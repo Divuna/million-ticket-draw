@@ -9,7 +9,6 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } f
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Textarea } from '@/components/ui/textarea';
 import {
   SALES_LEAD_TEMPLATE_VARIABLES,
   TEMPLATE_TYPE_LABELS,
@@ -18,6 +17,7 @@ import {
   type SalesLeadEmailTemplate,
   type SalesLeadEmailTemplateType,
 } from './salesLeadEmailTemplates';
+import { SalesLeadRichTextEditor } from './SalesLeadRichTextEditor';
 
 const emptyForm = () => ({ id: null as string | null, name: '', template_type: 'initial' as SalesLeadEmailTemplateType, subject: '', body: '', sort_order: '0' });
 
@@ -91,7 +91,7 @@ export function SalesLeadEmailTemplateManager({ open, onOpenChange }: { open: bo
             <span className="flex h-10 w-10 items-center justify-center rounded-2xl bg-primary/15 text-primary"><ShieldCheck className="h-4 w-4" /></span>
             <div>
               <DialogTitle>E-mailové šablony</DialogTitle>
-              <DialogDescription>Týmové plain-text šablony. Spravovat je může pouze superadmin.</DialogDescription>
+              <DialogDescription>Formátované týmové šablony s náhledem. Spravovat je může pouze superadmin.</DialogDescription>
             </div>
           </div>
         </DialogHeader>
@@ -134,7 +134,18 @@ export function SalesLeadEmailTemplateManager({ open, onOpenChange }: { open: bo
                 <div className="space-y-1.5"><Label htmlFor="template-order">Pořadí</Label><Input id="template-order" type="number" min="0" max="10000" value={form.sort_order} onChange={(event) => setForm((value) => ({ ...value, sort_order: event.target.value }))} /></div>
               </div>
               <div className="space-y-1.5"><Label htmlFor="template-subject">Předmět</Label><Input id="template-subject" maxLength={300} value={form.subject} onChange={(event) => setForm((value) => ({ ...value, subject: event.target.value }))} placeholder="Předmět e-mailu" /></div>
-              <div className="space-y-1.5"><Label htmlFor="template-body">Text šablony</Label><Textarea id="template-body" rows={13} maxLength={20000} className="resize-y leading-6" value={form.body} onChange={(event) => setForm((value) => ({ ...value, body: event.target.value }))} placeholder="Plain-text obsah e-mailu" /></div>
+              <div className="space-y-1.5">
+                <Label htmlFor="template-body">Text šablony</Label>
+                <SalesLeadRichTextEditor
+                  id="template-body"
+                  rows={13}
+                  maxLength={20000}
+                  value={form.body}
+                  onChange={(body) => setForm((value) => ({ ...value, body }))}
+                  placeholder="Napište obsah e-mailu a zvýrazněte důležité části."
+                />
+                <p className="text-xs text-muted-foreground">Formátování se uloží přímo do šablony a použije se při odeslání. Emoji můžete vložit tlačítky nebo běžně z klávesnice.</p>
+              </div>
               <div className="rounded-2xl border border-white/[0.08] bg-background/55 p-4">
                 <div className="text-xs font-semibold uppercase tracking-[0.14em] text-muted-foreground">Povolené proměnné</div>
                 <div className="mt-3 flex flex-wrap gap-2">{SALES_LEAD_TEMPLATE_VARIABLES.map((variable) => <button type="button" key={variable.key} onClick={() => setForm((value) => ({ ...value, body: `${value.body}${value.body ? ' ' : ''}${variable.token}` }))} className="rounded-full border border-white/[0.1] bg-card px-3 py-1.5 text-xs hover:border-primary/35"><span className="font-mono text-primary">{variable.token}</span><span className="ml-1.5 text-muted-foreground">{variable.label}</span></button>)}</div>
