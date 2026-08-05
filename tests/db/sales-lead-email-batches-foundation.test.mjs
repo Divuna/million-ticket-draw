@@ -10,6 +10,7 @@ import {
 const migration = fs.readFileSync('supabase/migrations/20260804165418_sales_lead_email_batches_foundation.sql', 'utf8');
 const adminPlanningMigration = fs.readFileSync('supabase/migrations/20260805160406_sales_lead_email_batch_admin_planning.sql', 'utf8');
 const deliveryMigration = fs.readFileSync('supabase/migrations/20260805140658_sales_lead_initial_email_delivery.sql', 'utf8');
+const workerMigration = fs.readFileSync('supabase/migrations/20260806090000_sales_lead_email_batch_worker.sql', 'utf8');
 const db = new PGlite();
 const manager = '10000000-0000-4000-8000-000000000001';
 const outsider = '10000000-0000-4000-8000-000000000002';
@@ -106,6 +107,7 @@ test.before(async () => {
   await db.exec(migration);
   await db.exec(adminPlanningMigration);
   await db.exec(deliveryMigration);
+  await db.exec(workerMigration);
   await db.query('insert into auth.users(id) values($1),($2)', [manager, outsider]);
 });
 test.after(async () => db.close());
@@ -745,5 +747,389 @@ for (const [suffix, providerCode, deliveryError] of [
     const delivery = (await db.query('select status,attempt_count,last_error_code from public.sales_lead_email_deliveries where id=$1',
       [fixture.deliveryId])).rows[0];
     assert.deepEqual(delivery, { status: 'uncertain', attempt_count: 1, last_error_code: deliveryError });
+  });
+}
+
+// ---------------------------------------------------------------------------
+// PR 4 — internal batch worker
+// ---------------------------------------------------------------------------
+
+const workerBatchIds = [];
+
+// A window that provably contains "now" in Europe/Prague, so due-item tests are
+// deterministic regardless of when the suite runs.
+const insertWorkerBatch = async ({ dayOffset = 0, status = 'scheduled' } = {}) => {
+  const batchId = `60000000-0000-4000-8000-${String(workerBatchIds.length + 1).padStart(12, '0')}`;
+  workerBatchIds.push(batchId);
+  const windowSql = `case when prague_now < time '02:00' then time '00:01' else (prague_now - interval '2 hours')::time end,
+       case when prague_now > time '22:00' then time '23:59' else (prague_now + interval '2 hours')::time end`;
+  await db.query(`insert into public.sales_lead_email_batches(
+      id,status,template_id,template_name_snapshot,created_by,scheduled_date,timezone,
+      window_start,window_end,daily_limit,idempotency_key,request_fingerprint,scheduled_count,skipped_count)
+    select $1,$2,$3,'Worker sablona',$4,
+      ((now() at time zone 'Europe/Prague')::date + $5::integer),'Europe/Prague',${windowSql},
+      20,$6,repeat('a',64),1,0
+    from (select (now() at time zone 'Europe/Prague')::time as prague_now) t`,
+  [batchId, status, template, manager, dayOffset, `worker-key-${batchId}`]);
+  return batchId;
+};
+
+const insertWorkerItem = async (batchId, suffix, overrides = {}) => {
+  const leadId = `61000000-0000-4000-8000-${String(suffix).padStart(12, '0')}`;
+  const itemId = `62000000-0000-4000-8000-${String(suffix).padStart(12, '0')}`;
+  const email = `worker-${suffix}@worker-${suffix}.example.cz`;
+  await db.query(`insert into public.sales_leads(id,company_name,ico,contact_person,contact_email,email_source,
+      email_verified_by_admin,email_verification_method,email_verified_at,status,created_by)
+    values($1,$2,$6,'Pavel',$3,$4,true,'admin_manual',now(),'novy',$5)`,
+  [leadId, `Worker ${suffix}`, email, `https://worker-${suffix}.example.cz/kontakt`, manager,
+    overrides.ico ?? null]);
+  await db.query(`insert into public.sales_lead_email_batch_items(
+      id,batch_id,lead_id,status,scheduled_for,recipient_snapshot,email_source_snapshot,
+      email_verification_method_snapshot,email_verified_at_snapshot,subject_snapshot,
+      body_source_snapshot,body_text_snapshot,body_html_snapshot,template_id_snapshot,
+      template_updated_at_snapshot,company_name_snapshot)
+    values($1,$2,$3,'pending',now() + ($9 || ' minutes')::interval,$4,$5,'admin_manual',now(),
+      $6,'Dobry den.','Dobry den.','<p>Dobry den.</p>',$7,now(),$8)`,
+  [itemId, batchId, leadId, email, `https://worker-${suffix}.example.cz/kontakt`,
+    overrides.subject ?? `Nabidka ${suffix}`, template, `Worker ${suffix}`,
+    String(overrides.dueInMinutes ?? -1)]);
+  return { leadId, itemId, email };
+};
+
+const claimNext = () => value('select public.sales_lead_email_batch_claim_next()');
+const setAutomation = async (enabled) => {
+  await asOwner();
+  await db.query('update public.sales_lead_email_automation_settings set enabled=$1 where singleton', [enabled]);
+};
+// Earlier suites leave prepared rows behind. Each worker case starts from an
+// empty queue so exactly one item can be due.
+const startWorkerCase = async (enabled = true) => {
+  await asOwner();
+  await db.query("update public.sales_lead_email_batch_items set status='cancelled' where status in ('pending','processing')");
+  await setAutomation(enabled);
+};
+const itemRow = async (itemId) => (await db.query(
+  'select status,skip_reason,error_code,attempt_count from public.sales_lead_email_batch_items where id=$1',
+  [itemId])).rows[0];
+const batchRow = async (batchId) => (await db.query(
+  'select status from public.sales_lead_email_batches where id=$1', [batchId])).rows[0];
+
+test('worker RPCs are service-role only and never reachable by API roles', async () => {
+  await asOwner();
+  for (const signature of [
+    'public.sales_lead_email_batch_claim_next()',
+    'public.sales_lead_email_batch_activate(uuid)',
+    'public.sales_lead_email_batch_item_record_failure(uuid,text,text)',
+    'public.sales_lead_email_batch_recalculate_status(uuid)',
+    'public.sales_lead_initial_email_already_recorded(uuid,text,uuid)',
+  ]) {
+    for (const role of ['anon', 'authenticated']) {
+      assert.equal((await db.query('select has_function_privilege($1,$2,$3) allowed', [role, signature, 'execute'])).rows[0].allowed,
+        false, `${role} ${signature}`);
+    }
+    assert.equal((await db.query('select has_function_privilege($1,$2,$3) allowed', ['service_role', signature, 'execute'])).rows[0].allowed,
+      true, signature);
+  }
+});
+
+test('disabled automation claims nothing and mutates nothing', async () => {
+  await startWorkerCase(false);
+  const batchId = await insertWorkerBatch();
+  const { itemId } = await insertWorkerItem(batchId, 401);
+  const claimed = await claimNext();
+  assert.deepEqual(claimed, { success: true, action: 'noop', reason: 'automation_disabled' });
+  assert.deepEqual(await itemRow(itemId), { status: 'pending', skip_reason: null, error_code: null, attempt_count: 0 });
+  assert.equal((await db.query('select count(*)::int n from public.sales_lead_email_deliveries where batch_item_id is not null')).rows[0].n, 0);
+});
+
+test('a paused batch is never claimed even while automation is enabled', async () => {
+  await startWorkerCase(true);
+  const batchId = await insertWorkerBatch({ status: 'paused' });
+  const { itemId } = await insertWorkerItem(batchId, 402);
+  assert.equal((await claimNext()).action, 'noop');
+  assert.equal((await itemRow(itemId)).status, 'pending');
+  await asOwner();
+  await db.query("update public.sales_lead_email_batch_items set status='cancelled' where batch_id in ($1,$2)",
+    [batchId, workerBatchIds[0]]);
+  await setAutomation(false);
+});
+
+test('a scheduled batch yields exactly one due item and concurrent workers never share it', async () => {
+  await startWorkerCase(true);
+  const batchId = await insertWorkerBatch();
+  const first = await insertWorkerItem(batchId, 403);
+  const second = await insertWorkerItem(batchId, 404);
+  const claimed = await claimNext();
+  assert.equal(claimed.action, 'send');
+  assert.equal(claimed.subject, 'Nabidka 403');
+  assert.equal(claimed.recipient, first.email);
+  assert.equal(claimed.performed_by, manager);
+  assert.deepEqual(await itemRow(first.itemId), { status: 'processing', skip_reason: null, error_code: null, attempt_count: 1 });
+
+  const [a, b] = await Promise.all([claimNext(), claimNext()]);
+  const claimedIds = [a, b].filter((row) => row.action === 'send').map((row) => row.batch_item_id);
+  assert.deepEqual(claimedIds, [second.itemId]);
+  assert.equal((await claimNext()).action, 'noop');
+  await asOwner();
+  await db.query("update public.sales_lead_email_batch_items set status='cancelled' where batch_id=$1", [batchId]);
+  await setAutomation(false);
+});
+
+test('an item outside its working window is not due yet and nothing is sent', async () => {
+  await startWorkerCase(true);
+  const batchId = await insertWorkerBatch({ dayOffset: 1 });
+  const { itemId } = await insertWorkerItem(batchId, 405, { dueInMinutes: 90 });
+  assert.equal((await claimNext()).action, 'noop');
+  assert.equal((await itemRow(itemId)).status, 'pending');
+  await asOwner();
+  await db.query("update public.sales_lead_email_batch_items set status='cancelled' where id=$1", [itemId]);
+  await setAutomation(false);
+});
+
+test('an item from an older day is skipped as scheduled_window_missed and never caught up', async () => {
+  await startWorkerCase(true);
+  const batchId = await insertWorkerBatch({ dayOffset: -1 });
+  const { itemId } = await insertWorkerItem(batchId, 406);
+  const claimed = await claimNext();
+  assert.equal(claimed.action, 'skipped');
+  assert.equal(claimed.reason, 'scheduled_window_missed');
+  assert.equal((await itemRow(itemId)).status, 'skipped');
+  assert.equal((await batchRow(batchId)).status, 'completed');
+  assert.equal((await claimNext()).action, 'noop');
+  await setAutomation(false);
+});
+
+for (const [suffix, reason, mutate] of [
+  [410, 'contact_email_changed', "update public.sales_leads set contact_email='changed-410@example.cz' where id=$1"],
+  [411, 'do_not_contact', 'update public.sales_leads set do_not_contact=true where id=$1'],
+  [412, 'email_not_verified', 'update public.sales_leads set email_verified_by_admin=false where id=$1'],
+  [413, 'initial_email_status_not_allowed', "update public.sales_leads set status='archiv' where id=$1"],
+]) {
+  test(`${reason} after preparation skips the item without any provider work`, async () => {
+    await startWorkerCase(true);
+    const batchId = await insertWorkerBatch();
+    const { itemId, leadId } = await insertWorkerItem(batchId, suffix);
+    await asOwner();
+    await db.query(mutate, [leadId]);
+    const claimed = await claimNext();
+    assert.equal(claimed.action, 'skipped');
+    assert.equal(claimed.reason, reason);
+    assert.deepEqual(await itemRow(itemId), { status: 'skipped', skip_reason: reason, error_code: null, attempt_count: 0 });
+    assert.equal((await db.query('select count(*)::int n from public.sales_lead_email_deliveries where batch_item_id=$1', [itemId])).rows[0].n, 0);
+    await setAutomation(false);
+  });
+}
+
+test('suppression added after preparation skips the item', async () => {
+  await startWorkerCase(true);
+  const batchId = await insertWorkerBatch();
+  const { itemId, email } = await insertWorkerItem(batchId, 414);
+  await asOwner();
+  await db.query('insert into public.sales_lead_email_suppression(email_pattern,reason) values($1,$2)', [email, 'test']);
+  const claimed = await claimNext();
+  assert.equal(claimed.reason, 'suppressed');
+  assert.equal((await itemRow(itemId)).status, 'skipped');
+  await setAutomation(false);
+});
+
+test('an initial e-mail recorded after preparation skips the item', async () => {
+  await startWorkerCase(true);
+  const batchId = await insertWorkerBatch();
+  const { itemId, leadId } = await insertWorkerItem(batchId, 415);
+  await asOwner();
+  await db.query(`insert into public.sales_lead_activities(lead_id,activity_type,direction,performed_by,metadata)
+    values($1,'email_sent','outbound',$2,'{"sent_by":"human"}'::jsonb)`, [leadId, manager]);
+  assert.equal((await claimNext()).reason, 'initial_email_already_sent');
+  assert.equal((await itemRow(itemId)).status, 'skipped');
+  await setAutomation(false);
+});
+
+test('a duplicate guard block after preparation skips the item', async () => {
+  await startWorkerCase(true);
+  const batchId = await insertWorkerBatch();
+  const { itemId, leadId } = await insertWorkerItem(batchId, 416);
+  await asOwner();
+  await db.query('insert into public.test_sales_lead_duplicate_guard_blocks(lead_id) values($1)', [leadId]);
+  assert.equal((await claimNext()).reason, 'duplicate_override_required');
+  assert.equal((await itemRow(itemId)).status, 'skipped');
+  await setAutomation(false);
+});
+
+const claimBatchDelivery = (claimed, overrides = {}) => value(
+  `select public.sales_lead_initial_email_claim($1,$2,$3::uuid,'batch_initial',$4::uuid,$5,$6,$7,$7,$8,'[]'::jsonb,$9::uuid,$10::uuid)`,
+  [
+    overrides.deliveryKey ?? '1'.repeat(64),
+    overrides.fingerprint ?? '2'.repeat(64),
+    claimed.lead_id,
+    overrides.batchItemId ?? claimed.batch_item_id,
+    claimed.recipient,
+    overrides.subject ?? claimed.subject,
+    overrides.body ?? claimed.body_source,
+    overrides.html ?? claimed.body_html,
+    claimed.performed_by,
+    overrides.captureId ?? '70000000-0000-4000-8000-000000000001',
+  ],
+);
+
+test('a snapshot mismatch blocks the provider call for a claimed batch item', async () => {
+  await startWorkerCase(true);
+  const batchId = await insertWorkerBatch();
+  const { itemId } = await insertWorkerItem(batchId, 420);
+  const claimed = await claimNext();
+  assert.equal(claimed.action, 'send');
+  const mismatch = await claimBatchDelivery(claimed, { subject: 'Podvrzeny predmet' });
+  assert.equal(mismatch.error, 'batch_snapshot_mismatch');
+  assert.equal((await db.query('select count(*)::int n from public.sales_lead_email_deliveries where batch_item_id=$1', [itemId])).rows[0].n, 0);
+  await asOwner();
+  await db.query("update public.sales_lead_email_batch_items set status='cancelled' where id=$1", [itemId]);
+  await setAutomation(false);
+});
+
+test('an accepted batch delivery commits once, marks the item sent, and completes the batch', async () => {
+  await startWorkerCase(true);
+  const batchId = await insertWorkerBatch();
+  const { itemId, leadId } = await insertWorkerItem(batchId, 421);
+  const claimed = await claimNext();
+  const delivery = await claimBatchDelivery(claimed, { deliveryKey: '3'.repeat(64), fingerprint: '4'.repeat(64) });
+  assert.equal(delivery.action, 'call_provider');
+  assert.equal((await value(`select public.sales_lead_initial_email_record_provider_result($1::uuid,'accepted','resend-batch-1',null)`,
+    [delivery.delivery_id])).success, true);
+  const committed = await value('select public.sales_lead_initial_email_commit($1::uuid)', [delivery.delivery_id]);
+  assert.equal(committed.success, true);
+  assert.equal(committed.batch_status, 'completed');
+  const replay = await value('select public.sales_lead_initial_email_commit($1::uuid)', [delivery.delivery_id]);
+  assert.equal(replay.already_committed, true);
+
+  const activities = (await db.query(`select metadata->>'sent_by' sent_by, metadata->>'delivery_mode' delivery_mode,
+      metadata->>'batch_item_id' batch_item_id, email_delivery_id
+    from public.sales_lead_activities where lead_id=$1 and activity_type='email_sent'`, [leadId])).rows;
+  assert.equal(activities.length, 1);
+  assert.equal(activities[0].sent_by, 'system');
+  assert.equal(activities[0].delivery_mode, 'batch_initial');
+  assert.equal(activities[0].batch_item_id, itemId);
+  assert.equal(activities[0].email_delivery_id, delivery.delivery_id);
+  assert.equal((await itemRow(itemId)).status, 'sent');
+  assert.equal((await batchRow(batchId)).status, 'completed');
+  assert.equal((await db.query('select status from public.sales_leads where id=$1', [leadId])).rows[0].status, 'osloveno');
+  assert.equal((await db.query('select count(*)::int n from public.email_queue')).rows[0].n, 0);
+  await setAutomation(false);
+});
+
+test('a failed batch attempt marks the item failed, keeps uncertain deliveries blocked, and fails the batch', async () => {
+  await startWorkerCase(true);
+  const batchId = await insertWorkerBatch();
+  const { itemId } = await insertWorkerItem(batchId, 422);
+  const claimed = await claimNext();
+  const delivery = await claimBatchDelivery(claimed, { deliveryKey: '5'.repeat(64), fingerprint: '6'.repeat(64) });
+  await value(`select public.sales_lead_initial_email_record_provider_result($1::uuid,'uncertain',null,'email_delivery_outcome_uncertain')`,
+    [delivery.delivery_id]);
+  const failure = await value(`select public.sales_lead_email_batch_item_record_failure($1::uuid,'uncertain','email_delivery_outcome_uncertain')`,
+    [itemId]);
+  assert.equal(failure.success, true);
+  assert.equal(failure.batch_status, 'failed');
+  assert.deepEqual(await itemRow(itemId), {
+    status: 'failed', skip_reason: null, error_code: 'email_delivery_outcome_uncertain', attempt_count: 1,
+  });
+  assert.equal((await db.query('select status from public.sales_lead_email_deliveries where id=$1', [delivery.delivery_id])).rows[0].status, 'uncertain');
+  const repeated = await value(`select public.sales_lead_email_batch_item_record_failure($1::uuid,'uncertain','x')`, [itemId]);
+  assert.equal(repeated.error, 'batch_item_not_processing');
+  assert.equal((await claimNext()).action, 'noop');
+  await setAutomation(false);
+});
+
+test('an accepted provider call can never be recorded as a batch failure', async () => {
+  await startWorkerCase(true);
+  const batchId = await insertWorkerBatch();
+  const { itemId } = await insertWorkerItem(batchId, 423);
+  const claimed = await claimNext();
+  const delivery = await claimBatchDelivery(claimed, { deliveryKey: '7'.repeat(64), fingerprint: '8'.repeat(64) });
+  await value(`select public.sales_lead_initial_email_record_provider_result($1::uuid,'accepted','resend-batch-2',null)`,
+    [delivery.delivery_id]);
+  const blocked = await value(`select public.sales_lead_email_batch_item_record_failure($1::uuid,'uncertain','x')`, [itemId]);
+  assert.equal(blocked.error, 'provider_accepted_commit_required');
+  // The next run may only finish the commit; the provider is never called again.
+  const resumed = await claimNext();
+  assert.equal(resumed.action, 'commit_only');
+  assert.equal(resumed.batch_item_id, itemId);
+  assert.equal(resumed.delivery_id, delivery.delivery_id);
+  await value('select public.sales_lead_initial_email_commit($1::uuid)', [delivery.delivery_id]);
+  assert.equal((await itemRow(itemId)).status, 'sent');
+  await setAutomation(false);
+});
+
+test('batch activation requires enabled automation, a paused batch, and a usable window', async () => {
+  await startWorkerCase(false);
+  const pausedId = await insertWorkerBatch({ status: 'paused' });
+  await insertWorkerItem(pausedId, 430);
+  assert.equal((await value('select public.sales_lead_email_batch_activate($1::uuid)', [pausedId])).error, 'automation_must_be_enabled');
+  assert.equal((await batchRow(pausedId)).status, 'paused');
+
+  await setAutomation(true);
+  const expiredId = await insertWorkerBatch({ dayOffset: -2, status: 'paused' });
+  await insertWorkerItem(expiredId, 431);
+  assert.equal((await value('select public.sales_lead_email_batch_activate($1::uuid)', [expiredId])).error, 'scheduled_window_missed');
+  assert.equal((await batchRow(expiredId)).status, 'paused');
+
+  const activated = await value('select public.sales_lead_email_batch_activate($1::uuid)', [pausedId]);
+  assert.equal(activated.success, true);
+  assert.equal((await batchRow(pausedId)).status, 'scheduled');
+  const snapshots = (await db.query(`select subject_snapshot,status
+    from public.sales_lead_email_batch_items where batch_id=$1`, [pausedId])).rows[0];
+  assert.equal(snapshots.subject_snapshot, 'Nabidka 430');
+  assert.equal(snapshots.status, 'pending');
+  assert.equal((await value('select public.sales_lead_email_batch_activate($1::uuid)', [pausedId])).error, 'batch_not_activatable');
+  await asOwner();
+  await db.query("update public.sales_lead_email_batch_items set status='cancelled' where batch_id in ($1,$2)", [pausedId, expiredId]);
+  await setAutomation(false);
+});
+
+test('the worker migration adds no cron, no queue write, and no automatic lead selection', async () => {
+  await asOwner();
+  const executable = workerMigration.replace(/--.*$/gm, '');
+  assert.ok(!/\bcron\./i.test(executable));
+  assert.ok(!/pg_cron|pg_net|net\.http/i.test(executable));
+  assert.ok(!/email_queue/i.test(executable));
+  assert.ok(!/\bresend\b/i.test(executable));
+  assert.ok(/UPDATE public\.sales_lead_email_automation_settings[\s\S]+SET enabled = false/.test(workerMigration));
+  const state = (await db.query(`select enabled,
+    (select count(*)::int from cron.job) cron_jobs,
+    (select count(*)::int from public.email_queue) email_queue
+    from public.sales_lead_email_automation_settings`)).rows[0];
+  assert.deepEqual(state, { enabled: false, cron_jobs: 0, email_queue: 0 });
+});
+
+// A change between claim_next and the delivery claim must always fail closed:
+// no new delivery row may appear and no provider call may ever follow.
+for (const [suffix, expectedError, mutate, performedByOverride] of [
+  [440, 'existing_partner', "update public.sales_leads set converted_partner_id=gen_random_uuid() where id=$1", null],
+  [441, 'existing_partner', "insert into public.partners(ico) values('44144144')", null],
+  [442, 'email_source_missing', "update public.sales_leads set email_source='' where id=$1", null],
+  [443, 'email_not_verified', 'update public.sales_leads set email_verified_at=null where id=$1', null],
+  [444, 'email_not_verified', "update public.sales_leads set email_verification_method='guessed' where id=$1", null],
+  [445, 'batch_performer_mismatch', 'select 1 where $1::uuid is not null', outsider],
+]) {
+  test(`${expectedError} discovered after the worker claim blocks the delivery claim (${suffix})`, async () => {
+    await startWorkerCase(true);
+    const batchId = await insertWorkerBatch();
+    const { itemId, leadId } = await insertWorkerItem(batchId, suffix, suffix === 441 ? { ico: '44144144' } : {});
+    const claimed = await claimNext();
+    assert.equal(claimed.action, 'send');
+    await asOwner();
+    await db.query(mutate, mutate.includes('$1') ? [leadId] : []);
+    const attempt = await claimBatchDelivery(
+      { ...claimed, performed_by: performedByOverride ?? claimed.performed_by },
+      { deliveryKey: suffix.toString(16).padStart(64, "0"), fingerprint: (suffix + 4096).toString(16).padStart(64, "0") },
+    );
+    assert.equal(attempt.success, false);
+    assert.equal(attempt.error, expectedError);
+    assert.equal(attempt.action, undefined);
+    assert.equal((await db.query('select count(*)::int n from public.sales_lead_email_deliveries where batch_item_id=$1',
+      [itemId])).rows[0].n, 0);
+    // The item stays claimed for manual review; nothing was sent.
+    assert.equal((await itemRow(itemId)).status, 'processing');
+    await asOwner();
+    await db.query("update public.sales_lead_email_batch_items set status='cancelled' where id=$1", [itemId]);
+    await db.query("delete from public.partners where ico='44144144'");
+    await setAutomation(false);
   });
 }

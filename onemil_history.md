@@ -1,3 +1,29 @@
+# 06. 08. 2026 — PR 4 interní worker připravených obchodních dávek (Draft)
+
+- Přidán service-role worker pro dávky prvních obchodních e-mailů: `sales_lead_email_batch_claim_next()`
+  (zámek kill switche, jen `scheduled` dávka, dnešní plán a okno podle `Europe/Prague`,
+  `FOR UPDATE SKIP LOCKED`, nejvýše jedna položka, plné znovuověření ochran před `processing`),
+  `sales_lead_email_batch_activate(uuid)` (`paused → scheduled` jen při `enabled=true`, bez změny
+  snapshotů) a `sales_lead_email_batch_item_record_failure(uuid,text,text)` (auditovaný `failed`,
+  `uncertain` se nikdy neopakuje). Zmeškaný den nebo okno = `skipped` s `scheduled_window_missed`,
+  nikdy catch-up.
+- Sdílená delivery vrstva a evidence rozšířeny o `batch_initial`; ruční odesílání zůstává funkčně
+  beze změny (delivery key ověřen jako bit po bitu identický). Batch commit vytvoří právě jednu
+  aktivitu `email_sent` se `sent_by='system'`, `delivery_mode='batch_initial'`, `batch_item_id` a
+  `delivery_id`, označí položku `sent` a přepočítá dávku na `completed`/`failed`.
+- Nová interní Edge Function `process-sales-lead-email-batch` (secret `SALES_LEAD_BATCH_WORKER_SECRET`,
+  POST only, fail-closed, stejná identita odesílatele jako ruční sender) zavolá poskytovatele nejvýše
+  jednou za request; přijatý e-mail se selhaným commitem pokračuje pouze jako `commit_only`.
+- Oprava dvou blokujících chyb z review: (1) větev `commit_only` už nesestavuje delivery vstup z
+  prázdných hodnot (vedlo by k `batch_snapshot_mismatch` a trvale blokované položce) — orchestrace
+  je ve sdíleném `salesLeadBatchWorkerRun.ts` a volá výhradně `sales_lead_initial_email_commit`;
+  (2) batch claim nově znovu ověřuje i `performed_by` = `batch.created_by`, `converted_partner_id`,
+  partnera se stejným IČO, povolenou metodu ověření, `email_verified_at` a `email_source`
+  (neprázdný, max 2048) ještě před vznikem delivery a před provider callem.
+- PR 1, PR 2 i PR 3 jsou v produkci a PR 3 je produkčně ověřené. **PR 4 zůstává pouze Draft:** worker
+  není nasazený, secret není nastavený, cron neexistuje, automatika je stále `enabled=false`, žádný
+  e-mail nebyl odeslán a staging ani produkce nebyly změněny.
+
 # 05. 08. 2026 — PR 3 administrační příprava pozastavených obchodních dávek (Draft)
 
 - Přidáno ruční UI pro výběr leadů, aktivní počáteční šablony a dne, serverový preview a výslovné

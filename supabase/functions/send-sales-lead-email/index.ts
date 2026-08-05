@@ -4,11 +4,12 @@ import { Resend } from "npm:resend@6.18.1";
 import { renderSalesLeadEmailHtml, renderSalesLeadEmailText } from "../_shared/salesLeadEmailRendering.ts";
 import { createOutboundCapture } from "../_shared/salesLeadEmailThreading.ts";
 import { parseSalesLeadEmailAttachments } from "../_shared/salesLeadEmailAttachments.ts";
+import { deliverSalesLeadInitialEmail } from "../_shared/salesLeadInitialEmailDelivery.ts";
 import {
-  classifyInitialEmailProviderError,
-  deliverSalesLeadInitialEmail,
-  InitialEmailProviderOutcomeUncertainError,
-} from "../_shared/salesLeadInitialEmailDelivery.ts";
+  createResendInitialEmailProvider,
+  SALES_LEAD_INITIAL_EMAIL_FROM,
+  SALES_LEAD_INITIAL_EMAIL_REPLY_TO,
+} from "../_shared/salesLeadInitialEmailSender.ts";
 
 // ============================================================================
 // send-sales-lead-email — odeslání aktuálního obsahu editoru ČLOVĚKEM
@@ -43,8 +44,9 @@ const corsHeaders = {
   "Access-Control-Allow-Methods": "POST, OPTIONS",
 };
 
-const FROM_ADDRESS = "Miroslav | OneMil <b2b@onemil.cz>";
-const REPLY_TO = "Miroslav | OneMil <b2b@onemil.cz>";
+// Stejná identita odesílatele jako u dávkového workeru (sdílený modul).
+const FROM_ADDRESS = SALES_LEAD_INITIAL_EMAIL_FROM;
+const REPLY_TO = SALES_LEAD_INITIAL_EMAIL_REPLY_TO;
 const INITIAL_EMAIL_ALLOWED_STATUSES = new Set(["novy", "priprava", "schvaleni_ceka"]);
 
 function jsonResponse(body: Record<string, unknown>, status = 200): Response {
@@ -65,15 +67,6 @@ function validateEmailContent(subject: string, body: string): string | null {
 
 function isValidRecipient(value: string): boolean {
   return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value) && value.length <= 320;
-}
-
-function resendErrorCode(error: unknown): string | null {
-  if (!error || typeof error !== "object") return null;
-  const value = error as Record<string, unknown>;
-  const candidate = typeof value.name === "string" ? value.name
-    : typeof value.code === "string" ? value.code
-    : null;
-  return candidate?.trim().toLowerCase() || null;
 }
 
 serve(async (req: Request) => {
@@ -250,21 +243,7 @@ serve(async (req: Request) => {
     if (!isReuse) {
       const deliveryResult = await deliverSalesLeadInitialEmail(
         supabaseAdmin,
-        {
-          send: async (payload, idempotencyKey) => {
-            const response = await resend.emails.send(payload as never, { idempotencyKey });
-            if (response.error) {
-              const decision = classifyInitialEmailProviderError(resendErrorCode(response.error));
-              if (decision.outcome === "rejected") {
-                return { accepted: false as const, errorCode: "email_send_failed" };
-              }
-              throw new InitialEmailProviderOutcomeUncertainError(decision.errorCode);
-            }
-            const messageId = (response.data as { id?: string } | null)?.id;
-            if (!messageId) throw new Error("provider_response_missing_message_id");
-            return { accepted: true as const, messageId };
-          },
-        },
+        createResendInitialEmailProvider(resend),
         {
           leadId,
           performedBy: caller.id,

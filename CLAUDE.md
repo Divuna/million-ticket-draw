@@ -1,3 +1,37 @@
+# Denní dávky prvních obchodních e-mailů — PR 4 worker (Draft, 06. 08. 2026)
+
+- **PR 1, PR 2 i PR 3 jsou v produkci; PR 3 je produkčně ověřené. PR 4 je pouze Draft.** Worker není
+  nasazený, secret `SALES_LEAD_BATCH_WORKER_SECRET` není nastavený, cron neexistuje, automatika je
+  stále `enabled=false` a PR 4 neodeslal žádný e-mail. Staging ani produkce nebyly PR 4 změněny.
+- **Worker nikdy nevybírá firmy ani nevytváří dávky.** Zpracuje výhradně položku připravenou v PR 3 a
+  vědomě aktivovanou přes `sales_lead_email_batch_activate`. Žádný ranní výběr, follow-up, odpověď
+  ani catch-up zmeškaných e-mailů.
+- **Jeden běh = nejvýše jeden provider call.** `sales_lead_email_batch_claim_next()` vydá nejvýše
+  jednu položku; Edge Function `process-sales-lead-email-batch` volá sdílenou delivery vrstvu právě
+  jednou a nikdy nezpracuje druhou položku ve stejném requestu.
+- **Fail-closed pořadí bariér:** kill switch (`enabled=true`) → dávka `scheduled` (nikdy `paused` /
+  `cancelled` / `completed` / `failed`) → dnešní datum a okno podle `Europe/Prague` →
+  `FOR UPDATE SKIP LOCKED` → znovuověření všech ochran leadu → `processing`. Zmeškaný den nebo okno
+  = `skipped` s důvodem `scheduled_window_missed`.
+- **Přijatý e-mail se nikdy neposílá dvakrát.** Když poskytovatel přijal a DB commit selhal, položka
+  zůstane `processing` a další běh smí provést jen `commit_only`. `uncertain` delivery se nikdy
+  automaticky neopakuje a nikdy se nevrací na `pending`.
+- **`commit_only` větev nesmí nikdy volat delivery vrstvu ani poskytovatele.** Claim v tomto stavu
+  vrací pouze identifikátory (bez příjemce, předmětu, těl a `performed_by`), takže jakékoli sestavení
+  fingerprintu by skončilo `batch_snapshot_mismatch`. Worker smí zavolat jen
+  `sales_lead_initial_email_commit(delivery_id)`; při neúspěchu položka zůstane blokovaná a
+  nezapisuje se neúspěch.
+- **Poslední bariéra nad zamčeným leadem v `sales_lead_initial_email_claim` (batch režim)** musí
+  zůstat úplná: `performed_by` = `batch.created_by`, `converted_partner_id IS NULL`, žádný partner se
+  stejným IČO, povolená `email_verification_method`, `email_verified_at IS NOT NULL`, neprázdný
+  `email_source` do 2048 znaků.
+- **Ruční sender se nesmí funkčně změnit.** Delivery key ručního režimu musí zůstat bit po bitu
+  stejný (regresní test se zlatou hodnotou); `batch_item_id` vstupuje do fingerprintu jen v režimu
+  `batch_initial`. Identita odesílatele je sdílená: `Miroslav | OneMil <b2b@onemil.cz>`.
+- **Zapnutí vyžaduje pět samostatných schválení:** secret → nasazení funkce → případný cron →
+  `enabled=true` → aktivace konkrétní dávky. Do PR 4 nepřidávat cron, `pg_net`, `email_queue` ani
+  klientské tlačítko Spustit/Obnovit/Zapnout automatiku.
+
 # Stripe refundace — invarianty (ověřeno Sandbox testy 04. 08. 2026)
 
 - **Refundaci lze zahájit jen tehdy, když má uživatel k dispozici celý počet MioCoinů připsaný danou platbou.** Kontrola je v `prepare_stripe_refund` a běží **před** jakýmkoli voláním Stripe.

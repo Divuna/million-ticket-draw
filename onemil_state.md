@@ -1,10 +1,30 @@
 # OneMil – aktuální stav projektu
 
-## DENNÍ DÁVKY PRVNÍCH OBCHODNÍCH E-MAILŮ — PR 3 V DRAFTU (05. 08. 2026)
+## DENNÍ DÁVKY PRVNÍCH OBCHODNÍCH E-MAILŮ — PR 4 WORKER V DRAFTU (06. 08. 2026)
+
+PR 1 (PR #312), bezpečná delivery vrstva PR 2 (PR #313) i administrační příprava pozastavených
+dávek PR 3 (PR #314) jsou **v produkci**; PR 3 je **produkčně ověřené**. **PR 4 je pouze Draft.**
+
+PR 4 přidává interní dávkový worker, který umí zpracovat výhradně ručně připravené a vědomě
+aktivované položky: service-role RPC `sales_lead_email_batch_claim_next()` (kill switch první, jen
+`scheduled` dávka, jen dnešní plán a okno podle `Europe/Prague`, `FOR UPDATE SKIP LOCKED`, nejvýše
+jedna položka, plné znovuověření ochran před přepnutím na `processing`),
+`sales_lead_email_batch_activate(uuid)` pro řízený přechod `paused → scheduled`,
+`sales_lead_email_batch_item_record_failure(uuid,text,text)` pro auditovaný neúspěch a rozšíření
+sdílené delivery vrstvy i evidence o režim `batch_initial`. Edge Function
+`process-sales-lead-email-batch` je interní (secret `SALES_LEAD_BATCH_WORKER_SECRET`, POST only,
+fail-closed) a zavolá poskytovatele nejvýše jednou za request.
+
+**Stav nasazení PR 4:** worker **není nasazený**, secret **není nastavený**, **cron neexistuje**,
+automatika je stále **`enabled=false`** a PR 4 **neodeslal žádný e-mail**. Staging ani produkce
+nebyly PR 4 nijak změněny. Zapnutí vyžaduje pět samostatných schválení: secret → nasazení funkce →
+případný cron → `enabled=true` → aktivace konkrétní dávky.
+
+## DENNÍ DÁVKY PRVNÍCH OBCHODNÍCH E-MAILŮ — PR 3 V PRODUKCI (05. 08. 2026)
 
 PR 1 z PR #312 a bezpečná delivery vrstva PR 2 z PR #313 jsou v produkci. Automatika zůstává
-`enabled=false`, batch tabulky jsou prázdné a neexistuje batch worker ani batch cron.
-PR 3 je samostatný Draft: administrátor může vybrat leady, aktivní první šablonu a den, zobrazit
+`enabled=false` a neexistuje batch cron.
+PR 3 je v produkci a produkčně ověřené: administrátor může vybrat leady, aktivní první šablonu a den, zobrazit
 serverový náhled a po druhém potvrzení uložit dávku. Při vypnuté automatice vznikne výhradně
 `paused` dávka s `pending` položkami. Přehled ukazuje posledních 20 dávek, položky i skip audit a
 umožňuje pouze guardované zrušení. PR 3 nemá sender, worker, cron, Resend volání ani `email_queue`.
