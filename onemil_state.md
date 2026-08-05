@@ -1,6 +1,14 @@
 # OneMil – aktuální stav projektu
 
-## DENNÍ DÁVKY PRVNÍCH OBCHODNÍCH E-MAILŮ — PR 1 POUZE V DRAFTU (04. 08. 2026)
+## DENNÍ DÁVKY PRVNÍCH OBCHODNÍCH E-MAILŮ — PR 2 V DRAFTU (05. 08. 2026)
+
+PR 1 z PR #312 je v produkci jako pasivní základ, stále `enabled=false`, bez dávek, workeru a cronu.
+PR 2 je pouze v samostatném Draft PR: ruční první sender používá serverovou delivery evidenci,
+atomický claim, Resend idempotency key, záznam výsledku poskytovatele a idempotentní atomický commit
+historie/stavu. Neznámý výsledek blokuje opakování. PR 2 není nasazen a neodeslal žádný e-mail.
+Administrační plánování bude až PR 3 a batch worker až PR 4.
+
+## DENNÍ DÁVKY PRVNÍCH OBCHODNÍCH E-MAILŮ — PR 1 V PRODUKCI, VYPNUTO (05. 08. 2026)
 
 V samostatné větvi je připraven pasivní databázový základ: tabulky
 `sales_lead_email_automation_settings`, `sales_lead_email_batches`,
@@ -12,7 +20,8 @@ unikátní lead/e-mail indexy pro `pending`/`processing`/`sent`/`failed`. Stejn�
 denní kapacitu; idempotence je vázaná na SHA-256 otisk požadavku; dnešní sloty jsou nejdříve za pět minut a
 před 16:30; cancel při `processing` selže bez částečné změny. Návrh nepoužívá obecnou `email_queue`, protože aktuální první
 obchodní sender posílá přímo přes Resend. V PR 1 není worker, cron, UI ani odesílací volání.
-Migrace nebyla nikde aplikována, staging ani produkce nebyly změněny a žádný e-mail nebyl odeslán.
+PR #312 je mergnutý a migrace PR 1 je v produkci. Nastavení zůstává `enabled=false`, tabulky jsou
+prázdné, worker ani cron neexistuje a nasazení neodeslalo žádný e-mail.
 
 ## AKTUÁLNÍ STAV — SANDBOX TOK DOBÍJENÍ A REFUNDACÍ OTESTOVÁN A FUNKČNÍ (04. 08. 2026)
 

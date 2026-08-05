@@ -1,3 +1,14 @@
+# 05. 08. 2026 — PR 2 bezpečné evidence prvního obchodního e-mailu (Draft)
+
+- Připraven společný server-only tok pro ruční první e-mail; provider je injektovaná závislost a
+  testy používají výhradně fake provider.
+- Přidána pasivní `sales_lead_email_deliveries` a service-role-only RPC pro claim, záznam výsledku a
+  atomický commit jediné historie a správného stavového přechodu.
+- Stabilní delivery key je současně Resend idempotency key. Accepted + DB failure pokračuje jen
+  commitem; timeout/neurčitý výsledek se blokuje jako `uncertain`.
+- Nic nebylo nasazeno ani aplikováno na staging/produkci, batch automatika zůstává vypnutá a nebyl
+  odeslán žádný e-mail. UI dávky je PR 3, worker/cron až PR 4.
+
 # 04. 08. 2026 — Stripe refundace: v137, superadmin, Publish, Sandbox webhook a ověřené testy
 
 - **`stripe-refund` nasazena ve verzi v137** (`verify_jwt = true`); `stripe-webhook` zůstává **v338** (`verify_jwt = false`, ověřuje Stripe podpis).

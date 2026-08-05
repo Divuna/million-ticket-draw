@@ -8,6 +8,7 @@ import {
 } from '../../supabase/functions/_shared/salesLeadEmailRendering.ts';
 
 const migration = fs.readFileSync('supabase/migrations/20260804165418_sales_lead_email_batches_foundation.sql', 'utf8');
+const deliveryMigration = fs.readFileSync('supabase/migrations/20260805140658_sales_lead_initial_email_delivery.sql', 'utf8');
 const db = new PGlite();
 const manager = '10000000-0000-4000-8000-000000000001';
 const outsider = '10000000-0000-4000-8000-000000000002';
@@ -45,12 +46,36 @@ create table public.sales_lead_email_suppression(
   id uuid primary key default gen_random_uuid(),email_pattern text,reason text,created_by uuid,created_at timestamptz default now());
 create table public.sales_lead_activities(
   id uuid primary key default gen_random_uuid(),lead_id uuid references public.sales_leads(id),activity_type text,
-  direction text,metadata jsonb default '{}'::jsonb,created_at timestamptz default now());
+  direction text,subject text,body_snapshot text,email_message_id text,performed_by uuid references auth.users(id),
+  metadata jsonb default '{}'::jsonb,created_at timestamptz default now());
+create table public.sales_lead_status_history(
+  id uuid primary key default gen_random_uuid(),lead_id uuid references public.sales_leads(id),old_status text,
+  new_status text,changed_by uuid references auth.users(id),reason text,created_at timestamptz default now());
 create function public.sales_lead_email_send_guard(p_lead_id uuid) returns jsonb
 language sql stable security definer set search_path=public as $$
   select jsonb_build_object('success',exists(select 1 from public.sales_leads where id=p_lead_id)) $$;
 revoke all on function public.sales_lead_email_send_guard(uuid) from public,anon,authenticated;
 grant execute on function public.sales_lead_email_send_guard(uuid) to service_role;
+create function public.sales_lead_mark_emailed(p_lead_id uuid,p_performed_by uuid) returns jsonb
+language plpgsql security definer set search_path=public as $$
+declare old_status text;
+begin
+  select status into old_status from public.sales_leads where id=p_lead_id for update;
+  if old_status in ('novy','priprava','schvaleni_ceka') then
+    update public.sales_leads set status='osloveno' where id=p_lead_id;
+    insert into public.sales_lead_status_history(lead_id,old_status,new_status,changed_by,reason)
+      values(p_lead_id,old_status,'osloveno',p_performed_by,'test');
+    insert into public.sales_lead_activities(lead_id,activity_type,direction,performed_by,metadata)
+      values(p_lead_id,'status_changed','internal',p_performed_by,jsonb_build_object('from',old_status,'to','osloveno'));
+    return jsonb_build_object('success',true,'status_changed',true,'new_status','osloveno');
+  end if;
+  if old_status in ('osloveno','follow_up','odpovedel','jednani','konvertovan') then
+    return jsonb_build_object('success',true,'status_changed',false,'current_status',old_status);
+  end if;
+  return jsonb_build_object('success',false,'error','initial_email_status_not_allowed');
+end $$;
+revoke all on function public.sales_lead_mark_emailed(uuid,uuid) from public,anon,authenticated;
+grant execute on function public.sales_lead_mark_emailed(uuid,uuid) to service_role;
 `;
 
 const value = async (sql, params = []) => {
@@ -70,6 +95,7 @@ const asOwner = async () => {
 test.before(async () => {
   await db.exec(baseline);
   await db.exec(migration);
+  await db.exec(deliveryMigration);
   await db.query('insert into auth.users(id) values($1),($2)', [manager, outsider]);
 });
 test.after(async () => db.close());
@@ -325,4 +351,61 @@ Konec "nabídky".`, 'Řádek s CRLF\r\n\r\nPoslední\r\n', ''];
     assert.equal(sqlText, renderSalesLeadEmailText(input));
     assert.equal(sqlHtml, renderSalesLeadEmailHtml(input));
   }
+});
+
+test('delivery migration is passive and internal RPC grants are service-role only', async () => {
+  await asOwner();
+  assert.equal((await db.query('select count(*)::int n from public.sales_lead_email_deliveries')).rows[0].n, 0);
+  const signature = `public.sales_lead_initial_email_commit(uuid)`;
+  for (const role of ['anon', 'authenticated']) {
+    assert.equal((await db.query('select has_function_privilege($1,$2,$3) allowed', [role, signature, 'execute'])).rows[0].allowed, false);
+  }
+  assert.equal((await db.query('select has_function_privilege($1,$2,$3) allowed', ['service_role', signature, 'execute'])).rows[0].allowed, true);
+});
+
+test('claim, provider acceptance, and commit create one delivery, email activity, and forward-only status change', async () => {
+  await asOwner();
+  const deliveryLead = '30000000-0000-4000-8000-000000000201';
+  await db.query(`insert into public.sales_leads(id,company_name,contact_email,email_source,email_verified_by_admin,
+    email_verification_method,email_verified_at,status,created_by) values($1,'Delivery','delivery@example.cz',
+    'https://example.cz/kontakt',true,'admin_manual',now(),'novy',$2)`, [deliveryLead, manager]);
+  const args = ['a'.repeat(64), 'b'.repeat(64), deliveryLead, 'manual_initial', null, 'delivery@example.cz',
+    'NabĂ­dka', 'DobrĂ˝ den.', 'DobrĂ˝ den.', '<p>DobrĂ˝ den.</p>', [], manager,
+    '40000000-0000-4000-8000-000000000201'];
+  const claim = await value(`select public.sales_lead_initial_email_claim(
+    $1,$2,$3::uuid,$4,$5::uuid,$6,$7,$8,$9,$10,$11::jsonb,$12::uuid,$13::uuid)`, args);
+  assert.equal(claim.action, 'call_provider');
+  const accepted = await value(`select public.sales_lead_initial_email_record_provider_result($1::uuid,'accepted','resend-db-1',null)`, [claim.delivery_id]);
+  assert.equal(accepted.success, true);
+  const committed = await value('select public.sales_lead_initial_email_commit($1::uuid)', [claim.delivery_id]);
+  assert.equal(committed.success, true);
+  const replay = await value('select public.sales_lead_initial_email_commit($1::uuid)', [claim.delivery_id]);
+  assert.equal(replay.already_committed, true);
+  assert.equal((await db.query(`select count(*)::int n from public.sales_lead_activities
+    where email_delivery_id=$1 and activity_type='email_sent'`, [claim.delivery_id])).rows[0].n, 1);
+  assert.equal((await db.query('select status from public.sales_leads where id=$1', [deliveryLead])).rows[0].status, 'osloveno');
+  assert.equal((await db.query(`select count(*)::int n from public.sales_lead_status_history
+    where lead_id=$1 and new_status='osloveno'`, [deliveryLead])).rows[0].n, 1);
+});
+
+test('uncertain outcome blocks replay while explicit rejection leaves no sent history', async () => {
+  await asOwner();
+  for (const [suffix, email] of [['202','uncertain@example.cz'], ['203','rejected@example.cz']]) {
+    await db.query(`insert into public.sales_leads(id,company_name,contact_email,email_source,email_verified_by_admin,
+      email_verification_method,email_verified_at,status,created_by) values($1,'Outcome',$2,'https://example.cz/kontakt',
+      true,'admin_manual',now(),'novy',$3)`, [`30000000-0000-4000-8000-000000000${suffix}`, email, manager]);
+  }
+  const claimFor = async (suffix, key, email) => value(`select public.sales_lead_initial_email_claim(
+    $1,$2,$3::uuid,'manual_initial',null,$4,'NabĂ­dka','Text','Text','<p>Text</p>','[]'::jsonb,$5::uuid,$6::uuid)`,
+    [key.repeat(64), 'd'.repeat(64), `30000000-0000-4000-8000-000000000${suffix}`, email, manager,
+      `40000000-0000-4000-8000-000000000${suffix}`]);
+  const uncertain = await claimFor('202', 'c', 'uncertain@example.cz');
+  await value(`select public.sales_lead_initial_email_record_provider_result($1::uuid,'uncertain',null,'timeout')`, [uncertain.delivery_id]);
+  const blocked = await claimFor('202', 'c', 'uncertain@example.cz');
+  assert.equal(blocked.error, 'email_delivery_outcome_uncertain');
+  const rejected = await claimFor('203', 'e', 'rejected@example.cz');
+  await value(`select public.sales_lead_initial_email_record_provider_result($1::uuid,'rejected',null,'validation_error')`, [rejected.delivery_id]);
+  assert.equal((await db.query(`select count(*)::int n from public.sales_lead_activities where lead_id=$1 and activity_type='email_sent'`,
+    ['30000000-0000-4000-8000-000000000203'])).rows[0].n, 0);
+  assert.equal((await db.query('select status from public.sales_leads where id=$1', ['30000000-0000-4000-8000-000000000203'])).rows[0].status, 'novy');
 });
