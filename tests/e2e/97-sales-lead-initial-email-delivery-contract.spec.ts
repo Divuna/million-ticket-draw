@@ -5,6 +5,7 @@ const read = (path: string) => fs.readFileSync(path, 'utf8');
 const sender = read('supabase/functions/send-sales-lead-email/index.ts');
 const delivery = read('supabase/functions/_shared/salesLeadInitialEmailDelivery.ts');
 const migration = read('supabase/migrations/20260805140658_sales_lead_initial_email_delivery.sql');
+const messages = read('src/components/admin/sales-leads/salesLeadsShared.ts');
 
 test('manual sender keeps human auth and delegates initial delivery server-side', () => {
   expect(sender).toContain('sales_leads.manage');
@@ -18,6 +19,23 @@ test('stable provider idempotency key and fail-closed uncertain outcome are wire
   expect(delivery).toContain('email_delivery_outcome_uncertain');
   expect(delivery).toContain('sales_lead_initial_email_commit');
   expect(migration).toContain("'action', 'commit_only'");
+});
+
+test('Resend idempotency conflicts are fail-closed and have explicit administrator guidance', () => {
+  expect(sender).toContain('classifyInitialEmailProviderError');
+  expect(delivery).toContain('normalized === "invalid_idempotent_request"');
+  expect(delivery).toContain('normalized === "concurrent_idempotent_requests"');
+  expect(delivery).toContain('email_delivery_idempotency_conflict');
+  expect(delivery).not.toMatch(/EXPLICIT_PROVIDER_REJECTIONS[\s\S]{0,500}invalid_idempotent_request/);
+  expect(messages).toContain('Odeslání je zablokované kvůli konfliktu bezpečnostního klíče. E-mail znovu neposílejte, dokud nebude stav ověřen.');
+});
+
+test('provider_rejected re-enters sending only after all authoritative barriers', () => {
+  const retryMarker = migration.indexOf('IF v_retry_rejected THEN');
+  expect(retryMarker).toBeGreaterThan(migration.indexOf("IF v_lead.do_not_contact"));
+  expect(retryMarker).toBeGreaterThan(migration.indexOf('sales_lead_email_suppression'));
+  expect(retryMarker).toBeGreaterThan(migration.indexOf('sales_lead_email_send_guard'));
+  expect(migration.slice(0, retryMarker)).not.toMatch(/status = 'sending'.*attempt_count = attempt_count \+ 1/s);
 });
 
 test('delivery RPCs are service-role only with database unique guards', () => {

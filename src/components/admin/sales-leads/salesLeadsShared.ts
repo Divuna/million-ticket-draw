@@ -291,6 +291,8 @@ export const RPC_ERROR_MESSAGES: Record<string, string> = {
   initial_email_status_not_allowed: 'První e-mail lze odeslat pouze ze schváleného leadu před oslovením.',
   status_sync_failed_after_send: 'E-mail byl odeslán, ale stav leadu se nepodařilo synchronizovat. E-mail znovu neposílejte.',
   email_delivery_outcome_uncertain: 'Výsledek odeslání nelze potvrdit. E-mail znovu neposílejte, dokud nebude stav ověřen.',
+  email_delivery_idempotency_conflict: 'Odeslání je zablokované kvůli konfliktu bezpečnostního klíče. E-mail znovu neposílejte, dokud nebude stav ověřen.',
+  email_delivery_concurrent_idempotency_request: 'Odeslání je zablokované kvůli souběžnému požadavku. E-mail znovu neposílejte, dokud nebude stav ověřen.',
   email_delivery_in_progress: 'Odeslání tohoto e-mailu už probíhá. Neodesílejte jej znovu.',
   provider_accepted_commit_failed: 'Poskytovatel e-mail přijal, ale dokončení evidence selhalo. E-mail znovu neposílejte; opakování provede pouze bezpečný zápis evidence.',
   provider_accepted_result_write_failed: 'Poskytovatel e-mail přijal, ale výsledek se nepodařilo zaznamenat. E-mail znovu neposílejte, dokud nebude stav ověřen.',

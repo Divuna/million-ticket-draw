@@ -49,6 +49,38 @@ export type DeliverInitialEmailResult = {
   deliveryId?: string;
 };
 
+export class InitialEmailProviderOutcomeUncertainError extends Error {
+  readonly deliveryErrorCode: string;
+
+  constructor(deliveryErrorCode: string) {
+    super(deliveryErrorCode);
+    this.name = "InitialEmailProviderOutcomeUncertainError";
+    this.deliveryErrorCode = deliveryErrorCode;
+  }
+}
+
+const EXPLICIT_PROVIDER_REJECTIONS = new Set([
+  "validation_error", "invalid_idempotency_key",
+  "invalid_attachment", "invalid_from_address", "invalid_to_address", "invalid_access",
+  "missing_api_key", "restricted_api_key", "rate_limit_exceeded", "daily_quota_exceeded",
+]);
+
+export function classifyInitialEmailProviderError(code: string | null):
+  | { outcome: "rejected"; errorCode: "email_send_failed" }
+  | { outcome: "uncertain"; errorCode: string } {
+  const normalized = code?.trim().toLowerCase() || null;
+  if (normalized === "invalid_idempotent_request") {
+    return { outcome: "uncertain", errorCode: "email_delivery_idempotency_conflict" };
+  }
+  if (normalized === "concurrent_idempotent_requests") {
+    return { outcome: "uncertain", errorCode: "email_delivery_concurrent_idempotency_request" };
+  }
+  if (normalized && EXPLICIT_PROVIDER_REJECTIONS.has(normalized)) {
+    return { outcome: "rejected", errorCode: "email_send_failed" };
+  }
+  return { outcome: "uncertain", errorCode: "email_delivery_outcome_uncertain" };
+}
+
 const canonicalJson = (value: unknown): string => {
   if (Array.isArray(value)) return `[${value.map(canonicalJson).join(",")}]`;
   if (value && typeof value === "object") {
@@ -140,16 +172,19 @@ export async function deliverSalesLeadInitialEmail(
         html: input.bodyHtml,
         ...(input.attachments.length ? { attachments: input.attachments } : {}),
       }, deliveryKey);
-    } catch (_error) {
+    } catch (error) {
+      const deliveryErrorCode = error instanceof InitialEmailProviderOutcomeUncertainError
+        ? error.deliveryErrorCode
+        : "email_delivery_outcome_uncertain";
       await client.rpc("sales_lead_initial_email_record_provider_result", {
         p_delivery_id: deliveryId,
         p_result: "uncertain",
         p_provider_message_id: null,
-        p_error_code: "provider_outcome_unknown",
+        p_error_code: deliveryErrorCode,
       });
       return {
         success: false,
-        error: "email_delivery_outcome_uncertain",
+        error: deliveryErrorCode,
         retryBlocked: true,
         deliveryId,
       };

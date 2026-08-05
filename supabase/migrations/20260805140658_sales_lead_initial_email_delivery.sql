@@ -81,6 +81,7 @@ DECLARE
   v_guard jsonb;
   v_recipient text := lower(btrim(p_recipient));
   v_domain text;
+  v_retry_rejected boolean := false;
 BEGIN
   IF p_mode <> 'manual_initial' OR p_batch_item_id IS NOT NULL THEN
     RETURN jsonb_build_object('success', false, 'error', 'batch_delivery_not_enabled');
@@ -88,14 +89,6 @@ BEGIN
   IF p_delivery_key !~ '^[0-9a-f]{64}$' OR p_request_fingerprint !~ '^[0-9a-f]{64}$' THEN
     RETURN jsonb_build_object('success', false, 'error', 'invalid_delivery_identity');
   END IF;
-  IF btrim(p_subject) = '' THEN RETURN jsonb_build_object('success', false, 'error', 'email_subject_required'); END IF;
-  IF btrim(p_body_source) = '' THEN RETURN jsonb_build_object('success', false, 'error', 'email_body_required'); END IF;
-  IF length(btrim(p_subject)) > 300 THEN RETURN jsonb_build_object('success', false, 'error', 'email_subject_too_long'); END IF;
-  IF length(btrim(p_body_source)) > 20000 THEN RETURN jsonb_build_object('success', false, 'error', 'email_body_too_long'); END IF;
-  IF (p_subject || E'\n' || p_body_source) ~ '\{\{[^{}]+\}\}' THEN
-    RETURN jsonb_build_object('success', false, 'error', 'unresolved_template_variables');
-  END IF;
-
   SELECT * INTO v_lead FROM public.sales_leads WHERE id = p_lead_id FOR UPDATE;
   IF NOT FOUND THEN RETURN jsonb_build_object('success', false, 'error', 'lead_not_found'); END IF;
 
@@ -116,11 +109,16 @@ BEGIN
     ELSIF v_delivery.status = 'uncertain' THEN
       RETURN jsonb_build_object('success', false, 'error', 'email_delivery_outcome_uncertain', 'retry_blocked', true);
     ELSIF v_delivery.status = 'provider_rejected' THEN
-      UPDATE public.sales_lead_email_deliveries SET status = 'sending', attempt_count = attempt_count + 1,
-        last_error_code = NULL, updated_at = now() WHERE id = v_delivery.id;
-      RETURN jsonb_build_object('success', true, 'action', 'call_provider', 'delivery_id', v_delivery.id,
-        'outbound_capture_id', v_delivery.outbound_capture_id);
+      v_retry_rejected := true;
     END IF;
+  END IF;
+
+  IF btrim(p_subject) = '' THEN RETURN jsonb_build_object('success', false, 'error', 'email_subject_required'); END IF;
+  IF btrim(p_body_source) = '' THEN RETURN jsonb_build_object('success', false, 'error', 'email_body_required'); END IF;
+  IF length(btrim(p_subject)) > 300 THEN RETURN jsonb_build_object('success', false, 'error', 'email_subject_too_long'); END IF;
+  IF length(btrim(p_body_source)) > 20000 THEN RETURN jsonb_build_object('success', false, 'error', 'email_body_too_long'); END IF;
+  IF (p_subject || E'\n' || p_body_source) ~ '\{\{[^{}]+\}\}' THEN
+    RETURN jsonb_build_object('success', false, 'error', 'unresolved_template_variables');
   END IF;
 
   IF v_lead.status = 'navrzeny' THEN RETURN jsonb_build_object('success', false, 'error', 'proposal_not_approved'); END IF;
@@ -144,12 +142,25 @@ BEGIN
     RETURN jsonb_build_object('success', false, 'error', 'initial_email_already_sent');
   END IF;
   IF EXISTS (SELECT 1 FROM public.sales_lead_email_deliveries
-    WHERE lead_id = p_lead_id AND status IN ('prepared','sending','provider_accepted','committed','uncertain')) THEN
+    WHERE lead_id = p_lead_id AND id IS DISTINCT FROM v_delivery.id
+      AND status IN ('prepared','sending','provider_accepted','committed','uncertain')) THEN
     RETURN jsonb_build_object('success', false, 'error', 'initial_email_already_claimed');
   END IF;
   v_guard := public.sales_lead_email_send_guard(p_lead_id);
   IF coalesce((v_guard->>'success')::boolean, false) IS NOT TRUE THEN
     RETURN jsonb_build_object('success', false, 'error', coalesce(v_guard->>'error', 'duplicate_override_required'));
+  END IF;
+
+  IF v_retry_rejected THEN
+    UPDATE public.sales_lead_email_deliveries
+      SET status = 'sending', attempt_count = attempt_count + 1,
+        last_error_code = NULL, updated_at = now()
+      WHERE id = v_delivery.id AND status = 'provider_rejected';
+    IF NOT FOUND THEN
+      RETURN jsonb_build_object('success', false, 'error', 'email_delivery_in_progress', 'retry_blocked', true);
+    END IF;
+    RETURN jsonb_build_object('success', true, 'action', 'call_provider', 'delivery_id', v_delivery.id,
+      'outbound_capture_id', v_delivery.outbound_capture_id);
   END IF;
 
   INSERT INTO public.sales_lead_email_deliveries(

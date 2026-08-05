@@ -51,9 +51,14 @@ create table public.sales_lead_activities(
 create table public.sales_lead_status_history(
   id uuid primary key default gen_random_uuid(),lead_id uuid references public.sales_leads(id),old_status text,
   new_status text,changed_by uuid references auth.users(id),reason text,created_at timestamptz default now());
+create table public.test_sales_lead_duplicate_guard_blocks(lead_id uuid primary key);
 create function public.sales_lead_email_send_guard(p_lead_id uuid) returns jsonb
 language sql stable security definer set search_path=public as $$
-  select jsonb_build_object('success',exists(select 1 from public.sales_leads where id=p_lead_id)) $$;
+  select case
+    when exists(select 1 from public.test_sales_lead_duplicate_guard_blocks where lead_id=p_lead_id)
+      then jsonb_build_object('success',false,'error','duplicate_override_required')
+    else jsonb_build_object('success',exists(select 1 from public.sales_leads where id=p_lead_id))
+  end $$;
 revoke all on function public.sales_lead_email_send_guard(uuid) from public,anon,authenticated;
 grant execute on function public.sales_lead_email_send_guard(uuid) to service_role;
 create function public.sales_lead_mark_emailed(p_lead_id uuid,p_performed_by uuid) returns jsonb
@@ -409,3 +414,141 @@ test('uncertain outcome blocks replay while explicit rejection leaves no sent hi
     ['30000000-0000-4000-8000-000000000203'])).rows[0].n, 0);
   assert.equal((await db.query('select status from public.sales_leads where id=$1', ['30000000-0000-4000-8000-000000000203'])).rows[0].status, 'novy');
 });
+
+const initialDeliveryFixture = async (suffix) => {
+  const padded = String(suffix).padStart(3, '0');
+  const leadId = `30000000-0000-4000-8000-000000000${padded}`;
+  const captureId = `40000000-0000-4000-8000-000000000${padded}`;
+  const email = `retry-${padded}@retry-${padded}.example.cz`;
+  const deliveryKey = Number(suffix).toString(16).padStart(64, '0');
+  const fingerprint = (Number(suffix) + 4096).toString(16).padStart(64, '0');
+  await db.query(`insert into public.sales_leads(id,company_name,contact_email,email_source,email_verified_by_admin,
+    email_verification_method,email_verified_at,status,created_by) values($1,$2,$3,'https://example.cz/kontakt',
+    true,'admin_manual',now(),'novy',$4)`, [leadId, `Retry ${padded}`, email, manager]);
+  const claim = async ({ subject = 'Nabídka', body = 'Text' } = {}) => value(`select public.sales_lead_initial_email_claim(
+    $1,$2,$3::uuid,'manual_initial',null,$4,$5,$6,$6,$7,'[]'::jsonb,$8::uuid,$9::uuid)`,
+    [deliveryKey, fingerprint, leadId, email, subject, body, `<p>${body}</p>`, manager, captureId]);
+  const first = await claim();
+  assert.equal(first.action, 'call_provider');
+  return { leadId, email, deliveryId: first.delivery_id, claim };
+};
+
+const rejectedDeliveryFixture = async (suffix) => {
+  const fixture = await initialDeliveryFixture(suffix);
+  await value(`select public.sales_lead_initial_email_record_provider_result($1::uuid,'rejected',null,'validation_error')`,
+    [fixture.deliveryId]);
+  return fixture;
+};
+
+const assertRejectedRetryBlocked = async (fixture, expectedError, claimOptions) => {
+  const retry = await fixture.claim(claimOptions);
+  assert.equal(retry.action, undefined);
+  assert.equal(retry.error, expectedError);
+  const delivery = (await db.query(`select status,attempt_count,last_error_code
+    from public.sales_lead_email_deliveries where id=$1`, [fixture.deliveryId])).rows[0];
+  assert.deepEqual(delivery, { status: 'provider_rejected', attempt_count: 1, last_error_code: 'validation_error' });
+};
+
+test('provider rejection retry rechecks do_not_contact before another provider call', async () => {
+  await asOwner();
+  const fixture = await rejectedDeliveryFixture(301);
+  await db.query('update public.sales_leads set do_not_contact=true where id=$1', [fixture.leadId]);
+  await assertRejectedRetryBlocked(fixture, 'do_not_contact');
+});
+
+test('provider rejection retry rechecks exact-email suppression before another provider call', async () => {
+  await asOwner();
+  const fixture = await rejectedDeliveryFixture(302);
+  await db.query('insert into public.sales_lead_email_suppression(email_pattern,reason) values($1,$2)', [fixture.email, 'test']);
+  await assertRejectedRetryBlocked(fixture, 'suppressed');
+});
+
+test('provider rejection retry rechecks domain suppression before another provider call', async () => {
+  await asOwner();
+  const fixture = await rejectedDeliveryFixture(303);
+  await db.query('insert into public.sales_lead_email_suppression(email_pattern,reason) values($1,$2)',
+    [`@${fixture.email.split('@')[1]}`, 'test']);
+  await assertRejectedRetryBlocked(fixture, 'suppressed');
+});
+
+test('provider rejection retry rechecks current lead status before another provider call', async () => {
+  await asOwner();
+  const fixture = await rejectedDeliveryFixture(304);
+  await db.query("update public.sales_leads set status='archiv' where id=$1", [fixture.leadId]);
+  await assertRejectedRetryBlocked(fixture, 'initial_email_status_not_allowed');
+});
+
+test('provider rejection retry rejects a changed current contact before another provider call', async () => {
+  await asOwner();
+  const fixture = await rejectedDeliveryFixture(305);
+  await db.query("update public.sales_leads set contact_email='changed@example.cz' where id=$1", [fixture.leadId]);
+  await assertRejectedRetryBlocked(fixture, 'missing_contact_email');
+});
+
+test('provider rejection retry rejects revoked contact verification before another provider call', async () => {
+  await asOwner();
+  const fixture = await rejectedDeliveryFixture(306);
+  await db.query('update public.sales_leads set email_verified_by_admin=false where id=$1', [fixture.leadId]);
+  await assertRejectedRetryBlocked(fixture, 'missing_contact_email');
+});
+
+test('provider rejection retry rechecks newly recorded initial email before another provider call', async () => {
+  await asOwner();
+  const fixture = await rejectedDeliveryFixture(307);
+  await db.query(`insert into public.sales_lead_activities(lead_id,activity_type,direction,performed_by,metadata)
+    values($1,'email_sent','outbound',$2,'{"sent_by":"human"}'::jsonb)`, [fixture.leadId, manager]);
+  await assertRejectedRetryBlocked(fixture, 'initial_email_already_sent');
+});
+
+test('provider rejection retry rechecks duplicate guard before another provider call', async () => {
+  await asOwner();
+  const fixture = await rejectedDeliveryFixture(308);
+  await db.query('insert into public.test_sales_lead_duplicate_guard_blocks(lead_id) values($1)', [fixture.leadId]);
+  await assertRejectedRetryBlocked(fixture, 'duplicate_override_required');
+});
+
+test('ordinary provider rejection retries only after every current barrier passes', async () => {
+  await asOwner();
+  const fixture = await rejectedDeliveryFixture(309);
+  const retry = await fixture.claim();
+  assert.equal(retry.action, 'call_provider');
+  assert.equal(retry.delivery_id, fixture.deliveryId);
+  const delivery = (await db.query('select status,attempt_count,last_error_code from public.sales_lead_email_deliveries where id=$1',
+    [fixture.deliveryId])).rows[0];
+  assert.deepEqual(delivery, { status: 'sending', attempt_count: 2, last_error_code: null });
+});
+
+test('provider rejection retry rechecks unresolved content before another provider call', async () => {
+  await asOwner();
+  const fixture = await rejectedDeliveryFixture(312);
+  await assertRejectedRetryBlocked(fixture, 'unresolved_template_variables', { subject: 'Nabídka pro {{firma}}' });
+});
+
+test('provider rejection retry rechecks another blocking delivery before another provider call', async () => {
+  await asOwner();
+  const fixture = await rejectedDeliveryFixture(313);
+  await db.query(`insert into public.sales_lead_email_deliveries(
+    delivery_key,request_fingerprint,lead_id,mode,status,recipient_snapshot,subject_snapshot,
+    body_source_snapshot,body_text_snapshot,body_html_snapshot,performed_by,outbound_capture_id,attempt_count,last_error_code)
+    values($1,$2,$3,'manual_initial','uncertain',$4,'Other','Other','Other','<p>Other</p>',$5,$6,1,'provider_outcome_unknown')`,
+    ['f'.repeat(64), 'e'.repeat(64), fixture.leadId, fixture.email, manager, '40000000-0000-4000-8000-000000000999']);
+  await assertRejectedRetryBlocked(fixture, 'initial_email_already_claimed');
+});
+
+for (const [suffix, providerCode, deliveryError] of [
+  [310, 'invalid_idempotent_request', 'email_delivery_idempotency_conflict'],
+  [311, 'concurrent_idempotent_requests', 'email_delivery_concurrent_idempotency_request'],
+]) {
+  test(`${providerCode} audit remains uncertain and blocks every later provider claim`, async () => {
+    await asOwner();
+    const fixture = await initialDeliveryFixture(suffix);
+    await value(`select public.sales_lead_initial_email_record_provider_result($1::uuid,'uncertain',null,$2)`,
+      [fixture.deliveryId, deliveryError]);
+    const replay = await fixture.claim();
+    assert.equal(replay.error, 'email_delivery_outcome_uncertain');
+    assert.equal(replay.retry_blocked, true);
+    const delivery = (await db.query('select status,attempt_count,last_error_code from public.sales_lead_email_deliveries where id=$1',
+      [fixture.deliveryId])).rows[0];
+    assert.deepEqual(delivery, { status: 'uncertain', attempt_count: 1, last_error_code: deliveryError });
+  });
+}

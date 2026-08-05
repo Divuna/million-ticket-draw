@@ -4,7 +4,11 @@ import { Resend } from "npm:resend@6.18.1";
 import { renderSalesLeadEmailHtml, renderSalesLeadEmailText } from "../_shared/salesLeadEmailRendering.ts";
 import { createOutboundCapture } from "../_shared/salesLeadEmailThreading.ts";
 import { parseSalesLeadEmailAttachments } from "../_shared/salesLeadEmailAttachments.ts";
-import { deliverSalesLeadInitialEmail } from "../_shared/salesLeadInitialEmailDelivery.ts";
+import {
+  classifyInitialEmailProviderError,
+  deliverSalesLeadInitialEmail,
+  InitialEmailProviderOutcomeUncertainError,
+} from "../_shared/salesLeadInitialEmailDelivery.ts";
 
 // ============================================================================
 // send-sales-lead-email — odeslání aktuálního obsahu editoru ČLOVĚKEM
@@ -62,12 +66,6 @@ function validateEmailContent(subject: string, body: string): string | null {
 function isValidRecipient(value: string): boolean {
   return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value) && value.length <= 320;
 }
-
-const EXPLICIT_RESEND_REJECTIONS = new Set([
-  "validation_error", "invalid_idempotency_key", "invalid_idempotent_request",
-  "invalid_attachment", "invalid_from_address", "invalid_to_address", "invalid_access",
-  "missing_api_key", "restricted_api_key", "rate_limit_exceeded", "daily_quota_exceeded",
-]);
 
 function resendErrorCode(error: unknown): string | null {
   if (!error || typeof error !== "object") return null;
@@ -256,11 +254,11 @@ serve(async (req: Request) => {
           send: async (payload, idempotencyKey) => {
             const response = await resend.emails.send(payload as never, { idempotencyKey });
             if (response.error) {
-              const code = resendErrorCode(response.error);
-              if (code && EXPLICIT_RESEND_REJECTIONS.has(code)) {
+              const decision = classifyInitialEmailProviderError(resendErrorCode(response.error));
+              if (decision.outcome === "rejected") {
                 return { accepted: false as const, errorCode: "email_send_failed" };
               }
-              throw new Error(`resend_outcome_uncertain:${code ?? "unknown"}`);
+              throw new InitialEmailProviderOutcomeUncertainError(decision.errorCode);
             }
             const messageId = (response.data as { id?: string } | null)?.id;
             if (!messageId) throw new Error("provider_response_missing_message_id");
@@ -283,7 +281,7 @@ serve(async (req: Request) => {
         },
       );
       if (!deliveryResult.success) {
-        const status = deliveryResult.error === "email_delivery_outcome_uncertain" ? 409
+        const status = deliveryResult.retryBlocked ? 409
           : deliveryResult.providerAccepted ? 500
           : deliveryResult.error === "email_send_failed" ? 502
           : 409;

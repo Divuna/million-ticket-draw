@@ -1,6 +1,10 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import { deliverSalesLeadInitialEmail } from '../../supabase/functions/_shared/salesLeadInitialEmailDelivery.ts';
+import {
+  classifyInitialEmailProviderError,
+  deliverSalesLeadInitialEmail,
+  InitialEmailProviderOutcomeUncertainError,
+} from '../../supabase/functions/_shared/salesLeadInitialEmailDelivery.ts';
 
 const baseInput = {
   leadId: '30000000-0000-4000-8000-000000000001',
@@ -57,9 +61,19 @@ test('explicit rejection permits a safe later attempt without commit', async () 
   const rpc = new FakeRpc(); let calls = 0;
   const rejected = { send: async () => { calls += 1; return { accepted: false, errorCode: 'email_send_failed' }; } };
   assert.equal((await deliverSalesLeadInitialEmail(rpc, rejected, baseInput)).success, false);
-  assert.equal(rpc.commits, 0); rpc.status = null;
-  await deliverSalesLeadInitialEmail(rpc, rejected, { ...baseInput, subject: 'Změněná nabídka' });
+  assert.equal(rpc.commits, 0);
+  await deliverSalesLeadInitialEmail(rpc, rejected, baseInput);
   assert.equal(calls, 2);
+});
+
+test('provider rejection retry cannot call provider after a newly introduced barrier', async () => {
+  const rpc = new FakeRpc(); let calls = 0;
+  const rejected = { send: async () => { calls += 1; return { accepted: false, errorCode: 'email_send_failed' }; } };
+  await deliverSalesLeadInitialEmail(rpc, rejected, baseInput);
+  rpc.claimError = 'do_not_contact';
+  const retry = await deliverSalesLeadInitialEmail(rpc, rejected, baseInput);
+  assert.equal(retry.error, 'do_not_contact');
+  assert.equal(calls, 1);
 });
 
 test('unknown provider outcome becomes uncertain and blocks automatic retry', async () => {
@@ -68,6 +82,35 @@ test('unknown provider outcome becomes uncertain and blocks automatic retry', as
   const first = await deliverSalesLeadInitialEmail(rpc, provider, baseInput);
   const replay = await deliverSalesLeadInitialEmail(rpc, provider, baseInput);
   assert.equal(first.error, 'email_delivery_outcome_uncertain'); assert.equal(replay.retryBlocked, true); assert.equal(calls, 1);
+});
+
+for (const [providerCode, deliveryError] of [
+  ['invalid_idempotent_request', 'email_delivery_idempotency_conflict'],
+  ['concurrent_idempotent_requests', 'email_delivery_concurrent_idempotency_request'],
+]) {
+  test(`${providerCode} is fail-closed and never becomes provider_rejected`, async () => {
+    const decision = classifyInitialEmailProviderError(providerCode);
+    assert.deepEqual(decision, { outcome: 'uncertain', errorCode: deliveryError });
+    const rpc = new FakeRpc(); let calls = 0;
+    const provider = { send: async () => {
+      calls += 1;
+      throw new InitialEmailProviderOutcomeUncertainError(decision.errorCode);
+    } };
+    const first = await deliverSalesLeadInitialEmail(rpc, provider, baseInput);
+    const replay = await deliverSalesLeadInitialEmail(rpc, provider, baseInput);
+    assert.equal(first.error, deliveryError);
+    assert.equal(first.retryBlocked, true);
+    assert.equal(rpc.status, 'uncertain');
+    assert.equal(replay.error, 'email_delivery_outcome_uncertain');
+    assert.equal(replay.retryBlocked, true);
+    assert.equal(calls, 1);
+  });
+}
+
+test('a provable provider validation rejection remains retryable', () => {
+  assert.deepEqual(classifyInitialEmailProviderError('validation_error'), {
+    outcome: 'rejected', errorCode: 'email_send_failed',
+  });
 });
 
 test('accepted plus first DB commit failure resumes commit only', async () => {
