@@ -12,6 +12,12 @@ verify_jwt = false
 [functions.send-sales-lead-email]
 verify_jwt = false
 
+# Interní worker připravených dávek. Autorizuje se výhradně sdíleným secretem
+# SALES_LEAD_BATCH_WORKER_SECRET (ne uživatelským JWT). PR 4 funkci nenasazuje,
+# secret nenastavuje a nevytváří pro ni žádný cron.
+[functions.process-sales-lead-email-batch]
+verify_jwt = false
+
 # Příjem PŘÍCHOZÍCH odpovědí firem (reply+LEAD_ID@reply.onemil.cz). Autorizace =
 # ověření podpisu webhooku (SALES_LEAD_INBOUND_WEBHOOK_SECRET) uvnitř funkce.
 # Nikdy neodesílá e-mail; jen zapíše `reply_received` a posune stav na `odpovedel`.

@@ -25,9 +25,15 @@ export type InitialEmailProvider = {
   >;
 };
 
+export type SalesLeadInitialEmailMode = "manual_initial" | "batch_initial";
+
 export type DeliverInitialEmailInput = {
   leadId: string;
   performedBy: string;
+  /** Defaults to manual_initial so the human sender behaves exactly as before. */
+  mode?: SalesLeadInitialEmailMode;
+  /** Required for batch_initial; the exact prepared batch item. */
+  batchItemId?: string | null;
   recipient: string;
   subject: string;
   bodySource: string;
@@ -116,8 +122,15 @@ export async function deliverSalesLeadInitialEmail(
   provider: InitialEmailProvider,
   input: DeliverInitialEmailInput,
 ): Promise<DeliverInitialEmailResult> {
+  const mode: SalesLeadInitialEmailMode = input.mode ?? "manual_initial";
+  const batchItemId = mode === "batch_initial" ? String(input.batchItemId ?? "") : null;
+  if (mode === "batch_initial" && !batchItemId) {
+    return { success: false, error: "batch_item_id_required" };
+  }
   const evidence = await attachmentEvidence(input.attachmentMetadata, input.attachments);
-  const requestFingerprint = await sha256(canonicalJson({
+  // The batch item id is part of the identity only in batch mode, so the
+  // manual fingerprint and delivery key stay byte-identical to before.
+  const fingerprintInput: Record<string, unknown> = {
     lead_id: input.leadId,
     recipient: input.recipient.trim().toLowerCase(),
     subject: input.subject,
@@ -125,15 +138,17 @@ export async function deliverSalesLeadInitialEmail(
     body_text: input.bodyText,
     body_html: input.bodyHtml,
     attachments: evidence,
-    mode: "manual_initial",
-  }));
+    mode,
+  };
+  if (mode === "batch_initial") fingerprintInput.batch_item_id = batchItemId;
+  const requestFingerprint = await sha256(canonicalJson(fingerprintInput));
   const deliveryKey = await sha256(`sales-lead-initial:v1:${input.leadId}:${requestFingerprint}`);
   const claimResponse = await client.rpc("sales_lead_initial_email_claim", {
     p_delivery_key: deliveryKey,
     p_request_fingerprint: requestFingerprint,
     p_lead_id: input.leadId,
-    p_mode: "manual_initial",
-    p_batch_item_id: null,
+    p_mode: mode,
+    p_batch_item_id: batchItemId,
     p_recipient: input.recipient,
     p_subject: input.subject,
     p_body_source: input.bodySource,

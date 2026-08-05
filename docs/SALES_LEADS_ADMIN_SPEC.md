@@ -1005,5 +1005,60 @@ odesílání. Administrační plánování patří do PR 3 a worker až do PR 4.
   ponechá `enabled=false`. Původní `sales_lead_email_batch_create` zůstává funkční
   (`enabled=false` → `paused`, `enabled=true` → `scheduled`) pro pozdější PR 4. Nevytváří worker, cron,
   Edge Function ani zápis do `email_queue`.
-- PR 3 není nasazen na staging ani produkci. Worker a řízené zapnutí zůstávají výhradně PR 4 a
+- PR 3 je v produkci a produkčně ověřený. Worker a řízené zapnutí zůstávají výhradně PR 4 a
   vyžadují nové výslovné schválení.
+
+## PR 4 — interní worker připravených dávek (Draft; 06. 08. 2026)
+
+- **Stav:** PR 1, PR 2 i PR 3 jsou v produkci; PR 3 je produkčně ověřené. **PR 4 je pouze Draft** —
+  worker není nasazený, secret `SALES_LEAD_BATCH_WORKER_SECRET` není nastavený, cron neexistuje,
+  automatika je stále `enabled=false` a PR 4 neodeslal žádný e-mail.
+- **Nic se nevybírá automaticky.** Worker nehledá firmy, nevytváří dávky, nedělá ranní výběr,
+  follow-upy ani odpovědi a nikdy nedohání zmeškané e-maily. Zpracuje výhradně položku, kterou
+  člověk připravil v PR 3 a kterou někdo vědomě aktivoval.
+- **Claim:** `sales_lead_email_batch_claim_next()` (service-role only) zamkne singleton nastavení
+  `FOR UPDATE`, při `enabled IS DISTINCT FROM true` okamžitě vrátí bezpečný no-op, pracuje jen s
+  dávkou `status='scheduled'` (nikdy `paused`, `cancelled`, `completed`, `failed`), jen s dnešním
+  plánem podle `Europe/Prague` a jen uvnitř okna uloženého u dávky. Vybere **nejvýše jednu** právě
+  splatnou položku přes `FOR UPDATE SKIP LOCKED`, znovu ověří všechny ochrany a teprve pak položku
+  atomicky přepne na `processing` (+`attempt_count`). Vrací pouze zmrazené snapshoty.
+- **Znovu ověřované ochrany:** existence leadu, povolený stav, `do_not_contact`, existující partner,
+  shoda aktuálního e-mailu se zmrazeným příjemcem, ověření e-mailu (metoda, čas, zdroj), suppression,
+  předchozí první obchodní e-mail, duplicate guard, jiná blokující delivery, jiná aktivní položka a
+  aktuální stav dávky i položky. Neúspěch = auditovaný `skipped` s přesným důvodem a **konec běhu**.
+- **Zmeškaný čas:** položka ze staršího dne nebo po konci okna se označí `skipped` s důvodem
+  `scheduled_window_missed`. Nikdy se neposílá později jako catch-up.
+- **Řízená aktivace:** `sales_lead_email_batch_activate(uuid)` (service-role only, bez `anon`/
+  `authenticated`) přepne jednu dávku `paused → scheduled`. Vyžaduje `enabled=true`, zamkne
+  nastavení, dávku i položky, odmítne jinou než `paused` dávku, prošlé datum i nepoužitelné okno,
+  nemění snapshoty ani časy položek a nic neodesílá. **PR 4 pro ni nepřidává UI ani automatické
+  volání.**
+- **Delivery:** sdílená vrstva `salesLeadInitialEmailDelivery.ts` nově zná `manual_initial`
+  i `batch_initial`. Ruční cesta zůstává funkčně beze změny (delivery key je bit po bitu stejný);
+  batch fingerprint navíc obsahuje `batch_item_id`. `delivery_key` je zároveň Resend idempotency key.
+  Batch claim v DB ověří neprázdné `batch_item_id`, příslušnost k leadu, `processing` položku,
+  `scheduled` dávku, `enabled=true`, platné datum a okno, `scheduled_for <= now()` a přesnou shodu
+  všech snapshotů; při nesouladu se poskytovatel nevolá.
+- **Commit:** úspěšný batch commit v jedné transakci vytvoří právě jednu aktivitu `email_sent`
+  (`sent_by='system'`, `delivery_mode='batch_initial'`, `batch_item_id`, `delivery_id`), označí
+  delivery `committed`, položku `sent`, synchronizuje stav leadu přes stávající RPC a přepočítá
+  dávku: `completed` (všechny položky terminální, žádná `failed`), `failed` (všechny terminální,
+  aspoň jedna `failed`), jinak zůstane `scheduled`. Staré ruční aktivity zůstávají kompatibilní;
+  kontrola předchozího prvního e-mailu (`sales_lead_initial_email_already_recorded`) rozpozná
+  `sent_by='human'`, `email_delivery_id` i `delivery_mode='batch_initial'`.
+- **Neúspěch:** `sales_lead_email_batch_item_record_failure(uuid,text,text)` (service-role only)
+  zamkne položku, dávku i delivery, přijme jen `processing` položku, uloží přesný `error_code`,
+  označí položku `failed` a přepočítá dávku. Explicitní odmítnutí i neznámý výsledek končí `failed`;
+  `uncertain` delivery zůstává `uncertain`, nikdy se automaticky neopakuje a nikdy se nevrací na
+  `pending`. Když poskytovatel e-mail přijal a selhal až DB commit, položka zůstane `processing` a
+  další běh smí provést pouze `commit_only` — druhý provider call nikdy nenastane.
+- **Edge Function `process-sales-lead-email-batch`:** interní a fail-closed. Jen `POST`; chybějící
+  nebo slabý `SALES_LEAD_BATCH_WORKER_SECRET` → 500 bez jakékoli změny; chybný/chybějící
+  `Authorization: Bearer <secret>` → 401; žádné uživatelské JWT ani veřejné admin volání; chybějící
+  `RESEND_API_KEY` → 503 ještě před claimem. Používá stejnou identitu odesílatele i Reply-To jako
+  ruční sender (`Miroslav | OneMil <b2b@onemil.cz>`), zavolá poskytovatele nejvýše jednou a nikdy
+  nezpracuje druhou položku v jednom requestu. Konfigurace je pouze v repozitáři.
+- **Žádný cron:** PR 4 neobsahuje `cron.schedule`, `pg_cron`, `pg_net`, `net.http_post` ani
+  automatické volání Edge Function a nemění existující produkční crony. Po mergi a nasazení zůstane
+  worker neaktivní, dokud nebudou samostatně schváleny: (1) secret, (2) nasazení funkce,
+  (3) případný cron, (4) `enabled=true`, (5) aktivace konkrétní dávky.
