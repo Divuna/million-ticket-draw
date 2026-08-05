@@ -8,6 +8,7 @@ import {
 } from '../../supabase/functions/_shared/salesLeadEmailRendering.ts';
 
 const migration = fs.readFileSync('supabase/migrations/20260804165418_sales_lead_email_batches_foundation.sql', 'utf8');
+const adminPlanningMigration = fs.readFileSync('supabase/migrations/20260805160406_sales_lead_email_batch_admin_planning.sql', 'utf8');
 const deliveryMigration = fs.readFileSync('supabase/migrations/20260805140658_sales_lead_initial_email_delivery.sql', 'utf8');
 const db = new PGlite();
 const manager = '10000000-0000-4000-8000-000000000001';
@@ -18,6 +19,9 @@ const lead = '30000000-0000-4000-8000-000000000001';
 const baseline = `
 create role anon nologin; create role authenticated nologin; create role service_role nologin;
 create schema auth; create schema extensions;
+create schema cron;
+create table cron.job(id bigint primary key, jobname text, command text);
+create table public.email_queue(id uuid primary key default gen_random_uuid());
 create function extensions.digest(value bytea, algorithm text) returns bytea language sql immutable as $$
   select decode(md5(encode(value,'hex')) || md5(algorithm || encode(value,'hex')),'hex') $$;
 create table auth.users(id uuid primary key);
@@ -100,17 +104,28 @@ const asOwner = async () => {
 test.before(async () => {
   await db.exec(baseline);
   await db.exec(migration);
+  await db.exec(adminPlanningMigration);
   await db.exec(deliveryMigration);
   await db.query('insert into auth.users(id) values($1),($2)', [manager, outsider]);
 });
 test.after(async () => db.close());
 
-test('migration is passive, empty, and disabled', async () => {
+test('migrations are passive, empty, disabled, and do not touch sending infrastructure', async () => {
   const { rows } = await db.query(`select enabled,
     (select count(*)::int from public.sales_lead_email_batches) batches,
-    (select count(*)::int from public.sales_lead_email_batch_items) items
+    (select count(*)::int from public.sales_lead_email_batch_items) items,
+    (select count(*)::int from public.sales_lead_activities where activity_type='email_sent') email_sent,
+    (select count(*)::int from public.email_queue) email_queue,
+    (select count(*)::int from cron.job) cron_jobs
     from public.sales_lead_email_automation_settings`);
-  assert.deepEqual(rows[0], { enabled: false, batches: 0, items: 0 });
+  assert.deepEqual(rows[0], { enabled: false, batches: 0, items: 0, email_sent: 0, email_queue: 0, cron_jobs: 0 });
+});
+
+test('admin prepare-paused wrapper is authenticated-only and never anon', async () => {
+  await asOwner();
+  const signature = 'public.sales_lead_email_batch_prepare_paused(uuid[],uuid,date,text)';
+  assert.equal((await db.query('select has_function_privilege($1,$2,$3) allowed', ['anon', signature, 'execute'])).rows[0].allowed, false);
+  assert.equal((await db.query('select has_function_privilege($1,$2,$3) allowed', ['authenticated', signature, 'execute'])).rows[0].allowed, true);
 });
 
 test('outsider cannot read, write, or create a batch', async () => {
@@ -139,14 +154,37 @@ test('manager gets atomic, frozen, idempotent enrollment and audited cancellatio
     'backend_verified_official_website',now(),'novy',$2)`, [lead, manager]);
   await asUser(manager);
   const disabled = await value('select public.sales_lead_email_batch_create($1::uuid[],$2::uuid,current_date+1,$3)',
-    [[lead], template, 'batch-idempotency-1']);
-  assert.equal(disabled.error, 'automation_disabled');
+    [[lead], template, 'batch-paused-idempotency-1']);
+  assert.equal(disabled.success, true);
+  assert.equal(disabled.batch_status, 'paused');
+  assert.equal(disabled.automation_enabled, false);
+  assert.equal(disabled.scheduled_count, 1);
+  assert.equal(disabled.skipped_count, 0);
+  assert.deepEqual(disabled.ineligible, []);
+  const pausedReplay = await value('select public.sales_lead_email_batch_create($1::uuid[],$2::uuid,current_date+1,$3)',
+    [[lead], template, 'batch-paused-idempotency-1']);
+  assert.equal(pausedReplay.idempotent_replay, true);
+  assert.equal(pausedReplay.batch_id, disabled.batch_id);
+  assert.equal(pausedReplay.batch_status, 'paused');
+  assert.equal(pausedReplay.automation_enabled, false);
+  const pausedState = (await db.query(`select b.status,array_agg(i.status order by i.id) item_states
+    from public.sales_lead_email_batches b join public.sales_lead_email_batch_items i on i.batch_id=b.id
+    where b.id=$1 group by b.status`, [disabled.batch_id])).rows[0];
+  assert.deepEqual(pausedState, { status: 'paused', item_states: ['pending'] });
+  const pausedConflict = await value('select public.sales_lead_email_batch_create($1::uuid[],$2::uuid,current_date+2,$3)',
+    [[lead], template, 'batch-paused-idempotency-1']);
+  assert.equal(pausedConflict.error, 'idempotency_key_conflict');
+  const pausedCancelled = await value('select public.sales_lead_email_batch_cancel($1::uuid,$2)',
+    [disabled.batch_id, 'Uvolnění kapacity před scheduled testem']);
+  assert.equal(pausedCancelled.cancelled_count, 1);
   await asOwner();
   await db.exec('update public.sales_lead_email_automation_settings set enabled=true where singleton');
   await asUser(manager);
   const created = await value('select public.sales_lead_email_batch_create($1::uuid[],$2::uuid,current_date+1,$3)',
     [[lead, lead], template, 'batch-idempotency-1']);
   assert.equal(created.scheduled_count, 1);
+  assert.equal(created.batch_status, 'scheduled');
+  assert.equal(created.automation_enabled, true);
   const replay = await value('select public.sales_lead_email_batch_create($1::uuid[],$2::uuid,current_date+1,$3)',
     [[lead], template, 'batch-idempotency-1']);
   assert.equal(replay.idempotent_replay, true);
@@ -194,6 +232,162 @@ test('manager gets atomic, frozen, idempotent enrollment and audited cancellatio
   const audit = (await db.query('select status,cancelled_by,cancel_reason from public.sales_lead_email_batches where id=$1',
     [created.batch_id])).rows[0];
   assert.deepEqual(audit, { status: 'cancelled', cancelled_by: manager, cancel_reason: 'Ruční zrušení testu' });
+});
+
+test('admin prepare-paused wrapper only ever stores a paused batch', async () => {
+  await asOwner();
+  await db.exec('update public.sales_lead_email_automation_settings set enabled=false where singleton');
+  const ids = ['34000000-0000-4000-8000-000000000001', '34000000-0000-4000-8000-000000000002'];
+  for (const [index, id] of ids.entries()) {
+    await db.query(`insert into public.sales_leads
+      (id,company_name,contact_person,contact_email,email_source,email_verified_by_admin,email_verification_method,
+       email_verified_at,status,created_by)
+      values($1,$2,'Pavel',$3,$4,true,'admin_manual',now(),'novy',$5)`,
+    [id, `Wrapper ${index + 1}`, `wrapper-${index + 1}@example.cz`, `https://example.cz/wrapper-${index + 1}`, manager]);
+  }
+  const call = (leadIds, key, offset) => value(
+    'select public.sales_lead_email_batch_prepare_paused($1::uuid[],$2::uuid,current_date+$4::integer,$3)',
+    [leadIds, template, key, offset],
+  );
+
+  await asUser(outsider);
+  assert.equal((await call([ids[0]], 'wrapper-outsider-key', 20)).error, 'access_denied');
+
+  await asUser(manager);
+  const prepared = await call([ids[0]], 'wrapper-paused-key', 20);
+  assert.equal(prepared.success, true);
+  assert.equal(prepared.batch_status, 'paused');
+  assert.equal(prepared.automation_enabled, false);
+  assert.equal(prepared.scheduled_count, 1);
+  const stored = (await db.query(`select b.status,array_agg(i.status order by i.id) item_states
+    from public.sales_lead_email_batches b join public.sales_lead_email_batch_items i on i.batch_id=b.id
+    where b.id=$1 group by b.status`, [prepared.batch_id])).rows[0];
+  assert.deepEqual(stored, { status: 'paused', item_states: ['pending'] });
+
+  const replay = await call([ids[0]], 'wrapper-paused-key', 20);
+  assert.equal(replay.batch_id, prepared.batch_id);
+  assert.equal(replay.batch_status, 'paused');
+  assert.equal(replay.idempotent_replay, true);
+  assert.equal((await db.query(`select count(*)::int n from public.sales_lead_email_batches
+    where idempotency_key='wrapper-paused-key'`)).rows[0].n, 1);
+  assert.equal((await call([ids[1]], 'wrapper-paused-key', 21)).error, 'idempotency_key_conflict');
+
+  await asOwner();
+  const before = (await db.query(`select
+    (select count(*)::int from public.sales_lead_email_batches) batches,
+    (select count(*)::int from public.sales_lead_email_batch_items) items,
+    (select count(*)::int from public.sales_lead_email_batch_skips) skips`)).rows[0];
+  await db.exec('update public.sales_lead_email_automation_settings set enabled=true where singleton');
+  await asUser(manager);
+  const blocked = await call([ids[1]], 'wrapper-enabled-key', 22);
+  assert.equal(blocked.success, false);
+  assert.equal(blocked.error, 'automation_must_be_disabled');
+  await asOwner();
+  assert.deepEqual((await db.query(`select
+    (select count(*)::int from public.sales_lead_email_batches) batches,
+    (select count(*)::int from public.sales_lead_email_batch_items) items,
+    (select count(*)::int from public.sales_lead_email_batch_skips) skips`)).rows[0], before);
+  assert.equal((await db.query(`select count(*)::int n from public.sales_lead_email_batches
+    where idempotency_key='wrapper-enabled-key'`)).rows[0].n, 0);
+  assert.equal((await db.query(`select count(*)::int n from public.sales_lead_email_batches
+    where status='scheduled' and created_by=$1 and scheduled_date>=current_date+20`, [manager])).rows[0].n, 0);
+
+  await db.exec('update public.sales_lead_email_automation_settings set enabled=false where singleton');
+  await asUser(manager);
+  const cancelled = await value('select public.sales_lead_email_batch_cancel($1::uuid,$2)',
+    [prepared.batch_id, 'Úklid po testu bezpečného wrapperu']);
+  assert.equal(cancelled.cancelled_count, 1);
+  await asOwner();
+});
+
+test('paused batches consume daily capacity and cancellation releases it', async () => {
+  await asOwner();
+  await db.exec('update public.sales_lead_email_automation_settings set enabled=false where singleton');
+  const ids = Array.from({ length: 21 }, (_, index) => `31000000-0000-4000-8000-${String(index + 1).padStart(12, '0')}`);
+  for (const [index, id] of ids.entries()) {
+    await db.query(`insert into public.sales_leads
+      (id,company_name,contact_person,contact_email,email_source,email_verified_by_admin,email_verification_method,
+       email_verified_at,status,created_by)
+      values($1,$2,'Pavel',$3,$4,true,'admin_manual',now(),'novy',$5)`,
+    [id, `Paused ${index + 1}`, `paused-${index + 1}@example.cz`, `https://example.cz/paused-${index + 1}`, manager]);
+  }
+  await asUser(manager);
+  const created = await value('select public.sales_lead_email_batch_create($1::uuid[],$2::uuid,current_date+10,$3)',
+    [ids.slice(0, 20), template, 'paused-capacity-20']);
+  assert.equal(created.batch_status, 'paused');
+  assert.equal(created.scheduled_count, 20);
+  const blockedPreview = await value('select public.sales_lead_email_batch_preview($1::uuid[],$2::uuid,current_date+10)',
+    [[ids[20]], template]);
+  assert.equal(blockedPreview.ineligible[0].reason, 'daily_limit_exceeded');
+  const cancelled = await value('select public.sales_lead_email_batch_cancel($1::uuid,$2)',
+    [created.batch_id, 'Test uvolnění denní kapacity']);
+  assert.equal(cancelled.cancelled_count, 20);
+  const afterCancel = await value('select public.sales_lead_email_batch_create($1::uuid[],$2::uuid,current_date+10,$3)',
+    [[ids[20]], template, 'paused-capacity-after-cancel']);
+  assert.equal(afterCancel.batch_status, 'paused');
+  assert.equal(afterCancel.scheduled_count, 1);
+});
+
+test('same concurrent idempotent request creates one paused batch', async () => {
+  await asOwner();
+  await db.exec('update public.sales_lead_email_automation_settings set enabled=false where singleton');
+  const concurrentLead = '32000000-0000-4000-8000-000000000001';
+  await db.query(`insert into public.sales_leads
+    (id,company_name,contact_person,contact_email,email_source,email_verified_by_admin,email_verification_method,
+     email_verified_at,status,created_by)
+    values($1,'Concurrent','Pavel','concurrent@example.cz','https://example.cz/concurrent',true,
+    'admin_manual',now(),'novy',$2)`, [concurrentLead, manager]);
+  await asUser(manager);
+  const call = () => value('select public.sales_lead_email_batch_create($1::uuid[],$2::uuid,current_date+11,$3)',
+    [[concurrentLead], template, 'same-concurrent-paused-key']);
+  const [first, second] = await Promise.all([call(), call()]);
+  assert.equal(first.batch_id, second.batch_id);
+  assert.equal([first.idempotent_replay, second.idempotent_replay].filter(Boolean).length, 1);
+  assert.equal((await db.query(`select count(*)::int n from public.sales_lead_email_batches
+    where idempotency_key='same-concurrent-paused-key'`)).rows[0].n, 1);
+});
+
+test('preview writes nothing and create rechecks changes made after preview', async () => {
+  await asOwner();
+  await db.exec('update public.sales_lead_email_automation_settings set enabled=false where singleton');
+  const ids = Array.from({ length: 4 }, (_, index) => `33000000-0000-4000-8000-${String(index + 1).padStart(12, '0')}`);
+  for (const [index, id] of ids.entries()) {
+    await db.query(`insert into public.sales_leads
+      (id,company_name,contact_person,contact_email,email_source,email_verified_by_admin,email_verification_method,
+       email_verified_at,status,created_by)
+      values($1,$2,'Pavel',$3,$4,true,'admin_manual',now(),'novy',$5)`,
+    [id, `Recheck ${index + 1}`, `recheck-${index + 1}@example.cz`, `https://example.cz/recheck-${index + 1}`, manager]);
+  }
+  const before = (await db.query(`select
+    (select count(*)::int from public.sales_lead_email_batches) batches,
+    (select count(*)::int from public.sales_lead_email_batch_items) items,
+    (select count(*)::int from public.sales_lead_email_batch_skips) skips`)).rows[0];
+  await asUser(manager);
+  const preview = await value('select public.sales_lead_email_batch_preview($1::uuid[],$2::uuid,current_date+12)',
+    [ids, template]);
+  assert.equal(preview.eligible_count, 4);
+  const afterPreview = (await db.query(`select
+    (select count(*)::int from public.sales_lead_email_batches) batches,
+    (select count(*)::int from public.sales_lead_email_batch_items) items,
+    (select count(*)::int from public.sales_lead_email_batch_skips) skips`)).rows[0];
+  assert.deepEqual(afterPreview, before);
+  await asOwner();
+  await db.query('update public.sales_leads set do_not_contact=true where id=$1', [ids[0]]);
+  await db.query(`insert into public.sales_lead_email_suppression(email_pattern,reason)
+    values('recheck-2@example.cz','created after preview')`);
+  await db.query(`update public.sales_leads set contact_email='changed-after-preview@example.cz',
+    email_verified_by_admin=false,email_verified_at=null where id=$1`, [ids[2]]);
+  await db.query(`insert into public.sales_lead_activities(lead_id,activity_type,direction,metadata)
+    values($1,'email_sent','outbound','{"sent_by":"human","to":"recheck-4@example.cz"}')`, [ids[3]]);
+  await asUser(manager);
+  const created = await value('select public.sales_lead_email_batch_create($1::uuid[],$2::uuid,current_date+12,$3)',
+    [ids, template, 'recheck-after-preview-key']);
+  assert.equal(created.error, 'no_eligible_leads');
+  assert.deepEqual(new Set(created.ineligible.map((item) => item.reason)), new Set([
+    'do_not_contact', 'suppressed', 'email_not_verified', 'initial_email_already_sent',
+  ]));
+  assert.equal((await db.query(`select count(*)::int n from public.sales_lead_email_batches
+    where idempotency_key='recheck-after-preview-key'`)).rows[0].n, 0);
 });
 
 test('eligibility reports suppression, verification, source, previous send, status, and template failures', async () => {
@@ -293,6 +487,7 @@ test('daily capacity and partial unique indexes cap active enrollment', async ()
 
 test('cancellation is fail-closed and atomic while an item is processing', async () => {
   await asOwner();
+  await db.exec('update public.sales_lead_email_automation_settings set enabled=true where singleton');
   const ids = ['30000000-0000-4000-8000-000000000130','30000000-0000-4000-8000-000000000131'];
   for (const [index,id] of ids.entries()) await db.query(`insert into public.sales_leads(
     id,company_name,contact_email,email_source,email_verified_by_admin,email_verification_method,

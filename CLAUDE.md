@@ -2108,5 +2108,18 @@ Zbývá ručně ověřit na telefonu: Android Chrome native install dialog, Andr
   `email_sent` plus the existing forward-only status transition. A failed commit is resumed without
   calling the provider. Unknown outcomes are `uncertain` and block automatic retry.
 - Reuse/forward remains on its existing path. Reply and follow-up are unchanged.
-- This Draft is not deployed. Automation remains `enabled=false`; there is no batch worker, cron or
-  batch dispatch. Admin scheduling belongs to PR 3 and the worker belongs to PR 4.
+- PR 2 is deployed. Automation remains `enabled=false`; there is no batch worker, cron or batch
+  dispatch. Admin scheduling belongs to PR 3 and the worker belongs to PR 4.
+
+# Sales lead daily email batches — PR 3 safety boundary (05. 08. 2026)
+
+- PR 3 may only prepare manually selected batches through the existing preview/create/cancel RPCs.
+  The server remains authoritative for eligibility, rendering, capacity, schedule and snapshots.
+- With automation disabled, create must persist the batch as `paused` and items as `pending`.
+  Database rows must never invoke a provider or send email.
+- The UI may list the latest 20 batches, items and skips and cancel only `paused`/`scheduled` batches
+  with a reason. It must not expose start, resume, enable-automation or send controls.
+- PR 3 must not add a worker, cron, Edge Function, sender call, Resend call, `email_queue` write,
+  automatic lead selection, follow-up, reply or catch-up behavior.
+- PR 3 is Draft-only and must not be deployed to staging or production. PR 4 owns any worker and
+  controlled activation and requires separate explicit approval.

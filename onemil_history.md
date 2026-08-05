@@ -1,4 +1,15 @@
-# 05. 08. 2026 — PR 2 bezpečné evidence prvního obchodního e-mailu (Draft)
+# 05. 08. 2026 — PR 3 administrační příprava pozastavených obchodních dávek (Draft)
+
+- Přidáno ruční UI pro výběr leadů, aktivní počáteční šablony a dne, serverový preview a výslovné
+  potvrzení vytvoření dávky. Klient nepočítá způsobilost ani obsah a zapisuje pouze přes existující RPC.
+- Při produkčním `enabled=false` create RPC nově bezpečně uloží dávku jako `paused` a položky jako
+  `pending`. Přehled čte posledních 20 dávek, položky a skip audit; zrušení je dostupné jen pro
+  `paused`/`scheduled` přes existující cancel RPC s důvodem.
+- PR 1 a PR 2 jsou v produkci, ale PR 3 zůstává pouze Draft. Nebyl přidán worker, cron, Edge Function,
+  sender, Resend volání ani `email_queue`; nic nebylo aplikováno na staging/produkci a žádný e-mail
+  nebyl odeslán. Worker a řízené zapnutí patří až do samostatně schváleného PR 4.
+
+# 05. 08. 2026 — PR 2 bezpečné evidence prvního obchodního e-mailu (produkce)
 
 - Připraven společný server-only tok pro ruční první e-mail; provider je injektovaná závislost a
   testy používají výhradně fake provider.
