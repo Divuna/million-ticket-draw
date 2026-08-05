@@ -7,6 +7,7 @@ import {
   deliverSalesLeadInitialEmail,
   InitialEmailProviderOutcomeUncertainError,
 } from '../../supabase/functions/_shared/salesLeadInitialEmailDelivery.ts';
+import { runSalesLeadEmailBatchWorker } from '../../supabase/functions/_shared/salesLeadBatchWorkerRun.ts';
 import {
   createResendInitialEmailProvider,
   SALES_LEAD_INITIAL_EMAIL_FROM,
@@ -272,4 +273,169 @@ test('the shared Resend adapter never turns an unprovable outcome into a rejecti
     emails: { send: async () => ({ data: { id: 'resend-ok' } }) },
   });
   assert.deepEqual(await accepting.send({}, 'key'), { accepted: true, messageId: 'resend-ok' });
+});
+
+// ---------------------------------------------------------------------------
+// Worker orchestration: one claim in, at most one provider call out.
+// ---------------------------------------------------------------------------
+
+class OrchestrationRpc {
+  constructor(claim) {
+    this.claim = claim;
+    this.calls = [];
+    this.commitResult = { data: { success: true, batch_status: 'completed' }, error: null };
+    this.claimDeliveryResult = { data: { success: true, action: 'call_provider', delivery_id: 'delivery-1', outbound_capture_id: 'capture-1' }, error: null };
+  }
+
+  countOf(name) {
+    return this.calls.filter((call) => call.name === name).length;
+  }
+
+  async rpc(name, params) {
+    this.calls.push({ name, params });
+    if (name === 'sales_lead_email_batch_claim_next') return { data: this.claim, error: null };
+    if (name === 'sales_lead_initial_email_commit') return this.commitResult;
+    if (name === 'sales_lead_initial_email_claim') return this.claimDeliveryResult;
+    if (name === 'sales_lead_initial_email_record_provider_result') return { data: { success: true }, error: null };
+    if (name === 'sales_lead_email_batch_item_record_failure') return { data: { success: true, batch_status: 'failed' }, error: null };
+    throw new Error(name);
+  }
+}
+
+const runWorker = (rpc, counter) => runSalesLeadEmailBatchWorker({
+  client: rpc,
+  provider: countingProvider(counter),
+  newOutboundCaptureId: () => '40000000-0000-4000-8000-000000000999',
+  from: SALES_LEAD_INITIAL_EMAIL_FROM,
+  replyTo: SALES_LEAD_INITIAL_EMAIL_REPLY_TO,
+});
+
+// The claim result for an already accepted e-mail carries identifiers only —
+// no recipient, subject, bodies, or performer.
+const commitOnlyClaim = {
+  success: true,
+  action: 'commit_only',
+  batch_item_id: '62000000-0000-4000-8000-000000000901',
+  batch_id: '60000000-0000-4000-8000-000000000901',
+  lead_id: '30000000-0000-4000-8000-000000000901',
+  delivery_id: '50000000-0000-4000-8000-000000000901',
+};
+
+test('a commit_only claim finishes the commit without touching the provider', async () => {
+  const rpc = new OrchestrationRpc(commitOnlyClaim);
+  const counter = newCounter();
+  const result = await runWorker(rpc, counter);
+  assert.equal(result.status, 200);
+  assert.deepEqual(result.body, {
+    success: true, action: 'committed', email_sent: true,
+    batch_item_id: commitOnlyClaim.batch_item_id, delivery_id: commitOnlyClaim.delivery_id,
+  });
+  assert.equal(rpc.countOf('sales_lead_initial_email_commit'), 1);
+  assert.equal(rpc.calls.find((call) => call.name === 'sales_lead_initial_email_commit').params.p_delivery_id,
+    commitOnlyClaim.delivery_id);
+  assert.equal(counter.calls, 0);
+  assert.equal(rpc.countOf('sales_lead_email_batch_item_record_failure'), 0);
+  assert.equal(rpc.countOf('sales_lead_initial_email_claim'), 0);
+  assert.equal(rpc.countOf('sales_lead_email_batch_claim_next'), 1);
+});
+
+test('a failed commit_only leaves the item blocked without a provider call or a recorded failure', async () => {
+  const rpc = new OrchestrationRpc(commitOnlyClaim);
+  rpc.commitResult = { data: null, error: { message: 'fixture failure' } };
+  const counter = newCounter();
+  const result = await runWorker(rpc, counter);
+  assert.equal(result.status, 500);
+  assert.equal(result.body.action, 'commit_pending');
+  assert.equal(result.body.email_sent, true);
+  assert.equal(counter.calls, 0);
+  assert.equal(rpc.countOf('sales_lead_email_batch_item_record_failure'), 0);
+  assert.equal(rpc.countOf('sales_lead_initial_email_commit'), 1);
+});
+
+test('a commit_only claim without a delivery id never sends and never records a failure', async () => {
+  const rpc = new OrchestrationRpc({ ...commitOnlyClaim, delivery_id: '   ' });
+  const counter = newCounter();
+  const result = await runWorker(rpc, counter);
+  assert.equal(result.status, 500);
+  assert.equal(result.body.error, 'batch_claim_incomplete');
+  assert.equal(counter.calls, 0);
+  assert.equal(rpc.countOf('sales_lead_initial_email_commit'), 0);
+  assert.equal(rpc.countOf('sales_lead_email_batch_item_record_failure'), 0);
+});
+
+test('disabled automation and no due item end the run without any provider work', async () => {
+  for (const claim of [
+    { success: true, action: 'noop', reason: 'automation_disabled' },
+    { success: true, action: 'noop', reason: 'no_due_item' },
+  ]) {
+    const rpc = new OrchestrationRpc(claim);
+    const counter = newCounter();
+    const result = await runWorker(rpc, counter);
+    assert.equal(result.status, 200);
+    assert.equal(result.body.action, 'noop');
+    assert.equal(result.body.email_sent, false);
+    assert.equal(counter.calls, 0);
+    assert.equal(rpc.calls.length, 1);
+  }
+});
+
+test('a skipped claim reports the reason and stops the run', async () => {
+  const rpc = new OrchestrationRpc({
+    success: true, action: 'skipped', reason: 'scheduled_window_missed',
+    batch_item_id: commitOnlyClaim.batch_item_id,
+  });
+  const counter = newCounter();
+  const result = await runWorker(rpc, counter);
+  assert.equal(result.status, 200);
+  assert.equal(result.body.reason, 'scheduled_window_missed');
+  assert.equal(result.body.email_sent, false);
+  assert.equal(counter.calls, 0);
+  assert.equal(rpc.calls.length, 1);
+});
+
+test('a send claim performs exactly one provider call and one commit', async () => {
+  const rpc = new OrchestrationRpc({
+    success: true, action: 'send',
+    batch_item_id: commitOnlyClaim.batch_item_id,
+    batch_id: commitOnlyClaim.batch_id,
+    lead_id: commitOnlyClaim.lead_id,
+    performed_by: '10000000-0000-4000-8000-000000000001',
+    recipient: 'info@worker.example.cz',
+    subject: 'Nabidka',
+    body_source: 'Dobry den.',
+    body_text: 'Dobry den.',
+    body_html: '<p>Dobry den.</p>',
+  });
+  const counter = newCounter();
+  const result = await runWorker(rpc, counter);
+  assert.equal(result.status, 200);
+  assert.equal(result.body.action, 'sent');
+  assert.equal(counter.calls, 1);
+  assert.equal(rpc.countOf('sales_lead_initial_email_claim'), 1);
+  assert.equal(rpc.countOf('sales_lead_initial_email_commit'), 1);
+  assert.equal(rpc.countOf('sales_lead_email_batch_item_record_failure'), 0);
+  const deliveryClaim = rpc.calls.find((call) => call.name === 'sales_lead_initial_email_claim').params;
+  assert.equal(deliveryClaim.p_mode, 'batch_initial');
+  assert.equal(deliveryClaim.p_batch_item_id, commitOnlyClaim.batch_item_id);
+  assert.equal(deliveryClaim.p_recipient, 'info@worker.example.cz');
+});
+
+test('a database barrier during the delivery claim records a failure without any provider call', async () => {
+  const rpc = new OrchestrationRpc({
+    success: true, action: 'send',
+    batch_item_id: commitOnlyClaim.batch_item_id,
+    lead_id: commitOnlyClaim.lead_id,
+    performed_by: '10000000-0000-4000-8000-000000000001',
+    recipient: 'info@worker.example.cz',
+    subject: 'Nabidka', body_source: 'Dobry den.', body_text: 'Dobry den.', body_html: '<p>Dobry den.</p>',
+  });
+  rpc.claimDeliveryResult = { data: { success: false, error: 'existing_partner' }, error: null };
+  const counter = newCounter();
+  const result = await runWorker(rpc, counter);
+  assert.equal(result.status, 502);
+  assert.equal(result.body.error, 'existing_partner');
+  assert.equal(result.body.email_sent, false);
+  assert.equal(counter.calls, 0);
+  assert.equal(rpc.countOf('sales_lead_email_batch_item_record_failure'), 1);
+  assert.equal(rpc.countOf('sales_lead_initial_email_commit'), 0);
 });

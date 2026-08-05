@@ -7,6 +7,8 @@ const executableSql = migration.replace(/--.*$/gm, '');
 const worker = read('supabase/functions/process-sales-lead-email-batch/index.ts');
 const workerCode = worker.replace(/\/\/.*$/gm, '');
 const workerAuth = read('supabase/functions/_shared/salesLeadBatchWorkerAuth.ts');
+const workerRun = read('supabase/functions/_shared/salesLeadBatchWorkerRun.ts');
+const workerRunCode = workerRun.replace(/\/\/.*$/gm, '');
 const delivery = read('supabase/functions/_shared/salesLeadInitialEmailDelivery.ts');
 const sender = read('supabase/functions/_shared/salesLeadInitialEmailSender.ts');
 const manualSender = read('supabase/functions/send-sales-lead-email/index.ts');
@@ -69,6 +71,19 @@ test.describe('99 — internal worker for prepared sales-lead e-mail batches', (
     expect(migration).toContain("'error', 'batch_item_not_processing'");
     expect(migration).toContain("'error', 'batch_not_scheduled'");
     expect(migration).toContain("'error', 'batch_attachments_not_allowed'");
+    // The locked lead is re-checked completely before any delivery row exists.
+    const leadLockIndex = migration.indexOf('SELECT * INTO v_lead FROM public.sales_leads WHERE id = p_lead_id FOR UPDATE');
+    const lastBarrier = migration.slice(
+      leadLockIndex,
+      migration.indexOf('SELECT * INTO v_delivery FROM public.sales_lead_email_deliveries', leadLockIndex),
+    );
+    expect(lastBarrier).toContain("'error', 'batch_performer_mismatch'");
+    expect(lastBarrier).toContain('v_lead.converted_partner_id IS NOT NULL');
+    expect(lastBarrier).toContain('SELECT 1 FROM public.partners p WHERE p.ico = v_lead.ico');
+    expect(lastBarrier).toContain("NOT IN ('admin_manual', 'backend_verified_official_website')");
+    expect(lastBarrier).toContain('v_lead.email_verified_at IS NULL');
+    expect(lastBarrier).toContain("'error', 'email_source_missing'");
+    expect(lastBarrier).toContain('length(btrim(v_lead.email_source)) > 2048');
     expect(migration).toContain("'sent_by', CASE WHEN v_delivery.mode = 'batch_initial' THEN 'system' ELSE 'human' END");
     expect(migration).toContain("'delivery_mode', v_delivery.mode");
     expect(migration).toContain("'batch_item_id', v_delivery.batch_item_id");
@@ -81,16 +96,30 @@ test.describe('99 — internal worker for prepared sales-lead e-mail batches', (
   test('the worker Edge Function is internal, fail-closed, and single-shot', () => {
     expect(worker).toContain('SALES_LEAD_BATCH_WORKER_SECRET');
     expect(worker).toContain('authorizeSalesLeadBatchWorkerRequest');
-    expect(worker).toContain('sales_lead_email_batch_claim_next');
-    expect(worker).toContain('sales_lead_email_batch_item_record_failure');
+    expect(worker).toContain('runSalesLeadEmailBatchWorker');
+    expect(workerRun).toContain('sales_lead_email_batch_claim_next');
+    expect(workerRun).toContain('sales_lead_email_batch_item_record_failure');
     expect(worker).toContain('SALES_LEAD_INITIAL_EMAIL_FROM');
     expect(worker).toContain('SALES_LEAD_INITIAL_EMAIL_REPLY_TO');
-    expect(worker).toContain('deliverSalesLeadInitialEmail');
-    expect(worker).toContain('mode: "batch_initial"');
+    expect(workerRun).toContain('deliverSalesLeadInitialEmail');
+    expect(workerRun).toContain('mode: "batch_initial"');
     // Exactly one delivery attempt per request, no loop over items.
-    expect(worker.match(/deliverSalesLeadInitialEmail\(/g)).toHaveLength(1);
+    expect(workerRun.match(/deliverSalesLeadInitialEmail\(/g)).toHaveLength(1);
+    expect(workerRunCode).not.toMatch(/\b(for|while)\s*\(/);
     expect(worker).not.toMatch(/\b(for|while)\s*\(/);
     expect(worker).not.toMatch(/auth\.getUser|user_roles|has_admin_permission/);
+    expect(workerRunCode).not.toMatch(/auth\.getUser|user_roles|has_admin_permission/);
+    expect(workerRunCode).not.toMatch(/email_queue|cron/i);
+    // A commit_only claim carries identifiers only: it must never build a
+    // provider payload, and it must never record a failure.
+    expect(workerRun).toMatch(/if \(claim\.action === "commit_only"\)[\s\S]{0,900}sales_lead_initial_email_commit/);
+    const commitOnlyBlock = workerRun.slice(
+      workerRun.indexOf('if (claim.action === "commit_only")'),
+      workerRun.indexOf('if (claim.action !== "send"'),
+    );
+    expect(commitOnlyBlock).toContain('p_delivery_id: deliveryId');
+    expect(commitOnlyBlock).toContain('batch_claim_incomplete');
+    expect(commitOnlyBlock).not.toMatch(/deliverSalesLeadInitialEmail|record_failure|newOutboundCaptureId|deps\.provider/);
     expect(workerCode).not.toMatch(/email_queue/i);
     expect(workerCode).not.toMatch(/cron/i);
     expect(workerCode).not.toMatch(/sales_lead_email_batch_create|sales_lead_email_batch_prepare_paused|sales_lead_discover/);

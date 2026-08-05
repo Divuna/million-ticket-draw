@@ -1039,6 +1039,16 @@ odesílání. Administrační plánování patří do PR 3 a worker až do PR 4.
   Batch claim v DB ověří neprázdné `batch_item_id`, příslušnost k leadu, `processing` položku,
   `scheduled` dávku, `enabled=true`, platné datum a okno, `scheduled_for <= now()` a přesnou shodu
   všech snapshotů; při nesouladu se poskytovatel nevolá.
+- **Poslední bariéra nad zamčeným leadem** (v téže transakci, před vznikem i opakováním delivery a
+  před jakýmkoli provider callem): `p_performed_by` musí přesně odpovídat `v_batch.created_by`,
+  `converted_partner_id IS NULL`, při vyplněném IČO neexistuje partner se stejným IČO,
+  `email_verification_method` je jen `admin_manual` nebo `backend_verified_official_website`,
+  `email_verified_at IS NOT NULL`, `email_source` není prázdný a nepřesahuje 2048 znaků.
+- **`commit_only` nikdy nevolá poskytovatele.** Když claim vrátí `action='commit_only'` (poskytovatel
+  už e-mail přijal), worker nevytváří Resend provider ani outbound capture, nevolá delivery vrstvu a
+  spustí výhradně `sales_lead_initial_email_commit(delivery_id)`; vyžaduje platné `delivery_id`.
+  Při úspěchu vrací `action='committed'` + `email_sent=true`, při neúspěchu zůstane položka bezpečně
+  blokovaná a neproběhne provider call ani zápis neúspěchu.
 - **Commit:** úspěšný batch commit v jedné transakci vytvoří právě jednu aktivitu `email_sent`
   (`sent_by='system'`, `delivery_mode='batch_initial'`, `batch_item_id`, `delivery_id`), označí
   delivery `committed`, položku `sent`, synchronizuje stav leadu přes stávající RPC a přepočítá

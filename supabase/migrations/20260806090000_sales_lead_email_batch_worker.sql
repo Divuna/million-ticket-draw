@@ -588,6 +588,30 @@ BEGIN
   SELECT * INTO v_lead FROM public.sales_leads WHERE id = p_lead_id FOR UPDATE;
   IF NOT FOUND THEN RETURN jsonb_build_object('success', false, 'error', 'lead_not_found'); END IF;
 
+  IF p_mode = 'batch_initial' THEN
+    -- Last barrier before any delivery row or provider call: the locked lead
+    -- must still satisfy every preparation-time condition, and the worker must
+    -- act as the person who created the batch.
+    IF p_performed_by IS DISTINCT FROM v_batch.created_by THEN
+      RETURN jsonb_build_object('success', false, 'error', 'batch_performer_mismatch');
+    END IF;
+    IF v_lead.converted_partner_id IS NOT NULL
+       OR (v_lead.ico IS NOT NULL AND EXISTS (SELECT 1 FROM public.partners p WHERE p.ico = v_lead.ico)) THEN
+      RETURN jsonb_build_object('success', false, 'error', 'existing_partner');
+    END IF;
+    IF v_lead.email_verification_method IS NULL
+       OR v_lead.email_verification_method NOT IN ('admin_manual', 'backend_verified_official_website')
+       OR v_lead.email_verified_at IS NULL THEN
+      RETURN jsonb_build_object('success', false, 'error', 'email_not_verified');
+    END IF;
+    IF nullif(btrim(coalesce(v_lead.email_source, '')), '') IS NULL THEN
+      RETURN jsonb_build_object('success', false, 'error', 'email_source_missing');
+    END IF;
+    IF length(btrim(v_lead.email_source)) > 2048 THEN
+      RETURN jsonb_build_object('success', false, 'error', 'email_source_too_long');
+    END IF;
+  END IF;
+
   SELECT * INTO v_delivery FROM public.sales_lead_email_deliveries
   WHERE delivery_key = p_delivery_key;
   IF FOUND THEN

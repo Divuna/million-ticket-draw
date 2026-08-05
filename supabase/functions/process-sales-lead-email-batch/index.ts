@@ -3,7 +3,7 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2.57.4";
 import { Resend } from "npm:resend@6.18.1";
 import { createOutboundCapture } from "../_shared/salesLeadEmailThreading.ts";
 import { authorizeSalesLeadBatchWorkerRequest } from "../_shared/salesLeadBatchWorkerAuth.ts";
-import { deliverSalesLeadInitialEmail } from "../_shared/salesLeadInitialEmailDelivery.ts";
+import { runSalesLeadEmailBatchWorker } from "../_shared/salesLeadBatchWorkerRun.ts";
 import {
   createResendInitialEmailProvider,
   SALES_LEAD_INITIAL_EMAIL_FROM,
@@ -28,27 +28,13 @@ import {
 //   • žádná splatná položka           → bezpečný no-op
 //
 // Autorizace je výhradně interní sdílený secret. Uživatelské JWT ani veřejné
-// admin volání se nepoužívá. Funkce nemá cron; spouští ji jen samostatně
-// schválený operační krok.
+// admin volání se nepoužívá. Funkce nemá plánovač; spouští ji jen samostatně
+// schválený operační krok. Vlastní orchestrace je ve sdíleném modulu
+// `salesLeadBatchWorkerRun.ts`, aby byla testovatelná bez poskytovatele.
 // ============================================================================
 
 const jsonResponse = (body: Record<string, unknown>, status = 200): Response =>
   new Response(JSON.stringify(body), { status, headers: { "Content-Type": "application/json" } });
-
-type ClaimResult = {
-  success?: boolean;
-  action?: "noop" | "skipped" | "send" | "commit_only";
-  reason?: string;
-  batch_item_id?: string;
-  batch_id?: string;
-  lead_id?: string;
-  performed_by?: string;
-  recipient?: string;
-  subject?: string;
-  body_source?: string;
-  body_text?: string;
-  body_html?: string;
-};
 
 serve(async (req) => {
   // Bez nakonfigurovaného secretu nebo bez správného Bearer headeru se nesmí
@@ -73,87 +59,12 @@ serve(async (req) => {
     return jsonResponse({ success: false, error: "email_not_configured" }, 503);
   }
 
-  const supabaseAdmin = createClient(supabaseUrl, serviceRoleKey);
-
-  const { data, error } = await supabaseAdmin.rpc("sales_lead_email_batch_claim_next", {});
-  if (error) {
-    return jsonResponse({ success: false, error: "batch_claim_failed" }, 500);
-  }
-  const claim = (data ?? {}) as ClaimResult;
-  if (claim.success !== true) {
-    return jsonResponse({ success: false, error: claim.reason ?? "batch_claim_failed" }, 500);
-  }
-  if (claim.action === "noop") {
-    return jsonResponse({ success: true, action: "noop", reason: claim.reason ?? "nothing_due", email_sent: false });
-  }
-  if (claim.action === "skipped") {
-    // Ochrana neprošla — nic se neodesílá a další položka se v tomto běhu nebere.
-    return jsonResponse({
-      success: true, action: "skipped", reason: claim.reason,
-      batch_item_id: claim.batch_item_id, email_sent: false,
-    });
-  }
-  if (!claim.batch_item_id || !claim.lead_id) {
-    return jsonResponse({ success: false, error: "batch_claim_incomplete" }, 500);
-  }
-
-  // Pro `commit_only` i `send` používáme stejnou bezpečnou delivery vrstvu.
-  // Ta sama pozná, že poskytovatel už e-mail přijal, a druhý provider call
-  // neprovede — v jednom requestu je tedy nejvýše jeden provider call.
-  const provider = createResendInitialEmailProvider(new Resend(resendApiKey));
-  const outboundCapture = createOutboundCapture();
-  const deliveryResult = await deliverSalesLeadInitialEmail(supabaseAdmin, provider, {
-    leadId: claim.lead_id,
-    performedBy: String(claim.performed_by ?? ""),
-    mode: "batch_initial",
-    batchItemId: claim.batch_item_id,
-    recipient: String(claim.recipient ?? ""),
-    subject: String(claim.subject ?? ""),
-    bodySource: String(claim.body_source ?? ""),
-    bodyText: String(claim.body_text ?? ""),
-    bodyHtml: String(claim.body_html ?? ""),
-    attachmentMetadata: [],
-    attachments: [],
-    outboundCaptureId: outboundCapture.id,
+  const result = await runSalesLeadEmailBatchWorker({
+    client: createClient(supabaseUrl, serviceRoleKey),
+    provider: createResendInitialEmailProvider(new Resend(resendApiKey)),
+    newOutboundCaptureId: () => createOutboundCapture().id,
     from: SALES_LEAD_INITIAL_EMAIL_FROM,
     replyTo: SALES_LEAD_INITIAL_EMAIL_REPLY_TO,
   });
-
-  if (deliveryResult.success) {
-    return jsonResponse({
-      success: true, action: "sent", email_sent: true,
-      batch_item_id: claim.batch_item_id, delivery_id: deliveryResult.deliveryId,
-    });
-  }
-
-  if (deliveryResult.providerAccepted === true) {
-    // Poskytovatel e-mail přijal, ale DB commit selhal. Položka zůstane
-    // `processing` a další běh smí provést pouze commit_only.
-    return jsonResponse({
-      success: false, action: "commit_pending", email_sent: true,
-      error: deliveryResult.error, batch_item_id: claim.batch_item_id,
-      delivery_id: deliveryResult.deliveryId,
-    }, 500);
-  }
-
-  const outcome = deliveryResult.error === "email_send_failed" ? "rejected" : "uncertain";
-  const { data: failureData, error: failureError } = await supabaseAdmin.rpc(
-    "sales_lead_email_batch_item_record_failure",
-    {
-      p_batch_item_id: claim.batch_item_id,
-      p_outcome: outcome,
-      p_error_code: deliveryResult.error ?? "email_delivery_outcome_unknown",
-    },
-  );
-  const failure = (failureData ?? {}) as { success?: boolean; batch_status?: string };
-  return jsonResponse({
-    success: false,
-    action: outcome === "rejected" ? "failed" : "uncertain",
-    email_sent: false,
-    error: deliveryResult.error,
-    retry_blocked: deliveryResult.retryBlocked === true,
-    batch_item_id: claim.batch_item_id,
-    batch_status: failure.batch_status,
-    failure_recorded: !failureError && failure.success === true,
-  }, 502);
+  return jsonResponse(result.body, result.status);
 });

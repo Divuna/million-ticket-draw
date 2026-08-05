@@ -778,10 +778,11 @@ const insertWorkerItem = async (batchId, suffix, overrides = {}) => {
   const leadId = `61000000-0000-4000-8000-${String(suffix).padStart(12, '0')}`;
   const itemId = `62000000-0000-4000-8000-${String(suffix).padStart(12, '0')}`;
   const email = `worker-${suffix}@worker-${suffix}.example.cz`;
-  await db.query(`insert into public.sales_leads(id,company_name,contact_person,contact_email,email_source,
+  await db.query(`insert into public.sales_leads(id,company_name,ico,contact_person,contact_email,email_source,
       email_verified_by_admin,email_verification_method,email_verified_at,status,created_by)
-    values($1,$2,'Pavel',$3,$4,true,'admin_manual',now(),'novy',$5)`,
-  [leadId, `Worker ${suffix}`, email, `https://worker-${suffix}.example.cz/kontakt`, manager]);
+    values($1,$2,$6,'Pavel',$3,$4,true,'admin_manual',now(),'novy',$5)`,
+  [leadId, `Worker ${suffix}`, email, `https://worker-${suffix}.example.cz/kontakt`, manager,
+    overrides.ico ?? null]);
   await db.query(`insert into public.sales_lead_email_batch_items(
       id,batch_id,lead_id,status,scheduled_for,recipient_snapshot,email_source_snapshot,
       email_verification_method_snapshot,email_verified_at_snapshot,subject_snapshot,
@@ -1096,3 +1097,39 @@ test('the worker migration adds no cron, no queue write, and no automatic lead s
     from public.sales_lead_email_automation_settings`)).rows[0];
   assert.deepEqual(state, { enabled: false, cron_jobs: 0, email_queue: 0 });
 });
+
+// A change between claim_next and the delivery claim must always fail closed:
+// no new delivery row may appear and no provider call may ever follow.
+for (const [suffix, expectedError, mutate, performedByOverride] of [
+  [440, 'existing_partner', "update public.sales_leads set converted_partner_id=gen_random_uuid() where id=$1", null],
+  [441, 'existing_partner', "insert into public.partners(ico) values('44144144')", null],
+  [442, 'email_source_missing', "update public.sales_leads set email_source='' where id=$1", null],
+  [443, 'email_not_verified', 'update public.sales_leads set email_verified_at=null where id=$1', null],
+  [444, 'email_not_verified', "update public.sales_leads set email_verification_method='guessed' where id=$1", null],
+  [445, 'batch_performer_mismatch', 'select 1 where $1::uuid is not null', outsider],
+]) {
+  test(`${expectedError} discovered after the worker claim blocks the delivery claim (${suffix})`, async () => {
+    await startWorkerCase(true);
+    const batchId = await insertWorkerBatch();
+    const { itemId, leadId } = await insertWorkerItem(batchId, suffix, suffix === 441 ? { ico: '44144144' } : {});
+    const claimed = await claimNext();
+    assert.equal(claimed.action, 'send');
+    await asOwner();
+    await db.query(mutate, mutate.includes('$1') ? [leadId] : []);
+    const attempt = await claimBatchDelivery(
+      { ...claimed, performed_by: performedByOverride ?? claimed.performed_by },
+      { deliveryKey: suffix.toString(16).padStart(64, "0"), fingerprint: (suffix + 4096).toString(16).padStart(64, "0") },
+    );
+    assert.equal(attempt.success, false);
+    assert.equal(attempt.error, expectedError);
+    assert.equal(attempt.action, undefined);
+    assert.equal((await db.query('select count(*)::int n from public.sales_lead_email_deliveries where batch_item_id=$1',
+      [itemId])).rows[0].n, 0);
+    // The item stays claimed for manual review; nothing was sent.
+    assert.equal((await itemRow(itemId)).status, 'processing');
+    await asOwner();
+    await db.query("update public.sales_lead_email_batch_items set status='cancelled' where id=$1", [itemId]);
+    await db.query("delete from public.partners where ico='44144144'");
+    await setAutomation(false);
+  });
+}

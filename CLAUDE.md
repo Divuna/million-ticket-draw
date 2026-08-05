@@ -16,6 +16,15 @@
 - **Přijatý e-mail se nikdy neposílá dvakrát.** Když poskytovatel přijal a DB commit selhal, položka
   zůstane `processing` a další běh smí provést jen `commit_only`. `uncertain` delivery se nikdy
   automaticky neopakuje a nikdy se nevrací na `pending`.
+- **`commit_only` větev nesmí nikdy volat delivery vrstvu ani poskytovatele.** Claim v tomto stavu
+  vrací pouze identifikátory (bez příjemce, předmětu, těl a `performed_by`), takže jakékoli sestavení
+  fingerprintu by skončilo `batch_snapshot_mismatch`. Worker smí zavolat jen
+  `sales_lead_initial_email_commit(delivery_id)`; při neúspěchu položka zůstane blokovaná a
+  nezapisuje se neúspěch.
+- **Poslední bariéra nad zamčeným leadem v `sales_lead_initial_email_claim` (batch režim)** musí
+  zůstat úplná: `performed_by` = `batch.created_by`, `converted_partner_id IS NULL`, žádný partner se
+  stejným IČO, povolená `email_verification_method`, `email_verified_at IS NOT NULL`, neprázdný
+  `email_source` do 2048 znaků.
 - **Ruční sender se nesmí funkčně změnit.** Delivery key ručního režimu musí zůstat bit po bitu
   stejný (regresní test se zlatou hodnotou); `batch_item_id` vstupuje do fingerprintu jen v režimu
   `batch_initial`. Identita odesílatele je sdílená: `Miroslav | OneMil <b2b@onemil.cz>`.
