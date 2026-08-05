@@ -65,6 +65,10 @@ export function SalesLeadEmailBatchDialog({ open, onOpenChange, selectedLeads, o
 
   const leadIds = useMemo(() => selectedLeads.map((lead) => lead.id), [selectedLeads]);
   const eligibleCount = preview?.eligible_count ?? preview?.eligible?.length ?? 0;
+  // Preparation is allowed only when the server proved automation is disabled.
+  // `true`, `undefined`, or any other value blocks the confirmation.
+  const automationSafelyDisabled = preview?.automation_enabled === false;
+  const canPrepare = Boolean(preview?.success) && automationSafelyDisabled && eligibleCount > 0;
 
   useEffect(() => {
     if (!open) {
@@ -135,10 +139,10 @@ export function SalesLeadEmailBatchDialog({ open, onOpenChange, selectedLeads, o
   }, [leadIds, open, scheduledDate, templateId]);
 
   const createBatch = async () => {
-    if (!preview?.success || eligibleCount === 0 || creating) return;
+    if (!canPrepare || creating) return;
     setCreating(true);
     try {
-      const { data, error } = await (supabase as any).rpc('sales_lead_email_batch_create', {
+      const { data, error } = await (supabase as any).rpc('sales_lead_email_batch_prepare_paused', {
         p_lead_ids: leadIds,
         p_template_id: templateId,
         p_scheduled_date: scheduledDate,
@@ -153,15 +157,14 @@ export function SalesLeadEmailBatchDialog({ open, onOpenChange, selectedLeads, o
         toast.error(salesLeadEmailBatchReasonMessage(result.error));
         return;
       }
-      const expectedStatus = result.automation_enabled === true ? 'scheduled' : 'paused';
-      if (result.batch_status !== expectedStatus) {
-        toast.error('Server vrátil neočekávaný stav dávky. Bezpečné uložení nebylo potvrzeno.');
+      // Only an explicitly paused batch with provably disabled automation counts
+      // as success. Anything else keeps the dialog and the selection untouched.
+      if (result.batch_status !== 'paused' || result.automation_enabled !== false) {
+        toast.error(salesLeadEmailBatchReasonMessage('unexpected_batch_state'));
         return;
       }
       toast.success(
-        result.batch_status === 'paused'
-          ? 'Dávka byla připravena. Žádný e-mail nebyl odeslán.'
-          : 'Dávka byla bezpečně naplánována.',
+        'Dávka byla připravena. Žádný e-mail nebyl odeslán.',
         { description: `Uloženo: ${result.scheduled_count ?? 0}, vyřazeno: ${result.skipped_count ?? 0}.` },
       );
       setConfirmationOpen(false);
@@ -197,6 +200,16 @@ export function SalesLeadEmailBatchDialog({ open, onOpenChange, selectedLeads, o
                 Potvrzením se dávka pouze bezpečně uloží a žádný e-mail se neodešle.
               </AlertDescription>
             </Alert>
+
+            {preview?.success && !previewLoading && !automationSafelyDisabled && (
+              <Alert variant="destructive" data-testid="batch-automation-blocked">
+                <AlertTriangle className="h-4 w-4" />
+                <AlertTitle>Přípravu dávky nelze potvrdit</AlertTitle>
+                <AlertDescription>
+                  {salesLeadEmailBatchReasonMessage('automation_must_be_disabled')}
+                </AlertDescription>
+              </Alert>
+            )}
 
             <div className="grid gap-4 md:grid-cols-2">
               <div className="space-y-2">
@@ -294,7 +307,7 @@ export function SalesLeadEmailBatchDialog({ open, onOpenChange, selectedLeads, o
             <Button variant="outline" onClick={() => onOpenChange(false)} disabled={creating}>Zavřít</Button>
             <Button
               onClick={() => setConfirmationOpen(true)}
-              disabled={!preview?.success || previewLoading || eligibleCount === 0 || creating}
+              disabled={!canPrepare || previewLoading || creating}
               data-testid="batch-prepare-confirm-open"
             >
               <ShieldCheck className="mr-2 h-4 w-4" />

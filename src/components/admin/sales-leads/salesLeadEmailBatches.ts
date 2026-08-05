@@ -121,6 +121,8 @@ export const SALES_LEAD_EMAIL_BATCH_REASON_MESSAGES: Record<string, string> = {
   no_eligible_leads: 'Ve výběru není žádná firma, kterou lze bezpečně zařadit.',
   concurrent_enrollment_conflict: 'Během ukládání byla firma souběžně zařazena jinam. Obnovte náhled.',
   idempotency_key_conflict: 'Bezpečnostní klíč už byl použit pro jiný výběr, šablonu nebo datum.',
+  automation_must_be_disabled: 'Automatické odesílání není bezpečně vypnuté. Dávku nyní nelze připravit.',
+  unexpected_batch_state: 'Server nepotvrdil pozastavenou dávku. Nic nebylo uloženo, zkuste akci znovu.',
   access_denied: 'Nemáte oprávnění spravovat obchodní leady.',
   lead_ids_required: 'Vyberte alespoň jednu firmu.',
   too_many_selected_leads: 'Najednou lze připravit nejvýše 100 vybraných firem.',

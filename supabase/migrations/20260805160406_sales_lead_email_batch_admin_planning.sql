@@ -331,6 +331,80 @@ GRANT EXECUTE ON FUNCTION public.sales_lead_email_batch_create(uuid[],uuid,date,
 COMMENT ON FUNCTION public.sales_lead_email_batch_create(uuid[],uuid,date,text) IS
   'Atomically rechecks eligibility and stores at most 20 frozen first-email items. When automation is disabled, the batch is prepared only as paused. A database row never sends email or calls a provider.';
 
+-- Admin-only safe entry point. The administration UI must call ONLY this
+-- wrapper. It refuses to do anything unless automation is provably disabled,
+-- and it accepts nothing except a paused batch. Any other outcome rolls the
+-- whole attempt back, so no batch, item, or skip row survives.
+CREATE OR REPLACE FUNCTION public.sales_lead_email_batch_prepare_paused(
+  p_lead_ids uuid[],
+  p_template_id uuid,
+  p_scheduled_date date,
+  p_idempotency_key text
+) RETURNS jsonb
+LANGUAGE plpgsql SECURITY DEFINER
+SET search_path = ''
+AS $$
+DECLARE
+  v_caller uuid := auth.uid();
+  v_settings public.sales_lead_email_automation_settings%ROWTYPE;
+  v_result jsonb;
+BEGIN
+  IF v_caller IS NULL OR NOT public.has_admin_permission('sales_leads.manage', v_caller) THEN
+    RETURN jsonb_build_object('success', false, 'error', 'access_denied');
+  END IF;
+
+  -- Hold the kill-switch row for the rest of this transaction. The wrapped call
+  -- takes the same lock, so automation cannot be enabled between this check and
+  -- the stored batch status.
+  SELECT * INTO v_settings
+  FROM public.sales_lead_email_automation_settings
+  WHERE singleton
+  FOR UPDATE;
+  IF NOT FOUND OR v_settings.enabled IS DISTINCT FROM false THEN
+    RETURN jsonb_build_object('success', false, 'error', 'automation_must_be_disabled');
+  END IF;
+
+  BEGIN
+    v_result := public.sales_lead_email_batch_create(
+      p_lead_ids,
+      p_template_id,
+      p_scheduled_date,
+      p_idempotency_key
+    );
+    IF coalesce((v_result->>'success')::boolean, false) IS NOT TRUE
+       OR (v_result->>'batch_status') IS DISTINCT FROM 'paused'
+       OR (v_result->>'automation_enabled')::boolean IS DISTINCT FROM false THEN
+      RAISE EXCEPTION USING
+        ERRCODE = '23514',
+        MESSAGE = 'sales_lead_email_batch_prepare_paused_rejected';
+    END IF;
+  EXCEPTION
+    WHEN OTHERS THEN
+      -- Every write made by the wrapped call is rolled back with this block.
+      IF v_result IS NOT NULL
+         AND coalesce((v_result->>'success')::boolean, false) IS NOT TRUE
+         AND nullif(v_result->>'error', '') IS NOT NULL THEN
+        RETURN jsonb_build_object(
+          'success', false,
+          'error', v_result->>'error',
+          'ineligible', coalesce(v_result->'ineligible', '[]'::jsonb)
+        );
+      END IF;
+      RETURN jsonb_build_object('success', false, 'error', 'unexpected_batch_state');
+  END;
+
+  RETURN v_result;
+END;
+$$;
+
+REVOKE ALL ON FUNCTION public.sales_lead_email_batch_prepare_paused(uuid[],uuid,date,text)
+  FROM PUBLIC, anon;
+GRANT EXECUTE ON FUNCTION public.sales_lead_email_batch_prepare_paused(uuid[],uuid,date,text)
+  TO authenticated;
+
+COMMENT ON FUNCTION public.sales_lead_email_batch_prepare_paused(uuid[],uuid,date,text) IS
+  'Admin-only wrapper. Requires disabled automation, reuses the existing atomic enrollment, and accepts only a paused batch; anything else is rolled back. Never sends email or calls a provider.';
+
 -- Fail closed after every application of this migration. A later explicit,
 -- separately approved operational step is required to enable automation.
 UPDATE public.sales_lead_email_automation_settings

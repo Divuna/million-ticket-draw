@@ -121,6 +121,13 @@ test('migrations are passive, empty, disabled, and do not touch sending infrastr
   assert.deepEqual(rows[0], { enabled: false, batches: 0, items: 0, email_sent: 0, email_queue: 0, cron_jobs: 0 });
 });
 
+test('admin prepare-paused wrapper is authenticated-only and never anon', async () => {
+  await asOwner();
+  const signature = 'public.sales_lead_email_batch_prepare_paused(uuid[],uuid,date,text)';
+  assert.equal((await db.query('select has_function_privilege($1,$2,$3) allowed', ['anon', signature, 'execute'])).rows[0].allowed, false);
+  assert.equal((await db.query('select has_function_privilege($1,$2,$3) allowed', ['authenticated', signature, 'execute'])).rows[0].allowed, true);
+});
+
 test('outsider cannot read, write, or create a batch', async () => {
   await asUser(outsider);
   assert.equal((await db.query('select count(*)::int n from public.sales_lead_email_automation_settings')).rows[0].n, 0);
@@ -225,6 +232,72 @@ test('manager gets atomic, frozen, idempotent enrollment and audited cancellatio
   const audit = (await db.query('select status,cancelled_by,cancel_reason from public.sales_lead_email_batches where id=$1',
     [created.batch_id])).rows[0];
   assert.deepEqual(audit, { status: 'cancelled', cancelled_by: manager, cancel_reason: 'Ruční zrušení testu' });
+});
+
+test('admin prepare-paused wrapper only ever stores a paused batch', async () => {
+  await asOwner();
+  await db.exec('update public.sales_lead_email_automation_settings set enabled=false where singleton');
+  const ids = ['34000000-0000-4000-8000-000000000001', '34000000-0000-4000-8000-000000000002'];
+  for (const [index, id] of ids.entries()) {
+    await db.query(`insert into public.sales_leads
+      (id,company_name,contact_person,contact_email,email_source,email_verified_by_admin,email_verification_method,
+       email_verified_at,status,created_by)
+      values($1,$2,'Pavel',$3,$4,true,'admin_manual',now(),'novy',$5)`,
+    [id, `Wrapper ${index + 1}`, `wrapper-${index + 1}@example.cz`, `https://example.cz/wrapper-${index + 1}`, manager]);
+  }
+  const call = (leadIds, key, offset) => value(
+    'select public.sales_lead_email_batch_prepare_paused($1::uuid[],$2::uuid,current_date+$4::integer,$3)',
+    [leadIds, template, key, offset],
+  );
+
+  await asUser(outsider);
+  assert.equal((await call([ids[0]], 'wrapper-outsider-key', 20)).error, 'access_denied');
+
+  await asUser(manager);
+  const prepared = await call([ids[0]], 'wrapper-paused-key', 20);
+  assert.equal(prepared.success, true);
+  assert.equal(prepared.batch_status, 'paused');
+  assert.equal(prepared.automation_enabled, false);
+  assert.equal(prepared.scheduled_count, 1);
+  const stored = (await db.query(`select b.status,array_agg(i.status order by i.id) item_states
+    from public.sales_lead_email_batches b join public.sales_lead_email_batch_items i on i.batch_id=b.id
+    where b.id=$1 group by b.status`, [prepared.batch_id])).rows[0];
+  assert.deepEqual(stored, { status: 'paused', item_states: ['pending'] });
+
+  const replay = await call([ids[0]], 'wrapper-paused-key', 20);
+  assert.equal(replay.batch_id, prepared.batch_id);
+  assert.equal(replay.batch_status, 'paused');
+  assert.equal(replay.idempotent_replay, true);
+  assert.equal((await db.query(`select count(*)::int n from public.sales_lead_email_batches
+    where idempotency_key='wrapper-paused-key'`)).rows[0].n, 1);
+  assert.equal((await call([ids[1]], 'wrapper-paused-key', 21)).error, 'idempotency_key_conflict');
+
+  await asOwner();
+  const before = (await db.query(`select
+    (select count(*)::int from public.sales_lead_email_batches) batches,
+    (select count(*)::int from public.sales_lead_email_batch_items) items,
+    (select count(*)::int from public.sales_lead_email_batch_skips) skips`)).rows[0];
+  await db.exec('update public.sales_lead_email_automation_settings set enabled=true where singleton');
+  await asUser(manager);
+  const blocked = await call([ids[1]], 'wrapper-enabled-key', 22);
+  assert.equal(blocked.success, false);
+  assert.equal(blocked.error, 'automation_must_be_disabled');
+  await asOwner();
+  assert.deepEqual((await db.query(`select
+    (select count(*)::int from public.sales_lead_email_batches) batches,
+    (select count(*)::int from public.sales_lead_email_batch_items) items,
+    (select count(*)::int from public.sales_lead_email_batch_skips) skips`)).rows[0], before);
+  assert.equal((await db.query(`select count(*)::int n from public.sales_lead_email_batches
+    where idempotency_key='wrapper-enabled-key'`)).rows[0].n, 0);
+  assert.equal((await db.query(`select count(*)::int n from public.sales_lead_email_batches
+    where status='scheduled' and created_by=$1 and scheduled_date>=current_date+20`, [manager])).rows[0].n, 0);
+
+  await db.exec('update public.sales_lead_email_automation_settings set enabled=false where singleton');
+  await asUser(manager);
+  const cancelled = await value('select public.sales_lead_email_batch_cancel($1::uuid,$2)',
+    [prepared.batch_id, 'Úklid po testu bezpečného wrapperu']);
+  assert.equal(cancelled.cancelled_count, 1);
+  await asOwner();
 });
 
 test('paused batches consume daily capacity and cancellation releases it', async () => {

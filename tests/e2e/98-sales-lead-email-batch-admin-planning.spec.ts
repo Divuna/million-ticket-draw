@@ -83,10 +83,49 @@ test.describe('98 — admin preparation of paused sales-lead e-mail batches', ()
     expect(dialog).toContain('const idempotencyKeyRef = useRef(crypto.randomUUID())');
     expect(dialog).toContain('p_idempotency_key: idempotencyKeyRef.current');
     expect(dialog.match(/idempotencyKeyRef\.current = crypto\.randomUUID\(\)/g)).toHaveLength(1);
-    expect(dialog).toContain(".rpc('sales_lead_email_batch_create'");
-    expect(dialog).toContain("result.batch_status !== expectedStatus");
     expect(dialog).toContain('Dávka byla připravena. Žádný e-mail nebyl odeslán.');
     expect(admin).toContain('setSelectedIds(new Set())');
+  });
+
+  test('migration adds a wrapper that can only ever store a paused batch', () => {
+    expect(migration).toContain('CREATE OR REPLACE FUNCTION public.sales_lead_email_batch_prepare_paused');
+    expect(migration).toMatch(/FROM public\.sales_lead_email_automation_settings\s+WHERE singleton\s+FOR UPDATE;\s+IF NOT FOUND OR v_settings\.enabled IS DISTINCT FROM false THEN/);
+    expect(migration).toContain("'error', 'automation_must_be_disabled'");
+    expect(migration).toContain('v_result := public.sales_lead_email_batch_create(');
+    expect(migration).toContain("(v_result->>'batch_status') IS DISTINCT FROM 'paused'");
+    expect(migration).toContain("(v_result->>'automation_enabled')::boolean IS DISTINCT FROM false");
+    expect(migration).toContain('sales_lead_email_batch_prepare_paused_rejected');
+    expect(migration).toContain("'error', 'unexpected_batch_state'");
+    expect(migration).toMatch(/REVOKE ALL ON FUNCTION public\.sales_lead_email_batch_prepare_paused\(uuid\[\],uuid,date,text\)\s+FROM PUBLIC, anon;/);
+    expect(migration).toMatch(/GRANT EXECUTE ON FUNCTION public\.sales_lead_email_batch_prepare_paused\(uuid\[\],uuid,date,text\)\s+TO authenticated;/);
+    // The wrapper must reuse the audited RPC instead of its own insert path.
+    expect(migration.slice(migration.indexOf('sales_lead_email_batch_prepare_paused')))
+      .not.toMatch(/INSERT\s+INTO\s+public\.sales_lead_email_batch/i);
+  });
+
+  test('dialog calls only the prepare-paused RPC and accepts only paused plus disabled', () => {
+    expect(dialog).toContain(".rpc('sales_lead_email_batch_prepare_paused'");
+    expect(dialog).not.toContain(".rpc('sales_lead_email_batch_create'");
+    expect(dialog).not.toContain('expectedStatus');
+    expect(dialog).not.toMatch(/automation_enabled === true \? 'scheduled' : 'paused'/);
+    expect(dialog).toContain("const automationSafelyDisabled = preview?.automation_enabled === false;");
+    expect(dialog).toContain('const canPrepare = Boolean(preview?.success) && automationSafelyDisabled && eligibleCount > 0;');
+    expect(dialog).toContain('disabled={!canPrepare || previewLoading || creating}');
+    expect(dialog).toContain('if (!canPrepare || creating) return;');
+    expect(dialog).toContain("if (result.batch_status !== 'paused' || result.automation_enabled !== false) {");
+    expect(dialog).toContain("salesLeadEmailBatchReasonMessage('unexpected_batch_state')");
+    expect(dialog).toContain("salesLeadEmailBatchReasonMessage('automation_must_be_disabled')");
+    // A rejected outcome must never clear the selection or close the dialog.
+    expect(dialog).toMatch(/toast\.error\(salesLeadEmailBatchReasonMessage\('unexpected_batch_state'\)\);\s+return;\s+}/);
+    expect(dialog).toMatch(/toast\.success\([\s\S]{0,200}?\);\s+setConfirmationOpen\(false\);\s+await onCreated\(result\);\s+onOpenChange\(false\);/);
+  });
+
+  test('blocked automation has an exact Czech message', () => {
+    expect(SALES_LEAD_EMAIL_BATCH_REASON_MESSAGES.automation_must_be_disabled)
+      .toBe('Automatické odesílání není bezpečně vypnuté. Dávku nyní nelze připravit.');
+    expect(SALES_LEAD_EMAIL_BATCH_REASON_MESSAGES.unexpected_batch_state).toBeTruthy();
+    expect(salesLeadEmailBatchReasonMessage('unexpected_batch_state'))
+      .not.toContain('Důvod: unexpected_batch_state');
   });
 
   test('batch overview shows items, skip audit, paused warning, and guarded cancellation', () => {

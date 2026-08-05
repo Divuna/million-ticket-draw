@@ -985,14 +985,25 @@ odesílání. Administrační plánování patří do PR 3 a worker až do PR 4.
 - Administrátor vybere nejvýše 100 leadů, aktivní šablonu typu `initial` a den. Náhled vzniká pouze
   přes `sales_lead_email_batch_preview` a zobrazuje serverem vrácenou způsobilost, důvody vyřazení,
   denní kapacitu, skutečné pracovní okno a zmrazený výsledný obsah.
-- Vytvoření vyžaduje druhé lidské potvrzení a stabilní idempotency key. RPC všechny bariéry znovu
-  ověří pod zámky. Při `enabled=false` uloží hlavičku jako `paused` a položky jako `pending`; samotný
-  databázový řádek nikdy nevolá poskytovatele ani neodesílá e-mail.
+- Vytvoření vyžaduje druhé lidské potvrzení a stabilní idempotency key. Administrační UI volá výhradně
+  `sales_lead_email_batch_prepare_paused`. Wrapper zamkne řádek `sales_lead_email_automation_settings`
+  přes `FOR UPDATE`, pokračuje jen při `enabled=false` (jinak `automation_must_be_disabled`), ve stejné
+  transakci použije stávající `sales_lead_email_batch_create` a přijme pouze výsledek `success=true`
+  + `automation_enabled=false` + `batch_status='paused'`. Jakýkoli jiný výsledek celý pokus rollbackne,
+  takže nevznikne dávka, položka ani skip řádek. Samotný databázový řádek nikdy nevolá poskytovatele
+  ani neodesílá e-mail.
+- Potvrzení v UI je povoleno jen při `preview.automation_enabled === false`; hodnota `true`,
+  `undefined` nebo jakákoli jiná potvrzení zablokuje s hláškou „Automatické odesílání není bezpečně
+  vypnuté. Dávku nyní nelze připravit.“ Za úspěch se považuje pouze `paused` + `automation_enabled=false`;
+  při jiném výsledku se dialog nezavře, výběr se nevyčistí a `onCreated` se nevolá.
 - Přehled načítá posledních 20 dávek, položky a trvalý skip audit. Zrušit lze jen `paused` nebo
   `scheduled` dávku přes stávající RPC a s povinným důvodem. UI nemá spuštění, obnovení, přepínač
   automatiky ani odesílací tlačítko.
-- Migrace `20260805160406_sales_lead_email_batch_admin_planning.sql` pouze upravuje create RPC tak,
-  aby při vypnuté automatice bezpečně vytvářelo pozastavené dávky; zároveň fail-closed ponechá
-  `enabled=false`. Nevytváří worker, cron, Edge Function ani zápis do `email_queue`.
+- Migrace `20260805160406_sales_lead_email_batch_admin_planning.sql` upravuje create RPC tak, aby při
+  vypnuté automatice bezpečně vytvářelo pozastavené dávky, přidává admin wrapper
+  `sales_lead_email_batch_prepare_paused` (REVOKE PUBLIC/anon, GRANT authenticated) a fail-closed
+  ponechá `enabled=false`. Původní `sales_lead_email_batch_create` zůstává funkční
+  (`enabled=false` → `paused`, `enabled=true` → `scheduled`) pro pozdější PR 4. Nevytváří worker, cron,
+  Edge Function ani zápis do `email_queue`.
 - PR 3 není nasazen na staging ani produkci. Worker a řízené zapnutí zůstávají výhradně PR 4 a
   vyžadují nové výslovné schválení.
