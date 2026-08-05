@@ -29,7 +29,7 @@ test.describe('sales lead initial email direct-send contract', () => {
     expect(sender).toContain('subject,');
     expect(sender).toContain('body_snapshot: textBody');
     expect(sender.indexOf('body_snapshot: textBody')).toBeGreaterThan(sender.indexOf('resend.emails.send'));
-    expect(sender).toContain('text: renderedBody');
+    expect(sender).toContain('text: renderedText');
   });
 
   test('failed provider send preserves state and editor while success advances workflow', () => {

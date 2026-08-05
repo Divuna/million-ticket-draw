@@ -5154,3 +5154,18 @@ Nejmenší safe krok delegace Partner Offers: nový klíč `partner_offers.finan
 Změny: (1) `src/hooks/useAdminPermissions.ts` — `partner_offers.finance.manage` (label „Partnerské nabídky (finance)") do `ADMIN_PERMISSION_KEYS`/`ADMIN_PERMISSION_LABELS`; `ADMIN_ROUTE_PERMISSION['/admin/partner-offers']`; položka v `SUBADMIN_ENTRY_ROUTES` (nav label „Partnerské nabídky"). (2) `src/App.tsx` — `/admin/partner-offers` přepnuto z `RequireSuperadmin` na `RequirePermission("partner_offers.finance.manage")` (jediná změněná routa). (3) `src/components/admin/AdminPrimaryNav.tsx` — ikona `Tag` pro nový klíč. Grant UI v `/admin/admins` se zobrazí automaticky (iteruje `ADMIN_PERMISSION_KEYS`). `AdminPartnerOffers` business logika beze změny.
 
 Rozsah role: jen `/admin/partner-offers` (moderace nabídek + per-offer billing `billing_mode`/`price_per_activation`/`billing_admin_override` + aktivace/kliky — čistě offer tabulky). Superadmin-only zůstává (Slice B/C, mimo tento krok): offer faktury (`partner_invoices type='offer'`, `partner_offer_invoice_lines`) ve smíšených `/admin/invoices` + `/admin/partners-portal`, globální platby, affiliate/influencer commissions+payouts, výherci, prize-delivery, contest internals, audit/system, `/admin/admins`. Superadmin chování beze změny. `npm run build` ✅ exit 0, `npx tsc --noEmit` ✅ 0 chyb. Vyžaduje Lovable Publish + grant klíče subadminovi v `/admin/admins`.
+# 04. 08. 2026 — PR 1 základu ručně plánovaných obchodních dávek (Draft, nenasazeno)
+
+- Read-only audit aktuálního `origin/main` a produkčního Supabase potvrdil tři obchodní sendery,
+  suppression, `sales_lead_email_send_guard`, `email_sent` audit a obecnou `email_queue` s workerem.
+  První obchodní e-mail ale dnes používá přímý Resend sender, nikoli obecnou frontu.
+- Připravena jediná pasivní migrace se settings (`enabled=false`), batch a frozen-item tabulkou,
+  RLS/privileges, read-only preview RPC, atomickým create RPC, cancel RPC a superadmin kill switchem.
+- Bezpečnostní revize před stagingem doplnila trvalý audit přeskočených leadů, skutečný denní limit
+  přes `pending`/`processing`/`sent`/`failed`, stejné stavy do unikátní ochrany leadu a příjemce,
+  fingerprint idempotentního požadavku, dnešní okno s rezervou pěti minut a fail-closed cancel při
+  `processing`. SQL text/HTML renderer je regresně porovnáván se sdíleným TypeScript rendererem.
+- Způsobilost znovu používá současné stavy, suppression a duplicitní guard; doplňuje ověření
+  zdroje/metody/času, historii prvního odeslání na lead i adresu, aktivní dávku, šablonu a proměnné.
+- Žádný worker, cron, Edge Function, sender ani administrační UI nebyly přidány nebo změněny.
+  Migrace nebyla aplikována, data stagingu a produkce zůstala beze změny a žádný e-mail neodešel.
