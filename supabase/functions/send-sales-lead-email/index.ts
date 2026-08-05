@@ -43,8 +43,8 @@ const corsHeaders = {
   "Access-Control-Allow-Methods": "POST, OPTIONS",
 };
 
-const FROM_ADDRESS = "OneMil obchodní tým <b2b@onemil.cz>";
-const REPLY_TO = "OneMil obchodní tým <b2b@onemil.cz>";
+const FROM_ADDRESS = "Miroslav Frydrych | OneMil <b2b@onemil.cz>";
+const REPLY_TO = "Miroslav Frydrych | OneMil <b2b@onemil.cz>";
 const INITIAL_EMAIL_ALLOWED_STATUSES = new Set(["novy", "priprava", "schvaleni_ceka"]);
 
 function jsonResponse(body: Record<string, unknown>, status = 200): Response {
