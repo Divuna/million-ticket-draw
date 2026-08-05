@@ -924,11 +924,11 @@ Stav nasazení 11. 07. 2026: LIVE na stagingu i produkci; migrace `sales_leads_v
 - Oba filtry obsahují volby `Všechny` a `Bez …`. Akce `Zrušit filtry` nastaví stavovou záložku
   na `Vše`, vymaže hledání a obnoví oba výběry na `Všechny`.
 
-## 23. Databázový základ denních dávek prvního e-mailu (PR 1, návrh)
+## 23. Denní dávky prvního e-mailu (PR 1 a PR 2 v produkci; PR 3 Draft)
 
 Migrace `20260804165418_sales_lead_email_batches_foundation.sql` připravuje pouze pasivní
-databázovou vrstvu. Není aplikovaná na staging ani produkci a neobsahuje worker, cron, síťové
-volání ani odesílací cestu. Globální nastavení vzniká s `enabled=false`.
+databázovou vrstvu. PR 1 a bezpečná delivery vrstva PR 2 jsou v produkci; automatika zůstává
+`enabled=false`, dávkové tabulky jsou prázdné a neexistuje batch worker ani batch cron.
 
 - `sales_lead_email_batches` je auditní hlavička ručně potvrzené dávky. Uchovává snapshot názvu
   šablony, den a skutečně použité pracovní okno v `Europe/Prague`, limit nejvýše 20, idempotency key,
@@ -964,7 +964,7 @@ Administrační výběr, náhled a ruční potvrzení dávky patří do PR 3. Sa
 před každým pokusem znovu provede ochrany a bezpečně claimne jednu položku, patří až do PR 4;
 nesmí přidat ranní automatický výběr, follow-upy, odpovědi ani dohánění zmeškaných položek velkou
 dávkou. Zapnutí zůstane samostatným, výslovně schváleným krokem.
-## PR 2 — bezpečná evidence prvního e-mailu (Draft, nenasazeno; 05. 08. 2026)
+## PR 2 — bezpečná evidence prvního e-mailu (produkce; 05. 08. 2026)
 
 PR 2 zavádí jedinou serverovou cestu pro ruční první obchodní e-mail. Tabulka
 `sales_lead_email_deliveries` zmrazí příjemce, předmět, zdrojové/plain-text/HTML tělo a metadata
@@ -977,5 +977,22 @@ se výsledek nejdřív uloží a idempotentní RPC atomicky vytvoří právě je
 status historii, případný posun do `osloveno` a `committed`. Selhání commitu se při opakování opravuje
 pouze DB commitem bez dalšího odeslání. Timeout či neznámý výsledek přechází do `uncertain`.
 
-Změna je pouze v Draft PR a není nasazená. Batch automatika zůstává `enabled=false`; nevzniká worker,
-cron ani dávkové odesílání. Administrační plánování patří do PR 3 a worker až do PR 4.
+PR 2 je v produkci. Batch automatika zůstává `enabled=false`; nevznikl worker, cron ani dávkové
+odesílání. Administrační plánování patří do PR 3 a worker až do PR 4.
+
+## PR 3 — administrační příprava pozastavených dávek (Draft; 05. 08. 2026)
+
+- Administrátor vybere nejvýše 100 leadů, aktivní šablonu typu `initial` a den. Náhled vzniká pouze
+  přes `sales_lead_email_batch_preview` a zobrazuje serverem vrácenou způsobilost, důvody vyřazení,
+  denní kapacitu, skutečné pracovní okno a zmrazený výsledný obsah.
+- Vytvoření vyžaduje druhé lidské potvrzení a stabilní idempotency key. RPC všechny bariéry znovu
+  ověří pod zámky. Při `enabled=false` uloží hlavičku jako `paused` a položky jako `pending`; samotný
+  databázový řádek nikdy nevolá poskytovatele ani neodesílá e-mail.
+- Přehled načítá posledních 20 dávek, položky a trvalý skip audit. Zrušit lze jen `paused` nebo
+  `scheduled` dávku přes stávající RPC a s povinným důvodem. UI nemá spuštění, obnovení, přepínač
+  automatiky ani odesílací tlačítko.
+- Migrace `20260805160406_sales_lead_email_batch_admin_planning.sql` pouze upravuje create RPC tak,
+  aby při vypnuté automatice bezpečně vytvářelo pozastavené dávky; zároveň fail-closed ponechá
+  `enabled=false`. Nevytváří worker, cron, Edge Function ani zápis do `email_queue`.
+- PR 3 není nasazen na staging ani produkci. Worker a řízené zapnutí zůstávají výhradně PR 4 a
+  vyžadují nové výslovné schválení.

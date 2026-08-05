@@ -1,12 +1,14 @@
 # OneMil – aktuální stav projektu
 
-## DENNÍ DÁVKY PRVNÍCH OBCHODNÍCH E-MAILŮ — PR 2 V DRAFTU (05. 08. 2026)
+## DENNÍ DÁVKY PRVNÍCH OBCHODNÍCH E-MAILŮ — PR 3 V DRAFTU (05. 08. 2026)
 
-PR 1 z PR #312 je v produkci jako pasivní základ, stále `enabled=false`, bez dávek, workeru a cronu.
-PR 2 je pouze v samostatném Draft PR: ruční první sender používá serverovou delivery evidenci,
-atomický claim, Resend idempotency key, záznam výsledku poskytovatele a idempotentní atomický commit
-historie/stavu. Neznámý výsledek blokuje opakování. PR 2 není nasazen a neodeslal žádný e-mail.
-Administrační plánování bude až PR 3 a batch worker až PR 4.
+PR 1 z PR #312 a bezpečná delivery vrstva PR 2 z PR #313 jsou v produkci. Automatika zůstává
+`enabled=false`, batch tabulky jsou prázdné a neexistuje batch worker ani batch cron.
+PR 3 je samostatný Draft: administrátor může vybrat leady, aktivní první šablonu a den, zobrazit
+serverový náhled a po druhém potvrzení uložit dávku. Při vypnuté automatice vznikne výhradně
+`paused` dávka s `pending` položkami. Přehled ukazuje posledních 20 dávek, položky i skip audit a
+umožňuje pouze guardované zrušení. PR 3 nemá sender, worker, cron, Resend volání ani `email_queue`.
+Worker a řízené zapnutí patří až do samostatně schváleného PR 4.
 
 ## DENNÍ DÁVKY PRVNÍCH OBCHODNÍCH E-MAILŮ — PR 1 V PRODUKCI, VYPNUTO (05. 08. 2026)
 

@@ -27,7 +27,7 @@ import {
 } from '@/components/ui/alert-dialog';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
-import { Briefcase, FileText, Plus, Search, Info, Sparkles, Trash2 } from 'lucide-react';
+import { Briefcase, FileText, History, MailPlus, Plus, Search, Info, Sparkles, Trash2 } from 'lucide-react';
 import { useUserRole } from '@/hooks/useUserRole';
 import {
   STATUS_LABELS,
@@ -45,6 +45,8 @@ import { SalesLeadOverview } from '@/components/admin/sales-leads/SalesLeadOverv
 import { SalesLeadEmailTemplateManager } from '@/components/admin/sales-leads/SalesLeadEmailTemplateManager';
 import { SalesLeadUnassignedEmails } from '@/components/admin/sales-leads/SalesLeadUnassignedEmails';
 import { SalesLeadToday } from '@/components/admin/sales-leads/SalesLeadToday';
+import { SalesLeadEmailBatchDialog } from '@/components/admin/sales-leads/SalesLeadEmailBatchDialog';
+import { SalesLeadEmailBatchesSheet } from '@/components/admin/sales-leads/SalesLeadEmailBatchesSheet';
 import {
   ALL_LEAD_FILTER_VALUE,
   EMPTY_LEAD_FILTER_VALUE,
@@ -115,6 +117,9 @@ const AdminSalesLeads: React.FC = () => {
   const [addOpen, setAddOpen] = useState(false);
   const [discoverOpen, setDiscoverOpen] = useState(false);
   const [templateManagerOpen, setTemplateManagerOpen] = useState(false);
+  const [batchDialogOpen, setBatchDialogOpen] = useState(false);
+  const [batchesOpen, setBatchesOpen] = useState(false);
+  const [batchesRefreshKey, setBatchesRefreshKey] = useState(0);
   const [detailId, setDetailId] = useState<string | null>(null);
   const [detailOpen, setDetailOpen] = useState(false);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
@@ -382,6 +387,21 @@ const AdminSalesLeads: React.FC = () => {
     });
   };
 
+  const selectedLeads = useMemo(
+    () => leads
+      .filter((lead) => selectedIds.has(lead.id))
+      .map((lead) => ({ id: lead.id, company_name: lead.company_name })),
+    [leads, selectedIds],
+  );
+
+  const openBatchDialog = () => {
+    if (selectedIds.size > 100) {
+      toast.error('Najednou lze připravit nejvýše 100 vybraných firem. Zmenšete výběr.');
+      return;
+    }
+    setBatchDialogOpen(true);
+  };
+
   const summaryCards: { label: string; value: number; unread?: number }[] = [
     { label: 'Celkem leadů', value: summary.total },
     { label: 'Návrhy', value: summary.proposed },
@@ -412,6 +432,10 @@ const AdminSalesLeads: React.FC = () => {
           </div>
         </div>
         <div className="flex flex-wrap gap-2">
+          <Button variant="outline" onClick={() => setBatchesOpen(true)} data-testid="sl-email-batches-btn">
+            <History className="h-4 w-4 mr-1.5" aria-hidden />
+            E-mailové dávky
+          </Button>
           {isSuperAdmin && (
             <Button variant="outline" onClick={() => setTemplateManagerOpen(true)} data-testid="sl-template-manager-btn">
               <FileText className="h-4 w-4 mr-1.5" aria-hidden />
@@ -551,19 +575,25 @@ const AdminSalesLeads: React.FC = () => {
             </div>
           )}
           {!['today', 'unassigned-emails'].includes(activeTab) && selectedIds.size > 0 && (
-            <div className="flex items-center justify-between gap-3 rounded-lg border border-destructive/30 bg-destructive/5 px-3 py-2">
+            <div className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-primary/25 bg-primary/5 px-3 py-2">
               <span className="text-sm text-muted-foreground">
                 Vybráno leadů: <strong className="text-foreground">{selectedIds.size}</strong>
               </span>
-              <Button
-                variant="destructive"
-                size="sm"
-                onClick={() => setBulkDeleteOpen(true)}
-                data-testid="sl-bulk-delete-btn"
-              >
-                <Trash2 className="h-4 w-4 mr-1.5" aria-hidden />
-                Smazat vybrané ({selectedIds.size})
-              </Button>
+              <div className="flex flex-wrap gap-2">
+                <Button size="sm" onClick={openBatchDialog} data-testid="sl-prepare-email-batch-btn">
+                  <MailPlus className="h-4 w-4 mr-1.5" aria-hidden />
+                  Připravit e-mailovou dávku ({selectedIds.size})
+                </Button>
+                <Button
+                  variant="destructive"
+                  size="sm"
+                  onClick={() => setBulkDeleteOpen(true)}
+                  data-testid="sl-bulk-delete-btn"
+                >
+                  <Trash2 className="h-4 w-4 mr-1.5" aria-hidden />
+                  Smazat vybrané ({selectedIds.size})
+                </Button>
+              </div>
             </div>
           )}
         </CardHeader>
@@ -688,6 +718,22 @@ const AdminSalesLeads: React.FC = () => {
         open={detailOpen}
         onOpenChange={handleDetailOpenChange}
         onMutated={load}
+      />
+      <SalesLeadEmailBatchDialog
+        open={batchDialogOpen}
+        onOpenChange={setBatchDialogOpen}
+        selectedLeads={selectedLeads}
+        onCreated={async () => {
+          setSelectedIds(new Set());
+          setBatchesRefreshKey((value) => value + 1);
+          await load();
+        }}
+      />
+      <SalesLeadEmailBatchesSheet
+        open={batchesOpen}
+        onOpenChange={setBatchesOpen}
+        refreshKey={batchesRefreshKey}
+        onChanged={() => setBatchesRefreshKey((value) => value + 1)}
       />
 
       <AlertDialog open={!!deleteOneId} onOpenChange={(o) => !o && setDeleteOneId(null)}>
