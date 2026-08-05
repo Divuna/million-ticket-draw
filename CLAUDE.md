@@ -2095,6 +2095,18 @@ Zbývá ručně ověřit na telefonu: Android Chrome native install dialog, Andr
 - Rejected selections are persisted in `sales_lead_email_batch_skips`. Today's first slot is at
   least five minutes in the future and all slots are before 16:30 Prague time; insufficient time
   returns `scheduling_window_closed`. Cancellation fails closed while any item is `processing`.
-- PR 2 must add UI preview/manual confirmation and a narrowly scoped internal worker with a fresh
-  pre-send recheck, atomic claim/recovery and one-item-at-a-time dispatch. It must ship disabled and
-  require separate rollout approval.
+- PR 2 adds only the shared initial-delivery safety path and connects the manual sender. PR 3 owns
+  UI preview/manual confirmation. A narrowly scoped internal worker with fresh pre-send checks,
+  claim/recovery and one-item-at-a-time dispatch belongs only to PR 4 and needs separate approval.
+# Sales lead initial email delivery — PR 2 safety boundary (05. 08. 2026)
+
+- PR 2 is delivery safety only. The manual initial sender uses the server-only shared module and
+  `sales_lead_email_deliveries`; no public endpoint is added.
+- The service-role-only claim locks the lead and repeats every authoritative barrier before granting
+  one provider call. Resend receives the stable delivery key as its idempotency key.
+- Provider acceptance is persisted before an idempotent atomic commit creates exactly one
+  `email_sent` plus the existing forward-only status transition. A failed commit is resumed without
+  calling the provider. Unknown outcomes are `uncertain` and block automatic retry.
+- Reuse/forward remains on its existing path. Reply and follow-up are unchanged.
+- This Draft is not deployed. Automation remains `enabled=false`; there is no batch worker, cron or
+  batch dispatch. Admin scheduling belongs to PR 3 and the worker belongs to PR 4.

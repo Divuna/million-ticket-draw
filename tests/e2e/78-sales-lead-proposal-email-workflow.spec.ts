@@ -7,6 +7,8 @@ import {
 
 const read = (path: string) => fs.readFileSync(path, 'utf8');
 const sender = read('supabase/functions/send-sales-lead-email/index.ts');
+const delivery = read('supabase/functions/_shared/salesLeadInitialEmailDelivery.ts');
+const deliveryMigration = read('supabase/migrations/20260805140658_sales_lead_initial_email_delivery.sql');
 const migration = read('supabase/migrations/20260716160634_sales_lead_initial_email_workflow_guard.sql');
 const detail = read('src/components/admin/sales-leads/SalesLeadDetailSheet.tsx');
 const templatePicker = read('src/components/admin/sales-leads/SalesLeadEmailTemplatePicker.tsx');
@@ -40,19 +42,20 @@ test.describe('sales lead proposal and initial-email workflow', () => {
     }
     expect(migration).toContain("v_lead.status NOT IN ('novy', 'priprava', 'schvaleni_ceka')");
     expect(migration).toContain("SET status = 'osloveno'");
-    expect(sender).toContain('status_sync_failed_after_send');
-    expect(sender).toContain('statusResult.status_changed === true');
+    expect(deliveryMigration).toContain('public.sales_lead_mark_emailed(v_delivery.lead_id, v_delivery.performed_by)');
+    expect(deliveryMigration).toContain("SET status='committed'");
+    expect(delivery).toContain('provider_accepted_commit_failed');
     expect(sender).not.toContain('Best-effort propsání stavu');
     expect(sender).toContain('initial_email_already_sent');
     expect(sender).toContain('.contains("metadata", { sent_by: "human" })');
   });
 
   test('failed Resend response cannot change lead status', () => {
-    const sendFailure = sender.indexOf('if (emailResponse.error)');
-    const markEmailed = sender.indexOf('supabaseAdmin.rpc("sales_lead_mark_emailed"');
+    const sendFailure = sender.indexOf('if (response.error)');
+    const markEmailed = deliveryMigration.indexOf('public.sales_lead_mark_emailed');
     expect(sendFailure).toBeGreaterThan(0);
-    expect(markEmailed).toBeGreaterThan(sendFailure);
-    expect(sender.slice(sendFailure, markEmailed)).toContain('email_send_failed');
+    expect(markEmailed).toBeGreaterThan(0);
+    expect(sender.slice(sendFailure, sendFailure + 320)).toContain('email_send_failed');
   });
 
   test('downstream states are never moved back to proposals or preparation', () => {

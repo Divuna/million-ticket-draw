@@ -959,8 +959,23 @@ volání ani odesílací cestu. Globální nastavení vzniká s `enabled=false`.
 - Přímé klientské zápisy jsou zakázané. Tabulky jsou přes RLS čitelné pouze s
   `sales_leads.manage`; interní pomocné funkce nejsou dostupné rolím `anon` ani `authenticated`.
 
-Navazující PR 2 smí přidat administrační výběr, náhled a ruční potvrzení dávky a samostatný interní
-worker, který před každým pokusem znovu provede ochrany, bezpečně claimne jednu položku a odešle ji
-přes sjednocenou obchodní odesílací logiku. Teprve PR 2 řeší pause/resume, průběžný stav a recovery;
+PR 2 přidává pouze společnou bezpečnou delivery vrstvu pro první e-mail a napojuje na ni ruční sender.
+Administrační výběr, náhled a ruční potvrzení dávky patří do PR 3. Samostatný interní worker, který
+před každým pokusem znovu provede ochrany a bezpečně claimne jednu položku, patří až do PR 4;
 nesmí přidat ranní automatický výběr, follow-upy, odpovědi ani dohánění zmeškaných položek velkou
 dávkou. Zapnutí zůstane samostatným, výslovně schváleným krokem.
+## PR 2 — bezpečná evidence prvního e-mailu (Draft, nenasazeno; 05. 08. 2026)
+
+PR 2 zavádí jedinou serverovou cestu pro ruční první obchodní e-mail. Tabulka
+`sales_lead_email_deliveries` zmrazí příjemce, předmět, zdrojové/plain-text/HTML tělo a metadata
+příloh bez binárního obsahu. Atomický claim pod zámkem leadu opakuje stavové, DNC, suppression,
+ověření kontaktu, historii a duplicate guard. Stav `sending`, `provider_accepted`, `uncertain` nebo
+`committed` blokuje další provider call; `provider_rejected` dovoluje nový bezpečný pokus.
+
+Resend dostává stejný deterministický `delivery_key` jako idempotency key. Po přijetí poskytovatelem
+se výsledek nejdřív uloží a idempotentní RPC atomicky vytvoří právě jednu `email_sent` aktivitu,
+status historii, případný posun do `osloveno` a `committed`. Selhání commitu se při opakování opravuje
+pouze DB commitem bez dalšího odeslání. Timeout či neznámý výsledek přechází do `uncertain`.
+
+Změna je pouze v Draft PR a není nasazená. Batch automatika zůstává `enabled=false`; nevzniká worker,
+cron ani dávkové odesílání. Administrační plánování patří do PR 3 a worker až do PR 4.

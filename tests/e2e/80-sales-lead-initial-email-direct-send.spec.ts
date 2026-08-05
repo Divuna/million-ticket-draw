@@ -12,6 +12,8 @@ import {
 const read = (path: string) => fs.readFileSync(path, 'utf8');
 const detail = read('src/components/admin/sales-leads/SalesLeadDetailSheet.tsx');
 const sender = read('supabase/functions/send-sales-lead-email/index.ts');
+const delivery = read('supabase/functions/_shared/salesLeadInitialEmailDelivery.ts');
+const deliveryMigration = read('supabase/migrations/20260805140658_sales_lead_initial_email_delivery.sql');
 const draftRpc = read('supabase/migrations/20260703170000_sales_leads_draft_rpc.sql');
 
 test.describe('sales lead initial email direct-send contract', () => {
@@ -33,15 +35,15 @@ test.describe('sales lead initial email direct-send contract', () => {
   });
 
   test('failed provider send preserves state and editor while success advances workflow', () => {
-    const providerFailure = sender.indexOf('if (emailResponse.error)');
-    const historyWrite = sender.indexOf('.from("sales_lead_activities").insert');
-    const statusSync = sender.indexOf('supabaseAdmin.rpc("sales_lead_mark_emailed"');
+    const providerFailure = sender.indexOf('if (response.error)');
+    const historyWrite = deliveryMigration.indexOf('INSERT INTO public.sales_lead_activities');
+    const statusSync = deliveryMigration.indexOf('public.sales_lead_mark_emailed');
     expect(providerFailure).toBeGreaterThan(0);
-    expect(historyWrite).toBeGreaterThan(providerFailure);
+    expect(historyWrite).toBeGreaterThan(0);
     expect(statusSync).toBeGreaterThan(historyWrite);
-    expect(sender.slice(providerFailure, historyWrite)).toContain('email_send_failed');
+    expect(sender.slice(providerFailure, providerFailure + 320)).toContain('email_send_failed');
     expect(detail).not.toMatch(/catch[\s\S]{0,250}setDraft(?:Subject|Body)\(/);
-    expect(sender).toContain('new_status === "osloveno"');
+    expect(deliveryMigration).toContain("v_status := public.sales_lead_mark_emailed");
   });
 
   test('save draft remains optional and supports a genuinely unfinished draft', () => {
@@ -86,7 +88,8 @@ test.describe('sales lead initial email direct-send contract', () => {
     expect(sender).toContain('parseSalesLeadEmailAttachments(body.attachments)');
     expect(sender).toContain('emailPayload.attachments = attachmentResult.attachments');
     expect(sender).toContain('attachments: attachmentResult.metadata');
-    expect(sender).not.toContain('attachments: attachmentResult.attachments,');
+    expect(delivery).toContain('attachments: input.attachments');
+    expect(deliveryMigration).toContain("'attachments',v_delivery.attachment_metadata");
 
     const oneByte = Buffer.from('x').toString('base64');
     expect(parseSalesLeadEmailAttachments([{ filename: 'nabidka.pdf', content: oneByte, content_type: 'application/pdf', size: 1 }])).toMatchObject({ ok: true });

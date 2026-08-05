@@ -1,9 +1,14 @@
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.57.4";
-import { Resend } from "npm:resend@2.0.0";
+import { Resend } from "npm:resend@6.18.1";
 import { renderSalesLeadEmailHtml, renderSalesLeadEmailText } from "../_shared/salesLeadEmailRendering.ts";
 import { createOutboundCapture } from "../_shared/salesLeadEmailThreading.ts";
 import { parseSalesLeadEmailAttachments } from "../_shared/salesLeadEmailAttachments.ts";
+import {
+  classifyInitialEmailProviderError,
+  deliverSalesLeadInitialEmail,
+  InitialEmailProviderOutcomeUncertainError,
+} from "../_shared/salesLeadInitialEmailDelivery.ts";
 
 // ============================================================================
 // send-sales-lead-email — odeslání aktuálního obsahu editoru ČLOVĚKEM
@@ -41,7 +46,6 @@ const corsHeaders = {
 const FROM_ADDRESS = "OneMil obchodní tým <b2b@onemil.cz>";
 const REPLY_TO = "OneMil obchodní tým <b2b@onemil.cz>";
 const INITIAL_EMAIL_ALLOWED_STATUSES = new Set(["novy", "priprava", "schvaleni_ceka"]);
-const ALREADY_CONTACTED_STATUSES = new Set(["osloveno", "follow_up", "odpovedel", "jednani", "konvertovan"]);
 
 function jsonResponse(body: Record<string, unknown>, status = 200): Response {
   return new Response(JSON.stringify(body), {
@@ -61,6 +65,15 @@ function validateEmailContent(subject: string, body: string): string | null {
 
 function isValidRecipient(value: string): boolean {
   return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value) && value.length <= 320;
+}
+
+function resendErrorCode(error: unknown): string | null {
+  if (!error || typeof error !== "object") return null;
+  const value = error as Record<string, unknown>;
+  const candidate = typeof value.name === "string" ? value.name
+    : typeof value.code === "string" ? value.code
+    : null;
+  return candidate?.trim().toLowerCase() || null;
 }
 
 serve(async (req: Request) => {
@@ -153,10 +166,11 @@ serve(async (req: Request) => {
       return jsonResponse({ success: false, error: "do_not_contact" }, 403);
     }
 
-    let reuseSource: {
+    type ReuseSource = {
       id: string;
       metadata: Record<string, unknown> | null;
-    } | null = null;
+    };
+    let reuseSource: ReuseSource | null = null;
     if (isReuse) {
       const { data: source, error: sourceError } = await supabaseAdmin
         .from("sales_lead_activities")
@@ -172,7 +186,7 @@ serve(async (req: Request) => {
       if (!source) {
         return jsonResponse({ success: false, error: "reuse_source_not_found" }, 404);
       }
-      reuseSource = source as typeof reuseSource;
+      reuseSource = source as unknown as ReuseSource;
     }
 
     // Poslední bariéra — globální suppression list (§12): přesný e-mail nebo @doména.
@@ -233,6 +247,55 @@ serve(async (req: Request) => {
     const outboundCapture = createOutboundCapture();
 
     const resend = new Resend(resendApiKey);
+    if (!isReuse) {
+      const deliveryResult = await deliverSalesLeadInitialEmail(
+        supabaseAdmin,
+        {
+          send: async (payload, idempotencyKey) => {
+            const response = await resend.emails.send(payload as never, { idempotencyKey });
+            if (response.error) {
+              const decision = classifyInitialEmailProviderError(resendErrorCode(response.error));
+              if (decision.outcome === "rejected") {
+                return { accepted: false as const, errorCode: "email_send_failed" };
+              }
+              throw new InitialEmailProviderOutcomeUncertainError(decision.errorCode);
+            }
+            const messageId = (response.data as { id?: string } | null)?.id;
+            if (!messageId) throw new Error("provider_response_missing_message_id");
+            return { accepted: true as const, messageId };
+          },
+        },
+        {
+          leadId,
+          performedBy: caller.id,
+          recipient,
+          subject,
+          bodySource: textBody,
+          bodyText: renderedText,
+          bodyHtml: renderedHtml,
+          attachmentMetadata: attachmentResult.metadata,
+          attachments: attachmentResult.attachments,
+          outboundCaptureId: outboundCapture.id,
+          from: FROM_ADDRESS,
+          replyTo: REPLY_TO,
+        },
+      );
+      if (!deliveryResult.success) {
+        const status = deliveryResult.retryBlocked ? 409
+          : deliveryResult.providerAccepted ? 500
+          : deliveryResult.error === "email_send_failed" ? 502
+          : 409;
+        return jsonResponse({
+          success: false,
+          error: deliveryResult.error,
+          email_sent: deliveryResult.providerAccepted === true,
+          retry_blocked: deliveryResult.retryBlocked === true,
+          delivery_id: deliveryResult.deliveryId,
+        }, status);
+      }
+      return jsonResponse({ success: true, lead_id: leadId, sent_to: recipient, delivery_id: deliveryResult.deliveryId });
+    }
+
     const emailPayload: Record<string, unknown> = {
       from: FROM_ADDRESS,
       to: [recipient],
@@ -280,29 +343,6 @@ serve(async (req: Request) => {
     }
 
     // ── 7. Povinné propsání stavu (§18 spec) ─────────────────────────────────
-    if (!isReuse) {
-      const { data: statusData, error: statusError } = await supabaseAdmin.rpc("sales_lead_mark_emailed", {
-        p_lead_id: leadId,
-        p_performed_by: caller.id,
-      });
-      const statusResult = statusData as {
-        success?: boolean;
-        status_changed?: boolean;
-        new_status?: string;
-        current_status?: string;
-      } | null;
-      const movedToContacted = statusResult?.success === true
-        && statusResult.status_changed === true
-        && statusResult.new_status === "osloveno";
-      const alreadyProgressed = statusResult?.success === true
-        && statusResult.status_changed === false
-        && typeof statusResult.current_status === "string"
-        && ALREADY_CONTACTED_STATUSES.has(statusResult.current_status);
-      if (statusError || (!movedToContacted && !alreadyProgressed)) {
-        return jsonResponse({ success: false, error: "status_sync_failed_after_send", email_sent: true });
-      }
-    }
-
     return jsonResponse({
       success: true,
       lead_id: leadId,

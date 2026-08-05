@@ -21,7 +21,8 @@
     "deploy:ai": "supabase functions deploy ai-chat --project-ref xkzhjldrojjlrkezorey",
     "auto-deploy:ai": "node scripts/auto-deploy-on-save.mjs",
     "test:smoke": "playwright test",
-    "test:sales-email-batches-db": "node --test tests/db/sales-lead-email-batches-foundation.test.mjs"
+    "test:sales-email-batches-db": "node --test tests/db/sales-lead-email-batches-foundation.test.mjs",
+    "test:sales-initial-email-delivery": "node --test tests/functions/sales-lead-initial-email-delivery.test.mjs"
   },
   "dependencies": {
     "@capacitor/android": "^8.4.2",
