@@ -31,7 +31,12 @@ const asObject = (value: unknown): Record<string, unknown> =>
 
 export async function runSalesLeadEmailBatchWorker(deps: {
   client: SalesLeadDeliveryRpcClient;
-  provider: InitialEmailProvider;
+  /**
+   * Lazy on purpose: the provider is constructed only when an item is actually
+   * going to be sent. A noop, skipped, commit_only, or malformed claim must
+   * never even build a provider client or an outbound capture.
+   */
+  providerFactory: () => InitialEmailProvider;
   newOutboundCaptureId: () => string;
   from: string;
   replyTo: string;
@@ -93,7 +98,10 @@ export async function runSalesLeadEmailBatchWorker(deps: {
     return { status: 500, body: { success: false, error: "batch_claim_incomplete" } };
   }
 
-  const deliveryResult = await deliverSalesLeadInitialEmail(deps.client, deps.provider, {
+  // Only here — with a real item to send — may a provider and an outbound
+  // capture come into existence.
+  const provider = deps.providerFactory();
+  const deliveryResult = await deliverSalesLeadInitialEmail(deps.client, provider, {
     leadId: claim.lead_id,
     performedBy: String(claim.performed_by ?? ""),
     mode: "batch_initial",

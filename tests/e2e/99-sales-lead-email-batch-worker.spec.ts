@@ -110,16 +110,33 @@ test.describe('99 — internal worker for prepared sales-lead e-mail batches', (
     expect(worker).not.toMatch(/auth\.getUser|user_roles|has_admin_permission/);
     expect(workerRunCode).not.toMatch(/auth\.getUser|user_roles|has_admin_permission/);
     expect(workerRunCode).not.toMatch(/email_queue|cron/i);
+    // The Edge Function hands in a lazy factory, so nothing constructs a
+    // provider before the orchestration knows an item is really being sent.
+    expect(worker).toContain('providerFactory: () => createResendInitialEmailProvider(new Resend(resendApiKey))');
+    expect(worker).not.toMatch(/provider:\s*createResendInitialEmailProvider/);
+    expect(worker.match(/new Resend\(/g)).toHaveLength(1);
+    expect(worker.match(/createOutboundCapture\(\)/g)).toHaveLength(1);
+    expect(worker).toContain('newOutboundCaptureId: () => createOutboundCapture().id');
+    expect(workerRun).toContain('providerFactory: () => InitialEmailProvider');
+    expect(workerRunCode).not.toMatch(/deps\.provider\b/);
+    // providerFactory() and newOutboundCaptureId() exist exactly once, inside
+    // the send branch, after every earlier branch has already returned.
+    expect(workerRunCode.match(/deps\.providerFactory\(\)/g)).toHaveLength(1);
+    expect(workerRunCode.match(/deps\.newOutboundCaptureId\(\)/g)).toHaveLength(1);
+    const sendBranchIndex = workerRun.indexOf('if (claim.action !== "send"');
+    expect(sendBranchIndex).toBeGreaterThan(0);
+    expect(workerRun.indexOf('deps.providerFactory()')).toBeGreaterThan(sendBranchIndex);
+    expect(workerRun.indexOf('deps.newOutboundCaptureId()')).toBeGreaterThan(sendBranchIndex);
     // A commit_only claim carries identifiers only: it must never build a
     // provider payload, and it must never record a failure.
     expect(workerRun).toMatch(/if \(claim\.action === "commit_only"\)[\s\S]{0,900}sales_lead_initial_email_commit/);
     const commitOnlyBlock = workerRun.slice(
       workerRun.indexOf('if (claim.action === "commit_only")'),
-      workerRun.indexOf('if (claim.action !== "send"'),
+      sendBranchIndex,
     );
     expect(commitOnlyBlock).toContain('p_delivery_id: deliveryId');
     expect(commitOnlyBlock).toContain('batch_claim_incomplete');
-    expect(commitOnlyBlock).not.toMatch(/deliverSalesLeadInitialEmail|record_failure|newOutboundCaptureId|deps\.provider/);
+    expect(commitOnlyBlock).not.toMatch(/deliverSalesLeadInitialEmail|record_failure|providerFactory|newOutboundCaptureId|deps\.provider/);
     expect(workerCode).not.toMatch(/email_queue/i);
     expect(workerCode).not.toMatch(/cron/i);
     expect(workerCode).not.toMatch(/sales_lead_email_batch_create|sales_lead_email_batch_prepare_paused|sales_lead_discover/);

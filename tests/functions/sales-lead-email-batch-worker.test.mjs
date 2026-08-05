@@ -302,13 +302,24 @@ class OrchestrationRpc {
   }
 }
 
-const runWorker = (rpc, counter) => runSalesLeadEmailBatchWorker({
-  client: rpc,
-  provider: countingProvider(counter),
-  newOutboundCaptureId: () => '40000000-0000-4000-8000-000000000999',
-  from: SALES_LEAD_INITIAL_EMAIL_FROM,
-  replyTo: SALES_LEAD_INITIAL_EMAIL_REPLY_TO,
-});
+// Counts provider construction and outbound captures separately from provider
+// calls: outside the send branch none of them may happen even once.
+const runWorker = (rpc, counter, usage = { factories: 0, captures: 0 }) => {
+  counter.usage = usage;
+  return runSalesLeadEmailBatchWorker({
+    client: rpc,
+    providerFactory: () => {
+      usage.factories += 1;
+      return countingProvider(counter);
+    },
+    newOutboundCaptureId: () => {
+      usage.captures += 1;
+      return '40000000-0000-4000-8000-000000000999';
+    },
+    from: SALES_LEAD_INITIAL_EMAIL_FROM,
+    replyTo: SALES_LEAD_INITIAL_EMAIL_REPLY_TO,
+  });
+};
 
 // The claim result for an already accepted e-mail carries identifiers only —
 // no recipient, subject, bodies, or performer.
@@ -438,4 +449,51 @@ test('a database barrier during the delivery claim records a failure without any
   assert.equal(counter.calls, 0);
   assert.equal(rpc.countOf('sales_lead_email_batch_item_record_failure'), 1);
   assert.equal(rpc.countOf('sales_lead_initial_email_commit'), 0);
+});
+
+// The provider must not even be constructed unless an item is really sent.
+const sendClaim = {
+  success: true,
+  action: 'send',
+  batch_item_id: '62000000-0000-4000-8000-000000000901',
+  batch_id: '60000000-0000-4000-8000-000000000901',
+  lead_id: '30000000-0000-4000-8000-000000000901',
+  performed_by: '10000000-0000-4000-8000-000000000001',
+  recipient: 'info@worker.example.cz',
+  subject: 'Nabidka',
+  body_source: 'Dobry den.',
+  body_text: 'Dobry den.',
+  body_html: '<p>Dobry den.</p>',
+};
+
+for (const [label, claim] of [
+  ['commit_only', commitOnlyClaim],
+  ['noop (automation_disabled)', { success: true, action: 'noop', reason: 'automation_disabled' }],
+  ['noop (no_due_item)', { success: true, action: 'noop', reason: 'no_due_item' }],
+  ['skipped', { success: true, action: 'skipped', reason: 'scheduled_window_missed', batch_item_id: sendClaim.batch_item_id }],
+  ['commit_only bez delivery_id', { ...commitOnlyClaim, delivery_id: '' }],
+  ['neplatný claim', { success: true, action: 'send', batch_item_id: null, lead_id: null }],
+]) {
+  test(`${label} never constructs a provider and never creates an outbound capture`, async () => {
+    const rpc = new OrchestrationRpc(claim);
+    const counter = newCounter();
+    const usage = { factories: 0, captures: 0 };
+    await runWorker(rpc, counter, usage);
+    assert.equal(usage.factories, 0, 'providerFactory');
+    assert.equal(usage.captures, 0, 'outbound capture');
+    assert.equal(counter.calls, 0, 'provider call');
+    assert.equal(rpc.countOf('sales_lead_initial_email_claim'), 0);
+    assert.equal(rpc.countOf('sales_lead_email_batch_item_record_failure'), 0);
+  });
+}
+
+test('only a send claim constructs the provider exactly once with one capture and one call', async () => {
+  const rpc = new OrchestrationRpc(sendClaim);
+  const counter = newCounter();
+  const usage = { factories: 0, captures: 0 };
+  const result = await runWorker(rpc, counter, usage);
+  assert.equal(result.body.action, 'sent');
+  assert.equal(usage.factories, 1);
+  assert.equal(usage.captures, 1);
+  assert.equal(counter.calls, 1);
 });

@@ -61,7 +61,8 @@ serve(async (req) => {
 
   const result = await runSalesLeadEmailBatchWorker({
     client: createClient(supabaseUrl, serviceRoleKey),
-    provider: createResendInitialEmailProvider(new Resend(resendApiKey)),
+    // Líná továrna — poskytovatel vznikne až ve větvi, kde se skutečně odesílá.
+    providerFactory: () => createResendInitialEmailProvider(new Resend(resendApiKey)),
     newOutboundCaptureId: () => createOutboundCapture().id,
     from: SALES_LEAD_INITIAL_EMAIL_FROM,
     replyTo: SALES_LEAD_INITIAL_EMAIL_REPLY_TO,
