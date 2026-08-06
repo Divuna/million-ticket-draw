@@ -18,6 +18,11 @@ verify_jwt = false
 [functions.process-sales-lead-email-batch]
 verify_jwt = false
 
+# Veřejná stránka reakcí z obchodního e-mailu. GET je pouze čtení; zápis
+# proběhne až vědomým POSTem s jednorázovým tokenem, jehož hash je v DB.
+[functions.sales-lead-response]
+verify_jwt = false
+
 # Příjem PŘÍCHOZÍCH odpovědí firem (reply+LEAD_ID@reply.onemil.cz). Autorizace =
 # ověření podpisu webhooku (SALES_LEAD_INBOUND_WEBHOOK_SECRET) uvnitř funkce.
 # Nikdy neodesílá e-mail; jen zapíše `reply_received` a posune stav na `odpovedel`.
