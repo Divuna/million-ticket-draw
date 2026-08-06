@@ -1,240 +1,64 @@
 import "jsr:@supabase/functions-js/edge-runtime.d.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.57.4";
 
-const BASE_HEADERS = {
-  "Content-Type": "text/html; charset=utf-8",
-  "Cache-Control": "no-store, max-age=0",
-  "Pragma": "no-cache",
-  "Referrer-Policy": "no-referrer",
-  "X-Content-Type-Options": "nosniff",
-  "X-Frame-Options": "DENY",
-  "Content-Security-Policy": "default-src 'none'; style-src 'unsafe-inline'; form-action 'self'; base-uri 'none'; frame-ancestors 'none'",
+const PUBLIC_PAGE_URL = "https://onemil.cz/partner-response.html";
+const ALLOWED_ORIGINS = new Set([
+  "https://onemil.cz",
+  "https://www.onemil.cz",
+  "http://localhost:5173",
+  "http://localhost:8080",
+]);
+const ALLOWED_PROJECT_REFS = new Set([
+  "dxmowysntemfqfnanxua",
+  "xkzhjldrojjlrkezorey",
+]);
+
+type Action = "interest" | "decline";
+
+type SubmitResult = {
+  success?: boolean;
+  error?: string;
+  action?: Action;
+  idempotent_replay?: boolean;
 };
 
-const jsonHeaders = {
-  "Content-Type": "application/json; charset=utf-8",
-  "Cache-Control": "no-store, max-age=0",
-  "X-Content-Type-Options": "nosniff",
-};
+function corsHeaders(req: Request): Record<string, string> {
+  const origin = req.headers.get("origin") ?? "";
+  return {
+    ...(ALLOWED_ORIGINS.has(origin) ? { "Access-Control-Allow-Origin": origin } : {}),
+    "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
+    "Access-Control-Allow-Headers": "content-type, accept",
+    "Access-Control-Max-Age": "86400",
+    "Vary": "Origin",
+  };
+}
 
-const escapeHtml = (value: string): string =>
-  value
-    .replaceAll("&", "&amp;")
-    .replaceAll("<", "&lt;")
-    .replaceAll(">", "&gt;")
-    .replaceAll('"', "&quot;")
-    .replaceAll("'", "&#39;");
-
-const layout = (title: string, content: string): string => `<!doctype html>
-<html lang="cs">
-<head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <meta name="robots" content="noindex,nofollow,noarchive" />
-  <title>${escapeHtml(title)} | OneMil</title>
-  <style>
-    * { box-sizing: border-box; }
-    body {
-      margin: 0;
-      min-height: 100vh;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      padding: 24px;
-      font-family: Arial, Helvetica, sans-serif;
-      color: #292524;
-      background:
-        radial-gradient(circle at top right, rgba(249,115,22,.13), transparent 34%),
-        linear-gradient(145deg, #fffdf8 0%, #f8f5ef 100%);
-    }
-    .shell { width: 100%; max-width: 560px; }
-    .brand {
-      margin: 0 0 18px;
-      text-align: center;
-      font-size: 28px;
-      line-height: 1;
-      font-weight: 800;
-      letter-spacing: -.04em;
-      color: #292524;
-    }
-    .brand span { color: #f97316; }
-    .card {
-      padding: 34px;
-      border: 1px solid #ebe5dc;
-      border-radius: 22px;
-      background: rgba(255,255,255,.96);
-      box-shadow: 0 22px 60px rgba(68,54,42,.12);
-    }
-    .icon {
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      width: 52px;
-      height: 52px;
-      margin-bottom: 18px;
-      border-radius: 16px;
-      background: #fff1e8;
-      color: #ea580c;
-      font-size: 25px;
-      font-weight: 800;
-    }
-    h1 {
-      margin: 0 0 12px;
-      font-size: 27px;
-      line-height: 1.2;
-      letter-spacing: -.025em;
-    }
-    p {
-      margin: 0 0 18px;
-      color: #57534e;
-      font-size: 16px;
-      line-height: 1.65;
-    }
-    .field { margin-top: 18px; }
-    label {
-      display: block;
-      margin-bottom: 7px;
-      font-size: 14px;
-      font-weight: 700;
-      color: #44403c;
-    }
-    input {
-      width: 100%;
-      height: 48px;
-      padding: 0 14px;
-      border: 1px solid #d6d3d1;
-      border-radius: 11px;
-      background: #fff;
-      color: #292524;
-      font: inherit;
-      outline: none;
-    }
-    input:focus {
-      border-color: #f97316;
-      box-shadow: 0 0 0 3px rgba(249,115,22,.14);
-    }
-    .button {
-      display: inline-flex;
-      align-items: center;
-      justify-content: center;
-      width: 100%;
-      min-height: 49px;
-      margin-top: 22px;
-      padding: 12px 18px;
-      border: 0;
-      border-radius: 11px;
-      background: #f97316;
-      color: #fff;
-      font: inherit;
-      font-weight: 800;
-      cursor: pointer;
-      text-decoration: none;
-    }
-    .button:hover { background: #ea580c; }
-    .button.secondary {
-      background: #fff;
-      color: #44403c;
-      border: 1px solid #d6d3d1;
-    }
-    .button.secondary:hover { background: #fafaf9; }
-    .note {
-      margin-top: 18px;
-      color: #78716c;
-      font-size: 13px;
-      line-height: 1.5;
-    }
-    .error {
-      padding: 12px 14px;
-      border-radius: 10px;
-      background: #fef2f2;
-      color: #b91c1c;
-      font-size: 14px;
-      line-height: 1.5;
-    }
-    @media (max-width: 520px) {
-      body { padding: 16px; align-items: flex-start; }
-      .shell { margin-top: 7vh; }
-      .card { padding: 25px 20px; border-radius: 18px; }
-      h1 { font-size: 23px; }
-    }
-  </style>
-</head>
-<body>
-  <main class="shell">
-    <div class="brand">One<span>Mil</span></div>
-    <section class="card">${content}</section>
-  </main>
-</body>
-</html>`;
-
-const htmlResponse = (title: string, content: string, status = 200): Response =>
-  new Response(layout(title, content), { status, headers: BASE_HEADERS });
-
-const errorPage = (message: string, status = 400): Response =>
-  htmlResponse(
-    "Odkaz nelze použít",
-    `<div class="icon">!</div>
-     <h1>Odkaz nelze použít</h1>
-     <p>${escapeHtml(message)}</p>`,
+function jsonResponse(
+  req: Request,
+  body: Record<string, unknown>,
+  status = 200,
+  extraHeaders: Record<string, string> = {},
+): Response {
+  return new Response(JSON.stringify(body), {
     status,
-  );
+    headers: {
+      ...corsHeaders(req),
+      ...extraHeaders,
+      "Content-Type": "application/json; charset=utf-8",
+      "Cache-Control": "no-store, max-age=0",
+      "X-Content-Type-Options": "nosniff",
+      "Referrer-Policy": "no-referrer",
+    },
+  });
+}
 
-const successPage = (action: "interest" | "decline"): Response => {
-  if (action === "interest") {
-    return htmlResponse(
-      "Děkujeme za zájem",
-      `<div class="icon">✓</div>
-       <h1>Děkujeme za projevený zájem</h1>
-       <p>Váš kontakt jsme přijali. Brzy se vám ozveme a společně probereme možnosti spolupráce.</p>`,
-    );
-  }
-  return htmlResponse(
-    "Odhlášení potvrzeno",
-    `<div class="icon">✓</div>
-     <h1>Děkujeme za odpověď</h1>
-     <p>Další obchodní nabídky vám již nebudeme zasílat a evidujeme, že nyní nemáte zájem o spolupráci.</p>`,
-  );
-};
+function validToken(value: string): boolean {
+  return /^[0-9a-f]{64}$/i.test(value);
+}
 
-const interestForm = (token: string, error = ""): Response =>
-  htmlResponse(
-    "Mám zájem o spolupráci",
-    `<div class="icon">✓</div>
-     <h1>Děkujeme za projevený zájem</h1>
-     <p>Vyplňte prosím své jméno a telefonní číslo. Ozveme se vám a společně probereme možnosti spolupráce.</p>
-     ${error ? `<div class="error">${escapeHtml(error)}</div>` : ""}
-     <form method="post">
-       <input type="hidden" name="token" value="${escapeHtml(token)}" />
-       <input type="hidden" name="action" value="interest" />
-       <div class="field">
-         <label for="name">Jméno a příjmení</label>
-         <input id="name" name="name" type="text" autocomplete="name" minlength="2" maxlength="120" required />
-       </div>
-       <div class="field">
-         <label for="phone">Telefonní číslo</label>
-         <input id="phone" name="phone" type="tel" autocomplete="tel" minlength="6" maxlength="40" required />
-       </div>
-       <button class="button" type="submit">Odeslat kontakt</button>
-     </form>
-     <div class="note">Kontakt použijeme pouze k domluvě ohledně spolupráce s OneMil.</div>`,
-  );
-
-const declineForm = (token: string): Response =>
-  htmlResponse(
-    "Nemám zájem",
-    `<div class="icon">×</div>
-     <h1>Nemáte zájem o spolupráci?</h1>
-     <p>Po potvrzení vám nebudeme zasílat další obchodní nabídky OneMil a vaši odpověď uložíme k oslovené firmě.</p>
-     <form method="post">
-       <input type="hidden" name="token" value="${escapeHtml(token)}" />
-       <input type="hidden" name="action" value="decline" />
-       <button class="button secondary" type="submit">Ano, nemám zájem</button>
-     </form>`,
-  );
-
-const validToken = (value: string): boolean => /^[0-9a-f]{64}$/i.test(value);
-const validAction = (value: string): value is "interest" | "decline" =>
-  value === "interest" || value === "decline";
+function validAction(value: string): value is Action {
+  return value === "interest" || value === "decline";
+}
 
 async function sha256Hex(value: string): Promise<string> {
   const digest = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(value));
@@ -252,7 +76,43 @@ function getClient() {
   });
 }
 
-async function readForm(req: Request): Promise<Record<string, string>> {
+function getProjectRef(): string | null {
+  const rawUrl = Deno.env.get("SUPABASE_URL") ?? "";
+  try {
+    const hostname = new URL(rawUrl).hostname;
+    const match = hostname.match(/^([a-z0-9-]+)\.supabase\.co$/i);
+    const projectRef = match?.[1]?.toLowerCase() ?? "";
+    return ALLOWED_PROJECT_REFS.has(projectRef) ? projectRef : null;
+  } catch {
+    return null;
+  }
+}
+
+function redirectToPublicPage(
+  req: Request,
+  token: string,
+  action: Action,
+): Response {
+  const projectRef = getProjectRef();
+  if (!projectRef) {
+    return jsonResponse(req, { success: false, error: "project_not_allowed" }, 503);
+  }
+  const target = new URL(PUBLIC_PAGE_URL);
+  target.searchParams.set("project", projectRef);
+  target.searchParams.set("token", token);
+  target.searchParams.set("action", action);
+  return new Response(null, {
+    status: 302,
+    headers: {
+      "Location": target.toString(),
+      "Cache-Control": "no-store, max-age=0",
+      "Referrer-Policy": "no-referrer",
+      "X-Content-Type-Options": "nosniff",
+    },
+  });
+}
+
+async function readBody(req: Request): Promise<Record<string, string>> {
   const contentType = req.headers.get("content-type") ?? "";
   if (contentType.includes("application/json")) {
     const parsed = await req.json().catch(() => ({}));
@@ -265,96 +125,109 @@ async function readForm(req: Request): Promise<Record<string, string>> {
   }
   const form = await req.formData().catch(() => null);
   if (!form) return {};
-  const output: Record<string, string> = {};
+  const result: Record<string, string> = {};
   for (const key of ["token", "action", "name", "phone"]) {
     const value = form.get(key);
-    if (typeof value === "string") output[key] = value;
+    if (typeof value === "string") result[key] = value;
   }
-  return output;
+  return result;
 }
 
 Deno.serve(async (req: Request) => {
+  if (req.method === "OPTIONS") {
+    return new Response(null, { status: 204, headers: corsHeaders(req) });
+  }
   if (req.method !== "GET" && req.method !== "POST") {
-    return new Response(JSON.stringify({ success: false, error: "method_not_allowed" }), {
-      status: 405,
-      headers: { ...jsonHeaders, Allow: "GET, POST" },
+    return jsonResponse(req, { success: false, error: "method_not_allowed" }, 405, {
+      "Allow": "GET, POST, OPTIONS",
     });
   }
 
   const client = getClient();
-  if (!client) return errorPage("Služba je dočasně nedostupná.", 503);
+  if (!client) {
+    return jsonResponse(req, { success: false, error: "service_unavailable" }, 503);
+  }
 
   if (req.method === "GET") {
     const url = new URL(req.url);
-    const token = (url.searchParams.get("token") ?? "").trim();
+    const token = (url.searchParams.get("token") ?? "").trim().toLowerCase();
     const action = (url.searchParams.get("action") ?? "").trim().toLowerCase();
+    const wantsJson =
+      url.searchParams.get("format") === "json"
+      || (req.headers.get("accept") ?? "").includes("application/json");
+
     if (!validToken(token) || !validAction(action)) {
-      return errorPage("Odkaz je neplatný nebo neúplný.", 404);
+      return jsonResponse(req, { success: false, error: "invalid_token" }, 404);
     }
 
-    const tokenHash = await sha256Hex(token.toLowerCase());
+    // Direct e-mail links are redirected to the public OneMil page because
+    // hosted Supabase Edge Functions rewrite GET text/html responses to text/plain.
+    if (!wantsJson) {
+      return redirectToPublicPage(req, token, action);
+    }
+
+    const tokenHash = await sha256Hex(token);
     const { data, error } = await client
       .from("sales_lead_email_response_tokens")
       .select("status,expires_at")
       .eq("token_hash", tokenHash)
       .maybeSingle();
 
-    if (error || !data) return errorPage("Odkaz nebyl nalezen.", 404);
-    if (new Date(data.expires_at).getTime() <= Date.now()) {
-      return errorPage("Platnost tohoto odkazu již vypršela.", 410);
+    if (error || !data) {
+      return jsonResponse(req, { success: false, error: "invalid_token" }, 404);
     }
-    if (data.status === "interested") return successPage("interest");
-    if (data.status === "declined") return successPage("decline");
-    if (data.status !== "pending") return errorPage("Odpověď již byla zpracována.", 409);
+    if (new Date(data.expires_at).getTime() <= Date.now()) {
+      return jsonResponse(req, { success: false, error: "expired_token" }, 410);
+    }
+    if (!["pending", "interested", "declined"].includes(data.status)) {
+      return jsonResponse(req, { success: false, error: "response_unavailable" }, 409);
+    }
 
-    // GET is intentionally read-only. E-mail scanners and link previews cannot
-    // submit either decision merely by opening the URL.
-    return action === "interest" ? interestForm(token) : declineForm(token);
+    // GET is intentionally read-only. It never calls the submit RPC.
+    return jsonResponse(req, {
+      success: true,
+      status: data.status,
+      action,
+      expires_at: data.expires_at,
+    });
   }
 
-  const body = await readForm(req);
-  const token = (body.token ?? "").trim();
+  const body = await readBody(req);
+  const token = (body.token ?? "").trim().toLowerCase();
   const action = (body.action ?? "").trim().toLowerCase();
   const name = (body.name ?? "").trim();
   const phone = (body.phone ?? "").trim();
 
   if (!validToken(token) || !validAction(action)) {
-    return errorPage("Odkaz je neplatný nebo neúplný.", 404);
-  }
-  if (action === "interest" && (name.length < 2 || phone.length < 6)) {
-    return interestForm(token, "Vyplňte prosím platné jméno a telefonní číslo.");
+    return jsonResponse(req, { success: false, error: "invalid_token" }, 404);
   }
 
-  const tokenHash = await sha256Hex(token.toLowerCase());
+  const tokenHash = await sha256Hex(token);
   const { data, error } = await client.rpc("sales_lead_email_response_submit", {
     p_token_hash: tokenHash,
     p_action: action,
     p_name: action === "interest" ? name : null,
     p_phone: action === "interest" ? phone : null,
   });
-
-  const result = (data ?? {}) as {
-    success?: boolean;
-    error?: string;
-    action?: "interest" | "decline";
-    idempotent_replay?: boolean;
-  };
+  const result = (data ?? {}) as SubmitResult;
 
   if (error || result.success !== true) {
-    if (result.error === "expired_token") {
-      return errorPage("Platnost tohoto odkazu již vypršela.", 410);
-    }
-    if (result.error === "invalid_name" || result.error === "invalid_phone") {
-      return interestForm(token, "Vyplňte prosím platné jméno a telefonní číslo.");
-    }
-    if (result.error === "response_already_recorded") {
-      return errorPage("Tento odkaz už byl použit pro jinou odpověď.", 409);
-    }
-    if (result.error === "lead_not_actionable") {
-      return errorPage("Tuto odpověď již nelze u firmy změnit.", 409);
-    }
-    return errorPage("Odpověď se nepodařilo uložit. Zkuste to prosím později.", 500);
+    const code = result.error ?? "submit_failed";
+    const status = code === "expired_token"
+      ? 410
+      : code === "invalid_token"
+      ? 404
+      : code === "response_already_recorded" || code === "lead_not_actionable"
+      ? 409
+      : code === "invalid_name" || code === "invalid_phone" || code === "invalid_action"
+      ? 400
+      : 500;
+    return jsonResponse(req, { success: false, error: code }, status);
   }
 
-  return successPage(result.action ?? action);
+  return jsonResponse(req, {
+    success: true,
+    action: result.action ?? action,
+    idempotent_replay: result.idempotent_replay === true,
+  });
 });
