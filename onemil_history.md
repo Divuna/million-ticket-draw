@@ -1,3 +1,27 @@
+# 06. 08. 2026 — Přehled reakcí „Mám zájem“ / „Nemám zájem“ v administraci (Draft)
+
+- Administrace Obchod / Leady dostala samostatný pohled na obě reakce z obchodního e-mailu, aby se
+  žádná neztratila. Nová záložka **„Kontaktovat“** (mezi „Osloveno“ a „Odpovědělo“) ukazuje firmy
+  s potvrzeným zájmem; odmítnutí zůstávají v existující záložce **„Nekontaktovat“** bez duplicitní
+  záložky. Obě mají červený počet nepřečtených reakcí.
+- **Nezavádí se nový stav leadu.** Ověřen stávající stavový systém — lead po „Mám zájem“ zůstává
+  `odpovedel` a „Kontaktovat“ je samostatný pohled nad konečným stavem response tokenu.
+- Read-only audit stagingu potvrdil, že metadata už jsou bezpečně rozlišitelná
+  (`source=interest_link` vs. `source=decline_link`), takže **migrace na doplnění metadat nebyla
+  potřeba**. Ručně nastavené „Nekontaktovat“ metadata nemá, a proto se do počtu nových odmítnutí
+  nikdy nezapočítá; stejně tak běžná e-mailová odpověď nespadne do „Kontaktovat“.
+- Nová `sales_lead_response_overview()` (`STABLE SECURITY DEFINER`, `search_path=''`, guard
+  `sales_leads.manage`/superadmin, bez `anon`, bez zápisu) — tabulka response tokenů je pro
+  `authenticated` zamčená, takže administrace čte autoritativní data jen přes RPC a frontend
+  nepoužívá service-role klíč.
+- Rozšířena **existující** `sales_lead_mark_replies_read(uuid)`, aby označila i odmítnutí z tlačítka.
+  Mění výhradně `read_at`/`read_by` — neruší `do_not_contact`, suppression ani stav `nekontaktovat`.
+- Testy: nový spec 106 (19 testů) + 89 zelených testů modulu, `tsc --noEmit` 0 chyb, produkční build
+  OK. Logika RPC ověřena read-only dotazem proti reálným staging datům.
+- Opraven latentní bug ve specu 105 (čtení migrace bez normalizace CRLF).
+- **Nic nenasazeno, nic nemergnuto, žádný e-mail, žádná dávka, žádná automatika, žádný cron.**
+  Produkce beze změny.
+
 # 06. 08. 2026 — PR 4 interní worker připravených obchodních dávek (Draft)
 
 - Přidán service-role worker pro dávky prvních obchodních e-mailů: `sales_lead_email_batch_claim_next()`

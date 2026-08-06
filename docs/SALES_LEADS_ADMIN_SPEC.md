@@ -1072,3 +1072,86 @@ odesílání. Administrační plánování patří do PR 3 a worker až do PR 4.
   automatické volání Edge Function a nemění existující produkční crony. Po mergi a nasazení zůstane
   worker neaktivní, dokud nebudou samostatně schváleny: (1) secret, (2) nasazení funkce,
   (3) případný cron, (4) `enabled=true`, (5) aktivace konkrétní dávky.
+
+## 24. Přehled reakcí „Mám zájem“ / „Nemám zájem“ v administraci (Draft; 06. 08. 2026)
+
+Navazuje na §23 a na response tlačítka z PR #318–#321. Cílem je, aby se ani jedna reakce
+firmy neztratila: obojí má vlastní pohled i vlastní červený počet nepřečtených.
+
+### 24.1 Zdroj pravdy
+
+- **Autoritativní je konečný stav response tokenu** (`sales_lead_email_response_tokens.status`
+  = `interested` / `declined`). Pro každý lead se bere **nejnovější zodpovězený token**
+  (`DISTINCT ON (lead_id) … ORDER BY responded_at DESC`), takže **jeden lead nikdy nespadne
+  do obou skupin současně**.
+- Aktivita `interest_link` slouží jen jako fallback pro lead, který token nemá.
+- Tabulka tokenů má `REVOKE ALL` pro `anon` i `authenticated`. Administrace se k datům dostane
+  **výhradně** přes SECURITY DEFINER RPC `sales_lead_response_overview()`.
+  **Frontend nikdy nepoužívá service-role klíč a tabulku tokenů nečte přímo.**
+
+### 24.2 Ověřená metadata (read-only audit staging, 06. 08. 2026)
+
+Rozlišení už existuje, **nová migrace na metadata nebyla potřeba**:
+
+| Reakce | `activity_type` | `direction` | metadata |
+|---|---|---|---|
+| Mám zájem | `reply_received` | `inbound` | `source='interest_link'`, `interest=true`, `batch_item_id`, `recipient` |
+| Nemám zájem | `do_not_contact_set` | `inbound` | `source='decline_link'`, `declined=true`, `batch_item_id`, `recipient` |
+| Běžná odpověď e-mailem | `reply_received` | `inbound` | **bez `source`** |
+| Ručně nastavené „Nekontaktovat“ | `do_not_contact_set` | — | **bez `source`** |
+
+Proto se do počtů nových odmítnutí **nikdy nezapočítá ručně nastavený stav** a do „Kontaktovat“
+se nikdy nedostane běžná e-mailová odpověď.
+
+### 24.3 Záložky a červené počty
+
+- **„Kontaktovat“** je nová záložka **mezi „Osloveno“ a „Odpovědělo“**. Je to **samostatný pohled**
+  nad potvrzeným zájmem — **NENÍ to nový stav leadu**. Lead zůstává ve stávajícím stavu `odpovedel`.
+  Nový stav `kontaktovat` se **nezavádí**.
+- **Červený počet u „Kontaktovat“** = nepřečtené `reply_received` + `inbound` + `read_at IS NULL`
+  + `source='interest_link'` + `interest=true`.
+- **Červený počet u „Nekontaktovat“** = nepřečtené `do_not_contact_set` + `inbound`
+  + `read_at IS NULL` + `source='decline_link'`. Duplicitní záložka pro odmítnutí **nevzniká**.
+- Vzhled je stejný `bg-destructive` puntík/pilulka, jakou stránka už používá u nepřečtených odpovědí.
+- **Přečtení lead ze záložky neodstraní.** Členství se odvozuje od konečného stavu tokenu, ne od
+  `read_at`; lead odejde až ruční změnou stavu administrátorem.
+- Řazení v „Kontaktovat“: **1) nepřečtené, 2) nejnovější reakce, 3) ostatní.**
+
+### 24.4 Zobrazení
+
+- Seznam „Kontaktovat“: firma, „Má zájem o spolupráci“, kontaktní osoba, telefon, e-mail, datum
+  a čas odpovědi, původní dávka, štítek **Vysoká priorita** (`priority = 1`).
+  **Chybějící jméno/telefon se zobrazí jako „—“, nikdy jako vymyšlená hodnota.**
+- Detail leadu má dva samostatné panely (jen když reakce z tlačítka existuje):
+  - **zájem** — datum a čas, kontaktní osoba, telefon, e-mail, firma, původní dávka;
+  - **odmítnutí** — „Firma nemá zájem o spolupráci a odhlásila se z dalších obchodních nabídek.“,
+    datum a čas, e-mail, důvod blokace, stav odhlášení a informace, že další obchodní e-maily
+    jsou blokované.
+
+### 24.5 Souhrnné karty
+
+Přibyly **„Kontaktovat“** (počet leadů s potvrzeným zájmem) a **„Nemá zájem“** (počet odmítnutých
+přes response link). Obě čtou z RPC. Karta „Odpovědělo“ zůstává **beze změny** — měří stav leadu,
+zatímco „Kontaktovat“ měří reakci na tlačítko. Jsou to různé metriky a každá počítá lead jen jednou;
+lead s potvrzeným zájmem je legitimně zároveň `odpovedel` i „Kontaktovat“.
+
+### 24.6 Značení přečtení (rozšíření §18)
+
+Rozšiřuje se **stávající** funkce `sales_lead_mark_replies_read(uuid)` (stejný název i signatura),
+aby vedle `reply_received` označila i `do_not_contact_set` se `source='decline_link'`.
+
+**Kritický invariant:** funkce mění **výhradně `read_at` / `read_by`**. Nikdy neruší
+`do_not_contact`, `do_not_contact_reason`, suppression ani stav `nekontaktovat` — přečtení je
+pouze UI příznak. Ručně nastavené „Nekontaktovat“ (bez `metadata.source`) se záměrně neoznačuje.
+
+### 24.7 Bezpečnost
+
+`sales_lead_response_overview()` je `STABLE` `SECURITY DEFINER` se `SET search_path = ''`,
+guardem `has_admin_permission('sales_leads.manage') OR is_superadmin()`, bez `anon` execute
+a **bez jakéhokoli zápisu**. Surový token ani jeho hash se nikdy nevrací.
+(Oprávnění `sales_leads.view` v projektu neexistuje — kanonické je `sales_leads.manage`.)
+
+### 24.8 Stav
+
+Draft. Migrace `20260806160000_sales_lead_response_overview.sql` **není aplikovaná** na staging
+ani produkci. Žádná dávka, žádný e-mail, žádná automatika, žádný cron.
