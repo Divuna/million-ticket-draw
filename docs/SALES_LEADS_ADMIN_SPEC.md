@@ -1220,3 +1220,28 @@ Aby se CTA objevilo v reálném provozu, je potřeba **samostatně schválit**:
 3. nasadit EF `send-sales-lead-email` a frontend.
 
 Staré už vytvořené dávky se nepřepisují; CTA se přidává jen nově vznikajícím e-mailům.
+
+### 25.5 Jediný podporovaný způsob odpovědi
+
+Na první obchodní e-mail lze odpovědět **výhradně** dvěma bezpečnými CTA:
+
+- **Mám zájem** — hlavní oranžové tlačítko,
+- **Nemám zájem** — vedlejší tlačítko (zároveň jediné odhlášení).
+
+Obě míří na `https://onemil.cz/partner-response.html` s vlastním tokenem příjemce.
+
+**Zrušený konkurenční mechanismus.** AI koncept dříve vynucoval závěrečnou větu s výzvou
+odpovědět e-mailem konkrétním slovem (konstanta `OPT_OUT_SENTENCE`, instrukce v obou promptech
+a guard `opt_out_sentence_missing` ve `sales-lead-draft-email`). Po přidání systémového CTA by
+e-mail nesl **dvě konkurenční cesty odhlášení**, proto byl tento mechanismus odstraněn.
+
+**Pravidla (neměnit):**
+
+- AI koncept ani asistent **nesmí** vytvářet odhlašovací větu, výzvu k odpovědi kvůli odhlášení
+  ani mailto odkaz. Zákaz je v obou promptech jako sdílené `NO_OPT_OUT_RULE`.
+- **Follow-up nepřidává žádný vlastní odhlašovací mechanismus** — nemá ani CTA blok, ten patří
+  jen k prvnímu e-mailu.
+- Odhlášení se do prvního e-mailu doplní **pouze systémově** ze sdíleného builderu
+  `_shared/salesLeadResponseCta.ts` (ruční cesta) nebo z DB triggeru (dávková cesta).
+- `opt_out_sentence_missing` se **nesmí vrátit** — AI výstup se kvůli chybějící odhlašovací větě
+  už neodmítá.

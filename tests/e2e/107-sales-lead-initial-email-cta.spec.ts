@@ -18,6 +18,8 @@ const manualTokenMigration = read('supabase/migrations/20260806180000_sales_lead
 const manualTokenSql = manualTokenMigration.replace(/--.*$/gm, '');
 const editor = read('src/components/admin/sales-leads/SalesLeadRichTextEditor.tsx');
 const templateManager = read('src/components/admin/sales-leads/SalesLeadEmailTemplateManager.tsx');
+const aiDrafter = read('supabase/functions/sales-lead-draft-email/index.ts');
+const followUpSender = read('supabase/functions/send-sales-lead-follow-up/index.ts');
 
 const PROJECT = 'xkzhjldrojjlrkezorey';
 const TOKEN_A = 'a'.repeat(64);
@@ -155,6 +157,62 @@ test.describe('107 — CTA prvního obchodního e-mailu', () => {
     // Guard je PŘED renderem i odesláním.
     expect(manualSender.indexOf('response_links_unavailable'))
       .toBeLessThan(manualSender.indexOf('const renderedText = renderSalesLeadEmailText(ctaBody)'));
+  });
+
+  // ── Jediný podporovaný způsob odpovědi = CTA „Mám zájem“ / „Nemám zájem“ ──
+  // AI koncept nesmí vytvářet konkurenční odhlašovací mechanismus.
+
+  test('O1) AI prompt neobsahuje OPT_OUT_SENTENCE', () => {
+    expect(aiDrafter).not.toContain('OPT_OUT_SENTENCE');
+    expect(aiDrafter).not.toContain('Pokud si nepřejete být kontaktováni');
+    expect(aiDrafter).not.toContain('příště vás nebudeme oslovovat');
+  });
+
+  test('O2) AI prompt nevyžaduje odpověď slovem NEKONTAKTOVAT', () => {
+    expect(aiDrafter).not.toContain('NEKONTAKTOVAT');
+    // Ani jako povinná závěrečná věta.
+    expect(aiDrafter).not.toMatch(/musí (tělo )?obsahovat přesně tuto závěrečnou větu/i);
+    expect(aiDrafter).not.toMatch(/Na konec těla přidej větu/i);
+  });
+
+  test('O3) guard opt_out_sentence_missing už neexistuje', () => {
+    expect(aiDrafter).not.toContain('opt_out_sentence_missing');
+    // A explicitně se AI zakazuje vymýšlet si vlastní odhlášení.
+    expect(aiDrafter).toContain('NO_OPT_OUT_RULE');
+    expect(aiDrafter).toContain('NEPŘIDÁVEJ žádnou odhlašovací větu');
+    expect(aiDrafter).toContain('žádný mailto odkaz');
+  });
+
+  test('O4) zákaz platí pro koncept i pro asistenta (první e-mail i follow-up)', () => {
+    const draftPrompt = aiDrafter.slice(
+      aiDrafter.indexOf('const DRAFT_SYSTEM_PROMPT'),
+      aiDrafter.indexOf('const ASSIST_SYSTEM_PROMPT'),
+    );
+    const assistPrompt = aiDrafter.slice(
+      aiDrafter.indexOf('const ASSIST_SYSTEM_PROMPT'),
+      aiDrafter.indexOf('function jsonResponse'),
+    );
+    expect(draftPrompt).toContain('${NO_OPT_OUT_RULE}');
+    expect(assistPrompt).toContain('${NO_OPT_OUT_RULE}');
+    // Follow-up už nemá vlastní povinnou odhlašovací větu.
+    expect(assistPrompt).not.toMatch(/follow-upu musí/i);
+  });
+
+  test('O5) první e-mail dostane odhlášení jen systémově přes sdílený CTA builder', () => {
+    // AI text odhlášení neobsahuje; přidá ho odesílací cesta ze sdíleného builderu.
+    expect(manualSender).toContain('buildResponseCtaBlock');
+    expect(aiDrafter).not.toContain('buildResponseCtaBlock');
+    const block = buildResponseCtaBlock(buildResponseCtaUrls(PROJECT, TOKEN_A));
+    expect(block.html).toContain('>Nemám zájem</a>');
+    expect(block.html).toContain('>Mám zájem</a>');
+  });
+
+  test('O6) follow-up nevytváří konkurenční mailto ani odhlašovací větu', () => {
+    expect(followUpSender).not.toContain('NEKONTAKTOVAT');
+    expect(followUpSender).not.toContain('Pokud si nepřejete být kontaktováni');
+    expect(followUpSender).not.toContain('opt_out');
+    // Follow-up nepřidává žádný vlastní CTA/odhlašovací blok.
+    expect(followUpSender).not.toContain('buildResponseCtaBlock');
   });
 
   test('CTA blok má čitelné odkazy v textu a tlačítka v HTML', () => {

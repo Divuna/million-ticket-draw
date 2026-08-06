@@ -25,6 +25,12 @@
 - `sales_lead_email_response_tokens.batch_item_id` je nullable kvůli ručnímu e-mailu; **nevracet
   NOT NULL** bez odstranění manuálních tokenů. UNIQUE zůstává (víc NULL je v Postgresu OK).
 - **Staré uzamčené snapshoty se nikdy nepřepisují** — CTA dostávají jen nově vznikající e-maily.
+- **Jediný podporovaný způsob odpovědi jsou CTA „Mám zájem“ / „Nemám zájem“.** Ve
+  `sales-lead-draft-email` byla zrušena konstanta `OPT_OUT_SENTENCE`, povinná instrukce v obou
+  promptech i guard `opt_out_sentence_missing` — jinak by e-mail nesl dvě konkurenční cesty
+  odhlášení. AI koncept ani asistent **nesmí** vytvářet odhlašovací větu, výzvu k odpovědi kvůli
+  odhlášení ani mailto (sdílené `NO_OPT_OUT_RULE` v obou promptech). **Follow-up nepřidává žádný
+  vlastní odhlašovací mechanismus ani CTA blok.** Nevracet `opt_out_sentence_missing`.
 
 **Otevřený následný krok:** aktivní šablonu `E - shop Míra 2` musí někdo ručně zbavit mailto odkazu
 „Nemám zájem, děkuji“ (produkční data, mimo tento PR) a produkce potřebuje DB části PR #318–#322.
