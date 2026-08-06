@@ -15,11 +15,15 @@ const ALLOWED_PROJECT_REFS = new Set([
 
 type Action = "interest" | "decline";
 
+type ResponseStatus = "pending" | "interested" | "declined";
+
 type SubmitResult = {
   success?: boolean;
   error?: string;
   action?: Action;
+  status?: ResponseStatus;
   idempotent_replay?: boolean;
+  conflicting_action?: boolean;
 };
 
 function corsHeaders(req: Request): Record<string, string> {
@@ -225,9 +229,14 @@ Deno.serve(async (req: Request) => {
     return jsonResponse(req, { success: false, error: code }, status);
   }
 
+  // The RPC is the single source of truth for the final outcome. On a replay it
+  // reports the ORIGINAL stored answer, never the requested one, so an opposite
+  // CTA link can never be presented as a new or changed response.
   return jsonResponse(req, {
     success: true,
     action: result.action ?? action,
+    status: result.status ?? null,
     idempotent_replay: result.idempotent_replay === true,
+    conflicting_action: result.conflicting_action === true,
   });
 });
