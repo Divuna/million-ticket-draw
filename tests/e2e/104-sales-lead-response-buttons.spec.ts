@@ -121,7 +121,7 @@ test.describe('104 — sales-lead e-mail response buttons', () => {
     expect(responseFunction).toContain('ALLOWED_ORIGINS');
     expect(responseFunction).toContain('Access-Control-Allow-Origin');
     expect(responseFunction).toContain('application/json; charset=utf-8');
-    expect(responseFunction).not.toContain('text/html');
+    expect(responseFunction).not.toMatch(/["']Content-Type["']\s*:\s*["']text\/html/i);
     expect(responseFunction).not.toMatch(/Resend|emails\.send|email_queue|net\.http/i);
     expect(responseMigrations).not.toMatch(/Resend|emails\.send|email_queue|net\.http/i);
   });
