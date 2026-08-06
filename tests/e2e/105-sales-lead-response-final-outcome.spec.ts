@@ -1,7 +1,9 @@
 import { expect, test, type Page } from '@playwright/test';
 import fs from 'node:fs';
 
-const read = (path: string) => fs.readFileSync(path, 'utf8');
+// Line endings are normalised because git may check these files out with CRLF
+// on Windows, which would break the multi-line markers used to slice the SQL.
+const read = (path: string) => fs.readFileSync(path, 'utf8').replace(/\r\n/g, '\n');
 const finalOutcomeMigration = read('supabase/migrations/20260806140000_sales_lead_response_final_outcome_lock.sql');
 const executableSql = finalOutcomeMigration.replace(/--.*$/gm, '');
 const responseFunction = read('supabase/functions/sales-lead-response/index.ts');

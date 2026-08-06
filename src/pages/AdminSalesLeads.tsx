@@ -55,6 +55,14 @@ import {
   filterSalesLeadList,
   type LeadFilterOption,
 } from '@/components/admin/sales-leads/salesLeadListFilters';
+import {
+  EMPTY_RESPONSE_OVERVIEW,
+  RESPONSE_INTEREST_SUMMARY,
+  displayOrDash,
+  parseResponseOverview,
+  sortInterestedRows,
+  type SalesLeadResponseOverview,
+} from '@/components/admin/sales-leads/salesLeadResponses';
 
 /**
  * Admin modul „Obchod / Leady" — Fáze 3A (ruční přidání, detail, editace, změna stavu)
@@ -87,6 +95,10 @@ const TABS: { id: string; label: string; statuses: string[] | null; draftsOnly?:
   // (nezávisle na stavu leadu) — `draft_updated_at` je vyplněné.
   { id: 'prep', label: 'Rozpracované', statuses: null, draftsOnly: true },
   { id: 'contacted', label: 'Osloveno', statuses: ['osloveno', 'follow_up'] },
+  // Samostatný pohled na potvrzený zájem z tlačítka „Mám zájem“ v obchodním
+  // e-mailu. NENÍ to nový stav leadu — lead zůstává `odpovedel`; zdrojem je
+  // konečný stav response tokenu (RPC sales_lead_response_overview).
+  { id: 'to-contact', label: 'Kontaktovat', statuses: [] },
   // `odpovedel` a `jednani` jsou oddělené fáze — nesmí se počítat dvakrát.
   { id: 'replied', label: 'Odpovědělo', statuses: ['odpovedel'] },
   { id: 'talks', label: 'Jednání', statuses: ['jednani'] },
@@ -102,6 +114,14 @@ const formatDate = (iso: string | null): string => {
   const d = new Date(iso);
   if (Number.isNaN(d.getTime())) return '—';
   return d.toLocaleDateString('cs-CZ', { day: 'numeric', month: 'numeric', year: 'numeric' });
+};
+
+/** Datum i čas reakce — u odpovědí z e-mailu je čas podstatný. */
+const formatDateTime = (iso: string | null): string => {
+  if (!iso) return '—';
+  const d = new Date(iso);
+  if (Number.isNaN(d.getTime())) return '—';
+  return d.toLocaleString('cs-CZ', { timeZone: 'Europe/Prague' });
 };
 
 const AdminSalesLeads: React.FC = () => {
@@ -132,11 +152,15 @@ const AdminSalesLeads: React.FC = () => {
   const [openTasks, setOpenTasks] = useState<{lead_id:string;due_at:string}[]>([]);
   const [plannedActivities, setPlannedActivities] = useState<{lead_id:string;scheduled_for:string;activity_type:string}[]>([]);
   const [unassignedEmailCount, setUnassignedEmailCount] = useState(0);
+  // Reakce na tlačítka v obchodním e-mailu. Autoritativní zdroj = konečný stav
+  // response tokenu přes SECURITY DEFINER RPC (tabulka tokenů je pro
+  // authenticated zamčená, frontend ji nesmí číst přímo).
+  const [responses, setResponses] = useState<SalesLeadResponseOverview>(EMPTY_RESPONSE_OVERVIEW);
 
   const load = useCallback(async () => {
     setLoading(true);
     try {
-      const [leadsRes, groupsRes, unreadRes, tasksRes, plannedRes, unassignedRes] = await Promise.all([
+      const [leadsRes, groupsRes, unreadRes, tasksRes, plannedRes, unassignedRes, responsesRes] = await Promise.all([
         (supabase as any)
           .from('sales_leads')
           .select('id, company_name, industry, city, status, contact_email, updated_at, assigned_admin_id, lead_group, draft_updated_at')
@@ -156,6 +180,7 @@ const AdminSalesLeads: React.FC = () => {
         (supabase as any).from('sales_lead_tasks').select('lead_id,due_at').in('status',['ceka','rozpracovano']).order('due_at'),
         (supabase as any).from('sales_lead_activities').select('lead_id,scheduled_for,activity_type').in('activity_status',['naplanovano','rozpracovano']).not('scheduled_for','is',null).in('activity_type',['call_logged','meeting_logged','note_added']).order('scheduled_for'),
         (supabase as any).from('sales_lead_unassigned_emails').select('id', { count: 'exact', head: true }).eq('status', 'unassigned'),
+        (supabase as any).rpc('sales_lead_response_overview'),
       ]);
       const loadedLeads = (leadsRes.error ? [] : leadsRes.data ?? []) as SalesLeadRow[];
       if (leadsRes.error) {
@@ -177,6 +202,13 @@ const AdminSalesLeads: React.FC = () => {
       setOpenTasks((tasksRes.error ? [] : tasksRes.data ?? []) as {lead_id:string;due_at:string}[]);
       setPlannedActivities((plannedRes.error ? [] : plannedRes.data ?? []) as {lead_id:string;scheduled_for:string;activity_type:string}[]);
       setUnassignedEmailCount(unassignedRes.error ? 0 : unassignedRes.count ?? 0);
+      // Best-effort jako ostatní počty: chybějící RPC (prostředí před migrací)
+      // znamená prázdný přehled, nikdy rozbitý seznam leadů.
+      setResponses(
+        responsesRes.error
+          ? EMPTY_RESPONSE_OVERVIEW
+          : parseResponseOverview(responsesRes.data),
+      );
     } catch {
       setTableMissing(true);
       setLeads([]);
@@ -186,6 +218,7 @@ const AdminSalesLeads: React.FC = () => {
       setOpenTasks([]);
       setPlannedActivities([]);
       setUnassignedEmailCount(0);
+      setResponses(EMPTY_RESPONSE_OVERVIEW);
     } finally {
       setLoading(false);
     }
@@ -339,6 +372,15 @@ const AdminSalesLeads: React.FC = () => {
     [leads],
   );
 
+  /**
+   * Řádky záložky „Kontaktovat“: nepřečtené první, pak nejnovější reakce.
+   * Lead ze záložky nezmizí přečtením — odejde až ruční změnou stavu.
+   */
+  const interestedRows = useMemo(
+    () => sortInterestedRows(responses.interested),
+    [responses.interested],
+  );
+
   /** Počet leadů s uloženým konceptem — badge u záložky Rozpracované. */
   const draftCount = useMemo(
     () => leads.filter((l) => Boolean(l.draft_updated_at)).length,
@@ -408,11 +450,15 @@ const AdminSalesLeads: React.FC = () => {
     { label: 'K oslovení', value: summary.toContact },
     { label: 'Čeká na schválení', value: summary.awaitingApproval },
     { label: 'Osloveno', value: summary.contacted },
+    // „Kontaktovat“ = firmy s potvrzeným zájmem z tlačítka (response token),
+    // „Odpovědělo“ = stav leadu. Různé metriky, každá počítá lead jen jednou.
+    { label: 'Kontaktovat', value: responses.interestedTotal, unread: responses.interestedUnread },
     { label: 'Odpovědělo', value: summary.replied, unread: unreadTotal },
     { label: 'Jednání', value: summary.talks },
     { label: 'Spolupráce', value: summary.converted },
     { label: 'Bez spolupráce', value: summary.notConverted },
     { label: 'Nekontaktovat', value: summary.blocked },
+    { label: 'Nemá zájem', value: responses.declinedTotal, unread: responses.declinedUnread },
     { label: 'Nevyřízené úkoly', value: openTasks.length },
   ];
 
@@ -497,7 +543,13 @@ const AdminSalesLeads: React.FC = () => {
         <CardHeader className="pb-3 space-y-3">
           <div className="flex flex-wrap items-center justify-between gap-3">
             <CardTitle className="text-base">
-              {activeTab === 'today' ? 'Dnes' : activeTab === 'unassigned-emails' ? 'Příchozí pošta bez návaznosti' : 'Seznam leadů'}
+              {activeTab === 'today'
+                ? 'Dnes'
+                : activeTab === 'unassigned-emails'
+                ? 'Příchozí pošta bez návaznosti'
+                : activeTab === 'to-contact'
+                ? 'Firmy s potvrzeným zájmem o spolupráci'
+                : 'Seznam leadů'}
             </CardTitle>
           </div>
           <Tabs value={activeTab} onValueChange={handleTabChange}>
@@ -513,11 +565,31 @@ const AdminSalesLeads: React.FC = () => {
                       {draftCount}
                     </Badge>
                   )}
+                  {/* Červené počty NOVÝCH reakcí z tlačítek v obchodním e-mailu.
+                      Stejný destructive vzhled jako u nepřečtených odpovědí. */}
+                  {t.id === 'to-contact' && responses.interestedUnread > 0 && (
+                    <span
+                      data-testid="sl-interested-unread-count"
+                      className="ml-1.5 min-w-[1.25rem] rounded-full bg-destructive px-1.5 py-0.5 text-center text-[11px] font-bold text-destructive-foreground"
+                      title={`${responses.interestedUnread} nepřečtených reakcí „Mám zájem“`}
+                    >
+                      {responses.interestedUnread > 99 ? '99+' : responses.interestedUnread}
+                    </span>
+                  )}
+                  {t.id === 'blocked' && responses.declinedUnread > 0 && (
+                    <span
+                      data-testid="sl-declined-unread-count"
+                      className="ml-1.5 min-w-[1.25rem] rounded-full bg-destructive px-1.5 py-0.5 text-center text-[11px] font-bold text-destructive-foreground"
+                      title={`${responses.declinedUnread} nových odmítnutí z obchodního e-mailu`}
+                    >
+                      {responses.declinedUnread > 99 ? '99+' : responses.declinedUnread}
+                    </span>
+                  )}
                 </TabsTrigger>
               ))}
             </TabsList>
           </Tabs>
-          {!['today', 'unassigned-emails'].includes(activeTab) && (
+          {!['today', 'unassigned-emails', 'to-contact'].includes(activeTab) && (
             <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-[minmax(16rem,1fr)_minmax(12rem,0.65fr)_minmax(12rem,0.65fr)_auto] lg:items-end">
               <div className="space-y-1">
                 <Label htmlFor="sl-search-filter" className="text-xs text-muted-foreground">Hledat</Label>
@@ -574,7 +646,7 @@ const AdminSalesLeads: React.FC = () => {
               </Button>
             </div>
           )}
-          {!['today', 'unassigned-emails'].includes(activeTab) && selectedIds.size > 0 && (
+          {!['today', 'unassigned-emails', 'to-contact'].includes(activeTab) && selectedIds.size > 0 && (
             <div className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-primary/25 bg-primary/5 px-3 py-2">
               <span className="text-sm text-muted-foreground">
                 Vybráno leadů: <strong className="text-foreground">{selectedIds.size}</strong>
@@ -597,7 +669,7 @@ const AdminSalesLeads: React.FC = () => {
             </div>
           )}
         </CardHeader>
-        <CardContent className={['today', 'unassigned-emails'].includes(activeTab) ? 'p-0' : undefined}>
+        <CardContent className={['today', 'unassigned-emails', 'to-contact'].includes(activeTab) ? 'p-0' : undefined}>
           {activeTab === 'today' ? (
             <SalesLeadToday
               onOpenLead={(leadId) => {
@@ -613,6 +685,67 @@ const AdminSalesLeads: React.FC = () => {
                 openDetail(leadId);
               }}
             />
+          ) : activeTab === 'to-contact' ? (
+            loading ? (
+              <div className="py-10 text-center text-sm text-muted-foreground">Načítám…</div>
+            ) : interestedRows.length === 0 ? (
+              <div className="py-12 text-center text-sm text-muted-foreground">
+                Zatím žádná firma nepotvrdila zájem přes tlačítko „Mám zájem“ v obchodním e-mailu.
+              </div>
+            ) : (
+              <Table data-testid="sl-to-contact-table">
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Firma</TableHead>
+                    <TableHead>Kontaktní osoba</TableHead>
+                    <TableHead>Telefon</TableHead>
+                    <TableHead>E-mail</TableHead>
+                    <TableHead>Odpověď</TableHead>
+                    <TableHead>Dávka</TableHead>
+                    <TableHead className="text-right">Akce</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {interestedRows.map((row) => (
+                    <TableRow key={row.lead_id} data-testid="sl-to-contact-row">
+                      <TableCell className="font-medium">
+                        <span className="flex items-center gap-2">
+                          {row.unread && (
+                            <span
+                              className="h-2 w-2 shrink-0 rounded-full bg-destructive"
+                              aria-label="Nová nepřečtená reakce"
+                            />
+                          )}
+                          <span className={row.unread ? 'font-bold' : undefined}>{row.company_name}</span>
+                        </span>
+                        <div className="mt-1 flex flex-wrap items-center gap-1.5">
+                          <Badge variant="outline" className="border-emerald-500/30 bg-emerald-500/15 text-emerald-500">
+                            {RESPONSE_INTEREST_SUMMARY}
+                          </Badge>
+                          {row.priority === 1 && (
+                            <Badge variant="outline" className="border-destructive/30 bg-destructive/10 text-destructive">
+                              Vysoká priorita
+                            </Badge>
+                          )}
+                        </div>
+                      </TableCell>
+                      <TableCell>{displayOrDash(row.contact_person)}</TableCell>
+                      <TableCell>{displayOrDash(row.contact_phone)}</TableCell>
+                      <TableCell className="text-muted-foreground">{displayOrDash(row.contact_email)}</TableCell>
+                      <TableCell className="text-muted-foreground">{formatDateTime(row.responded_at)}</TableCell>
+                      <TableCell className="text-muted-foreground">
+                        {row.batch_item_id ? `${row.batch_item_id.slice(0, 8)}…` : '—'}
+                      </TableCell>
+                      <TableCell className="text-right">
+                        <Button variant="ghost" size="sm" onClick={() => openDetail(row.lead_id)}>
+                          Detail
+                        </Button>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            )
           ) : loading ? (
             <div className="py-10 text-center text-sm text-muted-foreground">Načítám…</div>
           ) : visibleLeads.length === 0 ? (

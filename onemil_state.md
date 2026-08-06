@@ -1,5 +1,39 @@
 # OneMil – aktuální stav projektu
 
+## PŘEHLED REAKCÍ „MÁM ZÁJEM“ / „NEMÁM ZÁJEM“ V ADMINISTRACI — DRAFT (06. 08. 2026)
+
+Draft PR nad `main` (`b9febb47`). **Nic nenasazeno** — migrace
+`20260806160000_sales_lead_response_overview.sql` NENÍ aplikovaná na staging ani produkci, žádný
+EF deploy, žádný merge, žádný e-mail, žádná dávka, žádná automatika, žádný cron. Staging automatika
+zůstává `enabled=false`; produkce odpovědní systém stále nemá (tabulka tokenů ani RPC tam neexistují).
+
+- **Nová záložka „Kontaktovat“** mezi „Osloveno“ a „Odpovědělo“ — samostatný pohled na firmy, které
+  klikly „Mám zájem“. **NENÍ to nový stav leadu** (lead zůstává `odpovedel`); stav `kontaktovat` se
+  nezavádí. Řazení: nepřečtené → nejnovější → ostatní.
+- **Odmítnutí zůstávají v „Nekontaktovat“** — žádná duplicitní záložka, přibyl jen červený počet
+  NOVÝCH odmítnutí z tlačítka.
+- **Červené počty jdou z DB** přes RPC: zájem = nepřečtené `reply_received` se `source=interest_link`,
+  odmítnutí = nepřečtené `do_not_contact_set` se `source=decline_link`. Ručně nastavené
+  „Nekontaktovat“ ani běžná e-mailová odpověď se nezapočítají (ověřeno na reálných staging datech).
+- **Autoritativní je konečný stav response tokenu** (nejnovější zodpovězený token na lead), takže
+  jeden lead nikdy nespadne do obou skupin. Bez tokenu rozhodne aktivita — fallback je
+  **symetrický** (`interest_link` → `interested`, `decline_link` → `declined`). Opraveno po
+  read-only kontrole: dřívější jednostranný fallback ztrácel odmítnutí bez tokenu (token na
+  položku dávky kaskáduje, aktivita ne).
+- **Nová RPC `sales_lead_response_overview()`** — `STABLE SECURITY DEFINER`, `search_path=''`,
+  guard `sales_leads.manage`/superadmin, bez `anon`, **bez zápisu**, nevrací token ani jeho hash.
+  Tabulka tokenů je pro `authenticated` zamčená, proto se čte výhradně přes RPC; frontend nepoužívá
+  service-role klíč.
+- **Rozšířena existující** `sales_lead_mark_replies_read(uuid)` — nově označí i odmítnutí z tlačítka.
+  Mění výhradně `read_at`/`read_by`; **neruší `do_not_contact`, suppression ani stav `nekontaktovat`**.
+- **Nová migrace na metadata nebyla potřeba** — `interest_link` i `decline_link` už jsou bezpečně
+  rozlišitelné (ověřeno read-only auditem stagingu).
+- Testy: nový `tests/e2e/106-sales-lead-response-overview.spec.ts` (19 testů) + specy 104/105 a další
+  specy modulu zelené (89 passed). `tsc --noEmit` 0 chyb, `npm run build` OK. Logika RPC ověřena
+  read-only dotazem proti reálným staging datům (žádný zápis).
+- Opraven latentní bug ve specu 105: četl migraci bez normalizace konců řádků, takže po checkoutu
+  s CRLF selhal. Nově se konce řádků normalizují.
+
 ## DENNÍ DÁVKY PRVNÍCH OBCHODNÍCH E-MAILŮ — PR 4 WORKER V DRAFTU (06. 08. 2026)
 
 PR 1 (PR #312), bezpečná delivery vrstva PR 2 (PR #313) i administrační příprava pozastavených

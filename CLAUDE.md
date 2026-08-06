@@ -1,3 +1,48 @@
+# Administrace reakcí „Mám zájem“ / „Nemám zájem“ (Draft, 06. 08. 2026)
+
+- **Nasazeno nikam.** Jen větev `chatgpt/sales-lead-response-admin-overview` + Draft PR. Migrace
+  `20260806160000_sales_lead_response_overview.sql` **nebyla aplikována** na staging ani produkci;
+  žádný EF deploy, žádný merge, žádný e-mail, žádná dávka, žádná automatika, žádný cron.
+  Staging automatika zůstává `enabled=false`, produkce odpovědní systém nemá.
+
+**Závazné invarianty (neměnit bez výslovného schválení Pavla):**
+
+- **Autoritativní je konečný stav response tokenu.** Pro každý lead se bere **nejnovější
+  zodpovězený token** (`DISTINCT ON (lead_id) … ORDER BY responded_at DESC`), takže jeden lead
+  **nikdy** nespadne současně do „Mám zájem“ i „Nemám zájem“.
+- **Fallback bez tokenu musí zůstat SYMETRICKÝ.** Token na položku dávky kaskáduje, aktivita ne;
+  po smazání položky dávky zůstane reakce jen jako aktivita. Proto
+  `COALESCE(s.status, CASE WHEN ia … THEN 'interested' WHEN da … THEN 'declined' END)`.
+  **Nevracet jednostrannou variantu jen pro zájem** — odmítnutí bez tokenu by zmizelo z přehledu
+  i z červeného počtu. Zrcadlo pravidla pro testy: `resolveResponseStatus()`.
+- **Nezavádět stav `kontaktovat`.** Lead po „Mám zájem“ zůstává `odpovedel`; „Kontaktovat“ je
+  samostatný pohled, ne nový stav a ne druhý systém leadů.
+- **Záložka „Kontaktovat“** patří mezi „Osloveno“ a „Odpovědělo“. Odmítnutí zůstávají v existující
+  záložce „Nekontaktovat“ — **nevytvářet pro ně druhou záložku**.
+- **Počty nepřečtených se počítají jen z reakcí na tlačítka**, ne ze všech leadů daného stavu:
+  zájem = `reply_received` + `inbound` + `read_at IS NULL` + `source='interest_link'` + `interest=true`;
+  odmítnutí = `do_not_contact_set` + `inbound` + `read_at IS NULL` + `source='decline_link'`.
+  Ručně nastavené „Nekontaktovat“ ani běžná e-mailová odpověď nemají `metadata.source`, takže se
+  nikdy nezapočítají — **tenhle filtr neodstraňovat**.
+- **`sales_lead_response_overview()`** musí zůstat `STABLE SECURITY DEFINER` se `SET search_path = ''`,
+  guardem `has_admin_permission('sales_leads.manage') OR is_superadmin()`, bez `anon` execute a
+  **bez jakéhokoli zápisu**. Nikdy nevracet surový token ani `token_hash`.
+  (Oprávnění `sales_leads.view` v projektu neexistuje — kanonické je `sales_leads.manage`.)
+- **`sales_lead_email_response_tokens` se z frontendu nesmí číst přímo** (má `REVOKE ALL` pro
+  `authenticated`) a frontend **nikdy nepoužívá service-role klíč**.
+- **`sales_lead_mark_replies_read(uuid)` mění výhradně `read_at`/`read_by`.** Nikdy nesmí rušit
+  `do_not_contact`, `do_not_contact_reason`, suppression ani stav `nekontaktovat`.
+- **Přečtení lead ze záložky neodstraní** — členství se odvozuje od konečného stavu tokenu, ne od
+  `read_at`. Lead odejde až ruční změnou stavu.
+- **Chybějící jméno/telefon zobrazovat jako „—“**, nikdy nedoplňovat falešnou hodnotu.
+- Karta „Odpovědělo“ (stav leadu) a „Kontaktovat“ (reakce na tlačítko) jsou **různé metriky**;
+  jejich překryv u leadu se zájmem je záměrný a není to duplicitní počítání.
+
+**Testy:** `tests/e2e/106-sales-lead-response-overview.spec.ts` (19 testů) drží výše uvedené
+invarianty. Čisté odvozovací funkce žijí v `src/components/admin/sales-leads/salesLeadResponses.ts`,
+aby je testy importovaly přímo. Specy modulu čtou SQL s **normalizovanými konci řádků** — git na
+Windows soubory vytahuje s CRLF a víceřádkové značky by jinak přestaly sedět.
+
 # Odpovědi obchodních e-mailů — jeden konečný výsledek na token (Draft, 06. 08. 2026)
 
 - **Nasazeno nikam.** Pouze větev `chatgpt/fix-sales-lead-response-final-outcome` + Draft PR. Migrace

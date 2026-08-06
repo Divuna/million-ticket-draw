@@ -82,6 +82,10 @@ import {
   type SalesLeadDetail,
   type DuplicateConflict,
 } from './salesLeadsShared';
+import {
+  RESPONSE_DECLINED_SUMMARY,
+  RESPONSE_INTEREST_SUMMARY,
+} from './salesLeadResponses';
 import { DuplicateConflictAlert } from './DuplicateConflictAlert';
 import { LeadCrmPanel } from './LeadCrmPanel';
 import { SalesLeadEmailTemplatePicker } from './SalesLeadEmailTemplatePicker';
@@ -1375,6 +1379,17 @@ export function SalesLeadDetailSheet({ leadId, open, onOpenChange, onMutated }: 
   const replyValidationErrors = validateSalesLeadEmailContent('reply', replySubject, replyBody);
   const hasContactEmail = !!lead?.contact_email && lead.email_verified_by_admin === true;
   const isDoNotContact = !!lead?.do_not_contact;
+  // Reakce na tlačítka v obchodním e-mailu. `activities` je řazeno created_at
+  // DESC → první nález je ta poslední reakce. Ručně nastavené „Nekontaktovat“
+  // nemá metadata.source, takže se sem nikdy nedostane.
+  const interestResponse = activities.find((a) =>
+    a.activity_type === 'reply_received'
+    && a.direction === 'inbound'
+    && a.metadata?.source === 'interest_link') ?? null;
+  const declineResponse = activities.find((a) =>
+    a.activity_type === 'do_not_contact_set'
+    && a.direction === 'inbound'
+    && a.metadata?.source === 'decline_link') ?? null;
   const initialEmailStatusAllowed = !!lead && isInitialEmailStatusAllowed(lead.status);
   // activities je řazeno created_at DESC → první email_sent je ten poslední.
   const lastEmailSent = activities.find((a) => a.activity_type === 'email_sent') ?? null;
@@ -1639,6 +1654,99 @@ export function SalesLeadDetailSheet({ leadId, open, onOpenChange, onMutated }: 
                 <p className="text-xs text-destructive">Nekontaktovat: {lead.do_not_contact_reason}</p>
               )}
             </WorkspaceCard>
+            )}
+
+            {/* Reakce z tlačítka „Mám zájem“ v obchodním e-mailu. */}
+            {interestResponse && (
+              <WorkspaceCard className="order-1 border-emerald-500/30 bg-emerald-500/[0.06]">
+                <div
+                  className="text-[10px] font-semibold uppercase tracking-[0.16em] text-emerald-500"
+                  data-testid="sl-detail-interest-response"
+                >
+                  Reakce z obchodního e-mailu
+                </div>
+                <div className="mt-1 text-sm font-semibold">{RESPONSE_INTEREST_SUMMARY}</div>
+                <dl className="mt-3 grid gap-1.5 text-xs">
+                  <div className="flex gap-2">
+                    <dt className="w-28 shrink-0 text-muted-foreground">Datum a čas</dt>
+                    <dd>{formatDateTime(interestResponse.created_at)}</dd>
+                  </div>
+                  <div className="flex gap-2">
+                    <dt className="w-28 shrink-0 text-muted-foreground">Kontaktní osoba</dt>
+                    <dd>{lead.contact_person?.trim() || '—'}</dd>
+                  </div>
+                  <div className="flex gap-2">
+                    <dt className="w-28 shrink-0 text-muted-foreground">Telefon</dt>
+                    <dd>{lead.contact_phone?.trim() || '—'}</dd>
+                  </div>
+                  <div className="flex gap-2">
+                    <dt className="w-28 shrink-0 text-muted-foreground">E-mail</dt>
+                    <dd>
+                      {(typeof interestResponse.metadata?.recipient === 'string'
+                        ? interestResponse.metadata.recipient
+                        : lead.contact_email) || '—'}
+                    </dd>
+                  </div>
+                  <div className="flex gap-2">
+                    <dt className="w-28 shrink-0 text-muted-foreground">Firma</dt>
+                    <dd>{lead.company_name}</dd>
+                  </div>
+                  {typeof interestResponse.metadata?.batch_item_id === 'string' && (
+                    <div className="flex gap-2">
+                      <dt className="w-28 shrink-0 text-muted-foreground">Původní dávka</dt>
+                      <dd className="font-mono">{interestResponse.metadata.batch_item_id}</dd>
+                    </div>
+                  )}
+                </dl>
+                <p className="mt-3 text-[11px] text-emerald-500">
+                  Kontakt má vysokou prioritu — ozvěte se firmě přednostně.
+                </p>
+              </WorkspaceCard>
+            )}
+
+            {/* Reakce z tlačítka „Nemám zájem“ v obchodním e-mailu. */}
+            {declineResponse && (
+              <WorkspaceCard className="order-1 border-destructive/30 bg-destructive/[0.06]">
+                <div
+                  className="text-[10px] font-semibold uppercase tracking-[0.16em] text-destructive"
+                  data-testid="sl-detail-decline-response"
+                >
+                  Reakce z obchodního e-mailu
+                </div>
+                <div className="mt-1 text-sm font-semibold">{RESPONSE_DECLINED_SUMMARY}</div>
+                <dl className="mt-3 grid gap-1.5 text-xs">
+                  <div className="flex gap-2">
+                    <dt className="w-28 shrink-0 text-muted-foreground">Datum a čas</dt>
+                    <dd>{formatDateTime(declineResponse.created_at)}</dd>
+                  </div>
+                  <div className="flex gap-2">
+                    <dt className="w-28 shrink-0 text-muted-foreground">E-mail</dt>
+                    <dd>
+                      {(typeof declineResponse.metadata?.recipient === 'string'
+                        ? declineResponse.metadata.recipient
+                        : lead.contact_email) || '—'}
+                    </dd>
+                  </div>
+                  <div className="flex gap-2">
+                    <dt className="w-28 shrink-0 text-muted-foreground">Důvod blokace</dt>
+                    <dd>{lead.do_not_contact_reason?.trim() || '—'}</dd>
+                  </div>
+                  <div className="flex gap-2">
+                    <dt className="w-28 shrink-0 text-muted-foreground">Stav odhlášení</dt>
+                    <dd>{lead.do_not_contact ? 'Odhlášeno (Nekontaktovat)' : 'Neaktivní'}</dd>
+                  </div>
+                  {typeof declineResponse.metadata?.batch_item_id === 'string' && (
+                    <div className="flex gap-2">
+                      <dt className="w-28 shrink-0 text-muted-foreground">Původní dávka</dt>
+                      <dd className="font-mono">{declineResponse.metadata.batch_item_id}</dd>
+                    </div>
+                  )}
+                </dl>
+                <p className="mt-3 text-[11px] text-destructive">
+                  Další obchodní e-maily jsou pro tuto adresu blokované. Označení reakce jako
+                  přečtené na tom nic nemění.
+                </p>
+              </WorkspaceCard>
             )}
 
             {/* Zařazení / discovery (Fáze 4B) */}
