@@ -10,6 +10,11 @@
 - **Autoritativní je konečný stav response tokenu.** Pro každý lead se bere **nejnovější
   zodpovězený token** (`DISTINCT ON (lead_id) … ORDER BY responded_at DESC`), takže jeden lead
   **nikdy** nespadne současně do „Mám zájem“ i „Nemám zájem“.
+- **Fallback bez tokenu musí zůstat SYMETRICKÝ.** Token na položku dávky kaskáduje, aktivita ne;
+  po smazání položky dávky zůstane reakce jen jako aktivita. Proto
+  `COALESCE(s.status, CASE WHEN ia … THEN 'interested' WHEN da … THEN 'declined' END)`.
+  **Nevracet jednostrannou variantu jen pro zájem** — odmítnutí bez tokenu by zmizelo z přehledu
+  i z červeného počtu. Zrcadlo pravidla pro testy: `resolveResponseStatus()`.
 - **Nezavádět stav `kontaktovat`.** Lead po „Mám zájem“ zůstává `odpovedel`; „Kontaktovat“ je
   samostatný pohled, ne nový stav a ne druhý systém leadů.
 - **Záložka „Kontaktovat“** patří mezi „Osloveno“ a „Odpovědělo“. Odmítnutí zůstávají v existující

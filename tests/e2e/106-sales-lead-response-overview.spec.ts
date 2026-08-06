@@ -5,6 +5,7 @@ import {
   displayOrDash,
   isHighPriorityInterest,
   parseResponseOverview,
+  resolveResponseStatus,
   sortDeclinedRows,
   sortInterestedRows,
   type InterestedResponseRow,
@@ -311,6 +312,130 @@ test.describe('106 — přehled reakcí Mám zájem / Nemám zájem', () => {
     expect(parseResponseOverview({ success: false, error: 'access_denied' }))
       .toEqual(EMPTY_RESPONSE_OVERVIEW);
     expect(parseResponseOverview({ success: true })).toEqual(EMPTY_RESPONSE_OVERVIEW);
+  });
+
+  // ── Symetrický fallback (oprava nálezu č. 1) ──────────────────────────────
+  // Token na položku dávky kaskáduje, aktivita ne. Po smazání položky dávky
+  // tedy reakce zůstane jen jako aktivita a nesmí z přehledu zmizet.
+
+  test('F1) decline aktivita bez tokenu se zobrazí v Nekontaktovat', () => {
+    expect(resolveResponseStatus({ hasDeclineActivity: true })).toBe('declined');
+
+    const overview = parseResponseOverview(rpcPayload({
+      declined: [declinedRow({ batch_item_id: null })],
+      declined_total: 1,
+      declined_unread: 1,
+    }));
+    expect(overview.declined).toHaveLength(1);
+    expect(overview.declined[0].lead_id).toBe('lead-decline');
+    expect(overview.declinedTotal).toBe(1);
+  });
+
+  test('F2) decline aktivita bez tokenu zvýší nepřečtený červený počet', () => {
+    const overview = parseResponseOverview(rpcPayload({
+      declined: [declinedRow({ batch_item_id: null })],
+      declined_total: 1,
+      declined_unread: 1,
+    }));
+    expect(overview.declinedUnread).toBe(1);
+    expect(overview.declined[0].unread).toBe(true);
+  });
+
+  test('F3) po přečtení počet klesne', () => {
+    const afterRead = parseResponseOverview(rpcPayload({
+      declined: [declinedRow({ batch_item_id: null, unread: false })],
+      declined_total: 1,
+      declined_unread: 0,
+    }));
+    expect(afterRead.declinedUnread).toBe(0);
+    expect(afterRead.declined[0].unread).toBe(false);
+  });
+
+  test('F4) lead po přečtení zůstane v Nekontaktovat', () => {
+    const afterRead = parseResponseOverview(rpcPayload({
+      declined: [declinedRow({ batch_item_id: null, unread: false })],
+      declined_total: 1,
+      declined_unread: 0,
+    }));
+    expect(afterRead.declined).toHaveLength(1);
+    expect(afterRead.declinedTotal).toBe(1);
+    // Členství drží konečná odpověď, ne read_at.
+    expect(resolveResponseStatus({ hasDeclineActivity: true })).toBe('declined');
+  });
+
+  test('F5) do_not_contact a suppression zůstanou beze změny', () => {
+    const afterRead = parseResponseOverview(rpcPayload({
+      declined: [declinedRow({ batch_item_id: null, unread: false })],
+    }));
+    expect(afterRead.declined[0].do_not_contact).toBe(true);
+    expect(afterRead.declined[0].suppressed).toBe(true);
+    expect(afterRead.declined[0].do_not_contact_reason)
+      .toBe('Příjemce zvolil Nemám zájem v obchodním e-mailu');
+  });
+
+  test('F6) token interested + starší decline aktivita → jen interested', () => {
+    expect(resolveResponseStatus({
+      tokenStatus: 'interested',
+      hasDeclineActivity: true,
+    })).toBe('interested');
+    expect(resolveResponseStatus({
+      tokenStatus: 'interested',
+      hasInterestActivity: true,
+      hasDeclineActivity: true,
+    })).toBe('interested');
+  });
+
+  test('F7) token declined + starší interest aktivita → jen declined', () => {
+    expect(resolveResponseStatus({
+      tokenStatus: 'declined',
+      hasInterestActivity: true,
+    })).toBe('declined');
+    expect(resolveResponseStatus({
+      tokenStatus: 'declined',
+      hasInterestActivity: true,
+      hasDeclineActivity: true,
+    })).toBe('declined');
+  });
+
+  test('F8) žádná kombinace nedostane lead do obou skupin', () => {
+    const bools = [true, false];
+    const tokens: Array<'interested' | 'declined' | null> = ['interested', 'declined', null];
+    let resolvedCount = 0;
+    for (const tokenStatus of tokens) {
+      for (const hasInterestActivity of bools) {
+        for (const hasDeclineActivity of bools) {
+          const result = resolveResponseStatus({
+            tokenStatus, hasInterestActivity, hasDeclineActivity,
+          });
+          // Jediná skalární hodnota → nikdy obojí zároveň.
+          expect(['interested', 'declined', null]).toContain(result);
+          if (result !== null) resolvedCount += 1;
+          // Token má vždy přednost.
+          if (tokenStatus) expect(result).toBe(tokenStatus);
+          // Bez tokenu a bez aktivity lead do přehledu vůbec nepatří.
+          if (!tokenStatus && !hasInterestActivity && !hasDeclineActivity) {
+            expect(result).toBeNull();
+          }
+        }
+      }
+    }
+    // 12 kombinací s tokenem/aktivitou se vyřeší, 1 (nic) zůstane null.
+    expect(resolvedCount).toBe(11);
+  });
+
+  test('F9) migrace obsahuje symetrický fallback', () => {
+    expect(executableSql).toMatch(
+      /COALESCE\(\s*s\.status,\s*CASE\s+WHEN ia\.lead_id IS NOT NULL THEN 'interested'\s+WHEN da\.lead_id IS NOT NULL THEN 'declined'\s+END\s*\) AS response_status/,
+    );
+    // Decline bez tokenu musí projít i vstupním filtrem `resolved`.
+    expect(executableSql).toContain(
+      'WHERE s.lead_id IS NOT NULL OR ia.lead_id IS NOT NULL OR da.lead_id IS NOT NULL',
+    );
+    // Čas i dávka mají fallback na decline aktivitu.
+    expect(executableSql).toContain('COALESCE(s.responded_at, ia.created_at, da.created_at)');
+    expect(executableSql).toContain(
+      'COALESCE(s.batch_item_id::text, ia.batch_item_id, da.batch_item_id)',
+    );
   });
 
   test('souhrnné karty Kontaktovat a Nemá zájem nepočítají stejný lead dvakrát', () => {

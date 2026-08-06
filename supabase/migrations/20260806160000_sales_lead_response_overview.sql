@@ -166,9 +166,18 @@ BEGIN
   resolved AS (
     SELECT
       l.id AS lead_id,
+      -- Konečný token je VŽDY autoritativní. Teprve když token neexistuje
+      -- (např. po smazání položky dávky — token na ni kaskáduje, aktivita ne),
+      -- rozhodne aktivita. Fallback musí být SYMETRICKÝ, jinak by se odmítnutí
+      -- bez tokenu ztratilo z přehledu i z červeného počtu.
+      -- Výsledek je jediná skalární hodnota, takže lead nikdy nespadne
+      -- do obou skupin současně.
       COALESCE(
         s.status,
-        CASE WHEN ia.lead_id IS NOT NULL THEN 'interested' END
+        CASE
+          WHEN ia.lead_id IS NOT NULL THEN 'interested'
+          WHEN da.lead_id IS NOT NULL THEN 'declined'
+        END
       ) AS response_status,
       COALESCE(s.responded_at, ia.created_at, da.created_at) AS responded_at,
       COALESCE(s.batch_item_id::text, ia.batch_item_id, da.batch_item_id) AS batch_item_id,

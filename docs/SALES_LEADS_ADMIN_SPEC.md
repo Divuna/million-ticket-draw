@@ -1084,7 +1084,22 @@ firmy neztratila: obojí má vlastní pohled i vlastní červený počet nepře�
   = `interested` / `declined`). Pro každý lead se bere **nejnovější zodpovězený token**
   (`DISTINCT ON (lead_id) … ORDER BY responded_at DESC`), takže **jeden lead nikdy nespadne
   do obou skupin současně**.
-- Aktivita `interest_link` slouží jen jako fallback pro lead, který token nemá.
+- **Symetrický fallback bez tokenu.** Token na položku dávky kaskáduje
+  (`batch_item_id … ON DELETE CASCADE`), aktivita ne — po smazání položky dávky tedy reakce
+  zůstane jen jako aktivita. Aby se žádná neztratila, platí:
+
+  ```sql
+  COALESCE(s.status,
+    CASE WHEN ia.lead_id IS NOT NULL THEN 'interested'
+         WHEN da.lead_id IS NOT NULL THEN 'declined' END)
+  ```
+
+  Existuje-li token, rozhoduje **vždy** on. Bez tokenu rozhodne aktivita — `interest_link`
+  → `interested`, `decline_link` → `declined`. Výsledek je jediná skalární hodnota, takže lead
+  nikdy nespadne do obou skupin. Bez tokenu a se současně existující interest i decline aktivitou
+  vyhrává `interested` (pořadí CASE větví). **Fallback nesmí být jednostranný** — dřívější verze
+  řešila jen zájem a odmítnutí bez tokenu se ztrácelo z přehledu i z červeného počtu.
+  Zrcadlo pravidla pro testy: `resolveResponseStatus()` v `salesLeadResponses.ts`.
 - Tabulka tokenů má `REVOKE ALL` pro `anon` i `authenticated`. Administrace se k datům dostane
   **výhradně** přes SECURITY DEFINER RPC `sales_lead_response_overview()`.
   **Frontend nikdy nepoužívá service-role klíč a tabulku tokenů nečte přímo.**

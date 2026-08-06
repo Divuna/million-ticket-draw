@@ -16,7 +16,10 @@ zůstává `enabled=false`; produkce odpovědní systém stále nemá (tabulka t
   odmítnutí = nepřečtené `do_not_contact_set` se `source=decline_link`. Ručně nastavené
   „Nekontaktovat“ ani běžná e-mailová odpověď se nezapočítají (ověřeno na reálných staging datech).
 - **Autoritativní je konečný stav response tokenu** (nejnovější zodpovězený token na lead), takže
-  jeden lead nikdy nespadne do obou skupin.
+  jeden lead nikdy nespadne do obou skupin. Bez tokenu rozhodne aktivita — fallback je
+  **symetrický** (`interest_link` → `interested`, `decline_link` → `declined`). Opraveno po
+  read-only kontrole: dřívější jednostranný fallback ztrácel odmítnutí bez tokenu (token na
+  položku dávky kaskáduje, aktivita ne).
 - **Nová RPC `sales_lead_response_overview()`** — `STABLE SECURITY DEFINER`, `search_path=''`,
   guard `sales_leads.manage`/superadmin, bez `anon`, **bez zápisu**, nevrací token ani jeho hash.
   Tabulka tokenů je pro `authenticated` zamčená, proto se čte výhradně přes RPC; frontend nepoužívá

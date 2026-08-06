@@ -151,6 +151,36 @@ export function sortDeclinedRows(rows: DeclinedResponseRow[]): DeclinedResponseR
   });
 }
 
+/** Konečná odpověď leadu. `null` = lead žádnou reakci z tlačítka nemá. */
+export type ResolvedResponseStatus = 'interested' | 'declined' | null;
+
+/**
+ * 1:1 zrcadlo `COALESCE(...)` větve v RPC `sales_lead_response_overview()`
+ * (stejné pořadí větví). Autoritativní zůstává RPC — tohle je jen testovatelný
+ * popis pravidla, stejně jako `isTransitionAllowed` zrcadlí `sales_lead_set_status`.
+ *
+ * Pravidlo:
+ *   1) existuje-li konečný token, rozhoduje VŽDY on (aktivity se ignorují),
+ *   2) bez tokenu rozhodne aktivita — `interest_link` → `interested`,
+ *      `decline_link` → `declined` (fallback je symetrický),
+ *   3) vrací jedinou hodnotu, takže lead nikdy nespadne do obou skupin.
+ *
+ * Pozn.: bez tokenu a se současně existující interest i decline aktivitou
+ * vyhrává `interested` — stejné pořadí jako CASE větve v SQL.
+ */
+export function resolveResponseStatus(input: {
+  tokenStatus?: 'interested' | 'declined' | null;
+  hasInterestActivity?: boolean;
+  hasDeclineActivity?: boolean;
+}): ResolvedResponseStatus {
+  if (input.tokenStatus === 'interested' || input.tokenStatus === 'declined') {
+    return input.tokenStatus;
+  }
+  if (input.hasInterestActivity) return 'interested';
+  if (input.hasDeclineActivity) return 'declined';
+  return null;
+}
+
 /** Lead s potvrzeným zájmem má mít vysokou prioritu (RPC nastavuje priority=1). */
 export const isHighPriorityInterest = (row: InterestedResponseRow): boolean => row.priority === 1;
 
