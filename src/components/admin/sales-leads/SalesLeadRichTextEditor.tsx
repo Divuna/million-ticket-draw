@@ -3,6 +3,11 @@ import { Bold, Eye, Italic, Link2, List, SmilePlus } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { renderSalesLeadEmailHtml } from '../../../../supabase/functions/_shared/salesLeadEmailRendering';
+import {
+  PREVIEW_RESPONSE_TOKEN,
+  buildResponseCtaBlock,
+  buildResponseCtaUrls,
+} from '../../../../supabase/functions/_shared/salesLeadResponseCta';
 
 interface Props {
   id: string;
@@ -12,6 +17,12 @@ interface Props {
   maxLength?: number;
   placeholder?: string;
   disabled?: boolean;
+  /**
+   * Náhled prvního obchodního e-mailu doplní CTA blok, který se při odeslání
+   * přidá automaticky — aby preview odpovídalo skutečně odeslanému e-mailu.
+   * Zástupný token je neaktivní; skutečný je pro každého příjemce jiný.
+   */
+  showResponseCta?: boolean;
 }
 
 const EMOJIS = ['✨', '✅', '🚀', '🎁', '🤝', '👉'];
@@ -24,6 +35,7 @@ export function SalesLeadRichTextEditor({
   maxLength = 20_000,
   placeholder,
   disabled = false,
+  showResponseCta = false,
 }: Props) {
   const textareaRef = useRef<HTMLTextAreaElement | null>(null);
   const [previewOpen, setPreviewOpen] = useState(true);
@@ -149,7 +161,25 @@ export function SalesLeadRichTextEditor({
         <div className="border-t border-white/[0.08] bg-white px-5 py-4 text-left" data-testid="sales-lead-email-preview">
           <div className="mb-3 text-[10px] font-semibold uppercase tracking-[0.16em] text-slate-500">Náhled výsledného e-mailu</div>
           {value.trim() ? (
-            <div dangerouslySetInnerHTML={{ __html: renderSalesLeadEmailHtml(value) }} />
+            <>
+              <div dangerouslySetInnerHTML={{ __html: renderSalesLeadEmailHtml(value) }} />
+              {showResponseCta && (
+                <>
+                  <div
+                    data-testid="sales-lead-email-preview-cta"
+                    dangerouslySetInnerHTML={{
+                      __html: buildResponseCtaBlock(
+                        buildResponseCtaUrls('xkzhjldrojjlrkezorey', PREVIEW_RESPONSE_TOKEN),
+                      ).html,
+                    }}
+                  />
+                  <div className="mt-2 text-[11px] text-slate-500">
+                    Tlačítka se k prvnímu obchodnímu e-mailu přidají automaticky. Každý příjemce
+                    dostane vlastní bezpečný odkaz — v náhledu jsou proto neaktivní.
+                  </div>
+                </>
+              )}
+            </>
           ) : (
             <div className="text-sm text-slate-400">Začněte psát text šablony.</div>
           )}

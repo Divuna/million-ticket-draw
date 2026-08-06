@@ -1170,3 +1170,53 @@ a **bez jakéhokoli zápisu**. Surový token ani jeho hash se nikdy nevrací.
 
 Draft. Migrace `20260806160000_sales_lead_response_overview.sql` **není aplikovaná** na staging
 ani produkci. Žádná dávka, žádný e-mail, žádná automatika, žádný cron.
+
+## 25. CTA prvního obchodního e-mailu — „Mám zájem“ / „Nemám zájem“ (Draft; 06. 08. 2026)
+
+### 25.1 Zjištěná příčina (read-only audit)
+
+Reálný odeslaný e-mail neobsahoval tlačítko „Mám zájem“ a místo něj měl mailto odkaz
+„Nemám zájem, děkuji“. Příčina je dvojí a **není v kódu**:
+
+1. **Produkce nemá nasazený response systém.** Na `sales_lead_email_batch_items` je v produkci
+   jediný trigger `sales_lead_email_batch_item_preserve_snapshot`. Chybí
+   `trg_sales_lead_email_prepare_response_links` i `trg_sales_lead_email_store_response_token`
+   a tabulka `sales_lead_email_response_tokens` v produkci vůbec neexistuje. DB části PR #318–#322
+   byly aplikovány jen na staging. Bez triggeru se CTA nikdy nepřipojí.
+2. **Věta „Nemám zájem, děkuji“ je ručně uložená v aktivní šabloně.** Je to obsah pole `body`
+   šablony `E - shop Míra 2` (jediná `is_active = true`, typ `initial`) a renderer ji jen převede
+   z markdownu na mailto odkaz. **V repozitáři se tato věta nevyskytuje** a žádný kód ji nepřidává.
+
+### 25.2 Cesty prvního obchodního e-mailu
+
+| Cesta | Kde vzniká tělo | CTA před opravou |
+|---|---|---|
+| Dávka | BEFORE INSERT trigger `sales_lead_email_prepare_response_links` | ✅ přidává (jen staging) |
+| Ruční odeslání | EF `send-sales-lead-email` → `deliverSalesLeadInitialEmail` | ❌ nepřidávalo nic |
+| Náhled | `SalesLeadRichTextEditor` → `renderSalesLeadEmailHtml` | ❌ nezobrazoval |
+
+### 25.3 Oprava
+
+- Nový sdílený builder `supabase/functions/_shared/salesLeadResponseCta.ts` je **jediný zdroj
+  pravdy** pro markup CTA a je 1:1 zrcadlem DB triggeru (hlídá spec 107).
+- **Ruční cesta** razí vlastní token přes novou RPC
+  `sales_lead_issue_manual_response_token(uuid, text)` a CTA připojí **před** vyrenderováním
+  a uložením snapshotu, takže uložený snapshot i odeslaný e-mail obsahují totéž.
+  Cesta je **fail-closed** — bez tokenu se nic neodešle (`response_links_unavailable`).
+- **Náhled** prvního e-mailu zobrazuje stejný CTA blok se zástupným neaktivním tokenem.
+- `sales_lead_email_response_tokens.batch_item_id` je nově **nullable** (ruční e-mail nemá položku
+  dávky). UNIQUE zůstává — Postgres povoluje více NULL hodnot, takže vazba dávka↔token je pro
+  dávkovou cestu stále 1:1.
+- Obě tlačítka vždy míří na `https://onemil.cz/partner-response.html`; **nikdy mailto** a nikdy
+  odpověď na `b2b@onemil.cz` (ta zůstává jen jako odesílatel/reply-to).
+
+### 25.4 Nutný následný krok (NEPROVEDENO)
+
+Aby se CTA objevilo v reálném provozu, je potřeba **samostatně schválit**:
+
+1. aplikovat na produkci DB části PR #318–#322 + migraci `20260806180000` (jinak CTA nevznikne),
+2. **ručně upravit aktivní šablonu `E - shop Míra 2`** a odstranit z jejího těla mailto odkaz
+   „Nemám zájem, děkuji“ — je to produkční **data**, tímto PR se nemění,
+3. nasadit EF `send-sales-lead-email` a frontend.
+
+Staré už vytvořené dávky se nepřepisují; CTA se přidává jen nově vznikajícím e-mailům.
