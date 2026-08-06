@@ -45,7 +45,7 @@ test.describe('104 — sales-lead e-mail response buttons', () => {
     expect(fixMigration).toContain('CREATE TRIGGER trg_sales_lead_email_store_response_token');
     expect(fixMigration).toContain('AFTER INSERT ON public.sales_lead_email_batch_items');
     expect(fixMigration).toMatch(/INSERT INTO public\.sales_lead_email_response_tokens[\s\S]+NEW\.response_token_hash/);
-    expect(fixMigration).toContain('NEW.batch_item_id');
+    expect(fixMigration).toContain('NEW.id');
     expect(fixMigration).not.toContain('fbe779c0-5198-41b3-9370-0ae6337fb808');
   });
 
