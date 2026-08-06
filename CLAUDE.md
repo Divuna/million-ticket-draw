@@ -1,3 +1,44 @@
+# Odpovědi obchodních e-mailů — jeden konečný výsledek na token (Draft, 06. 08. 2026)
+
+- **Nasazeno nikam.** Pouze větev `chatgpt/fix-sales-lead-response-final-outcome` + Draft PR. Migrace
+  `20260806140000_sales_lead_response_final_outcome_lock.sql` **nebyla aplikována** na staging ani
+  produkci, Edge Function `sales-lead-response` nebyla přenasazena, žádný e-mail neodešel, žádná
+  produkční data se nezměnila, žádný cron, žádná automatika.
+- **Řešená chyba (skutečný staging test):** příjemce potvrdil „Mám zájem“ (lead `odpovedel`,
+  priority 1, `reply_received`, source `interest_link`, jméno + telefon uloženy) a poté z téhož
+  e-mailu otevřel „Nemám zájem“. Stránka znovu ukázala obyčejné „Děkujeme za projevený zájem“ bez
+  vysvětlení, že odpověď už byla dříve uzamčena. Data byla po celou dobu správná — chyba byla
+  v prezentaci a v neprůhledném POST kontraktu.
+
+**Závazné invarianty (neměnit bez výslovného schválení Pavla):**
+
+- **Každý odpovědní token má právě jeden konečný výsledek: `interested`, nebo `declined`.** Po prvním
+  úspěšném potvrzení se výsledek **nikdy** nesmí změnit. Opačný odkaz nesmí odpověď přepnout.
+- **GET nesmí nic měnit.** `sales-lead-response` v GET větvi pouze čte `status` + `expires_at`; nesmí
+  volat `.rpc(`, `.insert(`, `.update(` ani `.delete(`. Zamčeno spec 104 i 105.
+- **POST je bezpečně idempotentní.** Zapisuje výhradně při stavu `pending`. Je-li token už
+  `interested`/`declined`, RPC `sales_lead_email_response_submit` vrátí **původní** konečný stav
+  (`action` = uložená volba, nikoli požadovaná) s `idempotent_replay: true` a
+  `conflicting_action: true/false`, a **neprovede žádný zápis**.
+- **Replay větev RPC nesmí obsahovat žádný `INSERT`/`UPDATE`/`DELETE`.** Nepřibude aktivita ani
+  status history, nepřepíše se jméno/telefon, nezruší se `do_not_contact` a nesmaže se řádek
+  v `sales_lead_email_suppression`. Suppression se z této funkce nikdy nemaže a `do_not_contact`
+  se nikdy nenastavuje na `false`.
+- **Frontend nesmí rozhodovat podle URL parametru `action`.** `public/partner-response.html` renderuje
+  z autoritativního `status` vráceného API (`showFinalStatus`). Formulář ani potvrzovací tlačítko se
+  smí zobrazit **pouze** při `status === 'pending'`.
+- **Texty (neměnit):** opačný odkaz po uzamčení → nadpis „Vaše odpověď už byla zaznamenána“;
+  po `interested` text „Děkujeme za projevený zájem. Váš kontakt jsme přijali a brzy se vám ozveme.“;
+  po `declined` text „Vaše rozhodnutí respektujeme a další obchodní nabídky vám nebudeme zasílat.“
+  Opětovné otevření **stejné** původní volby ukáže její vlastní potvrzení, bez formuláře.
+- Zachován světlý OneMil vzhled a originální logo `/onemil-logo.png`; CSP `connect-src` beze změny.
+
+**Testy:** `tests/e2e/105-sales-lead-response-final-outcome.spec.ts` (14 testů). Browser testy jedou
+proti reálnému `public/partner-response.html` se stubovaným backend kontraktem — Vite dev server
+přepisuje neznámé `.html` cesty na SPA shell, proto se soubor servíruje přes `page.route`. Spec 104
+zůstává zelený. Ověřeno, že spec 105 na předfixové verzi stránky **selže** ve scénářích
+`interested + decline` a `declined + interest`.
+
 # Denní dávky prvních obchodních e-mailů — PR 4 worker (Draft, 06. 08. 2026)
 
 - **PR 1, PR 2 i PR 3 jsou v produkci; PR 3 je produkčně ověřené. PR 4 je pouze Draft.** Worker není

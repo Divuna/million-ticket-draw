@@ -143,6 +143,9 @@
           <p>${escapeHtml(message)}</p>`;
       }
 
+      // The stored token status is the only source of truth for what was answered.
+      const SETTLED_ACTION = { interested: 'interest', declined: 'decline' };
+
       function showSuccess(kind) {
         if (kind === 'interest') {
           card.innerHTML = `
@@ -155,6 +158,33 @@
           <div class="icon">✓</div>
           <h1>Děkujeme za odpověď</h1>
           <p>Další obchodní nabídky vám již nebudeme zasílat a evidujeme, že nyní nemáte zájem o spolupráci.</p>`;
+      }
+
+      // Shown when the opposite CTA link is opened after an answer was already
+      // recorded. No form and no button, because the outcome can never change.
+      function showAlreadyRecorded(settledAction) {
+        const detail = settledAction === 'interest'
+          ? 'Děkujeme za projevený zájem. Váš kontakt jsme přijali a brzy se vám ozveme.'
+          : 'Vaše rozhodnutí respektujeme a další obchodní nabídky vám nebudeme zasílat.';
+        card.innerHTML = `
+          <div class="icon">✓</div>
+          <h1>Vaše odpověď už byla zaznamenána</h1>
+          <p>${detail}</p>`;
+      }
+
+      // Renders a final status. Re-opening the original choice repeats its own
+      // confirmation; the opposite link explains that the answer is already locked.
+      function showFinalStatus(status, requestedAction) {
+        const settledAction = SETTLED_ACTION[status];
+        if (!settledAction) {
+          showError('Odkaz je neplatný nebo již není dostupný.');
+          return;
+        }
+        if (settledAction === requestedAction) {
+          showSuccess(settledAction);
+          return;
+        }
+        showAlreadyRecorded(settledAction);
       }
 
       function showInterestForm() {
@@ -223,10 +253,16 @@
               return;
             }
             if (result.error === 'response_already_recorded') {
-              showError('Tento odkaz už byl použit pro jinou odpověď.');
+              // Older backend contract: re-read the authoritative stored outcome
+              // instead of guessing from the requested action.
+              await load();
               return;
             }
             throw new Error('submit_failed');
+          }
+          if (SETTLED_ACTION[result.status]) {
+            showFinalStatus(result.status, action);
+            return;
           }
           showSuccess(result.action || action);
         } catch (_error) {
@@ -254,12 +290,9 @@
             showError('Odkaz je neplatný nebo již není dostupný.');
             return;
           }
-          if (result.status === 'interested') {
-            showSuccess('interest');
-            return;
-          }
-          if (result.status === 'declined') {
-            showSuccess('decline');
+          // Only a still-pending token may offer a form or a confirm button.
+          if (result.status !== 'pending') {
+            showFinalStatus(result.status, action);
             return;
           }
           action === 'interest' ? showInterestForm() : showDeclineForm();
