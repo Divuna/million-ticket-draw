@@ -3,14 +3,16 @@ import fs from 'node:fs';
 
 const read = (path: string) => fs.readFileSync(path, 'utf8');
 const initialMigration = read('supabase/migrations/20260806100000_sales_lead_email_response_links.sql');
-const fixMigration = read('supabase/migrations/20260806104000_fix_sales_lead_response_snapshot_trigger.sql');
-const responseMigrations = `${initialMigration}\n${fixMigration}`;
+const snapshotFixMigration = read('supabase/migrations/20260806104000_fix_sales_lead_response_snapshot_trigger.sql');
+const publicPageMigration = read('supabase/migrations/20260806113000_sales_lead_response_public_page.sql');
+const responseMigrations = `${initialMigration}\n${snapshotFixMigration}\n${publicPageMigration}`;
 const responseFunction = read('supabase/functions/sales-lead-response/index.ts');
+const publicPage = read('public/partner-response.html');
 const config = read('supabase/config.toml');
 
 const getBranch = responseFunction.slice(
   responseFunction.indexOf('if (req.method === "GET")'),
-  responseFunction.indexOf('const body = await readForm(req)'),
+  responseFunction.indexOf('const body = await readBody(req)'),
 );
 
 test.describe('104 — sales-lead e-mail response buttons', () => {
@@ -26,49 +28,60 @@ test.describe('104 — sales-lead e-mail response buttons', () => {
     expect(initialMigration).toContain('GRANT ALL ON TABLE public.sales_lead_email_response_tokens TO service_role');
   });
 
-  test('CTA links become part of the immutable snapshot before insertion', () => {
-    expect(fixMigration).toContain('response_token_hash text');
-    expect(fixMigration).toContain('CREATE TRIGGER trg_sales_lead_email_prepare_response_links');
-    expect(fixMigration).toContain('BEFORE INSERT ON public.sales_lead_email_batch_items');
-    expect(fixMigration).toContain('NEW.body_source_snapshot := NEW.body_source_snapshot');
-    expect(fixMigration).toContain('NEW.body_text_snapshot := NEW.body_text_snapshot');
-    expect(fixMigration).toContain('NEW.body_html_snapshot := NEW.body_html_snapshot');
-    expect(fixMigration).toContain('Mám zájem');
-    expect(fixMigration).toContain('Nemám zájem');
-    expect(fixMigration).toContain('background:#f97316');
-    expect(fixMigration).toContain('border:1px solid #d6d3d1');
-    expect(fixMigration).not.toMatch(/UPDATE public\.sales_lead_email_batch_items/i);
-    expect(fixMigration).toContain('DROP TRIGGER IF EXISTS trg_sales_lead_email_attach_response_links');
+  test('future CTA links point to the public OneMil page and remain immutable', () => {
+    expect(publicPageMigration).toContain("https://onemil.cz/partner-response.html");
+    expect(publicPageMigration).toContain("'?project=' || v_project_ref");
+    expect(publicPageMigration).toContain("'&token=' || v_token || '&action=interest'");
+    expect(publicPageMigration).toContain("'&token=' || v_token || '&action=decline'");
+    expect(publicPageMigration).toContain('NEW.body_source_snapshot := NEW.body_source_snapshot');
+    expect(publicPageMigration).toContain('NEW.body_text_snapshot := NEW.body_text_snapshot');
+    expect(publicPageMigration).toContain('NEW.body_html_snapshot := NEW.body_html_snapshot');
+    expect(publicPageMigration).toContain('Mám zájem');
+    expect(publicPageMigration).toContain('Nemám zájem');
+    expect(publicPageMigration).toContain('background:#f97316');
+    expect(publicPageMigration).not.toMatch(/UPDATE public\.sales_lead_email_batch_items/i);
+    expect(publicPageMigration).not.toContain("v_edge_base || '/sales-lead-response'");
   });
 
   test('the token row is stored only after the immutable item exists', () => {
-    expect(fixMigration).toContain('CREATE TRIGGER trg_sales_lead_email_store_response_token');
-    expect(fixMigration).toContain('AFTER INSERT ON public.sales_lead_email_batch_items');
-    expect(fixMigration).toMatch(/INSERT INTO public\.sales_lead_email_response_tokens[\s\S]+NEW\.response_token_hash/);
-    expect(fixMigration).toContain('NEW.id');
-    expect(fixMigration).not.toContain('fbe779c0-5198-41b3-9370-0ae6337fb808');
+    expect(snapshotFixMigration).toContain('CREATE TRIGGER trg_sales_lead_email_store_response_token');
+    expect(snapshotFixMigration).toContain('AFTER INSERT ON public.sales_lead_email_batch_items');
+    expect(snapshotFixMigration).toMatch(/INSERT INTO public\.sales_lead_email_response_tokens[\s\S]+NEW\.response_token_hash/);
+    expect(snapshotFixMigration).toContain('NEW.id');
+    expect(responseMigrations).not.toContain('fbe779c0-5198-41b3-9370-0ae6337fb808');
   });
 
   test('the response-token hash is protected with the rest of the snapshot', () => {
-    expect(fixMigration).toContain('NEW.response_token_hash IS DISTINCT FROM OLD.response_token_hash');
-    expect(fixMigration).toContain("MESSAGE = 'sales_lead_email_batch_snapshot_immutable'");
-    expect(fixMigration).toContain('uq_sales_lead_email_batch_items_response_token_hash');
-    expect(fixMigration).toContain("response_token_hash ~ '^[0-9a-f]{64}$'");
+    expect(snapshotFixMigration).toContain('NEW.response_token_hash IS DISTINCT FROM OLD.response_token_hash');
+    expect(snapshotFixMigration).toContain("MESSAGE = 'sales_lead_email_batch_snapshot_immutable'");
+    expect(snapshotFixMigration).toContain('uq_sales_lead_email_batch_items_response_token_hash');
+    expect(snapshotFixMigration).toContain("response_token_hash ~ '^[0-9a-f]{64}$'");
   });
 
-  test('opening a link is read-only and cannot submit a decision', () => {
+  test('direct e-mail GET redirects to OneMil and JSON GET stays read-only', () => {
+    expect(getBranch).toContain('return redirectToPublicPage(req, token, action)');
+    expect(responseFunction).toContain('status: 302');
+    expect(responseFunction).toContain('PUBLIC_PAGE_URL');
     expect(getBranch).toContain('.select("status,expires_at")');
     expect(getBranch).not.toContain('.rpc(');
     expect(getBranch).not.toMatch(/\.insert\(|\.update\(|\.delete\(/);
     expect(responseFunction).toContain('GET is intentionally read-only');
     expect(responseFunction.indexOf('client.rpc("sales_lead_email_response_submit"'))
-      .toBeGreaterThan(responseFunction.indexOf('const body = await readForm(req)'));
+      .toBeGreaterThan(responseFunction.indexOf('const body = await readBody(req)'));
   });
 
-  test('interest requires a name and phone and becomes an unread high-priority reply', () => {
-    expect(responseFunction).toContain('Jméno a příjmení');
-    expect(responseFunction).toContain('Telefonní číslo');
-    expect(responseFunction).toContain('Odeslat kontakt');
+  test('the public page shows interest and decline flows', () => {
+    expect(publicPage).toContain('Děkujeme za projevený zájem');
+    expect(publicPage).toContain('Jméno a příjmení');
+    expect(publicPage).toContain('Telefonní číslo');
+    expect(publicPage).toContain('Odeslat kontakt');
+    expect(publicPage).toContain('Ano, nemám zájem');
+    expect(publicPage).toContain('Další obchodní nabídky vám již nebudeme zasílat');
+    expect(publicPage).toContain("url.searchParams.set('format', 'json')");
+    expect(publicPage).toContain("'Content-Type': 'application/x-www-form-urlencoded;charset=UTF-8'");
+  });
+
+  test('interest becomes an unread high-priority reply', () => {
     expect(initialMigration).toContain("v_action = 'interest'");
     expect(initialMigration).toContain('contact_person = v_name');
     expect(initialMigration).toContain('contact_phone = v_phone');
@@ -80,8 +93,6 @@ test.describe('104 — sales-lead e-mail response buttons', () => {
   });
 
   test('decline suppresses the address and blocks further outreach', () => {
-    expect(responseFunction).toContain('Ano, nemám zájem');
-    expect(responseFunction).toContain('Další obchodní nabídky vám již nebudeme zasílat');
     expect(initialMigration).toContain('do_not_contact = true');
     expect(initialMigration).toContain("status = 'nekontaktovat'");
     expect(initialMigration).toContain('INSERT INTO public.sales_lead_email_suppression');
@@ -97,12 +108,21 @@ test.describe('104 — sales-lead e-mail response buttons', () => {
     expect(initialMigration).toContain('FOR UPDATE');
   });
 
-  test('the public function is registered and does not send e-mail', () => {
+  test('the public page uses the original project logo and restricts connections', () => {
+    expect(publicPage).toContain('src="/onemil-logo.png"');
+    expect(publicPage).toContain('connect-src https://dxmowysntemfqfnanxua.supabase.co https://xkzhjldrojjlrkezorey.supabase.co');
+    expect(publicPage).toContain("const ALLOWED_PROJECTS = new Set");
+    expect(publicPage).toContain('noindex,nofollow,noarchive');
+  });
+
+  test('the Edge Function is JSON-only, CORS-limited, and never sends e-mail', () => {
     expect(config).toContain('[functions.sales-lead-response]');
     expect(config).toMatch(/\[functions\.sales-lead-response\]\s+verify_jwt = false/);
+    expect(responseFunction).toContain('ALLOWED_ORIGINS');
+    expect(responseFunction).toContain('Access-Control-Allow-Origin');
+    expect(responseFunction).toContain('application/json; charset=utf-8');
+    expect(responseFunction).not.toContain('text/html');
     expect(responseFunction).not.toMatch(/Resend|emails\.send|email_queue|net\.http/i);
     expect(responseMigrations).not.toMatch(/Resend|emails\.send|email_queue|net\.http/i);
-    expect(responseFunction).toContain("frame-ancestors 'none'");
-    expect(responseFunction).toContain('Cache-Control');
   });
 });
