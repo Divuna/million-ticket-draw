@@ -1,0 +1,275 @@
+<!doctype html>
+<html lang="cs">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta name="robots" content="noindex,nofollow,noarchive" />
+  <meta http-equiv="Content-Security-Policy" content="default-src 'none'; img-src 'self'; style-src 'unsafe-inline'; script-src 'unsafe-inline'; connect-src https://dxmowysntemfqfnanxua.supabase.co https://xkzhjldrojjlrkezorey.supabase.co; base-uri 'none'; form-action 'none'; frame-ancestors 'none'" />
+  <title>Odpověď na nabídku spolupráce | OneMil</title>
+  <style>
+    * { box-sizing: border-box; }
+    html { color-scheme: light; }
+    body {
+      margin: 0;
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 24px;
+      font-family: Inter, Arial, Helvetica, sans-serif;
+      color: #292524;
+      background:
+        radial-gradient(circle at top right, rgba(249,115,22,.14), transparent 34%),
+        linear-gradient(145deg, #fffdf8 0%, #f6f1e8 100%);
+    }
+    .shell { width: 100%; max-width: 560px; }
+    .logo-wrap { display: flex; justify-content: center; margin: 0 0 22px; }
+    .logo { display: block; width: min(230px, 70vw); height: auto; object-fit: contain; }
+    .card {
+      padding: 34px;
+      border: 1px solid #ebe5dc;
+      border-radius: 22px;
+      background: rgba(255,255,255,.97);
+      box-shadow: 0 22px 60px rgba(68,54,42,.12);
+    }
+    .icon {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      width: 52px;
+      height: 52px;
+      margin-bottom: 18px;
+      border-radius: 16px;
+      background: #fff1e8;
+      color: #ea580c;
+      font-size: 25px;
+      font-weight: 800;
+    }
+    h1 { margin: 0 0 12px; font-size: 27px; line-height: 1.2; letter-spacing: -.025em; }
+    p { margin: 0 0 18px; color: #57534e; font-size: 16px; line-height: 1.65; }
+    .field { margin-top: 18px; }
+    label { display: block; margin-bottom: 7px; font-size: 14px; font-weight: 700; color: #44403c; }
+    input {
+      width: 100%;
+      height: 49px;
+      padding: 0 14px;
+      border: 1px solid #d6d3d1;
+      border-radius: 11px;
+      background: #fff;
+      color: #292524;
+      font: inherit;
+      outline: none;
+    }
+    input:focus { border-color: #f97316; box-shadow: 0 0 0 3px rgba(249,115,22,.14); }
+    button {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      width: 100%;
+      min-height: 50px;
+      margin-top: 22px;
+      padding: 12px 18px;
+      border: 0;
+      border-radius: 11px;
+      background: #f97316;
+      color: #fff;
+      font: inherit;
+      font-weight: 800;
+      cursor: pointer;
+    }
+    button:hover { background: #ea580c; }
+    button.secondary { background: #fff; color: #44403c; border: 1px solid #d6d3d1; }
+    button.secondary:hover { background: #fafaf9; }
+    button:disabled { opacity: .65; cursor: wait; }
+    .note { margin-top: 18px; color: #78716c; font-size: 13px; line-height: 1.5; }
+    .error { padding: 12px 14px; border-radius: 10px; background: #fef2f2; color: #b91c1c; font-size: 14px; line-height: 1.5; }
+    .loading { text-align: center; color: #78716c; }
+    .spinner {
+      width: 34px;
+      height: 34px;
+      margin: 0 auto 16px;
+      border: 3px solid #fed7aa;
+      border-top-color: #f97316;
+      border-radius: 50%;
+      animation: spin .8s linear infinite;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+    @media (max-width: 520px) {
+      body { padding: 16px; align-items: flex-start; }
+      .shell { margin-top: 5vh; }
+      .card { padding: 25px 20px; border-radius: 18px; }
+      h1 { font-size: 23px; }
+    }
+  </style>
+</head>
+<body>
+  <main class="shell">
+    <div class="logo-wrap"><img class="logo" src="/onemil-logo.png" alt="OneMil" /></div>
+    <section class="card" id="card" aria-live="polite">
+      <div class="loading"><div class="spinner"></div>Načítám odpověď…</div>
+    </section>
+  </main>
+  <script>
+    (() => {
+      'use strict';
+
+      const ALLOWED_PROJECTS = new Set([
+        'dxmowysntemfqfnanxua',
+        'xkzhjldrojjlrkezorey',
+      ]);
+      const params = new URLSearchParams(window.location.search);
+      const token = (params.get('token') || '').trim().toLowerCase();
+      const action = (params.get('action') || '').trim().toLowerCase();
+      const project = (params.get('project') || '').trim().toLowerCase();
+      const card = document.getElementById('card');
+      const validToken = /^[0-9a-f]{64}$/.test(token);
+      const validAction = action === 'interest' || action === 'decline';
+      const validProject = ALLOWED_PROJECTS.has(project);
+      const apiUrl = validProject
+        ? `https://${project}.supabase.co/functions/v1/sales-lead-response`
+        : '';
+
+      const escapeHtml = (value) => String(value)
+        .replaceAll('&', '&amp;')
+        .replaceAll('<', '&lt;')
+        .replaceAll('>', '&gt;')
+        .replaceAll('"', '&quot;')
+        .replaceAll("'", '&#39;');
+
+      function showError(message) {
+        card.innerHTML = `
+          <div class="icon">!</div>
+          <h1>Odkaz nelze použít</h1>
+          <p>${escapeHtml(message)}</p>`;
+      }
+
+      function showSuccess(kind) {
+        if (kind === 'interest') {
+          card.innerHTML = `
+            <div class="icon">✓</div>
+            <h1>Děkujeme za projevený zájem</h1>
+            <p>Váš kontakt jsme přijali. Brzy se vám ozveme a společně probereme možnosti spolupráce.</p>`;
+          return;
+        }
+        card.innerHTML = `
+          <div class="icon">✓</div>
+          <h1>Děkujeme za odpověď</h1>
+          <p>Další obchodní nabídky vám již nebudeme zasílat a evidujeme, že nyní nemáte zájem o spolupráci.</p>`;
+      }
+
+      function showInterestForm() {
+        card.innerHTML = `
+          <div class="icon">✓</div>
+          <h1>Děkujeme za projevený zájem</h1>
+          <p>Vyplňte prosím své jméno a telefonní číslo. Ozveme se vám a společně probereme možnosti spolupráce.</p>
+          <div id="form-error"></div>
+          <form id="response-form" novalidate>
+            <div class="field">
+              <label for="name">Jméno a příjmení</label>
+              <input id="name" name="name" type="text" autocomplete="name" minlength="2" maxlength="120" required />
+            </div>
+            <div class="field">
+              <label for="phone">Telefonní číslo</label>
+              <input id="phone" name="phone" type="tel" autocomplete="tel" minlength="6" maxlength="40" required />
+            </div>
+            <button id="submit-button" type="submit">Odeslat kontakt</button>
+          </form>
+          <div class="note">Kontakt použijeme pouze k domluvě ohledně spolupráce s OneMil.</div>`;
+
+        document.getElementById('response-form').addEventListener('submit', async (event) => {
+          event.preventDefault();
+          const name = document.getElementById('name').value.trim();
+          const phone = document.getElementById('phone').value.trim();
+          const errorBox = document.getElementById('form-error');
+          if (name.length < 2 || phone.length < 6) {
+            errorBox.innerHTML = '<div class="error">Vyplňte prosím platné jméno a telefonní číslo.</div>';
+            return;
+          }
+          await submitResponse({ name, phone });
+        });
+      }
+
+      function showDeclineForm() {
+        card.innerHTML = `
+          <div class="icon">×</div>
+          <h1>Nemáte zájem o spolupráci?</h1>
+          <p>Po potvrzení vám nebudeme zasílat další obchodní nabídky OneMil a vaši odpověď uložíme k oslovené firmě.</p>
+          <button id="decline-button" class="secondary" type="button">Ano, nemám zájem</button>`;
+        document.getElementById('decline-button').addEventListener('click', () => submitResponse({}));
+      }
+
+      async function submitResponse(extra) {
+        const button = document.querySelector('button');
+        if (button) button.disabled = true;
+        try {
+          const body = new URLSearchParams({ token, action, ...extra });
+          const response = await fetch(apiUrl, {
+            method: 'POST',
+            headers: {
+              'Accept': 'application/json',
+              'Content-Type': 'application/x-www-form-urlencoded;charset=UTF-8',
+            },
+            body,
+          });
+          const result = await response.json().catch(() => ({}));
+          if (!response.ok || result.success !== true) {
+            if (result.error === 'invalid_name' || result.error === 'invalid_phone') {
+              showInterestForm();
+              document.getElementById('form-error').innerHTML = '<div class="error">Vyplňte prosím platné jméno a telefonní číslo.</div>';
+              return;
+            }
+            if (result.error === 'expired_token') {
+              showError('Platnost tohoto odkazu již vypršela.');
+              return;
+            }
+            if (result.error === 'response_already_recorded') {
+              showError('Tento odkaz už byl použit pro jinou odpověď.');
+              return;
+            }
+            throw new Error('submit_failed');
+          }
+          showSuccess(result.action || action);
+        } catch (_error) {
+          showError('Odpověď se nepodařilo uložit. Zkuste to prosím později.');
+        }
+      }
+
+      async function load() {
+        if (!validToken || !validAction || !validProject) {
+          showError('Odkaz je neplatný nebo neúplný.');
+          return;
+        }
+        try {
+          const url = new URL(apiUrl);
+          url.searchParams.set('token', token);
+          url.searchParams.set('action', action);
+          url.searchParams.set('format', 'json');
+          const response = await fetch(url, { headers: { 'Accept': 'application/json' } });
+          const result = await response.json().catch(() => ({}));
+          if (!response.ok || result.success !== true) {
+            if (result.error === 'expired_token') {
+              showError('Platnost tohoto odkazu již vypršela.');
+              return;
+            }
+            showError('Odkaz je neplatný nebo již není dostupný.');
+            return;
+          }
+          if (result.status === 'interested') {
+            showSuccess('interest');
+            return;
+          }
+          if (result.status === 'declined') {
+            showSuccess('decline');
+            return;
+          }
+          action === 'interest' ? showInterestForm() : showDeclineForm();
+        } catch (_error) {
+          showError('Stránku se nepodařilo načíst. Zkuste to prosím později.');
+        }
+      }
+
+      load();
+    })();
+  </script>
+</body>
+</html>
