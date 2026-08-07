@@ -15,8 +15,14 @@
 - **`_shared/salesLeadResponseCta.ts` je jediný zdroj pravdy pro markup CTA** a musí zůstat
   1:1 zrcadlem DB triggeru `sales_lead_email_prepare_response_links` — jinak se ruční a dávkový
   e-mail rozejdou. Hlídá spec 107.
-- **CTA se přidává PŘED renderem a uložením snapshotu** (ruční cesta staví `ctaBody` a ten jde
-  do `bodySource` i do renderu), aby preview == odeslaný e-mail.
+- **CTA se NIKDY nepouští přes obecný renderer.** `markdownLinksToVisibleText` převádí
+  `[popisek](url)` na holý `popisek` a **URL zahodí** — plaintext by přišel o odkazy a v HTML by
+  nevznikla tlačítka. Renderer dostane jen text od člověka a CTA se připojí **až za výsledek**:
+  `source = humanBody + cta.source`, `text = render(humanBody) + cta.text`,
+  `html = render(humanBody) + cta.html`. Skládá to sdílená `composeInitialEmailBodies()`;
+  **nevracet variantu, kde se `cta.source` renderuje** (byl to reálný bug opravený po preview).
+  Stejné pořadí render → append má i DB trigger dávkové cesty. Hlídá spec 108 (skutečný výstup
+  pipeline, ne jen builder).
 - **Obě tlačítka vždy na `https://onemil.cz/partner-response.html`. Nikdy mailto**, nikdy odpověď
   na `b2b@onemil.cz` (ta zůstává jen jako odesílatel/reply-to).
 - **Každý příjemce má vlastní token**; obě tlačítka jednoho e-mailu sdílejí tentýž token.

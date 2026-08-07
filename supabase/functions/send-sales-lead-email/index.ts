@@ -8,8 +8,10 @@ import { deliverSalesLeadInitialEmail } from "../_shared/salesLeadInitialEmailDe
 import {
   buildResponseCtaBlock,
   buildResponseCtaUrls,
+  composeInitialEmailBodies,
   isValidResponseToken,
   responseProjectRefFromUrl,
+  type ResponseCtaBlock,
 } from "../_shared/salesLeadResponseCta.ts";
 import {
   createResendInitialEmailProvider,
@@ -246,7 +248,7 @@ serve(async (req: Request) => {
     // VŽDY před vyrenderováním, takže uzamčený snapshot i skutečně odeslaný
     // e-mail obsahují totéž. Každý příjemce dostane vlastní token; odkazy míří
     // na veřejnou stránku, nikdy na mailto.
-    let ctaBody = textBody;
+    let cta: ResponseCtaBlock | null = null;
     if (!isReuse) {
       const projectRef = responseProjectRefFromUrl(Deno.env.get("SUPABASE_URL") ?? "");
       if (!projectRef) {
@@ -262,12 +264,20 @@ serve(async (req: Request) => {
         // Fail closed — raději neodeslat než poslat e-mail bez odpovědních tlačítek.
         return jsonResponse({ success: false, error: "response_links_unavailable" }, 500);
       }
-      const cta = buildResponseCtaBlock(buildResponseCtaUrls(projectRef, tokenResult.token));
-      ctaBody = `${textBody}${cta.source}`;
+      cta = buildResponseCtaBlock(buildResponseCtaUrls(projectRef, tokenResult.token));
     }
 
-    const renderedText = renderSalesLeadEmailText(ctaBody);
-    const renderedHtml = renderSalesLeadEmailHtml(ctaBody);
+    // Renderer dostane JEN text od člověka; CTA se připojí až za výsledek
+    // (`cta.text` / `cta.html`). Kdyby CTA prošlo rendererem jako markdown,
+    // plaintext by přišel o URL a v HTML by nevznikla tlačítka.
+    const composed = composeInitialEmailBodies(
+      textBody,
+      cta,
+      renderSalesLeadEmailText,
+      renderSalesLeadEmailHtml,
+    );
+    const renderedText = composed.text;
+    const renderedHtml = composed.html;
     const outboundCapture = createOutboundCapture();
 
     const resend = new Resend(resendApiKey);
@@ -280,7 +290,7 @@ serve(async (req: Request) => {
           performedBy: caller.id,
           recipient,
           subject,
-          bodySource: ctaBody,
+          bodySource: composed.source,
           bodyText: renderedText,
           bodyHtml: renderedHtml,
           attachmentMetadata: attachmentResult.metadata,

@@ -90,10 +90,14 @@ test.describe('107 — CTA prvního obchodního e-mailu', () => {
   });
 
   test('6) preview odpovídá uloženému snapshotu', () => {
-    // Ruční cesta renderuje TĚLO VČETNĚ CTA a stejné tělo ukládá do snapshotu.
-    expect(manualSender).toContain('const renderedText = renderSalesLeadEmailText(ctaBody)');
-    expect(manualSender).toContain('const renderedHtml = renderSalesLeadEmailHtml(ctaBody)');
-    expect(manualSender).toContain('bodySource: ctaBody');
+    // Ruční cesta skládá tělo přes sdílenou `composeInitialEmailBodies` a
+    // stejné tělo ukládá do snapshotu. CTA se NIKDY nepouští přes renderer —
+    // ten by markdown odkaz zploštil a URL zahodil (viz spec 108).
+    expect(manualSender).toContain('composeInitialEmailBodies');
+    expect(manualSender).toContain('const renderedText = composed.text');
+    expect(manualSender).toContain('const renderedHtml = composed.html');
+    expect(manualSender).toContain('bodySource: composed.source');
+    expect(manualSender).not.toContain('ctaBody');
     // Náhled používá tentýž builder jako odesílací cesta.
     expect(editor).toContain('buildResponseCtaBlock');
     expect(editor).toContain('sales-lead-email-preview-cta');
@@ -113,7 +117,7 @@ test.describe('107 — CTA prvního obchodního e-mailu', () => {
     expect(batchTrigger).toContain('border:1px solid #d6d3d1');
     expect(block.html).toContain('Vyberte prosím:');
     // CTA se přidává jen k prvnímu e-mailu, ne k reuse/forward.
-    expect(manualSender).toMatch(/let ctaBody = textBody;\s*\n\s*if \(!isReuse\) \{/);
+    expect(manualSender).toMatch(/let cta: ResponseCtaBlock \| null = null;\s*\n\s*if \(!isReuse\) \{/);
   });
 
   test('8) existující uzamčený snapshot se nezmění', () => {
@@ -154,9 +158,9 @@ test.describe('107 — CTA prvního obchodního e-mailu', () => {
     expect(manualSender).toContain('response_links_not_configured');
     expect(manualSender).toContain('response_links_unavailable');
     expect(manualSender).toContain('isValidResponseToken(tokenResult.token)');
-    // Guard je PŘED renderem i odesláním.
+    // Guard je PŘED složením těla i odesláním.
     expect(manualSender.indexOf('response_links_unavailable'))
-      .toBeLessThan(manualSender.indexOf('const renderedText = renderSalesLeadEmailText(ctaBody)'));
+      .toBeLessThan(manualSender.indexOf('const renderedText = composed.text'));
   });
 
   // ── Jediný podporovaný způsob odpovědi = CTA „Mám zájem“ / „Nemám zájem“ ──
