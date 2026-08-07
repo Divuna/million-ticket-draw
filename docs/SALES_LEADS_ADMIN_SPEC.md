@@ -1270,3 +1270,111 @@ obě cesty dávají funkčně shodný e-mail. `cta = null` (reuse/forward, follo
 
 Spec 108 ověřuje **skutečný výstup pipeline**, ne jen builder — spec 107 to nechytil, protože
 testoval `buildResponseCtaBlock()` a řetězce ve zdrojáku, ale ne výsledek renderování.
+
+## 26. Automatické zakládání discovery jobů (Draft; 07. 08. 2026)
+
+### 26.1 Zjištěný stav před opravou
+
+Discovery worker (`cron → run_sales_lead_discovery_worker() → sales-lead-discover`) je funkční,
+ale **sám nové firmy nehledal**. Rozhodující řádek:
+
+```sql
+IF (0 jobů ve stavu queued/running) THEN RETURN;
+```
+
+Frontu plnil výhradně člověk v administraci. Poslední job vznikl **23. 07. 2026**, takže cron od té
+doby dělal ~1440 prázdných běhů denně a za 24 h i 7 dní vytvořil **0 leadů**.
+
+### 26.2 Doplněný článek
+
+Přidán **pouze plánovač**. Architektura workeru, ověřování webu ani ukládání do Návrhů se nemění:
+
+```
+cron „sales_lead_discovery_scheduler_daily" (20 4 * * *)
+  └─ run_sales_lead_discovery_scheduler()
+       ├─ advisory lock (žádné souběžné spuštění)
+       ├─ IF existuje queued/running job → nevytvoří nic
+       ├─ sales_lead_pick_next_discovery_group()  → rotace kategorií
+       └─ INSERT 1 job (requested_count 5, max_candidates 80, auto_created = true)
+            ↓
+cron „sales_lead_discovery_worker_min" (* * * * *)  — BEZE ZMĚNY
+```
+
+**Frekvence:** 1 job denně, a jen když žádný neběží. Worker si ho pak po dávkách dotáhne.
+
+**Parametry 5 / 80** vycházejí z 13 historických jobů (`requested_count` 5–10, `max_candidates`
+vždy 80). Volena konzervativní varianta — pozdější běhy měly kvůli saturaci vyšší podíl duplicit.
+
+### 26.3 Rotace kategorií
+
+`sales_lead_pick_next_discovery_group()` vybírá **LRU nad skutečným číselníkem**
+`sales_lead_groups`: aktivní skupina, která se v discovery jobech používala nejdéle; nikdy použitá
+má přednost (`ORDER BY last_used ASC NULLS FIRST, sort_order, slug`). Nevymýšlí nové názvy.
+`jine` je vyloučena — je to catch-all pro klasifikaci, ne cílový segment.
+
+### 26.4 Rozšířená deduplikace
+
+`sales_lead_propose` (na kterou `_with_contact` deleguje, takže stačí jedno místo) nově blokuje:
+
+| Kontrola | Důvod |
+|---|---|
+| doména | `duplicate_domain` |
+| IČO | `duplicate_ico` |
+| **contact_email** | `duplicate_email` (nový parametr `p_contact_email`) |
+| **do_not_contact** | `do_not_contact` (podle domény, IČO i e-mailu) |
+| partner s IČO | `already_partner` |
+| doménová suppression | `suppressed_domain` |
+| **suppression přes přesný e-mail** | `suppressed_email` |
+
+**Klíčová oprava:** z kontrol IČO a domény zmizelo `status <> 'archivovan'`. Archivovaná firma
+(i dříve oslovená nebo odpovědělá) se tak už nemůže automaticky založit znovu.
+
+### 26.5 Dohled
+
+Nový sloupec `sales_lead_discovery_jobs.auto_created` odliší automatický job od ručního. Kdy vznikl,
+jakou měl kategorii, kolik kandidátů zpracoval, kolik uložil a kolik přeskočil jako duplicity už
+tabulka nese (`created_at`, `lead_group`, `candidates_checked`, `created_count`, `duplicates`,
+`finish_reason`). **Nový dashboard nevzniká.**
+
+### 26.5b Vlastník automatického jobu (validace `created_by`)
+
+`sales_leads.created_by` je NOT NULL a má FK na `auth.users` (ON DELETE RESTRICT);
+`sales_lead_discovery_jobs` ale FK **nemá**, takže jeho `created_by` může viset na smazaného
+uživatele. Takové UUID by shodilo **každý** insert leadu a job by spálil všech 80 kandidátů s 0
+uloženými leady — tiché selhání vypadající jako saturace kategorie.
+
+Proto `sales_lead_pick_discovery_owner()` vlastníka **vždy validuje**:
+
+- existuje v `auth.users`,
+- má aktuálně roli `admin` nebo `superadmin`,
+- projde kanonickou kontrolou `has_admin_permission('sales_leads.manage')`
+  (ta vrací true i pro superadmina).
+
+Autor posledního jobu je jen **preference uvnitř množiny vhodných uživatelů** (`ORDER BY`), ne
+samostatná větev — nevhodné UUID se tedy do výběru vůbec nedostane. Fallback je deterministický:
+superadmin, pak nejstarší admin. Bez vhodného vlastníka se job **nezaloží**
+(`no_owner_available`) — bez výjimky a bez částečného zápisu. Nezakládá se žádný systémový účet
+a nemění se role ani auth uživatelé.
+
+Ověřeno read-only proti produkčním datům: platný vlastník se použije; neexistující UUID
+i uživatel bez admin role se **nepoužijí** a spadnou na superadmina.
+
+**Pravidlo (neměnit):** nikdy nebrat `created_by` ze starého jobu bez revalidace.
+
+Pojistka: `sales_lead_propose` nově zachytává i `foreign_key_violation` a vrací `invalid_owner`
+místo neodchycené výjimky, takže neplatný vlastník je čitelný místo tiché ztráty celé dávky.
+
+### 26.6 Bezpečnost
+
+Cron příkaz je jen `SELECT public.run_sales_lead_discovery_scheduler();` — **žádný secret**; token
+i URL čte až worker z Vaultu. Obě funkce jsou `SECURITY DEFINER` se `search_path = ''`, execute jen
+`service_role`, bez `anon`/`authenticated`. Plánovač **nevolá Resend, nevytváří e-mailovou dávku,
+nezapíná automatiku, nemění stavy leadů ani nenastavuje `osloveno`** — jeho jediný výstup je jeden
+řádek ve frontě jobů. Nové firmy končí výhradně v `navrzeny`.
+
+### 26.7 Stav
+
+Draft. Migrace `20260807120000_sales_lead_discovery_scheduler.sql` **není aplikovaná** na staging
+ani produkci, cron tedy zatím neexistuje. Rotace ověřena read-only proti produkčním datům: prvních
+5 voleb jsou nikdy nepoužité kategorie (`auto-moto`, `luxusni-zbozi`, `cestovani`, `gastronomie`,
+`lokalni-sluzby`), teprve pak nejstarší `sport`.
