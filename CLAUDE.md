@@ -19,8 +19,14 @@ firmy nehledal** — `run_sales_lead_discovery_worker()` má na začátku
 - **Rotace kategorií je LRU nad `sales_lead_groups`** (nikdy použitá první), `jine` vyloučena.
   **Nevymýšlet nové názvy kategorií** — číselník je zdroj pravdy.
 - **Parametry 5 / 80** vycházejí z historických jobů; nezvyšovat bez důvodu (šetří OpenAI/web search).
-- **`created_by` je povinné** — `sales_leads.created_by` je NOT NULL, takže bez vlastníka se job
-  vědomě nezaloží (`no_owner_available`). Nevracet NULL.
+- **`created_by` se VŽDY validuje** přes `sales_lead_pick_discovery_owner()`: uživatel musí
+  existovat v `auth.users`, mít roli `admin`/`superadmin` a projít
+  `has_admin_permission('sales_leads.manage')`. Autor posledního jobu je jen **preference uvnitř
+  množiny vhodných** (ORDER BY), ne samostatná větev — **nikdy nebrat UUID ze starého jobu bez
+  revalidace**. `sales_lead_discovery_jobs` nemá FK, takže zavěšené UUID by shodilo každý insert
+  leadu (`sales_leads.created_by` FK ON DELETE RESTRICT) a job by spálil 80 kandidátů s 0 leady.
+  Bez vhodného vlastníka se job vědomě nezaloží (`no_owner_available`), bez výjimky.
+- `sales_lead_propose` zachytává i `foreign_key_violation` → `invalid_owner` (ne tichá výjimka).
 - **Plánovač nesmí:** volat Resend, vytvářet e-mailovou dávku, zapínat automatiku, měnit stavy
   leadů ani nastavovat `osloveno`. Jediný výstup = jeden řádek ve frontě jobů.
 - **Deduplikace v `sales_lead_propose`** (na kterou `_with_contact` deleguje) blokuje doménu, IČO,

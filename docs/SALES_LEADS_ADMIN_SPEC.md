@@ -1336,6 +1336,34 @@ jakou měl kategorii, kolik kandidátů zpracoval, kolik uložil a kolik přesko
 tabulka nese (`created_at`, `lead_group`, `candidates_checked`, `created_count`, `duplicates`,
 `finish_reason`). **Nový dashboard nevzniká.**
 
+### 26.5b Vlastník automatického jobu (validace `created_by`)
+
+`sales_leads.created_by` je NOT NULL a má FK na `auth.users` (ON DELETE RESTRICT);
+`sales_lead_discovery_jobs` ale FK **nemá**, takže jeho `created_by` může viset na smazaného
+uživatele. Takové UUID by shodilo **každý** insert leadu a job by spálil všech 80 kandidátů s 0
+uloženými leady — tiché selhání vypadající jako saturace kategorie.
+
+Proto `sales_lead_pick_discovery_owner()` vlastníka **vždy validuje**:
+
+- existuje v `auth.users`,
+- má aktuálně roli `admin` nebo `superadmin`,
+- projde kanonickou kontrolou `has_admin_permission('sales_leads.manage')`
+  (ta vrací true i pro superadmina).
+
+Autor posledního jobu je jen **preference uvnitř množiny vhodných uživatelů** (`ORDER BY`), ne
+samostatná větev — nevhodné UUID se tedy do výběru vůbec nedostane. Fallback je deterministický:
+superadmin, pak nejstarší admin. Bez vhodného vlastníka se job **nezaloží**
+(`no_owner_available`) — bez výjimky a bez částečného zápisu. Nezakládá se žádný systémový účet
+a nemění se role ani auth uživatelé.
+
+Ověřeno read-only proti produkčním datům: platný vlastník se použije; neexistující UUID
+i uživatel bez admin role se **nepoužijí** a spadnou na superadmina.
+
+**Pravidlo (neměnit):** nikdy nebrat `created_by` ze starého jobu bez revalidace.
+
+Pojistka: `sales_lead_propose` nově zachytává i `foreign_key_violation` a vrací `invalid_owner`
+místo neodchycené výjimky, takže neplatný vlastník je čitelný místo tiché ztráty celé dávky.
+
 ### 26.6 Bezpečnost
 
 Cron příkaz je jen `SELECT public.run_sales_lead_discovery_scheduler();` — **žádný secret**; token

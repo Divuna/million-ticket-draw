@@ -70,6 +70,65 @@ REVOKE ALL ON FUNCTION public.sales_lead_pick_next_discovery_group()
 GRANT EXECUTE ON FUNCTION public.sales_lead_pick_next_discovery_group()
   TO service_role;
 
+-- ── 2b. Vlastník automatického jobu ─────────────────────────────────────────
+-- `sales_leads.created_by` má FK na `auth.users` (ON DELETE RESTRICT) a je
+-- NOT NULL. `sales_lead_discovery_jobs` ale FK NEMÁ, takže jeho `created_by`
+-- může „viset" na smazaného uživatele. Kdyby takové UUID prošlo do jobu,
+-- každý `sales_lead_propose` by skončil foreign_key_violation a job by spálil
+-- všech 80 kandidátů s 0 uloženými leady — tiché selhání vypadající jako
+-- saturace kategorie.
+--
+-- Proto se vlastník VŽDY validuje:
+--   • existuje v auth.users,
+--   • má aktuálně roli admin nebo superadmin,
+--   • projde kanonickou kontrolou has_admin_permission('sales_leads.manage')
+--     (ta vrací true i pro superadmina).
+--
+-- Pořadí: autor posledního discovery jobu, pokud je stále vhodný; jinak
+-- deterministicky superadmin, pak nejstarší admin. Nezakládá žádný systémový
+-- účet a nemění role ani auth uživatele.
+CREATE OR REPLACE FUNCTION public.sales_lead_pick_discovery_owner()
+RETURNS uuid
+LANGUAGE sql
+STABLE
+SECURITY DEFINER
+SET search_path = ''
+AS $$
+  WITH eligible AS (
+    SELECT DISTINCT ON (u.id)
+      u.id,
+      u.created_at,
+      (r.role::text = 'superadmin') AS is_superadmin
+    FROM auth.users u
+    JOIN public.user_roles r ON r.user_id = u.id
+    WHERE r.role::text IN ('admin', 'superadmin')
+      AND public.has_admin_permission('sales_leads.manage', u.id)
+    ORDER BY u.id, (r.role::text = 'superadmin') DESC
+  ),
+  last_owner AS (
+    SELECT j.created_by AS id
+    FROM public.sales_lead_discovery_jobs j
+    WHERE j.created_by IS NOT NULL
+    ORDER BY j.created_at DESC
+    LIMIT 1
+  )
+  SELECT e.id
+  FROM eligible e
+  ORDER BY
+    -- 1) autor posledního jobu, ale JEN když je stále vhodný
+    (e.id = (SELECT id FROM last_owner)) DESC,
+    -- 2) jinak deterministicky: superadmin, pak nejstarší účet
+    e.is_superadmin DESC,
+    e.created_at ASC,
+    e.id ASC
+  LIMIT 1;
+$$;
+
+REVOKE ALL ON FUNCTION public.sales_lead_pick_discovery_owner()
+  FROM PUBLIC, anon, authenticated;
+GRANT EXECUTE ON FUNCTION public.sales_lead_pick_discovery_owner()
+  TO service_role;
+
 -- ── 3. Plánovač ─────────────────────────────────────────────────────────────
 -- JEDINÝ účel: založit discovery job. Nic neodesílá, nevytváří e-mailovou
 -- dávku, nezapíná automatiku, nemění stavy leadů.
@@ -114,22 +173,13 @@ BEGIN
     RETURN jsonb_build_object('success', true, 'created', false, 'reason', 'no_active_group');
   END IF;
 
-  SELECT j.created_by INTO v_created_by
-  FROM public.sales_lead_discovery_jobs j
-  WHERE j.created_by IS NOT NULL
-  ORDER BY j.created_at DESC
-  LIMIT 1;
+  -- Vlastník se vždy validuje (existuje + admin/superadmin + sales_leads.manage).
+  -- Nikdy se nepoužije UUID jen proto, že bylo na starém jobu.
+  v_created_by := public.sales_lead_pick_discovery_owner();
 
   IF v_created_by IS NULL THEN
-    SELECT r.user_id INTO v_created_by
-    FROM public.user_roles r
-    WHERE r.role::text = 'superadmin'
-    ORDER BY r.user_id
-    LIMIT 1;
-  END IF;
-
-  IF v_created_by IS NULL THEN
-    -- sales_leads.created_by je NOT NULL — bez autora by worker neuložil nic.
+    -- sales_leads.created_by je NOT NULL — bez platného vlastníka by worker
+    -- neuložil nic. Fail closed: žádný job, žádný částečný zápis, bez výjimky.
     RETURN jsonb_build_object('success', true, 'created', false, 'reason', 'no_owner_available');
   END IF;
 
@@ -144,6 +194,7 @@ BEGIN
     'created', true,
     'job_id', v_job_id,
     'lead_group', v_group,
+    'created_by', v_created_by,
     'requested_count', 5,
     'max_candidates', 80
   );
@@ -302,6 +353,11 @@ BEGIN
       RETURN jsonb_build_object('success', true, 'outcome', 'skipped', 'reason', 'duplicate');
     WHEN check_violation THEN
       RETURN jsonb_build_object('success', false, 'outcome', 'error', 'reason', 'invalid_input');
+    WHEN foreign_key_violation THEN
+      -- Typicky neplatný `created_by` (FK na auth.users). Dřív to byla
+      -- neodchycená výjimka, kterou worker jen zalogoval — job pak spálil
+      -- všechny kandidáty s 0 uloženými leady. Nově vrátí čitelný důvod.
+      RETURN jsonb_build_object('success', false, 'outcome', 'error', 'reason', 'invalid_owner');
   END;
 
   INSERT INTO public.sales_lead_activities

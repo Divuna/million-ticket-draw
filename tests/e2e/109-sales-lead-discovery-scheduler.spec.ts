@@ -22,6 +22,11 @@ const rotationFn = sql.slice(
   sql.indexOf('CREATE OR REPLACE FUNCTION public.sales_lead_pick_next_discovery_group'),
   sql.indexOf('REVOKE ALL ON FUNCTION public.sales_lead_pick_next_discovery_group'),
 );
+/** Tělo výběru vlastníka automatického jobu. */
+const ownerFn = sql.slice(
+  sql.indexOf('CREATE OR REPLACE FUNCTION public.sales_lead_pick_discovery_owner'),
+  sql.indexOf('REVOKE ALL ON FUNCTION public.sales_lead_pick_discovery_owner'),
+);
 
 test.describe('109 — automatické zakládání discovery jobů', () => {
   test('1) žádný aktivní job → plánovač založí právě 1 job', () => {
@@ -165,6 +170,90 @@ test.describe('109 — automatické zakládání discovery jobů', () => {
     expect(schedulerFn).toContain('v_group, 5, 80');
     // created_by je povinné — bez vlastníka se job vědomě nezaloží.
     expect(schedulerFn).toContain("'no_owner_available'");
-    expect(schedulerFn).toContain("r.role::text = 'superadmin'");
+  });
+});
+
+// ── Validace vlastníka automatického jobu ────────────────────────────────────
+// `sales_lead_discovery_jobs` nemá FK, takže jeho `created_by` může „viset" na
+// smazaného uživatele. `sales_leads.created_by` FK má (ON DELETE RESTRICT),
+// takže neplatný vlastník by shodil KAŽDÝ insert leadu.
+test.describe('109b — created_by automatického discovery jobu', () => {
+  test('O1) vlastník se vybírá jen z existujících adminů se sales oprávněním', () => {
+    expect(ownerFn).toContain('FROM auth.users u');
+    expect(ownerFn).toContain('JOIN public.user_roles r ON r.user_id = u.id');
+    expect(ownerFn).toContain("r.role::text IN ('admin', 'superadmin')");
+    expect(ownerFn).toContain("public.has_admin_permission('sales_leads.manage', u.id)");
+  });
+
+  test('O2) autor posledního jobu se použije JEN když je stále vhodný', () => {
+    // Poslední vlastník je pouhé řazení NAD množinou vhodných uživatelů,
+    // takže nevhodné UUID se do výběru vůbec nedostane.
+    expect(ownerFn).toContain('SELECT e.id\n  FROM eligible e');
+    expect(ownerFn).toContain('(e.id = (SELECT id FROM last_owner)) DESC');
+    // Není zde žádná větev, která by last_owner vzala bez ověření.
+    expect(ownerFn).not.toMatch(/SELECT j\.created_by INTO/);
+  });
+
+  test('O3) neexistující ani demotovaný uživatel se nepoužije', () => {
+    // Ověřeno read-only proti produkčním datům (scénáře B a C):
+    //   neexistující UUID  → fallback na superadmina
+    //   uživatel bez role  → fallback na superadmina
+    // Strukturálně to zajišťuje ORDER BY nad `eligible`, ne WHERE na last_owner.
+    const eligibleBlock = ownerFn.slice(ownerFn.indexOf('WITH eligible AS'), ownerFn.indexOf('last_owner AS'));
+    expect(eligibleBlock).toContain('FROM auth.users u');
+    expect(eligibleBlock).toContain('has_admin_permission');
+    // last_owner sám o sobě nefiltruje — jen upřednostňuje.
+    const lastOwnerBlock = ownerFn.slice(ownerFn.indexOf('last_owner AS'), ownerFn.indexOf('SELECT e.id'));
+    expect(lastOwnerBlock).not.toContain('auth.users');
+  });
+
+  test('O4) fallback je deterministický (superadmin, pak nejstarší admin)', () => {
+    expect(ownerFn).toContain('e.is_superadmin DESC');
+    expect(ownerFn).toContain('e.created_at ASC');
+    expect(ownerFn).toContain('e.id ASC');
+    expect(ownerFn).toContain('LIMIT 1');
+  });
+
+  test('O5) žádný vhodný admin → no_owner_available, 0 jobů, bez výjimky', () => {
+    // Prázdná množina `eligible` → SELECT ... LIMIT 1 vrátí NULL (ne chybu).
+    expect(schedulerFn).toContain('v_created_by := public.sales_lead_pick_discovery_owner();');
+    expect(schedulerFn).toMatch(
+      /IF v_created_by IS NULL THEN[\s\S]{0,400}'created', false, 'reason', 'no_owner_available'/,
+    );
+    // Guard je PŘED insertem → žádný částečný zápis.
+    expect(schedulerFn.indexOf('no_owner_available'))
+      .toBeLessThan(schedulerFn.indexOf('INSERT INTO public.sales_lead_discovery_jobs'));
+    expect(ownerFn).not.toMatch(/RAISE\s+EXCEPTION/i);
+  });
+
+  test('O6) job nikdy nevznikne s neplatným created_by', () => {
+    // Jediný zdroj created_by je validovaná funkce.
+    expect(schedulerFn).not.toMatch(/created_by\s+INTO\s+v_created_by/i);
+    expect(schedulerFn.match(/v_created_by :=/g) ?? []).toHaveLength(1);
+    // A i kdyby se FK přesto porušilo, propose vrátí čitelný důvod místo výjimky.
+    expect(proposeFn).toContain('WHEN foreign_key_violation THEN');
+    expect(proposeFn).toContain("'invalid_owner'");
+  });
+
+  test('O7) nezakládá systémový účet ani nemění role', () => {
+    for (const fn of [ownerFn, schedulerFn]) {
+      expect(fn).not.toMatch(/INSERT INTO auth\.users|UPDATE auth\.users|DELETE FROM auth\.users/i);
+      expect(fn).not.toMatch(/INSERT INTO public\.user_roles|UPDATE public\.user_roles/i);
+      expect(fn).not.toMatch(/INSERT INTO public\.admin_permissions/i);
+    }
+    // Výběr je jen pro čtení.
+    expect(ownerFn).toContain('LANGUAGE sql');
+    expect(ownerFn).toContain('STABLE');
+  });
+
+  test('O8) výběr vlastníka má správná oprávnění a search_path', () => {
+    expect(ownerFn).toContain('SECURITY DEFINER');
+    expect(ownerFn).toContain("SET search_path = ''");
+    expect(sql).toContain('REVOKE ALL ON FUNCTION public.sales_lead_pick_discovery_owner()\n  FROM PUBLIC, anon, authenticated');
+    expect(sql).toContain('GRANT EXECUTE ON FUNCTION public.sales_lead_pick_discovery_owner()\n  TO service_role');
+  });
+
+  test('O9) vlastník je dohledatelný v návratové hodnotě', () => {
+    expect(schedulerFn).toContain("'created_by', v_created_by");
   });
 });
