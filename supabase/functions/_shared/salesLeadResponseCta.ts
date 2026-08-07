@@ -88,3 +88,41 @@ export function buildResponseCtaBlock({ interestUrl, declineUrl }: ResponseCtaUr
  * token vznikne až při odeslání a je pro každého příjemce jiný.
  */
 export const PREVIEW_RESPONSE_TOKEN = "0".repeat(64);
+
+/** Tři podoby těla e-mailu ukládané do snapshotu i odesílané příjemci. */
+export type ComposedEmailBodies = {
+  /** Markdown zdroj (body_source_snapshot). */
+  source: string;
+  /** Plaintextová MIME alternativa (body_text_snapshot). */
+  text: string;
+  /** HTML verze (body_html_snapshot). */
+  html: string;
+};
+
+/**
+ * Složí finální tělo prvního obchodního e-mailu.
+ *
+ * KRITICKÉ: CTA se připojuje AŽ ZA vyrenderovaný text člověka, nikdy se
+ * nepouští přes obecný renderer. `renderSalesLeadEmailText` totiž převádí
+ * `[popisek](url)` na holý `popisek` a URL zahazuje — CTA by tak v plaintextu
+ * přišlo o odkaz a v HTML by místo tlačítek vznikly obyčejné odkazy.
+ * Proto se používá `cta.text` a `cta.html`, ne `cta.source`.
+ *
+ * Stejné pořadí (render → append) používá i DB trigger dávkové cesty
+ * `sales_lead_email_prepare_response_links`, takže obě cesty dávají shodný
+ * výsledek. Hlídá to spec 108.
+ *
+ * `cta = null` (reuse/forward, follow-up) → tělo zůstane beze změny.
+ */
+export function composeInitialEmailBodies(
+  humanBody: string,
+  cta: ResponseCtaBlock | null,
+  renderText: (value: string) => string,
+  renderHtml: (value: string) => string,
+): ComposedEmailBodies {
+  return {
+    source: `${humanBody}${cta?.source ?? ""}`,
+    text: `${renderText(humanBody)}${cta?.text ?? ""}`,
+    html: `${renderHtml(humanBody)}${cta?.html ?? ""}`,
+  };
+}

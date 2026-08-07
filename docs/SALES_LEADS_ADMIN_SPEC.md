@@ -1245,3 +1245,28 @@ e-mail nesl **dvě konkurenční cesty odhlášení**, proto byl tento mechanism
   `_shared/salesLeadResponseCta.ts` (ruční cesta) nebo z DB triggeru (dávková cesta).
 - `opt_out_sentence_missing` se **nesmí vrátit** — AI výstup se kvůli chybějící odhlašovací větě
   už neodmítá.
+
+### 25.6 Skládání těla ručního e-mailu (oprava po preview na stagingu)
+
+Ruční cesta původně připojila `cta.source` (markdown) k tělu a celek pustila přes obecný renderer.
+`markdownLinksToVisibleText` ale převádí `[popisek](url)` na holý `popisek` a **URL zahodí**:
+
+- plaintext přišel o odkazy úplně — příjemce neměl jak odpovědět,
+- HTML mělo obyčejné odkazy místo tlačítek,
+- ruční a dávková cesta se tím rozešly.
+
+**Pravidlo (neměnit):** CTA se **nikdy** nepouští přes obecný renderer. Renderer dostane výhradně
+text od člověka a CTA se připojí **až za výsledek**, ve správné podobě pro každou verzi:
+
+| Verze | Skládá se jako |
+|---|---|
+| `body_source_snapshot` | `humanBody + cta.source` (markdown) |
+| `body_text_snapshot` | `renderSalesLeadEmailText(humanBody) + cta.text` |
+| `body_html_snapshot` | `renderSalesLeadEmailHtml(humanBody) + cta.html` |
+
+Zajišťuje to sdílená `composeInitialEmailBodies()` v `_shared/salesLeadResponseCta.ts`, kterou volá
+`send-sales-lead-email`. Stejné pořadí (render → append) používá i DB trigger dávkové cesty, takže
+obě cesty dávají funkčně shodný e-mail. `cta = null` (reuse/forward, follow-up) → tělo beze změny.
+
+Spec 108 ověřuje **skutečný výstup pipeline**, ne jen builder — spec 107 to nechytil, protože
+testoval `buildResponseCtaBlock()` a řetězce ve zdrojáku, ale ne výsledek renderování.
