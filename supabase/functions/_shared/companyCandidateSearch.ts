@@ -126,7 +126,12 @@ async function searchDdg(query: string): Promise<string[]> {
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), DDG_TIMEOUT_MS);
   try {
-    const res = await fetch(url, { headers: { "User-Agent": BROWSER_UA, "Accept-Language": "cs,en;q=0.8" } });
+    // signal MUSÍ jít do fetch, jinak se DDG_TIMEOUT_MS nevynutí a viselo by to
+    // až do wall-clock limitu celé funkce. Abort skončí v catch → prázdný výsledek.
+    const res = await fetch(url, {
+      headers: { "User-Agent": BROWSER_UA, "Accept-Language": "cs,en;q=0.8" },
+      signal: controller.signal,
+    });
     if (!res.ok) { logSearch("ddg_http_error", { query, status: res.status }); return []; }
     const html = await res.text();
     const urls = parseDdg(html);
@@ -148,26 +153,76 @@ export function buildQueriesForRound(leadGroup: string, round: number): string[]
   return [`${term} ${city}`, `${term} Česká republika`];
 }
 
+/** Důvod spuštění DDG fallbacku v rámci jedné dávky. */
+export type CandidateFallbackReason =
+  | "openai_empty"
+  | "openai_no_usable_candidates"
+  | "none";
+
+/** Bezpečná diagnostika dávky — jen počty a důvod, nikdy klíče ani tokeny. */
+export interface CandidateSearchDiagnostics {
+  openai_raw_count: number;
+  openai_usable_count: number;
+  ddg_raw_count: number;
+  ddg_usable_count: number;
+  final_candidate_count: number;
+  /** Důvod posledního fallbacku v dávce; "none" = DDG se nevolalo. */
+  fallback_reason: CandidateFallbackReason;
+}
+
+export interface CandidateSearchResult {
+  urls: string[];
+  diagnostics: CandidateSearchDiagnostics;
+}
+
+/**
+ * Normalizace jedné dávky syrových URL na homepage kandidáty: odfiltruje
+ * katalogy/sítě/zpravodajství a nevalidní URL, dedupe podle registrovatelné
+ * domény uvnitř dávky. „Použitelný kandidát" = to, co projde touto funkcí.
+ */
+function normalizeCandidates(rawUrls: string[]): string[] {
+  const out: string[] = [];
+  const seenInBatch = new Set<string>();
+  for (const raw of rawUrls) {
+    const host = safeHost(raw);
+    if (!host || isNonOfficialWebsiteUrl(raw)) continue;
+    const home = toHomepage(raw);
+    if (!home) continue;
+    const key = host.replace(/^www\./, "");
+    if (seenInBatch.has(key)) continue;
+    seenInBatch.add(key);
+    out.push(home);
+  }
+  return out;
+}
+
 /**
  * Vygeneruje dávku kandidátních homepage URL pro segment + kolo. Nejdřív
- * OpenAI web search (hlavní zdroj), při prázdném výsledku DDG fallback.
- * Odfiltruje katalogy/sítě/zpravodajství. Dedupe podle domény.
+ * OpenAI web search (hlavní zdroj); DDG fallback se spustí, když OpenAI
+ * nedodá POUŽITELNÉ kandidáty — tedy i tehdy, když nějaká URL vrátí, ale
+ * všechny odpadnou na normalizaci/deny-listu. Dedupe napříč oběma zdroji.
  */
-export async function generateCandidateUrls(input: {
+export async function generateCandidateUrlsWithDiagnostics(input: {
   leadGroup: string;
   round: number;
   openaiKey?: string;
-}): Promise<string[]> {
+}): Promise<CandidateSearchResult> {
   const queries = buildQueriesForRound(input.leadGroup, input.round);
   const seen = new Set<string>();
   const out: string[] = [];
+  const diagnostics: CandidateSearchDiagnostics = {
+    openai_raw_count: 0,
+    openai_usable_count: 0,
+    ddg_raw_count: 0,
+    ddg_usable_count: 0,
+    final_candidate_count: 0,
+    fallback_reason: "none",
+  };
 
-  const collect = (rawUrls: string[]) => {
-    for (const raw of rawUrls) {
-      const host = safeHost(raw);
-      if (!host || isNonOfficialWebsiteUrl(raw)) continue;
-      const home = toHomepage(raw);
-      if (!home) continue;
+  const append = (candidates: string[]) => {
+    for (const home of candidates) {
+      const host = safeHost(home);
+      if (!host) continue;
       const key = host.replace(/^www\./, "");
       if (seen.has(key)) continue;
       seen.add(key);
@@ -176,12 +231,36 @@ export async function generateCandidateUrls(input: {
   };
 
   for (const query of queries) {
-    let urls: string[] = [];
-    if (input.openaiKey) urls = await searchOpenAi(query, input.openaiKey);
-    if (urls.length === 0) urls = await searchDdg(query);
-    collect(urls);
+    const openaiRaw = input.openaiKey ? await searchOpenAi(query, input.openaiKey) : [];
+    const openaiUsable = normalizeCandidates(openaiRaw);
+    diagnostics.openai_raw_count += openaiRaw.length;
+    diagnostics.openai_usable_count += openaiUsable.length;
+    append(openaiUsable);
+
+    // Fallback řídí POUŽITELNOST, ne holý počet vrácených URL.
+    if (openaiUsable.length === 0) {
+      diagnostics.fallback_reason = openaiRaw.length === 0
+        ? "openai_empty"
+        : "openai_no_usable_candidates";
+      const ddgRaw = await searchDdg(query);
+      const ddgUsable = normalizeCandidates(ddgRaw);
+      diagnostics.ddg_raw_count += ddgRaw.length;
+      diagnostics.ddg_usable_count += ddgUsable.length;
+      append(ddgUsable);
+    }
   }
 
-  logSearch("batch", { leadGroup: input.leadGroup, round: input.round, candidates: out.length });
-  return out;
+  diagnostics.final_candidate_count = out.length;
+  logSearch("batch", { leadGroup: input.leadGroup, round: input.round, ...diagnostics });
+  return { urls: out, diagnostics };
+}
+
+/** Zpětně kompatibilní obal — worker konzumuje jen seznam URL. */
+export async function generateCandidateUrls(input: {
+  leadGroup: string;
+  round: number;
+  openaiKey?: string;
+}): Promise<string[]> {
+  const { urls } = await generateCandidateUrlsWithDiagnostics(input);
+  return urls;
 }
