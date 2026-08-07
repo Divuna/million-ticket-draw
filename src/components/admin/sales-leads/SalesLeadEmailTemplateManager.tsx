@@ -143,6 +143,7 @@ export function SalesLeadEmailTemplateManager({ open, onOpenChange }: { open: bo
                   value={form.body}
                   onChange={(body) => setForm((value) => ({ ...value, body }))}
                   placeholder="Napište obsah e-mailu a zvýrazněte důležité části."
+                  showResponseCta={form.template_type === 'initial'}
                 />
                 <p className="text-xs text-muted-foreground">Formátování se uloží přímo do šablony a použije se při odeslání. Emoji můžete vložit tlačítky nebo běžně z klávesnice.</p>
               </div>

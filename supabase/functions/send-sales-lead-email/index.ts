@@ -6,6 +6,12 @@ import { createOutboundCapture } from "../_shared/salesLeadEmailThreading.ts";
 import { parseSalesLeadEmailAttachments } from "../_shared/salesLeadEmailAttachments.ts";
 import { deliverSalesLeadInitialEmail } from "../_shared/salesLeadInitialEmailDelivery.ts";
 import {
+  buildResponseCtaBlock,
+  buildResponseCtaUrls,
+  isValidResponseToken,
+  responseProjectRefFromUrl,
+} from "../_shared/salesLeadResponseCta.ts";
+import {
   createResendInitialEmailProvider,
   SALES_LEAD_INITIAL_EMAIL_FROM,
   SALES_LEAD_INITIAL_EMAIL_REPLY_TO,
@@ -235,8 +241,33 @@ serve(async (req: Request) => {
       return jsonResponse({ success: false, error: "email_not_configured" }, 503);
     }
 
-    const renderedText = renderSalesLeadEmailText(textBody);
-    const renderedHtml = renderSalesLeadEmailHtml(textBody);
+    // ── CTA „Mám zájem“ / „Nemám zájem“ ──────────────────────────────────────
+    // Přidává se POUZE k prvnímu obchodnímu e-mailu (ne k reuse/forward) a
+    // VŽDY před vyrenderováním, takže uzamčený snapshot i skutečně odeslaný
+    // e-mail obsahují totéž. Každý příjemce dostane vlastní token; odkazy míří
+    // na veřejnou stránku, nikdy na mailto.
+    let ctaBody = textBody;
+    if (!isReuse) {
+      const projectRef = responseProjectRefFromUrl(Deno.env.get("SUPABASE_URL") ?? "");
+      if (!projectRef) {
+        return jsonResponse({ success: false, error: "response_links_not_configured" }, 503);
+      }
+      const { data: tokenData, error: tokenError } = await supabaseAdmin.rpc(
+        "sales_lead_issue_manual_response_token",
+        { p_lead_id: leadId, p_recipient: recipient },
+      );
+      const tokenResult = (tokenData ?? {}) as { success?: boolean; token?: string };
+      if (tokenError || tokenResult.success !== true || !tokenResult.token
+        || !isValidResponseToken(tokenResult.token)) {
+        // Fail closed — raději neodeslat než poslat e-mail bez odpovědních tlačítek.
+        return jsonResponse({ success: false, error: "response_links_unavailable" }, 500);
+      }
+      const cta = buildResponseCtaBlock(buildResponseCtaUrls(projectRef, tokenResult.token));
+      ctaBody = `${textBody}${cta.source}`;
+    }
+
+    const renderedText = renderSalesLeadEmailText(ctaBody);
+    const renderedHtml = renderSalesLeadEmailHtml(ctaBody);
     const outboundCapture = createOutboundCapture();
 
     const resend = new Resend(resendApiKey);
@@ -249,7 +280,7 @@ serve(async (req: Request) => {
           performedBy: caller.id,
           recipient,
           subject,
-          bodySource: textBody,
+          bodySource: ctaBody,
           bodyText: renderedText,
           bodyHtml: renderedHtml,
           attachmentMetadata: attachmentResult.metadata,

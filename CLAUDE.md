@@ -1,3 +1,40 @@
+# CTA prvního obchodního e-mailu (Draft, 06. 08. 2026)
+
+- **Nasazeno nikam.** Jen větev `chatgpt/sales-lead-initial-email-cta` + Draft PR.
+  Migrace `20260806180000_sales_lead_manual_response_token.sql` **neaplikována**, žádný EF deploy,
+  žádný e-mail, žádná dávka, žádná automatika, žádná změna produkčních dat.
+
+**Zjištěná příčina (neopakovat špatnou diagnózu):** chybějící „Mám zájem“ **není bug v kódu**.
+(1) Produkce nemá nasazený response systém — na `sales_lead_email_batch_items` je jen
+`preserve_snapshot` trigger a tabulka `sales_lead_email_response_tokens` tam neexistuje.
+(2) Věta „Nemám zájem, děkuji“ je **ručně uložená v aktivní šabloně** `E - shop Míra 2`
+(`is_active=true`, typ `initial`); v repu se nevyskytuje a žádný kód ji nepřidává.
+
+**Závazné invarianty (neměnit bez schválení Pavla):**
+
+- **`_shared/salesLeadResponseCta.ts` je jediný zdroj pravdy pro markup CTA** a musí zůstat
+  1:1 zrcadlem DB triggeru `sales_lead_email_prepare_response_links` — jinak se ruční a dávkový
+  e-mail rozejdou. Hlídá spec 107.
+- **CTA se přidává PŘED renderem a uložením snapshotu** (ruční cesta staví `ctaBody` a ten jde
+  do `bodySource` i do renderu), aby preview == odeslaný e-mail.
+- **Obě tlačítka vždy na `https://onemil.cz/partner-response.html`. Nikdy mailto**, nikdy odpověď
+  na `b2b@onemil.cz` (ta zůstává jen jako odesílatel/reply-to).
+- **Každý příjemce má vlastní token**; obě tlačítka jednoho e-mailu sdílejí tentýž token.
+- **Ruční cesta je fail-closed** — bez platného tokenu se e-mail neodešle.
+- **CTA jen pro první e-mail** (`!isReuse`), ne pro reuse/forward/reply/follow-up.
+- `sales_lead_email_response_tokens.batch_item_id` je nullable kvůli ručnímu e-mailu; **nevracet
+  NOT NULL** bez odstranění manuálních tokenů. UNIQUE zůstává (víc NULL je v Postgresu OK).
+- **Staré uzamčené snapshoty se nikdy nepřepisují** — CTA dostávají jen nově vznikající e-maily.
+- **Jediný podporovaný způsob odpovědi jsou CTA „Mám zájem“ / „Nemám zájem“.** Ve
+  `sales-lead-draft-email` byla zrušena konstanta `OPT_OUT_SENTENCE`, povinná instrukce v obou
+  promptech i guard `opt_out_sentence_missing` — jinak by e-mail nesl dvě konkurenční cesty
+  odhlášení. AI koncept ani asistent **nesmí** vytvářet odhlašovací větu, výzvu k odpovědi kvůli
+  odhlášení ani mailto (sdílené `NO_OPT_OUT_RULE` v obou promptech). **Follow-up nepřidává žádný
+  vlastní odhlašovací mechanismus ani CTA blok.** Nevracet `opt_out_sentence_missing`.
+
+**Otevřený následný krok:** aktivní šablonu `E - shop Míra 2` musí někdo ručně zbavit mailto odkazu
+„Nemám zájem, děkuji“ (produkční data, mimo tento PR) a produkce potřebuje DB části PR #318–#322.
+
 # Administrace reakcí „Mám zájem“ / „Nemám zájem“ (Draft, 06. 08. 2026)
 
 - **Nasazeno nikam.** Jen větev `chatgpt/sales-lead-response-admin-overview` + Draft PR. Migrace
