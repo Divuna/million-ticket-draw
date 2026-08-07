@@ -1,7 +1,12 @@
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.57.4";
 import { verifyCompanyWebsite, verifyDiscoveredCompanySite } from "../_shared/companyWebsiteVerifier.ts";
-import { generateCandidateUrls } from "../_shared/companyCandidateSearch.ts";
+import {
+  appendDiagnosticsEntry,
+  buildDiagnosticsEntry,
+  generateCandidateUrlsWithDiagnostics,
+  type CandidateSearchDiagnosticsEntry,
+} from "../_shared/companyCandidateSearch.ts";
 import { aresByIco, aresByName, type RegistryRecord } from "../_shared/companyRegistryEnrich.ts";
 import {
   crawlCompanyWebsite,
@@ -135,6 +140,9 @@ serve(async (req: Request) => {
   let cursor = job.cursor as number;
   let searchRounds = job.search_rounds as number;
   let searchExhausted = job.search_exhausted as boolean;
+  // Historie diagnostiky přežívá napříč cron ticky — načti a jen připisuj.
+  let searchDiagnostics: CandidateSearchDiagnosticsEntry[] =
+    Array.isArray(job.search_diagnostics) ? (job.search_diagnostics as CandidateSearchDiagnosticsEntry[]) : [];
   const requested = job.requested_count as number;
   const maxCandidates = job.max_candidates as number;
   const counters = {
@@ -160,9 +168,17 @@ serve(async (req: Request) => {
     // Doplň frontu kandidátů, když dojde.
     if (cursor >= pool.length) {
       if (searchExhausted) break;
-      const fresh = await generateCandidateUrls({ leadGroup, round: searchRounds, openaiKey });
-      searchRounds++;
+      const { urls: fresh, diagnostics } = await generateCandidateUrlsWithDiagnostics({
+        leadGroup,
+        round: searchRounds,
+        openaiKey,
+      });
       const added = fresh.filter((u) => !pool.includes(u));
+      searchDiagnostics = appendDiagnosticsEntry(
+        searchDiagnostics,
+        buildDiagnosticsEntry({ round: searchRounds, diagnostics, addedToPool: added.length }),
+      );
+      searchRounds++;
       if (added.length === 0) {
         emptyRounds++;
         if (emptyRounds >= MAX_EMPTY_ROUNDS) { searchExhausted = true; break; }
@@ -317,6 +333,7 @@ serve(async (req: Request) => {
   await supabaseAdmin.from("sales_lead_discovery_jobs").update({
     ...counters,
     candidate_pool: pool, cursor, search_rounds: searchRounds, search_exhausted: searchExhausted,
+    search_diagnostics: searchDiagnostics,
     status, finish_reason: finishReason,
     finished_at: status === "done" ? new Date().toISOString() : null,
     updated_at: new Date().toISOString(),
