@@ -222,10 +222,14 @@ test('diagnostika obsahuje jen bezpečné počty a důvod, žádný klíč ani t
   });
 
   expect(Object.keys(diagnostics).sort()).toEqual([
+    'ddg_error_type',
+    'ddg_http_status',
     'ddg_raw_count',
     'ddg_usable_count',
     'fallback_reason',
     'final_candidate_count',
+    'openai_error_type',
+    'openai_http_status',
     'openai_raw_count',
     'openai_usable_count',
   ]);
