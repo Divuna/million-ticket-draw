@@ -255,6 +255,53 @@ export async function generateCandidateUrlsWithDiagnostics(input: {
   return { urls: out, diagnostics };
 }
 
+/**
+ * Jeden záznam diagnostiky ukládaný k discovery jobu (sloupec
+ * `sales_lead_discovery_jobs.search_diagnostics`). Jen čísla, ISO timestamp a
+ * enum důvodu — nikdy API klíč, token ani jiný secret.
+ */
+export interface CandidateSearchDiagnosticsEntry extends CandidateSearchDiagnostics {
+  round: number;
+  at: string;
+  added_to_pool: number;
+}
+
+/** Kolik posledních kol se u jobu drží, aby jsonb nerostlo bez omezení. */
+export const MAX_DIAGNOSTICS_ENTRIES = 50;
+
+/** Sestaví záznam diagnostiky pro jedno search kolo. Pure, bez vedlejších efektů. */
+export function buildDiagnosticsEntry(input: {
+  round: number;
+  diagnostics: CandidateSearchDiagnostics;
+  addedToPool: number;
+  at?: string;
+}): CandidateSearchDiagnosticsEntry {
+  return {
+    round: input.round,
+    at: input.at ?? new Date().toISOString(),
+    openai_raw_count: input.diagnostics.openai_raw_count,
+    openai_usable_count: input.diagnostics.openai_usable_count,
+    ddg_raw_count: input.diagnostics.ddg_raw_count,
+    ddg_usable_count: input.diagnostics.ddg_usable_count,
+    final_candidate_count: input.diagnostics.final_candidate_count,
+    fallback_reason: input.diagnostics.fallback_reason,
+    added_to_pool: input.addedToPool,
+  };
+}
+
+/**
+ * Přidá záznam k historii jobu. Zachovává předchozí kola (worker běží opakovaně
+ * přes cron), ořezává jen nejstarší nad `MAX_DIAGNOSTICS_ENTRIES`.
+ */
+export function appendDiagnosticsEntry(
+  existing: unknown,
+  entry: CandidateSearchDiagnosticsEntry,
+): CandidateSearchDiagnosticsEntry[] {
+  const history = Array.isArray(existing) ? (existing as CandidateSearchDiagnosticsEntry[]) : [];
+  const next = [...history, entry];
+  return next.length > MAX_DIAGNOSTICS_ENTRIES ? next.slice(-MAX_DIAGNOSTICS_ENTRIES) : next;
+}
+
 /** Zpětně kompatibilní obal — worker konzumuje jen seznam URL. */
 export async function generateCandidateUrls(input: {
   leadGroup: string;
