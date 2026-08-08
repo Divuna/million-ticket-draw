@@ -98,6 +98,10 @@ test.describe('Helpery — tvar a historie záznamů', () => {
     ddg_usable_count: 9,
     final_candidate_count: 9,
     fallback_reason: 'openai_no_usable_candidates' as const,
+    openai_http_status: 200,
+    openai_error_type: 'none' as const,
+    ddg_http_status: 200,
+    ddg_error_type: 'none' as const,
   };
 
   test('záznam obsahuje všech 6 povinných počtů plus round a čas', () => {
@@ -116,10 +120,14 @@ test.describe('Helpery — tvar a historie záznamů', () => {
     expect(Object.keys(entry).sort()).toEqual([
       'added_to_pool',
       'at',
+      'ddg_error_type',
+      'ddg_http_status',
       'ddg_raw_count',
       'ddg_usable_count',
       'fallback_reason',
       'final_candidate_count',
+      'openai_error_type',
+      'openai_http_status',
       'openai_raw_count',
       'openai_usable_count',
       'round',
