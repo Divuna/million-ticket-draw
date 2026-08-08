@@ -22,7 +22,9 @@ test.describe('Discovery Jobs — worker, kandidáti z web search, bezpečný vo
   test('kandidáti se získávají AKTIVNÍM web search (ne AI generuje seznam)', () => {
     expect(candidates).toContain('web_search_preview');
     expect(candidates).toContain('api.openai.com/v1/responses');
-    expect(candidates).toContain('duckduckgo.com/html'); // fallback
+    // DDG fallback odstraněn — z Edge runtime vracel HTTP 202 bez výsledků.
+    expect(candidates).not.toContain('duckduckgo.com/html');
+    expect(candidates).not.toContain('searchDdg');
     expect(candidates).toContain('SEGMENT_QUERIES');
     expect(candidates).toContain('buildQueriesForRound');
     expect(worker).toContain('generateCandidateUrls');

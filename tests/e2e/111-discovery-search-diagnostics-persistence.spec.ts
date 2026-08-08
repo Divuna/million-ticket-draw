@@ -21,8 +21,6 @@ const shared = read('supabase/functions/_shared/companyCandidateSearch.ts');
 const REQUIRED_KEYS = [
   'openai_raw_count',
   'openai_usable_count',
-  'ddg_raw_count',
-  'ddg_usable_count',
   'final_candidate_count',
   'fallback_reason',
 ] as const;
@@ -94,14 +92,10 @@ test.describe('Helpery — tvar a historie záznamů', () => {
   const diagnostics = {
     openai_raw_count: 12,
     openai_usable_count: 0,
-    ddg_raw_count: 40,
-    ddg_usable_count: 9,
     final_candidate_count: 9,
     fallback_reason: 'openai_no_usable_candidates' as const,
     openai_http_status: 200,
     openai_error_type: 'none' as const,
-    ddg_http_status: 200,
-    ddg_error_type: 'none' as const,
   };
 
   test('záznam obsahuje všech 6 povinných počtů plus round a čas', () => {
@@ -120,10 +114,6 @@ test.describe('Helpery — tvar a historie záznamů', () => {
     expect(Object.keys(entry).sort()).toEqual([
       'added_to_pool',
       'at',
-      'ddg_error_type',
-      'ddg_http_status',
-      'ddg_raw_count',
-      'ddg_usable_count',
       'fallback_reason',
       'final_candidate_count',
       'openai_error_type',
@@ -182,17 +172,11 @@ test.describe('Reálná diagnostika ze search vrstvy je uložitelná', () => {
     globalThis.fetch = (async (input: unknown) => {
       const url = typeof input === 'string' ? input : (input as { url?: string })?.url ?? String(input);
       if (url.includes('api.openai.com')) {
-        // OpenAI vrátí jen zakázané URL → fallback na DDG.
+        // OpenAI vrátí jen zakázané URL → žádný použitelný kandidát.
         return new Response(JSON.stringify({ output_text: 'https://www.heureka.cz/x https://facebook.com/y' }), {
           status: 200,
           headers: { 'content-type': 'application/json' },
         });
-      }
-      if (url.includes('duckduckgo.com')) {
-        return new Response(
-          `<a href="//duckduckgo.com/l/?uddg=${encodeURIComponent('https://alza.cz')}&rut=x">o</a>`,
-          { status: 200, headers: { 'content-type': 'text/html' } },
-        );
       }
       return new Response('', { status: 404 });
     }) as typeof fetch;
@@ -202,13 +186,12 @@ test.describe('Reálná diagnostika ze search vrstvy je uložitelná', () => {
       round: 0,
       openaiKey: 'super-secret-key',
     });
-    const entry = buildDiagnosticsEntry({ round: 0, diagnostics, addedToPool: 1 });
+    const entry = buildDiagnosticsEntry({ round: 0, diagnostics, addedToPool: 0 });
 
     expect(entry.fallback_reason).toBe('openai_no_usable_candidates');
     expect(entry.openai_raw_count).toBeGreaterThan(0);
     expect(entry.openai_usable_count).toBe(0);
-    expect(entry.ddg_usable_count).toBeGreaterThan(0);
-    expect(entry.final_candidate_count).toBeGreaterThan(0);
+    expect(entry.final_candidate_count).toBe(0);
     expect(JSON.stringify(entry)).not.toContain('super-secret-key');
     // Musí projít JSON round-tripem (ukládá se do jsonb sloupce).
     expect(JSON.parse(JSON.stringify(entry))).toEqual(entry);
