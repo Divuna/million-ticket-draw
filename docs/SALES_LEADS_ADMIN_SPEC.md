@@ -1378,3 +1378,55 @@ Draft. Migrace `20260807120000_sales_lead_discovery_scheduler.sql` **není aplik
 ani produkci, cron tedy zatím neexistuje. Rotace ověřena read-only proti produkčním datům: prvních
 5 voleb jsou nikdy nepoužité kategorie (`auto-moto`, `luxusni-zbozi`, `cestovani`, `gastronomie`,
 `lokalni-sluzby`), teprve pak nejstarší `sport`.
+
+## 27. Discovery — OpenAI jako jediný zdroj kandidátů (DDG fallback odstraněn)
+
+### 27.1 Co se změnilo
+
+`companyCandidateSearch` hledá kandidátní firmy **výhradně přes OpenAI Responses API
+`web_search_preview`**. DuckDuckGo fallback byl odstraněn i s helpery (`searchDdg`, `parseDdg`,
+`DDG_TIMEOUT_MS`, browser User-Agent). Discovery už na `duckduckgo.com` neposílá žádný požadavek.
+
+### 27.2 Proč
+
+Měřeno na stagingu přes uloženou diagnostiku (`sales_lead_discovery_jobs.search_diagnostics`),
+job `d2c342d1` / `lokalni-sluzby`, všechna tři kola shodně:
+
+| zdroj | HTTP status | raw URL | závěr |
+|---|---|---|---|
+| OpenAI | **429** | 0 | vyčerpaná kvóta/limit — klíč je platný (jinak 401) |
+| DuckDuckGo | **202** | 0 | anti-bot odpověď z Edge runtime, žádné výsledky |
+
+DDG odpovídal rychle a formálně úspěšně (202 je 2xx, takže `res.ok` = true), ale tělo neobsahovalo
+jediný výsledkový odkaz. Ze stejné infrastruktury přes DB egress přitom stejný dotaz vracel 200
+a použitelné kandidáty — DuckDuckGo tedy blokuje IP rozsahy Edge runtime. **Fallback nebyl zálohou,
+jen tichým zdrojem nuly a údržby navíc.**
+
+### 27.3 Jak se discovery chová teď
+
+- OpenAI dodá použitelné kandidáty → zpracují se jako dřív (ověření webu, ARES, dedup, `navrzeny`).
+- OpenAI nevrátí nic, selže (429/401/timeout/síť) nebo vrátí jen URL, které odpadnou na
+  normalizaci/deny-listu → **kolo bezpečně skončí s 0 kandidáty**. Job se neukončí chybou,
+  `error` zůstává `null` a po `MAX_EMPTY_ROUNDS` prázdných kolech doběhne jako
+  `candidates_exhausted`.
+- Scheduler (`26.`) není dotčen — další plánovaný job to zkusí znovu, takže dočasný výpadek nebo
+  429 se sám vyřeší, jakmile je kvóta zpátky.
+
+### 27.4 Diagnostika
+
+Nové záznamy v `search_diagnostics` nesou pouze OpenAI pole: `openai_http_status`,
+`openai_error_type`, `openai_raw_count`, `openai_usable_count`, `final_candidate_count`,
+`fallback_reason`, `added_to_pool`, `round`, `at`. `fallback_reason` si ponechává stejné hodnoty
+(`none` / `openai_empty` / `openai_no_usable_candidates`), nově ale popisuje výsledek OpenAI, ne
+spuštění fallbacku.
+
+Pole `ddg_http_status`, `ddg_error_type`, `ddg_raw_count`, `ddg_usable_count` se **už nezapisují**.
+V typu `CandidateSearchDiagnosticsEntry` zůstávají jako `@deprecated` volitelná, aby starší uložené
+záznamy zůstaly čitelné. **Historické joby se nepřepisují a nevzniká žádná datová migrace.**
+
+### 27.5 Pravidla (neměnit bez rozhodnutí)
+
+- Discovery nemá druhý vyhledávací zdroj; nulový výsledek je legitimní stav, ne chyba.
+- Nevracet DDG fallback bez důkazu, že z Edge runtime vrací použitelné výsledky.
+- Při trvalém 429 řešit kvótu/limit na OpenAI účtu, **ne rotaci klíče** — 429 znamená, že klíč
+  autentizuje správně.
