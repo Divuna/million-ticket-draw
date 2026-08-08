@@ -132,6 +132,9 @@ export const SALES_LEAD_EMAIL_BATCH_REASON_MESSAGES: Record<string, string> = {
   batch_not_cancellable: 'Dávku v tomto stavu už nelze zrušit.',
   batch_processing: 'Dávku nelze zrušit, protože se některá položka právě zpracovává.',
   cancel_reason_required: 'Uveďte důvod zrušení v délce 3 až 1000 znaků.',
+  batch_not_activatable: 'Spustit lze jen pozastavenou dávku. Tato dávka je v jiném stavu.',
+  no_pending_items: 'Dávka nemá žádnou čekající položku ke spuštění.',
+  scheduled_window_missed: 'Časové okno dávky už uplynulo. Připravte novou dávku na jiný den.',
 };
 
 export const salesLeadEmailBatchReasonMessage = (reason: string | null | undefined): string => {

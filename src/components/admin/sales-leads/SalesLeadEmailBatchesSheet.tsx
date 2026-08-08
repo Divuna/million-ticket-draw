@@ -1,6 +1,6 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { ChevronDown, History, Loader2, ShieldOff, XCircle } from 'lucide-react';
+import { ChevronDown, History, Loader2, PlayCircle, ShieldOff, XCircle } from 'lucide-react';
 import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
 import {
@@ -48,6 +48,7 @@ export function SalesLeadEmailBatchesSheet({ open, onOpenChange, refreshKey, onC
   const [cancelBatch, setCancelBatch] = useState<SalesLeadEmailBatchRow | null>(null);
   const [cancelReason, setCancelReason] = useState('');
   const [cancelling, setCancelling] = useState(false);
+  const [activatingId, setActivatingId] = useState<string | null>(null);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -107,6 +108,34 @@ export function SalesLeadEmailBatchesSheet({ open, onOpenChange, refreshKey, onC
     for (const skip of skips) grouped.set(skip.batch_id, [...(grouped.get(skip.batch_id) ?? []), skip]);
     return grouped;
   }, [skips]);
+
+  // Spuštění dávky = pouze paused → scheduled. Neodesílá e-mail a nezapíná
+  // kill-switch; dokud je automatika vypnutá, worker si položku nevezme.
+  const activate = async (batch: SalesLeadEmailBatchRow) => {
+    if (activatingId) return;
+    setActivatingId(batch.id);
+    try {
+      const { data, error } = await (supabase as any).rpc('sales_lead_email_batch_activate_admin', {
+        p_batch_id: batch.id,
+      });
+      if (error) {
+        toast.error(error.message || 'Dávku se nepodařilo spustit.');
+        return;
+      }
+      const result = (data ?? {}) as { success?: boolean; error?: string; batch_status?: string };
+      if (!result.success) {
+        toast.error(salesLeadEmailBatchReasonMessage(result.error));
+        return;
+      }
+      toast.success('Dávka je naplánovaná.', {
+        description: 'Zatím se nic neodeslalo — odesílání hlídá samostatný přepínač automatiky.',
+      });
+      await load();
+      onChanged?.();
+    } finally {
+      setActivatingId(null);
+    }
+  };
 
   const cancel = async () => {
     if (!cancelBatch || cancelling || cancelReason.trim().length < 3 || cancelReason.trim().length > 1000) return;
@@ -178,6 +207,17 @@ export function SalesLeadEmailBatchesSheet({ open, onOpenChange, refreshKey, onC
                           </div>
                         </div>
                         <div className="flex gap-2">
+                          {batch.status === 'paused' && (
+                            <Button
+                              size="sm"
+                              data-testid="batch-activate-button"
+                              disabled={activatingId !== null}
+                              onClick={() => activate(batch)}
+                            >
+                              <PlayCircle className="mr-1.5 h-4 w-4" />
+                              {activatingId === batch.id ? 'Spouštím…' : 'Spustit dávku'}
+                            </Button>
+                          )}
                           {(['paused', 'scheduled'] as const).includes(batch.status as 'paused' | 'scheduled') && (
                             <Button variant="outline" size="sm" onClick={() => { setCancelReason(''); setCancelBatch(batch); }}>
                               <XCircle className="mr-1.5 h-4 w-4" />Zrušit dávku
