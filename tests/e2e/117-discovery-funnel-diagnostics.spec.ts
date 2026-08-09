@@ -39,6 +39,8 @@ test.describe('Žádný kandidát nesmí zmizet bez důvodu', () => {
 
   test('chyba RPC se počítá', () => {
     expect(loop).toContain('bump("rpc_error")');
+    // Ukládá se jen kód chyby, ne text (mohl by nést data firmy).
+    expect(loop).toContain('bumpReason("rpc_error_code", rpcErr.code || "unknown")');
   });
 
   test('jiný než created výsledek RPC se počítá i s důvodem', () => {

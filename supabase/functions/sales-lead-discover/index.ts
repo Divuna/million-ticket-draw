@@ -299,7 +299,13 @@ serve(async (req: Request) => {
       }
       : baseRpcArgs;
     const { data: rpcData, error: rpcErr } = await supabaseAdmin.rpc(rpcName, rpcArgs);
-    if (rpcErr) { dbg("rpc_error", { url, error: rpcErr.message }); bump("rpc_error"); continue; }
+    if (rpcErr) {
+      dbg("rpc_error", { url, error: rpcErr.message });
+      bump("rpc_error");
+      // Jen kod chyby (napr. 23505), nikdy text s daty firmy.
+      bumpReason("rpc_error_code", rpcErr.code || "unknown");
+      continue;
+    }
     const res = (rpcData ?? {}) as {
       outcome?: string;
       reason?: string;
