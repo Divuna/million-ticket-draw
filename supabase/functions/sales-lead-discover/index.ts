@@ -17,6 +17,7 @@ import {
   verifyEmailOnOfficialSourcePage,
   type VerifiedSourceEmailResult,
 } from "../_shared/companyEmailCrawler.ts";
+import { classificationMatchesJobScope } from "./categoryPolicy.ts";
 
 // ============================================================================
 // sales-lead-discover — WORKER Discovery Jobu (dávkové zpracování).
@@ -130,6 +131,7 @@ serve(async (req: Request) => {
   const job = jobRow as Record<string, unknown>;
   const jobId = job.id as string;
   const leadGroup = job.lead_group as string;
+  const autoCreated = job.auto_created === true;
 
   await supabaseAdmin.from("sales_lead_discovery_jobs").update({
     status: "running", started_at: job.started_at ?? new Date().toISOString(), updated_at: new Date().toISOString(),
@@ -267,9 +269,23 @@ serve(async (req: Request) => {
     const cls = await classify(name, site.snippet, groups, openaiKey);
     if (cls.failed) { bump("classifier_failed"); continue; }
     if (!cls.relevant) { bump("classified_irrelevant"); continue; }
-    // Firma prosla overenim webu i ARES. Kdyz klasifikator nezvladne urcit
-    // kategorii, je spravne ji zaradit do existujici kategorie "jine", ne
-    // zahodit. Kategorie neni bezpecnostni kontrola.
+    // Automaticky zalozeny job smi ulozit jen firmu, kterou klasifikator zaradil
+    // PRESNE do segmentu pozadovaneho jobem. Jiny platny slug i fallback `jine`
+    // jsou wrong_category a hledani pokracuje dalsim kandidatem. Rucni discovery
+    // zachovava dosavadni moznost ulozit firmu do jine platne kategorie.
+    if (!classificationMatchesJobScope({
+      autoCreated,
+      requestedGroup: leadGroup,
+      classifiedGroup: cls.slug,
+    })) {
+      counters.wrong_category++;
+      bump("wrong_category");
+      continue;
+    }
+    // V rucnim discovery zustava dosavadni routovani: kdyz klasifikator
+    // nezvladne urcit kategorii, muze se ARES-identifikovana firma zaradit do
+    // existujici kategorie "jine". Automaticky job uz pripadny fallback vyse
+    // odmitl, protoze vyzaduje presnou klasifikaci do segmentu jobu.
     let targetGroup = cls.slug === leadGroup ? leadGroup : (cls.slug && validSlugs.has(cls.slug) ? cls.slug : null);
     // Fallback jen pro firmu s IC z ARES. Bez registrovane identity by se tudy
     // mohl protahnout katalog nebo agregator, ktery klasifikator nezaradil.
