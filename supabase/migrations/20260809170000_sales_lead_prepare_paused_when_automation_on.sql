@@ -68,7 +68,7 @@ BEGIN
           MESSAGE = 'sales_lead_email_batch_prepare_paused_replay_not_paused';
       END IF;
     ELSE
-      IF v_batch_status NOT IN ('paused', 'scheduled') THEN
+      IF v_batch_status IS NULL OR v_batch_status NOT IN ('paused', 'scheduled') THEN
         RAISE EXCEPTION USING
           ERRCODE = '23514',
           MESSAGE = 'sales_lead_email_batch_prepare_paused_unexpected_state';
