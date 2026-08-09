@@ -1,8 +1,9 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { ChevronDown, History, Loader2, PlayCircle, ShieldOff, XCircle } from 'lucide-react';
+import { ChevronDown, History, Loader2, PlayCircle, Power, PowerOff, ShieldOff, XCircle } from 'lucide-react';
 import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
+import { useUserRole } from '@/hooks/useUserRole';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -49,9 +50,19 @@ export function SalesLeadEmailBatchesSheet({ open, onOpenChange, refreshKey, onC
   const [cancelReason, setCancelReason] = useState('');
   const [cancelling, setCancelling] = useState(false);
   const [activatingId, setActivatingId] = useState<string | null>(null);
+  const [automationEnabled, setAutomationEnabled] = useState<boolean | null>(null);
+  const [automationBusy, setAutomationBusy] = useState(false);
+  const [automationConfirm, setAutomationConfirm] = useState<boolean | null>(null);
+  const { isSuperAdmin } = useUserRole();
 
   const load = useCallback(async () => {
     setLoading(true);
+    // Skutecny stav kill-switche z DB, aby byl spravny i po reloadu stranky.
+    const automationResult = await (supabase as any)
+      .from('sales_lead_email_automation_settings')
+      .select('enabled')
+      .maybeSingle();
+    setAutomationEnabled(automationResult.error ? null : (automationResult.data?.enabled ?? null));
     const batchesResult = await (supabase as any)
       .from('sales_lead_email_batches')
       .select('id,status,template_name_snapshot,created_at,scheduled_date,timezone,window_start,window_end,scheduled_count,skipped_count,cancel_reason')
@@ -137,6 +148,35 @@ export function SalesLeadEmailBatchesSheet({ open, onOpenChange, refreshKey, onC
     }
   };
 
+  // Prepinac kill-switche. Zapisuje pres existujici superadmin-only RPC;
+  // zadny service-role klic ve frontendu. Po zmene se stav znovu cte z DB.
+  const setAutomation = async (next: boolean) => {
+    if (automationBusy) return;
+    setAutomationBusy(true);
+    try {
+      const { data, error } = await (supabase as any).rpc('sales_lead_email_automation_set_enabled', {
+        p_enabled: next,
+      });
+      if (error) {
+        toast.error(error.message || 'Stav automatiky se nepodařilo změnit.');
+        return;
+      }
+      const result = (data ?? {}) as { success?: boolean; error?: string; enabled?: boolean };
+      if (!result.success) {
+        toast.error(salesLeadEmailBatchReasonMessage(result.error));
+        return;
+      }
+      toast.success(next
+        ? 'Automatické odesílání je zapnuté.'
+        : 'Automatické odesílání je vypnuté. Nic dalšího se neodešle.');
+      setAutomationConfirm(null);
+      await load();
+      onChanged?.();
+    } finally {
+      setAutomationBusy(false);
+    }
+  };
+
   const cancel = async () => {
     if (!cancelBatch || cancelling || cancelReason.trim().length < 3 || cancelReason.trim().length > 1000) return;
     setCancelling(true);
@@ -176,6 +216,45 @@ export function SalesLeadEmailBatchesSheet({ open, onOpenChange, refreshKey, onC
               Posledních 20 ručně připravených dávek. Pozastavené dávky nic neodesílají.
             </SheetDescription>
           </SheetHeader>
+
+          {/* Stav kill-switche cteny z DB, takze je spravny i po reloadu stranky. */}
+          <div
+            className="mt-4 flex flex-wrap items-center justify-between gap-3 rounded-lg border p-3"
+            data-testid="automation-status"
+          >
+            <div className="flex items-center gap-2">
+              {automationEnabled ? (
+                <Power className="h-4 w-4 text-primary" />
+              ) : (
+                <PowerOff className="h-4 w-4 text-muted-foreground" />
+              )}
+              <div>
+                <Badge variant={automationEnabled ? 'default' : 'secondary'}>
+                  {automationEnabled === null
+                    ? 'Stav automatiky neznámý'
+                    : automationEnabled ? 'Automatika zapnutá' : 'Automatika vypnutá'}
+                </Badge>
+                <div className="mt-1 text-xs text-muted-foreground">
+                  {automationEnabled
+                    ? 'Naplánované dávky se v časovém okně odesílají, nejvýše 20 e-mailů denně.'
+                    : 'Naplánované dávky čekají a nic se neodesílá. Ruční odeslání funguje dál.'}
+                </div>
+              </div>
+            </div>
+            {isSuperAdmin && automationEnabled !== null && (
+              <Button
+                size="sm"
+                variant={automationEnabled ? 'outline' : 'default'}
+                data-testid="automation-toggle"
+                disabled={automationBusy}
+                onClick={() => setAutomationConfirm(!automationEnabled)}
+              >
+                {automationBusy
+                  ? 'Ukládám…'
+                  : automationEnabled ? 'Vypnout automatiku' : 'Zapnout automatiku'}
+              </Button>
+            )}
+          </div>
 
           {loading ? (
             <div className="flex min-h-48 items-center justify-center text-sm text-muted-foreground"><Loader2 className="mr-2 h-4 w-4 animate-spin" />Načítám dávky…</div>
@@ -271,6 +350,34 @@ export function SalesLeadEmailBatchesSheet({ open, onOpenChange, refreshKey, onC
           </div>
         </SheetContent>
       </Sheet>
+
+      <AlertDialog
+        open={automationConfirm !== null}
+        onOpenChange={(next) => !automationBusy && !next && setAutomationConfirm(null)}
+      >
+        <AlertDialogContent data-testid="automation-confirm-dialog">
+          <AlertDialogHeader>
+            <AlertDialogTitle>
+              {automationConfirm ? 'Zapnout automatické odesílání?' : 'Vypnout automatické odesílání?'}
+            </AlertDialogTitle>
+            <AlertDialogDescription>
+              {automationConfirm
+                ? 'Naplánované dávky, které jsou dnes v časovém okně, začnou odcházet — nejvýše 20 e-mailů za den. Pozastavené dávky se nespustí.'
+                : 'Odesílání se okamžitě zastaví. Naplánované dávky zůstanou čekat a ruční odeslání funguje dál.'}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={automationBusy}>Zpět</AlertDialogCancel>
+            <AlertDialogAction
+              disabled={automationBusy}
+              data-testid="automation-confirm-action"
+              onClick={(event) => { event.preventDefault(); void setAutomation(automationConfirm === true); }}
+            >
+              {automationConfirm ? 'Zapnout' : 'Vypnout'}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
 
       <AlertDialog open={!!cancelBatch} onOpenChange={(next) => !cancelling && !next && setCancelBatch(null)}>
         <AlertDialogContent data-testid="batch-cancel-dialog">
