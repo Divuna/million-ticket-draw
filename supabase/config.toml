@@ -193,6 +193,9 @@ verify_jwt = false
 [functions.sales-lead-work-intake]
 verify_jwt = false
 
+[functions.onemil-work-intake-mcp]
+verify_jwt = false
+
 # Disabled legacy contest generators. They remain deployable only to replace
 # old production copies with safe tombstones that never use service_role.
 [functions.generate-complete-contests]
