@@ -51,11 +51,24 @@ END $$;
 -- Oprávnění: migrace 20260807120000 vytvořila nové přetížení bez REVOKE, takže
 -- zdědilo výchozí PUBLIC EXECUTE — anon mohl volat SECURITY DEFINER funkci,
 -- která zakládá leady. Sjednocuje se se vzorem z 20260704140000: jen service_role.
-REVOKE ALL ON FUNCTION public.sales_lead_propose(
-  uuid, text, text, text, smallint, jsonb, text, text, text, text, text
-) FROM PUBLIC, anon, authenticated;
-GRANT EXECUTE ON FUNCTION public.sales_lead_propose(
-  uuid, text, text, text, smallint, jsonb, text, text, text, text, text
-) TO service_role;
+--
+-- Guard: na projektu bez 11argumentové verze (migrace 20260807120000 tam ještě
+-- neproběhla) by REVOKE/GRANT na neexistující signaturu celou migraci shodil.
+-- Oprávnění 10argumentové verze řeší už 20260704140000, takže tady je no-op.
+DO $$
+BEGIN
+  IF EXISTS (
+    SELECT 1 FROM pg_proc p
+    JOIN pg_namespace n ON n.oid = p.pronamespace
+    WHERE n.nspname = 'public' AND p.proname = 'sales_lead_propose' AND p.pronargs = 11
+  ) THEN
+    EXECUTE 'REVOKE ALL ON FUNCTION public.sales_lead_propose('
+         || 'uuid, text, text, text, smallint, jsonb, text, text, text, text, text'
+         || ') FROM PUBLIC, anon, authenticated';
+    EXECUTE 'GRANT EXECUTE ON FUNCTION public.sales_lead_propose('
+         || 'uuid, text, text, text, smallint, jsonb, text, text, text, text, text'
+         || ') TO service_role';
+  END IF;
+END $$;
 
 COMMIT;

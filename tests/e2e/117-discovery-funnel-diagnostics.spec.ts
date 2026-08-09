@@ -171,8 +171,19 @@ test.describe('Nejednoznačné přetížení sales_lead_propose', () => {
   });
 
   test('oprávnění zůstávají service-role only', () => {
-    expect(overloadFix).toContain('FROM PUBLIC, anon, authenticated;');
-    expect(overloadFix).toContain('TO service_role;');
+    expect(overloadFix).toContain('FROM PUBLIC, anon, authenticated');
+    expect(overloadFix).toContain('TO service_role');
+  });
+
+  test('na projektu bez nové verze je migrace no-op, ne chyba', () => {
+    // REVOKE/GRANT míří na 11argumentovou signaturu; bez guardu by migrace na
+    // projektu, kde existuje jen 10argumentová verze, spadla na "function does not exist".
+    const grants = overloadFix.split('Oprávnění:')[1] ?? '';
+    expect(grants).toContain("p.proname = 'sales_lead_propose' AND p.pronargs = 11");
+    expect(grants).toContain('EXECUTE ');
+    // Guard musí obalit oba příkazy.
+    expect(grants.indexOf('IF EXISTS')).toBeLessThan(grants.indexOf('REVOKE ALL'));
+    expect(grants.indexOf('GRANT EXECUTE')).toBeLessThan(grants.indexOf('END IF;'));
   });
 
   test('migrace je transakční a nesahá na data leadů', () => {
