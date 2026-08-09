@@ -84,7 +84,9 @@ const Login: React.FC = () => {
         .in("role", ["admin", "superadmin"])
         .maybeSingle();
       if (adminRole) {
-        navigate("/admin", { replace: true });
+        const redirectTarget = safeRedirectPath(redirectRaw);
+        const isOAuthConsentReturn = redirectTarget?.startsWith("/oauth/consent?authorization_id=") ?? false;
+        navigate(isOAuthConsentReturn ? redirectTarget! : "/admin", { replace: true });
         return;
       }
 

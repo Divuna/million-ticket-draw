@@ -97,6 +97,7 @@ import AdminAffiliatePayouts from "@/pages/AdminAffiliatePayouts";
 import AdminAffiliatePayoutDetail from "@/pages/AdminAffiliatePayoutDetail";
 import PartnerSetPassword from "@/pages/PartnerSetPassword";
 import ResetPassword from "@/pages/ResetPassword";
+import OAuthConsent from "@/pages/OAuthConsent";
 
 import { BottomNavigation } from "@/components/BottomNavigation";
 import { AdminLayout } from "@/components/admin/AdminLayout";
@@ -610,6 +611,7 @@ function AppContent() {
         <Routes>
           <Route path="/" element={<Homepage />} />
           <Route path="/login" element={<Login />} />
+          <Route path="/oauth/consent" element={<OAuthConsent />} />
           <Route path="/reset-password" element={<ResetPassword />} />
           <Route path="/register" element={<Register />} />
           <Route path="/profile" element={<Profile />} />
