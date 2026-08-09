@@ -41,3 +41,40 @@ Production requires a separate approval. During that rollout, deploy the MCP
 function to production, rotate `SALES_LEAD_WORK_INTAKE_SECRET` once, and let
 both production Edge Functions read the same value from the production
 Supabase secret vault. Never copy the value into plugin files.
+
+## Staging OAuth consent setup
+
+The staging frontend is intentionally local and uses the existing OneMil login:
+
+```bash
+copy .env.staging.example .env.staging
+npm run dev:staging
+```
+
+Keep `http://localhost:5173` running while linking ChatGPT. In the staging
+Supabase project (`dxmowysntemfqfnanxua`) configure:
+
+1. **Authentication > URL Configuration > Site URL**:
+   `http://localhost:5173`
+2. **Authentication > OAuth Server > Authorization Path**:
+   `/oauth/consent`
+3. Enable **OAuth 2.1 Server**.
+4. Enable **Dynamic Client Registration**.
+
+The resulting consent URL is
+`http://localhost:5173/oauth/consent?authorization_id=...`. The page reuses the
+current Supabase session and the existing `/login?redirect=...` path. It is
+compiled to operate only with the staging project and requires the current user
+to have the `superadmin` role. The MCP server independently enforces the exact
+server-side `WORK_INTAKE_CONNECTOR_ALLOWED_USER_IDS` allowlist.
+
+After enabling OAuth, verify that this endpoint returns JSON instead of 404:
+
+```text
+https://dxmowysntemfqfnanxua.supabase.co/.well-known/oauth-authorization-server/auth/v1
+```
+
+Then enable ChatGPT Developer mode, add the staging MCP endpoint shown above,
+and complete the Supabase login and consent flow. Dynamic registration lets
+ChatGPT register its callback; do not create or store a client secret in the
+frontend.
