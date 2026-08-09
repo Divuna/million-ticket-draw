@@ -9,6 +9,7 @@ const read = (p: string) => fs.readFileSync(p, 'utf8').replace(/\r\n/g, '\n');
 
 const worker = read('supabase/functions/sales-lead-discover/index.ts');
 const migration = read('supabase/migrations/20260810100000_sales_lead_discovery_funnel.sql');
+const overloadFix = read('supabase/migrations/20260810110000_sales_lead_propose_drop_legacy_overload.sql');
 const loop = worker.split('const url = pool[cursor];')[1] ?? '';
 
 test.describe('Migrace — sloupec funnel', () => {
@@ -146,5 +147,36 @@ test.describe('Bezpečnostní kontroly zůstávají', () => {
 
   test('discovery nic neodesílá', () => {
     expect(worker).not.toMatch(/resend|email_queue|send-sales-lead/i);
+  });
+});
+
+test.describe('Nejednoznačné přetížení sales_lead_propose', () => {
+  test('maže se jen zastaralá 10argumentová verze, a jen když existuje nová', () => {
+    expect(overloadFix).toContain('p.pronargs = 11');
+    expect(overloadFix).toContain('p.pronargs = 10');
+    const dropped = overloadFix.split('DROP FUNCTION public.sales_lead_propose(')[1].split(')')[0];
+    // Mazaná signatura má 10 argumentů; přísnější verze s p_contact_email zůstává.
+    expect(dropped.split(',').length).toBe(10);
+    expect(dropped).not.toContain('smallint, jsonb, text, text, text, text, text');
+  });
+
+  test('po migraci smí zůstat právě jedno přetížení', () => {
+    expect(overloadFix).toContain('musi mit prave jedno pretizeni');
+    expect(overloadFix).toContain('RAISE EXCEPTION');
+  });
+
+  test('oprávnění zůstávají service-role only', () => {
+    expect(overloadFix).toContain('FROM PUBLIC, anon, authenticated;');
+    expect(overloadFix).toContain('TO service_role;');
+  });
+
+  test('migrace je transakční a nesahá na data leadů', () => {
+    expect(overloadFix.trimStart().startsWith('BEGIN;')).toBe(true);
+    expect(overloadFix.trimEnd().endsWith('COMMIT;')).toBe(true);
+    const sql = overloadFix
+      .split('\n')
+      .filter((line) => !line.trim().startsWith('--'))
+      .join('\n');
+    expect(sql).not.toMatch(/DELETE FROM|TRUNCATE|DROP TABLE|UPDATE public\./i);
   });
 });
