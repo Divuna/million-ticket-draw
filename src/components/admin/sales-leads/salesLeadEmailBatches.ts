@@ -135,6 +135,8 @@ export const SALES_LEAD_EMAIL_BATCH_REASON_MESSAGES: Record<string, string> = {
   batch_not_activatable: 'Spustit lze jen pozastavenou dávku. Tato dávka je v jiném stavu.',
   no_pending_items: 'Dávka nemá žádnou čekající položku ke spuštění.',
   scheduled_window_missed: 'Časové okno dávky už uplynulo. Připravte novou dávku na jiný den.',
+  access_denied_superadmin_only: 'Automatiku smí přepnout pouze superadmin.',
+  enabled_required: 'Chybí požadovaný stav automatiky.',
 };
 
 export const salesLeadEmailBatchReasonMessage = (reason: string | null | undefined): string => {
