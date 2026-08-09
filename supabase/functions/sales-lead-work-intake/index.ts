@@ -52,17 +52,19 @@ async function processOne(client: SupabaseClient, runId: string): Promise<boolea
       if (finishError) throw finishError;
       return true;
     }
-    const { error: commitError } = await client.rpc("sales_lead_work_intake_commit", {
+    const { data: commit, error: commitError } = await client.rpc("sales_lead_work_intake_commit", {
       p_item_id: item.id, p_website: result.website, p_domain: result.domain,
       p_email: result.email, p_source_url: result.sourceUrl, p_evidence: result.evidence,
     });
     if (commitError) throw commitError;
+    if (!commit?.success) throw new Error(commit?.error ?? "commit_failed");
     return true;
   } catch (processingError) {
     console.error("[work-intake] item failed", { runId, position: item.position, error: String(processingError) });
-    await client.rpc("sales_lead_work_intake_finish_item", {
+    const { error: finishError } = await client.rpc("sales_lead_work_intake_finish_item", {
       p_item_id: item.id, p_outcome: "rejected", p_reason: "processing_failed", p_evidence: {},
     });
+    if (finishError) throw finishError;
     return true;
   }
 }
@@ -71,7 +73,8 @@ async function processRun(client: SupabaseClient, runId: string): Promise<void> 
   const worker = async () => { while (await processOne(client, runId)) { /* drain */ } };
   try {
     await Promise.all(Array.from({ length: WORKERS }, worker));
-    await client.rpc("sales_lead_work_intake_refresh", { p_run_id: runId });
+    const { error: refreshError } = await client.rpc("sales_lead_work_intake_refresh", { p_run_id: runId });
+    if (refreshError) throw refreshError;
   } catch (error) {
     console.error("[work-intake] processing failed", { runId, error: String(error) });
     await client.from("sales_lead_work_intake_runs").update({

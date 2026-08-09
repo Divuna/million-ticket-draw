@@ -3,12 +3,16 @@ import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import {
   deterministicEshopEvidence,
+  isPublicNetworkAddress,
   sameCompanyDomain,
   verifyWorkIntakeCandidate,
 } from "../../supabase/functions/_shared/salesLeadWorkIntakeVerifier.ts";
 
 const root = process.cwd();
-const migration = readFileSync(join(root, "supabase/migrations/20260809153000_sales_lead_work_intake.sql"), "utf8");
+const migration = [
+  "20260809153000_sales_lead_work_intake.sql",
+  "20260809203719_sales_lead_work_intake_review_fixes.sql",
+].map((file) => readFileSync(join(root, "supabase/migrations", file), "utf8")).join("\n");
 const edge = readFileSync(join(root, "supabase/functions/sales-lead-work-intake/index.ts"), "utf8");
 const verifier = readFileSync(join(root, "supabase/functions/_shared/salesLeadWorkIntakeVerifier.ts"), "utf8");
 
@@ -75,6 +79,15 @@ test("e-shop evidence requires a transactional signal, not a category guess", ()
   expect(deterministicEshopEvidence("WooCommerce košík 100 Kč")).toMatchObject({ accepted: true });
 });
 
+test("network guard rejects private, link-local, carrier and mapped addresses", () => {
+  for (const address of [
+    "127.0.0.1", "10.0.0.1", "172.16.0.1", "192.168.1.1", "169.254.169.254",
+    "100.64.0.1", "198.18.0.1", "::1", "fd00::1", "fe80::1", "::ffff:127.0.0.1",
+  ]) expect(isPublicNetworkAddress(address), address).toBe(false);
+  expect(isPublicNetworkAddress("93.184.216.34")).toBe(true);
+  expect(isPublicNetworkAddress("2606:2800:220:1:248:1893:25c8:1946")).toBe(true);
+});
+
 test("intake is private, asynchronous, bounded and idempotent", () => {
   expect(edge).toContain('Deno.env.get("SALES_LEAD_WORK_INTAKE_SECRET")');
   expect(edge).toContain("EdgeRuntime.waitUntil(processing)");
@@ -84,6 +97,7 @@ test("intake is private, asynchronous, bounded and idempotent", () => {
   expect(migration).toContain("external_batch_id text NOT NULL UNIQUE");
   expect(migration).toContain("idempotency_conflict");
   expect(migration).toContain("FOR UPDATE SKIP LOCKED");
+  expect(migration).toContain("claimed_at < clock_timestamp() - interval '2 minutes'");
   expect(migration).toContain("pg_advisory_xact_lock");
   expect(migration).toContain("REVOKE ALL ON public.sales_lead_work_intake_runs FROM PUBLIC, anon, authenticated");
 });
@@ -92,6 +106,7 @@ test("atomic commit retains all mandatory CRM and outreach guards", () => {
   for (const marker of [
     "sales_lead_partner_match_reason", "duplicate_domain", "duplicate_email",
     "do_not_contact", "sales_lead_email_suppression", "previous_or_active_batch",
+    "previous_outreach", "sales_lead_duplicate_matches", "duplicate_email_domain",
     "'novy','work_intake'", "'e-shopy'", "'chatgpt_work_intake'",
     "backend_verified_official_website", "exact_http_source_match",
   ]) expect(migration).toContain(marker);

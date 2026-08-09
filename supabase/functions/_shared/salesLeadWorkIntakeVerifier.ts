@@ -15,6 +15,13 @@ const HEADERS = {
   "Accept-Language": "cs,en;q=0.8",
 };
 
+type DnsRecordType = "A" | "AAAA";
+type ResolveDns = (query: string, recordType: DnsRecordType) => Promise<string[]>;
+
+declare const Deno: {
+  resolveDns(query: string, recordType: DnsRecordType): Promise<string[]>;
+};
+
 export interface WorkIntakeCandidate {
   website: string;
   public_email: string;
@@ -33,6 +40,60 @@ function host(raw: string): string {
 export function sameCompanyDomain(a: string, b: string): boolean {
   const ah = host(a); const bh = host(b);
   return Boolean(ah && bh && registrableDomainOf(ah) === registrableDomainOf(bh));
+}
+
+function publicIpv4(value: string): boolean {
+  const octets = value.split(".").map(Number);
+  if (octets.length !== 4 || octets.some((part) => !Number.isInteger(part) || part < 0 || part > 255)) return false;
+  const [a, b, c] = octets;
+  if (a === 0 || a === 10 || a === 127 || a >= 224) return false;
+  if (a === 100 && b >= 64 && b <= 127) return false;
+  if (a === 169 && b === 254) return false;
+  if (a === 172 && b >= 16 && b <= 31) return false;
+  if (a === 192 && (b === 168 || (b === 0 && c === 0) || (b === 0 && c === 2))) return false;
+  if (a === 198 && (b === 18 || b === 19 || (b === 51 && c === 100))) return false;
+  if (a === 203 && b === 0 && c === 113) return false;
+  return true;
+}
+
+export function isPublicNetworkAddress(value: string): boolean {
+  const address = value.toLowerCase().replace(/^\[/, "").replace(/\]$/, "");
+  if (/^\d{1,3}(?:\.\d{1,3}){3}$/.test(address)) return publicIpv4(address);
+  const mapped = address.match(/^::ffff:(\d{1,3}(?:\.\d{1,3}){3})$/);
+  if (mapped) return publicIpv4(mapped[1]);
+  if (!address.includes(":")) return false;
+  if (address === "::" || address === "::1" || address.startsWith("fc") || address.startsWith("fd")) return false;
+  if (/^fe[89ab]/.test(address) || address.startsWith("ff") || address.startsWith("2001:db8:")) return false;
+  return true;
+}
+
+async function hostnameResolvesPublicly(hostname: string, resolveDns: ResolveDns): Promise<boolean> {
+  const literal = hostname.toLowerCase().replace(/^\[/, "").replace(/\]$/, "");
+  if (/^\d{1,3}(?:\.\d{1,3}){3}$/.test(literal) || literal.includes(":")) {
+    return isPublicNetworkAddress(literal);
+  }
+  const answers = await Promise.allSettled([
+    resolveDns(literal, "A"),
+    resolveDns(literal, "AAAA"),
+  ]);
+  const addresses = answers.flatMap((answer) => answer.status === "fulfilled" ? answer.value : []);
+  return addresses.length > 0 && addresses.every(isPublicNetworkAddress);
+}
+
+function dnsGuardedFetch(fetchImpl: typeof fetch): typeof fetch {
+  if (fetchImpl !== fetch) return fetchImpl;
+  const cache = new Map<string, Promise<boolean>>();
+  return (async (input: string | URL | Request, init?: RequestInit) => {
+    const raw = typeof input === "string" ? input : input instanceof URL ? input.toString() : input.url;
+    const hostname = new URL(raw).hostname.toLowerCase();
+    let check = cache.get(hostname);
+    if (!check) {
+      check = hostnameResolvesPublicly(hostname, (query, recordType) => Deno.resolveDns(query, recordType));
+      cache.set(hostname, check);
+    }
+    if (!await check) throw new TypeError("unsafe_network_destination");
+    return await fetchImpl(input, init);
+  }) as typeof fetch;
 }
 
 async function readLimited(response: Response): Promise<string> {
@@ -101,7 +162,8 @@ export async function verifyWorkIntakeCandidate(
   if (isNonOfficialWebsiteUrl(website) || isNonOfficialWebsiteUrl(source)) return { ok: false, reason: "catalog_or_marketplace" };
   if (!sameCompanyDomain(website, source)) return { ok: false, reason: "email_source_domain_mismatch" };
 
-  const page = await fetchWebsite(website, fetchImpl);
+  const guardedFetch = dnsGuardedFetch(fetchImpl);
+  const page = await fetchWebsite(website, guardedFetch);
   if (!page) return { ok: false, reason: "fetch_failed" };
   if (isNonOfficialWebsiteUrl(page.url) || !sameCompanyDomain(website, page.url)) return { ok: false, reason: "email_source_domain_mismatch" };
   const eshop = deterministicEshopEvidence(page.html);
@@ -113,7 +175,7 @@ export async function verifyWorkIntakeCandidate(
     officialWebsite: page.url,
     candidateEmail: email,
     sourceUrl: source,
-    fetchImpl,
+    fetchImpl: guardedFetch,
   });
   if (!exact.verified) {
     const reason = exact.reason === "email_not_found_on_verified_website" ? "email_not_found_on_source"

@@ -242,26 +242,6 @@ BEGIN
 END;
 $$;
 
-CREATE OR REPLACE FUNCTION public.sales_lead_work_intake_refresh(p_run_id uuid)
-RETURNS void
-LANGUAGE plpgsql
-SECURITY DEFINER
-SET search_path = ''
-AS $$
-DECLARE v_pending integer; v_processing integer;
-BEGIN
-  SELECT count(*) FILTER (WHERE status='pending'), count(*) FILTER (WHERE status='processing')
-    INTO v_pending,v_processing FROM public.sales_lead_work_intake_items WHERE run_id=p_run_id;
-  UPDATE public.sales_lead_work_intake_runs r SET
-    created_count=(SELECT count(*) FROM public.sales_lead_work_intake_items WHERE run_id=p_run_id AND status='created'),
-    skipped_count=(SELECT count(*) FROM public.sales_lead_work_intake_items WHERE run_id=p_run_id AND status='skipped'),
-    rejected_count=(SELECT count(*) FROM public.sales_lead_work_intake_items WHERE run_id=p_run_id AND status='rejected'),
-    status=CASE WHEN v_pending=0 AND v_processing=0 THEN 'done' ELSE 'processing' END,
-    completed_at=CASE WHEN v_pending=0 AND v_processing=0 THEN clock_timestamp() ELSE NULL END
-  WHERE r.id=p_run_id;
-END;
-$$;
-
 CREATE OR REPLACE FUNCTION public.sales_lead_work_intake_commit(
   p_item_id uuid,
   p_website text,
