@@ -1,6 +1,10 @@
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.57.4";
-import { verifyCompanyWebsite, verifyDiscoveredCompanySite } from "../_shared/companyWebsiteVerifier.ts";
+import {
+  domainBelongsToCompanyName,
+  verifyCompanyWebsite,
+  verifyDiscoveredCompanySite,
+} from "../_shared/companyWebsiteVerifier.ts";
 import {
   appendDiagnosticsEntry,
   buildDiagnosticsEntry,
@@ -219,9 +223,22 @@ serve(async (req: Request) => {
     }
 
     // Autoritativní registr (ARES): podle IČO na webu, jinak podle názvu.
+    //
+    // IČO uvedené přímo na webu je důkaz vazby firmy na doménu. Shoda v ARES
+    // JEN podle názvu ale důkaz není — stejný nebo podobný název může mít cizí
+    // právnická osoba. Takový záznam smí přepsat identitu jen tehdy, když web
+    // sám potvrdí, že doména patří té firmě.
     let reg: RegistryRecord | null = null;
     if (site.icoOnPage) reg = await aresByIco(site.icoOnPage);
-    if (!reg && site.companyName) reg = await aresByName(site.companyName);
+    if (!reg && site.companyName) {
+      const byName = await aresByName(site.companyName);
+      if (byName && site.website && domainBelongsToCompanyName(site.website, byName.legalName)) {
+        reg = byName;
+      } else if (byName) {
+        // Cizí právnická osoba se nesmí uložit jen kvůli podobnému názvu.
+        bump("ares_name_match_rejected");
+      }
+    }
     const name = reg?.legalName ?? site.companyName;
     if (!name) { counters.websites_rejected++; bump("no_company_name"); continue; }
 
@@ -267,7 +284,6 @@ serve(async (req: Request) => {
     // E-mail je volitelný bonus. Nedoložený výsledek se nikam neukládá a
     // nebrání vytvoření jinak platného leadu.
     const verifiedContact = await findVerifiedDiscoveryContact(official.website, name);
-    bump(verifiedContact ? "email_found" : "email_missing");
     bump(verifiedContact ? "email_found" : "email_missing");
 
     const nowIso = new Date().toISOString();
