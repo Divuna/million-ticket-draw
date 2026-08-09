@@ -254,10 +254,13 @@ serve(async (req: Request) => {
     // kategorii, je spravne ji zaradit do existujici kategorie "jine", ne
     // zahodit. Kategorie neni bezpecnostni kontrola.
     let targetGroup = cls.slug === leadGroup ? leadGroup : (cls.slug && validSlugs.has(cls.slug) ? cls.slug : null);
-    if (!targetGroup && validSlugs.has("jine")) {
+    // Fallback jen pro firmu s IC z ARES. Bez registrovane identity by se tudy
+    // mohl protahnout katalog nebo agregator, ktery klasifikator nezaradil.
+    if (!targetGroup && ico && validSlugs.has("jine")) {
       targetGroup = "jine";
       bump("classified_fallback_other");
     }
+    if (!targetGroup && !ico) bump("fallback_blocked_no_ico");
     if (!targetGroup) { counters.wrong_category++; bump("wrong_category"); continue; }
     const isTargetSegment = targetGroup === leadGroup;
 

@@ -110,9 +110,14 @@ test.describe('Skutečná příčina: uložený lead se nepočítal jako vytvoř
 
 test.describe('Kategorie jine místo zahození ověřené firmy', () => {
   test('neurčená kategorie spadne do jine a započítá se', () => {
-    expect(loop).toContain('if (!targetGroup && validSlugs.has("jine"))');
+    expect(loop).toContain('if (!targetGroup && ico && validSlugs.has("jine"))');
     expect(loop).toContain('targetGroup = "jine"');
     expect(loop).toContain('bump("classified_fallback_other")');
+  });
+
+  test('fallback platí jen pro firmu s IČO z ARES — katalog se tudy neprotáhne', () => {
+    // Bez registrované identity zůstává kandidát odmítnutý a je to vidět v diagnostice.
+    expect(loop).toContain('if (!targetGroup && !ico) bump("fallback_blocked_no_ico")');
   });
 
   test('wrong_category zůstává pro případ, že jine neexistuje', () => {
