@@ -102,9 +102,9 @@ test.describe('Skutečná příčina: uložený lead se nepočítal jako vytvoř
     expect(loop).toContain('bump(isTargetSegment ? "created_in_target_group" : "created_in_other_group")');
   });
 
-  test('wrong_category zůstává jen pro skutečné odmítnutí před uložením', () => {
+  test('wrong_category pokrývá obecné odmítnutí i striktní automatický segment', () => {
     const rejections = loop.split('counters.wrong_category++').length - 1;
-    expect(rejections).toBe(1);
+    expect(rejections).toBe(2);
   });
 });
 
