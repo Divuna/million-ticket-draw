@@ -7,13 +7,13 @@ import fs from 'node:fs';
 
 const read = (p: string) => fs.readFileSync(p, 'utf8').replace(/\r\n/g, '\n');
 
-const migration = read('supabase/migrations/20260809120000_sales_lead_daily_send_cap.sql');
+const migration = read('supabase/migrations/20260809140000_sales_lead_daily_cap_batch_only.sql');
 const claimFn = migration
   .split('CREATE OR REPLACE FUNCTION public.sales_lead_email_batch_claim_next()')[1]
   ?.split('REVOKE ALL ON FUNCTION')[0] ?? '';
 
 /** Blok, který spočítá dnešní spotřebu limitu. */
-const budgetBlock = claimFn.split('INTO v_used_today')[0]?.split('Denní strop')[1] ?? '';
+const budgetBlock = claimFn.split('INTO v_used_today')[1]?.split('IF v_used_today')[0] ?? '';
 /** Vyhodnocení stropu. */
 const capBlock = claimFn.split('IF v_used_today >= v_settings.daily_limit THEN')[1]?.split('END IF;')[0] ?? '';
 
@@ -60,14 +60,18 @@ test.describe('Denní strop — výpočet', () => {
     expect(budgetBlock).not.toContain("'provider_rejected'");
   });
 
-  test('ruční první e-maily se do denního stropu počítají také', () => {
-    expect(budgetBlock).toContain("d.mode <> 'batch_initial'");
-    expect(budgetBlock).toContain("(d.created_at AT TIME ZONE 'Europe/Prague')::date = v_today");
+  test('ruční první e-maily se do denního stropu NEzapočítávají a nemají limit', () => {
+    // Strop je jen pro dávkový tok; manual_initial nesmí snižovat automatickou kapacitu.
+    expect(budgetBlock).not.toContain("manual_initial");
+    expect(budgetBlock).not.toContain("d.mode <> 'batch_initial'");
+    expect(budgetBlock).toContain("d.mode = 'batch_initial'");
+    // Počítá se výhradně přes položky dávek, ne přes samostatné delivery.
+    expect(budgetBlock).toContain('FROM public.sales_lead_email_batch_items i');
   });
 
   test('10) den se určuje v Europe/Prague, takže půlnoc limit resetuje', () => {
     expect(claimFn).toContain("v_today := (v_now AT TIME ZONE 'Europe/Prague')::date;");
-    expect(budgetBlock).toContain("AT TIME ZONE 'Europe/Prague'");
+    expect(claimFn).toContain("b.scheduled_date = v_today");
   });
 });
 
