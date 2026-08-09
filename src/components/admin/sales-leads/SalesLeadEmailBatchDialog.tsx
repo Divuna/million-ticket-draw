@@ -1,6 +1,6 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { AlertTriangle, CalendarClock, ExternalLink, Loader2, ShieldCheck } from 'lucide-react';
+import { CalendarClock, ExternalLink, Loader2, ShieldCheck } from 'lucide-react';
 import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
@@ -65,10 +65,7 @@ export function SalesLeadEmailBatchDialog({ open, onOpenChange, selectedLeads, o
 
   const leadIds = useMemo(() => selectedLeads.map((lead) => lead.id), [selectedLeads]);
   const eligibleCount = preview?.eligible_count ?? preview?.eligible?.length ?? 0;
-  // Preparation is allowed only when the server proved automation is disabled.
-  // `true`, `undefined`, or any other value blocks the confirmation.
-  const automationSafelyDisabled = preview?.automation_enabled === false;
-  const canPrepare = Boolean(preview?.success) && automationSafelyDisabled && eligibleCount > 0;
+  const canPrepare = Boolean(preview?.success) && eligibleCount > 0;
 
   useEffect(() => {
     if (!open) {
@@ -157,14 +154,14 @@ export function SalesLeadEmailBatchDialog({ open, onOpenChange, selectedLeads, o
         toast.error(salesLeadEmailBatchReasonMessage(result.error));
         return;
       }
-      // Only an explicitly paused batch with provably disabled automation counts
-      // as success. Anything else keeps the dialog and the selection untouched.
-      if (result.batch_status !== 'paused' || result.automation_enabled !== false) {
+      // Safe preparation must always commit as paused, regardless of the global
+      // automation state. Sending still requires a separate explicit activation.
+      if (result.batch_status !== 'paused') {
         toast.error(salesLeadEmailBatchReasonMessage('unexpected_batch_state'));
         return;
       }
       toast.success(
-        'Dávka byla připravena. Žádný e-mail nebyl odeslán.',
+        'Dávka byla připravena jako pozastavená. Žádný e-mail nebyl odeslán.',
         { description: `Uloženo: ${result.scheduled_count ?? 0}, vyřazeno: ${result.skipped_count ?? 0}.` },
       );
       setConfirmationOpen(false);
@@ -193,23 +190,17 @@ export function SalesLeadEmailBatchDialog({ open, onOpenChange, selectedLeads, o
           </DialogHeader>
 
           <div className="min-h-0 flex-1 space-y-5 overflow-y-auto px-6 py-5">
-            <Alert className="border-amber-500/40 bg-amber-500/10" data-testid="batch-disabled-warning">
-              <AlertTriangle className="h-4 w-4" />
-              <AlertTitle>Automatické odesílání je vypnuté</AlertTitle>
+            <Alert className="border-amber-500/40 bg-amber-500/10" data-testid="batch-preparation-safety">
+              <ShieldCheck className="h-4 w-4" />
+              <AlertTitle>
+                {preview?.automation_enabled === true ? 'Automatické odesílání je zapnuté' : 'Automatické odesílání je vypnuté'}
+              </AlertTitle>
               <AlertDescription>
-                Potvrzením se dávka pouze bezpečně uloží a žádný e-mail se neodešle.
+                {preview?.automation_enabled === true
+                  ? 'Připravená dávka se i tak uloží jako pozastavená. Nic se neodešle, dokud ji výslovně nespustíte.'
+                  : 'Připravená dávka se uloží jako pozastavená a žádný e-mail se neodešle.'}
               </AlertDescription>
             </Alert>
-
-            {preview?.success && !previewLoading && !automationSafelyDisabled && (
-              <Alert variant="destructive" data-testid="batch-automation-blocked">
-                <AlertTriangle className="h-4 w-4" />
-                <AlertTitle>Přípravu dávky nelze potvrdit</AlertTitle>
-                <AlertDescription>
-                  {salesLeadEmailBatchReasonMessage('automation_must_be_disabled')}
-                </AlertDescription>
-              </Alert>
-            )}
 
             <div className="grid gap-4 md:grid-cols-2">
               <div className="space-y-2">
@@ -238,7 +229,7 @@ export function SalesLeadEmailBatchDialog({ open, onOpenChange, selectedLeads, o
                   onChange={(event) => setScheduledDate(event.target.value)}
                   data-testid="batch-scheduled-date"
                 />
-                <p className="text-xs text-muted-foreground">Denní limit je nejvýše 20 prvních e-mailů.</p>
+                <p className="text-xs text-muted-foreground">Denní limit je nejvýše 20 dávkových e-mailů.</p>
               </div>
             </div>
 
@@ -322,7 +313,7 @@ export function SalesLeadEmailBatchDialog({ open, onOpenChange, selectedLeads, o
           <AlertDialogHeader>
             <AlertDialogTitle>Opravdu připravit dávku?</AlertDialogTitle>
             <AlertDialogDescription>
-              Dávka bude uložena jako pozastavená. Nyní se neodešle žádný e-mail.
+              Dávka bude uložena jako pozastavená. Nyní se neodešle žádný e-mail. Odesílání začne až po samostatném kliknutí na „Spustit dávku“.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
