@@ -18,6 +18,7 @@ import {
   type VerifiedSourceEmailResult,
 } from "../_shared/companyEmailCrawler.ts";
 import { classificationMatchesJobScope } from "./categoryPolicy.ts";
+import { runAutomaticSalesFlow } from "../_shared/automaticSalesFlow.ts";
 
 // ============================================================================
 // sales-lead-discover — WORKER Discovery Jobu (dávkové zpracování).
@@ -37,6 +38,7 @@ const AI_MODEL = Deno.env.get("SALES_LEADS_AI_MODEL") ?? "gpt-4o-mini";
 const BATCH_MAX = 12;
 const TIME_BUDGET_MS = 90_000;
 const MAX_EMPTY_ROUNDS = 3;
+const JOB_LEASE_MS = 110_000;
 
 function jsonResponse(body: Record<string, unknown>, status = 200): Response {
   return new Response(JSON.stringify(body), { status, headers: { "Content-Type": "application/json" } });
@@ -133,9 +135,32 @@ serve(async (req: Request) => {
   const leadGroup = job.lead_group as string;
   const autoCreated = job.auto_created === true;
 
-  await supabaseAdmin.from("sales_lead_discovery_jobs").update({
-    status: "running", started_at: job.started_at ?? new Date().toISOString(), updated_at: new Date().toISOString(),
-  }).eq("id", jobId);
+  const previousUpdatedAt = String(job.updated_at ?? "");
+  if (job.status === "running" && Date.now() - new Date(previousUpdatedAt).getTime() < JOB_LEASE_MS) {
+    return jsonResponse({ success: true, job_id: jobId, lease_held: true });
+  }
+  // Optimistic compare-and-set lease: two overlapping cron invocations may
+  // read the same row, but only one can replace its exact previous timestamp.
+  const leaseAt = new Date().toISOString();
+  const { data: leasedJob, error: leaseError } = await supabaseAdmin.from("sales_lead_discovery_jobs").update({
+    status: "running", started_at: job.started_at ?? leaseAt, updated_at: leaseAt,
+  }).eq("id", jobId).eq("updated_at", previousUpdatedAt).select("id").maybeSingle();
+  if (leaseError) return jsonResponse({ success: false, error: "job_lease_failed" }, 500);
+  if (!leasedJob) return jsonResponse({ success: true, job_id: jobId, lease_held: true });
+
+  // Automatic jobs use batch web search and the existing deterministic intake.
+  // The ARES and per-candidate classifier path below remains manual-only.
+  if (autoCreated) {
+    const intakeSecret = Deno.env.get("SALES_LEAD_WORK_INTAKE_SECRET") ?? "";
+    const supabaseUrl = Deno.env.get("SUPABASE_URL") ?? "";
+    if (intakeSecret.length < 32 || !supabaseUrl) return jsonResponse({ success: false, error: "automatic_intake_not_configured" }, 503);
+    try {
+      return jsonResponse(await runAutomaticSalesFlow({ client: supabaseAdmin, job, openaiKey, intakeSecret, supabaseUrl }));
+    } catch (error) {
+      dbg("automatic_flow_error", { job_id: jobId, error: error instanceof Error ? error.message.slice(0, 160) : "unknown" });
+      return jsonResponse({ success: false, error: "automatic_flow_failed", job_id: jobId }, 500);
+    }
+  }
 
   const { data: groupRows } = await supabaseAdmin.from("sales_lead_groups").select("slug, label").eq("is_active", true);
   const groups = (groupRows ?? []) as { slug: string; label: string }[];
