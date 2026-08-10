@@ -436,6 +436,7 @@ function AppContent() {
     if (isAffiliateAccount && !isPartnerAccount) {
       const allowedForAffiliate =
         location.pathname.startsWith('/affiliate') ||
+        location.pathname === '/partner/login' ||   // gating login page must stay reachable (blocks with its own message)
         location.pathname === '/partner/invite' ||
         location.pathname === '/partner/set-password' ||
         location.pathname === '/reset-password' ||
@@ -544,6 +545,7 @@ function AppContent() {
   if (isAffiliateAccount && !isPartnerAccount && user) {
     const allowedForAffiliate =
       location.pathname.startsWith('/affiliate') ||
+      location.pathname === '/partner/login' ||   // gating login page must stay reachable (blocks with its own message)
       location.pathname === '/partner/invite' ||
       location.pathname === '/partner/set-password' ||
       location.pathname === '/reset-password' ||
