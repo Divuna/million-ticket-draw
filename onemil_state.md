@@ -26,8 +26,23 @@ Read-only ověřeno přímo na produkci `xkzhjldrojjlrkezorey`:
   neplatné datum → 400 `invalid_target_date`.
 - Po nasazení **nevznikla žádná nová dávka, neodešel žádný e-mail** a pozastavená dávka z 6. 8.
   zůstala pozastavená. Checksum stavů dávek byl před i po nasazení `b42bb7f7…`.
-- **Agent Magin zatím není vytvořený ani naplánovaný.** První plánovaný počet je
-  **40 e-mailů dne 12. 8. 2026**, plán `30 7 * * 1-5` v `Europe/Prague`.
+- **Agent Magin je vytvořený a naplánovaný** (Paperclip 2026.722.0, firma `iCONIC POINT s.r.o.`).
+  Agent id `3ef09c71-d9a0-43f3-8ce8-c5e9938dae64`, adaptér `codex_local`, search OFF,
+  `canCreateAgents=false`, `canCreateSkills=false`, `budgetMonthlyCents=0` (firemní výchozí),
+  nadřízený `Provozní ředitel OneMil`. Routine `Denní dávka prvních obchodních e-mailů`
+  (`a3ac40b2-7d58-4207-9c5d-1ffc52ee8c8c`, `active`, `catchUpPolicy=skip_missed`,
+  `concurrencyPolicy=skip_if_active`) s cron triggerem `30 7 * * 1-5`, `timezone=Europe/Prague`.
+  **První ostrý běh 12. 8. 2026 v 7:30 Praha** (`nextRunAt = 2026-08-12T05:30:00Z`), počet 40.
+- **Credential je hotový.** `SALES_LEAD_BATCH_AGENT_SECRET` je bezpečně uložený v Paperclip
+  credential store (`local_encrypted`, `paperclip_managed`, stav `active`) a **stejná nová hodnota
+  je nastavená v produkčním Supabase**. Hodnota vznikla jen v paměti a **není nikde zveřejněná ani
+  uložená** — v dokumentaci, gitu, promptu, instrukcích agenta, issue ani logu; Paperclip API ji
+  nevrací. Shodu obou uložených hodnot **definitivně potvrdí až první ostrý běh 12. 8. 2026**,
+  protože každé úspěšné volání funkce zakládá dávku, a proto se novou hodnotou vědomě nevolalo.
+- **Paperclip nepodporuje vlastní profilový obrázek agenta.** Pole `icon` je pevný výčet 41
+  vestavěných ikon; `iconAssetId` ani `avatarAssetId` neexistuje (nahrávání obrázků je jen pro
+  logo firmy). Magin má proto vestavěnou ikonu `mail` a schválená postavička je uložená jako
+  cesta v jeho `metadata.approvedAvatarPath`.
 - Schválený profilový obrázek Magina je na cestě
   `C:\Users\divis\Downloads\ChatGPT Image 11. 8. 2026 11_37_39.png` (3D postavička s headsetem).
   **Obrázek MioCoinu se pro Magina nesmí použít**, ani když se automaticky přiloží do konverzace.

@@ -281,10 +281,36 @@ Top candidates: Dedoles, Slevomat, Rohlik.cz, Aktin/Vilgain, Vuch, DATART.
 
 ---
 
-## 14. Magin — CRM operátor OneMil (backend ready, agent NOT created yet, 11. 08. 2026)
+## 14. Magin — CRM operátor OneMil (CREATED AND SCHEDULED, 11. 08. 2026)
 
-**Status: the secure OneMil connection is live on production; the Paperclip agent itself does not
-exist yet and is not scheduled.** Do not create or schedule it without Pavel's explicit approval.
+**Status: live.** Agent id `3ef09c71-d9a0-43f3-8ce8-c5e9938dae64`, urlKey `magin-crm-oper-tor-onemil`,
+status `idle`, adapter `codex_local` (model `gpt-5.3-codex`, `--skip-git-repo-check`, **search OFF**),
+reports to `Provozní ředitel OneMil`, `budgetMonthlyCents = 0` (company default, unchanged),
+`canCreateAgents = false`, `canCreateSkills = false`.
+
+Routine `Denní dávka prvních obchodních e-mailů` — id `a3ac40b2-7d58-4207-9c5d-1ffc52ee8c8c`,
+status `active`, `catchUpPolicy = skip_missed`, `concurrencyPolicy = skip_if_active`.
+Schedule trigger `7b512abb-…`: cron `30 7 * * 1-5`, **timezone `Europe/Prague`**, enabled,
+`nextRunAt = 2026-08-12T05:30:00Z` = **12. 08. 2026, 07:30 Prague**.
+
+**Two API facts worth remembering (verified, not guessed):**
+
+- Creating an agent directly with `POST /companies/:id/agents` returns **409** because the company
+  has `requireBoardApprovalForNewAgents = true`. Use `POST /companies/:id/agent-hires`.
+- Scheduling uses **routines + triggers**, not a per-agent cron field:
+  `POST /companies/:id/routines` then `POST /routines/:id/triggers` with
+  `{ kind: "schedule", cronExpression, timezone }`.
+
+**Credential is in place.** `SALES_LEAD_BATCH_AGENT_SECRET` is stored in the Paperclip credential
+store (`POST /api/companies/:id/secrets`, provider `local_encrypted`, mode `paperclip_managed`,
+status `active`) and the **same new value is set in the production Supabase project**. The value was
+generated in memory only and is **not published or stored anywhere** — not in this documentation,
+git, the agent prompt or instructions, an issue, or a log. The API does not return it; the agent
+fetches it at run time via `/api/agents/me/secrets/{key}/value`.
+
+**Final confirmation happens on the first real run.** Both stores received the same value from a
+single in-memory generation, but the function was deliberately not called with it, because every
+successful call creates a batch. The 12. 08. 2026 run is what proves the two sides match.
 
 ### What is already live on production `xkzhjldrojjlrkezorey`
 
