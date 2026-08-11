@@ -3,6 +3,7 @@ import { serve } from "https://deno.land/std@0.224.0/http/server.ts";
 
 const SECRET_MIN_LENGTH = 32;
 const MAX_LEAD_IDS = 100;
+const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 
 type Action =
   | "approve_backend_verified_proposals"
@@ -75,6 +76,16 @@ function getClient() {
   });
 }
 
+function getApprovedActorUserId(): string {
+  const actorUserId = Deno.env.get("SALES_LEAD_MAGIN_SUPPLY_APPROVER_USER_ID") ?? "";
+
+  if (!UUID_PATTERN.test(actorUserId)) {
+    throw new Error("approved_actor_not_configured");
+  }
+
+  return actorUserId;
+}
+
 function parseLeadIds(value: unknown): string[] {
   if (!Array.isArray(value)) {
     throw new Error("lead_ids_required");
@@ -88,10 +99,8 @@ function parseLeadIds(value: unknown): string[] {
     throw new Error("too_many_leads");
   }
 
-  const uuidPattern = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
-
   for (const leadId of value) {
-    if (typeof leadId !== "string" || !uuidPattern.test(leadId)) {
+    if (typeof leadId !== "string" || !UUID_PATTERN.test(leadId)) {
       throw new Error("invalid_lead_id");
     }
   }
@@ -117,6 +126,7 @@ async function handle(body: RequestBody): Promise<Response> {
   }
 
   const supabase = getClient();
+  const actorUserId = getApprovedActorUserId();
 
   if (body.action === "approve_backend_verified_proposals") {
     let leadIds: string[];
@@ -129,7 +139,10 @@ async function handle(body: RequestBody): Promise<Response> {
 
     const { data, error } = await supabase.rpc(
       "sales_lead_magin_approve_backend_verified_proposals",
-      { p_lead_ids: leadIds },
+      {
+        p_lead_ids: leadIds,
+        p_actor_user_id: actorUserId,
+      },
     );
 
     if (error) {
@@ -154,7 +167,10 @@ async function handle(body: RequestBody): Promise<Response> {
 
     const { data, error } = await supabase.rpc(
       "sales_lead_magin_create_e_shopy_discovery_job",
-      { p_requested_count: requestedCount },
+      {
+        p_requested_count: requestedCount,
+        p_actor_user_id: actorUserId,
+      },
     );
 
     if (error) {

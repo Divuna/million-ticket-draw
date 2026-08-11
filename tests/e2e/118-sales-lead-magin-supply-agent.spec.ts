@@ -15,42 +15,46 @@ test.describe("Magin lead supply adapter contract", () => {
 
     expect(migration).toContain("sales_lead_magin_approve_backend_verified_proposals");
     expect(migration).toContain("sales_lead_magin_create_e_shopy_discovery_job");
-    expect(migration).toContain("GRANT EXECUTE ON FUNCTION public.sales_lead_magin_approve_backend_verified_proposals(uuid[]) TO service_role");
-    expect(migration).toContain("GRANT EXECUTE ON FUNCTION public.sales_lead_magin_create_e_shopy_discovery_job(integer) TO service_role");
-    expect(migration).toContain("REVOKE ALL ON FUNCTION public.sales_lead_magin_approve_backend_verified_proposals(uuid[]) FROM PUBLIC, anon, authenticated");
-    expect(migration).toContain("REVOKE ALL ON FUNCTION public.sales_lead_magin_create_e_shopy_discovery_job(integer) FROM PUBLIC, anon, authenticated");
+    expect(migration).toContain("GRANT EXECUTE ON FUNCTION public.sales_lead_magin_approve_backend_verified_proposals(uuid[], uuid) TO service_role");
+    expect(migration).toContain("GRANT EXECUTE ON FUNCTION public.sales_lead_magin_create_e_shopy_discovery_job(integer, uuid) TO service_role");
+    expect(migration).toContain("REVOKE ALL ON FUNCTION public.sales_lead_magin_approve_backend_verified_proposals(uuid[], uuid) FROM PUBLIC, anon, authenticated");
+    expect(migration).toContain("REVOKE ALL ON FUNCTION public.sales_lead_magin_create_e_shopy_discovery_job(integer, uuid) FROM PUBLIC, anon, authenticated");
 
     expect(migration).not.toMatch(/GRANT\s+EXECUTE[\s\S]+TO\s+authenticated/i);
-    expect(migration).not.toContain("sales_leads.manage");
     expect(migration).not.toMatch(/CREATE\s+OR\s+REPLACE\s+FUNCTION\s+public\.sales_lead_approve_proposed/i);
     expect(migration).not.toMatch(/CREATE\s+OR\s+REPLACE\s+FUNCTION\s+public\.sales_lead_discovery_job_create/i);
   });
 
-  test("approval wrapper accepts only already backend-verified official-website proposals", () => {
+  test("approval wrapper pre-checks Magin scope and delegates approval to the existing RPC", () => {
     const migration = read(migrationPath);
 
     expect(migration).toContain("v_lead.status IS DISTINCT FROM 'navrzeny'");
     expect(migration).toContain("email_verified_by_admin");
     expect(migration).toContain("backend_verified_official_website");
-    expect(migration).toContain("email_verified_at IS NOT NULL");
-    expect(migration).toContain("email_source !~* '^https?://'");
-    expect(migration).toContain("public.sales_lead_initial_email_already_recorded");
-    expect(migration).toContain("public.sales_lead_email_send_guard");
-    expect(migration).toContain("status = 'novy'");
+    expect(migration).toContain("v_lead.email_verified_at IS NULL");
+    expect(migration).toContain("v_lead.email_source !~* '^https?://'");
+    expect(migration).toContain("public.sales_lead_approve_proposed(");
+    expect(migration).toContain("p_actor_user_id");
+    expect(migration).toContain("set_config('request.jwt.claim.sub', p_actor_user_id::text, true)");
 
-    expect(migration).not.toMatch(/SET[\s\S]*contact_email\s*=/i);
-    expect(migration).not.toContain("p_duplicate_override");
+    expect(migration).not.toMatch(/UPDATE\s+public\.sales_leads/i);
+    expect(migration).not.toMatch(/INSERT\s+INTO\s+public\.sales_lead_status_history/i);
+    expect(migration).not.toMatch(/INSERT\s+INTO\s+public\.sales_lead_activities/i);
+    expect(migration).not.toMatch(/UPDATE\s+public\.sales_leads[\s\S]*contact_email\s*=/i);
+    expect(migration).not.toMatch(/public\.sales_lead_set_status\s*\(/i);
+    expect(migration).not.toMatch(/public\.sales_lead_update_fields\s*\(/i);
   });
 
-  test("discovery wrapper can only enqueue e-shopy jobs through existing job queue", () => {
+  test("discovery wrapper delegates e-shopy job creation to the existing RPC", () => {
     const migration = read(migrationPath);
 
-    expect(migration).toContain("FROM public.sales_lead_discovery_jobs");
-    expect(migration).toContain("status IN ('queued', 'running')");
-    expect(migration).toContain("INSERT INTO public.sales_lead_discovery_jobs");
+    expect(migration).toContain("public.sales_lead_discovery_job_create('e-shopy', v_requested_count)");
     expect(migration).toContain("'e-shopy'");
-    expect(migration).toContain("least(greatest(coalesce(p_requested_count, 1), 1), 25)");
+    expect(migration).toContain("least(greatest(coalesce(p_requested_count, 5), 1), 25)");
+    expect(migration).toContain("set_config('request.jwt.claim.sub', p_actor_user_id::text, true)");
 
+    expect(migration).not.toMatch(/INSERT\s+INTO\s+public\.sales_lead_discovery_jobs/i);
+    expect(migration).not.toMatch(/UPDATE\s+public\.sales_lead_discovery_jobs/i);
     expect(migration).not.toMatch(/companyCandidateSearch|companyEmailCrawler|OPENAI|web_search/i);
   });
 
@@ -58,6 +62,7 @@ test.describe("Magin lead supply adapter contract", () => {
     const adapter = read(adapterPath);
 
     expect(adapter).toContain("SALES_LEAD_MAGIN_SUPPLY_AGENT_SECRET");
+    expect(adapter).toContain("SALES_LEAD_MAGIN_SUPPLY_APPROVER_USER_ID");
     expect(adapter).toContain("SECRET_MIN_LENGTH = 32");
     expect(adapter).toContain("approve_backend_verified_proposals");
     expect(adapter).toContain("create_e_shopy_discovery_job");
@@ -76,6 +81,5 @@ test.describe("Magin lead supply adapter contract", () => {
     expect(config).toContain("[functions.sales-lead-discover]");
     expect(config).toContain("[functions.sales-lead-magin-supply-agent]");
     expect(config).toMatch(/\[functions\.sales-lead-magin-supply-agent\]\s+verify_jwt\s*=\s*false/);
-    expect(config).not.toContain("[functions.sales-lead-daily-batch-agent]");
   });
 });

@@ -2,13 +2,14 @@
 -- Magin lead supply agent adapter
 -- ============================================================================
 -- Service-role-only wrappers used by the Paperclip adapter. They expose only the
--- minimal lead-supply actions Magin needs and leave the existing CRM and
--- discovery RPCs unchanged.
+-- minimal lead-supply actions Magin needs and delegate the writes to existing
+-- OneMil CRM/discovery RPCs.
 
 BEGIN;
 
 CREATE OR REPLACE FUNCTION public.sales_lead_magin_approve_backend_verified_proposals(
-  p_lead_ids uuid[]
+  p_lead_ids uuid[],
+  p_actor_user_id uuid
 )
 RETURNS jsonb
 LANGUAGE plpgsql
@@ -21,10 +22,21 @@ DECLARE
   v_requested_count integer := coalesce(array_length(p_lead_ids, 1), 0);
   v_approved_count integer := 0;
   v_skipped jsonb := '[]'::jsonb;
-  v_guard jsonb;
+  v_approve_result jsonb;
   v_recipient text;
-  v_domain text;
 BEGIN
+  IF p_actor_user_id IS NULL
+    OR NOT (
+      public.has_admin_permission('sales_leads.manage', p_actor_user_id)
+      OR public.is_superadmin(p_actor_user_id)
+    )
+  THEN
+    RETURN jsonb_build_object(
+      'success', false,
+      'error', 'approved_actor_required'
+    );
+  END IF;
+
   IF v_requested_count = 0 THEN
     RETURN jsonb_build_object(
       'success', false,
@@ -56,7 +68,6 @@ BEGIN
     END IF;
 
     v_recipient := lower(btrim(coalesce(v_lead.contact_email, '')));
-    v_domain := '@' || split_part(v_recipient, '@', 2);
 
     IF v_lead.status IS DISTINCT FROM 'navrzeny' THEN
       v_skipped := v_skipped || jsonb_build_array(jsonb_build_object(
@@ -83,135 +94,39 @@ BEGIN
       CONTINUE;
     END IF;
 
-    IF coalesce(v_lead.do_not_contact, false) IS TRUE THEN
-      v_skipped := v_skipped || jsonb_build_array(jsonb_build_object(
-        'lead_id', v_lead_id,
-        'reason', 'do_not_contact'
-      ));
-      CONTINUE;
-    END IF;
+    PERFORM set_config('request.jwt.claim.sub', p_actor_user_id::text, true);
+    PERFORM set_config('request.jwt.claim.role', 'authenticated', true);
 
-    IF v_lead.converted_partner_id IS NOT NULL
-      OR (
-        v_lead.ico IS NOT NULL
-        AND EXISTS (
-          SELECT 1
-          FROM public.partners p
-          WHERE p.ico = v_lead.ico
-        )
-      )
-    THEN
-      v_skipped := v_skipped || jsonb_build_array(jsonb_build_object(
-        'lead_id', v_lead_id,
-        'reason', 'already_partner'
-      ));
-      CONTINUE;
-    END IF;
-
-    IF EXISTS (
-      SELECT 1
-      FROM public.sales_lead_suppressions s
-      WHERE s.is_active IS TRUE
-        AND lower(btrim(s.email_pattern)) IN (v_recipient, v_domain)
-    ) THEN
-      v_skipped := v_skipped || jsonb_build_array(jsonb_build_object(
-        'lead_id', v_lead_id,
-        'reason', 'suppressed'
-      ));
-      CONTINUE;
-    END IF;
-
-    IF public.sales_lead_initial_email_already_recorded(v_lead_id, v_recipient, NULL) THEN
-      v_skipped := v_skipped || jsonb_build_array(jsonb_build_object(
-        'lead_id', v_lead_id,
-        'reason', 'initial_email_already_recorded'
-      ));
-      CONTINUE;
-    END IF;
-
-    IF EXISTS (
-      SELECT 1
-      FROM public.sales_lead_email_deliveries d
-      WHERE d.lead_id = v_lead_id
-        AND d.status IN ('prepared', 'sending', 'provider_accepted', 'committed', 'uncertain')
-    ) THEN
-      v_skipped := v_skipped || jsonb_build_array(jsonb_build_object(
-        'lead_id', v_lead_id,
-        'reason', 'active_delivery_exists'
-      ));
-      CONTINUE;
-    END IF;
-
-    v_guard := public.sales_lead_email_send_guard(v_lead_id);
-
-    IF coalesce((v_guard->>'success')::boolean, false) IS NOT TRUE THEN
-      v_skipped := v_skipped || jsonb_build_array(jsonb_build_object(
-        'lead_id', v_lead_id,
-        'reason', coalesce(v_guard->>'error', 'send_guard_failed'),
-        'guard', v_guard
-      ));
-      CONTINUE;
-    END IF;
-
-    UPDATE public.sales_leads
-    SET
-      status = 'novy',
-      updated_at = now()
-    WHERE id = v_lead_id
-      AND status = 'navrzeny'
-      AND coalesce(email_verified_by_admin, false) IS TRUE
-      AND email_verification_method = 'backend_verified_official_website'
-      AND email_verified_at IS NOT NULL
-      AND lower(btrim(coalesce(contact_email, ''))) = v_recipient
-      AND coalesce(btrim(email_source), '') <> ''
-      AND email_source ~* '^https?://';
-
-    IF NOT FOUND THEN
-      v_skipped := v_skipped || jsonb_build_array(jsonb_build_object(
-        'lead_id', v_lead_id,
-        'reason', 'lead_changed_during_approval'
-      ));
-      CONTINUE;
-    END IF;
-
-    INSERT INTO public.sales_lead_status_history (
-      lead_id,
-      old_status,
-      new_status,
-      changed_by,
-      reason
-    )
-    VALUES (
+    v_approve_result := public.sales_lead_approve_proposed(
       v_lead_id,
-      'navrzeny',
-      'novy',
-      NULL,
-      'Magin approved backend-verified discovery proposal'
+      v_lead.company_name,
+      v_lead.ico,
+      v_lead.dic,
+      v_lead.website,
+      v_lead.industry,
+      v_lead.city,
+      v_lead.address,
+      v_lead.company_size,
+      v_lead.contact_person,
+      v_lead.contact_role,
+      v_lead.contact_email,
+      v_lead.contact_phone,
+      v_lead.email_source,
+      v_lead.email_verified_by_admin,
+      v_lead.notes,
+      false,
+      NULL
     );
 
-    INSERT INTO public.sales_lead_activities (
-      lead_id,
-      activity_type,
-      direction,
-      performed_by,
-      metadata
-    )
-    VALUES (
-      v_lead_id,
-      'status_changed',
-      'internal',
-      NULL,
-      jsonb_build_object(
-        'from', 'navrzeny',
-        'to', 'novy',
-        'reason', 'Magin approved backend-verified discovery proposal',
-        'actor', 'Magin - CRM operator OneMil',
-        'source', 'sales-lead-magin-supply-agent',
-        'verification_method', 'backend_verified_official_website'
-      )
-    );
-
-    v_approved_count := v_approved_count + 1;
+    IF coalesce((v_approve_result->>'success')::boolean, false) IS TRUE THEN
+      v_approved_count := v_approved_count + 1;
+    ELSE
+      v_skipped := v_skipped || jsonb_build_array(jsonb_build_object(
+        'lead_id', v_lead_id,
+        'reason', coalesce(v_approve_result->>'error', 'approve_proposed_failed'),
+        'approval_result', v_approve_result
+      ));
+    END IF;
   END LOOP;
 
   RETURN jsonb_build_object(
@@ -224,11 +139,12 @@ BEGIN
 END;
 $$;
 
-REVOKE ALL ON FUNCTION public.sales_lead_magin_approve_backend_verified_proposals(uuid[]) FROM PUBLIC, anon, authenticated;
-GRANT EXECUTE ON FUNCTION public.sales_lead_magin_approve_backend_verified_proposals(uuid[]) TO service_role;
+REVOKE ALL ON FUNCTION public.sales_lead_magin_approve_backend_verified_proposals(uuid[], uuid) FROM PUBLIC, anon, authenticated;
+GRANT EXECUTE ON FUNCTION public.sales_lead_magin_approve_backend_verified_proposals(uuid[], uuid) TO service_role;
 
 CREATE OR REPLACE FUNCTION public.sales_lead_magin_create_e_shopy_discovery_job(
-  p_requested_count integer DEFAULT 1
+  p_requested_count integer DEFAULT 5,
+  p_actor_user_id uuid DEFAULT NULL
 )
 RETURNS jsonb
 LANGUAGE plpgsql
@@ -236,50 +152,34 @@ SECURITY DEFINER
 SET search_path = ''
 AS $$
 DECLARE
-  v_requested_count integer := least(greatest(coalesce(p_requested_count, 1), 1), 25);
-  v_active_job_count integer;
-  v_job_id uuid;
+  v_requested_count integer := least(greatest(coalesce(p_requested_count, 5), 1), 25);
 BEGIN
-  SELECT count(*)
-  INTO v_active_job_count
-  FROM public.sales_lead_discovery_jobs
-  WHERE status IN ('queued', 'running');
-
-  IF v_active_job_count > 0 THEN
+  IF p_actor_user_id IS NULL
+    OR NOT (
+      public.has_admin_permission('sales_leads.manage', p_actor_user_id)
+      OR public.is_superadmin(p_actor_user_id)
+    )
+  THEN
     RETURN jsonb_build_object(
       'success', false,
-      'error', 'discovery_job_already_active'
+      'error', 'approved_actor_required'
     );
   END IF;
 
-  INSERT INTO public.sales_lead_discovery_jobs (
-    lead_group,
-    requested_count,
-    created_by
-  )
-  VALUES (
-    'e-shopy',
-    v_requested_count,
-    NULL
-  )
-  RETURNING id INTO v_job_id;
+  PERFORM set_config('request.jwt.claim.sub', p_actor_user_id::text, true);
+  PERFORM set_config('request.jwt.claim.role', 'authenticated', true);
 
-  RETURN jsonb_build_object(
-    'success', true,
-    'job_id', v_job_id,
-    'lead_group', 'e-shopy',
-    'requested_count', v_requested_count
-  );
+  RETURN public.sales_lead_discovery_job_create('e-shopy', v_requested_count);
 END;
 $$;
 
-REVOKE ALL ON FUNCTION public.sales_lead_magin_create_e_shopy_discovery_job(integer) FROM PUBLIC, anon, authenticated;
-GRANT EXECUTE ON FUNCTION public.sales_lead_magin_create_e_shopy_discovery_job(integer) TO service_role;
+REVOKE ALL ON FUNCTION public.sales_lead_magin_create_e_shopy_discovery_job(integer, uuid) FROM PUBLIC, anon, authenticated;
+GRANT EXECUTE ON FUNCTION public.sales_lead_magin_create_e_shopy_discovery_job(integer, uuid) TO service_role;
 
-COMMENT ON FUNCTION public.sales_lead_magin_approve_backend_verified_proposals(uuid[]) IS
-  'Narrow service-role-only adapter for Magin: approve only proposed leads already backend-verified from an official website.';
+COMMENT ON FUNCTION public.sales_lead_magin_approve_backend_verified_proposals(uuid[], uuid) IS
+  'Narrow service-role-only adapter for Magin: pre-check backend-verified proposals, then delegate approval to sales_lead_approve_proposed.';
 
-COMMENT ON FUNCTION public.sales_lead_magin_create_e_shopy_discovery_job(integer) IS
-  'Narrow service-role-only adapter for Magin: enqueue a discovery job only for lead_group e-shopy.';
+COMMENT ON FUNCTION public.sales_lead_magin_create_e_shopy_discovery_job(integer, uuid) IS
+  'Narrow service-role-only adapter for Magin: delegate discovery job creation to sales_lead_discovery_job_create with lead_group e-shopy.';
 
 COMMIT;
