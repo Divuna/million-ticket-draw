@@ -20,6 +20,9 @@ verify_jwt = false
 
 # Veřejná stránka reakcí z obchodního e-mailu. GET je pouze čtení; zápis
 # proběhne až vědomým POSTem s jednorázovým tokenem, jehož hash je v DB.
+[functions.sales-lead-magin-supply-agent]
+verify_jwt = false
+
 [functions.sales-lead-response]
 verify_jwt = false
 

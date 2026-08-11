@@ -1,0 +1,81 @@
+import { expect, test } from "@playwright/test";
+import fs from "fs";
+
+const migrationPath = "supabase/migrations/20260811185022_sales_lead_magin_supply_agent.sql";
+const adapterPath = "supabase/functions/sales-lead-magin-supply-agent/index.ts";
+const configPath = "supabase/config.toml";
+
+function read(path: string): string {
+  return fs.readFileSync(path, "utf8");
+}
+
+test.describe("Magin lead supply adapter contract", () => {
+  test("adds only narrow service-role database wrappers", () => {
+    const migration = read(migrationPath);
+
+    expect(migration).toContain("sales_lead_magin_approve_backend_verified_proposals");
+    expect(migration).toContain("sales_lead_magin_create_e_shopy_discovery_job");
+    expect(migration).toContain("GRANT EXECUTE ON FUNCTION public.sales_lead_magin_approve_backend_verified_proposals(uuid[]) TO service_role");
+    expect(migration).toContain("GRANT EXECUTE ON FUNCTION public.sales_lead_magin_create_e_shopy_discovery_job(integer) TO service_role");
+    expect(migration).toContain("REVOKE ALL ON FUNCTION public.sales_lead_magin_approve_backend_verified_proposals(uuid[]) FROM PUBLIC, anon, authenticated");
+    expect(migration).toContain("REVOKE ALL ON FUNCTION public.sales_lead_magin_create_e_shopy_discovery_job(integer) FROM PUBLIC, anon, authenticated");
+
+    expect(migration).not.toMatch(/GRANT\s+EXECUTE[\s\S]+TO\s+authenticated/i);
+    expect(migration).not.toContain("sales_leads.manage");
+    expect(migration).not.toMatch(/CREATE\s+OR\s+REPLACE\s+FUNCTION\s+public\.sales_lead_approve_proposed/i);
+    expect(migration).not.toMatch(/CREATE\s+OR\s+REPLACE\s+FUNCTION\s+public\.sales_lead_discovery_job_create/i);
+  });
+
+  test("approval wrapper accepts only already backend-verified official-website proposals", () => {
+    const migration = read(migrationPath);
+
+    expect(migration).toContain("v_lead.status IS DISTINCT FROM 'navrzeny'");
+    expect(migration).toContain("email_verified_by_admin");
+    expect(migration).toContain("backend_verified_official_website");
+    expect(migration).toContain("email_verified_at IS NOT NULL");
+    expect(migration).toContain("email_source !~* '^https?://'");
+    expect(migration).toContain("public.sales_lead_initial_email_already_recorded");
+    expect(migration).toContain("public.sales_lead_email_send_guard");
+    expect(migration).toContain("status = 'novy'");
+
+    expect(migration).not.toMatch(/SET[\s\S]*contact_email\s*=/i);
+    expect(migration).not.toContain("p_duplicate_override");
+  });
+
+  test("discovery wrapper can only enqueue e-shopy jobs through existing job queue", () => {
+    const migration = read(migrationPath);
+
+    expect(migration).toContain("FROM public.sales_lead_discovery_jobs");
+    expect(migration).toContain("status IN ('queued', 'running')");
+    expect(migration).toContain("INSERT INTO public.sales_lead_discovery_jobs");
+    expect(migration).toContain("'e-shopy'");
+    expect(migration).toContain("least(greatest(coalesce(p_requested_count, 1), 1), 25)");
+
+    expect(migration).not.toMatch(/companyCandidateSearch|companyEmailCrawler|OPENAI|web_search/i);
+  });
+
+  test("edge function is secret-gated and exposes only the adapter actions", () => {
+    const adapter = read(adapterPath);
+
+    expect(adapter).toContain("SALES_LEAD_MAGIN_SUPPLY_AGENT_SECRET");
+    expect(adapter).toContain("SECRET_MIN_LENGTH = 32");
+    expect(adapter).toContain("approve_backend_verified_proposals");
+    expect(adapter).toContain("create_e_shopy_discovery_job");
+    expect(adapter).toContain("sales_lead_magin_approve_backend_verified_proposals");
+    expect(adapter).toContain("sales_lead_magin_create_e_shopy_discovery_job");
+
+    expect(adapter).not.toContain("SALES_LEAD_BATCH_AGENT_SECRET");
+    expect(adapter).not.toContain("SALES_LEAD_BATCH_WORKER_SECRET");
+    expect(adapter).not.toMatch(/Resend|companyCandidateSearch|companyEmailCrawler|web_search/i);
+  });
+
+  test("registers only the new adapter function without touching existing batch/discovery functions", () => {
+    const config = read(configPath);
+
+    expect(config).toContain("[functions.process-sales-lead-email-batch]");
+    expect(config).toContain("[functions.sales-lead-discover]");
+    expect(config).toContain("[functions.sales-lead-magin-supply-agent]");
+    expect(config).toMatch(/\[functions\.sales-lead-magin-supply-agent\]\s+verify_jwt\s*=\s*false/);
+    expect(config).not.toContain("[functions.sales-lead-daily-batch-agent]");
+  });
+});
