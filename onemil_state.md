@@ -47,6 +47,31 @@ Read-only ověřeno přímo na produkci `xkzhjldrojjlrkezorey`:
   `C:\Users\divis\Downloads\ChatGPT Image 11. 8. 2026 11_37_39.png` (3D postavička s headsetem).
   **Obrázek MioCoinu se pro Magina nesmí použít**, ani když se automaticky přiloží do konverzace.
 
+## 0c. Paperclip — finální ověřený stav k 11. 8. 2026
+
+Zdroj pravdy pro Paperclip je `PAPERCLIP_SETUP_CONTEXT.md`; tohle je jen shrnutí.
+
+- **Synchronizátor Paperclip OneMil je funkční end-to-end.** Ingest vrátil **HTTP 200**, úkol
+  `ICO-41` skončil `done` a ve stagingu vznikl snapshot
+  **`7be66d9c-e984-42d3-9d1e-1e5e4001260a`** (`captured_at 17:26:45`, 43 kB).
+- **API Access na `PAPERCLIP_BRIDGE_SECRET` funguje** — načtení přes run-bound agent JWT je
+  doložené v access-events.
+- **Synchronizátor odesílá přes Node fetch, nikdy PowerShell ani `curl.exe`.** Ve Windows sandboxu
+  oba selhávají (`curl` vrací `000`, PowerShell hlásí „Nadřízené připojení bylo uzavřeno"),
+  přestože síť funguje.
+- **Payload kontrakt je `snake_case`** — `source_instance`, **`captured_at`**, `payload`.
+  `capturedAt` v camelCase vrací `HTTP 400`.
+- **Magin má funkční API Access na `SALES_LEAD_BATCH_AGENT_SECRET`**
+  (`access.SALES_LEAD_BATCH_AGENT_SECRET` vázaný na jeho agent id).
+- **Maginova rutina používá Node fetch a přesný kontrakt** `sales-lead-daily-batch-agent`:
+  `{"schema_version":1,"target_date":"YYYY-MM-DD","requested_count":<počet>}` — jakýkoli klíč navíc
+  vrací `400 unexpected_field`; `target_date` je pražské datum.
+- **Magin je připravený na první ostrý běh 12. 8. 2026 v 7:30 Europe/Prague** (40 e-mailů).
+  Skutečným během ověřen **není** a nemůže být — každé úspěšné volání zakládá reálnou dávku.
+- **Průzkumník obchodních leadů OneMil je nově operátorem existujícího OneMil discovery systému**,
+  ne paralelní samostatný vyhledávač leadů. Nesmí budovat druhou lead databázi ani vlastní
+  vyhledávání mimo OneMil workflow.
+
 ## 1. Obchod / Leady – první automatické e-maily jsou produkčně funkční
 
 Automatické dávkové odesílání prvního obchodního e-mailu je na produkci **hotové a ověřené end-to-end**.

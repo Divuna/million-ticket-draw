@@ -2249,12 +2249,21 @@ Paperclip běží lokálně jako AI management vrstva pro OneMil.
 Spuštění: `npx paperclipai onboard --yes` z `C:\Users\divis\Desktop\Onemil - Projekt\million-ticket-draw`.
 Detailní setup viz `PAPERCLIP_SETUP_CONTEXT.md`.
 
-### Aktivní agenti
+### Aktivní agenti (aktualizováno 11. 08. 2026)
 
-| Agent | Adaptér | Role |
-|-------|---------|------|
-| Provozní ředitel OneMil | claude_local / codex_local | Manažer, deleguje práci |
-| Průzkumník obchodních leadů OneMil | codex_local | Lead research, hledá firmy |
+| Agent | Adaptér | Model | Role |
+|-------|---------|-------|------|
+| Provozní ředitel OneMil | codex_local | gpt-5.5 | Manažer, deleguje práci |
+| Magin – CRM operátor OneMil | codex_local | gpt-5.5 | Denní dávka prvních obchodních e-mailů |
+| Průzkumník obchodních leadů OneMil | codex_local | gpt-5.5 | **Operátor existujícího OneMil discovery systému** |
+| Synchronizátor Paperclip OneMil | codex_local | gpt-5.5 | Read-only snapshot Paperclipu → OneMil STAGING |
+
+**Průzkumník není samostatný paralelní vyhledávač leadů** (změna 11. 08. 2026). Pracuje se
+stávajícím discovery workflow OneMilu; nesmí budovat druhou lead databázi ani vlastní vyhledávání
+mimo něj.
+
+**Model všech `codex_local` agentů je `gpt-5.5`.** Starší `gpt-5.3-codex` i `gpt-5.6-sol` server
+pro tento ChatGPT účet odmítá (`invalid_request_error`) — nevracet je.
 
 ### Pravidla pro Claude Code při práci s Paperclipem
 

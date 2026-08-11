@@ -71,6 +71,25 @@ Secret:
 - uložen v Paperclip credential store
 - Magin má v UI **Secret access → API access → Bound to latest** pouze pro tento secret
 - secret nikdy nepatří do promptu, issue, dokumentace, gitu ani logu
+- **API Access binding je funkční** (`access.SALES_LEAD_BATCH_AGENT_SECRET`, cíl = Maginovo agent id)
+
+**Instrukce rutiny srovnány s ověřeným vzorem Synchronizátora (11. 8. 2026):**
+
+- **HTTP klient: výhradně Node fetch**, nikdy PowerShell `Invoke-WebRequest` ani `curl.exe`.
+- **Přesný kontrakt** Edge Function `sales-lead-daily-batch-agent` — pouze tři klíče, jakýkoli
+  další vrací `400 unexpected_field`:
+  `{"schema_version":1,"target_date":"YYYY-MM-DD","requested_count":<počet>}`
+- Hlavičky `Authorization: Bearer <secret>` + `Content-Type: application/json`.
+- `target_date` je **pražské** datum, ne UTC ani čas Windows. Skupinu, šablonu i výběr leadů určuje
+  server; agent je neposílá.
+- `action: created_and_activated` i `already_exists` jsou **obojí úspěch** a neopakují se.
+- Při chybě nahlásit Provoznímu řediteli a skončit — žádný retry, žádná druhá dávka pro stejný den,
+  žádná aktivace staré pozastavené dávky.
+
+**Magin je připravený na první ostrý běh 12. 8. 2026 v 7:30 Europe/Prague**
+(`nextRunAt = 2026-08-12T05:30:00Z`, počet 40). Na rozdíl od Synchronizátora **nebyl ověřen
+skutečným během** — každé úspěšné volání zakládá reálnou dávku, takže nanečisto to nejde.
+Instrukce stojí na ověřeném vzoru; první důkaz přinese až ten ostrý běh.
 
 ### Průzkumník obchodních leadů OneMil
 
@@ -78,7 +97,11 @@ Secret:
 - Model: `gpt-5.5`
 - Heartbeat enabled: `true`
 - Reports to: Provozní ředitel OneMil
-- Úloha: hledat, ověřovat a klasifikovat vhodné firmy/e-shopy pro OneMil.
+- Úloha (**změna 11. 8. 2026**): je **operátorem existujícího OneMil discovery systému**, ne
+  paralelní samostatný vyhledávač leadů. Pracuje se stávajícím discovery workflow OneMilu
+  (fronta discovery jobů, ověřování webu, ukládání do Návrhů) a jeho výstupy jsou leady v OneMilu,
+  ne vlastní seznamy stranou.
+- **Nesmí budovat druhou lead databázi** ani vlastní paralelní vyhledávání mimo OneMil systém.
 - Nesmí sám kontaktovat firmy ani odesílat e-maily bez příslušného schváleného workflow.
 
 ### Synchronizátor Paperclip OneMil
@@ -108,6 +131,21 @@ Secret:
 - žádný jiný OneMil agent ho nemá dostat bez výslovného důvodu
 
 Bridge je pouze read-only přehled do STAGING. Produkční data nesmí synchronizátor měnit.
+
+**Stav: funkční end-to-end (ověřeno 11. 8. 2026).** Poslední ověřený staging snapshot
+`7be66d9c-e984-42d3-9d1e-1e5e4001260a` (`captured_at 17:26:45`, 43 kB, klíče
+`agents, issues, routines, runs, errors`). Úkol `ICO-41` skončil jako `done`, ingest vrátil
+**HTTP 200**. API Access na `PAPERCLIP_BRIDGE_SECRET` prokazatelně funguje — v access-events je
+úspěšné načtení přes run-bound agent JWT.
+
+Dvě věci v instrukci rutiny, bez kterých to nefunguje (nevracet zpět):
+
+- **HTTP klient: výhradně Node fetch.** Ve Windows sandboxu selhává PowerShell `Invoke-WebRequest`
+  („Nadřízené připojení bylo uzavřeno") i `curl.exe` (vrací `000`), přestože síť funguje.
+  Ověřeno protikladem: `node -e "fetch(...)"` na tentýž endpoint odpoví korektně.
+- **Payload v `snake_case`.** Edge Function vyžaduje přesně `source_instance`, **`captured_at`**
+  a `payload`; `capturedAt` v camelCase vrací `HTTP 400`. Tělo drží pod 1 MB — posílají se jen
+  id/název/stav, ne celé objekty ani logy.
 
 ## 4. Vestavění pomocní agenti Paperclipu
 
@@ -267,13 +305,28 @@ Výsledek práce musí být viditelný v Paperclip issue/commentu. Pokud vznikne
 
 Lokální pracovní soubory nejsou samy o sobě dostatečný finální výstup.
 
-## 13. Aktuální otevřený test k 11. 8. 2026
+## 13. Výsledek testu k 11. 8. 2026 — uzavřeno
 
-Synchronizátor byl po nastavení `PAPERCLIP_BRIDGE_SECRET` přes **Secret access → API access → Bound to latest** ručně spuštěn. V době posledního potvrzení ještě běžel a nový staging snapshot ještě nebyl potvrzen.
+**Synchronizátor je funkční end-to-end.** Ingest vrátil **HTTP 200**, úkol `ICO-41` skončil `done`
+a ve OneMil STAGING vznikl snapshot **`7be66d9c-e984-42d3-9d1e-1e5e4001260a`**
+(`captured_at 17:26:45`, 43 kB). API Access na `PAPERCLIP_BRIDGE_SECRET` funguje.
 
-Magin má analogicky nastavený pouze `SALES_LEAD_BATCH_AGENT_SECRET` přes **API access → Bound to latest**. Jeho ruční heartbeat bez přiděleného pracovního issue nevytvořil obchodní dávku; následný běh byl pozastaven/zrušen. Ostrou denní rutinu ručně nespouštět jen kvůli testu, protože úspěšné volání může vytvořit reálnou dávku.
+Cesta k tomu odhalila čtyři vrstvy, které bylo nutné postupně odstranit — všechny jsou popsané
+v oddílech 3, 6 a 7 a žádnou z nich nevracet zpět:
 
-Po dokončení Synchronizátora ověř nový `paperclip_bridge_snapshot` ve OneMil STAGING a tento oddíl aktualizuj.
+1. rutiny bez `projectId` → Paperclip úkol zablokuje ještě před odesláním agentovi,
+2. vypnutý heartbeat → úkol vznikne, ale nikdo ho nezpracuje,
+3. Windows sandbox: `elevated` končí na `CreateProcessWithLogonW failed: 1326`; nutné
+   `unelevated` + `sandbox_mode = "workspace-write"` + `network_access = true`,
+4. HTTP klient a tvar payloadu — Node fetch a `snake_case` (viz oddíl 3).
+
+**Magin ověřený skutečným během není** a ani být nemůže: každé úspěšné volání jeho Edge Function
+zakládá reálnou dávku. Jeho rutina byla srovnána s ověřeným vzorem Synchronizátora a je připravená
+na první ostrý běh **12. 8. 2026 v 7:30 Europe/Prague** (40 e-mailů). Ostrou denní rutinu
+**nespouštět ručně jen kvůli testu**.
+
+Otevřené a neblokující: `codex_acp_credentials_missing` je falešný poplach — kontrola adaptéru
+hledá `refresh_token` na top-level, zatímco Codex ho ukládá pod `tokens`. Na běh vliv nemá.
 
 ## 14. Oficiální Paperclip dokumentace používaná jako referenční základ
 

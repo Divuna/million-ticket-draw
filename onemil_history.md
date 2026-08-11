@@ -5286,3 +5286,47 @@ Agent Magin nebyl vytvořen ani naplánován. První plánovaný počet je 40 e-
 plán `30 7 * * 1-5` v `Europe/Prague`. Schválený profilový obrázek je na cestě
 `C:\Users\divis\Downloads\ChatGPT Image 11. 8. 2026 11_37_39.png`; obrázek MioCoinu se pro Magina
 použít nesmí.
+
+## 11. 08. 2026 (večer) — Paperclip agenti zprovozněni end-to-end
+
+Synchronizátor Paperclip OneMil poprvé doručil snapshot do OneMil STAGING: ingest vrátil HTTP 200,
+úkol `ICO-41` skončil `done` a vznikl snapshot `7be66d9c-e984-42d3-9d1e-1e5e4001260a`
+(`captured_at 17:26:45`, 43 kB, klíče `agents, issues, routines, runs, errors`).
+
+Cesta k tomu odhalila čtyři nezávislé vrstvy, každá se projevila až po odstranění té předchozí:
+
+1. **Rutiny bez `projectId`.** Rutina zakládá úkol se stavem `todo`, ale `heartbeat.js` ho těsně
+   před odesláním přepne na `blocked` s kódem `workspace_worktree_requires_project`, když úkol nemá
+   projekt ani execution workspace (`execution-workspace-policy.js:isUnrunnableWorktreeCombo`).
+   Doplněn projekt OneMil `b9aafaa8-fbf3-4c65-ae28-b11eafd12b3a` na obě rutiny.
+2. **Vypnutý heartbeat.** Úkoly vznikaly, ale nikdo je nezpracoval. Zapnut u čtyř OneMil agentů,
+   vestavěných `Reflection Coach` a `Summarizer` se nedotkl.
+3. **Windows sandbox.** `[windows] sandbox = "elevated"` končí na `CreateProcessWithLogonW failed:
+   1326` a žádný příkaz se nespustí. V Paperclipím per-company `CODEX_HOME` nastaveno
+   `unelevated`, `sandbox_mode = "workspace-write"` a `[sandbox_workspace_write] network_access =
+   true`. Ověřeno, že adaptér tento soubor nepřepisuje: `ensureCopiedFile()` má `if (existing)
+   return;` a `writeManagedCodexMcpConfig()` sahá jen na blok mezi značkami managed MCP.
+4. **HTTP klient a tvar payloadu.** Ve Windows sandboxu selhává PowerShell `Invoke-WebRequest`
+   („Nadřízené připojení bylo uzavřeno") i `curl.exe` (`000`), přestože síť funguje — ověřeno
+   protikladem, že `node -e "fetch(...)"` odpoví korektně. Payload musí být `snake_case`;
+   `capturedAt` místo `captured_at` vracelo `HTTP 400`.
+
+Vedle toho byly modely všech `codex_local` agentů srovnány na `gpt-5.5`. Model nebyl odhadnut —
+server pro tento ChatGPT účet vrací `gpt-5.5`, `gpt-5.4`, `gpt-5.4-mini` a skrytý
+`codex-auto-review`, zatímco dříve nastavené `gpt-5.3-codex` i `gpt-5.6-sol` končí na
+`invalid_request_error`. Opraven i hostitelský `~/.codex/config.toml`, kde `service_tier =
+"default"` rozbíjel codex-cli 0.130.0 úplně.
+
+Secrets: `PAPERCLIP_BRIDGE_SECRET` i `SALES_LEAD_BATCH_AGENT_SECRET` mají v Paperclipu API Access
+binding vázaný vždy jen na jednoho agenta. Přístup k hodnotě vyžaduje run-bound agent JWT, běžící
+heartbeat run a `secrets:read`. Hodnoty secretů nejsou nikde v dokumentaci, gitu, promptu, issue
+ani logu.
+
+Magin má rutinu srovnanou s ověřeným vzorem Synchronizátora a je připravený na první ostrý běh
+12. 8. 2026 v 7:30 Europe/Prague na 40 e-mailů. Skutečným během ověřen není a být nemůže, protože
+každé úspěšné volání jeho Edge Function zakládá reálnou dávku. Dnes žádná dávka nevznikla a žádný
+e-mail neodešel.
+
+Rozhodnutí Pavla: **Průzkumník obchodních leadů OneMil je nově operátorem existujícího OneMil
+discovery systému**, ne paralelní samostatný vyhledávač leadů. Nesmí budovat druhou lead databázi
+ani vlastní vyhledávání mimo OneMil workflow.
