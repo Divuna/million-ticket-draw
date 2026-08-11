@@ -92,16 +92,35 @@ BEGIN
     RETURN jsonb_build_object('success', false, 'error', 'no_owner_available');
   END IF;
 
-  -- 5. Šablona. Server ji vybírá sám — agent ji nesmí ovlivnit. Musí být právě
-  --    jedna aktivní šablona typu 'initial', jinak fail-closed.
-  SELECT count(*), min(id) INTO v_template_count, v_template_id
-  FROM public.sales_lead_email_templates
-  WHERE is_active AND template_type = 'initial';
-  IF v_template_count <> 1 THEN
-    RETURN jsonb_build_object(
-      'success', false, 'error', 'active_initial_template_not_unique',
-      'active_template_count', v_template_count
-    );
+  -- 5. Šablona. Server ji vybírá sám — agent ji nesmí ovlivnit.
+  --    Pravidlo je „stejná šablona jako poslední skutečně použitá dávka“:
+  --    vezme se šablona poslední nezrušené dávky a musí být stále aktivní
+  --    a typu 'initial'. Když žádná dřívější dávka není, projde to jen tehdy,
+  --    je-li aktivní initial šablona právě jedna. Jinak fail-closed — raději
+  --    nic než uhodnout špatný text reálným firmám.
+  SELECT b.template_id INTO v_template_id
+  FROM public.sales_lead_email_batches b
+  WHERE b.status <> 'cancelled'
+  ORDER BY b.scheduled_date DESC, b.created_at DESC
+  LIMIT 1;
+
+  IF v_template_id IS NOT NULL AND NOT EXISTS (
+    SELECT 1 FROM public.sales_lead_email_templates t
+    WHERE t.id = v_template_id AND t.is_active AND t.template_type = 'initial'
+  ) THEN
+    v_template_id := NULL;
+  END IF;
+
+  IF v_template_id IS NULL THEN
+    SELECT count(*), min(id) INTO v_template_count, v_template_id
+    FROM public.sales_lead_email_templates
+    WHERE is_active AND template_type = 'initial';
+    IF v_template_count <> 1 THEN
+      RETURN jsonb_build_object(
+        'success', false, 'error', 'active_initial_template_not_unique',
+        'active_template_count', v_template_count
+      );
+    END IF;
   END IF;
 
   -- 6. Výběr leadů. Pouze skupina 'e-shopy'. Levný předfiltr jen zužuje množinu;
@@ -167,7 +186,7 @@ BEGIN
   SELECT b.scheduled_count, b.skipped_count INTO v_scheduled_count, v_skipped_count
   FROM public.sales_lead_email_batches b WHERE b.id = v_batch_id;
 
-  SELECT min(i.scheduled_at), max(i.scheduled_at) INTO v_first_at, v_last_at
+  SELECT min(i.scheduled_for), max(i.scheduled_for) INTO v_first_at, v_last_at
   FROM public.sales_lead_email_batch_items i WHERE i.batch_id = v_batch_id;
 
   RETURN jsonb_build_object(

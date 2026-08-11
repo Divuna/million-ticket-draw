@@ -55,6 +55,9 @@ test.describe('122 — denní dávkový agent: bezpečnostní kontrakt', () => {
     expect(migration).toContain('public.sales_lead_email_batch_check_one(v_candidate.id, v_template_id)');
     expect(migration).toContain("'active_initial_template_not_unique'");
     expect(migration).toContain("template_type = 'initial'");
+    // Šablona = stejná jako poslední nezrušená dávka, pokud je stále aktivní.
+    expect(migration).toContain("WHERE b.status <> 'cancelled'");
+    expect(migration).toContain('t.id = v_template_id AND t.is_active');
 
     // Jediné vstupy agenta jsou datum a počet.
     expect(migration).toContain('p_scheduled_date date,');
