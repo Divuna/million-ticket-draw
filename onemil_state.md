@@ -77,6 +77,11 @@ Zdroj pravdy pro Paperclip je `PAPERCLIP_SETUP_CONTEXT.md`; tohle je jen shrnut�
   Skutečným během ověřen **není** a nemůže být — každé úspěšné volání zakládá reálnou dávku.
 - **Průzkumník obchodních leadů OneMil byl z Paperclipu odstraněn** 11. 8. 2026. Jeho zastaralý
   paralelní lead-research úkol `ICO-17` byl zrušen/skryt a pending potvrzení odmítnuta.
+- **Provozní ředitel OneMil má funkční nouzové upozornění přes Telegram bota `@OneMilDirectorBot`.**
+  Používá ho pouze pro chyby, blokace a důležité eskalace podřízených agentů; neposílá běžné statusy,
+  marketing ani zprávy leadům. Bot token a `chat_id` jsou uložené pouze v Paperclip `local_encrypted`
+  secrets a oba mají **API Access → Bound to latest** pouze pro Provozního ředitele. Testovací zpráva
+  byla úspěšně doručena.
 
 ## 1. Obchod / Leady – první automatické e-maily jsou produkčně funkční
 

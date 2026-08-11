@@ -42,6 +42,10 @@ Specializovaní agenti nemají dělat práci mimo svou roli jen proto, že ji te
 - Heartbeat enabled: `true`
 - Má řídit ostatní OneMil agenty, ne nahrazovat jejich specializovanou práci.
 - Nové agenty smí navrhovat; jejich vytvoření/aktivace podléhá schválení Pavla.
+- Nouzové upozornění přes Telegram bota `@OneMilDirectorBot` je funkční a ověřené testovací zprávou.
+- Telegram smí používat pouze pro chyby, blokace a důležité eskalace podřízených agentů. Neposílat běžné statusy, marketing ani zprávy leadům.
+- Telegram zpráva má být jedna stručná eskalace: název agenta, problém a zda je potřeba zásah Pavla.
+- Secrets `ONEMIL_DIRECTOR_TELEGRAM_BOT_TOKEN` a `ONEMIL_DIRECTOR_TELEGRAM_CHAT_ID` jsou uložené pouze v Paperclip `local_encrypted` secrets a mají **API Access → Bound to latest** pouze pro Provozního ředitele OneMil.
 
 ### Magin — CRM operátor OneMil
 

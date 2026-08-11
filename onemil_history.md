@@ -5349,3 +5349,11 @@ Navazující stav téhož dne: **Průzkumník obchodních leadů OneMil byl z Pa
 doplňování zásoby leadů převzal Magin přes úzký STAGING lead-supply adapter. Existující OneMil
 discovery systém zůstal beze změny; Magin používá pouze segment `e-shopy` a neschvaluje nic mimo
 backendově ověřené návrhy, které adapter dovolí schválit.
+
+Navazující stav téhož dne: **Provozní ředitel OneMil dostal funkční nouzové upozornění přes Telegram
+bota `@OneMilDirectorBot`**. Bot token a `chat_id` jsou uložené pouze v Paperclip `local_encrypted`
+secrets `ONEMIL_DIRECTOR_TELEGRAM_BOT_TOKEN` a `ONEMIL_DIRECTOR_TELEGRAM_CHAT_ID`; oba mají API Access
+`Bound to latest` pouze pro Provozního ředitele. Instrukce Ředitele dovolují Telegram použít jen pro
+chyby, blokace a důležité eskalace podřízených agentů, ne pro běžné statusy, marketing ani zprávy
+leadům. Jedna testovací zpráva byla úspěšně doručena. Žádný OneMil kód, data, discovery systém,
+Maginova denní dávka ani ostatní agenti nebyli změněni.
