@@ -52,7 +52,10 @@ Specializovaní agenti nemají dělat práci mimo svou roli jen proto, že ji te
 - Heartbeat enabled: `true`
 - Reports to: Provozní ředitel OneMil
 - `canCreateAgents=false`, `canCreateSkills=false`
-- Úloha: spustit serverem řízenou denní dávku prvních obchodních e-mailů. Magin sám nevybírá leady, nepíše text e-mailu, nevolá Resend a nepíše přímo do databáze.
+- Úloha: před denní dávkou hlídat zásobu schválených a odeslatelných leadů a potom spustit serverem řízenou denní dávku prvních obchodních e-mailů. Magin sám nepíše text e-mailu, nevolá Resend, nepíše přímo do databáze a nevytváří paralelní CRM/discovery proces.
+- Pokud zásoba leadů nestačí, Magin používá pouze existující OneMil lead-supply adapter `sales-lead-magin-supply-agent` na STAGING. Přes něj schvaluje jen backendově ověřené návrhy `navrzeny`; pokud ani potom zásoba nestačí a neběží aktivní discovery job, založí přes adapter existující OneMil discovery job.
+- Aktuální segment pro Magina je pevně `e-shopy`; Magin ho nesmí svévolně změnit.
+- OneMil discovery systém nebyl předělán ani nahrazen. Adapter je jen úzká bezpečná cesta z Paperclipu do existujících RPC/funkcí.
 
 Routine `Denní dávka prvních obchodních e-mailů`:
 
@@ -68,10 +71,12 @@ Routine `Denní dávka prvních obchodních e-mailů`:
 Secret:
 
 - `SALES_LEAD_BATCH_AGENT_SECRET`
+- `SALES_LEAD_MAGIN_SUPPLY_AGENT_SECRET`
 - uložen v Paperclip credential store
-- Magin má v UI **Secret access → API access → Bound to latest** pouze pro tento secret
+- Magin má v UI **Secret access → API access → Bound to latest** pouze pro tyto secrety
 - secret nikdy nepatří do promptu, issue, dokumentace, gitu ani logu
 - **API Access binding je funkční** (`access.SALES_LEAD_BATCH_AGENT_SECRET`, cíl = Maginovo agent id)
+- **API Access binding pro lead-supply adapter je funkční** (`access.SALES_LEAD_MAGIN_SUPPLY_AGENT_SECRET`, cíl = Maginovo agent id)
 
 **Instrukce rutiny srovnány s ověřeným vzorem Synchronizátora (11. 8. 2026):**
 
@@ -93,16 +98,10 @@ Instrukce stojí na ověřeném vzoru; první důkaz přinese až ten ostrý bě
 
 ### Průzkumník obchodních leadů OneMil
 
-- Adapter: `codex_local`
-- Model: `gpt-5.5`
-- Heartbeat enabled: `true`
-- Reports to: Provozní ředitel OneMil
-- Úloha (**změna 11. 8. 2026**): je **operátorem existujícího OneMil discovery systému**, ne
-  paralelní samostatný vyhledávač leadů. Pracuje se stávajícím discovery workflow OneMilu
-  (fronta discovery jobů, ověřování webu, ukládání do Návrhů) a jeho výstupy jsou leady v OneMilu,
-  ne vlastní seznamy stranou.
-- **Nesmí budovat druhou lead databázi** ani vlastní paralelní vyhledávání mimo OneMil systém.
-- Nesmí sám kontaktovat firmy ani odesílat e-maily bez příslušného schváleného workflow.
+- Stav: odstraněn z Paperclipu 11. 8. 2026.
+- Důvod: jeho původní role samostatného/paralelního lead research agenta byla překonaná existujícím OneMil discovery systémem a Maginovým úzkým lead-supply adapterem.
+- Vlastní zastaralá větev `ICO-17` byla zrušena/skryta a její pending potvrzení odmítnuta. Parent issue Provozního ředitele zůstala zachovaná.
+- Neobnovovat bez nového výslovného rozhodnutí Pavla.
 
 ### Synchronizátor Paperclip OneMil
 
@@ -167,7 +166,7 @@ Oficiální Paperclip model rozlišuje:
 
 **Důležité:** pro plánovanou práci používej primárně rutiny. Intervalový heartbeat nepoužívej jako náhradu rutiny, pokud agent nemusí něco skutečně pollovat.
 
-Aktuálně je `heartbeat.enabled=true` u čtyř hlavních OneMil agentů. Před případnou optimalizací spotřeby ověř, zda jde o intervalové buzení nebo jen povolení běhu/wake-on-demand v konkrétní verzi Paperclipu. Nevypínej agenta (`Pause`) jen kvůli omezení zbytečných intervalových běhů — Pause blokuje i legitimní probuzení úkolem/rutinou.
+Aktuálně je `heartbeat.enabled=true` u tří hlavních OneMil agentů: Provozní ředitel OneMil, Magin – CRM operátor OneMil a Synchronizátor Paperclip OneMil. Před případnou optimalizací spotřeby ověř, zda jde o intervalové buzení nebo jen povolení běhu/wake-on-demand v konkrétní verzi Paperclipu. Nevypínej agenta (`Pause`) jen kvůli omezení zbytečných intervalových běhů — Pause blokuje i legitimní probuzení úkolem/rutinou.
 
 ## 6. Kritické pravidlo rutin: vždy projekt OneMil
 
@@ -277,9 +276,9 @@ Toto je výchozí návrh, ne automatické schválení instalace:
 
 **Provozní ředitel:** `paperclip`, `paperclip-converting-plans-to-tasks`, `summarize-status`; případně `issue-triage`.
 
-**Magin:** pouze základní Paperclip workflow a budoucí vlastní úzký OneMil CRM runbook, pokud bude potřeba. Nepotřebuje obecný browser ani research skill pro svou denní dávku.
+**Magin:** pouze základní Paperclip workflow a úzký OneMil CRM/lead-supply runbook. Nepotřebuje obecný browser ani research skill; doplňování zásoby leadů dělá výhradně přes existující OneMil discovery systém a lead-supply adapter.
 
-**Průzkumník:** základní Paperclip workflow + vhodný research/browser skill podle schváleného způsobu hledání leadů.
+**Průzkumník:** odstraněn; žádné skills mu nepřiřazovat.
 
 **Synchronizátor:** pouze základní Paperclip workflow + úzké instrukce synchronizace. Nepotřebuje marketingové, browser ani research skills.
 

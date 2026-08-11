@@ -63,14 +63,20 @@ Zdroj pravdy pro Paperclip je `PAPERCLIP_SETUP_CONTEXT.md`; tohle je jen shrnut�
   `capturedAt` v camelCase vrací `HTTP 400`.
 - **Magin má funkční API Access na `SALES_LEAD_BATCH_AGENT_SECRET`**
   (`access.SALES_LEAD_BATCH_AGENT_SECRET` vázaný na jeho agent id).
+- **Magin má funkční API Access na STAGING lead-supply adapter**
+  (`access.SALES_LEAD_MAGIN_SUPPLY_AGENT_SECRET` vázaný na jeho agent id). Hodnota secretu není
+  v dokumentaci, gitu, promptu, issue ani logu.
 - **Maginova rutina používá Node fetch a přesný kontrakt** `sales-lead-daily-batch-agent`:
   `{"schema_version":1,"target_date":"YYYY-MM-DD","requested_count":<počet>}` — jakýkoli klíč navíc
   vrací `400 unexpected_field`; `target_date` je pražské datum.
+- **Magin před denní dávkou zajišťuje i zásobu leadů**, ale pouze přes existující OneMil lead-supply
+  adapter a existující OneMil discovery systém. Schvaluje jen backendově ověřené návrhy `navrzeny`,
+  které adapter dovolí schválit; pokud zásoba nestačí a neběží aktivní discovery job, spustí přes
+  adapter discovery job. Segment je pevně `e-shopy` a Magin ho nesmí měnit.
 - **Magin je připravený na první ostrý běh 12. 8. 2026 v 7:30 Europe/Prague** (40 e-mailů).
   Skutečným během ověřen **není** a nemůže být — každé úspěšné volání zakládá reálnou dávku.
-- **Průzkumník obchodních leadů OneMil je nově operátorem existujícího OneMil discovery systému**,
-  ne paralelní samostatný vyhledávač leadů. Nesmí budovat druhou lead databázi ani vlastní
-  vyhledávání mimo OneMil workflow.
+- **Průzkumník obchodních leadů OneMil byl z Paperclipu odstraněn** 11. 8. 2026. Jeho zastaralý
+  paralelní lead-research úkol `ICO-17` byl zrušen/skryt a pending potvrzení odmítnuta.
 
 ## 1. Obchod / Leady – první automatické e-maily jsou produkčně funkční
 
@@ -199,6 +205,13 @@ Discovery infrastruktura je postavená, ale kandidátní vyhledávání je aktu�
 - OpenAI je nyní jediný candidate source.
 
 **Klíče nyní nerotovat.** Uživatel chce rotaci secretů/klíčů řešit souhrnně až před produkčním spuštěním. Po doplnění/obnovení OpenAI kvóty je potřeba pouze znovu ověřit discovery job a návazný tok; nestavět nový discovery systém.
+
+Paperclip tok pro doplňování zásoby leadů je nyní soustředěný do Magina. Magin nevytváří vlastní
+vyhledávání ani databázi; používá jen úzký STAGING adapter `sales-lead-magin-supply-agent`, který
+deleguje na existující OneMil mechanismy. Schvalování návrhů jde přes existující schvalovací cestu
+po backendové kontrole bezpečně ověřeného veřejného firemního e-mailu; zakládání discovery jobu jde
+přes existující OneMil discovery systém a pouze pro segment `e-shopy`. Stávající denní e-mailová
+rutina `sales-lead-daily-batch-agent` zůstává beze změny.
 
 ## 9. Co ještě chybí k úplnému dokončení automatického obchodního e-mailového procesu
 

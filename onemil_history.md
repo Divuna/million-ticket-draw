@@ -1,4 +1,22 @@
-# 06. 08. 2026 — Přehled reakcí „Mám zájem“ / „Nemám zájem“ v administraci (Draft)
+# 11. 08. 2026 — Paperclip lead role cleanup a Magin lead-supply adapter
+
+- Aktualizován živý Paperclip stav OneMil po odstranění agenta **Průzkumník obchodních leadů OneMil**.
+  Agent byl před odstraněním ověřen jako `idle`, bez live runů; neměl vlastní rutiny. Jeho zastaralý
+  vlastní lead-research úkol `ICO-17` byl zrušen/skryt, dvě pending request-confirmation interakce
+  byly odmítnuty a parent issue Provozního ředitele zůstalo zachované. Žádná OneMil data, discovery
+  joby ani leady nebyly smazány.
+- **Magin – CRM operátor OneMil** nově před původní denní e-mailovou dávkou kontroluje zásobu
+  schválených a odeslatelných leadů. Pokud zásoba nestačí, používá výhradně úzký STAGING adapter
+  `sales-lead-magin-supply-agent`: schvaluje jen backendově ověřené návrhy `navrzeny` a případně
+  zakládá existující OneMil discovery job pouze pro segment `e-shopy`.
+- Maginův segment je pevně `e-shopy`. Magin nesmí vytvářet vlastní vyhledávání, vlastní lead databázi,
+  paralelní CRM proces ani obcházet odmítnuté/neověřené leady. E-maily dál neposílá přímo; rozesílání
+  provádí existující OneMil systém přes `sales-lead-daily-batch-agent`.
+- Stávající Maginova denní rutina zůstala beze změny (`30 7 * * 1-5`, `Europe/Prague`,
+  `sales-lead-daily-batch-agent`, současný plán velikosti dávky a batch secret). OneMil discovery
+  systém nebyl předělán ani nahrazen; adapter jen deleguje na existující OneMil mechanismy.
+
+# 06. 08. 2026 — Přehled reakcí „Mám zájem" / „Nemám zájem" v administraci (Draft)
 
 - Administrace Obchod / Leady dostala samostatný pohled na obě reakce z obchodního e-mailu, aby se
   žádná neztratila. Nová záložka **„Kontaktovat“** (mezi „Osloveno“ a „Odpovědělo“) ukazuje firmy
@@ -5327,6 +5345,7 @@ Magin má rutinu srovnanou s ověřeným vzorem Synchronizátora a je připraven
 každé úspěšné volání jeho Edge Function zakládá reálnou dávku. Dnes žádná dávka nevznikla a žádný
 e-mail neodešel.
 
-Rozhodnutí Pavla: **Průzkumník obchodních leadů OneMil je nově operátorem existujícího OneMil
-discovery systému**, ne paralelní samostatný vyhledávač leadů. Nesmí budovat druhou lead databázi
-ani vlastní vyhledávání mimo OneMil workflow.
+Navazující stav téhož dne: **Průzkumník obchodních leadů OneMil byl z Paperclipu odstraněn** a
+doplňování zásoby leadů převzal Magin přes úzký STAGING lead-supply adapter. Existující OneMil
+discovery systém zůstal beze změny; Magin používá pouze segment `e-shopy` a neschvaluje nic mimo
+backendově ověřené návrhy, které adapter dovolí schválit.

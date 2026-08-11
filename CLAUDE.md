@@ -2254,13 +2254,13 @@ Detailní setup viz `PAPERCLIP_SETUP_CONTEXT.md`.
 | Agent | Adaptér | Model | Role |
 |-------|---------|-------|------|
 | Provozní ředitel OneMil | codex_local | gpt-5.5 | Manažer, deleguje práci |
-| Magin – CRM operátor OneMil | codex_local | gpt-5.5 | Denní dávka prvních obchodních e-mailů |
-| Průzkumník obchodních leadů OneMil | codex_local | gpt-5.5 | **Operátor existujícího OneMil discovery systému** |
+| Magin – CRM operátor OneMil | codex_local | gpt-5.5 | Denní dávka prvních obchodních e-mailů + zásoba leadů přes úzký adapter |
 | Synchronizátor Paperclip OneMil | codex_local | gpt-5.5 | Read-only snapshot Paperclipu → OneMil STAGING |
 
-**Průzkumník není samostatný paralelní vyhledávač leadů** (změna 11. 08. 2026). Pracuje se
-stávajícím discovery workflow OneMilu; nesmí budovat druhou lead databázi ani vlastní vyhledávání
-mimo něj.
+**Průzkumník obchodních leadů OneMil byl odstraněn z Paperclipu** (11. 08. 2026). Neobnovovat jeho
+zastaralou paralelní lead-research roli bez nového výslovného rozhodnutí Pavla. Doplňování zásoby
+leadů nyní zajišťuje Magin výhradně přes existující OneMil discovery systém a úzký lead-supply
+adapter; segment je pevně `e-shopy`.
 
 **Model všech `codex_local` agentů je `gpt-5.5`.** Starší `gpt-5.3-codex` i `gpt-5.6-sol` server
 pro tento ChatGPT účet odmítá (`invalid_request_error`) — nevracet je.
@@ -2268,7 +2268,7 @@ pro tento ChatGPT účet odmítá (`invalid_request_error`) — nevracet je.
 ### Pravidla pro Claude Code při práci s Paperclipem
 
 - **Nikdy nečti `onemil_history.md` automaticky** v kontextu Paperclip agentů — pouze na výslovnou žádost Pavla.
-- Provozní ředitel **deleguje** lead scouting, velké tabulky, marketingový průzkum a repetitivní práci na Průzkumníka. Sám zpracovává, pouze pokud Pavel řekne „zpracuj osobně".
+- Provozní ředitel **deleguje** provozní práci na existující specializované agenty. Lead-supply tok pro obchodní dávky patří Maginovi a běží výhradně přes existující OneMil discovery systém; Provozní ředitel nemá obnovovat paralelní lead-research agenta bez Pavlova schválení.
 - Výstupy se **zveřejňují přímo do komentáře Paperclip issue** (ne jen jako interní soubor).
 - Soubory (CSV, Markdown, reporty) se ukládají do: `C:\Users\divis\Desktop\OneMil Paperclip Outputs`
 - Nový agent se **navrhuje, ale nespouští** bez schválení Pavla Diviše.
