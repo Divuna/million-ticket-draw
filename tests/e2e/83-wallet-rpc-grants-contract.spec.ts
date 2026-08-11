@@ -75,7 +75,6 @@ test.describe('wallet mutation RPC grant contract', () => {
     expect(filesWithDeductRpc).toEqual([
       'docs/launch-readiness/PAY01_PAYMENTS_TEST_MODE_NOTE.md',
       'onemil_history.md',
-      'onemil_state.md',
       'src/integrations/supabase/types.ts',
       'supabase/migrations/20260315140000_audit_improvements_close_wallet.sql',
       'supabase/migrations/20260315201000_wallet_hardening_functions.sql',
