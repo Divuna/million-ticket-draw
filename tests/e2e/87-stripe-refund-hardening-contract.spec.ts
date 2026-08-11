@@ -304,7 +304,7 @@ test.describe('stripe refund hardening contract', () => {
 
     // Autorizace zůstává: JWT + role administrátora.
     expect(edge).toContain('supabaseClient.auth.getUser(token)');
-    expect(edge).toContain("'Forbidden: admin role required'");
+    expect(edge).toContain("'Forbidden: admin or superadmin role required'");
   });
 
   test('edge function branches on every stripe refund status', () => {
