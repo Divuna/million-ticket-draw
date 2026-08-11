@@ -301,9 +301,16 @@ Schedule trigger `7b512abb-…`: cron `30 7 * * 1-5`, **timezone `Europe/Prague`
   `POST /companies/:id/routines` then `POST /routines/:id/triggers` with
   `{ kind: "schedule", cronExpression, timezone }`.
 
-**Open item before the first real run:** the value of `SALES_LEAD_BATCH_AGENT_SECRET` must be put
-into Magin's credentials by Pavel. Without it the 12. 8. run gets 401, and per his instructions
-Magin only reports it to the Director and does **not** retry.
+**Credential is in place.** `SALES_LEAD_BATCH_AGENT_SECRET` is stored in the Paperclip credential
+store (`POST /api/companies/:id/secrets`, provider `local_encrypted`, mode `paperclip_managed`,
+status `active`) and the **same new value is set in the production Supabase project**. The value was
+generated in memory only and is **not published or stored anywhere** — not in this documentation,
+git, the agent prompt or instructions, an issue, or a log. The API does not return it; the agent
+fetches it at run time via `/api/agents/me/secrets/{key}/value`.
+
+**Final confirmation happens on the first real run.** Both stores received the same value from a
+single in-memory generation, but the function was deliberately not called with it, because every
+successful call creates a batch. The 12. 08. 2026 run is what proves the two sides match.
 
 ### What is already live on production `xkzhjldrojjlrkezorey`
 

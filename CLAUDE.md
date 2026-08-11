@@ -43,9 +43,15 @@ firma `iCONIC POINT s.r.o.`, agent id `3ef09c71-d9a0-43f3-8ce8-c5e9938dae64`, ad
 `codex_local`, nadřízený `Provozní ředitel OneMil`. Routine
 `a3ac40b2-7d58-4207-9c5d-1ffc52ee8c8c` (`active`, `catchUpPolicy=skip_missed`,
 `concurrencyPolicy=skip_if_active`), cron `30 7 * * 1-5`, `timezone=Europe/Prague`.
-**První běh 12. 8. 2026 v 7:30 Praha, počet 40.** Magin musí posílat **pražské datum**.
-Secret patří do jeho credential store, **nikdy do promptu ani do Paperclip issue** — v době
-vytvoření tam ještě vložen nebyl, viz otevřený bod níže.
+**První ostrý běh 12. 8. 2026 v 7:30 Europe/Prague, počet 40.** Magin musí posílat **pražské datum**.
+
+**Credential je hotový.** `SALES_LEAD_BATCH_AGENT_SECRET` je bezpečně uložený v Paperclip
+credential store (provider `local_encrypted`, mode `paperclip_managed`, stav `active`) a **stejná
+nová hodnota je nastavená v produkčním Supabase**. Hodnota byla vygenerována pouze v paměti,
+**není nikde zveřejněná ani uložená** — v dokumentaci, gitu, promptu, instrukcích agenta, issue
+ani logu. Paperclip API ji nevrací; agent si ji vyzvedne až za běhu přes
+`/api/agents/me/secrets/{key}/value`. Secret patří **jen** do credential store, nikdy do promptu
+ani do Paperclip issue.
 
 **Vytváření agentů vyžaduje schválení představenstvem** (`requireBoardApprovalForNewAgents=true`).
 Přímé `POST /agents` vrací 409; správná cesta je `POST /companies/:id/agent-hires`.
@@ -57,9 +63,10 @@ logo firmy). Magin má vestavěnou ikonu `mail`. Schválená a vizuálně ověř
 `metadata.approvedAvatarPath` pro chvíli, kdy to Paperclip umožní. **Obrázek MioCoinu se pro
 Magina nesmí použít**, ani když se do konverzace přiloží automaticky. Nevytvářet jinou grafiku.
 
-**Otevřený bod před prvním ostrým během:** do Maginových credentials musí Pavel vložit hodnotu
-`SALES_LEAD_BATCH_AGENT_SECRET`. Bez ní běh 12. 8. skončí na 401 a Magin to podle instrukcí jen
-nahlásí Řediteli a **nebude opakovat**.
+**Poslední ověření proběhne prvním ostrým během.** Obě uložené hodnoty se rovnají, protože vznikly
+z jednoho generování v paměti, ale **definitivně to potvrdí až běh 12. 8. 2026** — novou hodnotou
+se funkce vědomě nevolala, protože každé úspěšné volání zakládá dávku. Kdyby se hodnoty přesto
+rozešly, vrátí funkce 401 a Magin to podle instrukcí jen nahlásí Řediteli a **nebude opakovat**.
 
 **Testy:** `tests/e2e/122-sales-lead-daily-batch-agent.spec.ts` (10 statických kontraktních testů)
 drží výše uvedené invarianty.
