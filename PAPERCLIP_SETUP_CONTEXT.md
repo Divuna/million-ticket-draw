@@ -1,346 +1,289 @@
 # OneMil — Paperclip setup context
 
-**Status:** permanent Paperclip / AI employee setup context  
-**Last updated:** 2026-05-12  
-**Company:** iCONIC POINT s.r.o.  
-**Project:** OneMil  
-**Owner / final decision maker:** Pavel Diviš
+**Status:** hlavní zdroj pravdy pro Paperclip / AI zaměstnance OneMil  
+**Aktualizováno:** 2026-08-11  
+**Firma:** iCONIC POINT s.r.o.  
+**Projekt:** OneMil  
+**Vlastník / konečné rozhodnutí:** Pavel Diviš
 
-This file is the source of truth for setting up Paperclip and AI employees for OneMil.
+Tento soubor je autoritativní kontext pro nastavení a provoz Paperclipu v OneMil. Starší údaje o Paperclipu v jiných dokumentech, které mu odporují, se považují za překonané a musí se před použitím ověřit proti skutečnému Paperclipu.
 
-Paperclip and all AI agents must read these files before working on OneMil:
+## 1. Co načíst před prací s Paperclipem
 
-- `COMPANY_CONTEXT.md` — company identity, contacts, public signature, billing identity
-- `ONEMIL_BUSINESS_CONTEXT.md` — what OneMil is, B2B reward model, partners, MioCoins, vouchers, coupons, Partner Offers, influencers, agencies, social campaigns
-- `CLAUDE.md` — project rules and safety rules
-- `onemil_state.md` — current project state
-- `onemil_history.md` — project history
-- `.cursorrules` — centralized Cursor / AI work rules
+Při každé práci s Paperclipem načti podle potřeby minimálně:
 
----
+- `PAPERCLIP_SETUP_CONTEXT.md` — tento soubor, Paperclip a AI tým
+- `ONEMIL_BUSINESS_CONTEXT.md` — obchodní model a produkt OneMil
+- `COMPANY_CONTEXT.md` — identita firmy a kontakty
+- `CLAUDE.md` — pracovní a bezpečnostní pravidla
+- `onemil_state.md` — aktuální technický/provozní stav
+- `onemil_history.md` pouze když je potřeba historie
 
-## 1. Purpose
+Nevymýšlej stav Paperclipu. Pokud je dostupný lokální Paperclip/API/bridge, skutečný stav nejdřív ověř.
 
-Paperclip is being set up as the AI management layer for OneMil.
+## 2. Úloha Paperclipu v OneMil
 
-The goal is not to let AI decide everything alone. The goal is to create a structured AI team that can understand OneMil, organize work, prepare plans, research partners, evaluate opportunities, and ask Pavel Diviš for approval before anything is executed.
+Paperclip je řídicí vrstva AI firmy OneMil. Cílový model je:
 
----
+**Pavel Diviš → Provozní ředitel OneMil → specializovaní AI zaměstnanci.**
 
-## 2. Paperclip company setup
+Pavel zůstává konečný rozhodovatel. Provozní ředitel koordinuje práci, rozděluje úkoly správným specialistům, kontroluje výsledky a eskaluje rozhodnutí, která vyžadují Pavlovo schválení.
 
-Use this setup:
+Specializovaní agenti nemají dělat práci mimo svou roli jen proto, že ji technicky zvládnou.
 
-Company name:
-iCONIC POINT s.r.o.
-
-Main project:
-OneMil
-
-Main business context:
-ONEMIL_BUSINESS_CONTEXT.md
-
-Company identity context:
-COMPANY_CONTEXT.md
-
-OneMil must be understood as a B2B reward, partner, and marketing platform with a premium contest and reward experience for users.
-
----
-
-## 3. Manager agent — Provozní ředitel OneMil
-
-**Agent name:** Provozní ředitel OneMil
-**Adapter:** claude_local or codex_local
-**Role:** AI operations coordinator / right hand for Pavel Diviš
-
-This agent is not the company owner. Pavel Diviš remains the owner and final decision maker.
-
-The Provozní ředitel OneMil:
-
-- reads only the minimum necessary files before each task
-- does NOT read onemil_history.md automatically — only when Pavel explicitly asks for history
-- organizes tasks and prepares plans
-- checks risks
-- proposes new agents (does not create or activate without Pavel approval)
-- reviews outputs from other agents
-- summarizes decisions for Pavel
-- asks for approval before any execution
-
-**Delegation rule (critical):**
-Provozní ředitel is a manager, not an executor. He must delegate specialized work to the correct agent:
-- lead research → Průzkumník obchodních leadů OneMil
-- large tables, repetitive processing, marketing research → appropriate specialized agent
-- technical work, legal analysis → appropriate specialized agent
-
-He processes tasks personally only when Pavel explicitly says: **"zpracuj osobně"**.
-
-If no suitable agent exists for a task, he proposes a new agent and waits for Pavel approval.
-
-**Paperclip settings:**
-- Enable search: OFF
-- Can assign tasks: ON
-- Can create new agents: OFF
-- Heartbeat: OFF
-
----
-
-## 4. Approval model
-
-The OneMil Chief of Staff may propose new AI agents, but must not create, launch, or activate them without Pavel Diviš approval.
-
-Every proposed new agent must include:
-
-- agent name
-- why the agent is needed
-- exact responsibility
-- expected output
-- data it will read
-- monthly budget
-- restrictions
-- who it reports to
-- how usefulness will be measured
-
-Pavel Diviš can approve, reject, or request revision.
-
----
-
-## 5. First focus: sales department
-
-The first practical focus for Paperclip is the OneMil sales department.
-
-The sales department must not start with random outreach.
-
-First, it must create a clear lead database structure and have it approved.
-
-The sales system should collect companies in a structured way so OneMil can evaluate, filter, contact, and track them.
-
----
-
-## 6. Lead database fields
-
-Every company / lead should be tracked with at least these fields:
-
-- company name
-- website
-- industry
-- company type: e-shop / brand / agency / local company / starting company / other
-- products or services
-- OneMil fit: high / medium / low
-- reason why it fits OneMil
-- possible MioCoin reward use
-- voucher fit
-- partner offer fit
-- contest product supplier fit
-- estimated company size
-- public contact email
-- public phone if available
-- social media links
-- priority: A / B / C
-- sales status
-- outreach note
-- source where the lead was found
-- date added
-- last checked date
-
-Suggested sales statuses:
-
-- found
-- needs review
-- approved for outreach
-- outreach drafted
-- outreach approved
-- contacted
-- replied
-- meeting planned
-- partner negotiation
-- partner active
-- rejected
-- not suitable
-
----
-
-## 7. What sales agents should evaluate
-
-Sales agents should evaluate:
-
-- whether the company can reward customers with MioCoins
-- whether the company has products suitable for contests
-- whether the company can provide vouchers
-- whether the company can provide Partner Offers
-- whether the company is suitable for long-term cooperation
-- whether the company could benefit from performance-based billing
-- whether an agency manages the company and could become a commission channel
-- whether the company is a starting brand that OneMil can help promote
-
----
-
-## 8. Active agents (as of 2026-05-12)
+## 3. Aktuální hlavní OneMil agenti
 
 ### Provozní ředitel OneMil
 
-Status: active
-Adapter: claude_local or codex_local
-Role: manager, operations coordinator, delegation hub
-Reports to: Pavel Diviš
-See section 3 for full rules.
+- Role: hlavní AI manažer OneMil a delegační uzel
+- Reports to: Pavel Diviš
+- Adapter: `codex_local`
+- Model: `gpt-5.5`
+- Heartbeat enabled: `true`
+- Má řídit ostatní OneMil agenty, ne nahrazovat jejich specializovanou práci.
+- Nové agenty smí navrhovat; jejich vytvoření/aktivace podléhá schválení Pavla.
+
+### Magin — CRM operátor OneMil
+
+- Agent id: `3ef09c71-d9a0-43f3-8ce8-c5e9938dae64`
+- Adapter: `codex_local`
+- Model: `gpt-5.5`
+- Search: OFF
+- Heartbeat enabled: `true`
+- Reports to: Provozní ředitel OneMil
+- `canCreateAgents=false`, `canCreateSkills=false`
+- Úloha: spustit serverem řízenou denní dávku prvních obchodních e-mailů. Magin sám nevybírá leady, nepíše text e-mailu, nevolá Resend a nepíše přímo do databáze.
+
+Routine `Denní dávka prvních obchodních e-mailů`:
+
+- id `a3ac40b2-7d58-4207-9c5d-1ffc52ee8c8c`
+- status `active`
+- projectId `b9aafaa8-fbf3-4c65-ae28-b11eafd12b3a` (OneMil)
+- cron `30 7 * * 1-5`
+- timezone `Europe/Prague`
+- `catchUpPolicy=skip_missed`
+- `concurrencyPolicy=skip_if_active`
+- první ostrý plán: 12. 8. 2026 07:30 Praha, 40 e-mailů
+
+Secret:
+
+- `SALES_LEAD_BATCH_AGENT_SECRET`
+- uložen v Paperclip credential store
+- Magin má v UI **Secret access → API access → Bound to latest** pouze pro tento secret
+- secret nikdy nepatří do promptu, issue, dokumentace, gitu ani logu
 
 ### Průzkumník obchodních leadů OneMil
 
-Status: active
-Adapter: codex_local
-Role: business lead researcher — finds and classifies companies, e-shops, brands, agencies, product suppliers
-Reports to: Provozní ředitel OneMil
-Must not: contact anyone, send emails, publish content, change any system without Pavel approval
+- Adapter: `codex_local`
+- Model: `gpt-5.5`
+- Heartbeat enabled: `true`
+- Reports to: Provozní ředitel OneMil
+- Úloha: hledat, ověřovat a klasifikovat vhodné firmy/e-shopy pro OneMil.
+- Nesmí sám kontaktovat firmy ani odesílat e-maily bez příslušného schváleného workflow.
 
-Paperclip settings:
-- Enable search: ON
-- Can assign tasks: OFF
-- Can create new agents: OFF
-- Heartbeat: OFF
+### Synchronizátor Paperclip OneMil
 
-Expected outputs:
-- Structured lead list with classification (fit: high/medium/low, type, contact, priority A/B/C)
-- Saved as Markdown and CSV to: `C:\Users\divis\Desktop\OneMil Paperclip Outputs`
-- Summary posted directly into Paperclip issue comment
+- Agent id `a4609906-2a83-4d61-b66a-652cdcecc8b1`
+- Adapter: `codex_local`
+- Model: `gpt-5.5`
+- Heartbeat enabled: `true`
+- Reports to: Provozní ředitel OneMil
+- Úloha: read-only snapshot stavu Paperclipu → OneMil STAGING bridge.
 
-### Campaign & Offer Planner (proposed, not yet created)
+Routine `Synchronizace stavu Paperclipu do OneMil STAGING`:
 
-Purpose:
-Prepare campaign, contest, product, voucher, and partner offer ideas based on approved partners.
+- id `52328b78-f0cc-4afe-9429-2548b10c927e`
+- status `active`
+- projectId `b9aafaa8-fbf3-4c65-ae28-b11eafd12b3a` (OneMil)
+- cron `*/15 * * * *`
+- timezone `Europe/Prague`
+- `catchUpPolicy=skip_missed`
+- `concurrencyPolicy=skip_if_active`
 
-Expected output:
-Campaign drafts, contest ideas, partner activation ideas, moderator/script notes.
-Do not create without Pavel Diviš approval.
+Secret:
 
----
+- `PAPERCLIP_BRIDGE_SECRET`
+- uložen v Paperclip credential store
+- Synchronizátor má v UI **Secret access → API access → Bound to latest** pouze pro tento secret
+- žádný jiný OneMil agent ho nemá dostat bez výslovného důvodu
 
-## 9. Restrictions
+Bridge je pouze read-only přehled do STAGING. Produkční data nesmí synchronizátor měnit.
 
-No Paperclip agent may execute these without Pavel Diviš approval:
+## 4. Vestavění pomocní agenti Paperclipu
 
-- send emails
-- send partner outreach
-- publish posts
-- contact customers
-- contact partners
-- approve contracts
-- approve legal wording
-- approve financial terms
-- change production
-- change Supabase
-- change Stripe
-- change GitHub code
-- change contest engine
-- change wallet, MioCoin, voucher, ticket, winner, Partner Offers, Sofinity, or Bob logic
+`Reflection Coach` a `Summarizer` nejsou hlavní OneMil provozní agenti. Jejich automatické používání se zapíná jen tehdy, když pro ně existuje konkrétní schválený účel.
 
-Agents may prepare drafts, reports, proposals, lead lists, campaign ideas, and risk checks.
+Reflection Coach je podle Paperclipu určen ke kontrolovaným návrhům zlepšení instrukcí/skillů agentů; změny nemá aplikovat bez review. Nepovažovat ho za náhradu Provozního ředitele.
 
----
+## 5. Heartbeat a rutiny — závazný provozní model
 
-## 10. Technical notes (Codex local on Windows)
+Paperclip agenti neběží nepřetržitě. Pracují v krátkých bězích (heartbeats).
 
-- Codex local adapter is functional on Windows.
-- Required Extra args in agent settings: `--skip-git-repo-check`
-- Model: use **Default** or **gpt-5.3-codex** (o4-mini was not supported with current Codex + ChatGPT account setup).
-- Claude Code adapter (claude_local) also works; may be credit-limited on Pro subscription.
-- Claude.exe path: `C:\Users\divis\.local\bin\claude.exe`
-- C:\Users\divis\.local\bin is in user PATH registry — new terminal windows pick it up automatically.
+Oficiální Paperclip model rozlišuje:
 
----
+- přiřazení úkolu → probudí agenta
+- komentář / mention → může probudit agenta
+- ruční `Run Heartbeat` → probudí agenta
+- rutina → vytvoří/přiřadí práci a probudí agenta
+- intervalový heartbeat → pravidelně budí agenta i bez nové práce
 
-## 11. Output file handling
+**Důležité:** pro plánovanou práci používej primárně rutiny. Intervalový heartbeat nepoužívej jako náhradu rutiny, pokud agent nemusí něco skutečně pollovat.
 
-All Paperclip agent outputs (reports, lead lists, one-pagers, proposals) must be:
-1. Posted as a comment directly into the Paperclip issue (visible in UI).
-2. Saved as Markdown and/or CSV files to: `C:\Users\divis\Desktop\OneMil Paperclip Outputs`
+Aktuálně je `heartbeat.enabled=true` u čtyř hlavních OneMil agentů. Před případnou optimalizací spotřeby ověř, zda jde o intervalové buzení nebo jen povolení běhu/wake-on-demand v konkrétní verzi Paperclipu. Nevypínej agenta (`Pause`) jen kvůli omezení zbytečných intervalových běhů — Pause blokuje i legitimní probuzení úkolem/rutinou.
 
-Internal `.paperclip` folder files must never be the only output.
+## 6. Kritické pravidlo rutin: vždy projekt OneMil
 
----
+Aktivní OneMil rutina, která má běžet v izolovaném git worktree, musí mít:
 
-## 12. Issues created during first live session (2026-05-12)
+`projectId = b9aafaa8-fbf3-4c65-ae28-b11eafd12b3a`
 
-| Issue | Content |
-|-------|---------|
-| ICO-15 | Lead scouting — 10 Czech e-shops/brands |
-| ICO-16 | Shortlist of top 3 from existing leads |
-| ICO-17 | Public B2B contact verification — Dedoles, Slevomat, Rohlik.cz |
-| ICO-18 | Dedoles one-pager draft → `dedoles_one_pager_ICO-18_2026-05-12.md` |
-| ICO-19 | Ideal AI team proposal → `onemil_ai_team_ICO-19_2026-05-12.md` |
+Bez projektu Paperclip vytvoří issue, ale execution workspace policy ho před skutečným během může převést na `blocked` (`workspace_worktree_requires_project`).
 
-Top candidates: Dedoles, Slevomat, Rohlik.cz, Aktin/Vilgain, Vuch, DATART.
+Tato chyba už byla nalezena u Magina i Synchronizátora a `projectId` byl 11. 8. 2026 doplněn do obou rutin.
 
----
+Staré testovací issues ICO-26 až ICO-32 vznikly bez projectId a mohou zůstat `blocked`; nejsou zdrojem pravdy pro nové běhy.
 
-## 13. Next confirmed steps
+## 7. Codex local na Windows — aktuální ověřené nastavení
 
-- Continue building the lead database (Průzkumník extends the list).
-- Provozní ředitel coordinates priorities and presents shortlists to Pavel before any outreach.
-- Outreach drafts are prepared only after Pavel explicitly approves the shortlist.
-- Do not invent missing business rules. Ask Pavel Diviš or mark as TODO until confirmed.
+OneMil `codex_local` agenti používají model:
 
----
+`gpt-5.5`
 
-## 14. Magin — CRM operátor OneMil (CREATED AND SCHEDULED, 11. 08. 2026)
+Starší hodnoty `gpt-5.3-codex` a `gpt-5.6-sol` jsou pro tento ChatGPT/Codex účet v tomto prostředí neplatné a nesmí se vracet bez nového ověření.
 
-**Status: live.** Agent id `3ef09c71-d9a0-43f3-8ce8-c5e9938dae64`, urlKey `magin-crm-oper-tor-onemil`,
-status `idle`, adapter `codex_local` (model `gpt-5.3-codex`, `--skip-git-repo-check`, **search OFF**),
-reports to `Provozní ředitel OneMil`, `budgetMonthlyCents = 0` (company default, unchanged),
-`canCreateAgents = false`, `canCreateSkills = false`.
+Osobní Codex config:
 
-Routine `Denní dávka prvních obchodních e-mailů` — id `a3ac40b2-7d58-4207-9c5d-1ffc52ee8c8c`,
-status `active`, `catchUpPolicy = skip_missed`, `concurrencyPolicy = skip_if_active`.
-Schedule trigger `7b512abb-…`: cron `30 7 * * 1-5`, **timezone `Europe/Prague`**, enabled,
-`nextRunAt = 2026-08-12T05:30:00Z` = **12. 08. 2026, 07:30 Prague**.
+- `model = "gpt-5.5"`
+- `service_tier = "fast"`
+- `sandbox_mode = "workspace-write"`
+- `[sandbox_workspace_write] network_access = true`
 
-**Two API facts worth remembering (verified, not guessed):**
+Paperclip používá vlastní per-company `CODEX_HOME`, nikoli automaticky osobní `~/.codex/config.toml`.
 
-- Creating an agent directly with `POST /companies/:id/agents` returns **409** because the company
-  has `requireBoardApprovalForNewAgents = true`. Use `POST /companies/:id/agent-hires`.
-- Scheduling uses **routines + triggers**, not a per-agent cron field:
-  `POST /companies/:id/routines` then `POST /routines/:id/triggers` with
-  `{ kind: "schedule", cronExpression, timezone }`.
+V Paperclip per-company `codex-home/config.toml` bylo 11. 8. 2026 ověřeně nastaveno:
 
-**Credential is in place.** `SALES_LEAD_BATCH_AGENT_SECRET` is stored in the Paperclip credential
-store (`POST /api/companies/:id/secrets`, provider `local_encrypted`, mode `paperclip_managed`,
-status `active`) and the **same new value is set in the production Supabase project**. The value was
-generated in memory only and is **not published or stored anywhere** — not in this documentation,
-git, the agent prompt or instructions, an issue, or a log. The API does not return it; the agent
-fetches it at run time via `/api/agents/me/secrets/{key}/value`.
+- `model = "gpt-5.5"`
+- `sandbox_mode = "workspace-write"`
+- `[sandbox_workspace_write] network_access = true`
+- `[windows] sandbox = "unelevated"`
 
-**Final confirmation happens on the first real run.** Both stores received the same value from a
-single in-memory generation, but the function was deliberately not called with it, because every
-successful call creates a batch. The 12. 08. 2026 run is what proves the two sides match.
+Důvod `unelevated`: `elevated` na tomto Windows končil `CreateProcessWithLogonW failed: 1326`.
 
-### What is already live on production `xkzhjldrojjlrkezorey`
+Paperclip existující per-company config při startu celý nepřepisuje: kopírovací logika existující soubor ponechá a managed MCP writer mění jen svůj označený managed blok.
 
-- Edge Function `sales-lead-daily-batch-agent` — v1 ACTIVE, `verify_jwt=false`.
-- Secret `SALES_LEAD_BATCH_AGENT_SECRET` — production value, different from staging.
-- RPC `sales_lead_email_batch_agent_run(date, integer)` — `service_role` only.
-- Batch worker runs every 5 minutes (pg_cron job 30); automation is on, daily limit **90**,
-  timezone `Europe/Prague`, window `08:30–16:30`.
-- Production security checks passed without creating a batch: 401 without secret, 401 with a wrong
-  secret, 405 for GET, 400 `unexpected_field`, 400 `invalid_target_date`.
+Pozor: `curl.exe` může ve Windows sandboxu vracet HTTP `000`, i když síť funguje. Síť byla ověřena skutečným HTTPS `fetch`. Při diagnostice proto nevyvozuj nedostupnost sítě pouze z `curl.exe` HTTP 000.
 
-### Planned agent configuration
+Varování `codex_acp_credentials_missing` bylo 11. 8. 2026 vyhodnoceno jako falešné pro aktuální formát Codex credentials (`tokens.refresh_token` vs. top-level kontrola adaptéru). Reálné `codex_local` běhy přes ChatGPT účet fungují. Neopravovat ho kopírováním živého refresh tokenu ani přechodem na placený API key jen kvůli odstranění warningu.
 
-- Name: **Magin – CRM operátor OneMil**; company `iCONIC POINT s.r.o.`, project `OneMil`,
-  manager `Provozní ředitel OneMil`.
-- Schedule `30 7 * * 1-5`, timezone explicitly **`Europe/Prague`** (never Windows time, UTC or a
-  fixed offset).
-- First planned run: **12. 08. 2026, 40 e-mails.** Then 13. 8. → 50, 14. 8. → 60, 17. 8. → 70,
-  18. 8. → 80, from 19. 8. → 90 every working day. Weekends are skipped and a missed day is never
-  caught up later.
-- Enable search OFF, Can assign tasks OFF, Can create agents OFF.
-- Magin only calls the Edge Function with `target_date` (Prague date) and `requested_count`, then
-  reports the result to Provozní ředitel. He never selects leads, never writes e-mail text, never
-  calls Resend and never writes to the database.
-- **The secret belongs in Paperclip's credential store, never in the agent prompt or in an issue.**
+## 8. Secrets — závazné pravidlo
 
-### Profile picture — binding
+Paperclip secret nestačí pouze vytvořit v credential store. Agent musí mít explicitně přidělený přístup.
 
-The approved and visually verified character is at:
-`C:\Users\divis\Downloads\ChatGPT Image 11. 8. 2026 11_37_39.png`
+Pro OneMil používej nejmenší oprávnění:
 
-Do not create other artwork, do not edit it, and **never use the MioCoin image** for Magin — it may
-be attached to a conversation automatically and must be ignored.
+- UI agenta → Configuration → Secret access
+- **API access** pro on-demand čtení
+- **Bound to latest**, pokud má agent používat aktuální rotovanou hodnotu
+- každý agent dostane pouze secret, který skutečně potřebuje
+
+Run-bound secret API je určen pouze pro běžícího agenta s platným run-bound agent JWT. Úspěšné čtení secretu je auditované.
+
+Nikdy:
+
+- nevkládat secret do promptu
+- nevkládat secret do issue/commentu
+- nevkládat secret do GitHubu nebo dokumentace
+- nevypisovat hodnotu do logu
+- nedávat agentovi service-role klíč, pokud existuje úzký agent-specific secret
+
+## 9. Skills — jak je používat v OneMil
+
+Paperclip skill je opakovaně použitelný pracovní postup. Typicky je to složka se `SKILL.md`; krátký popis říká agentovi, kdy skill použít, a plné instrukce se načtou až při relevantním úkolu.
+
+To je preferovaný způsob pro opakované postupy. Nezahlcuj hlavní instrukce agenta dlouhými návody, které potřebuje jen někdy.
+
+Paperclip má:
+
+- company skill library
+- bundled catalog skills
+- optional catalog skills
+- Paperclip-managed vlastní skills
+- importované/připnuté skills z externích zdrojů
+- přiřazení skillů jednotlivým agentům
+
+Před přiřazením externího skillu agentovi s vyššími oprávněními vždy přečti celý `SKILL.md` a ověř původ/verzi.
+
+### Relevantní oficiální Paperclip skills pro OneMil
+
+Před tvorbou vlastního skillu nejdřív zkontroluj aktuální katalog Paperclipu. Mezi oficiálně dokumentované patří například:
+
+- `paperclip` — základní heartbeat/work protocol
+- `paperclip-board` — board/company management
+- `paperclip-create-agent` — řízené vytváření agentů
+- `paperclip-converting-plans-to-tasks` — převod plánu na správně delegované issues
+- `summarize-status` — manažerský stručný stav a rozhodnutí
+- `task-planning`
+- `issue-triage`
+- `qa-acceptance`
+- `doc-maintenance`
+- `github-pr-workflow`
+- `wireframe`
+- optional `agent-browser` — pouze řízené ověřování webu, ne unattended scraping
+- optional `last30days` — aktuální research, pokud je pro úkol vhodný
+
+Skills neinstaluj hromadně „pro jistotu“. Každému agentovi dej jen ty, které odpovídají jeho práci; snižuje to šum, spotřebu a riziko chybného použití.
+
+## 10. Doporučené rozdělení skillů
+
+Toto je výchozí návrh, ne automatické schválení instalace:
+
+**Provozní ředitel:** `paperclip`, `paperclip-converting-plans-to-tasks`, `summarize-status`; případně `issue-triage`.
+
+**Magin:** pouze základní Paperclip workflow a budoucí vlastní úzký OneMil CRM runbook, pokud bude potřeba. Nepotřebuje obecný browser ani research skill pro svou denní dávku.
+
+**Průzkumník:** základní Paperclip workflow + vhodný research/browser skill podle schváleného způsobu hledání leadů.
+
+**Synchronizátor:** pouze základní Paperclip workflow + úzké instrukce synchronizace. Nepotřebuje marketingové, browser ani research skills.
+
+Vlastní OneMil skill vytvoř až tehdy, když jde o opakovatelný postup, který nechceme držet v dlouhém promptu agenta. Nevytvářej nový duplicitní zdroj obchodní pravdy; obchodní fakta zůstávají v `ONEMIL_BUSINESS_CONTEXT.md`.
+
+## 11. Schvalování a bezpečnost
+
+Bez výslovného schválení Pavla žádný Paperclip agent nesmí provést destruktivní nebo citlivou produkční změnu, zejména:
+
+- mazání produkčních dat
+- změny peněženek/MioCoinů
+- změny plateb/Stripe
+- změny soutěžní logiky
+- změny RLS
+- produkční migrace
+- zásahy do peněz
+
+U obchodních a komunikačních akcí se řiď konkrétním schváleným workflow. Pokud je akce serverem předem bezpečně omezená (např. Maginova denní dávka), agent smí pouze parametry výslovně povolené daným kontraktem.
+
+## 12. Výstupy agentů
+
+Výsledek práce musí být viditelný v Paperclip issue/commentu. Pokud vznikne soubor určený pro člověka, preferuj Paperclip artifact/attachment workflow, aby výsledek nezůstal pouze v lokálním workspace.
+
+Lokální pracovní soubory nejsou samy o sobě dostatečný finální výstup.
+
+## 13. Aktuální otevřený test k 11. 8. 2026
+
+Synchronizátor byl po nastavení `PAPERCLIP_BRIDGE_SECRET` přes **Secret access → API access → Bound to latest** ručně spuštěn. V době posledního potvrzení ještě běžel a nový staging snapshot ještě nebyl potvrzen.
+
+Magin má analogicky nastavený pouze `SALES_LEAD_BATCH_AGENT_SECRET` přes **API access → Bound to latest**. Jeho ruční heartbeat bez přiděleného pracovního issue nevytvořil obchodní dávku; následný běh byl pozastaven/zrušen. Ostrou denní rutinu ručně nespouštět jen kvůli testu, protože úspěšné volání může vytvořit reálnou dávku.
+
+Po dokončení Synchronizátora ověř nový `paperclip_bridge_snapshot` ve OneMil STAGING a tento oddíl aktualizuj.
+
+## 14. Oficiální Paperclip dokumentace používaná jako referenční základ
+
+Při změnách Paperclipu ověř aktuální verzi dokumentace, protože produkt se vyvíjí rychle. Referenční oblasti:
+
+- Agents
+- Heartbeats & Routines
+- Skills / Skills Reference
+- Routines API
+- Secrets API / Run-Bound Agent Secret Access
+- Roles & Permissions
+
+Dokumentace Paperclipu je referenční zdroj pro chování platformy; tento soubor je zdroj pravdy pro to, jak je Paperclip použit konkrétně v OneMil.
