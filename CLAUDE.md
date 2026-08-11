@@ -38,13 +38,28 @@
 - **Kapacita okna je těsná:** worker zpracuje nejvýš jednu položku na běh → ~96 slotů v okně.
   90 e-mailů denně = ~94 % kapacity. Při náběhu na 70+ (od 17. 8. 2026) sledovat, jestli den dojede.
 
-**Stav agenta Magin:** **není vytvořený ani naplánovaný.** První plánovaný počet je
-**40 e-mailů dne 12. 8. 2026**, plán `30 7 * * 1-5` v `Europe/Prague`. Magin musí posílat
-**pražské datum**. Secret patří do jeho credential store, **nikdy do promptu ani do Paperclip issue**.
+**Stav agenta Magin (11. 08. 2026):** **vytvořen a naplánován** v Paperclipu 2026.722.0,
+firma `iCONIC POINT s.r.o.`, agent id `3ef09c71-d9a0-43f3-8ce8-c5e9938dae64`, adaptér
+`codex_local`, nadřízený `Provozní ředitel OneMil`. Routine
+`a3ac40b2-7d58-4207-9c5d-1ffc52ee8c8c` (`active`, `catchUpPolicy=skip_missed`,
+`concurrencyPolicy=skip_if_active`), cron `30 7 * * 1-5`, `timezone=Europe/Prague`.
+**První běh 12. 8. 2026 v 7:30 Praha, počet 40.** Magin musí posílat **pražské datum**.
+Secret patří do jeho credential store, **nikdy do promptu ani do Paperclip issue** — v době
+vytvoření tam ještě vložen nebyl, viz otevřený bod níže.
 
-**Profilový obrázek Magina:** schválená a vizuálně ověřená postavička je na cestě
-`C:\Users\divis\Downloads\ChatGPT Image 11. 8. 2026 11_37_39.png`. **Obrázek MioCoinu se pro
+**Vytváření agentů vyžaduje schválení představenstvem** (`requireBoardApprovalForNewAgents=true`).
+Přímé `POST /agents` vrací 409; správná cesta je `POST /companies/:id/agent-hires`.
+
+**Profilový obrázek Magina:** **Paperclip vlastní obrázek agenta nepodporuje** — `icon` je pevný
+výčet 41 vestavěných ikon, `iconAssetId`/`avatarAssetId` neexistuje (obrázky lze nahrát jen jako
+logo firmy). Magin má vestavěnou ikonu `mail`. Schválená a vizuálně ověřená postavička je na cestě
+`C:\Users\divis\Downloads\ChatGPT Image 11. 8. 2026 11_37_39.png` a je uložená v jeho
+`metadata.approvedAvatarPath` pro chvíli, kdy to Paperclip umožní. **Obrázek MioCoinu se pro
 Magina nesmí použít**, ani když se do konverzace přiloží automaticky. Nevytvářet jinou grafiku.
+
+**Otevřený bod před prvním ostrým během:** do Maginových credentials musí Pavel vložit hodnotu
+`SALES_LEAD_BATCH_AGENT_SECRET`. Bez ní běh 12. 8. skončí na 401 a Magin to podle instrukcí jen
+nahlásí Řediteli a **nebude opakovat**.
 
 **Testy:** `tests/e2e/122-sales-lead-daily-batch-agent.spec.ts` (10 statických kontraktních testů)
 drží výše uvedené invarianty.

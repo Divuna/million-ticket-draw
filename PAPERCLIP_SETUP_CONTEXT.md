@@ -281,10 +281,29 @@ Top candidates: Dedoles, Slevomat, Rohlik.cz, Aktin/Vilgain, Vuch, DATART.
 
 ---
 
-## 14. Magin — CRM operátor OneMil (backend ready, agent NOT created yet, 11. 08. 2026)
+## 14. Magin — CRM operátor OneMil (CREATED AND SCHEDULED, 11. 08. 2026)
 
-**Status: the secure OneMil connection is live on production; the Paperclip agent itself does not
-exist yet and is not scheduled.** Do not create or schedule it without Pavel's explicit approval.
+**Status: live.** Agent id `3ef09c71-d9a0-43f3-8ce8-c5e9938dae64`, urlKey `magin-crm-oper-tor-onemil`,
+status `idle`, adapter `codex_local` (model `gpt-5.3-codex`, `--skip-git-repo-check`, **search OFF**),
+reports to `Provozní ředitel OneMil`, `budgetMonthlyCents = 0` (company default, unchanged),
+`canCreateAgents = false`, `canCreateSkills = false`.
+
+Routine `Denní dávka prvních obchodních e-mailů` — id `a3ac40b2-7d58-4207-9c5d-1ffc52ee8c8c`,
+status `active`, `catchUpPolicy = skip_missed`, `concurrencyPolicy = skip_if_active`.
+Schedule trigger `7b512abb-…`: cron `30 7 * * 1-5`, **timezone `Europe/Prague`**, enabled,
+`nextRunAt = 2026-08-12T05:30:00Z` = **12. 08. 2026, 07:30 Prague**.
+
+**Two API facts worth remembering (verified, not guessed):**
+
+- Creating an agent directly with `POST /companies/:id/agents` returns **409** because the company
+  has `requireBoardApprovalForNewAgents = true`. Use `POST /companies/:id/agent-hires`.
+- Scheduling uses **routines + triggers**, not a per-agent cron field:
+  `POST /companies/:id/routines` then `POST /routines/:id/triggers` with
+  `{ kind: "schedule", cronExpression, timezone }`.
+
+**Open item before the first real run:** the value of `SALES_LEAD_BATCH_AGENT_SECRET` must be put
+into Magin's credentials by Pavel. Without it the 12. 8. run gets 401, and per his instructions
+Magin only reports it to the Director and does **not** retry.
 
 ### What is already live on production `xkzhjldrojjlrkezorey`
 
