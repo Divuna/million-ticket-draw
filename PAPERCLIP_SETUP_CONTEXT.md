@@ -278,3 +278,43 @@ Top candidates: Dedoles, Slevomat, Rohlik.cz, Aktin/Vilgain, Vuch, DATART.
 - Provozní ředitel coordinates priorities and presents shortlists to Pavel before any outreach.
 - Outreach drafts are prepared only after Pavel explicitly approves the shortlist.
 - Do not invent missing business rules. Ask Pavel Diviš or mark as TODO until confirmed.
+
+---
+
+## 14. Magin — CRM operátor OneMil (backend ready, agent NOT created yet, 11. 08. 2026)
+
+**Status: the secure OneMil connection is live on production; the Paperclip agent itself does not
+exist yet and is not scheduled.** Do not create or schedule it without Pavel's explicit approval.
+
+### What is already live on production `xkzhjldrojjlrkezorey`
+
+- Edge Function `sales-lead-daily-batch-agent` — v1 ACTIVE, `verify_jwt=false`.
+- Secret `SALES_LEAD_BATCH_AGENT_SECRET` — production value, different from staging.
+- RPC `sales_lead_email_batch_agent_run(date, integer)` — `service_role` only.
+- Batch worker runs every 5 minutes (pg_cron job 30); automation is on, daily limit **90**,
+  timezone `Europe/Prague`, window `08:30–16:30`.
+- Production security checks passed without creating a batch: 401 without secret, 401 with a wrong
+  secret, 405 for GET, 400 `unexpected_field`, 400 `invalid_target_date`.
+
+### Planned agent configuration
+
+- Name: **Magin – CRM operátor OneMil**; company `iCONIC POINT s.r.o.`, project `OneMil`,
+  manager `Provozní ředitel OneMil`.
+- Schedule `30 7 * * 1-5`, timezone explicitly **`Europe/Prague`** (never Windows time, UTC or a
+  fixed offset).
+- First planned run: **12. 08. 2026, 40 e-mails.** Then 13. 8. → 50, 14. 8. → 60, 17. 8. → 70,
+  18. 8. → 80, from 19. 8. → 90 every working day. Weekends are skipped and a missed day is never
+  caught up later.
+- Enable search OFF, Can assign tasks OFF, Can create agents OFF.
+- Magin only calls the Edge Function with `target_date` (Prague date) and `requested_count`, then
+  reports the result to Provozní ředitel. He never selects leads, never writes e-mail text, never
+  calls Resend and never writes to the database.
+- **The secret belongs in Paperclip's credential store, never in the agent prompt or in an issue.**
+
+### Profile picture — binding
+
+The approved and visually verified character is at:
+`C:\Users\divis\Downloads\ChatGPT Image 11. 8. 2026 11_37_39.png`
+
+Do not create other artwork, do not edit it, and **never use the MioCoin image** for Magin — it may
+be attached to a conversation automatically and must be ignored.
