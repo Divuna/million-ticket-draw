@@ -193,6 +193,11 @@ verify_jwt = false
 [functions.sales-lead-work-intake]
 verify_jwt = false
 
+# Autorizace je vlastní secret SALES_LEAD_BATCH_AGENT_SECRET ověřený uvnitř funkce
+# (stejný vzor jako sales-lead-work-intake), proto se JWT nevyžaduje.
+[functions.sales-lead-daily-batch-agent]
+verify_jwt = false
+
 [functions.onemil-work-intake-mcp]
 verify_jwt = false
 
