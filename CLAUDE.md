@@ -1,3 +1,54 @@
+# Bezpečné propojení pro externího denního agenta (PRODUKCE, 11. 08. 2026)
+
+**Nasazeno na produkci `xkzhjldrojjlrkezorey`** po výslovném schválení Pavla. PR #344 mergnut do
+`main` (merge commit `acd8aa76`).
+
+**Ověřený produkční stav (read-only, 11. 08. 2026) — tohle přebíjí starší zápisy níže:**
+
+- Automatika **`enabled = true`**, pásmo `Europe/Prague`, okno `08:30–16:30`, **denní limit 90**.
+  Starší text „automatika je stále `enabled=false`" a „limit 20" **už neplatí** (20 je staging).
+- **Worker běží každých 5 minut:** pg_cron job 30 `sales_lead_email_batch_worker_every_5_min`
+  → `run_sales_lead_email_batch_worker_cron()` → Edge Function `process-sales-lead-email-batch`
+  (ACTIVE v10). Za 24 h 288 běhů, všechny `succeeded`.
+- **Edge Function `sales-lead-daily-batch-agent`** nasazena (v1 ACTIVE, `verify_jwt=false`),
+  secret `SALES_LEAD_BATCH_AGENT_SECRET` vytvořen (produkční hodnota ≠ stagingová).
+- Migrace `20260811090000_sales_lead_daily_batch_agent.sql` aplikována.
+
+**Závazné invarianty (neměnit bez schválení Pavla):**
+
+- **`sales_lead_email_batch_agent_run(date, integer)` smí volat POUZE `service_role.`**
+  `anon` i `authenticated` mají EXECUTE odebraný. Nevracet jim ho.
+- **Agent nikdy nedostane service-role klíč ani přihlášení admina.** Autorizuje se výhradně
+  vlastním secretem v hlavičce `Authorization: Bearer`, ověřeným v konstantním čase.
+- **Agent smí poslat jen `target_date` a `requested_count`.** Jakýkoli další klíč v těle → 400
+  `unexpected_field`. Skupinu (`e-shopy`), šablonu i výběr leadů určuje server — nikdy agent.
+- **Šablona = ta z poslední nezrušené dávky**, a musí být stále `is_active` a typu `initial`.
+  Když dřívější dávka není, projde to jen při právě jedné aktivní `initial` šabloně. Jinak
+  fail-closed — raději nic než uhodnout špatný text reálným firmám.
+- **Žádná bariéra se neobchází ani nekopíruje.** RPC ověří vlastníka přes
+  `sales_lead_pick_discovery_owner()` a pod jeho identitou (transakčně lokální
+  `request.jwt.claims`) zavolá existující `prepare_paused` → `activate_admin`. O způsobilosti
+  rozhoduje dál kanonická `sales_lead_email_batch_check_one()`.
+- **Idempotence na den.** Existující dávka pro dané datum se vrátí (`already_exists`), druhá
+  nikdy nevznikne a **stará pozastavená dávka se nikdy neaktivuje** — větev `already_exists`
+  se vrací dřív, než se vůbec dojde k `activate_admin`.
+- **RPC ani Edge Function nikdy neodesílají e-mail** — žádný Resend, žádná `email_queue`, žádné
+  `claim_next`. Rozesílání a rozložení do okna dělá výhradně stávající worker.
+- Do logu smí jít jen `error.code`, nikdy tělo požadavku, hlavičky ani secret.
+- **Kapacita okna je těsná:** worker zpracuje nejvýš jednu položku na běh → ~96 slotů v okně.
+  90 e-mailů denně = ~94 % kapacity. Při náběhu na 70+ (od 17. 8. 2026) sledovat, jestli den dojede.
+
+**Stav agenta Magin:** **není vytvořený ani naplánovaný.** První plánovaný počet je
+**40 e-mailů dne 12. 8. 2026**, plán `30 7 * * 1-5` v `Europe/Prague`. Magin musí posílat
+**pražské datum**. Secret patří do jeho credential store, **nikdy do promptu ani do Paperclip issue**.
+
+**Profilový obrázek Magina:** schválená a vizuálně ověřená postavička je na cestě
+`C:\Users\divis\Downloads\ChatGPT Image 11. 8. 2026 11_37_39.png`. **Obrázek MioCoinu se pro
+Magina nesmí použít**, ani když se do konverzace přiloží automaticky. Nevytvářet jinou grafiku.
+
+**Testy:** `tests/e2e/122-sales-lead-daily-batch-agent.spec.ts` (10 statických kontraktních testů)
+drží výše uvedené invarianty.
+
 # Automatické zakládání discovery jobů (Draft, 07. 08. 2026)
 
 - **Nasazeno nikam.** Jen větev `chatgpt/sales-lead-discovery-scheduler` + Draft PR. Migrace

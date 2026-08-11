@@ -1,7 +1,36 @@
 # OneMil – aktuální stav projektu
 
-> **Autoritativní aktuální stav. Aktualizováno 9. 8. 2026.**
+> **Autoritativní aktuální stav. Aktualizováno 11. 8. 2026.**
 > Historický vývoj je v `onemil_history.md` a v Git historii. Pokud starší dokumentace odporuje tomuto souboru, pro současný provoz platí tento soubor a skutečný stav ověřený v GitHubu/Supabase.
+
+## 0. Denní e-mailové dávky a propojení pro externího agenta (ověřeno 11. 8. 2026)
+
+Read-only ověřeno přímo na produkci `xkzhjldrojjlrkezorey`:
+
+- **Automatika je zapnutá** (`enabled = true`), pásmo `Europe/Prague`, okno `08:30–16:30`.
+- **Denní limit je 90.** Starší dokumentace uvádějící 20 je neplatná; 20 je hodnota stagingu.
+- **Worker běží každých 5 minut.** pg_cron job 30 `sales_lead_email_batch_worker_every_5_min`
+  (`*/5 * * * *`, aktivní) volá `run_sales_lead_email_batch_worker_cron()`, ta si vezme token a URL
+  z Vaultu, ověří, že URL míří na produkční projekt, a zavolá Edge Function
+  `process-sales-lead-email-batch` (ACTIVE v10). Za 24 h 288 běhů, všechny `succeeded`.
+- **Kapacita okna je těsná.** Worker zpracuje nejvýš jednu položku na běh → v okně 08:30–16:30
+  je ~96 slotů. Při cílových 90 e-mailech denně to je ~94 % kapacity, prakticky bez rezervy.
+  Sledovat od 17. 8. 2026 (70 e-mailů) výš.
+- **Edge Function `sales-lead-daily-batch-agent` je nasazená na produkci** (v1 ACTIVE,
+  `verify_jwt=false`, autorizace vlastním secretem `SALES_LEAD_BATCH_AGENT_SECRET`).
+  Produkční secret je jiná hodnota než stagingový.
+- RPC `sales_lead_email_batch_agent_run(date, integer)`: `SECURITY DEFINER`, `search_path = ''`,
+  EXECUTE **pouze `service_role`** (`anon = false`, `authenticated = false`).
+- **Bezpečnostní kontroly na produkci prošly** (bez vytvoření dávky): bez secretu → 401,
+  špatný secret → 401, GET → 405, nepovolené pole `lead_group` → 400 `unexpected_field`,
+  neplatné datum → 400 `invalid_target_date`.
+- Po nasazení **nevznikla žádná nová dávka, neodešel žádný e-mail** a pozastavená dávka z 6. 8.
+  zůstala pozastavená. Checksum stavů dávek byl před i po nasazení `b42bb7f7…`.
+- **Agent Magin zatím není vytvořený ani naplánovaný.** První plánovaný počet je
+  **40 e-mailů dne 12. 8. 2026**, plán `30 7 * * 1-5` v `Europe/Prague`.
+- Schválený profilový obrázek Magina je na cestě
+  `C:\Users\divis\Downloads\ChatGPT Image 11. 8. 2026 11_37_39.png` (3D postavička s headsetem).
+  **Obrázek MioCoinu se pro Magina nesmí použít**, ani když se automaticky přiloží do konverzace.
 
 ## 1. Obchod / Leady – první automatické e-maily jsou produkčně funkční
 

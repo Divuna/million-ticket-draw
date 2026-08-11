@@ -5241,3 +5241,48 @@ Rozsah role: jen `/admin/partner-offers` (moderace nabídek + per-offer billing 
   zdroje/metody/času, historii prvního odeslání na lead i adresu, aktivní dávku, šablonu a proměnné.
 - Žádný worker, cron, Edge Function, sender ani administrační UI nebyly přidány nebo změněny.
   Migrace nebyla aplikována, data stagingu a produkce zůstala beze změny a žádný e-mail neodešel.
+
+## 11. 08. 2026 — bezpečné propojení pro externího denního agenta (Magin) na produkci
+
+PR #344 mergnut do `main` (merge commit `acd8aa76`). Na produkci `xkzhjldrojjlrkezorey` aplikována
+migrace `20260811090000_sales_lead_daily_batch_agent.sql`, vytvořen secret
+`SALES_LEAD_BATCH_AGENT_SECRET` (produkční hodnota odlišná od stagingové) a nasazena Edge Function
+`sales-lead-daily-batch-agent` (v1 ACTIVE, `verify_jwt=false`).
+
+Důvod vzniku: žádná stávající cesta k založení a aktivaci e-mailové dávky nešla použít externím
+agentem. `sales_lead_email_batch_create`, `_prepare_paused` i `_activate_admin` jsou gatované na
+`auth.uid()` + `has_admin_permission('sales_leads.manage')`, takže volání přes service role končilo
+na `access_denied`. Existující konektor `sales-lead-work-intake` podle vlastní dokumentace dávku
+nikdy nevytváří ani neaktivuje. Agent přitom nesmí držet service-role klíč ani přihlášení admina.
+
+Řešení kopíruje schválený vzor plánovače discovery jobů: RPC `sales_lead_email_batch_agent_run`
+volatelná pouze `service_role` ověří vlastníka přes `sales_lead_pick_discovery_owner()` a pod jeho
+identitou (transakčně lokální `request.jwt.claims`) zavolá existující admin cestu. Agent posílá jen
+datum a počet; skupinu `e-shopy`, šablonu i výběr leadů určuje server.
+
+Staging test (`dxmowysntemfqfnanxua`) odhalil dvě chyby, které kontrola kódu nenašla: čtení
+neexistujícího sloupce `scheduled_at` místo `scheduled_for` (RPC spadla po prepare+activate, celá
+transakce se vrátila zpět a nezůstala žádná dávka) a příliš úzké pravidlo pro výběr šablony
+(vyžadovalo právě jednu aktivní `initial`, což nevystihuje zadání a na stagingu s pěti šablonami
+selhalo). Obojí opraveno commitem `d807f618`. Staging test poté prošel: dávka vytvořena a
+aktivována, položky 08:30–12:30 Europe/Prague, opakovaná volání vrátila stejnou dávku
+s `created_second_batch=false`, žádný e-mail neodešel, testovací data uklizena a automatika vrácena
+na `enabled=false` / limit 20.
+
+Při stagingovém testu přešla stará zbytková dávka z 9. 8. ze `scheduled` na `completed`; její
+položka skončila jako `skipped` s důvodem `scheduled_window_missed`. Žádný e-mail se neodeslal.
+
+Produkční bezpečnostní kontroly proběhly bez vytvoření dávky: bez secretu 401, špatný secret 401,
+GET 405, nepovolené pole 400 `unexpected_field`, neplatné datum 400 `invalid_target_date`.
+Po nasazení zůstal počet dávek 6, počet položek 69, pozastavená dávka z 6. 8. pozastavená, dnešní
+dávka `scheduled/30` beze změny a checksum stavů dávek `b42bb7f7…` shodný před i po. Žádná nová
+dávka, žádný nový e-mail.
+
+Při této příležitosti bylo read-only ověřeno, že produkční automatika je zapnutá, denní limit je 90
+(ne 20 jako uvádí starší dokumentace — to je hodnota stagingu), pásmo je `Europe/Prague`, okno
+`08:30–16:30` a worker běží každých 5 minut přes pg_cron job 30 (288 úspěšných běhů za 24 h).
+
+Agent Magin nebyl vytvořen ani naplánován. První plánovaný počet je 40 e-mailů dne 12. 8. 2026,
+plán `30 7 * * 1-5` v `Europe/Prague`. Schválený profilový obrázek je na cestě
+`C:\Users\divis\Downloads\ChatGPT Image 11. 8. 2026 11_37_39.png`; obrázek MioCoinu se pro Magina
+použít nesmí.
