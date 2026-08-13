@@ -1,7 +1,7 @@
 # OneMil — Paperclip setup context
 
 **Status:** hlavní zdroj pravdy pro Paperclip / AI zaměstnance OneMil  
-**Aktualizováno:** 2026-08-11  
+**Aktualizováno:** 2026-08-13
 **Firma:** iCONIC POINT s.r.o.  
 **Projekt:** OneMil  
 **Vlastník / konečné rozhodnutí:** Pavel Diviš
@@ -46,6 +46,57 @@ Specializovaní agenti nemají dělat práci mimo svou roli jen proto, že ji te
 - Telegram smí používat pouze pro chyby, blokace a důležité eskalace podřízených agentů. Neposílat běžné statusy, marketing ani zprávy leadům.
 - Telegram zpráva má být jedna stručná eskalace: název agenta, problém a zda je potřeba zásah Pavla.
 - Secrets `ONEMIL_DIRECTOR_TELEGRAM_BOT_TOKEN` a `ONEMIL_DIRECTOR_TELEGRAM_CHAT_ID` jsou uložené pouze v Paperclip `local_encrypted` secrets a mají **API Access → Bound to latest** pouze pro Provozního ředitele OneMil.
+
+### Marketingový tým OneMil
+
+Ověřený živý stav Paperclipu k 13. 8. 2026:
+
+**Hierarchie:** Pavel → Provozní ředitel OneMil → Martin – vedoucí marketingu OneMil → Content & Community Planner OneMil / Performance Analyst OneMil.
+
+Marketingoví agenti jsou přesně tři; žádná duplicita nevznikla. Jednorázový úkol `ICO-53` už není součástí permanentních agent instructions. Jednorázové úkoly patří do Paperclip issues, ne do trvalých instructions. Board approval nebyl potřeba, protože nevznikal nový agent.
+
+#### Martin – vedoucí marketingu OneMil
+
+- Agent id: `be26a7d0-bb12-4720-b535-a1c656f355ae`
+- Adapter: `codex_local`
+- Model: `gpt-5.5`
+- Status: `idle`
+- Reports to: Provozní ředitel OneMil
+- Heartbeat enabled: `false`
+- Budget: `0 Kč`
+- `canCreateAgents=false`, `canCreateSkills=false`
+- Bez social secrets, bez publishing práv, bez ads práv a bez možnosti utrácet peníze.
+- Řídí oba marketingové specialisty, přijímá marketingové cíle od Provozního ředitele a připravuje jeden konsolidovaný marketingový výstup pro Provozního ředitele.
+- OneMil Brand Kit / Brand Manual je závazný zdroj pro značku a sociální komunikaci.
+
+#### Content & Community Planner OneMil
+
+- Agent id: `2c257400-e694-4286-be4a-b015d23221f9`
+- Adapter: `codex_local`
+- Model: `gpt-5.5`
+- Status: `idle`
+- Reports to: Martin – vedoucí marketingu OneMil
+- Heartbeat enabled: `false`
+- Budget: `0 Kč`
+- `canCreateAgents=false`, `canCreateSkills=false`
+- Připravuje content plány, copy, captiony, CTA, scénáře krátkých videí/Reels/TikTok, kreativní briefy a community návrhy.
+- Bez social secrets, bez publishing práv, bez ads práv a bez možnosti utrácet peníze.
+
+#### Performance Analyst OneMil
+
+- Agent id: `16844c6f-8960-43a8-a71c-f599e33c3ee2`
+- Adapter: `codex_local`
+- Model: `gpt-5.5`
+- Status: `idle`
+- Reports to: Martin – vedoucí marketingu OneMil
+- Heartbeat enabled: `false`
+- Budget: `0 Kč`
+- `canCreateAgents=false`, `canCreateSkills=false`
+- Role: KPI, reporting a vyhodnocení výkonu obsahu.
+- Dokud nemá skutečná performance data, nemá zbytečně běhat pravidelně.
+- Bez social secrets, bez publishing práv, bez ads práv a bez možnosti utrácet peníze.
+
+Marketingový provozní model: specialisté předávají výstupy Martinovi; Provozní ředitel má primárně dostávat jeden konsolidovaný marketingový výstup od Martina, ne tři paralelní reporty. Žádná nová marketingová rutina nebyla aktivována.
 
 ### Magin — CRM operátor OneMil
 
@@ -170,7 +221,7 @@ Oficiální Paperclip model rozlišuje:
 
 **Důležité:** pro plánovanou práci používej primárně rutiny. Intervalový heartbeat nepoužívej jako náhradu rutiny, pokud agent nemusí něco skutečně pollovat.
 
-Aktuálně je `heartbeat.enabled=true` u tří hlavních OneMil agentů: Provozní ředitel OneMil, Magin – CRM operátor OneMil a Synchronizátor Paperclip OneMil. Před případnou optimalizací spotřeby ověř, zda jde o intervalové buzení nebo jen povolení běhu/wake-on-demand v konkrétní verzi Paperclipu. Nevypínej agenta (`Pause`) jen kvůli omezení zbytečných intervalových běhů — Pause blokuje i legitimní probuzení úkolem/rutinou.
+Aktuálně je `heartbeat.enabled=true` u tří hlavních OneMil agentů: Provozní ředitel OneMil, Magin – CRM operátor OneMil a Synchronizátor Paperclip OneMil. Marketingoví agenti Martin, Content & Community Planner OneMil a Performance Analyst OneMil mají `heartbeat.enabled=false` a nemají vlastní aktivní marketingovou rutinu. Před případnou optimalizací spotřeby ověř, zda jde o intervalové buzení nebo jen povolení běhu/wake-on-demand v konkrétní verzi Paperclipu. Nevypínej agenta (`Pause`) jen kvůli omezení zbytečných intervalových běhů — Pause blokuje i legitimní probuzení úkolem/rutinou.
 
 ## 6. Kritické pravidlo rutin: vždy projekt OneMil
 

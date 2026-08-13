@@ -1,3 +1,13 @@
+# 13. 08. 2026 — Paperclip marketingový tým OneMil sjednocen pod Martina
+
+- Živý Paperclip stav marketingu byl ověřen a zapsán do dokumentace. Marketingoví agenti jsou přesně tři, bez duplicit.
+- Existující agent **Social Media Strateg OneMil** byl přejmenován na **Martin – vedoucí marketingu OneMil** (`be26a7d0-bb12-4720-b535-a1c656f355ae`) a zůstává pod **Provozním ředitelem OneMil**. Model `gpt-5.5`, status `idle`, `canCreateAgents=false`, `canCreateSkills=false`, `heartbeat.enabled=false`, budget `0 Kč`.
+- **Content & Community Planner OneMil** (`2c257400-e694-4286-be4a-b015d23221f9`) a **Performance Analyst OneMil** (`16844c6f-8960-43a8-a71c-f599e33c3ee2`) byli organizačně nastaveni pod Martina. Oba zůstávají `idle`, model `gpt-5.5`, `canCreateAgents=false`, `canCreateSkills=false`, `heartbeat.enabled=false`, budget `0 Kč`.
+- Z permanentních instructions všech tří marketingových agentů byl odstraněn jednorázový úkol `ICO-53 / první společný úkol`. Jednorázové úkoly patří do Paperclip issues, ne do trvalých instructions. OneMil Brand Kit / Brand Manual zůstal závazný zdroj.
+- Marketingový provozní model: Content & Community Planner a Performance Analyst předávají výstupy Martinovi; Martin odstraňuje duplicity a připravuje jeden konsolidovaný marketingový výstup pro Provozního ředitele.
+- Zachována nulová oprávnění k publikování, placené reklamě a utrácení. Marketingoví agenti nemají social secrets, publishing práva ani ads práva. Žádná nová marketingová rutina nebyla aktivována.
+- Magin a Synchronizátor zůstali nedotčeni: jejich modely, permissions, heartbeat, secrets a rutiny nebyly změněny. Board approval nebyl potřeba, protože nevznikal nový agent.
+
 # 11. 08. 2026 — Paperclip lead role cleanup a Magin lead-supply adapter
 
 - Aktualizován živý Paperclip stav OneMil po odstranění agenta **Průzkumník obchodních leadů OneMil**.

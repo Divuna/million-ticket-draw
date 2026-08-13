@@ -2249,13 +2249,18 @@ Paperclip běží lokálně jako AI management vrstva pro OneMil.
 Spuštění: `npx paperclipai onboard --yes` z `C:\Users\divis\Desktop\Onemil - Projekt\million-ticket-draw`.
 Detailní setup viz `PAPERCLIP_SETUP_CONTEXT.md`.
 
-### Aktivní agenti (aktualizováno 11. 08. 2026)
+### Aktivní agenti (aktualizováno 13. 08. 2026)
 
 | Agent | Adaptér | Model | Role |
 |-------|---------|-------|------|
 | Provozní ředitel OneMil | codex_local | gpt-5.5 | Manažer, deleguje práci |
+| Martin – vedoucí marketingu OneMil | codex_local | gpt-5.5 | Vede marketingový tým, konsoliduje výstup pro Provozního ředitele |
+| Content & Community Planner OneMil | codex_local | gpt-5.5 | Content plány, copy, captiony, CTA, scénáře, kreativní briefy a community návrhy pro Martina |
+| Performance Analyst OneMil | codex_local | gpt-5.5 | KPI, reporting a vyhodnocení výkonu obsahu pro Martina |
 | Magin – CRM operátor OneMil | codex_local | gpt-5.5 | Denní dávka prvních obchodních e-mailů + zásoba leadů přes úzký adapter |
 | Synchronizátor Paperclip OneMil | codex_local | gpt-5.5 | Read-only snapshot Paperclipu → OneMil STAGING |
+
+Marketingová hierarchie je: Pavel → Provozní ředitel OneMil → Martin – vedoucí marketingu OneMil → Content & Community Planner OneMil / Performance Analyst OneMil. Marketingoví agenti jsou přesně tři, bez duplicit, nemají social secrets, publishing práva, ads práva ani možnost utrácet. `ICO-53` už není v permanentních instructions; jednorázové úkoly patří do Paperclip issues. OneMil Brand Kit / Brand Manual je závazný zdroj.
 
 **Průzkumník obchodních leadů OneMil byl odstraněn z Paperclipu** (11. 08. 2026). Neobnovovat jeho
 zastaralou paralelní lead-research roli bez nového výslovného rozhodnutí Pavla. Doplňování zásoby

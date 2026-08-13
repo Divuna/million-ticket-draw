@@ -1,7 +1,18 @@
 # OneMil – aktuální stav projektu
 
-> **Autoritativní aktuální stav. Aktualizováno 11. 8. 2026.**
+> **Autoritativní aktuální stav. Aktualizováno 13. 8. 2026.**
 > Historický vývoj je v `onemil_history.md` a v Git historii. Pokud starší dokumentace odporuje tomuto souboru, pro současný provoz platí tento soubor a skutečný stav ověřený v GitHubu/Supabase.
+
+## 0b. Paperclip marketingový tým OneMil (ověřeno 13. 8. 2026)
+
+Živý Paperclip stav marketingového týmu:
+
+- Hierarchie: Pavel → Provozní ředitel OneMil → Martin – vedoucí marketingu OneMil → Content & Community Planner OneMil / Performance Analyst OneMil.
+- **Martin – vedoucí marketingu OneMil** (`be26a7d0-bb12-4720-b535-a1c656f355ae`): `idle`, model `gpt-5.5`, reportsTo Provozní ředitel OneMil, `canCreateAgents=false`, `canCreateSkills=false`, `heartbeat.enabled=false`, budget `0 Kč`. Řídí oba marketingové specialisty a připravuje jeden konsolidovaný marketingový výstup pro Provozního ředitele. OneMil Brand Kit / Brand Manual je závazný zdroj.
+- **Content & Community Planner OneMil** (`2c257400-e694-4286-be4a-b015d23221f9`): `idle`, model `gpt-5.5`, reportsTo Martin – vedoucí marketingu OneMil, `canCreateAgents=false`, `canCreateSkills=false`, `heartbeat.enabled=false`, budget `0 Kč`. Připravuje content plány, copy, captiony, CTA, scénáře krátkých videí/Reels/TikTok, kreativní briefy a community návrhy.
+- **Performance Analyst OneMil** (`16844c6f-8960-43a8-a71c-f599e33c3ee2`): `idle`, model `gpt-5.5`, reportsTo Martin – vedoucí marketingu OneMil, `canCreateAgents=false`, `canCreateSkills=false`, `heartbeat.enabled=false`, budget `0 Kč`. Řeší KPI, reporting a vyhodnocení výkonu obsahu; dokud nemá skutečná data, nemá zbytečně běhat pravidelně.
+- Marketingoví agenti jsou přesně 3, žádná duplicita. Nemají social secrets, publishing práva, ads práva ani možnost utrácet. `ICO-53` už není v permanentních agent instructions; jednorázové úkoly patří do Paperclip issues.
+- Magin a Synchronizátor zůstali nedotčeni: jejich modely, permissions, heartbeat, secrets a rutiny nebyly změněny. Žádná nová marketingová rutina nebyla aktivována. Board approval nebyl potřeba, protože nevznikal nový agent.
 
 ## 0. Denní e-mailové dávky a propojení pro externího agenta (ověřeno 11. 8. 2026)
 
