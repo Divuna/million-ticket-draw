@@ -3,16 +3,19 @@ import { serve } from "https://deno.land/std@0.224.0/http/server.ts";
 
 const SECRET_MIN_LENGTH = 32;
 const MAX_LEAD_IDS = 100;
+const MAX_DISCOVERY_JOB_IDS = 50;
 const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 
 type Action =
   | "approve_backend_verified_proposals"
-  | "create_e_shopy_discovery_job";
+  | "create_e_shopy_discovery_job"
+  | "get_e_shopy_discovery_job_results";
 
 type RequestBody = {
   schema_version?: number;
   action?: Action;
   lead_ids?: unknown;
+  discovery_job_ids?: unknown;
   requested_count?: unknown;
 };
 
@@ -108,6 +111,28 @@ function parseLeadIds(value: unknown): string[] {
   return value;
 }
 
+function parseDiscoveryJobIds(value: unknown): string[] {
+  if (!Array.isArray(value)) {
+    throw new Error("discovery_job_ids_required");
+  }
+
+  if (value.length === 0) {
+    throw new Error("discovery_job_ids_required");
+  }
+
+  if (value.length > MAX_DISCOVERY_JOB_IDS) {
+    throw new Error("too_many_discovery_jobs");
+  }
+
+  for (const jobId of value) {
+    if (typeof jobId !== "string" || !UUID_PATTERN.test(jobId)) {
+      throw new Error("invalid_discovery_job_id");
+    }
+  }
+
+  return value;
+}
+
 function parseRequestedCount(value: unknown): number {
   if (!Number.isInteger(value)) {
     throw new Error("requested_count_required");
@@ -149,6 +174,34 @@ async function handle(body: RequestBody): Promise<Response> {
       return jsonResponse({
         success: false,
         error: "approval_rpc_failed",
+        details: error.message,
+      }, 500);
+    }
+
+    return jsonResponse(data as Record<string, unknown>);
+  }
+
+  if (body.action === "get_e_shopy_discovery_job_results") {
+    let discoveryJobIds: string[];
+
+    try {
+      discoveryJobIds = parseDiscoveryJobIds(body.discovery_job_ids);
+    } catch (error) {
+      return jsonResponse({ success: false, error: (error as Error).message }, 400);
+    }
+
+    const { data, error } = await supabase.rpc(
+      "sales_lead_magin_get_discovery_job_results",
+      {
+        p_job_ids: discoveryJobIds,
+        p_actor_user_id: actorUserId,
+      },
+    );
+
+    if (error) {
+      return jsonResponse({
+        success: false,
+        error: "discovery_results_rpc_failed",
         details: error.message,
       }, 500);
     }
