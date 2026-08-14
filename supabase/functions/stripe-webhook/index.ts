@@ -46,10 +46,177 @@ function miocoinsForCzkPrice(priceCzk: number): number {
 const UUID_RE =
   /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
 
-function normalizeUserId(value: unknown): string | null {
+function normalizeUuid(value: unknown): string | null {
   if (typeof value !== 'string') return null
   const s = value.trim().toLowerCase()
   return UUID_RE.test(s) ? s : null
+}
+
+function normalizeUserId(value: unknown): string | null {
+  return normalizeUuid(value)
+}
+
+/**
+ * Stripe refundační události.
+ *
+ * Stav refundace může být `pending`, `requires_action`, `succeeded`, `failed`
+ * nebo `canceled`. Webhook je jediné místo, které se o dokončení dozví
+ * spolehlivě — opakovaný `refunds.create` se stejným idempotency key vrací
+ * původní uloženou odpověď, takže aktuální stav neukazuje.
+ *
+ * Idempotence: veškerá práce s penězi je uvnitř databázových funkcí, které
+ * jsou jištěné unikátními indexy (`refund_debit` / `refund_reversal` na platbu).
+ * Opakovaná událost proto nemůže změnit zůstatek podruhé ani vytvořit druhý
+ * ledger řádek, a `refunded` se nikdy nevrací zpět.
+ */
+const REFUND_EVENT_TYPES = new Set(['refund.created', 'refund.updated', 'refund.failed'])
+
+type RefundLike = {
+  id?: string
+  status?: string | null
+  metadata?: Record<string, string> | null
+  payment_intent?: unknown
+}
+
+async function handleRefundEvent(
+  supabaseClient: ReturnType<typeof createClient>,
+  eventType: string,
+  refund: RefundLike,
+): Promise<{ handled: boolean; reason?: string }> {
+  const refundId = typeof refund.id === 'string' ? refund.id : null
+  const refundStatus = typeof refund.status === 'string' ? refund.status : null
+
+  if (!refundId) {
+    omLog('warn', 'refund_event_missing_id', { action: 'stripe_webhook', event_type: eventType })
+    return { handled: false, reason: 'missing_refund_id' }
+  }
+
+  // Platbu hledáme primárně přes metadata, která zapisuje stripe-refund.
+  let paymentId = normalizeUuid(refund.metadata?.onemil_payment_id)
+
+  if (!paymentId) {
+    // Záloha: refundace založená ručně ve Stripe dashboardu metadata nemá.
+    const { data: byRefundId } = await supabaseClient
+      .from('payments')
+      .select('id')
+      .eq('stripe_refund_id', refundId)
+      .maybeSingle()
+    paymentId = (byRefundId?.id as string | undefined) ?? null
+  }
+
+  if (!paymentId) {
+    omLog('warn', 'refund_event_payment_not_found', {
+      action: 'stripe_webhook',
+      event_type: eventType,
+      stripe_refund_id: refundId,
+    })
+    return { handled: false, reason: 'payment_not_found' }
+  }
+
+  // Uložení aktuálního Stripe stavu — nikdy nemění stav platby ani zůstatky.
+  const { data: recorded, error: recordError } = await supabaseClient.rpc(
+    'record_stripe_refund_status',
+    { p_payment_id: paymentId, p_refund_id: refundId, p_status: refundStatus ?? 'unknown' },
+  )
+
+  const rec = recorded as {
+    ok?: boolean
+    code?: string
+    ignored?: boolean
+    stripe_refund_status?: string | null
+  } | null
+
+  if (recordError || !rec || rec.ok !== true) {
+    omLog('error', 'refund_event_record_failed', {
+      action: 'stripe_webhook',
+      event_type: eventType,
+      payment_id: paymentId,
+      code: recordError?.code ?? rec?.code ?? 'unknown',
+    })
+    return { handled: false, reason: 'record_failed' }
+  }
+
+  // Dál se pokračuje podle EFEKTIVNÍHO stavu uloženého v databázi, ne podle
+  // stavu z právě doručené události. Terminální `succeeded`/`failed`/`canceled`
+  // databáze chrání, takže starší nebo přeházená událost nespustí špatnou větev
+  // a webhook se kvůli ní nezacyklí na chybě 500.
+  const effectiveStatus = rec.stripe_refund_status ?? refundStatus
+
+  if (rec.ignored === true) {
+    omLog('info', 'refund_event_ignored_terminal', {
+      action: 'stripe_webhook',
+      event_type: eventType,
+      payment_id: paymentId,
+      incoming_status: refundStatus,
+      effective_status: effectiveStatus,
+    })
+    return { handled: true }
+  }
+
+  if (effectiveStatus === 'succeeded') {
+    const { data: finalized, error: finalizeError } = await supabaseClient.rpc(
+      'finalize_stripe_refund',
+      { p_payment_id: paymentId },
+    )
+    const fin = finalized as { ok?: boolean; code?: string } | null
+
+    if (finalizeError || !fin || fin.ok !== true) {
+      omLog('error', 'refund_event_finalize_failed', {
+        action: 'stripe_webhook',
+        payment_id: paymentId,
+        code: finalizeError?.code ?? fin?.code ?? 'unknown',
+      })
+      return { handled: false, reason: 'finalize_failed' }
+    }
+
+    omLog('info', 'refund_succeeded', { action: 'stripe_webhook', payment_id: paymentId })
+    return { handled: true }
+  }
+
+  if (effectiveStatus === 'failed' || effectiveStatus === 'canceled') {
+    // Pozdní `failed` po dokončené refundaci se nesmí projevit. RPC to samo
+    // odmítne (`already_refunded`) a peníze zůstanou beze změny.
+    const { data: reversed, error: reverseError } = await supabaseClient.rpc(
+      'reverse_failed_stripe_refund',
+      { p_payment_id: paymentId, p_stripe_status: effectiveStatus },
+    )
+    const rev = reversed as { ok?: boolean; code?: string; referral_reward_restored?: boolean } | null
+
+    if (reverseError || !rev || rev.ok !== true) {
+      // `already_refunded` = pozdní událost po dokončené refundaci. Není to
+      // chyba, opakování by nic nezměnilo — událost se jen potvrdí.
+      if (!reverseError && rev?.code === 'already_refunded') {
+        omLog('info', 'refund_late_failure_ignored', {
+          action: 'stripe_webhook',
+          payment_id: paymentId,
+        })
+        return { handled: true }
+      }
+
+      omLog('error', 'refund_event_reverse_failed', {
+        action: 'stripe_webhook',
+        payment_id: paymentId,
+        code: reverseError?.code ?? rev?.code ?? 'unknown',
+      })
+      return { handled: false, reason: 'reverse_failed' }
+    }
+
+    // Platba se vrací mezi dokončené; MioCoiny i odměna za doporučení jsou zpět.
+    omLog('info', 'refund_reversed', {
+      action: 'stripe_webhook',
+      payment_id: paymentId,
+      referral_reward_restored: rev.referral_reward_restored === true,
+    })
+    return { handled: true }
+  }
+
+  // pending / requires_action — platba zůstává `refund_pending`.
+  omLog('info', 'refund_still_pending', {
+    action: 'stripe_webhook',
+    payment_id: paymentId,
+    stripe_refund_status: effectiveStatus,
+  })
+  return { handled: true }
 }
 
 serve(async (req) => {
@@ -98,6 +265,34 @@ serve(async (req) => {
     }
 
     console.log('Received webhook event:', event.type)
+
+    // Refundační události. Tok `checkout.session.completed` níže zůstává beze změny.
+    if (REFUND_EVENT_TYPES.has(event.type)) {
+      const result = await handleRefundEvent(
+        supabaseClient,
+        event.type,
+        event.data.object as RefundLike,
+      )
+
+      if (!result.handled) {
+        // 500 → Stripe událost zopakuje. Opakování je bezpečné: práce s penězi
+        // je jištěná unikátními indexy, takže druhý zápis nevznikne.
+        return new Response(
+          JSON.stringify({ received: true, error: result.reason ?? 'refund_event_failed' }),
+          {
+            headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+            status: result.reason === 'payment_not_found' || result.reason === 'missing_refund_id'
+              ? 200
+              : 500,
+          },
+        )
+      }
+
+      return new Response(JSON.stringify({ received: true, handled: event.type }), {
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        status: 200,
+      })
+    }
 
     if (event.type === 'checkout.session.completed') {
       const session = event.data.object as Stripe.Checkout.Session

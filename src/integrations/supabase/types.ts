@@ -2260,6 +2260,9 @@ export type Database = {
           format: string
           id: string
           invoice_id: string
+          metadata: Json
+          storage_bucket: string | null
+          storage_path: string | null
         }
         Insert: {
           created_at?: string | null
@@ -2267,6 +2270,9 @@ export type Database = {
           format: string
           id?: string
           invoice_id: string
+          metadata?: Json
+          storage_bucket?: string | null
+          storage_path?: string | null
         }
         Update: {
           created_at?: string | null
@@ -2274,6 +2280,9 @@ export type Database = {
           format?: string
           id?: string
           invoice_id?: string
+          metadata?: Json
+          storage_bucket?: string | null
+          storage_path?: string | null
         }
         Relationships: [
           {
@@ -3795,6 +3804,8 @@ export type Database = {
           draft_email_subject: string | null
           draft_prepared_by: string | null
           email_source: string | null
+          email_verification_method: string | null
+          email_verified_at: string | null
           email_verified_by_admin: boolean
           ico: string | null
           id: string
@@ -3841,6 +3852,8 @@ export type Database = {
           draft_email_subject?: string | null
           draft_prepared_by?: string | null
           email_source?: string | null
+          email_verification_method?: string | null
+          email_verified_at?: string | null
           email_verified_by_admin?: boolean
           ico?: string | null
           id?: string
@@ -3887,6 +3900,8 @@ export type Database = {
           draft_email_subject?: string | null
           draft_prepared_by?: string | null
           email_source?: string | null
+          email_verification_method?: string | null
+          email_verified_at?: string | null
           email_verified_by_admin?: boolean
           ico?: string | null
           id?: string
@@ -6159,6 +6174,16 @@ export type Database = {
         Args: { p_contest_id: string }
         Returns: number
       }
+      get_contest_progress_admin: {
+        Args: { p_contest_ids?: string[] | null }
+        Returns: {
+          contest_id: string
+          sold_percent: number | null
+          tickets_remaining: number | null
+          tickets_sold: number | null
+          tickets_total: number | null
+        }[]
+      }
       get_contests_json: { Args: never; Returns: Json }
       get_current_user_role: { Args: never; Returns: string }
       get_due_offer_reminder_rows: {
@@ -6551,6 +6576,18 @@ export type Database = {
           p_email: string
           p_lead_id: string
           p_proposed_by?: string
+          p_source_url: string
+        }
+        Returns: Json
+      }
+      sales_lead_store_backend_verified_contact: {
+        Args: {
+          p_created_by: string
+          p_email: string
+          p_expected_updated_at: string
+          p_expected_website: string
+          p_expected_website_verified_at: string
+          p_lead_id: string
           p_source_url: string
         }
         Returns: Json

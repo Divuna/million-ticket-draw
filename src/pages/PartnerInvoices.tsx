@@ -10,6 +10,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Skeleton } from '@/components/ui/skeleton';
+import { openPartnerInvoiceExport } from '@/lib/partnerInvoiceDownload';
 
 type InvoiceStatus = 'draft' | 'issued' | 'paid';
 
@@ -22,8 +23,9 @@ interface PartnerInvoice {
 }
 
 interface PdfExport {
+  id: string;
   invoice_id: string;
-  file_url: string | null;
+  storage_path: string | null;
 }
 
 const statusLabels: Record<InvoiceStatus, string> = {
@@ -42,6 +44,7 @@ const PartnerInvoices: React.FC = () => {
   const navigate = useNavigate();
   const [invoices, setInvoices] = useState<PartnerInvoice[]>([]);
   const [pdfExports, setPdfExports] = useState<Map<string, string>>(new Map());
+  const [downloadingExport, setDownloadingExport] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -89,17 +92,19 @@ const PartnerInvoices: React.FC = () => {
         const invoiceIds = invoicesData.map(inv => inv.id);
         const { data: exportsData } = await supabase
           .from('partner_invoice_exports')
-          .select('invoice_id, file_url')
+          .select('id, invoice_id, storage_path')
           .in('invoice_id', invoiceIds)
           .eq('format', 'pdf')
+          .eq('storage_bucket', 'partner-invoices')
+          .not('storage_path', 'is', null)
           .order('created_at', { ascending: false });
 
         if (exportsData) {
           const map = new Map<string, string>();
           // Keep only the latest PDF per invoice
           for (const exp of exportsData) {
-            if (exp.file_url && !map.has(exp.invoice_id)) {
-              map.set(exp.invoice_id, exp.file_url);
+            if (exp.id && exp.storage_path && !map.has(exp.invoice_id)) {
+              map.set(exp.invoice_id, exp.id);
             }
           }
           setPdfExports(map);
@@ -115,6 +120,18 @@ const PartnerInvoices: React.FC = () => {
 
   const formatCurrency = (amount: number) => {
     return new Intl.NumberFormat('cs-CZ', { style: 'currency', currency: 'CZK' }).format(amount);
+  };
+
+  const downloadPdf = async (exportId: string) => {
+    setDownloadingExport(exportId);
+    try {
+      await openPartnerInvoiceExport(exportId);
+    } catch (error) {
+      console.error('Error downloading invoice export:', error);
+      toast.error('Nepodařilo se připravit odkaz pro stažení');
+    } finally {
+      setDownloadingExport(null);
+    }
   };
 
   return (
@@ -158,7 +175,7 @@ const PartnerInvoices: React.FC = () => {
                   </TableHeader>
                   <TableBody>
                     {invoices.map(invoice => {
-                      const pdfUrl = pdfExports.get(invoice.id);
+                      const pdfExportId = pdfExports.get(invoice.id);
                       return (
                         <TableRow key={invoice.id}>
                           <TableCell className="font-medium">
@@ -175,12 +192,19 @@ const PartnerInvoices: React.FC = () => {
                             </Badge>
                           </TableCell>
                           <TableCell className="text-right">
-                            {pdfUrl ? (
-                              <Button variant="outline" size="sm" asChild>
-                                <a href={pdfUrl} target="_blank" rel="noopener noreferrer">
+                            {pdfExportId ? (
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={() => downloadPdf(pdfExportId)}
+                                disabled={downloadingExport === pdfExportId}
+                              >
+                                {downloadingExport === pdfExportId ? (
+                                  <Loader2 className="h-4 w-4 mr-1 animate-spin" />
+                                ) : (
                                   <Download className="h-4 w-4 mr-1" />
-                                  Stáhnout
-                                </a>
+                                )}
+                                Stáhnout
                               </Button>
                             ) : (
                               <span className="text-xs text-muted-foreground">—</span>

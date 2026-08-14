@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Header } from '@/components/Header';
 import { ArrowLeft } from 'lucide-react';
@@ -20,6 +20,16 @@ import {
   recordTicketPurchaseAttemptForAbuseCheck,
 } from '@/lib/monitoring';
 import { analytics } from '@/lib/analytics';
+import {
+  MysteryPurchaseResultDialog,
+  type MysteryTicketOutcome,
+} from '@/components/MysteryPurchaseResultDialog';
+import {
+  isMysteryContestAvailable,
+  mysteryErrorMessage,
+  purchaseMysteryCoupon,
+  type MysteryCoupon,
+} from '@/lib/mysteryCouponPurchase';
 
 interface Contest {
   id: string;
@@ -49,6 +59,8 @@ interface PartnerOfferResult {
 
 interface UnlockTicketResult {
   ticket_number: number;
+  /** UUID řádku v `tickets` z `buy_ticket_atomic` — nutné pro upload sdíleného obrázku. */
+  ticket_row_id?: string | null;
   ticket_price: number;
   next_bonus_position?: number | null;
   distance_to_next_bonus?: number | null;
@@ -61,7 +73,6 @@ interface UnlockTicketResult {
 
 const FavoriteGames = () => {
   const [contests, setContests] = useState<Contest[]>([]);
-  const [progressMap, setProgressMap] = useState<Record<string, { tickets_sold: number; tickets_total: number }>>({});
   const [loading, setLoading] = useState(true);
   const [processingContestId, setProcessingContestId] = useState<string | null>(null);
   const [modalResult, setModalResult] = useState<UnlockTicketResult | null>(null);
@@ -71,6 +82,15 @@ const FavoriteGames = () => {
   const navigate = useNavigate();
   const [removingFavoriteId, setRemovingFavoriteId] = useState<string | null>(null);
   const [walletBalance, setWalletBalance] = useState<number | undefined>(undefined);
+  const [mysteryResult, setMysteryResult] = useState<{
+    contestId: string;
+    ticket: MysteryTicketOutcome;
+    coupon: MysteryCoupon | null;
+  } | null>(null);
+  // Synchronní zámek nákupu. `processingContestId` je React state, takže se
+  // projeví až po re-renderu — dvě kliknutí ve stejném ticku by jinak obě
+  // prošla a vytvořila dva nákupy (každý s vlastním idempotency key).
+  const purchaseInFlightRef = useRef(false);
 
   const loadWallet = useCallback(async (): Promise<number> => {
     if (!user?.id) {
@@ -159,25 +179,9 @@ const FavoriteGames = () => {
 
       if (contestData.length === 0) {
         setContests([]);
-        setProgressMap({});
         return;
       }
 
-      const ids = contestData.map((c) => c.id);
-      const { data: progressRows } = await supabase
-        .from('contest_progress')
-        .select('contest_id, tickets_sold, tickets_total')
-        .in('contest_id', ids);
-
-      const map: Record<string, { tickets_sold: number; tickets_total: number }> = {};
-      (progressRows || []).forEach((r) => {
-        map[r.contest_id] = {
-          tickets_sold: r.tickets_sold ?? 0,
-          tickets_total: r.tickets_total ?? 1_000_000,
-        };
-      });
-
-      setProgressMap(map);
       setContests(contestData);
     } catch (error) {
       console.error('Error fetching favorite contests:', error);
@@ -187,14 +191,64 @@ const FavoriteGames = () => {
     }
   };
 
+  const runMysteryPurchase = async (contestId: string) => {
+    if (!user) return;
+
+    const outcome = await purchaseMysteryCoupon(user.id, contestId);
+
+    if (!outcome.success) {
+      logTicketPurchaseRejected({
+        userId: user.id,
+        contestId,
+        errorCode: outcome.error.slice(0, 200),
+      });
+      toast.error(mysteryErrorMessage(outcome.error));
+      return;
+    }
+
+    logTicketPurchaseSuccess({
+      userId: user.id,
+      contestId,
+      ticketNumber: outcome.ticket_number,
+    });
+    analytics.ticketPurchase({ contestId, ticketNumber: outcome.ticket_number });
+
+    recordLocalTicketPlay();
+    fetchFavoriteContests();
+    await loadWallet();
+
+    // Jeden společný výsledek: výhra z tiketu nahoře, kupon jako druhý bonus.
+    // Tiket i kupon už jsou uložené — dialog jen ukazuje, co vzniklo.
+    setMysteryResult({
+      contestId,
+      ticket: {
+        ticket_number: outcome.ticket_number,
+        won_type: outcome.won_type,
+        won_prize: outcome.won_prize,
+        distance_to_next_bonus: outcome.distance_to_next_bonus,
+      },
+      coupon: outcome.coupon,
+    });
+  };
+
   const handleUnlockTicket = async (contestId: string) => {
+    // Zámek se bere synchronně, ještě před prvním awaitem — druhý klik ve
+    // stejném ticku se tak zahodí dřív, než vznikne jakýkoli idempotency key.
+    // Platí pro mystery i klasický nákup.
+    if (purchaseInFlightRef.current) return;
+    purchaseInFlightRef.current = true;
+
     if (!user) {
       toast.error('Pro koupi tiketu se musíte přihlásit');
+      purchaseInFlightRef.current = false;
       return;
     }
 
     const contest = contests.find((c) => c.id === contestId);
-    if (!contest) return;
+    if (!contest) {
+      purchaseInFlightRef.current = false;
+      return;
+    }
 
     let effectiveBalance = walletBalance;
     if (typeof effectiveBalance !== 'number') {
@@ -203,12 +257,20 @@ const FavoriteGames = () => {
     if (effectiveBalance < contest.ticket_price) {
       const shortage = Math.max(0, Math.ceil(contest.ticket_price - effectiveBalance));
       toast.error(`Chybí ti ${shortage.toLocaleString('cs-CZ')} MioCoinů`);
+      purchaseInFlightRef.current = false;
       return;
     }
 
     setProcessingContestId(contestId);
-    
+
     try {
+      // Mystery kupon: u zapojených soutěží zákazník za stejnou cenu dostane
+      // náhodný kupon a tiket zdarma. Ostatní soutěže jdou beze změny dál.
+      if (await isMysteryContestAvailable(contestId)) {
+        await runMysteryPurchase(contestId);
+        return;
+      }
+
       const built = buildBuyTicketAtomicRpcPayload(contestId, user.id);
       if (!built.ok) {
         toast.error((built as { ok: false; message: string }).message);
@@ -315,6 +377,7 @@ const FavoriteGames = () => {
 
       const result: UnlockTicketResult = {
         ticket_number: rpcResult.ticket_number,
+        ticket_row_id: ticketRowId ?? null,
         ticket_price: rpcResult.ticket_price ?? 1,
         next_bonus_position: rpcResult.next_bonus_position ?? null,
         distance_to_next_bonus: rpcResult.distance_to_next_bonus ?? null,
@@ -347,6 +410,7 @@ const FavoriteGames = () => {
       toast.error('Chyba při koupi tiketu');
     } finally {
       setProcessingContestId(null);
+      purchaseInFlightRef.current = false;
     }
   };
 
@@ -398,8 +462,8 @@ const FavoriteGames = () => {
               onRemoveFavorite={handleRemoveFavorite}
               onPlay={handleUnlockTicket}
               fromPage="favorites"
-              ticketsSold={progressMap[contest.id]?.tickets_sold ?? 0}
-              ticketsTotal={progressMap[contest.id]?.tickets_total ?? 1_000_000}
+              showTotalOnly
+              ticketsTotal={contest.ticket_count ?? 1_000_000}
               walletBalance={walletBalance}
             />
           ))}
@@ -419,9 +483,18 @@ const FavoriteGames = () => {
         )}
       </div>
 
+      <MysteryPurchaseResultDialog
+        open={mysteryResult !== null}
+        contestId={mysteryResult?.contestId ?? null}
+        ticket={mysteryResult?.ticket ?? null}
+        coupon={mysteryResult?.coupon ?? null}
+        onClose={() => setMysteryResult(null)}
+      />
+
       <TicketResultModal
         result={modalResult ? {
           ticket_number: modalResult.ticket_number,
+          ticket_row_id: modalResult.ticket_row_id ?? null,
           distance_to_next_bonus: modalResult.distance_to_next_bonus,
           next_bonus_position: modalResult.next_bonus_position,
           won_prize: modalResult.won_prize,

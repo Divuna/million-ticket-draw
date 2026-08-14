@@ -1,159 +1,172 @@
-import { test, expect, Page } from '@playwright/test';
+import { test, expect } from '@playwright/test';
 
 /**
- * L08 — 18+ věkový gate
+ * L08 — potvrzení 18+ při registraci
  *
- * Ověřuje, že:
- * - registrační formulář (/register) odmítne věk < 18 a zobrazí chybový text,
- * - registrační formulář přijme věk >= 18 (age error se nezobrazí),
- * - onboarding stránka (/onboarding/date-of-birth) odmítne věk < 18,
- * - onboarding stránka přijme věk >= 18 (age error se nezobrazí).
+ * Registrace už nesbírá ani neukládá datum narození. Místo toho je povinné
+ * zaškrtávací pole „Potvrzuji, že mi bylo 18 let.". Tento test ověřuje:
+ * - registrační formulář obsahuje povinné potvrzení 18+ (#ageConfirm),
+ * - bez potvrzení registrace neprojde a zobrazí srozumitelnou chybu,
+ * - datum narození už není ve formuláři vyžadováno (#dateOfBirth neexistuje),
+ * - po potvrzení 18+ se chyba věku nezobrazí (flow pokračuje k podmínkám),
+ * - stará onboarding routa /onboarding/date-of-birth nikoho neblokuje a
+ *   přesměruje na domovskou stránku (OAuth ani přihlášený uživatel bez data
+ *   narození není blokován).
  *
  * Testy jsou čistě frontendové — žádný Supabase signup se neprovede.
- * /onboarding/date-of-birth je veřejná routa (bez auth guardu), takže
- * test odmítnutí věku < 18 funguje i bez aktivní session.
  */
+
+const AGE_CONFIRM_ERROR = 'Pro registraci musíte potvrdit, že vám bylo 18 let.';
 
 /**
- * Vrátí ISO datum (YYYY-MM-DD) pro narozeniny přesně `years` let zpět od dnešního dne.
- * Leap-year edge case (29. 2.): pokud výsledný rok nemá 29. 2., použije se 28. 2.
+ * Všechny podporované sociální registrace. Testy iterují jen přes ty, které
+ * jsou v daném buildu skutečně vykreslené (viz ENABLED_OAUTH_PROVIDERS —
+ * Google a Facebook jsou zapnuté výchozí, Apple jen přes env flag).
  */
-function dobYearsAgo(years: number): string {
-  const today = new Date();
-  const targetYear = today.getFullYear() - years;
-  const month = today.getMonth();
-  const day = today.getDate();
-  const candidate = new Date(targetYear, month, day);
-  // Pokud den přetekl (29.2. → 1.3. v nepřestupném roce), vrátíme se na poslední den měsíce
-  if (candidate.getMonth() !== month) {
-    candidate.setDate(0);
-  }
-  return candidate.toISOString().split('T')[0];
-}
+const SOCIAL_PROVIDERS = [
+  { name: 'Google', label: /Registrovat se přes Google/i },
+  { name: 'Apple', label: /Registrovat se přes Apple/i },
+  { name: 'Facebook', label: /Registrovat se přes Facebook/i },
+] as const;
 
-/**
- * Spolehlivě vyplní React-controlled <input type="date">.
- * Stejný helper jako spec 01 — zajišťuje, že React zachytí změnu i při
- * synthetickém fill().
- */
-async function fillDateInput(page: Page, selector: string, isoDate: string): Promise<void> {
-  const input = page.locator(selector);
-  await input.focus();
-  await input.fill(isoDate);
-  await input.evaluate((el: HTMLInputElement, val: string) => {
-    if (el.value !== val) {
-      const nativeSetter = Object.getOwnPropertyDescriptor(
-        window.HTMLInputElement.prototype,
-        'value',
-      )?.set;
-      nativeSetter?.call(el, val);
-      el.dispatchEvent(new Event('input', { bubbles: true }));
-      el.dispatchEvent(new Event('change', { bubbles: true }));
-    }
-  }, isoDate);
-  await expect(input).toHaveValue(isoDate);
-}
+test.describe('L08 — potvrzení 18+ při registraci', () => {
+  test('49a) registrace obsahuje povinné potvrzení 18+', async ({ page }) => {
+    await page.goto('/register');
+    await expect(page.locator('#ageConfirm')).toBeVisible();
+    await expect(page.getByText('Potvrzuji, že mi bylo 18 let.')).toBeVisible();
+  });
 
-const AGE_ERROR = 'Pro registraci musíte mít alespoň 18 let.';
+  test('49b) datum narození už není ve formuláři vyžadováno', async ({ page }) => {
+    await page.goto('/register');
+    await expect(page.locator('#dateOfBirth')).toHaveCount(0);
+    await expect(page.getByText('Datum narození')).toHaveCount(0);
+  });
 
-test.describe('L08 — 18+ věkový gate', () => {
-
-  // ── Registrační formulář (/register) ──────────────────────────────────────
-
-  test('49a) registrace — odmítne věk 17 let', async ({ page }) => {
+  test('49c) bez potvrzení 18+ registrace neprojde a zobrazí chybu', async ({ page }) => {
     await page.goto('/register');
 
-    await page.fill('#email', 'underage17@onemil-test.invalid');
+    await page.fill('#email', 'noage@onemil-test.invalid');
     await page.fill('#password', 'TestPassword123!');
     await page.fill('#confirmPassword', 'TestPassword123!');
-    await fillDateInput(page, '#dateOfBirth', dobYearsAgo(17));
+    // #ageConfirm záměrně NEZAŠKRTÁVÁME
     await page.locator('#terms').click();
     await page.locator('#gdpr').click();
 
     await page.getByRole('button', { name: 'Zaregistrovat se' }).click();
 
-    // Chyba věku musí být viditelná
-    await expect(page.getByText(AGE_ERROR)).toBeVisible({ timeout: 5_000 });
+    await expect(page.getByText(AGE_CONFIRM_ERROR)).toBeVisible({ timeout: 5_000 });
     // Zůstáváme na /register — žádný signup request nebyl odeslán
     await expect(page).toHaveURL('/register');
   });
 
-  test('49b) registrace — odmítne věk 0 let (narozeni dnes)', async ({ page }) => {
+  test('49d) po potvrzení 18+ se chyba věku nezobrazí', async ({ page }) => {
     await page.goto('/register');
 
-    await page.fill('#email', 'newborn@onemil-test.invalid');
+    await page.fill('#email', 'adult@onemil-test.invalid');
     await page.fill('#password', 'TestPassword123!');
     await page.fill('#confirmPassword', 'TestPassword123!');
-    await fillDateInput(page, '#dateOfBirth', dobYearsAgo(0));
-    await page.locator('#terms').click();
-    await page.locator('#gdpr').click();
+    await page.locator('#ageConfirm').click();
+    // Záměrně NEPŘIJÍMÁME podmínky — flow se zastaví na podmínkách (toast),
+    // nikoli na chybě věku. Tím ověříme, že potvrzení 18+ prošlo.
 
     await page.getByRole('button', { name: 'Zaregistrovat se' }).click();
 
-    await expect(page.getByText(AGE_ERROR)).toBeVisible({ timeout: 5_000 });
+    await expect(page.getByText(AGE_CONFIRM_ERROR)).not.toBeVisible({ timeout: 3_000 });
     await expect(page).toHaveURL('/register');
   });
 
-  test('49c) registrace — přijme věk přesně 18 let (žádná chyba věku)', async ({ page }) => {
+  // ── Sociální registrace (Google / Apple / Facebook) ───────────────────────
+  // Potvrzení 18+ je povinné i pro OAuth. Přesměrování k poskytovateli jde přes
+  // Supabase /auth/v1/authorize — odchytáváme ho a rušíme, takže test nikdy
+  // neopustí aplikaci a je deterministický (žádná externí síť).
+
+  test('49f) bez potvrzení 18+ se sociální registrace nespustí', async ({ page }) => {
+    let authorizeAttempts = 0;
+    // Pre-seed cookie consent — CookieConsentBanner (fixed bottom-0 z-[100])
+    // jinak překrývá sociální tlačítka v patičce a blokuje pointer events.
+    await page.addInitScript(() => {
+      localStorage.setItem('cookie_consent', JSON.stringify({
+        essential: true,
+        analytics: false,
+        marketing: false,
+        timestamp: new Date().toISOString(),
+      }));
+    });
+
+    await page.route('**/auth/v1/authorize**', async (route) => {
+      authorizeAttempts += 1;
+      await route.abort();
+    });
+
     await page.goto('/register');
 
-    await page.fill('#email', 'exact18@onemil-test.invalid');
-    await page.fill('#password', 'TestPassword123!');
-    await page.fill('#confirmPassword', 'TestPassword123!');
-    await fillDateInput(page, '#dateOfBirth', dobYearsAgo(18));
-    // Záměrně NEPŘIJÍMÁME podmínky — formulář se zastaví na podmínkách (toast),
-    // nikoli na chybě věku. Tím ověříme, že age validace prošla, aniž bychom
-    // odeslali skutečný signup request.
+    let checked = 0;
+    for (const social of SOCIAL_PROVIDERS) {
+      const button = page.getByRole('button', { name: social.label });
+      if (!(await button.isVisible().catch(() => false))) continue;
+      checked += 1;
 
-    await page.getByRole('button', { name: 'Zaregistrovat se' }).click();
+      await button.click();
 
-    // Chyba věku nesmí být viditelná
-    await expect(page.getByText(AGE_ERROR)).not.toBeVisible({ timeout: 3_000 });
-    // Stále na /register (zastaveno u podmínek)
-    await expect(page).toHaveURL('/register');
+      // Stejná chyba jako u běžné registrace
+      await expect(page.getByText(AGE_CONFIRM_ERROR)).toBeVisible({ timeout: 5_000 });
+      // Žádné přesměrování k poskytovateli
+      expect(
+        authorizeAttempts,
+        `${social.name}: bez potvrzení 18+ se registrace nesmí spustit`,
+      ).toBe(0);
+      await expect(page).toHaveURL('/register');
+    }
+
+    expect(checked, 'Očekáván alespoň jeden viditelný sociální login').toBeGreaterThan(0);
   });
 
-  test('49d) registrace — přijme věk 25 let (žádná chyba věku)', async ({ page }) => {
-    await page.goto('/register');
+  test('49g) s potvrzením 18+ se sociální registrace může spustit', async ({ page }) => {
+    const attempted: string[] = [];
+    // Pre-seed cookie consent — CookieConsentBanner (fixed bottom-0 z-[100])
+    // jinak překrývá sociální tlačítka v patičce a blokuje pointer events.
+    await page.addInitScript(() => {
+      localStorage.setItem('cookie_consent', JSON.stringify({
+        essential: true,
+        analytics: false,
+        marketing: false,
+        timestamp: new Date().toISOString(),
+      }));
+    });
 
-    await page.fill('#email', 'adult25@onemil-test.invalid');
-    await page.fill('#password', 'TestPassword123!');
-    await page.fill('#confirmPassword', 'TestPassword123!');
-    await fillDateInput(page, '#dateOfBirth', dobYearsAgo(25));
+    await page.route('**/auth/v1/authorize**', async (route) => {
+      attempted.push(new URL(route.request().url()).searchParams.get('provider') ?? 'unknown');
+      await route.abort();
+    });
 
-    await page.getByRole('button', { name: 'Zaregistrovat se' }).click();
+    let checked = 0;
+    for (const social of SOCIAL_PROVIDERS) {
+      await page.goto('/register');
 
-    await expect(page.getByText(AGE_ERROR)).not.toBeVisible({ timeout: 3_000 });
-    await expect(page).toHaveURL('/register');
+      const button = page.getByRole('button', { name: social.label });
+      if (!(await button.isVisible().catch(() => false))) continue;
+      checked += 1;
+
+      await page.locator('#ageConfirm').click();
+      const before = attempted.length;
+      await button.click();
+
+      // Registrace se spustila — pokus o přesměrování k poskytovateli proběhl
+      await expect
+        .poll(() => attempted.length, { timeout: 10_000 })
+        .toBeGreaterThan(before);
+      await expect(page.getByText(AGE_CONFIRM_ERROR)).not.toBeVisible();
+    }
+
+    expect(checked, 'Očekáván alespoň jeden viditelný sociální login').toBeGreaterThan(0);
   });
 
-  // ── Onboarding stránka (/onboarding/date-of-birth) ────────────────────────
-  // Tato routa je veřejná (žádný auth guard v App.tsx).
-  // Validace věku proběhne ještě před kontrolou přihlášení uživatele,
-  // takže odmítnutí věku < 18 funguje i bez aktivní session.
-
-  test('49e) onboarding — odmítne věk 17 let', async ({ page }) => {
+  test('49e) stará onboarding routa přesměruje na domovskou stránku (neblokuje)', async ({ page }) => {
     await page.goto('/onboarding/date-of-birth');
 
-    await fillDateInput(page, '#dateOfBirth', dobYearsAgo(17));
-    await page.getByRole('button', { name: 'Pokračovat' }).click();
-
-    await expect(page.getByText(AGE_ERROR)).toBeVisible({ timeout: 5_000 });
-    // Zůstáváme na onboarding stránce
-    await expect(page).toHaveURL('/onboarding/date-of-birth');
+    // Přesměrování pryč z onboardingu — žádný formulář data narození se nezobrazí
+    await expect(page).not.toHaveURL(/\/onboarding\/date-of-birth/, { timeout: 5_000 });
+    await expect(page.locator('#dateOfBirth')).toHaveCount(0);
+    await expect(page.getByText('Pro pokračování potřebujeme znát vaše datum narození.')).toHaveCount(0);
   });
-
-  test('49f) onboarding — přijme věk přesně 18 (žádná chyba věku; bez session)', async ({ page }) => {
-    await page.goto('/onboarding/date-of-birth');
-
-    await fillDateInput(page, '#dateOfBirth', dobYearsAgo(18));
-    await page.getByRole('button', { name: 'Pokračovat' }).click();
-
-    // Chyba věku nesmí být viditelná — age validace prošla
-    await expect(page.getByText(AGE_ERROR)).not.toBeVisible({ timeout: 3_000 });
-    // Bez session handleSubmit zobrazí "Uživatel není přihlášen." — potvrzuje,
-    // že age check proběhl úspěšně a dospěl k auth check.
-    await expect(page.getByText('Uživatel není přihlášen.')).toBeVisible({ timeout: 5_000 });
-  });
-
 });

@@ -1,3 +1,5 @@
+import { isNonOfficialWebsiteUrl } from "./officialWebsitePolicy.ts";
+
 // ============================================================================
 // companyEmailCrawler — dohledání VEŘEJNÉHO kontaktního e-mailu na OVĚŘENÉM
 // webu firmy. Prochází homepage + kontaktní/o-nás odkazy (jen stejná doména),
@@ -105,7 +107,8 @@ export function isSafePublicUrl(rawUrl: string): boolean {
     if (a === 0) return false;
   }
 
-  if (hostname === "::1" || hostname.startsWith("fe80:") || hostname.startsWith("fc") || hostname.startsWith("fd")) {
+  const ipv6Host = hostname.replace(/^\[/, "").replace(/\]$/, "");
+  if (ipv6Host === "::1" || ipv6Host.startsWith("fe80:") || ipv6Host.startsWith("fc") || ipv6Host.startsWith("fd")) {
     return false;
   }
 
@@ -134,12 +137,20 @@ function stripWwwPrefix(hostname: string): string {
   return hostname.startsWith("www.") ? hostname.slice(4) : hostname;
 }
 
-function isSameCompanyDomain(hostA: string, hostB: string): boolean {
+export function isSameCompanyDomain(hostA: string, hostB: string): boolean {
   return stripWwwPrefix(hostA) === stripWwwPrefix(hostB);
 }
 
+function stripNonContentHtml(html: string): string {
+  return html
+    .replace(/<!--\s*[\s\S]*?-->/g, " ")
+    .replace(/<script\b[\s\S]*?<\/script>/gi, " ")
+    .replace(/<style\b[\s\S]*?<\/style>/gi, " ")
+    .replace(/<noscript\b[\s\S]*?<\/noscript>/gi, " ");
+}
+
 function buildEmailSearchVariants(html: string): { loose: string; compact: string } {
-  const loose = html
+  const loose = stripNonContentHtml(html)
     .replace(/&amp;/gi, "&")
     .replace(/&#64;|&commat;/gi, "@")
     .replace(/&#46;|&period;/gi, ".")
@@ -167,7 +178,8 @@ export function extractMailtoEmails(html: string): string[] {
   const emails: string[] = [];
   const re = /mailto:([^"'?&>\s]+)/gi;
   let m: RegExpExecArray | null;
-  while ((m = re.exec(html))) {
+  const contentHtml = stripNonContentHtml(html);
+  while ((m = re.exec(contentHtml))) {
     let addr = m[1];
     try { addr = decodeURIComponent(addr); } catch { /* keep raw */ }
     const clean = sanitizeEmail(addr);
@@ -288,6 +300,108 @@ async function fetchSafePage(url: string): Promise<{ finalUrl: string; html: str
   }
 
   return null;
+}
+
+export type VerifiedSourceEmailResult =
+  | { verified: true; email: string; sourceUrl: string }
+  | { verified: false; reason:
+    | "invalid_email"
+    | "invalid_source_url"
+    | "source_not_on_verified_website"
+    | "non_official_third_party"
+    | "source_fetch_failed"
+    | "redirect_left_verified_website"
+    | "email_not_found_on_verified_website" };
+
+/**
+ * Verifies one exact AI candidate against one exact source page. It never
+ * crawls a homepage or guesses an address: the candidate and source URL must
+ * both be supplied, every redirect must remain on the already verified host,
+ * and the exact normalized address must exist in visible text or a mailto link.
+ */
+export async function verifyEmailOnOfficialSourcePage(input: {
+  officialWebsite: string;
+  candidateEmail: string;
+  sourceUrl: string;
+  fetchImpl?: typeof fetch;
+}): Promise<VerifiedSourceEmailResult> {
+  const email = input.candidateEmail.trim().toLowerCase();
+  if (!EMAIL_RE.test(email)) return { verified: false, reason: "invalid_email" };
+  if (!isSafePublicUrl(input.officialWebsite) || !isSafePublicUrl(input.sourceUrl)) {
+    return { verified: false, reason: "invalid_source_url" };
+  }
+  if (isNonOfficialWebsiteUrl(input.sourceUrl)) {
+    return { verified: false, reason: "non_official_third_party" };
+  }
+
+  let officialHost: string;
+  let currentUrl = input.sourceUrl;
+  try {
+    officialHost = new URL(input.officialWebsite).hostname.toLowerCase();
+    const sourceHost = new URL(currentUrl).hostname.toLowerCase();
+    if (!isSameCompanyDomain(sourceHost, officialHost)) {
+      return { verified: false, reason: "source_not_on_verified_website" };
+    }
+  } catch {
+    return { verified: false, reason: "invalid_source_url" };
+  }
+
+  const fetchImpl = input.fetchImpl ?? fetch;
+  for (let hop = 0; hop <= MAX_REDIRECTS; hop++) {
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), SOURCE_FETCH_TIMEOUT_MS);
+    let response: Response;
+    try {
+      response = await fetchImpl(currentUrl, {
+        method: "GET",
+        redirect: "manual",
+        signal: controller.signal,
+        headers: {
+          "User-Agent": BROWSER_UA,
+          "Accept": "text/html,application/xhtml+xml,text/plain;q=0.9",
+          "Accept-Language": "cs,en;q=0.8",
+        },
+      });
+    } catch {
+      return { verified: false, reason: "source_fetch_failed" };
+    } finally {
+      clearTimeout(timer);
+    }
+
+    if (response.status >= 300 && response.status < 400) {
+      const location = response.headers.get("location");
+      if (!location || hop === MAX_REDIRECTS) {
+        return { verified: false, reason: "source_fetch_failed" };
+      }
+      let nextUrl: string;
+      try {
+        nextUrl = new URL(location, currentUrl).toString();
+        const nextHost = new URL(nextUrl).hostname.toLowerCase();
+        if (!isSafePublicUrl(nextUrl) || !isSameCompanyDomain(nextHost, officialHost)) {
+          return { verified: false, reason: "redirect_left_verified_website" };
+        }
+      } catch {
+        return { verified: false, reason: "source_fetch_failed" };
+      }
+      currentUrl = nextUrl;
+      continue;
+    }
+
+    const contentType = (response.headers.get("content-type") ?? "").toLowerCase();
+    const isTextPage = contentType === "" || contentType.includes("text/html") ||
+      contentType.includes("application/xhtml+xml") || contentType.includes("text/plain");
+    if (response.status !== 200 || !isTextPage) {
+      return { verified: false, reason: "source_fetch_failed" };
+    }
+
+    const html = await readBodyWithLimit(response);
+    const exactEmails = new Set([...extractMailtoEmails(html), ...extractTextEmails(html)]);
+    return exactEmails.has(email)
+      ? { verified: true, email, sourceUrl: currentUrl }
+      : { verified: false, reason: "email_not_found_on_verified_website" };
+  }
+
+  return { verified: false, reason: "source_fetch_failed" };
 }
 
 export type CrawlResult =

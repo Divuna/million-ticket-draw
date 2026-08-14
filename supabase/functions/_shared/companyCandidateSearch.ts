@@ -1,9 +1,10 @@
 // ============================================================================
 // companyCandidateSearch — GENEROVÁNÍ kandidátů firem pro segment (ne AI).
 // Kandidáti se získávají AKTIVNÍM webovým vyhledáváním: OpenAI Responses API
-// web_search_preview (hlavní) + DuckDuckGo (fallback), více různých dotazů
-// podle segmentu, měst a podsegmentů. Vrací kandidátní homepage URL; AI zde
-// NENÍ zdrojem firem. Každý web se dál ověřuje a doplňuje z ARES.
+// web_search_preview je JEDINÝ zdroj, více různých dotazů podle segmentu, měst
+// a podsegmentů. DuckDuckGo fallback byl odstraněn — z Edge runtime vracel
+// HTTP 202 bez výsledků, takže zálohou nebyl. Vrací kandidátní homepage URL;
+// AI zde NENÍ zdrojem firem. Každý web se dál ověřuje a doplňuje z ARES.
 // ============================================================================
 
 import { isNonOfficialWebsiteUrl } from "./officialWebsitePolicy.ts";
@@ -11,9 +12,6 @@ import { isNonOfficialWebsiteUrl } from "./officialWebsitePolicy.ts";
 const OPENAI_MODEL =
   (typeof Deno !== "undefined" ? Deno.env.get("SALES_LEADS_SEARCH_MODEL") : undefined) ?? "gpt-4o-mini";
 const OPENAI_TIMEOUT_MS = 25000;
-const DDG_TIMEOUT_MS = 12000;
-const BROWSER_UA =
-  "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/125.0.0.0 Safari/537.36";
 
 const CITIES = ["Praha", "Brno", "Ostrava", "Plzeň", "Olomouc", "Liberec", "Hradec Králové", "České Budějovice"];
 
@@ -84,7 +82,35 @@ function extractUrls(json: OpenAiJson): string[] {
   return urls;
 }
 
-async function searchOpenAi(query: string, openaiKey: string): Promise<string[]> {
+/**
+ * Bezpečná klasifikace výsledku volání zdroje. Nikdy neobsahuje tělo odpovědi,
+ * hlavičky ani hodnotu klíče — jen typ selhání.
+ */
+export type SearchErrorType =
+  | "none"
+  | "not_called"
+  | "http_error"
+  | "timeout"
+  | "network_error"
+  | "parse_error";
+
+/** Výsledek jednoho volání zdroje: URL + skutečný HTTP status + typ chyby. */
+interface SourceSearchResult {
+  urls: string[];
+  httpStatus: number | null;
+  errorType: SearchErrorType;
+}
+
+/** Odliší abort (timeout) od ostatních síťových chyb. Nikdy nevyhodí výjimku. */
+function classifyFetchError(err: unknown): "timeout" | "network_error" {
+  const name = err instanceof Error ? err.name : "";
+  const message = err instanceof Error ? err.message : "";
+  if (name === "AbortError" || name === "TimeoutError") return "timeout";
+  if (/\babort(ed)?\b|timed?\s?out/i.test(message)) return "timeout";
+  return "network_error";
+}
+
+async function searchOpenAi(query: string, openaiKey: string): Promise<SourceSearchResult> {
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), OPENAI_TIMEOUT_MS);
   try {
@@ -98,43 +124,24 @@ async function searchOpenAi(query: string, openaiKey: string): Promise<string[]>
         input: `${query}. Vypiš 10 konkrétních firem a jejich oficiální webové stránky (přímé URL homepage jejich vlastního webu). NE katalogy (Firmy.cz/Živéfirmy), NE sociální sítě, NE zpravodajské články. Ke každé firmě uveď URL.`,
       }),
     });
-    if (!res.ok) { logSearch("openai_http_error", { status: res.status }); return []; }
-    const json = (await res.json()) as OpenAiJson;
+    if (!res.ok) {
+      logSearch("openai_http_error", { status: res.status });
+      return { urls: [], httpStatus: res.status, errorType: "http_error" };
+    }
+    let json: OpenAiJson;
+    try {
+      json = (await res.json()) as OpenAiJson;
+    } catch {
+      logSearch("openai_parse_error", { status: res.status });
+      return { urls: [], httpStatus: res.status, errorType: "parse_error" };
+    }
     const urls = extractUrls(json);
     logSearch("openai", { query, raw: urls.length });
-    return urls;
+    return { urls, httpStatus: res.status, errorType: "none" };
   } catch (err) {
+    // Odpověď vůbec nevznikla → status null, rozlišíme timeout vs. síť.
     logSearch("openai_failed", { error: err instanceof Error ? err.message : "unknown" });
-    return [];
-  } finally {
-    clearTimeout(timer);
-  }
-}
-
-function parseDdg(html: string): string[] {
-  const urls: string[] = [];
-  const re = /[?&]uddg=([^&"'\s]+)/gi;
-  let m: RegExpExecArray | null;
-  while ((m = re.exec(html))) {
-    try { const d = decodeURIComponent(m[1]); if (/^https?:\/\//i.test(d)) urls.push(d); } catch { /* skip */ }
-  }
-  return urls;
-}
-
-async function searchDdg(query: string): Promise<string[]> {
-  const url = `https://html.duckduckgo.com/html/?q=${encodeURIComponent(query)}&kl=cz-cs`;
-  const controller = new AbortController();
-  const timer = setTimeout(() => controller.abort(), DDG_TIMEOUT_MS);
-  try {
-    const res = await fetch(url, { headers: { "User-Agent": BROWSER_UA, "Accept-Language": "cs,en;q=0.8" } });
-    if (!res.ok) { logSearch("ddg_http_error", { query, status: res.status }); return []; }
-    const html = await res.text();
-    const urls = parseDdg(html);
-    logSearch("ddg", { query, raw: urls.length });
-    return urls;
-  } catch (err) {
-    logSearch("ddg_failed", { error: err instanceof Error ? err.message : "unknown" });
-    return [];
+    return { urls: [], httpStatus: null, errorType: classifyFetchError(err) };
   } finally {
     clearTimeout(timer);
   }
@@ -148,26 +155,91 @@ export function buildQueriesForRound(leadGroup: string, round: number): string[]
   return [`${term} ${city}`, `${term} Česká republika`];
 }
 
+/** Výsledek OpenAI vyhledávání v rámci jedné dávky. */
+export type CandidateFallbackReason =
+  | "openai_empty"
+  | "openai_no_usable_candidates"
+  | "none";
+
+/** Bezpečná diagnostika dávky — jen počty, statusy a typy chyb; nikdy secrets. */
+export interface CandidateSearchDiagnostics {
+  openai_raw_count: number;
+  openai_usable_count: number;
+  final_candidate_count: number;
+  /**
+   * Výsledek OpenAI v dávce: "none" = dodal použitelné kandidáty,
+   * "openai_empty" = nevrátil žádnou URL, "openai_no_usable_candidates" = URL
+   * vrátil, ale všechny odpadly na normalizaci/deny-listu.
+   */
+  fallback_reason: CandidateFallbackReason;
+  /** HTTP status skutečné odpovědi; null = odpověď vůbec nevznikla. */
+  openai_http_status: number | null;
+  openai_error_type: SearchErrorType;
+}
+
+export interface CandidateSearchResult {
+  urls: string[];
+  diagnostics: CandidateSearchDiagnostics;
+}
+
 /**
- * Vygeneruje dávku kandidátních homepage URL pro segment + kolo. Nejdřív
- * OpenAI web search (hlavní zdroj), při prázdném výsledku DDG fallback.
- * Odfiltruje katalogy/sítě/zpravodajství. Dedupe podle domény.
+ * Normalizace jedné dávky syrových URL na homepage kandidáty: odfiltruje
+ * katalogy/sítě/zpravodajství a nevalidní URL, dedupe podle registrovatelné
+ * domény uvnitř dávky. „Použitelný kandidát" = to, co projde touto funkcí.
  */
-export async function generateCandidateUrls(input: {
+function normalizeCandidates(rawUrls: string[]): string[] {
+  const out: string[] = [];
+  const seenInBatch = new Set<string>();
+  for (const raw of rawUrls) {
+    const host = safeHost(raw);
+    if (!host || isNonOfficialWebsiteUrl(raw)) continue;
+    const home = toHomepage(raw);
+    if (!home) continue;
+    const key = host.replace(/^www\./, "");
+    if (seenInBatch.has(key)) continue;
+    seenInBatch.add(key);
+    out.push(home);
+  }
+  return out;
+}
+
+/**
+ * Vygeneruje dávku kandidátních homepage URL pro segment + kolo. Jediným
+ * zdrojem je OpenAI web search. Když nedodá POUŽITELNÉ kandidáty (nevrátí nic,
+ * selže, nebo všechny URL odpadnou na normalizaci/deny-listu), kolo bezpečně
+ * skončí s prázdným výsledkem. Dedupe podle registrovatelné domény.
+ */
+export async function generateCandidateUrlsWithDiagnostics(input: {
   leadGroup: string;
   round: number;
   openaiKey?: string;
-}): Promise<string[]> {
+}): Promise<CandidateSearchResult> {
   const queries = buildQueriesForRound(input.leadGroup, input.round);
   const seen = new Set<string>();
   const out: string[] = [];
+  const diagnostics: CandidateSearchDiagnostics = {
+    openai_raw_count: 0,
+    openai_usable_count: 0,
+    final_candidate_count: 0,
+    fallback_reason: "none",
+    openai_http_status: null,
+    openai_error_type: "not_called",
+  };
 
-  const collect = (rawUrls: string[]) => {
-    for (const raw of rawUrls) {
-      const host = safeHost(raw);
-      if (!host || isNonOfficialWebsiteUrl(raw)) continue;
-      const home = toHomepage(raw);
-      if (!home) continue;
+  // Dávka má víc dotazů. Vyhrává PRVNÍ chyba (aby problém nezmizel pod pozdějším
+  // úspěchem); dokud žádná nenastala, drží se poslední pozorovaný stav.
+  const recordOpenAi = (result: SourceSearchResult) => {
+    const currentType = diagnostics.openai_error_type;
+    const alreadyFailed = currentType !== "not_called" && currentType !== "none";
+    if (alreadyFailed) return;
+    diagnostics.openai_http_status = result.httpStatus;
+    diagnostics.openai_error_type = result.errorType;
+  };
+
+  const append = (candidates: string[]) => {
+    for (const home of candidates) {
+      const host = safeHost(home);
+      if (!host) continue;
       const key = host.replace(/^www\./, "");
       if (seen.has(key)) continue;
       seen.add(key);
@@ -176,12 +248,96 @@ export async function generateCandidateUrls(input: {
   };
 
   for (const query of queries) {
-    let urls: string[] = [];
-    if (input.openaiKey) urls = await searchOpenAi(query, input.openaiKey);
-    if (urls.length === 0) urls = await searchDdg(query);
-    collect(urls);
+    const openaiResult = input.openaiKey
+      ? await searchOpenAi(query, input.openaiKey)
+      : { urls: [], httpStatus: null, errorType: "not_called" as const };
+    if (input.openaiKey) recordOpenAi(openaiResult);
+    const openaiRaw = openaiResult.urls;
+    const openaiUsable = normalizeCandidates(openaiRaw);
+    diagnostics.openai_raw_count += openaiRaw.length;
+    diagnostics.openai_usable_count += openaiUsable.length;
+    append(openaiUsable);
+
+    // Bez použitelných kandidátů kolo bezpečně skončí s prázdným výsledkem —
+    // žádný druhý zdroj neexistuje. Rozliší se, zda OpenAI nevrátil nic, nebo
+    // vrátil jen URL, které odpadly na normalizaci/deny-listu.
+    if (openaiUsable.length === 0) {
+      diagnostics.fallback_reason = openaiRaw.length === 0
+        ? "openai_empty"
+        : "openai_no_usable_candidates";
+    }
   }
 
-  logSearch("batch", { leadGroup: input.leadGroup, round: input.round, candidates: out.length });
-  return out;
+  diagnostics.final_candidate_count = out.length;
+  logSearch("batch", { leadGroup: input.leadGroup, round: input.round, ...diagnostics });
+  return { urls: out, diagnostics };
+}
+
+/**
+ * Jeden záznam diagnostiky ukládaný k discovery jobu (sloupec
+ * `sales_lead_discovery_jobs.search_diagnostics`). Jen čísla, ISO timestamp a
+ * enum důvodu — nikdy API klíč, token ani jiný secret.
+ */
+export interface CandidateSearchDiagnosticsEntry extends CandidateSearchDiagnostics {
+  round: number;
+  at: string;
+  added_to_pool: number;
+  /**
+   * @deprecated Pozůstatek po odstraněném DDG fallbacku. Nové záznamy tato pole
+   * NEobsahují; zůstávají volitelná jen proto, aby starší uložené
+   * `search_diagnostics` z DB byly dál typově čitelné bez migrace dat.
+   */
+  ddg_http_status?: number | null;
+  /** @deprecated Viz `ddg_http_status`. */
+  ddg_error_type?: string;
+  /** @deprecated Viz `ddg_http_status`. */
+  ddg_raw_count?: number;
+  /** @deprecated Viz `ddg_http_status`. */
+  ddg_usable_count?: number;
+}
+
+/** Kolik posledních kol se u jobu drží, aby jsonb nerostlo bez omezení. */
+export const MAX_DIAGNOSTICS_ENTRIES = 50;
+
+/** Sestaví záznam diagnostiky pro jedno search kolo. Pure, bez vedlejších efektů. */
+export function buildDiagnosticsEntry(input: {
+  round: number;
+  diagnostics: CandidateSearchDiagnostics;
+  addedToPool: number;
+  at?: string;
+}): CandidateSearchDiagnosticsEntry {
+  return {
+    round: input.round,
+    at: input.at ?? new Date().toISOString(),
+    openai_raw_count: input.diagnostics.openai_raw_count,
+    openai_usable_count: input.diagnostics.openai_usable_count,
+    final_candidate_count: input.diagnostics.final_candidate_count,
+    fallback_reason: input.diagnostics.fallback_reason,
+    openai_http_status: input.diagnostics.openai_http_status,
+    openai_error_type: input.diagnostics.openai_error_type,
+    added_to_pool: input.addedToPool,
+  };
+}
+
+/**
+ * Přidá záznam k historii jobu. Zachovává předchozí kola (worker běží opakovaně
+ * přes cron), ořezává jen nejstarší nad `MAX_DIAGNOSTICS_ENTRIES`.
+ */
+export function appendDiagnosticsEntry(
+  existing: unknown,
+  entry: CandidateSearchDiagnosticsEntry,
+): CandidateSearchDiagnosticsEntry[] {
+  const history = Array.isArray(existing) ? (existing as CandidateSearchDiagnosticsEntry[]) : [];
+  const next = [...history, entry];
+  return next.length > MAX_DIAGNOSTICS_ENTRIES ? next.slice(-MAX_DIAGNOSTICS_ENTRIES) : next;
+}
+
+/** Zpětně kompatibilní obal — worker konzumuje jen seznam URL. */
+export async function generateCandidateUrls(input: {
+  leadGroup: string;
+  round: number;
+  openaiKey?: string;
+}): Promise<string[]> {
+  const { urls } = await generateCandidateUrlsWithDiagnostics(input);
+  return urls;
 }

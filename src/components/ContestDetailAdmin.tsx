@@ -65,6 +65,13 @@ interface ProgressStats {
   estimated_revenue: number;
 }
 
+interface ContestProgressAdminRow {
+  tickets_total: number | null;
+  tickets_sold: number | null;
+  tickets_remaining: number | null;
+  sold_percent: number | null;
+}
+
 const STATUS_OPTIONS = [
   { value: "draft", label: "Koncept" },
   { value: "pending", label: "Čeká na start" },
@@ -116,10 +123,7 @@ const ContestDetailAdmin: React.FC = () => {
     try {
       const [{ data: prog }, { data: rev }, { data: act }] = await Promise.all([
         supabase
-          .from('contest_progress')
-          .select('tickets_total,tickets_sold,tickets_remaining,sold_percent')
-          .eq('contest_id', contestId)
-          .maybeSingle(),
+          .rpc('get_contest_progress_admin', { p_contest_ids: [contestId] }),
         supabase
           .from('contest_revenue')
           .select('estimated_revenue')
@@ -131,11 +135,12 @@ const ContestDetailAdmin: React.FC = () => {
           .eq('contest_id', contestId)
           .maybeSingle(),
       ]);
+      const progressRow = ((prog || []) as ContestProgressAdminRow[])[0];
       setProgressStats({
-        tickets_total:     prog?.tickets_total     ?? 1_000_000,
-        tickets_sold:      prog?.tickets_sold      ?? 0,
-        tickets_remaining: prog?.tickets_remaining ?? 1_000_000,
-        sold_percent:      prog?.sold_percent      ?? 0,
+        tickets_total:     progressRow?.tickets_total     ?? 1_000_000,
+        tickets_sold:      progressRow?.tickets_sold      ?? 0,
+        tickets_remaining: progressRow?.tickets_remaining ?? 1_000_000,
+        sold_percent:      progressRow?.sold_percent      ?? 0,
         tickets_last_24h:  act?.tickets_last_24h   ?? 0,
         estimated_revenue: rev?.estimated_revenue  ?? 0,
       });

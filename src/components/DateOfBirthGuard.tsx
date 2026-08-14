@@ -1,10 +1,16 @@
 import React, { useState } from 'react';
 import { useLocation } from 'react-router-dom';
 import { useAuth } from '@/hooks/useAuth';
-import { useDateOfBirthCheck } from '@/hooks/useDateOfBirthCheck';
 import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
 import { Mail } from 'lucide-react';
+
+/**
+ * Pozn.: Datum narození se už při registraci nevyžaduje ani nekontroluje.
+ * Tento guard nyní vynucuje pouze potvrzení e-mailu; přihlášený uživatel
+ * není nikdy blokován kvůli chybějícímu datu narození. Název je ponechán
+ * kvůli stabilitě importů v App.tsx.
+ */
 
 interface DateOfBirthGuardProps {
   children: React.ReactNode;
@@ -75,7 +81,6 @@ const EmailNotConfirmed: React.FC<{ email: string | undefined }> = ({ email }) =
 
 export const DateOfBirthGuard: React.FC<DateOfBirthGuardProps> = ({ children }) => {
   const { user } = useAuth();
-  const { isLoading } = useDateOfBirthCheck();
   const location = useLocation();
 
   // Check if current route is exempt
@@ -105,15 +110,6 @@ export const DateOfBirthGuard: React.FC<DateOfBirthGuardProps> = ({ children }) 
   // Email must be confirmed before anything else
   if (!user.email_confirmed_at) {
     return <EmailNotConfirmed email={user.email} />;
-  }
-
-  // If still loading, show loading state
-  if (isLoading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-background">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
-      </div>
-    );
   }
 
   return <>{children}</>;

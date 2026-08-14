@@ -16,7 +16,7 @@
  * Invariants verified:
  *   44a) no auth → 401 on both EFs
  *   44b) non-admin JWT → 403 on both EFs
- *   44c) internal token → generate-partner-invoice-pdf 200 + file_url,
+ *   44c) internal token → generate-partner-invoice-pdf 200 + storage_path,
  *        partner_invoice_exports row created, PDF object downloadable via storage
  *   44d) partner (authenticated, own invoice) can read the export row via RLS
  *   44e) admin JWT → send-partner-invoice-email 200, sent_to ==
@@ -91,15 +91,9 @@ async function callEf(
   });
 }
 
-function storagePathFromFileUrl(fileUrl: string): string | null {
-  const match = fileUrl.match(/partner-invoices\/([^?]+)/);
-  return match ? decodeURIComponent(match[1]) : null;
-}
-
-async function expectPdfObjectExists(admin: SupabaseClient, fileUrl: string): Promise<void> {
-  const storagePath = storagePathFromFileUrl(fileUrl);
+async function expectPdfObjectExists(admin: SupabaseClient, storagePath: string): Promise<void> {
   expect(storagePath).toBeTruthy();
-  const { data, error } = await admin.storage.from('partner-invoices').download(storagePath!);
+  const { data, error } = await admin.storage.from('partner-invoices').download(storagePath);
   expect(error).toBeNull();
   expect(data).toBeTruthy();
   const head = new Uint8Array((await data!.arrayBuffer()).slice(0, 4));
@@ -113,9 +107,9 @@ interface Ctx {
   partnerId: string;
   invoiceId: string;
   noPdfInvoiceId: string;
-  fileUrl: string | null;
+  storagePath: string | null;
 }
-const ctx: Partial<Ctx> = { fileUrl: null };
+const ctx: Partial<Ctx> = { storagePath: null };
 
 test.describe.serial('44 — Partner invoice PDF + email EF contract', () => {
   test.skip(
@@ -214,10 +208,8 @@ test.describe.serial('44 — Partner invoice PDF + email EF contract', () => {
 
   test.afterAll(async () => {
     const admin = makeAdmin();
-    if (ctx.fileUrl) {
-      // storage path: .../object/sign/partner-invoices/<filename>?token=...
-      const storagePath = storagePathFromFileUrl(ctx.fileUrl);
-      if (storagePath) await admin.storage.from('partner-invoices').remove([storagePath]).catch(() => undefined);
+    if (ctx.storagePath) {
+      await admin.storage.from('partner-invoices').remove([ctx.storagePath]).catch(() => undefined);
     }
     if (ctx.invoiceId) {
       await (admin as any).from('partner_invoices').delete().eq('id', ctx.invoiceId);
@@ -264,18 +256,23 @@ test.describe.serial('44 — Partner invoice PDF + email EF contract', () => {
     expect(res.status).toBe(200);
     const body = await res.json();
     expect(body.success).toBe(true);
-    expect(body.file_url).toBeTruthy();
-    ctx.fileUrl = body.file_url as string;
+    expect(body.file_url).toBeFalsy();
+    expect(body.storage_path).toBeTruthy();
+    expect(body.export_id).toBeTruthy();
+    ctx.storagePath = body.storage_path as string;
 
     const admin = makeAdmin();
     const { data: exp } = await (admin as any)
       .from('partner_invoice_exports')
-      .select('id, format, file_url')
+      .select('id, format, file_url, storage_bucket, storage_path')
       .eq('invoice_id', ctx.invoiceId)
       .eq('format', 'pdf');
     expect(exp).toHaveLength(1);
+    expect(exp![0].file_url).toBeNull();
+    expect(exp![0].storage_bucket).toBe('partner-invoices');
+    expect(exp![0].storage_path).toBe(ctx.storagePath);
 
-    await expectPdfObjectExists(admin, ctx.fileUrl!);
+    await expectPdfObjectExists(admin, ctx.storagePath!);
   });
 
   test('44d: partner reads own export via RLS', async () => {
@@ -287,12 +284,14 @@ test.describe.serial('44 — Partner invoice PDF + email EF contract', () => {
 
     const { data: exps, error: expErr } = await (client as any)
       .from('partner_invoice_exports')
-      .select('invoice_id, file_url')
+      .select('invoice_id, file_url, storage_bucket, storage_path')
       .eq('format', 'pdf');
     expect(expErr).toBeNull();
     expect(exps).toHaveLength(1);
     expect(exps![0].invoice_id).toBe(ctx.invoiceId);
-    expect(exps![0].file_url).toBe(ctx.fileUrl);
+    expect(exps![0].file_url).toBeNull();
+    expect(exps![0].storage_bucket).toBe('partner-invoices');
+    expect(exps![0].storage_path).toBe(ctx.storagePath);
 
     await client.auth.signOut();
   });

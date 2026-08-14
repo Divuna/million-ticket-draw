@@ -12,6 +12,20 @@ verify_jwt = false
 [functions.send-sales-lead-email]
 verify_jwt = false
 
+# Interní worker připravených dávek. Autorizuje se výhradně sdíleným secretem
+# SALES_LEAD_BATCH_WORKER_SECRET (ne uživatelským JWT). PR 4 funkci nenasazuje,
+# secret nenastavuje a nevytváří pro ni žádný cron.
+[functions.process-sales-lead-email-batch]
+verify_jwt = false
+
+# Veřejná stránka reakcí z obchodního e-mailu. GET je pouze čtení; zápis
+# proběhne až vědomým POSTem s jednorázovým tokenem, jehož hash je v DB.
+[functions.sales-lead-magin-supply-agent]
+verify_jwt = false
+
+[functions.sales-lead-response]
+verify_jwt = false
+
 # Příjem PŘÍCHOZÍCH odpovědí firem (reply+LEAD_ID@reply.onemil.cz). Autorizace =
 # ověření podpisu webhooku (SALES_LEAD_INBOUND_WEBHOOK_SECRET) uvnitř funkce.
 # Nikdy neodesílá e-mail; jen zapíše `reply_received` a posune stav na `odpovedel`.
@@ -85,11 +99,14 @@ verify_jwt = false
 verify_jwt = false
 
 [functions.upload-ticket-share]
-verify_jwt = false
+verify_jwt = true
 
+# Deprecated: kept as a safe tombstone so an existing deployed endpoint cannot
+# send reminders for a field that is no longer required.
 [functions.send-onboarding-reminder]
 verify_jwt = true
 
+# Deprecated: kept as an authenticated no-op for any existing scheduler.
 [functions.daily-onboarding-reminder]
 verify_jwt = false
 
@@ -132,10 +149,16 @@ verify_jwt = true
 [functions.generate-partner-invoice-pdf]
 verify_jwt = false
 
+[functions.get-partner-invoice-export-url]
+verify_jwt = true
+
 [functions.send-partner-invoice-email]
 verify_jwt = false
 
 [functions.partner-invoice-auto-send]
+verify_jwt = false
+
+[functions.send-offer-reminders]
 verify_jwt = false
 
 [functions.stripe-refund]
@@ -168,4 +191,23 @@ verify_jwt = false
 verify_jwt = false
 
 [functions.sales-lead-ares-lookup]
+verify_jwt = false
+
+[functions.sales-lead-work-intake]
+verify_jwt = false
+
+# Autorizace je vlastní secret SALES_LEAD_BATCH_AGENT_SECRET ověřený uvnitř funkce
+# (stejný vzor jako sales-lead-work-intake), proto se JWT nevyžaduje.
+[functions.sales-lead-daily-batch-agent]
+verify_jwt = false
+
+[functions.onemil-work-intake-mcp]
+verify_jwt = false
+
+# Disabled legacy contest generators. They remain deployable only to replace
+# old production copies with safe tombstones that never use service_role.
+[functions.generate-complete-contests]
+verify_jwt = false
+
+[functions.generate-tickets]
 verify_jwt = false

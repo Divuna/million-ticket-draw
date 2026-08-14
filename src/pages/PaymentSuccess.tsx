@@ -10,9 +10,15 @@ import {
   resolvePaymentSuccessViewContext,
 } from '@/lib/paymentSuccessContext';
 import { analytics } from '@/lib/analytics';
+import { isNativeApp } from '@/lib/nativeApp';
 
 const PaymentSuccess: React.FC = () => {
   const navigate = useNavigate();
+  // Nativní aplikace: platební stránky nejsou dostupné — okamžitý redirect.
+  const nativeApp = isNativeApp();
+  useEffect(() => {
+    if (nativeApp) navigate('/games', { replace: true });
+  }, [nativeApp, navigate]);
   const [searchParams] = useSearchParams();
   const sessionId = searchParams.get('session_id');
 
@@ -29,6 +35,7 @@ const PaymentSuccess: React.FC = () => {
 
   const toastShown = useRef(false);
   useEffect(() => {
+    if (nativeApp) return;
     clearPaymentSuccessContext();
     if (toastShown.current) return;
     toastShown.current = true;
@@ -61,7 +68,9 @@ const PaymentSuccess: React.FC = () => {
         }
       })();
     }
-  }, [kind, sessionId]);
+  }, [kind, sessionId, nativeApp]);
+
+  if (nativeApp) return null;
 
   return (
     <div className="min-h-screen bg-background">

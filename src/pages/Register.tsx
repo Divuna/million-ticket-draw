@@ -6,11 +6,14 @@ import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Checkbox } from '@/components/ui/checkbox';
 import { useAuth } from '@/hooks/useAuth';
-import { useDateOfBirthCheck } from '@/hooks/useDateOfBirthCheck';
 import { toast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 import logo from '@/assets/logo-onemil.png';
 import { PENDING_REFERRAL_STORAGE_KEY } from '@/hooks/useApplyPendingReferral';
+import {
+  markAdultConfirmationPending,
+  ADULT_CONFIRMATION_TEXT,
+} from '@/hooks/useApplyPendingAdultConfirmation';
 
 // Affiliate v2: pending affiliate ref code captured from ?ref= (separate from legacy referral).
 const PENDING_AFFILIATE_REF_KEY = 'onemil_affiliate_ref';
@@ -33,19 +36,21 @@ const FacebookIcon = () => (
   </svg>
 );
 
+/** Povinné potvrzení 18+ platí pro e-mailovou i sociální (OAuth) registraci. */
+const AGE_CONFIRM_ERROR = 'Pro registraci musíte potvrdit, že vám bylo 18 let.';
+
 const Register: React.FC = () => {
   const [searchParams] = useSearchParams();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
-  const [dateOfBirth, setDateOfBirth] = useState('');
-  const [dateOfBirthError, setDateOfBirthError] = useState('');
+  const [ageConfirmed, setAgeConfirmed] = useState(false);
+  const [ageError, setAgeError] = useState('');
   const [termsAccepted, setTermsAccepted] = useState(false);
   const [gdprAccepted, setGdprAccepted] = useState(false);
   const [marketingAccepted, setMarketingAccepted] = useState(false);
   const [loading, setLoading] = useState(false);
   const { signUp, signInWithOAuth } = useAuth();
-  const { setDateOfBirthOptimistic } = useDateOfBirthCheck();
   const navigate = useNavigate();
 
   // Persist referral code from URL so it can be applied after signup (or after OAuth return)
@@ -63,32 +68,15 @@ const Register: React.FC = () => {
     }
   }, [searchParams]);
 
-  const validateAge = (dob: string): boolean => {
-    if (!dob) return false;
-    const birthDate = new Date(dob);
-    const today = new Date();
-    let age = today.getFullYear() - birthDate.getFullYear();
-    const monthDiff = today.getMonth() - birthDate.getMonth();
-    if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birthDate.getDate())) {
-      age--;
-    }
-    return age >= 18;
-  };
-
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setDateOfBirthError('');
-    
-    if (!dateOfBirth) {
-      setDateOfBirthError('Datum narození je povinné.');
+    setAgeError('');
+
+    if (!ageConfirmed) {
+      setAgeError(AGE_CONFIRM_ERROR);
       return;
     }
 
-    if (!validateAge(dateOfBirth)) {
-      setDateOfBirthError('Pro registraci musíte mít alespoň 18 let.');
-      return;
-    }
-    
     if (!termsAccepted || !gdprAccepted) {
       toast({
         title: "Chyba",
@@ -118,8 +106,12 @@ const Register: React.FC = () => {
 
     setLoading(true);
 
+    // Marker přežije i případ, kdy okamžitý zápis po signUp neprojde
+    // (např. účet ještě není potvrzený) — dopíše se po přihlášení.
+    markAdultConfirmationPending();
+
     try {
-      const { error } = await signUp(email, password, marketingAccepted);
+      const { error } = await signUp(email, password, marketingAccepted, ageConfirmed);
       
       if (error) {
         toast({
@@ -128,22 +120,11 @@ const Register: React.FC = () => {
           variant: "destructive"
         });
       } else {
-        // Store date of birth in profiles table
+        // Age (18+) is confirmed via a mandatory checkbox at registration and is
+        // NOT persisted — profiles has no dedicated age-confirmation column.
+        // Date of birth is no longer collected or stored during registration.
         const { data: { user: newUser } } = await supabase.auth.getUser();
         if (newUser) {
-          const { error: dobError } = await supabase
-            .from('profiles')
-            .update({ date_of_birth: dateOfBirth })
-            .eq('id', newUser.id);
-
-          if (dobError) {
-            console.error('Error saving date of birth during registration:', dobError);
-          } else {
-            // Mark DOB as present in context immediately so DateOfBirthGuard
-            // does not redirect to onboarding before the DB check catches up.
-            setDateOfBirthOptimistic(dateOfBirth);
-          }
-
           // Apply referral code from URL if present (e.g. /register?ref=CODE)
           try {
             const pendingRef = sessionStorage.getItem(PENDING_REFERRAL_STORAGE_KEY);
@@ -190,6 +171,18 @@ const Register: React.FC = () => {
   };
 
   const handleOAuthSignIn = async (provider: OAuthProvider) => {
+    // Potvrzení 18+ je povinné i pro registraci přes Google / Apple / Facebook.
+    // Bez zaškrtnutí se nesmí spustit žádné přesměrování k poskytovateli.
+    if (!ageConfirmed) {
+      setAgeError(AGE_CONFIRM_ERROR);
+      return;
+    }
+    setAgeError('');
+
+    // Potvrzení musí přežít přesměrování k poskytovateli a zpět — zapíše se
+    // po návratu, až bude znám přihlášený uživatel (useApplyPendingAdultConfirmation).
+    markAdultConfirmationPending();
+
     try {
       await signInWithOAuth(provider, searchParams.get('redirect'));
     } catch (error) {
@@ -262,25 +255,24 @@ const Register: React.FC = () => {
             </div>
 
             <div className="space-y-2">
-              <label htmlFor="dateOfBirth" className="text-sm font-medium">
-                Datum narození *
-              </label>
-              <Input
-                id="dateOfBirth"
-                type="date"
-                value={dateOfBirth}
-                onChange={(e) => {
-                  setDateOfBirth(e.target.value);
-                  setDateOfBirthError('');
-                }}
-                required
-                max={new Date().toISOString().split('T')[0]}
-              />
-              {dateOfBirthError && (
-                <p className="text-sm text-destructive">{dateOfBirthError}</p>
+              <div className="flex items-start space-x-2">
+                <Checkbox
+                  id="ageConfirm"
+                  checked={ageConfirmed}
+                  onCheckedChange={(checked) => {
+                    setAgeConfirmed(checked === true);
+                    setAgeError('');
+                  }}
+                />
+                <label htmlFor="ageConfirm" className="text-sm leading-tight cursor-pointer">
+                  {ADULT_CONFIRMATION_TEXT} *
+                </label>
+              </div>
+              {ageError && (
+                <p className="text-sm text-destructive">{ageError}</p>
               )}
             </div>
-            
+
             <div className="flex items-start space-x-2">
               <Checkbox
                 id="terms"

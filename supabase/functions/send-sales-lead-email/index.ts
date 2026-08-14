@@ -1,9 +1,23 @@
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.57.4";
-import { Resend } from "npm:resend@2.0.0";
-import { markdownLinksToVisibleText } from "../_shared/salesLeadEmailRendering.ts";
+import { Resend } from "npm:resend@6.18.1";
+import { renderSalesLeadEmailHtml, renderSalesLeadEmailText } from "../_shared/salesLeadEmailRendering.ts";
 import { createOutboundCapture } from "../_shared/salesLeadEmailThreading.ts";
 import { parseSalesLeadEmailAttachments } from "../_shared/salesLeadEmailAttachments.ts";
+import { deliverSalesLeadInitialEmail } from "../_shared/salesLeadInitialEmailDelivery.ts";
+import {
+  buildResponseCtaBlock,
+  buildResponseCtaUrls,
+  composeInitialEmailBodies,
+  isValidResponseToken,
+  responseProjectRefFromUrl,
+  type ResponseCtaBlock,
+} from "../_shared/salesLeadResponseCta.ts";
+import {
+  createResendInitialEmailProvider,
+  SALES_LEAD_INITIAL_EMAIL_FROM,
+  SALES_LEAD_INITIAL_EMAIL_REPLY_TO,
+} from "../_shared/salesLeadInitialEmailSender.ts";
 
 // ============================================================================
 // send-sales-lead-email — odeslání aktuálního obsahu editoru ČLOVĚKEM
@@ -38,25 +52,16 @@ const corsHeaders = {
   "Access-Control-Allow-Methods": "POST, OPTIONS",
 };
 
-const FROM_ADDRESS = "OneMil obchodní tým <b2b@onemil.cz>";
-const REPLY_TO = "OneMil obchodní tým <b2b@onemil.cz>";
+// Stejná identita odesílatele jako u dávkového workeru (sdílený modul).
+const FROM_ADDRESS = SALES_LEAD_INITIAL_EMAIL_FROM;
+const REPLY_TO = SALES_LEAD_INITIAL_EMAIL_REPLY_TO;
 const INITIAL_EMAIL_ALLOWED_STATUSES = new Set(["novy", "priprava", "schvaleni_ceka"]);
-const ALREADY_CONTACTED_STATUSES = new Set(["osloveno", "follow_up", "odpovedel", "jednani", "konvertovan"]);
 
 function jsonResponse(body: Record<string, unknown>, status = 200): Response {
   return new Response(JSON.stringify(body), {
     status,
     headers: { ...corsHeaders, "Content-Type": "application/json" },
   });
-}
-
-function escapeHtml(v: string): string {
-  return v
-    .replaceAll("&", "&amp;")
-    .replaceAll("<", "&lt;")
-    .replaceAll(">", "&gt;")
-    .replaceAll('"', "&quot;")
-    .replaceAll("'", "&#39;");
 }
 
 function validateEmailContent(subject: string, body: string): string | null {
@@ -66,6 +71,10 @@ function validateEmailContent(subject: string, body: string): string | null {
   if (body.trim().length > 20_000) return "email_body_too_long";
   if (/\{\{[^{}]+\}\}/.test(`${subject}\n${body}`)) return "unresolved_template_variables";
   return null;
+}
+
+function isValidRecipient(value: string): boolean {
+  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value) && value.length <= 320;
 }
 
 serve(async (req: Request) => {
@@ -107,6 +116,16 @@ serve(async (req: Request) => {
     }
     const leadId = typeof body.lead_id === "string" ? body.lead_id.trim() : null;
     if (!leadId) return jsonResponse({ success: false, error: "lead_id_required" }, 400);
+    const reuseSourceActivityId = typeof body.reuse_source_activity_id === "string"
+      ? body.reuse_source_activity_id.trim()
+      : null;
+    const reuseMode = body.reuse_mode === "resend" || body.reuse_mode === "forward"
+      ? body.reuse_mode
+      : null;
+    const isReuse = Boolean(reuseSourceActivityId);
+    if (isReuse !== Boolean(reuseMode)) {
+      return jsonResponse({ success: false, error: "invalid_reuse_request" }, 422);
+    }
     const subject = typeof body.subject === "string" ? body.subject : null;
     const textBody = typeof body.body === "string" ? body.body : null;
     if (subject === null || textBody === null) {
@@ -126,19 +145,49 @@ serve(async (req: Request) => {
     if (leadErr) return jsonResponse({ success: false, error: "lead_lookup_failed" }, 500);
     if (!lead) return jsonResponse({ success: false, error: "lead_not_found" }, 404);
     if (lead.status === "navrzeny") {
-      return jsonResponse({ success: false, error: "proposal_not_approved" }, 409);
+      if (!isReuse) {
+        return jsonResponse({ success: false, error: "proposal_not_approved" }, 409);
+      }
     }
-    if (!INITIAL_EMAIL_ALLOWED_STATUSES.has(lead.status)) {
+    if (!isReuse && !INITIAL_EMAIL_ALLOWED_STATUSES.has(lead.status)) {
       return jsonResponse({ success: false, error: "initial_email_status_not_allowed" }, 409);
     }
 
     // ── 4. Tvrdé bariéry ─────────────────────────────────────────────────────
-    const recipient = (lead.contact_email ?? "").trim().toLowerCase();
-    if (!recipient || lead.email_verified_by_admin !== true) {
+    const recipient = isReuse
+      ? (typeof body.recipient === "string" ? body.recipient.trim().toLowerCase() : "")
+      : (lead.contact_email ?? "").trim().toLowerCase();
+    if (!isReuse && (!recipient || lead.email_verified_by_admin !== true)) {
       return jsonResponse({ success: false, error: "missing_contact_email" }, 422);
+    }
+    if (!isValidRecipient(recipient)) {
+      return jsonResponse({ success: false, error: "invalid_recipient" }, 422);
     }
     if (lead.do_not_contact === true) {
       return jsonResponse({ success: false, error: "do_not_contact" }, 403);
+    }
+
+    type ReuseSource = {
+      id: string;
+      metadata: Record<string, unknown> | null;
+    };
+    let reuseSource: ReuseSource | null = null;
+    if (isReuse) {
+      const { data: source, error: sourceError } = await supabaseAdmin
+        .from("sales_lead_activities")
+        .select("id, metadata")
+        .eq("id", reuseSourceActivityId)
+        .eq("lead_id", leadId)
+        .eq("activity_type", "email_sent")
+        .eq("direction", "outbound")
+        .maybeSingle();
+      if (sourceError) {
+        return jsonResponse({ success: false, error: "reuse_source_lookup_failed" }, 500);
+      }
+      if (!source) {
+        return jsonResponse({ success: false, error: "reuse_source_not_found" }, 404);
+      }
+      reuseSource = source as unknown as ReuseSource;
     }
 
     // Poslední bariéra — globální suppression list (§12): přesný e-mail nebo @doména.
@@ -155,20 +204,22 @@ serve(async (req: Request) => {
 
     // Idempotency guard: if Resend succeeded previously but a later DB step
     // failed, the same first e-mail must never be sent again.
-    const { data: previousInitialEmail, error: previousInitialEmailError } = await supabaseAdmin
-      .from("sales_lead_activities")
-      .select("id")
-      .eq("lead_id", leadId)
-      .eq("activity_type", "email_sent")
-      .eq("direction", "outbound")
-      .contains("metadata", { sent_by: "human" })
-      .limit(1)
-      .maybeSingle();
-    if (previousInitialEmailError) {
-      return jsonResponse({ success: false, error: "initial_email_history_check_failed" }, 500);
-    }
-    if (previousInitialEmail) {
-      return jsonResponse({ success: false, error: "initial_email_already_sent" }, 409);
+    if (!isReuse) {
+      const { data: previousInitialEmail, error: previousInitialEmailError } = await supabaseAdmin
+        .from("sales_lead_activities")
+        .select("id")
+        .eq("lead_id", leadId)
+        .eq("activity_type", "email_sent")
+        .eq("direction", "outbound")
+        .contains("metadata", { sent_by: "human" })
+        .limit(1)
+        .maybeSingle();
+      if (previousInitialEmailError) {
+        return jsonResponse({ success: false, error: "initial_email_history_check_failed" }, 500);
+      }
+      if (previousInitialEmail) {
+        return jsonResponse({ success: false, error: "initial_email_already_sent" }, 409);
+      }
     }
 
     // Autoritativní kontrola duplicit těsně před odesláním. Frontend ji nemůže
@@ -192,19 +243,87 @@ serve(async (req: Request) => {
       return jsonResponse({ success: false, error: "email_not_configured" }, 503);
     }
 
-    const renderedBody = markdownLinksToVisibleText(textBody);
-    const htmlBody = `<div style="white-space:pre-wrap;font-family:Arial,sans-serif;font-size:14px;line-height:1.5">${escapeHtml(renderedBody)}</div>`;
+    // ── CTA „Mám zájem“ / „Nemám zájem“ ──────────────────────────────────────
+    // Přidává se POUZE k prvnímu obchodnímu e-mailu (ne k reuse/forward) a
+    // VŽDY před vyrenderováním, takže uzamčený snapshot i skutečně odeslaný
+    // e-mail obsahují totéž. Každý příjemce dostane vlastní token; odkazy míří
+    // na veřejnou stránku, nikdy na mailto.
+    let cta: ResponseCtaBlock | null = null;
+    if (!isReuse) {
+      const projectRef = responseProjectRefFromUrl(Deno.env.get("SUPABASE_URL") ?? "");
+      if (!projectRef) {
+        return jsonResponse({ success: false, error: "response_links_not_configured" }, 503);
+      }
+      const { data: tokenData, error: tokenError } = await supabaseAdmin.rpc(
+        "sales_lead_issue_manual_response_token",
+        { p_lead_id: leadId, p_recipient: recipient },
+      );
+      const tokenResult = (tokenData ?? {}) as { success?: boolean; token?: string };
+      if (tokenError || tokenResult.success !== true || !tokenResult.token
+        || !isValidResponseToken(tokenResult.token)) {
+        // Fail closed — raději neodeslat než poslat e-mail bez odpovědních tlačítek.
+        return jsonResponse({ success: false, error: "response_links_unavailable" }, 500);
+      }
+      cta = buildResponseCtaBlock(buildResponseCtaUrls(projectRef, tokenResult.token));
+    }
+
+    // Renderer dostane JEN text od člověka; CTA se připojí až za výsledek
+    // (`cta.text` / `cta.html`). Kdyby CTA prošlo rendererem jako markdown,
+    // plaintext by přišel o URL a v HTML by nevznikla tlačítka.
+    const composed = composeInitialEmailBodies(
+      textBody,
+      cta,
+      renderSalesLeadEmailText,
+      renderSalesLeadEmailHtml,
+    );
+    const renderedText = composed.text;
+    const renderedHtml = composed.html;
     const outboundCapture = createOutboundCapture();
 
     const resend = new Resend(resendApiKey);
+    if (!isReuse) {
+      const deliveryResult = await deliverSalesLeadInitialEmail(
+        supabaseAdmin,
+        createResendInitialEmailProvider(resend),
+        {
+          leadId,
+          performedBy: caller.id,
+          recipient,
+          subject,
+          bodySource: composed.source,
+          bodyText: renderedText,
+          bodyHtml: renderedHtml,
+          attachmentMetadata: attachmentResult.metadata,
+          attachments: attachmentResult.attachments,
+          outboundCaptureId: outboundCapture.id,
+          from: FROM_ADDRESS,
+          replyTo: REPLY_TO,
+        },
+      );
+      if (!deliveryResult.success) {
+        const status = deliveryResult.retryBlocked ? 409
+          : deliveryResult.providerAccepted ? 500
+          : deliveryResult.error === "email_send_failed" ? 502
+          : 409;
+        return jsonResponse({
+          success: false,
+          error: deliveryResult.error,
+          email_sent: deliveryResult.providerAccepted === true,
+          retry_blocked: deliveryResult.retryBlocked === true,
+          delivery_id: deliveryResult.deliveryId,
+        }, status);
+      }
+      return jsonResponse({ success: true, lead_id: leadId, sent_to: recipient, delivery_id: deliveryResult.deliveryId });
+    }
+
     const emailPayload: Record<string, unknown> = {
       from: FROM_ADDRESS,
       to: [recipient],
       bcc: [outboundCapture.address],
       reply_to: REPLY_TO,
       subject,
-      text: renderedBody,
-      html: htmlBody,
+      text: renderedText,
+      html: renderedHtml,
     };
     if (attachmentResult.attachments.length > 0) {
       emailPayload.attachments = attachmentResult.attachments;
@@ -224,10 +343,15 @@ serve(async (req: Request) => {
       email_message_id: (emailResponse.data as { id?: string } | null)?.id ?? null,
       performed_by: caller.id,
       metadata: {
-        sent_by: "human",
+        sent_by: isReuse ? (reuseMode === "forward" ? "human_forward" : "human_resend") : "human",
         from: "b2b@onemil.cz",
         reply_to: "b2b@onemil.cz",
         to: recipient,
+        reused_from_activity_id: reuseSource?.id ?? null,
+        reuse_mode: reuseMode,
+        original_recipient: typeof reuseSource?.metadata?.to === "string"
+          ? reuseSource.metadata.to
+          : null,
         resend_email_id: (emailResponse.data as { id?: string } | null)?.id ?? null,
         outbound_capture_id: outboundCapture.id,
         attachments: attachmentResult.metadata,
@@ -239,28 +363,12 @@ serve(async (req: Request) => {
     }
 
     // ── 7. Povinné propsání stavu (§18 spec) ─────────────────────────────────
-    const { data: statusData, error: statusError } = await supabaseAdmin.rpc("sales_lead_mark_emailed", {
-      p_lead_id: leadId,
-      p_performed_by: caller.id,
+    return jsonResponse({
+      success: true,
+      lead_id: leadId,
+      sent_to: recipient,
+      reused_from_activity_id: reuseSource?.id ?? null,
     });
-    const statusResult = statusData as {
-      success?: boolean;
-      status_changed?: boolean;
-      new_status?: string;
-      current_status?: string;
-    } | null;
-    const movedToContacted = statusResult?.success === true
-      && statusResult.status_changed === true
-      && statusResult.new_status === "osloveno";
-    const alreadyProgressed = statusResult?.success === true
-      && statusResult.status_changed === false
-      && typeof statusResult.current_status === "string"
-      && ALREADY_CONTACTED_STATUSES.has(statusResult.current_status);
-    if (statusError || (!movedToContacted && !alreadyProgressed)) {
-      return jsonResponse({ success: false, error: "status_sync_failed_after_send", email_sent: true });
-    }
-
-    return jsonResponse({ success: true, lead_id: leadId, sent_to: recipient });
   } catch (_err) {
     return jsonResponse({ success: false, error: "internal_error" }, 500);
   }

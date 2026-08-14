@@ -651,30 +651,28 @@ serve(async (req) => {
     }
 
     // ── 8. Get signed URL (bucket is private — no public access) ───
-    const SIGNED_URL_TTL_SECONDS = 10 * 365 * 24 * 60 * 60; // ~10 years
-    const { data: urlData, error: signError } = await supabase.storage
-      .from('partner-invoices')
-      .createSignedUrl(filename, SIGNED_URL_TTL_SECONDS);
-
-    if (signError || !urlData?.signedUrl) {
-      console.error('Signed URL error:', signError);
-      return new Response(
-        JSON.stringify({ error: 'Nepodařilo se vytvořit odkaz na PDF', details: signError?.message }),
-        { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
-    }
-
-    const fileUrl = urlData.signedUrl;
-    console.log('PDF uploaded, signed URL created');
+    // Persist the private Storage object path; signed URLs are created only
+    // when an authorized user downloads the export.
+    console.log('PDF uploaded to private Storage');
 
     // ── 9. Record export ────────────────────────────────────────────
-    const { error: exportError } = await supabase
+    const { data: exportData, error: exportError } = await supabase
       .from('partner_invoice_exports')
       .insert({
         invoice_id,
         format: 'pdf',
-        file_url: fileUrl,
-      });
+        file_url: null,
+        storage_bucket: 'partner-invoices',
+        storage_path: filename,
+        metadata: {
+          content_type: 'application/pdf',
+          filename,
+          size_bytes: pdfBytes.length,
+          generated_by: 'generate-partner-invoice-pdf',
+        },
+      })
+      .select('id')
+      .single();
 
     if (exportError) {
       console.error('Error recording export:', exportError);
@@ -687,7 +685,9 @@ serve(async (req) => {
     return new Response(
       JSON.stringify({
         success: true,
-        file_url: fileUrl,
+        export_id: exportData?.id ?? null,
+        storage_bucket: 'partner-invoices',
+        storage_path: filename,
         activation_overview_source: isOfferInvoice ? 'partner_offer_activations' : 'partner_invoice_lines',
         activation_overview_total_coins: activationOverviewTotalCoins,
         activation_overview_rows: activations.length,

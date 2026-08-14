@@ -22,8 +22,19 @@ import {
 import { analytics } from "@/lib/analytics";
 import { buildBuyTicketAtomicRpcPayload } from "@/utils/buyTicketAtomicRpcArgs";
 import { TicketResultModal } from "@/components/TicketResultModal";
+import {
+  MysteryPurchaseResultDialog,
+  type MysteryTicketOutcome,
+} from "@/components/MysteryPurchaseResultDialog";
+import {
+  isMysteryContestAvailable,
+  mysteryErrorMessage,
+  purchaseMysteryCoupon,
+  type MysteryCoupon,
+} from "@/lib/mysteryCouponPurchase";
 import { BonusPrizeDetailModal } from "@/components/BonusPrizeDetailModal";
 import { usePlacementBanners } from "@/hooks/usePlacementBanners";
+import { isNativeApp } from "@/lib/nativeApp";
 import "@/components/ContestCard.css";
 import { Helmet } from "react-helmet-async";
 
@@ -35,6 +46,7 @@ type Contest = {
   rules_pdf_url: string | null;
   main_prize: string | null;
   ticket_price: number;
+  ticket_count: number;
   status: string;
   main_prize_secondary_image: string | null;
   main_image: string | null;
@@ -72,6 +84,8 @@ interface PartnerOfferResult {
 
 interface UnlockTicketResult {
   ticket_number: number;
+  /** UUID řádku v `tickets` z `buy_ticket_atomic` — nutné pro upload sdíleného obrázku. */
+  ticket_row_id?: string | null;
   ticket_price: number;
   next_bonus_position?: number | null;
   distance_to_next_bonus?: number | null;
@@ -138,6 +152,11 @@ export default function ContestDetail() {
   const [modalResult, setModalResult] = useState<UnlockTicketResult | null>(null);
   const [modalContestId, setModalContestId] = useState<string | null>(null);
   const requestInFlightRef = useRef(false);
+  const [mysteryResult, setMysteryResult] = useState<{
+    contestId: string;
+    ticket: MysteryTicketOutcome;
+    coupon: MysteryCoupon | null;
+  } | null>(null);
   const [selectedBonusPrize, setSelectedBonusPrize] = useState<BonusPrize | null>(null);
   const [galleryMedia, setGalleryMedia] = useState<{ id: string; contest_id: string; type: string; url: string; sort_order: number | null; created_at: string | null }[]>([]);
   const [activeGalleryIndex, setActiveGalleryIndex] = useState(0);
@@ -251,46 +270,108 @@ export default function ContestDetail() {
     }
   }, []);
 
+  /**
+   * Mystery kupon: za contests.ticket_price dostane zákazník náhodný dostupný
+   * kupon a tiket zdarma. Celý nákup je jedna atomická transakce — při chybě
+   * se nestrhnou MioCoiny ani nevznikne tiket.
+   */
+  async function runMysteryPurchase(contestId: string, userId: string) {
+    const outcome = await purchaseMysteryCoupon(userId, contestId);
+
+    if (!outcome.success) {
+      logTicketPurchaseRejected({
+        userId,
+        contestId,
+        errorCode: outcome.error.slice(0, 200),
+      });
+      toast.error(mysteryErrorMessage(outcome.error));
+      return;
+    }
+
+    logTicketPurchaseSuccess({ userId, contestId, ticketNumber: outcome.ticket_number });
+    analytics.ticketPurchase({ contestId, ticketNumber: outcome.ticket_number });
+
+    recordLocalTicketPlay();
+    await loadUserBalance(userId);
+
+    // Jeden společný výsledek: výhra z tiketu nahoře, kupon jako druhý bonus.
+    // Tiket i kupon už jsou uložené — dialog jen ukazuje, co vzniklo.
+    setMysteryResult({
+      contestId,
+      ticket: {
+        ticket_number: outcome.ticket_number,
+        won_type: outcome.won_type,
+        won_prize: outcome.won_prize,
+        distance_to_next_bonus: outcome.distance_to_next_bonus,
+      },
+      coupon: outcome.coupon,
+    });
+  }
+
   async function handleUseMiocoins() {
     console.log('[DEBUG ContestDetail] handleUseMiocoins called, user:', user?.id, 'contest:', contest?.id);
 
-    // Strict single-request guard
+    // Zámek se bere synchronně, ještě před prvním awaitem. Načtení zůstatku
+    // níž je await, takže dva kliky ve stejném ticku by při nenačtené peněžence
+    // jinak prošly oba a koupily dvakrát. Platí pro mystery i klasický nákup.
     if (requestInFlightRef.current) {
       console.log('[DEBUG ContestDetail] Request already in flight, ignoring click');
       return;
     }
+    requestInFlightRef.current = true;
 
     if (!user) {
       toast.error("Pro nákup tiketu se musíš přihlásit.");
+      requestInFlightRef.current = false;
       navigate(buildLoginRedirectUrl(location.pathname + location.search));
       return;
     }
 
-    if (!contest) return;
+    if (!contest) {
+      requestInFlightRef.current = false;
+      return;
+    }
 
     if (contest.status !== 'active') {
       toast.error("Soutěž není aktivní");
+      requestInFlightRef.current = false;
       return;
     }
 
     let effectiveBalance: number;
-    if (!balanceLoaded) {
-      effectiveBalance = await loadUserBalance(user.id);
-    } else {
-      effectiveBalance = balance;
+    try {
+      if (!balanceLoaded) {
+        effectiveBalance = await loadUserBalance(user.id);
+      } else {
+        effectiveBalance = balance;
+      }
+    } catch (err) {
+      // loadUserBalance si dnes chyby řeší sám, ale kdyby to někdy přestalo
+      // platit, nesmí nám tu uváznout zámek — tlačítko by zůstalo mrtvé
+      // až do znovunačtení stránky.
+      console.error('[DEBUG ContestDetail] loadUserBalance failed:', err);
+      toast.error("Nepodařilo se načíst zůstatek MioCoinů.");
+      requestInFlightRef.current = false;
+      return;
     }
     if (contest.status === 'active' && effectiveBalance < contest.ticket_price) {
       const shortage = Math.max(0, Math.ceil(contest.ticket_price - effectiveBalance));
       toast.error(`Chybí ti ${shortage.toLocaleString('cs-CZ')} MioCoinů`);
+      requestInFlightRef.current = false;
       return;
     }
 
-    // Lock immediately
-    requestInFlightRef.current = true;
     console.log('[DEBUG ContestDetail] setProcessingContestId:', contest.id);
     setProcessingContestId(contest.id);
 
     try {
+      // Mystery kupon: u zapojených soutěží zákazník za stejnou cenu dostane
+      // náhodný kupon a tiket zdarma. Ostatní soutěže jdou beze změny dál.
+      if (await isMysteryContestAvailable(contest.id)) {
+        await runMysteryPurchase(contest.id, user.id);
+        return;
+      }
+
       const built = buildBuyTicketAtomicRpcPayload(contest.id, user.id);
       if (!built.ok) {
         toast.error((built as { ok: false; message: string }).message);
@@ -359,14 +440,7 @@ export default function ContestDetail() {
         
         // Refresh balance and progress immediately
         loadUserBalance(user.id);
-        const { data: prog } = await supabase
-          .from("contest_progress")
-          .select("tickets_total")
-          .eq("contest_id", contest.id)
-          .maybeSingle();
-        if (prog) {
-          setProgressTicketsTotal(prog.tickets_total ?? 1_000_000);
-        }
+        setProgressTicketsTotal(contest.ticket_count ?? 1_000_000);
 
         // ── Partner Offer lookup ──────────────────────────────────────────────
         // buy_ticket_atomic returns ticket_row_id (UUID of the new tickets row).
@@ -408,6 +482,7 @@ export default function ContestDetail() {
 
         const mappedResult: UnlockTicketResult = {
           ticket_number: result.ticket_number,
+          ticket_row_id: ticketRowId ?? null,
           ticket_price: result.ticket_price ?? 1,
           next_bonus_position: result.next_bonus_position ?? null,
           distance_to_next_bonus: result.distance_to_next_bonus ?? null,
@@ -463,7 +538,7 @@ export default function ContestDetail() {
       try {
         const { data: contestData, error: contestError } = await supabase
           .from("contests")
-          .select("id, title, description, rules, rules_pdf_url, main_prize, ticket_price, status, main_prize_secondary_image, main_image, banner_image, fast_game, total_miocoin_bonus")
+          .select("id, title, description, rules, rules_pdf_url, main_prize, ticket_price, ticket_count, status, main_prize_secondary_image, main_image, banner_image, fast_game, total_miocoin_bonus")
           .eq("id", id)
           .maybeSingle();
 
@@ -484,6 +559,7 @@ export default function ContestDetail() {
 
         console.log('[DEBUG ContestDetail] setContest:', JSON.stringify(contestData));
         setContest(contestData as Contest);
+        setProgressTicketsTotal(contestData.ticket_count ?? 1_000_000);
 
         // === Bonusové MioCoiny (součet) — přes RPC, obchází 1000-row cap PostgRESTu ===
         const { data: poolSum, error: poolError } = await supabase
@@ -579,12 +655,6 @@ export default function ContestDetail() {
         console.log('[DEBUG ContestDetail] setGalleryMedia:', mediaData?.length, 'items');
         setGalleryMedia(mediaData ?? []);
 
-        const { data: prog } = await supabase
-          .from("contest_progress")
-          .select("tickets_total")
-          .eq("contest_id", id)
-          .maybeSingle();
-        setProgressTicketsTotal(prog?.tickets_total ?? 1_000_000);
         console.log("galleryMedia", mediaData);
 
         console.log('[DEBUG ContestDetail] setLoading: false');
@@ -602,6 +672,7 @@ export default function ContestDetail() {
     if (!modalResult) return undefined;
     return {
       ticket_number: modalResult.ticket_number,
+      ticket_row_id: modalResult.ticket_row_id ?? null,
       next_bonus_position: modalResult.next_bonus_position ?? null,
       distance_to_next_bonus: modalResult.distance_to_next_bonus ?? null,
       won_prize: modalResult.won_prize,
@@ -612,6 +683,7 @@ export default function ContestDetail() {
     };
   }, [
     modalResult?.ticket_number,
+    modalResult?.ticket_row_id,
     modalResult?.next_bonus_position,
     modalResult?.distance_to_next_bonus,
     modalResult?.won_prize,
@@ -924,6 +996,11 @@ export default function ContestDetail() {
           )}
           <div className="flex flex-col sm:flex-row items-stretch gap-3 mt-auto">
             {insufficientFunds ? (
+              isNativeApp() ? (
+                <div className="flex-1 h-11 flex items-center justify-center text-sm font-semibold text-amber-300/95">
+                  Nedostatek MioCoinů
+                </div>
+              ) : (
               <Button
                 onClick={() =>
                   navigate('/profile', {
@@ -935,6 +1012,7 @@ export default function ContestDetail() {
               >
                 Dobít MioCoiny
               </Button>
+              )
             ) : (
               <>
                 <Button
@@ -950,6 +1028,7 @@ export default function ContestDetail() {
                     </span>
                   ) : `Uplatnit ${contest.ticket_price} MioCoin`}
                 </Button>
+                {!isNativeApp() && (
                 <Button
                   onClick={() =>
                     navigate('/profile', {
@@ -961,6 +1040,7 @@ export default function ContestDetail() {
                 >
                   Dobít MioCoiny
                 </Button>
+                )}
               </>
             )}
           </div>
@@ -1156,6 +1236,13 @@ export default function ContestDetail() {
         }}
         prize={selectedBonusPrize}
         backgroundImageUrl={starryBackgroundUrl}
+      />
+      <MysteryPurchaseResultDialog
+        open={mysteryResult !== null}
+        contestId={mysteryResult?.contestId ?? null}
+        ticket={mysteryResult?.ticket ?? null}
+        coupon={mysteryResult?.coupon ?? null}
+        onClose={() => setMysteryResult(null)}
       />
       {/* TICKET RESULT MODAL */}
       <TicketResultModal

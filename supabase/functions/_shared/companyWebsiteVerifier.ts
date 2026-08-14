@@ -41,6 +41,20 @@ const PARKED_PATTERNS = [
   /expired domain/i, /domain has expired/i, /webhosting zdarma/i,
 ];
 
+// Firemní adresář/katalog vypisuje CIZÍ firmy včetně jejich IČO. Takový web
+// nesmí projít jako oficiální web firmy: `extractIcoFromText` by z něj vytáhl
+// IČO třetí strany a identita by se přiřadila cizí právnické osobě.
+const COMPANY_DIRECTORY_PATTERNS = [
+  /adres[áa][řr] firem/i, /katalog firem/i, /datab[áa]ze firem/i, /seznam firem/i,
+  /firemn[íi] (?:katalog|adres[áa][řr])/i, /rejst[řr][íi]k firem/i,
+  /p[řr]idat firmu/i, /zaregistrovat firmu/i, /zapsat firmu/i,
+  /company directory/i, /business directory/i, /add your (?:company|business)/i,
+];
+
+function looksLikeCompanyDirectory(text: string): boolean {
+  return COMPANY_DIRECTORY_PATTERNS.some((p) => p.test(text));
+}
+
 const GENERIC_NAME_WORDS = new Set([
   'restaurace', 'restaurant', 'kavarna', 'cafe', 'bar', 'hospoda', 'hotel',
   'penzion', 'pension', 'agentura', 'agency', 'studio', 'shop', 'eshop',
@@ -226,6 +240,7 @@ export async function verifyCompanyWebsite(input: { companyName: string; ico?: s
     let text = pageText(page.html);
     if (text.length < 250) { evaluated.push({ url: normalized, source: candidate.source, confidence: 0, reason: 'empty_page' }); continue; }
     if (PARKED_PATTERNS.some(p => p.test(text))) { evaluated.push({ url: normalized, source: candidate.source, confidence: 0, reason: 'parked_or_for_sale' }); continue; }
+    if (looksLikeCompanyDirectory(text)) { evaluated.push({ url: normalized, finalUrl: page.finalUrl, source: candidate.source, confidence: 0, reason: 'company_directory' }); continue; }
     if (isNonOfficialWebsiteUrl(page.finalUrl)) {
       evaluated.push({ url: normalized, finalUrl: page.finalUrl, source: candidate.source, confidence: 0, reason: 'non_official_third_party' }); continue;
     }
@@ -253,6 +268,15 @@ export async function verifyCompanyWebsite(input: { companyName: string; ico?: s
     ico: registry?.ico ?? ico, evidence: { registry: registry ? 'ARES' : null, selected: best ?? null, candidates_checked: evaluated.length },
     alternatives: evaluated.filter(e => !best || e.url !== best.url).map(e => ({ url: e.finalUrl ?? e.url, source: e.source, confidence: e.confidence, reason: e.reason })),
   };
+}
+
+/**
+ * Souvisí doména s názvem firmy? Bez „záchrany" přes IČO — používá se tam, kde
+ * IČO NENÍ důkazem vazby (např. shoda v ARES jen podle názvu), takže by cizí
+ * právnická osoba jinak mohla přepsat identitu webu.
+ */
+export function domainBelongsToCompanyName(url: string, companyName: string): boolean {
+  return domainMatchesCompany(url, companyName, false);
 }
 
 export interface DiscoveredSite {
@@ -308,6 +332,8 @@ export async function verifyDiscoveredCompanySite(url: string): Promise<Discover
   const text = pageText(page.html);
   if (text.length < 250) return { ...empty, reason: 'empty_page' };
   if (PARKED_PATTERNS.some((p) => p.test(text))) return { ...empty, reason: 'parked_or_for_sale' };
+  // Adresář firem vypisuje cizí IČO — nikdy z něj nesmí vzniknout identita firmy.
+  if (looksLikeCompanyDirectory(text)) return { ...empty, reason: 'company_directory' };
 
   const icoOnPage = extractIcoFromText(text);
   const companyName = extractCompanyNameFromHtml(page.html);

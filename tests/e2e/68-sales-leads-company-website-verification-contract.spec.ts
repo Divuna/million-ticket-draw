@@ -3,6 +3,7 @@ import fs from 'node:fs';
 const verifier=fs.readFileSync('supabase/functions/_shared/companyWebsiteVerifier.ts','utf8');
 const discover=fs.readFileSync('supabase/functions/sales-lead-discover/index.ts','utf8');
 const enrich=fs.readFileSync('supabase/functions/sales-lead-enrich-contact/index.ts','utf8');
+const emailCrawler=fs.readFileSync('supabase/functions/_shared/companyEmailCrawler.ts','utf8');
 const policy=fs.readFileSync('supabase/functions/_shared/officialWebsitePolicy.ts','utf8');
 const addDialog=fs.readFileSync('src/components/admin/sales-leads/AddSalesLeadDialog.tsx','utf8');
 const detail=fs.readFileSync('src/components/admin/sales-leads/SalesLeadDetailSheet.tsx','utf8');
@@ -19,7 +20,7 @@ test.describe('company website verification is fail closed',()=>{
  test('změna názvu firmy použije právní název ARES',()=>{expect(verifier).toContain('registry?.legalName');expect(verifier).toContain('obchodniJmeno');});
  test('shoda podle IČO má nejvyšší důvěru',()=>{expect(verifier).toContain("matches.includes('ico') ? 100 : 95");expect(verifier).toContain('ARES + oficiální web');});
  test('shoda jen podle názvu musí být jednoznačná',()=>{expect(verifier).toContain('if (exact.length !== 1) return null');expect(verifier).toContain("matches.includes('company_name')");});
- test('kontakt jen z ověřeného webu',()=>{expect(enrich).toContain('website_verification_status !== "overeny"');expect(enrich).toContain('source_not_on_verified_website');expect(enrich).toContain('email_not_found_on_verified_website');});
+ test('kontakt jen z ověřeného webu',()=>{expect(enrich).toContain('website_verification_status !== "overeny"');expect(enrich).toContain('verifyEmailOnOfficialSourcePage');expect(emailCrawler).toContain('source_not_on_verified_website');expect(emailCrawler).toContain('email_not_found_on_verified_website');});
 });
 
 test('centrální politika blokuje katalogy ve všech ukládacích cestách',()=>{

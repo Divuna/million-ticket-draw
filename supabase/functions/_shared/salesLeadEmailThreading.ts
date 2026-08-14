@@ -10,7 +10,11 @@ function normalizeMessageId(value: string | null | undefined): string | null {
 
 export function createOutboundCapture(): { id: string; address: string } {
   const id = crypto.randomUUID();
-  return { id, address: `sales-lead-capture-${id}@${RECEIVING_DOMAIN}` };
+  return { id, address: outboundCaptureAddress(id) };
+}
+
+export function outboundCaptureAddress(id: string): string {
+  return `sales-lead-capture-${id}@${RECEIVING_DOMAIN}`;
 }
 
 export function extractOutboundCaptureId(addresses: string[]): string | null {

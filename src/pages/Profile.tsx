@@ -25,6 +25,7 @@ import {
   OneMilWalletIcon,
   OneMilShieldIcon,
   OneMilInfoIcon,
+  OneMilMessageIcon,
 } from '@/components/icons/OneMilIcons';
 import ReferralSection from '@/components/ReferralSection';
 import { RedeemMioCoinCard } from '@/components/RedeemMioCoinCard';
@@ -32,8 +33,10 @@ import RecommendShopMailtoCard from '@/components/RecommendShopMailtoCard';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { Link } from 'react-router-dom';
 import { setPendingPaymentSuccessContext, isSafeInternalPath } from '@/lib/paymentSuccessContext';
+import { isNativeApp } from '@/lib/nativeApp';
 import { logStripeCheckoutClientFailure } from '@/lib/monitoring';
 import { useUserRole } from '@/hooks/useUserRole';
+import { useUnreadMessagesCount } from '@/hooks/useUnreadMessagesCount';
 import { useNotificationSettings } from '@/hooks/useNotificationSettings';
 import { Switch } from '@/components/ui/switch';
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
@@ -115,15 +118,11 @@ const useCountUp = (target: number, duration: number = 1200) => {
   return count;
 };
 
-// Premium section card — consistent with Games/Vouchers/Wins/Messages design
+// Premium section card — světlý zákaznický styl OneMil (Homepage / /partnerstvi).
+// Vzhled řídí `homepage-light-panel` uvnitř `homepage-light-content`.
 const PremiumCard: React.FC<{ children: React.ReactNode; className?: string }> = ({ children, className = '' }) => (
   <div
-    className={`relative overflow-hidden rounded-2xl ${className}`}
-    style={{
-      background: 'linear-gradient(135deg, hsl(220, 25%, 8%) 0%, hsl(220, 30%, 12%) 50%, hsl(220, 25%, 8%) 100%)',
-      border: '1px solid rgba(255,138,0,0.2)',
-      boxShadow: '0 8px 32px rgba(0,0,0,0.4), inset 0 1px 0 rgba(255,138,0,0.06)',
-    }}
+    className={`homepage-light-panel relative overflow-hidden rounded-2xl border border-[rgba(255,138,0,0.18)] bg-white ${className}`}
   >
     {children}
   </div>
@@ -145,6 +144,8 @@ const SectionTile: React.FC<{ icon: React.ReactNode }> = ({ icon }) => (
 const Profile: React.FC = () => {
   const { user, session } = useAuth();
   const { isAdmin } = useUserRole();
+  // Vstup do Zpráv je nově v profilu — stejný zdroj počtu jako spodní menu.
+  const { unreadCount } = useUnreadMessagesCount();
   const { soundEnabled, messageSoundEnabled, winSoundEnabled, toggleSound, toggleMessageSound, toggleWinSound } = useNotificationSettings();
   const navigate = useNavigate();
   const location = useLocation();
@@ -544,6 +545,8 @@ const Profile: React.FC = () => {
   };
 
   const handleTopUpPurchase = async () => {
+    // Nativní aplikace nesmí spustit Stripe checkout (Apple/Google pravidla).
+    if (isNativeApp()) return;
     if (purchaseLoading) return;
     let priceInCzk: number;
     let totalCoins: number;
@@ -653,9 +656,9 @@ const Profile: React.FC = () => {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-background dark pb-20">
+      <div className="homepage-light-page min-h-screen bg-background pb-20">
         <Header />
-        <div className="container mx-auto px-4 py-8">
+        <div className="homepage-light-content container mx-auto px-4 py-8">
           <div className="flex items-center justify-center h-64">
             <div className="relative">
               <div className="w-12 h-12 rounded-full border-2 border-[rgba(255,138,0,0.25)] border-t-[#FF8A00] animate-spin" />
@@ -668,24 +671,17 @@ const Profile: React.FC = () => {
   }
 
   return (
-    <div className="min-h-screen bg-background dark pb-20">
+    <div className="homepage-light-page min-h-screen bg-background pb-20">
       <Header />
 
-      <div className="container mx-auto px-4 py-8">
+      <div className="homepage-light-content container mx-auto px-4 py-8">
 
         {/* ── Premium Profile Header ──────────────────────────────────── */}
-        <div
-          className="relative overflow-hidden rounded-2xl p-6 mb-6"
-          style={{
-            background: 'linear-gradient(135deg, hsl(220, 25%, 8%) 0%, hsl(220, 30%, 12%) 50%, hsl(220, 25%, 8%) 100%)',
-            border: '1px solid rgba(255,138,0,0.2)',
-            boxShadow: '0 8px 32px rgba(0,0,0,0.4), inset 0 1px 0 rgba(255,138,0,0.06)',
-          }}
-        >
+        <div className="homepage-light-panel homepage-miocoin-panel relative overflow-hidden rounded-2xl border border-[rgba(255,138,0,0.2)] bg-white p-6 mb-6">
           <div
-            className="absolute inset-0 opacity-10 pointer-events-none"
+            className="absolute inset-0 opacity-20 pointer-events-none"
             style={{
-              background: 'linear-gradient(90deg, transparent 0%, rgba(255,181,71,1) 50%, transparent 100%)',
+              background: 'linear-gradient(90deg, transparent 0%, rgba(255,181,71,0.55) 50%, transparent 100%)',
               backgroundSize: '200% 100%',
               animation: 'shimmer 4s ease-in-out infinite',
             }}
@@ -721,7 +717,7 @@ const Profile: React.FC = () => {
               >
                 {profile.nickname || profile.first_name || 'Můj profil'}
               </h1>
-              <p className="text-sm text-gray-400 mt-1">Kliknutím na avatar změníte obrázek</p>
+              <p className="text-sm text-muted-foreground mt-1">Kliknutím na avatar změníte obrázek</p>
             </div>
           </div>
         </div>
@@ -740,12 +736,12 @@ const Profile: React.FC = () => {
                 <div className="flex items-center gap-4">
                   <SectionTile icon={<OneMilWalletIcon size={24} className="w-6 h-6 text-black" />} />
                   <div>
-                    <h2 className="text-xl font-bold text-[#E7EBF0]">Peněženka</h2>
-                    <p className="text-sm text-gray-400">Váš MioCoin účet</p>
+                    <h2 className="text-xl font-bold text-foreground">Peněženka</h2>
+                    <p className="text-sm text-muted-foreground">Váš MioCoin účet</p>
                   </div>
                 </div>
                 <Button variant="ghost" size="sm" onClick={handleRefreshBalance} disabled={refreshing}
-                  className="text-[#8E98A6] hover:text-[#FF8A00] hover:bg-[rgba(255,138,0,0.08)] transition-all duration-200">
+                  className="text-muted-foreground hover:text-[#FF8A00] hover:bg-[rgba(255,138,0,0.08)] transition-all duration-200">
                   <RefreshCw className={`h-4 w-4 mr-2 ${refreshing ? 'animate-spin' : ''}`} />
                   {refreshing ? 'Aktualizuji...' : 'Aktualizovat'}
                 </Button>
@@ -760,7 +756,7 @@ const Profile: React.FC = () => {
                       <OneMilCoinsIcon size={32} className="h-8 w-8 text-black" />
                     </div>
                     <div className="min-w-0">
-                      <p className="text-xs text-[rgba(255,138,0,0.7)] uppercase tracking-wider mb-0.5">MioCoiny</p>
+                      <p className="text-xs text-[#c2570a] uppercase tracking-wider mb-0.5">MioCoiny</p>
                       <p className="text-4xl lg:text-5xl font-black text-[#FFB547] tabular-nums tracking-tight truncate">
                         {animatedBalance.toLocaleString('cs-CZ', { minimumFractionDigits: 0, maximumFractionDigits: 1 })}
                       </p>
@@ -775,7 +771,7 @@ const Profile: React.FC = () => {
                       </div>
                       <div className="min-w-0">
                         <div className="flex items-center gap-2 mb-0.5">
-                          <p className="text-xs text-green-500/80 uppercase tracking-wider">Bonusové</p>
+                          <p className="text-xs text-green-700 uppercase tracking-wider">Bonusové</p>
                           <TooltipProvider>
                             <Tooltip>
                               <TooltipTrigger asChild>
@@ -787,7 +783,7 @@ const Profile: React.FC = () => {
                             </Tooltip>
                           </TooltipProvider>
                         </div>
-                        <p className="text-2xl font-bold text-green-500 tabular-nums truncate">
+                        <p className="text-2xl font-bold text-green-600 tabular-nums truncate">
                           {animatedBonusBalance.toLocaleString('cs-CZ', { minimumFractionDigits: 0, maximumFractionDigits: 1 })}
                         </p>
                       </div>
@@ -804,14 +800,16 @@ const Profile: React.FC = () => {
 
               {/* Action buttons */}
               <div className="flex flex-col sm:flex-row gap-3 mb-5">
-                <Button onClick={() => setShowTopUpModal(true)}
-                  className="flex-1 bg-gradient-to-r from-[#FF8A00] to-[#FFB547] hover:from-[#FFB547] hover:to-[#FF8A00] text-black font-bold shadow-lg shadow-[rgba(255,138,0,0.2)] transition-all duration-200"
-                  size="lg">
-                  <OneMilCoinsIcon size={20} className="h-5 w-5 mr-2" />
-                  Dobít MioCoiny
-                </Button>
+                {!isNativeApp() && (
+                  <Button onClick={() => setShowTopUpModal(true)}
+                    className="flex-1 bg-gradient-to-r from-[#FF8A00] to-[#FFB547] hover:from-[#FFB547] hover:to-[#FF8A00] text-black font-bold shadow-lg shadow-[rgba(255,138,0,0.2)] transition-all duration-200"
+                    size="lg">
+                    <OneMilCoinsIcon size={20} className="h-5 w-5 mr-2" />
+                    Dobít MioCoiny
+                  </Button>
+                )}
                 <Button onClick={() => navigate('/my-contests')} variant="outline"
-                  className="flex-1 border-[rgba(255,138,0,0.3)] hover:border-[rgba(255,138,0,0.5)] hover:bg-[rgba(255,138,0,0.06)] text-[#E7EBF0] font-semibold transition-all duration-200"
+                  className="flex-1 border-[rgba(255,138,0,0.3)] hover:border-[rgba(255,138,0,0.5)] hover:bg-[rgba(255,138,0,0.06)] text-foreground font-semibold transition-all duration-200"
                   size="lg">
                   <GamepadIcon className="h-5 w-5 mr-2" />
                   Moje hry
@@ -821,23 +819,23 @@ const Profile: React.FC = () => {
               {/* Transfer history */}
               <div className="pt-5 border-t border-[rgba(255,138,0,0.12)]">
                 <div className="flex items-center justify-between mb-3">
-                  <h3 className="text-sm font-semibold text-[#8E98A6] uppercase tracking-wider">Historie převodů</h3>
+                  <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider">Historie převodů</h3>
                   {bonusTransfers.length > 3 && (
                     <Button variant="ghost" size="sm"
                       onClick={() => setHistoryExpanded(!historyExpanded)}
-                      className="text-xs text-[#8E98A6] hover:text-[#FF8A00] flex items-center gap-1">
+                      className="text-xs text-muted-foreground hover:text-[#FF8A00] flex items-center gap-1">
                       {historyExpanded ? 'Skrýt historii' : 'Zobrazit celou historii'}
                       <ChevronDown className={`h-4 w-4 transition-transform duration-200 ${historyExpanded ? 'rotate-180' : ''}`} />
                     </Button>
                   )}
                 </div>
                 {bonusTransfersLoading ? (
-                  <div className="flex items-center gap-2 text-sm text-[#8E98A6]">
+                  <div className="flex items-center gap-2 text-sm text-muted-foreground">
                     <Loader2 className="h-4 w-4 animate-spin" />
                     Načítám...
                   </div>
                 ) : bonusTransfers.length === 0 ? (
-                  <p className="text-sm text-[#8E98A6] italic">Zatím žádné převody bonusových MioCoinů</p>
+                  <p className="text-sm text-muted-foreground italic">Zatím žádné převody bonusových MioCoinů</p>
                 ) : (
                   <div
                     className={`space-y-2 pr-1 ${
@@ -857,7 +855,7 @@ const Profile: React.FC = () => {
                           <span className="text-sm text-foreground">Převod bonusových MioCoinů</span>
                         </div>
                         <div className="flex items-center gap-4 pl-8 sm:pl-0">
-                          <span className="text-sm font-bold text-green-500">+{transfer.amount} MioCoinů</span>
+                          <span className="text-sm font-bold text-green-700">+{transfer.amount} MioCoinů</span>
                           <span className="text-xs text-muted-foreground">
                             {new Date(transfer.created_at).toLocaleString('cs-CZ', {
                               day: '2-digit',
@@ -876,6 +874,48 @@ const Profile: React.FC = () => {
             </div>
           </PremiumCard>
 
+          {/* Zprávy — hlavní vstup do konverzace s podporou (web, PWA i nativní aplikace). */}
+          <PremiumCard>
+            <div className="p-6">
+              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+                <div className="flex items-center gap-4 min-w-0">
+                  <div className="relative shrink-0">
+                    <SectionTile icon={<OneMilMessageIcon size={24} className="w-6 h-6 text-black" />} />
+                    {unreadCount > 0 && (
+                      <span
+                        className="absolute -top-2 -right-2 bg-red-500 text-white text-[11px] font-bold rounded-full px-[7px] py-[1px] shadow-lg"
+                        aria-hidden="true"
+                      >
+                        {unreadCount}
+                      </span>
+                    )}
+                  </div>
+                  <div className="min-w-0">
+                    <h2 className="text-xl font-bold text-foreground">Zprávy</h2>
+                    <p className="text-sm text-muted-foreground">
+                      {unreadCount > 0
+                        ? `Máte ${unreadCount} nepřečtených zpráv`
+                        : 'Konverzace s podporou OneMil'}
+                    </p>
+                  </div>
+                </div>
+                <Button
+                  onClick={() => navigate('/messages')}
+                  size="lg"
+                  className="w-full sm:w-auto bg-gradient-to-r from-[#FF8A00] to-[#FFB547] hover:from-[#FFB547] hover:to-[#FF8A00] text-black font-bold shadow-lg shadow-[rgba(255,138,0,0.2)] transition-all duration-200"
+                >
+                  <OneMilMessageIcon size={20} className="h-5 w-5 mr-2" />
+                  Otevřít zprávy
+                  {unreadCount > 0 && (
+                    <span className="ml-2 rounded-full bg-black/20 px-2 py-0.5 text-xs font-bold tabular-nums">
+                      {unreadCount}
+                    </span>
+                  )}
+                </Button>
+              </div>
+            </div>
+          </PremiumCard>
+
           {/* MioCoin code redemption — separate from referral code */}
           <RedeemMioCoinCard onRedeemed={fetchUserWallet} />
 
@@ -887,8 +927,8 @@ const Profile: React.FC = () => {
                 <div className="flex items-center gap-4">
                   <SectionTile icon={<OneMilProfileIcon size={24} className="w-6 h-6 text-black" />} />
                   <div>
-                    <h2 className="text-xl font-bold text-[#E7EBF0]">Osobní údaje</h2>
-                    <p className="text-sm text-gray-400">Profil a kontaktní informace</p>
+                    <h2 className="text-xl font-bold text-foreground">Osobní údaje</h2>
+                    <p className="text-sm text-muted-foreground">Profil a kontaktní informace</p>
                   </div>
                 </div>
                 {!editMode && (
@@ -897,7 +937,7 @@ const Profile: React.FC = () => {
                     size="default" 
                     type="button"
                     onClick={() => setEditMode(true)}
-                    className="relative z-20 border-[rgba(255,138,0,0.3)] bg-[rgba(255,138,0,0.04)] hover:bg-[rgba(255,138,0,0.08)] hover:border-[rgba(255,138,0,0.5)] text-[#FF8A00] hover:text-[#FFB547] transition-all duration-300 font-semibold px-6 rounded-xl hover:shadow-lg hover:shadow-[rgba(255,138,0,0.08)] hover:scale-[1.02]"
+                    className="relative z-20 border-[rgba(255,138,0,0.3)] bg-[rgba(255,138,0,0.04)] hover:bg-[rgba(255,138,0,0.08)] hover:border-[rgba(255,138,0,0.5)] text-[#c2570a] hover:text-[#e26305] transition-all duration-300 font-semibold px-6 rounded-xl hover:shadow-lg hover:shadow-[rgba(255,138,0,0.08)] hover:scale-[1.02]"
                   >
                     <OneMilDiamondIcon size={16} className="h-4 w-4 mr-2" />
                     Upravit
@@ -1122,8 +1162,8 @@ const Profile: React.FC = () => {
               <div className="flex items-center gap-4 mb-5">
                 <SectionTile icon={<OneMilShieldIcon size={24} className="w-6 h-6 text-black" />} />
                 <div>
-                  <h2 className="text-xl font-bold text-[#E7EBF0]">Účet</h2>
-                  <p className="text-sm text-gray-400">Přihlašovací údaje</p>
+                  <h2 className="text-xl font-bold text-foreground">Účet</h2>
+                  <p className="text-sm text-muted-foreground">Přihlašovací údaje</p>
                 </div>
               </div>
               <div className="space-y-3">
@@ -1133,13 +1173,13 @@ const Profile: React.FC = () => {
                       <OneMilEmailIcon size={18} className="text-[#FF8A00]" />
                     </div>
                     <div className="flex-1 min-w-0">
-                      <p className="text-xs text-[#8E98A6] uppercase tracking-wider mb-1">E-mailová adresa</p>
-                      <p className="text-base font-semibold text-[#E7EBF0] truncate">{wallet?.email || user?.email}</p>
+                      <p className="text-xs text-muted-foreground uppercase tracking-wider mb-1">E-mailová adresa</p>
+                      <p className="text-base font-semibold text-foreground truncate">{wallet?.email || user?.email}</p>
                     </div>
                   </div>
                   <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-green-500/10 border border-green-500/20 shrink-0">
                     <CheckCircle className="h-3 w-3 text-green-500" />
-                    <span className="text-xs font-medium text-green-500">Ověřeno</span>
+                    <span className="text-xs font-medium text-green-700">Ověřeno</span>
                   </div>
                 </div>
                 {wallet?.name && (
@@ -1148,8 +1188,8 @@ const Profile: React.FC = () => {
                       <OneMilProfileIcon size={18} className="text-[#FF8A00]" />
                     </div>
                     <div className="min-w-0">
-                      <p className="text-xs text-[#8E98A6] uppercase tracking-wider mb-1">Jméno účtu</p>
-                      <p className="text-base font-semibold text-[#E7EBF0] truncate">{wallet.name}</p>
+                      <p className="text-xs text-muted-foreground uppercase tracking-wider mb-1">Jméno účtu</p>
+                      <p className="text-base font-semibold text-foreground truncate">{wallet.name}</p>
                     </div>
                   </div>
                 )}
@@ -1163,8 +1203,8 @@ const Profile: React.FC = () => {
               <div className="flex items-center gap-4 mb-5">
                 <SectionTile icon={<OneMilBellIcon size={24} className="w-6 h-6 text-black" />} />
                 <div>
-                  <h2 className="text-xl font-bold text-[#E7EBF0]">Notifikace</h2>
-                  <p className="text-sm text-gray-400">Zvuky a upozornění</p>
+                  <h2 className="text-xl font-bold text-foreground">Notifikace</h2>
+                  <p className="text-sm text-muted-foreground">Zvuky a upozornění</p>
                 </div>
               </div>
 
@@ -1214,9 +1254,9 @@ const Profile: React.FC = () => {
 
               {/* Test notification section */}
               <div className="pt-4 border-t border-[rgba(255,138,0,0.12)]">
-                <p className="text-sm text-[#8E98A6] mb-3">Otestujte si funkčnost push notifikací na vašem zařízení.</p>
+                <p className="text-sm text-muted-foreground mb-3">Otestujte si funkčnost push notifikací na vašem zařízení.</p>
                 <Button onClick={handleTestNotification} variant="outline" disabled={testingNotification}
-                  className="w-full sm:w-auto border-[rgba(255,138,0,0.3)] hover:border-[rgba(255,138,0,0.5)] hover:bg-[rgba(255,138,0,0.06)] text-[#E7EBF0] font-semibold transition-all duration-200">
+                  className="w-full sm:w-auto border-[rgba(255,138,0,0.3)] hover:border-[rgba(255,138,0,0.5)] hover:bg-[rgba(255,138,0,0.06)] text-foreground font-semibold transition-all duration-200">
                   <OneMilBellIcon size={16} className={`h-4 w-4 mr-2 ${testingNotification ? 'animate-pulse' : ''}`} />
                   {testingNotification ? 'Odesílám...' : 'Otestovat notifikaci'}
                 </Button>
@@ -1233,8 +1273,8 @@ const Profile: React.FC = () => {
               <div className="flex items-center gap-4 mb-5">
                 <SectionTile icon={<OneMilEmailIcon size={24} className="w-6 h-6 text-black" />} />
                 <div>
-                  <h2 className="text-xl font-bold text-[#E7EBF0]">Marketingová sdělení</h2>
-                  <p className="text-sm text-gray-400">E-mailové novinky</p>
+                  <h2 className="text-xl font-bold text-foreground">Marketingová sdělení</h2>
+                  <p className="text-sm text-muted-foreground">E-mailové novinky</p>
                 </div>
               </div>
               
@@ -1337,7 +1377,8 @@ const Profile: React.FC = () => {
       </div>
 
       {/* Premium Top-up Modal */}
-      <Dialog open={showTopUpModal} onOpenChange={setShowTopUpModal}>
+      {/* Top-up modal se v nativní aplikaci vůbec nerenderuje — nejde otevřít ani nepřímo. */}
+      <Dialog open={showTopUpModal && !isNativeApp()} onOpenChange={setShowTopUpModal}>
         <DialogContent className="max-w-md border-[rgba(255,138,0,0.15)] bg-gradient-to-br from-card via-card to-[rgba(255,138,0,0.04)] backdrop-blur-xl">
           <DialogHeader>
             <DialogTitle className="text-2xl font-bold flex items-center gap-3">

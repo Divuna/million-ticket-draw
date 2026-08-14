@@ -47,9 +47,10 @@ Deno.serve(async (req) => {
       .from("user_roles")
       .select("role")
       .eq("user_id", user.id)
+      .eq("role", "superadmin")
       .maybeSingle();
 
-    if (roleError || !roleData || !["admin", "superadmin"].includes(roleData.role)) {
+    if (roleError || !roleData) {
       return new Response(
         JSON.stringify({ success: false, error: "Nedostatečná oprávnění" }),
         { status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" } }

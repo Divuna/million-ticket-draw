@@ -55,6 +55,7 @@ import {
   Pencil,
   PhoneCall,
   Save,
+  Trash2,
   Search,
   Send,
   Sparkles,
@@ -81,9 +82,19 @@ import {
   type SalesLeadDetail,
   type DuplicateConflict,
 } from './salesLeadsShared';
+import {
+  RESPONSE_DECLINED_SUMMARY,
+  RESPONSE_INTEREST_SUMMARY,
+} from './salesLeadResponses';
 import { DuplicateConflictAlert } from './DuplicateConflictAlert';
 import { LeadCrmPanel } from './LeadCrmPanel';
 import { SalesLeadEmailTemplatePicker } from './SalesLeadEmailTemplatePicker';
+import {
+  useDraftAutosave,
+  readLocalDraft,
+  clearLocalDraft,
+  DRAFT_AUTOSAVE_LABEL,
+} from './useDraftAutosave';
 import {
   validateSalesLeadEmailContent,
   validateSalesLeadEmailDraft,
@@ -131,8 +142,8 @@ interface ActivityRow {
 const DETAIL_COLUMNS =
   'id, company_name, industry, city, address, status, contact_email, updated_at, assigned_admin_id, ' +
   'ico, dic, website, company_size, contact_person, contact_role, contact_phone, email_source, ' +
-  'email_verified_by_admin, do_not_contact, do_not_contact_reason, notes, created_at, ' +
-  'ai_research_summary, ai_research_at, draft_email_subject, draft_email_body, draft_prepared_by, ' +
+  'email_verified_by_admin, email_verification_method, email_verified_at, do_not_contact, do_not_contact_reason, notes, created_at, ' +
+  'ai_research_summary, ai_research_at, draft_email_subject, draft_email_body, draft_prepared_by, draft_updated_at, ' +
   'lead_group, lead_quality, discovery_source, discovery_meta, website_verification_status, website_verification_source, website_confidence, website_verified_at, website_verification_evidence, alternative_websites, contact_data_provenance, ' +
   'proposed_contact_email, proposed_contact_source_url, proposed_contact_at, ' +
   'proposed_contact_by, proposed_contact_status';
@@ -253,12 +264,16 @@ const ActivityGlyph = ({ type }: { type: string }) => {
 const EmailActivityItem = ({
   activity,
   onReply,
+  onReuse,
   replyForm,
+  reuseForm,
 }: {
   activity: ActivityRow;
   onReply?: (activity: ActivityRow) => void;
+  onReuse?: (activity: ActivityRow, mode: 'resend' | 'forward') => void;
   /** Formulář odpovědi — renderuje se přímo pod TOUTO zprávou, jen když je otevřený. */
   replyForm?: ReactNode;
+  reuseForm?: ReactNode;
 }) => {
   const [showFullBody, setShowFullBody] = useState(false);
   const [showQuoted, setShowQuoted] = useState(false);
@@ -360,12 +375,77 @@ const EmailActivityItem = ({
             Odpovědět
           </Button>
         )}
+        {!isInbound && onReuse && !reuseForm && (
+          <div className="mt-2 flex flex-wrap gap-2">
+            <Button type="button" variant="outline" size="sm" onClick={() => onReuse(activity, 'resend')}>
+              Odeslat znovu
+            </Button>
+            <Button type="button" variant="outline" size="sm" onClick={() => onReuse(activity, 'forward')}>
+              Přeposlat na jiný e-mail
+            </Button>
+          </div>
+        )}
         {/* Formulář odpovědi — přímo pod zprávou, na kterou uživatel klikl. */}
         {replyForm}
+        {reuseForm}
       </div>
     </li>
   );
 };
+
+const InlineReuseForm = ({
+  mode,
+  recipient,
+  subject,
+  body,
+  sending,
+  onRecipientChange,
+  onSubjectChange,
+  onBodyChange,
+  onSend,
+  onCancel,
+}: {
+  mode: 'resend' | 'forward';
+  recipient: string;
+  subject: string;
+  body: string;
+  sending: boolean;
+  onRecipientChange: (value: string) => void;
+  onSubjectChange: (value: string) => void;
+  onBodyChange: (value: string) => void;
+  onSend: () => void;
+  onCancel: () => void;
+}) => (
+  <div className="mt-4 space-y-3 rounded-xl border border-primary/30 bg-background/90 p-4 shadow-sm">
+    <div className="flex items-center justify-between gap-2">
+      <div className="text-sm font-medium">
+        {mode === 'forward' ? 'Přeposlat na jiný e-mail' : 'Odeslat e-mail znovu'}
+      </div>
+      <Button type="button" variant="ghost" size="sm" onClick={onCancel} disabled={sending}>Zrušit</Button>
+    </div>
+    <div className="space-y-1">
+      <Label htmlFor="reuse-recipient">Příjemce</Label>
+      <Input id="reuse-recipient" type="email" value={recipient} onChange={(event) => onRecipientChange(event.target.value)} disabled={sending} maxLength={320} />
+    </div>
+    <div className="space-y-1">
+      <Label htmlFor="reuse-subject">Předmět</Label>
+      <Input id="reuse-subject" value={subject} onChange={(event) => onSubjectChange(event.target.value)} disabled={sending} maxLength={300} />
+    </div>
+    <div className="space-y-1">
+      <Label htmlFor="reuse-body">Text e-mailu</Label>
+      <Textarea id="reuse-body" value={body} onChange={(event) => onBodyChange(event.target.value)} disabled={sending} rows={8} maxLength={20000} />
+    </div>
+    <p className="text-xs text-muted-foreground">
+      Nic se neodešle automaticky. Hlavní kontakt leadu se změnou příjemce neupraví.
+    </p>
+    <div className="flex justify-end">
+      <Button type="button" onClick={onSend} disabled={sending} className="gap-1.5">
+        {sending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
+        Odeslat e-mail
+      </Button>
+    </div>
+  </div>
+);
 
 /**
  * Formulář odpovědi zobrazený inline pod vybranou příchozí zprávou.
@@ -508,6 +588,7 @@ export function SalesLeadDetailSheet({ leadId, open, onOpenChange, onMutated }: 
   const [activityAuthors, setActivityAuthors] = useState<Record<string,string>>({});
   const [loading, setLoading] = useState(false);
   const [editing, setEditing] = useState(false);
+  const [approving, setApproving] = useState(false);
   const [form, setForm] = useState<EditForm | null>(null);
   const [saving, setSaving] = useState(false);
   const [aresLoading, setAresLoading] = useState(false);
@@ -526,6 +607,7 @@ export function SalesLeadDetailSheet({ leadId, open, onOpenChange, onMutated }: 
   const [draftSubject, setDraftSubject] = useState('');
   const [draftBody, setDraftBody] = useState('');
   const draftTouchedRef = useRef(false);
+  const [deleteDraftOpen, setDeleteDraftOpen] = useState(false);
   const draftComposerLeadIdRef = useRef<string | null>(null);
   const [draftExpandedOpen, setDraftExpandedOpen] = useState(false);
   const [draftAttachments, setDraftAttachments] = useState<SalesLeadEmailAttachment[]>([]);
@@ -551,6 +633,12 @@ export function SalesLeadDetailSheet({ leadId, open, onOpenChange, onMutated }: 
   const [replySending, setReplySending] = useState(false);
   const [replyAiBusy, setReplyAiBusy] = useState(false);
   const [replyAttachments, setReplyAttachments] = useState<SalesLeadEmailAttachment[]>([]);
+  const [reuseActivity, setReuseActivity] = useState<ActivityRow | null>(null);
+  const [reuseMode, setReuseMode] = useState<'resend' | 'forward'>('resend');
+  const [reuseRecipient, setReuseRecipient] = useState('');
+  const [reuseSubject, setReuseSubject] = useState('');
+  const [reuseBody, setReuseBody] = useState('');
+  const [reuseSending, setReuseSending] = useState(false);
   const [templatePickerType, setTemplatePickerType] = useState<SalesLeadEmailTemplateType | null>(null);
 
   const load = useCallback(async () => {
@@ -620,6 +708,7 @@ export function SalesLeadDetailSheet({ leadId, open, onOpenChange, onMutated }: 
       setDuplicateConflicts([]);
       setOverrideReason('');
       setReplyToActivity(null);
+      setReuseActivity(null);
       setAresLoading(false);
       setIcoError('');
       setPendingAresResult(null);
@@ -781,6 +870,92 @@ export function SalesLeadDetailSheet({ leadId, open, onOpenChange, onMutated }: 
     await saveEdit(true);
   };
 
+  /**
+   * Schválení navrženého leadu JEDNOU akcí: uloží právě upravená pole
+   * (včetně `email_verified_by_admin`) a zároveň změní stav `navrzeny → novy`.
+   *
+   * Vše dělá jediná transakční RPC `sales_lead_approve_proposed`, která uvnitř
+   * volá existující `sales_lead_update_fields` + `sales_lead_set_status` —
+   * duplicitní kontroly, historie stavu i audit tedy zůstávají beze změny
+   * a lead nikdy nezůstane napůl uložený.
+   *
+   * Schválit lze i bez zaškrtnutého ověření e-mailu; odesílání e-mailů hlídají
+   * beze změny stávající kontroly jinde.
+   */
+  const approveProposed = async (confirmOverride = false) => {
+    if (!lead || lead.status !== 'navrzeny') return;
+    if (confirmOverride && overrideReason.trim().length < 3) {
+      toast.error('Uveďte důvod výjimky alespoň 3 znaky.');
+      return;
+    }
+    // Když se needituje, vezmi aktuální hodnoty leadu.
+    const values = editing && form ? form : toForm(lead);
+
+    if (values.ico.trim() && !isValidSalesLeadIco(values.ico)) {
+      setIcoError(SALES_LEAD_ICO_ERROR);
+      toast.error(SALES_LEAD_ICO_ERROR);
+      return;
+    }
+    if (!values.company_name.trim()) {
+      toast.error('Název firmy je povinný');
+      return;
+    }
+    const website = values.website.trim();
+    const normalizedWebsite = website
+      ? (/^https?:\/\//i.test(website) ? website : `https://${website}`)
+      : '';
+    if (normalizedWebsite && isNonOfficialWebsiteUrl(normalizedWebsite)) {
+      toast.error('Katalog, rejstřík, sociální síť ani cizí profil nelze uložit jako firemní web.');
+      return;
+    }
+
+    setApproving(true);
+    try {
+      const { data, error } = await (supabase as any).rpc('sales_lead_approve_proposed', {
+        p_lead_id: lead.id,
+        p_company_name: values.company_name.trim(),
+        p_ico: values.ico.trim() || null,
+        p_dic: values.dic.trim() || null,
+        p_website: normalizedWebsite || null,
+        p_industry: values.industry || null,
+        p_city: values.city.trim() || null,
+        p_address: values.address.trim() || null,
+        p_company_size: values.company_size || null,
+        p_contact_person: values.contact_person.trim() || null,
+        p_contact_role: values.contact_role.trim() || null,
+        p_contact_email: values.contact_email.trim() || null,
+        p_contact_phone: values.contact_phone.trim() || null,
+        p_email_source: values.email_source.trim() || null,
+        p_email_verified_by_admin: values.email_verified_by_admin,
+        p_notes: values.notes.trim() || null,
+        p_duplicate_override: confirmOverride,
+        p_duplicate_override_reason: confirmOverride ? overrideReason.trim() : null,
+      });
+      if (error) throw new Error(error.message);
+      const res = (data ?? {}) as { success?: boolean; error?: string; conflicts?: DuplicateConflict[] };
+      if (!res.success) {
+        if (res.error === 'duplicate_conflict' || res.error === 'duplicate_override_reason_required') {
+          setDuplicateConflicts(res.conflicts ?? []);
+          setEditing(true);
+        }
+        toast.error(rpcErrorMessage(res.error));
+        return;
+      }
+      toast.success('Lead byl schválen a uložen.');
+      setPendingStatus(null);
+      setReason('');
+      setEditing(false);
+      setDuplicateConflicts([]);
+      setOverrideReason('');
+      await load();
+      onMutated();
+    } catch (err: unknown) {
+      toast.error(err instanceof Error ? err.message : 'Schválení se nezdařilo');
+    } finally {
+      setApproving(false);
+    }
+  };
+
   const startReply = (activity: ActivityRow) => {
     setReplyToActivity(activity);
     setReplySubject(activity.subject?.toLowerCase().startsWith('re:') ? activity.subject : `Re: ${activity.subject ?? ''}`);
@@ -819,6 +994,67 @@ export function SalesLeadDetailSheet({ leadId, open, onOpenChange, onMutated }: 
     } catch (err: unknown) {
       toast.error(err instanceof Error ? err.message : 'Odpověď se nepodařilo odeslat.');
     } finally { setReplySending(false); }
+  };
+
+  const startReuse = (activity: ActivityRow, mode: 'resend' | 'forward') => {
+    const originalRecipient = typeof activity.metadata?.to === 'string'
+      ? activity.metadata.to
+      : lead?.contact_email ?? '';
+    setReuseActivity(activity);
+    setReuseMode(mode);
+    setReuseRecipient(mode === 'forward' ? '' : originalRecipient);
+    setReuseSubject(activity.subject ?? '');
+    setReuseBody(activity.body_snapshot ?? '');
+  };
+
+  const sendReusedEmail = async () => {
+    if (!lead || !reuseActivity) return;
+    if (lead.do_not_contact) {
+      toast.error('Lead je označený „Nekontaktovat“. E-mail nebyl odeslán.');
+      return;
+    }
+    const recipient = reuseRecipient.trim().toLowerCase();
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(recipient)) {
+      toast.error('Zadejte platnou e-mailovou adresu příjemce.');
+      return;
+    }
+    const validationErrors = validateSalesLeadEmailContent('initial', reuseSubject, reuseBody);
+    if (validationErrors.length > 0) {
+      toast.error(validationErrors[0]);
+      return;
+    }
+    setReuseSending(true);
+    try {
+      const { data, error } = await supabase.functions.invoke('send-sales-lead-email', {
+        body: {
+          lead_id: lead.id,
+          reuse_source_activity_id: reuseActivity.id,
+          reuse_mode: reuseMode,
+          recipient,
+          subject: reuseSubject,
+          body: reuseBody,
+        },
+      });
+      if (error) throw new Error(error.message);
+      const res = (data ?? {}) as { success?: boolean; error?: string; warning?: string; email_sent?: boolean };
+      if (!res.success) {
+        toast.error(rpcErrorMessage(res.error));
+        if (res.email_sent) {
+          setReuseActivity(null);
+          await load();
+          onMutated();
+        }
+        return;
+      }
+      toast.success(reuseMode === 'forward' ? 'E-mail byl přeposlán.' : 'E-mail byl znovu odeslán.');
+      setReuseActivity(null);
+      await load();
+      onMutated();
+    } catch (err: unknown) {
+      toast.error(err instanceof Error ? err.message : 'E-mail se nepodařilo odeslat.');
+    } finally {
+      setReuseSending(false);
+    }
   };
 
   const targets = useMemo(
@@ -918,9 +1154,20 @@ export function SalesLeadDetailSheet({ leadId, open, onOpenChange, onMutated }: 
       return;
     }
     const sameLeadComposer = draftComposerLeadIdRef.current === lead.id;
-    setDraftSubject(sameLeadComposer ? draftSubject : lead.draft_email_subject ?? '');
-    setDraftBody(sameLeadComposer ? draftBody : lead.draft_email_body ?? '');
-    if (!sameLeadComposer) draftTouchedRef.current = false;
+    if (sameLeadComposer) {
+      setDraftSubject(draftSubject);
+      setDraftBody(draftBody);
+    } else {
+      // Obnov poslední uložený koncept; pokud v zařízení zůstala NOVĚJŠÍ
+      // neodeslaná verze (výpadek sítě), automaticky ji vrátíme.
+      const local = readLocalDraft(lead.id);
+      const serverAt = lead.draft_updated_at ? Date.parse(lead.draft_updated_at) : 0;
+      const useLocal = local !== null && local.updatedAt > serverAt;
+      setDraftSubject(useLocal ? local.subject : lead.draft_email_subject ?? '');
+      setDraftBody(useLocal ? local.body : lead.draft_email_body ?? '');
+      draftTouchedRef.current = useLocal;
+      if (useLocal) toast.message('Obnovena novější neuložená verze konceptu z tohoto zařízení.');
+    }
     draftComposerLeadIdRef.current = lead.id;
     setAiWorkspaceOpen(true);
   };
@@ -940,6 +1187,67 @@ export function SalesLeadDetailSheet({ leadId, open, onOpenChange, onMutated }: 
       toast.warning(`Šablona „${value.templateName}“ obsahuje nedoplněné proměnné: ${value.unresolved.join(', ')}`);
     } else {
       toast.success(`Šablona „${value.templateName}“ byla vložena do editoru.`);
+    }
+  };
+
+  /**
+   * Tiché automatické ukládání konceptu. Má VLASTNÍ stav — záměrně nepoužívá
+   * `draftSaving`, který zakazuje inputy (to by při psaní shodilo kurzor).
+   * Po uložení obnoví jen seznam/počty v rodiči, nikdy nesahá na text editoru.
+   */
+  const autosave = useDraftAutosave({
+    leadId: lead?.id ?? null,
+    subject: draftSubject,
+    body: draftBody,
+    enabled: Boolean(lead) && aiWorkspaceOpen,
+    onPersisted: onMutated,
+  });
+
+  /**
+   * Best-effort vyčištění konceptu na serveru. Záměrně samostatná funkce —
+   * úklid nesmí být nikdy blízko mazání editoru, aby při chybě odeslání
+   * nemohl přijít rozepsaný text uživatele.
+   */
+  const clearServerDraft = async (targetLeadId: string) => {
+    try {
+      await (supabase as any).rpc('sales_lead_autosave_draft', {
+        p_lead_id: targetLeadId,
+        p_subject: '',
+        p_body: '',
+        p_client_updated_at: new Date().toISOString(),
+      });
+      clearLocalDraft(targetLeadId);
+    } catch {
+      // odeslání už proběhlo; koncept se doklidí při dalším uložení
+    }
+  };
+
+  const deleteDraft = async () => {
+    if (!lead) return;
+    setDraftSaving(true);
+    try {
+      const { data, error } = await (supabase as any).rpc('sales_lead_autosave_draft', {
+        p_lead_id: lead.id,
+        p_subject: '',
+        p_body: '',
+        p_client_updated_at: new Date().toISOString(),
+      });
+      if (error) throw new Error(error.message);
+      const res = (data ?? {}) as { success?: boolean; error?: string };
+      if (!res.success) { toast.error(rpcErrorMessage(res.error)); return; }
+      setDraftSubject('');
+      setDraftBody('');
+      draftTouchedRef.current = false;
+      autosave.reset();
+      clearLocalDraft(lead.id);
+      setDeleteDraftOpen(false);
+      toast.success('Koncept smazán');
+      await load();
+      onMutated();
+    } catch (err: unknown) {
+      toast.error(err instanceof Error ? err.message : 'Smazání konceptu se nezdařilo');
+    } finally {
+      setDraftSaving(false);
     }
   };
 
@@ -966,6 +1274,7 @@ export function SalesLeadDetailSheet({ leadId, open, onOpenChange, onMutated }: 
       toast.success('Koncept uložen');
       draftTouchedRef.current = false;
       draftComposerLeadIdRef.current = lead.id;
+      autosave.markSaved(draftSubject, draftBody);
       await load();
       onMutated();
     } catch (err: unknown) {
@@ -1005,10 +1314,9 @@ export function SalesLeadDetailSheet({ leadId, open, onOpenChange, onMutated }: 
     }
   };
 
-  // ── Dohledání veřejného kontaktu (Fáze 5B) — AI nevymýšlí, jen návrh ──────
-  // EF sales-lead-enrich-contact najde VEŘEJNÝ e-mail a uloží ho jen jako
-  // NEOVĚŘENÝ návrh (proposed_contact_*). Odesílací contact_email zůstává beze
-  // změny — vyplní ho teprve člověk schválením níže.
+  // ── Dohledání veřejného kontaktu ──────────────────────────────────────────
+  // AI vrátí pouze kandidáta a přesnou URL. Teprve backendové nalezení přesně
+  // stejné adresy na ověřeném oficiálním webu dovolí atomické uložení kontaktu.
   const runEnrich = async () => {
     if (!lead) return;
     setEnrichBusy(true);
@@ -1017,16 +1325,16 @@ export function SalesLeadDetailSheet({ leadId, open, onOpenChange, onMutated }: 
         body: { lead_id: lead.id },
       });
       if (error) throw new Error(error.message);
-      const res = (data ?? {}) as { success?: boolean; error?: string; found?: boolean };
+      const res = (data ?? {}) as { success?: boolean; error?: string; found?: boolean; reason?: string };
       if (!res.success) {
         toast.error(rpcErrorMessage(res.error));
         return;
       }
       if (res.found === false) {
-        toast.info('Veřejný e-mail se nepodařilo dohledat. AI nic nevymýšlí.');
+        toast.info(res.reason ? rpcErrorMessage(res.reason) : 'Veřejný e-mail se nepodařilo bezpečně ověřit. Nic nebylo uloženo.');
         return;
       }
-      toast.success('Návrh e-mailu uložen — schvalte ho ručně níže.');
+      toast.success('E-mail byl systémově ověřen na oficiálním webu a uložen.');
       await load();
       onMutated();
     } catch (err: unknown) {
@@ -1071,6 +1379,17 @@ export function SalesLeadDetailSheet({ leadId, open, onOpenChange, onMutated }: 
   const replyValidationErrors = validateSalesLeadEmailContent('reply', replySubject, replyBody);
   const hasContactEmail = !!lead?.contact_email && lead.email_verified_by_admin === true;
   const isDoNotContact = !!lead?.do_not_contact;
+  // Reakce na tlačítka v obchodním e-mailu. `activities` je řazeno created_at
+  // DESC → první nález je ta poslední reakce. Ručně nastavené „Nekontaktovat“
+  // nemá metadata.source, takže se sem nikdy nedostane.
+  const interestResponse = activities.find((a) =>
+    a.activity_type === 'reply_received'
+    && a.direction === 'inbound'
+    && a.metadata?.source === 'interest_link') ?? null;
+  const declineResponse = activities.find((a) =>
+    a.activity_type === 'do_not_contact_set'
+    && a.direction === 'inbound'
+    && a.metadata?.source === 'decline_link') ?? null;
   const initialEmailStatusAllowed = !!lead && isInitialEmailStatusAllowed(lead.status);
   // activities je řazeno created_at DESC → první email_sent je ten poslední.
   const lastEmailSent = activities.find((a) => a.activity_type === 'email_sent') ?? null;
@@ -1111,6 +1430,13 @@ export function SalesLeadDetailSheet({ leadId, open, onOpenChange, onMutated }: 
       setSendConfirmOpen(false);
       setDraftAttachments([]);
       setDraftExpandedOpen(false);
+      // Koncept je vyřízený → lead zmizí z Rozpracovaných.
+      // Odeslaný e-mail zůstává v historii (aktivity se nemění).
+      autosave.reset();
+      setDraftSubject('');
+      setDraftBody('');
+      draftTouchedRef.current = false;
+      await clearServerDraft(lead.id);
       await load();
       onMutated();
     } catch (err: unknown) {
@@ -1187,7 +1513,15 @@ export function SalesLeadDetailSheet({ leadId, open, onOpenChange, onMutated }: 
   };
 
   return (
-    <Sheet open={open} onOpenChange={onOpenChange}>
+    <Sheet
+      open={open}
+      onOpenChange={(nextOpen) => {
+        // Při zavření detailu okamžitě ulož poslední změny konceptu.
+        // Žádné potvrzovací okno — koncept je bezpečně uložený.
+        if (!nextOpen) void autosave.flush();
+        onOpenChange(nextOpen);
+      }}
+    >
       <SheetContent data-testid="sales-lead-crm-workspace" className="inset-0 flex h-dvh w-screen max-w-none flex-col gap-0 overflow-hidden border-0 bg-background p-0 sm:max-w-none">
         {loading || !lead ? (
           <div className="flex flex-1 items-center justify-center text-muted-foreground">
@@ -1221,16 +1555,23 @@ export function SalesLeadDetailSheet({ leadId, open, onOpenChange, onMutated }: 
                 {!pendingStatus && targets.length > 0 && (
                   <div className="flex shrink-0 flex-wrap items-center gap-2 xl:max-w-[420px] xl:justify-end">
                     {targets.map((t) => {
-                      const label = lead.status === 'navrzeny' && t === 'novy' ? 'Schválit návrh' : STATUS_LABELS[t];
+                      // Schválení návrhu je JEDNA akce — uloží údaje i změní stav.
+                      // Žádné mezikroky „Schválit návrh" → „Změnit stav na Nový?".
+                      const isApprove = lead.status === 'navrzeny' && t === 'novy';
                       return (
                         <Button
                           key={t}
-                          variant={lead.status === 'navrzeny' && t === 'novy' ? 'default' : 'outline'}
+                          variant={isApprove ? 'default' : 'outline'}
                           size="sm"
-                          onClick={() => { setPendingStatus(t); setReason(''); }}
-                          className={lead.status === 'navrzeny' && t === 'novy' ? 'h-9 rounded-xl px-4 font-semibold shadow-md shadow-primary/20 transition-colors duration-150' : 'h-9 rounded-xl border-white/[0.09] bg-background/60 px-4 transition-colors duration-150 hover:bg-muted/70'}
+                          data-testid={isApprove ? 'sl-approve-proposed' : undefined}
+                          disabled={isApprove && (approving || saving)}
+                          onClick={isApprove
+                            ? () => void approveProposed(false)
+                            : () => { setPendingStatus(t); setReason(''); }}
+                          className={isApprove ? 'h-9 gap-1.5 rounded-xl px-4 font-semibold shadow-md shadow-primary/20 transition-colors duration-150' : 'h-9 rounded-xl border-white/[0.09] bg-background/60 px-4 transition-colors duration-150 hover:bg-muted/70'}
                         >
-                          {label}
+                          {isApprove && approving && <Loader2 className="h-3.5 w-3.5 animate-spin" />}
+                          {isApprove ? 'Schválit a uložit lead' : STATUS_LABELS[t]}
                         </Button>
                       );
                     })}
@@ -1303,15 +1644,109 @@ export function SalesLeadDetailSheet({ leadId, open, onOpenChange, onMutated }: 
               )}
               {lead.status === 'navrzeny' && (
                 <p className="text-[11px] text-muted-foreground">
-                  Navržený lead: rozhodněte ručně — <strong>Schválit návrh</strong> (→ Nový),
-                  <strong> Nekontaktovat</strong> nebo <strong>Archivován</strong>. Do oslovování ani
-                  odesílání e-mailu se z návrhu nedostanete přímo — nejdřív musí projít schválením.
+                  Navržený lead: rozhodněte ručně — <strong>Schválit a uložit lead</strong> (uloží
+                  úpravy a rovnou přepne na Nový), <strong>Nekontaktovat</strong> nebo
+                  <strong> Archivován</strong>. Do oslovování ani odesílání e-mailu se z návrhu
+                  nedostanete přímo — nejdřív musí projít schválením.
                 </p>
               )}
               {lead.do_not_contact && lead.do_not_contact_reason && (
                 <p className="text-xs text-destructive">Nekontaktovat: {lead.do_not_contact_reason}</p>
               )}
             </WorkspaceCard>
+            )}
+
+            {/* Reakce z tlačítka „Mám zájem“ v obchodním e-mailu. */}
+            {interestResponse && (
+              <WorkspaceCard className="order-1 border-emerald-500/30 bg-emerald-500/[0.06]">
+                <div
+                  className="text-[10px] font-semibold uppercase tracking-[0.16em] text-emerald-500"
+                  data-testid="sl-detail-interest-response"
+                >
+                  Reakce z obchodního e-mailu
+                </div>
+                <div className="mt-1 text-sm font-semibold">{RESPONSE_INTEREST_SUMMARY}</div>
+                <dl className="mt-3 grid gap-1.5 text-xs">
+                  <div className="flex gap-2">
+                    <dt className="w-28 shrink-0 text-muted-foreground">Datum a čas</dt>
+                    <dd>{formatDateTime(interestResponse.created_at)}</dd>
+                  </div>
+                  <div className="flex gap-2">
+                    <dt className="w-28 shrink-0 text-muted-foreground">Kontaktní osoba</dt>
+                    <dd>{lead.contact_person?.trim() || '—'}</dd>
+                  </div>
+                  <div className="flex gap-2">
+                    <dt className="w-28 shrink-0 text-muted-foreground">Telefon</dt>
+                    <dd>{lead.contact_phone?.trim() || '—'}</dd>
+                  </div>
+                  <div className="flex gap-2">
+                    <dt className="w-28 shrink-0 text-muted-foreground">E-mail</dt>
+                    <dd>
+                      {(typeof interestResponse.metadata?.recipient === 'string'
+                        ? interestResponse.metadata.recipient
+                        : lead.contact_email) || '—'}
+                    </dd>
+                  </div>
+                  <div className="flex gap-2">
+                    <dt className="w-28 shrink-0 text-muted-foreground">Firma</dt>
+                    <dd>{lead.company_name}</dd>
+                  </div>
+                  {typeof interestResponse.metadata?.batch_item_id === 'string' && (
+                    <div className="flex gap-2">
+                      <dt className="w-28 shrink-0 text-muted-foreground">Původní dávka</dt>
+                      <dd className="font-mono">{interestResponse.metadata.batch_item_id}</dd>
+                    </div>
+                  )}
+                </dl>
+                <p className="mt-3 text-[11px] text-emerald-500">
+                  Kontakt má vysokou prioritu — ozvěte se firmě přednostně.
+                </p>
+              </WorkspaceCard>
+            )}
+
+            {/* Reakce z tlačítka „Nemám zájem“ v obchodním e-mailu. */}
+            {declineResponse && (
+              <WorkspaceCard className="order-1 border-destructive/30 bg-destructive/[0.06]">
+                <div
+                  className="text-[10px] font-semibold uppercase tracking-[0.16em] text-destructive"
+                  data-testid="sl-detail-decline-response"
+                >
+                  Reakce z obchodního e-mailu
+                </div>
+                <div className="mt-1 text-sm font-semibold">{RESPONSE_DECLINED_SUMMARY}</div>
+                <dl className="mt-3 grid gap-1.5 text-xs">
+                  <div className="flex gap-2">
+                    <dt className="w-28 shrink-0 text-muted-foreground">Datum a čas</dt>
+                    <dd>{formatDateTime(declineResponse.created_at)}</dd>
+                  </div>
+                  <div className="flex gap-2">
+                    <dt className="w-28 shrink-0 text-muted-foreground">E-mail</dt>
+                    <dd>
+                      {(typeof declineResponse.metadata?.recipient === 'string'
+                        ? declineResponse.metadata.recipient
+                        : lead.contact_email) || '—'}
+                    </dd>
+                  </div>
+                  <div className="flex gap-2">
+                    <dt className="w-28 shrink-0 text-muted-foreground">Důvod blokace</dt>
+                    <dd>{lead.do_not_contact_reason?.trim() || '—'}</dd>
+                  </div>
+                  <div className="flex gap-2">
+                    <dt className="w-28 shrink-0 text-muted-foreground">Stav odhlášení</dt>
+                    <dd>{lead.do_not_contact ? 'Odhlášeno (Nekontaktovat)' : 'Neaktivní'}</dd>
+                  </div>
+                  {typeof declineResponse.metadata?.batch_item_id === 'string' && (
+                    <div className="flex gap-2">
+                      <dt className="w-28 shrink-0 text-muted-foreground">Původní dávka</dt>
+                      <dd className="font-mono">{declineResponse.metadata.batch_item_id}</dd>
+                    </div>
+                  )}
+                </dl>
+                <p className="mt-3 text-[11px] text-destructive">
+                  Další obchodní e-maily jsou pro tuto adresu blokované. Označení reakce jako
+                  přečtené na tom nic nemění.
+                </p>
+              </WorkspaceCard>
             )}
 
             {/* Zařazení / discovery (Fáze 4B) */}
@@ -1435,8 +1870,13 @@ export function SalesLeadDetailSheet({ leadId, open, onOpenChange, onMutated }: 
                 <ReadRow label="Funkce" value={lead.contact_role} />
                 <ReadRow label="E-mail" value={lead.contact_email} />
                 <ReadRow label="Telefon" value={lead.contact_phone} />
-                <ReadRow label="Zdroj e-mailu" value={lead.email_source} />
-                <ReadRow label="E-mail ověřen" value={lead.email_verified_by_admin ? 'Ano' : 'Ne'} />
+                <ReadRow label="Zdroj e-mailu" value={lead.email_source} href={lead.email_source} />
+                <ReadRow label="E-mail ověřen" value={
+                  lead.email_verification_method === 'backend_verified_official_website'
+                    ? 'Systémově ověřeno'
+                    : lead.email_verified_by_admin ? 'Ručně ověřeno' : 'Ne'
+                } />
+                <ReadRow label="Datum ověření e-mailu" value={lead.email_verified_at ? formatDateTime(lead.email_verified_at) : null} />
                 <ReadRow label="Poznámka" value={lead.notes} />
               </div>
             ) : (
@@ -1535,12 +1975,28 @@ export function SalesLeadDetailSheet({ leadId, open, onOpenChange, onMutated }: 
                 <DuplicateConflictAlert conflicts={duplicateConflicts} reason={overrideReason}
                   onReasonChange={setOverrideReason} disabled={saving} />
                 <div className="flex justify-end gap-2 pt-1">
-                  <Button variant="outline" onClick={() => setEditing(false)} disabled={saving || aresLoading}>Zrušit</Button>
-                  <Button onClick={duplicateConflicts.length > 0 ? confirmEditOverride : () => saveEdit(false)}
-                    variant={duplicateConflicts.length > 0 ? 'destructive' : 'default'} disabled={saving || aresLoading} className="gap-1.5">
-                    {saving && <Loader2 className="h-4 w-4 animate-spin" />}
-                    {duplicateConflicts.length > 0 ? 'Potvrdit výjimku a pokračovat' : 'Uložit'}
-                  </Button>
+                  <Button variant="outline" onClick={() => setEditing(false)} disabled={saving || approving || aresLoading}>Zrušit</Button>
+                  {lead.status === 'navrzeny' ? (
+                    // Navržený lead: jedna hlavní akce — uloží úpravy a rovnou schválí.
+                    <Button
+                      data-testid="sl-approve-proposed-edit"
+                      onClick={duplicateConflicts.length > 0
+                        ? () => void approveProposed(true)
+                        : () => void approveProposed(false)}
+                      variant={duplicateConflicts.length > 0 ? 'destructive' : 'default'}
+                      disabled={saving || approving || aresLoading}
+                      className="gap-1.5"
+                    >
+                      {approving && <Loader2 className="h-4 w-4 animate-spin" />}
+                      {duplicateConflicts.length > 0 ? 'Potvrdit výjimku a schválit' : 'Schválit a uložit lead'}
+                    </Button>
+                  ) : (
+                    <Button onClick={duplicateConflicts.length > 0 ? confirmEditOverride : () => saveEdit(false)}
+                      variant={duplicateConflicts.length > 0 ? 'destructive' : 'default'} disabled={saving || aresLoading} className="gap-1.5">
+                      {saving && <Loader2 className="h-4 w-4 animate-spin" />}
+                      {duplicateConflicts.length > 0 ? 'Potvrdit výjimku a pokračovat' : 'Uložit'}
+                    </Button>
+                  )}
                 </div>
               </div>
             )}
@@ -1559,8 +2015,8 @@ export function SalesLeadDetailSheet({ leadId, open, onOpenChange, onMutated }: 
               </Button>
             </div>
             <p className="text-xs text-muted-foreground mb-3">
-              AI dohledá jen <strong>veřejně uvedený</strong> firemní e-mail a uloží ho jako <strong>neověřený návrh</strong>.
-              E-mail se nikdy nevymýšlí. Odesílací kontakt se vyplní teprve po vašem ručním schválení.
+              AI pouze navrhne veřejný firemní e-mail a přesnou zdrojovou stránku. Kontakt se uloží jen tehdy,
+              když backend najde stejnou adresu na již ověřeném oficiálním webu firmy.
             </p>
 
             {lead.proposed_contact_status === 'neovereny' && lead.proposed_contact_email ? (
@@ -1590,7 +2046,9 @@ export function SalesLeadDetailSheet({ leadId, open, onOpenChange, onMutated }: 
                   </div>
                 )}
                 <p className="text-[11px] text-muted-foreground">
-                  Ověřte, že e-mail patří firmě. Schválením se vyplní odesílací kontakt a označí jako ověřený člověkem.
+                  {lead.proposed_contact_by === 'ai'
+                    ? 'Starý AI návrh nelze schválit bez backendového důkazu. Zamítněte ho a spusťte ověření znovu.'
+                    : 'Ručně vložený návrh můžete po vlastní kontrole schválit.'}
                 </p>
                 <div className="flex justify-end gap-2">
                   <Button
@@ -1603,15 +2061,17 @@ export function SalesLeadDetailSheet({ leadId, open, onOpenChange, onMutated }: 
                     {contactReviewBusy ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <X className="h-3.5 w-3.5" />}
                     Zamítnout e-mail
                   </Button>
-                  <Button
-                    size="sm"
-                    onClick={() => reviewContact('approve')}
-                    disabled={contactReviewBusy}
-                    className="gap-1.5"
-                  >
-                    {contactReviewBusy ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Save className="h-3.5 w-3.5" />}
-                    Schválit e-mail
-                  </Button>
+                  {lead.proposed_contact_by !== 'ai' && (
+                    <Button
+                      size="sm"
+                      onClick={() => reviewContact('approve')}
+                      disabled={contactReviewBusy}
+                      className="gap-1.5"
+                    >
+                      {contactReviewBusy ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Save className="h-3.5 w-3.5" />}
+                      Schválit e-mail
+                    </Button>
+                  )}
                 </div>
               </div>
             ) : (
@@ -1619,7 +2079,10 @@ export function SalesLeadDetailSheet({ leadId, open, onOpenChange, onMutated }: 
                 {lead.contact_email ? (
                   <>
                     Kontaktní e-mail: <strong className="text-foreground break-all">{lead.contact_email}</strong>
-                    {lead.email_verified_by_admin ? ' · ověřeno člověkem' : ' · neověřeno'}
+                    {lead.email_verification_method === 'backend_verified_official_website'
+                      ? ' · systémově ověřeno'
+                      : lead.email_verified_by_admin ? ' · ručně ověřeno' : ' · neověřeno'}
+                    {lead.email_verified_at ? ` · ${formatDateTime(lead.email_verified_at)}` : ''}
                   </>
                 ) : lead.proposed_contact_status === 'zamitnuty' ? (
                   'Poslední návrh e-mailu byl zamítnut. Můžete zkusit dohledat znovu.'
@@ -1755,7 +2218,23 @@ export function SalesLeadDetailSheet({ leadId, open, onOpenChange, onMutated }: 
                   {draftValidationErrors.map((error) => <div key={error}>{error}</div>)}
                 </div>
               )}
-              <div className="flex items-center justify-end gap-2">
+              <div className="flex flex-wrap items-center justify-end gap-2">
+                {/* Nenápadný stav automatického ukládání */}
+                <span
+                  data-testid="sl-draft-autosave-state"
+                  data-state={autosave.state}
+                  className={`mr-auto text-[11px] ${autosave.state === 'offline' ? 'text-amber-500' : 'text-muted-foreground'}`}
+                >
+                  {DRAFT_AUTOSAVE_LABEL[autosave.state]}
+                </span>
+                {(draftSubject.trim() || draftBody.trim()) && (
+                  <Button type="button" size="sm" variant="ghost" data-testid="sl-draft-delete"
+                    onClick={() => setDeleteDraftOpen(true)}
+                    disabled={draftSaving || draftBusy || sending}
+                    className="gap-1.5 text-muted-foreground hover:text-destructive">
+                    <Trash2 className="h-3.5 w-3.5" /> Smazat koncept
+                  </Button>
+                )}
                 <Button type="button" size="sm" variant="outline" onClick={saveDraft} disabled={draftSaving || draftBusy || sending} className="gap-1.5">
                   {draftSaving ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Save className="h-3.5 w-3.5" />}
                   Uložit koncept
@@ -1820,6 +2299,7 @@ export function SalesLeadDetailSheet({ leadId, open, onOpenChange, onMutated }: 
                       key={a.id}
                       activity={a}
                       onReply={startReply}
+                      onReuse={startReuse}
                       replyForm={
                         replyToActivity?.id === a.id ? (
                           <InlineReplyForm
@@ -1838,6 +2318,22 @@ export function SalesLeadDetailSheet({ leadId, open, onOpenChange, onMutated }: 
                             validationErrors={replyValidationErrors}
                             attachments={replyAttachments}
                             onAttachmentsChange={setReplyAttachments}
+                          />
+                        ) : undefined
+                      }
+                      reuseForm={
+                        reuseActivity?.id === a.id ? (
+                          <InlineReuseForm
+                            mode={reuseMode}
+                            recipient={reuseRecipient}
+                            subject={reuseSubject}
+                            body={reuseBody}
+                            sending={reuseSending}
+                            onRecipientChange={setReuseRecipient}
+                            onSubjectChange={setReuseSubject}
+                            onBodyChange={setReuseBody}
+                            onSend={() => void sendReusedEmail()}
+                            onCancel={() => setReuseActivity(null)}
                           />
                         ) : undefined
                       }
@@ -2030,6 +2526,31 @@ export function SalesLeadDetailSheet({ leadId, open, onOpenChange, onMutated }: 
             >
               {sending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
               Odeslat e-mail
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* Smazání konceptu — čistí jen rozepsaný text, ne lead ani historii. */}
+      <AlertDialog open={deleteDraftOpen} onOpenChange={setDeleteDraftOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Smazat rozepsaný koncept?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Smaže se pouze rozepsaný předmět a text e-mailu. Lead ani historie
+              komunikace se nesmažou. Lead zmizí ze záložky „Rozpracované".
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={draftSaving}>Zrušit</AlertDialogCancel>
+            <AlertDialogAction
+              data-testid="sl-draft-delete-confirm"
+              onClick={(e) => { e.preventDefault(); void deleteDraft(); }}
+              disabled={draftSaving}
+              className="gap-1.5"
+            >
+              {draftSaving && <Loader2 className="h-4 w-4 animate-spin" />}
+              Smazat koncept
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

@@ -1,3 +1,309 @@
+# Bezpečné propojení pro externího denního agenta (PRODUKCE, 11. 08. 2026)
+
+**Nasazeno na produkci `xkzhjldrojjlrkezorey`** po výslovném schválení Pavla. PR #344 mergnut do
+`main` (merge commit `acd8aa76`).
+
+**Ověřený produkční stav (read-only, 11. 08. 2026) — tohle přebíjí starší zápisy níže:**
+
+- Automatika **`enabled = true`**, pásmo `Europe/Prague`, okno `08:30–16:30`, **denní limit 90**.
+  Starší text „automatika je stále `enabled=false`" a „limit 20" **už neplatí** (20 je staging).
+- **Worker běží každých 5 minut:** pg_cron job 30 `sales_lead_email_batch_worker_every_5_min`
+  → `run_sales_lead_email_batch_worker_cron()` → Edge Function `process-sales-lead-email-batch`
+  (ACTIVE v10). Za 24 h 288 běhů, všechny `succeeded`.
+- **Edge Function `sales-lead-daily-batch-agent`** nasazena (v1 ACTIVE, `verify_jwt=false`),
+  secret `SALES_LEAD_BATCH_AGENT_SECRET` vytvořen (produkční hodnota ≠ stagingová).
+- Migrace `20260811090000_sales_lead_daily_batch_agent.sql` aplikována.
+
+**Závazné invarianty (neměnit bez schválení Pavla):**
+
+- **`sales_lead_email_batch_agent_run(date, integer)` smí volat POUZE `service_role.`**
+  `anon` i `authenticated` mají EXECUTE odebraný. Nevracet jim ho.
+- **Agent nikdy nedostane service-role klíč ani přihlášení admina.** Autorizuje se výhradně
+  vlastním secretem v hlavičce `Authorization: Bearer`, ověřeným v konstantním čase.
+- **Agent smí poslat jen `target_date` a `requested_count`.** Jakýkoli další klíč v těle → 400
+  `unexpected_field`. Skupinu (`e-shopy`), šablonu i výběr leadů určuje server — nikdy agent.
+- **Šablona = ta z poslední nezrušené dávky**, a musí být stále `is_active` a typu `initial`.
+  Když dřívější dávka není, projde to jen při právě jedné aktivní `initial` šabloně. Jinak
+  fail-closed — raději nic než uhodnout špatný text reálným firmám.
+- **Žádná bariéra se neobchází ani nekopíruje.** RPC ověří vlastníka přes
+  `sales_lead_pick_discovery_owner()` a pod jeho identitou (transakčně lokální
+  `request.jwt.claims`) zavolá existující `prepare_paused` → `activate_admin`. O způsobilosti
+  rozhoduje dál kanonická `sales_lead_email_batch_check_one()`.
+- **Idempotence na den.** Existující dávka pro dané datum se vrátí (`already_exists`), druhá
+  nikdy nevznikne a **stará pozastavená dávka se nikdy neaktivuje** — větev `already_exists`
+  se vrací dřív, než se vůbec dojde k `activate_admin`.
+- **RPC ani Edge Function nikdy neodesílají e-mail** — žádný Resend, žádná `email_queue`, žádné
+  `claim_next`. Rozesílání a rozložení do okna dělá výhradně stávající worker.
+- Do logu smí jít jen `error.code`, nikdy tělo požadavku, hlavičky ani secret.
+- **Kapacita okna je těsná:** worker zpracuje nejvýš jednu položku na běh → ~96 slotů v okně.
+  90 e-mailů denně = ~94 % kapacity. Při náběhu na 70+ (od 17. 8. 2026) sledovat, jestli den dojede.
+
+**Stav agenta Magin (11. 08. 2026):** **vytvořen a naplánován** v Paperclipu 2026.722.0,
+firma `iCONIC POINT s.r.o.`, agent id `3ef09c71-d9a0-43f3-8ce8-c5e9938dae64`, adaptér
+`codex_local`, nadřízený `Provozní ředitel OneMil`. Routine
+`a3ac40b2-7d58-4207-9c5d-1ffc52ee8c8c` (`active`, `catchUpPolicy=skip_missed`,
+`concurrencyPolicy=skip_if_active`), cron `30 7 * * 1-5`, `timezone=Europe/Prague`.
+**První ostrý běh 12. 8. 2026 v 7:30 Europe/Prague, počet 40.** Magin musí posílat **pražské datum**.
+
+**Credential je hotový.** `SALES_LEAD_BATCH_AGENT_SECRET` je bezpečně uložený v Paperclip
+credential store (provider `local_encrypted`, mode `paperclip_managed`, stav `active`) a **stejná
+nová hodnota je nastavená v produkčním Supabase**. Hodnota byla vygenerována pouze v paměti,
+**není nikde zveřejněná ani uložená** — v dokumentaci, gitu, promptu, instrukcích agenta, issue
+ani logu. Paperclip API ji nevrací; agent si ji vyzvedne až za běhu přes
+`/api/agents/me/secrets/{key}/value`. Secret patří **jen** do credential store, nikdy do promptu
+ani do Paperclip issue.
+
+**Vytváření agentů vyžaduje schválení představenstvem** (`requireBoardApprovalForNewAgents=true`).
+Přímé `POST /agents` vrací 409; správná cesta je `POST /companies/:id/agent-hires`.
+
+**Profilový obrázek Magina:** **Paperclip vlastní obrázek agenta nepodporuje** — `icon` je pevný
+výčet 41 vestavěných ikon, `iconAssetId`/`avatarAssetId` neexistuje (obrázky lze nahrát jen jako
+logo firmy). Magin má vestavěnou ikonu `mail`. Schválená a vizuálně ověřená postavička je na cestě
+`C:\Users\divis\Downloads\ChatGPT Image 11. 8. 2026 11_37_39.png` a je uložená v jeho
+`metadata.approvedAvatarPath` pro chvíli, kdy to Paperclip umožní. **Obrázek MioCoinu se pro
+Magina nesmí použít**, ani když se do konverzace přiloží automaticky. Nevytvářet jinou grafiku.
+
+**Poslední ověření proběhne prvním ostrým během.** Obě uložené hodnoty se rovnají, protože vznikly
+z jednoho generování v paměti, ale **definitivně to potvrdí až běh 12. 8. 2026** — novou hodnotou
+se funkce vědomě nevolala, protože každé úspěšné volání zakládá dávku. Kdyby se hodnoty přesto
+rozešly, vrátí funkce 401 a Magin to podle instrukcí jen nahlásí Řediteli a **nebude opakovat**.
+
+**Testy:** `tests/e2e/122-sales-lead-daily-batch-agent.spec.ts` (10 statických kontraktních testů)
+drží výše uvedené invarianty.
+
+# Automatické zakládání discovery jobů (Draft, 07. 08. 2026)
+
+- **Nasazeno nikam.** Jen větev `chatgpt/sales-lead-discovery-scheduler` + Draft PR. Migrace
+  `20260807120000_sales_lead_discovery_scheduler.sql` **neaplikována**, cron neexistuje, žádná
+  produkční data nezměněna, žádný e-mail.
+
+**Zjištěná příčina (neopakovat špatnou diagnózu):** discovery worker je funkční, ale **sám nové
+firmy nehledal** — `run_sales_lead_discovery_worker()` má na začátku
+`IF (0 jobů queued/running) THEN RETURN`. Frontu plnil jen člověk z administrace; poslední job
+23. 07. 2026, takže cron dělal ~1440 prázdných běhů denně a 0 leadů za 7 dní.
+
+**Závazné invarianty (neměnit bez schválení Pavla):**
+
+- **Architektura workeru se nemění.** Doplněn JEN plánovač
+  `run_sales_lead_discovery_scheduler()` + cron `sales_lead_discovery_scheduler_daily`
+  (`20 4 * * *`). Worker, ověřování webu i ukládání do Návrhů zůstávají beze změny.
+- **Nikdy dva paralelní discovery joby** — guard na `status IN ('queued','running')` + advisory
+  lock. Opakované spuštění je idempotentní.
+- **Rotace kategorií je LRU nad `sales_lead_groups`** (nikdy použitá první), `jine` vyloučena.
+  **Nevymýšlet nové názvy kategorií** — číselník je zdroj pravdy.
+- **Parametry 5 / 80** vycházejí z historických jobů; nezvyšovat bez důvodu (šetří OpenAI/web search).
+- **`created_by` se VŽDY validuje** přes `sales_lead_pick_discovery_owner()`: uživatel musí
+  existovat v `auth.users`, mít roli `admin`/`superadmin` a projít
+  `has_admin_permission('sales_leads.manage')`. Autor posledního jobu je jen **preference uvnitř
+  množiny vhodných** (ORDER BY), ne samostatná větev — **nikdy nebrat UUID ze starého jobu bez
+  revalidace**. `sales_lead_discovery_jobs` nemá FK, takže zavěšené UUID by shodilo každý insert
+  leadu (`sales_leads.created_by` FK ON DELETE RESTRICT) a job by spálil 80 kandidátů s 0 leady.
+  Bez vhodného vlastníka se job vědomě nezaloží (`no_owner_available`), bez výjimky.
+- `sales_lead_propose` zachytává i `foreign_key_violation` → `invalid_owner` (ne tichá výjimka).
+- **Plánovač nesmí:** volat Resend, vytvářet e-mailovou dávku, zapínat automatiku, měnit stavy
+  leadů ani nastavovat `osloveno`. Jediný výstup = jeden řádek ve frontě jobů.
+- **Deduplikace v `sales_lead_propose`** (na kterou `_with_contact` deleguje) blokuje doménu, IČO,
+  contact_email, `do_not_contact`, partnera podle IČO a suppression doménovou i přes přesný e-mail.
+  **`status <> 'archivovan'` se do kontrol NEVRACÍ** — archivovaná/dříve oslovená firma se nesmí
+  automaticky založit znovu.
+- Nové firmy končí výhradně ve stavu `navrzeny`.
+
+**Testy:** `tests/e2e/109-sales-lead-discovery-scheduler.spec.ts` (18 testů) drží výše uvedené.
+
+# CTA prvního obchodního e-mailu (Draft, 06. 08. 2026)
+
+- **Nasazeno nikam.** Jen větev `chatgpt/sales-lead-initial-email-cta` + Draft PR.
+  Migrace `20260806180000_sales_lead_manual_response_token.sql` **neaplikována**, žádný EF deploy,
+  žádný e-mail, žádná dávka, žádná automatika, žádná změna produkčních dat.
+
+**Zjištěná příčina (neopakovat špatnou diagnózu):** chybějící „Mám zájem“ **není bug v kódu**.
+(1) Produkce nemá nasazený response systém — na `sales_lead_email_batch_items` je jen
+`preserve_snapshot` trigger a tabulka `sales_lead_email_response_tokens` tam neexistuje.
+(2) Věta „Nemám zájem, děkuji“ je **ručně uložená v aktivní šabloně** `E - shop Míra 2`
+(`is_active=true`, typ `initial`); v repu se nevyskytuje a žádný kód ji nepřidává.
+
+**Závazné invarianty (neměnit bez schválení Pavla):**
+
+- **`_shared/salesLeadResponseCta.ts` je jediný zdroj pravdy pro markup CTA** a musí zůstat
+  1:1 zrcadlem DB triggeru `sales_lead_email_prepare_response_links` — jinak se ruční a dávkový
+  e-mail rozejdou. Hlídá spec 107.
+- **CTA se NIKDY nepouští přes obecný renderer.** `markdownLinksToVisibleText` převádí
+  `[popisek](url)` na holý `popisek` a **URL zahodí** — plaintext by přišel o odkazy a v HTML by
+  nevznikla tlačítka. Renderer dostane jen text od člověka a CTA se připojí **až za výsledek**:
+  `source = humanBody + cta.source`, `text = render(humanBody) + cta.text`,
+  `html = render(humanBody) + cta.html`. Skládá to sdílená `composeInitialEmailBodies()`;
+  **nevracet variantu, kde se `cta.source` renderuje** (byl to reálný bug opravený po preview).
+  Stejné pořadí render → append má i DB trigger dávkové cesty. Hlídá spec 108 (skutečný výstup
+  pipeline, ne jen builder).
+- **Obě tlačítka vždy na `https://onemil.cz/partner-response.html`. Nikdy mailto**, nikdy odpověď
+  na `b2b@onemil.cz` (ta zůstává jen jako odesílatel/reply-to).
+- **Každý příjemce má vlastní token**; obě tlačítka jednoho e-mailu sdílejí tentýž token.
+- **Ruční cesta je fail-closed** — bez platného tokenu se e-mail neodešle.
+- **CTA jen pro první e-mail** (`!isReuse`), ne pro reuse/forward/reply/follow-up.
+- `sales_lead_email_response_tokens.batch_item_id` je nullable kvůli ručnímu e-mailu; **nevracet
+  NOT NULL** bez odstranění manuálních tokenů. UNIQUE zůstává (víc NULL je v Postgresu OK).
+- **Staré uzamčené snapshoty se nikdy nepřepisují** — CTA dostávají jen nově vznikající e-maily.
+- **Jediný podporovaný způsob odpovědi jsou CTA „Mám zájem“ / „Nemám zájem“.** Ve
+  `sales-lead-draft-email` byla zrušena konstanta `OPT_OUT_SENTENCE`, povinná instrukce v obou
+  promptech i guard `opt_out_sentence_missing` — jinak by e-mail nesl dvě konkurenční cesty
+  odhlášení. AI koncept ani asistent **nesmí** vytvářet odhlašovací větu, výzvu k odpovědi kvůli
+  odhlášení ani mailto (sdílené `NO_OPT_OUT_RULE` v obou promptech). **Follow-up nepřidává žádný
+  vlastní odhlašovací mechanismus ani CTA blok.** Nevracet `opt_out_sentence_missing`.
+
+**Otevřený následný krok:** aktivní šablonu `E - shop Míra 2` musí někdo ručně zbavit mailto odkazu
+„Nemám zájem, děkuji“ (produkční data, mimo tento PR) a produkce potřebuje DB části PR #318–#322.
+
+# Administrace reakcí „Mám zájem“ / „Nemám zájem“ (Draft, 06. 08. 2026)
+
+- **Nasazeno nikam.** Jen větev `chatgpt/sales-lead-response-admin-overview` + Draft PR. Migrace
+  `20260806160000_sales_lead_response_overview.sql` **nebyla aplikována** na staging ani produkci;
+  žádný EF deploy, žádný merge, žádný e-mail, žádná dávka, žádná automatika, žádný cron.
+  Staging automatika zůstává `enabled=false`, produkce odpovědní systém nemá.
+
+**Závazné invarianty (neměnit bez výslovného schválení Pavla):**
+
+- **Autoritativní je konečný stav response tokenu.** Pro každý lead se bere **nejnovější
+  zodpovězený token** (`DISTINCT ON (lead_id) … ORDER BY responded_at DESC`), takže jeden lead
+  **nikdy** nespadne současně do „Mám zájem“ i „Nemám zájem“.
+- **Fallback bez tokenu musí zůstat SYMETRICKÝ.** Token na položku dávky kaskáduje, aktivita ne;
+  po smazání položky dávky zůstane reakce jen jako aktivita. Proto
+  `COALESCE(s.status, CASE WHEN ia … THEN 'interested' WHEN da … THEN 'declined' END)`.
+  **Nevracet jednostrannou variantu jen pro zájem** — odmítnutí bez tokenu by zmizelo z přehledu
+  i z červeného počtu. Zrcadlo pravidla pro testy: `resolveResponseStatus()`.
+- **Nezavádět stav `kontaktovat`.** Lead po „Mám zájem“ zůstává `odpovedel`; „Kontaktovat“ je
+  samostatný pohled, ne nový stav a ne druhý systém leadů.
+- **Záložka „Kontaktovat“** patří mezi „Osloveno“ a „Odpovědělo“. Odmítnutí zůstávají v existující
+  záložce „Nekontaktovat“ — **nevytvářet pro ně druhou záložku**.
+- **Počty nepřečtených se počítají jen z reakcí na tlačítka**, ne ze všech leadů daného stavu:
+  zájem = `reply_received` + `inbound` + `read_at IS NULL` + `source='interest_link'` + `interest=true`;
+  odmítnutí = `do_not_contact_set` + `inbound` + `read_at IS NULL` + `source='decline_link'`.
+  Ručně nastavené „Nekontaktovat“ ani běžná e-mailová odpověď nemají `metadata.source`, takže se
+  nikdy nezapočítají — **tenhle filtr neodstraňovat**.
+- **`sales_lead_response_overview()`** musí zůstat `STABLE SECURITY DEFINER` se `SET search_path = ''`,
+  guardem `has_admin_permission('sales_leads.manage') OR is_superadmin()`, bez `anon` execute a
+  **bez jakéhokoli zápisu**. Nikdy nevracet surový token ani `token_hash`.
+  (Oprávnění `sales_leads.view` v projektu neexistuje — kanonické je `sales_leads.manage`.)
+- **`sales_lead_email_response_tokens` se z frontendu nesmí číst přímo** (má `REVOKE ALL` pro
+  `authenticated`) a frontend **nikdy nepoužívá service-role klíč**.
+- **`sales_lead_mark_replies_read(uuid)` mění výhradně `read_at`/`read_by`.** Nikdy nesmí rušit
+  `do_not_contact`, `do_not_contact_reason`, suppression ani stav `nekontaktovat`.
+- **Přečtení lead ze záložky neodstraní** — členství se odvozuje od konečného stavu tokenu, ne od
+  `read_at`. Lead odejde až ruční změnou stavu.
+- **Chybějící jméno/telefon zobrazovat jako „—“**, nikdy nedoplňovat falešnou hodnotu.
+- Karta „Odpovědělo“ (stav leadu) a „Kontaktovat“ (reakce na tlačítko) jsou **různé metriky**;
+  jejich překryv u leadu se zájmem je záměrný a není to duplicitní počítání.
+
+**Testy:** `tests/e2e/106-sales-lead-response-overview.spec.ts` (19 testů) drží výše uvedené
+invarianty. Čisté odvozovací funkce žijí v `src/components/admin/sales-leads/salesLeadResponses.ts`,
+aby je testy importovaly přímo. Specy modulu čtou SQL s **normalizovanými konci řádků** — git na
+Windows soubory vytahuje s CRLF a víceřádkové značky by jinak přestaly sedět.
+
+# Odpovědi obchodních e-mailů — jeden konečný výsledek na token (Draft, 06. 08. 2026)
+
+- **Nasazeno nikam.** Pouze větev `chatgpt/fix-sales-lead-response-final-outcome` + Draft PR. Migrace
+  `20260806140000_sales_lead_response_final_outcome_lock.sql` **nebyla aplikována** na staging ani
+  produkci, Edge Function `sales-lead-response` nebyla přenasazena, žádný e-mail neodešel, žádná
+  produkční data se nezměnila, žádný cron, žádná automatika.
+- **Řešená chyba (skutečný staging test):** příjemce potvrdil „Mám zájem“ (lead `odpovedel`,
+  priority 1, `reply_received`, source `interest_link`, jméno + telefon uloženy) a poté z téhož
+  e-mailu otevřel „Nemám zájem“. Stránka znovu ukázala obyčejné „Děkujeme za projevený zájem“ bez
+  vysvětlení, že odpověď už byla dříve uzamčena. Data byla po celou dobu správná — chyba byla
+  v prezentaci a v neprůhledném POST kontraktu.
+
+**Závazné invarianty (neměnit bez výslovného schválení Pavla):**
+
+- **Každý odpovědní token má právě jeden konečný výsledek: `interested`, nebo `declined`.** Po prvním
+  úspěšném potvrzení se výsledek **nikdy** nesmí změnit. Opačný odkaz nesmí odpověď přepnout.
+- **GET nesmí nic měnit.** `sales-lead-response` v GET větvi pouze čte `status` + `expires_at`; nesmí
+  volat `.rpc(`, `.insert(`, `.update(` ani `.delete(`. Zamčeno spec 104 i 105.
+- **POST je bezpečně idempotentní.** Zapisuje výhradně při stavu `pending`. Je-li token už
+  `interested`/`declined`, RPC `sales_lead_email_response_submit` vrátí **původní** konečný stav
+  (`action` = uložená volba, nikoli požadovaná) s `idempotent_replay: true` a
+  `conflicting_action: true/false`, a **neprovede žádný zápis**.
+- **Replay větev RPC nesmí obsahovat žádný `INSERT`/`UPDATE`/`DELETE`.** Nepřibude aktivita ani
+  status history, nepřepíše se jméno/telefon, nezruší se `do_not_contact` a nesmaže se řádek
+  v `sales_lead_email_suppression`. Suppression se z této funkce nikdy nemaže a `do_not_contact`
+  se nikdy nenastavuje na `false`.
+- **Frontend nesmí rozhodovat podle URL parametru `action`.** `public/partner-response.html` renderuje
+  z autoritativního `status` vráceného API (`showFinalStatus`). Formulář ani potvrzovací tlačítko se
+  smí zobrazit **pouze** při `status === 'pending'`.
+- **Texty (neměnit):** opačný odkaz po uzamčení → nadpis „Vaše odpověď už byla zaznamenána“;
+  po `interested` text „Děkujeme za projevený zájem. Váš kontakt jsme přijali a brzy se vám ozveme.“;
+  po `declined` text „Vaše rozhodnutí respektujeme a další obchodní nabídky vám nebudeme zasílat.“
+  Opětovné otevření **stejné** původní volby ukáže její vlastní potvrzení, bez formuláře.
+- Zachován světlý OneMil vzhled a originální logo `/onemil-logo.png`; CSP `connect-src` beze změny.
+
+**Testy:** `tests/e2e/105-sales-lead-response-final-outcome.spec.ts` (14 testů). Browser testy jedou
+proti reálnému `public/partner-response.html` se stubovaným backend kontraktem — Vite dev server
+přepisuje neznámé `.html` cesty na SPA shell, proto se soubor servíruje přes `page.route`. Spec 104
+zůstává zelený. Ověřeno, že spec 105 na předfixové verzi stránky **selže** ve scénářích
+`interested + decline` a `declined + interest`.
+
+# Denní dávky prvních obchodních e-mailů — PR 4 worker (Draft, 06. 08. 2026)
+
+- **PR 1, PR 2 i PR 3 jsou v produkci; PR 3 je produkčně ověřené. PR 4 je pouze Draft.** Worker není
+  nasazený, secret `SALES_LEAD_BATCH_WORKER_SECRET` není nastavený, cron neexistuje, automatika je
+  stále `enabled=false` a PR 4 neodeslal žádný e-mail. Staging ani produkce nebyly PR 4 změněny.
+- **Worker nikdy nevybírá firmy ani nevytváří dávky.** Zpracuje výhradně položku připravenou v PR 3 a
+  vědomě aktivovanou přes `sales_lead_email_batch_activate`. Žádný ranní výběr, follow-up, odpověď
+  ani catch-up zmeškaných e-mailů.
+- **Jeden běh = nejvýše jeden provider call.** `sales_lead_email_batch_claim_next()` vydá nejvýše
+  jednu položku; Edge Function `process-sales-lead-email-batch` volá sdílenou delivery vrstvu právě
+  jednou a nikdy nezpracuje druhou položku ve stejném requestu.
+- **Fail-closed pořadí bariér:** kill switch (`enabled=true`) → dávka `scheduled` (nikdy `paused` /
+  `cancelled` / `completed` / `failed`) → dnešní datum a okno podle `Europe/Prague` →
+  `FOR UPDATE SKIP LOCKED` → znovuověření všech ochran leadu → `processing`. Zmeškaný den nebo okno
+  = `skipped` s důvodem `scheduled_window_missed`.
+- **Přijatý e-mail se nikdy neposílá dvakrát.** Když poskytovatel přijal a DB commit selhal, položka
+  zůstane `processing` a další běh smí provést jen `commit_only`. `uncertain` delivery se nikdy
+  automaticky neopakuje a nikdy se nevrací na `pending`.
+- **`commit_only` větev nesmí nikdy volat delivery vrstvu ani poskytovatele.** Claim v tomto stavu
+  vrací pouze identifikátory (bez příjemce, předmětu, těl a `performed_by`), takže jakékoli sestavení
+  fingerprintu by skončilo `batch_snapshot_mismatch`. Worker smí zavolat jen
+  `sales_lead_initial_email_commit(delivery_id)`; při neúspěchu položka zůstane blokovaná a
+  nezapisuje se neúspěch.
+- **Poslední bariéra nad zamčeným leadem v `sales_lead_initial_email_claim` (batch režim)** musí
+  zůstat úplná: `performed_by` = `batch.created_by`, `converted_partner_id IS NULL`, žádný partner se
+  stejným IČO, povolená `email_verification_method`, `email_verified_at IS NOT NULL`, neprázdný
+  `email_source` do 2048 znaků.
+- **Ruční sender se nesmí funkčně změnit.** Delivery key ručního režimu musí zůstat bit po bitu
+  stejný (regresní test se zlatou hodnotou); `batch_item_id` vstupuje do fingerprintu jen v režimu
+  `batch_initial`. Identita odesílatele je sdílená: `Miroslav | OneMil <b2b@onemil.cz>`.
+- **Zapnutí vyžaduje pět samostatných schválení:** secret → nasazení funkce → případný cron →
+  `enabled=true` → aktivace konkrétní dávky. Do PR 4 nepřidávat cron, `pg_net`, `email_queue` ani
+  klientské tlačítko Spustit/Obnovit/Zapnout automatiku.
+
+# Stripe refundace — invarianty (ověřeno Sandbox testy 04. 08. 2026)
+
+- **Refundaci lze zahájit jen tehdy, když má uživatel k dispozici celý počet MioCoinů připsaný danou platbou.** Kontrola je v `prepare_stripe_refund` a běží **před** jakýmkoli voláním Stripe.
+- **Refundace odečítá celý připsaný počet včetně balíčkového bonusu** — u balíčku 300 Kč se odečítá 310 MioCoinů, ne 300.
+- **Nedostatečný zůstatek musí refundaci zastavit před Stripe.** Platba zůstane `completed`, `stripe_refund_id` i `stripe_refund_status` prázdné a nesmí vzniknout `refund_debit` ani `refund_reversal`.
+- **Refundaci smí spustit role `admin` i `superadmin`** (`stripe-refund`, oprava v commitu `ffc0aac8`). Nevracet kontrolu jen na `admin`.
+- **Terminální Stripe stavy `succeeded`, `failed` a `canceled` se nesmí přepisovat staršími webhooky.** `record_stripe_refund_status` je chrání a vrací `ok: true, ignored: true, code: 'terminal_state'`; obě Edge Functions větví podle efektivního stavu z databáze, ne podle příchozí události.
+- **Jedna platba smí mít nejvýše jeden `refund_debit` a nejvýše jeden `refund_reversal`** — jištěno unikátními parciálními indexy `uniq_wallet_tx_refund_debit_per_payment` a `uniq_wallet_tx_refund_reversal_per_payment`.
+- **Stripe Sandbox webhook** pro `https://xkzhjldrojjlrkezorey.supabase.co/functions/v1/stripe-webhook` má právě čtyři události: `checkout.session.completed`, `refund.created`, `refund.updated`, `refund.failed`.
+- **Live Stripe webhook (zatím jen `checkout.session.completed`) se nesmí měnit bez výslovného schválení Pavla.**
+- **Stripe konektor připojený k live režimu se nesmí používat pro testovací refundace ani jakékoli změny** — testovat výhradně v Sandboxu.
+- **Nikdy nezobrazovat ani neukládat Stripe secret key ani webhook signing secret** (do kódu, logů, dokumentace, commitů ani odpovědí).
+
+# Bezpečnostní invarianty — ověřeno 02. 08. 2026
+
+- Funkcím `get_admin_activation_summary()`, `create_partner_offer_invoices_for_period(date,date)`, `assign_partner_offer_to_ticket(uuid,uuid,uuid)` a `sync_partner_offer_activations()` **nevracet `anon` ani `PUBLIC` EXECUTE**. První má vnitřní guard `WHERE public.is_admin()`, zbylé tři smí volat jen `service_role` / interní backend. Odpovídající migrace jsou v `supabase/migrations/` (`20260801180617`, `20260801180912`, `20260801181421`, `20260801185927`).
+- `upload-ticket-share` nevracet na `verify_jwt = false` ani na `upsert: true`; vyžaduje JWT, `ticketId` jako UUID, shodu `tickets.user_id` s přihlášeným uživatelem a jen PNG. Klient posílá výhradně `ticket_row_id` z `buy_ticket_atomic`; veřejná URL `og-ticket-share?id=${contestId}-${ticket_number}` je na bucketu nezávislá.
+- **P1 (CSP)** je na produkci aktivní přes meta tag v `index.html`. Při přidání nové externí služby je nutné doplnit její doménu do allowlistu, jinak ji prohlížeč zablokuje. `vercel.json` produkční hosting (Lovable) **nepoužívá** — hlavičky se přes něj nastavit nedají.
+- **P2 (iframe) a P3 (CORP)** jsou vědomě odložené a nekritické; šly by nastavit jen na edge vrstvě (vlastní Cloudflare), což by znamenalo migraci celé DNS zóny včetně pošty. **Cloudflare se nyní nezavádí.**
+- Apex `onemil.cz` musí mít vždy **právě jeden** SPF (`v=spf1 a mx include:_spf.websupport.cz -all`); SES/Resend odesílání patří na `send.onemil.cz`. Dva SPF na jednom jménu = `permerror` dle RFC 7208.
+
+# Garantovaný nákupní benefit — datový základ Fáze 1 (24. 07. 2026)
+
+- Produktový název je vždy **„garantovaný nákupní benefit“**. Klasický soutěžní voucher je jiný, dobrovolný a pro partnera zůstává zdarma.
+- Aditivní základ je v migraci `supabase/migrations/20260724140039_guaranteed_purchase_benefit_phase1.sql`; dokud není samostatně zkontrolována a aplikována, není aktivní ani v databázi.
+- Nové nákupy nejsou zapojené: `buy_ticket_atomic`, současné soutěže, `partner_invoices`, PDF/e-mail fakturace a automatická fakturace se nemění.
+- Nové `vat_rate_percent` ukládá procento (`21`) a výpočet dělí `100`. Historické `partners.vat_rate`/`partner_invoices.vat_rate` dál používají zlomek (`0.21`) a jejich funkce se nesmí převádět.
+- Schválené `voucher_versions`, použité ceny objednávek a identity/cenové snapshoty `voucher_issuances` jsou neměnné. `voucher_code_id`, `ticket_id` a fakturační source mají unikátní ochranu.
+- Authenticated klient má na nové workflow/issuance/invoice tabulky pouze RLS-omezené čtení. Schválení, zamítnutí, cena, pozastavení a ukončení jdou jen přes superadmin RPC; vydání a budoucí fakturační zápisy zůstávají service-role/atomickému backendu.
+- `partner_invoice_items` a `partner_invoice_item_sources` jsou jen budoucí základ. Nesmí se napojit do současného cron/PDF/e-mail řetězce bez další samostatné fáze a kontroly.
+
 # Sales Leads CRM — aktuální produkční invarianty (14. 07. 2026)
 
 - Odpovědi zákazníků směřují veřejně na `OneMil obchodní tým <b2b@onemil.cz>`. Technická adresa `reply+<lead_id>@…` se už zákazníkovi nesmí zobrazovat.
@@ -1937,40 +2243,52 @@ Toto pravidlo platí vždy, bez výjimky — nikdy nenechávej state/history zm�
 
 ---
 
-## Paperclip — operační pravidla (12. 05. 2026, agenti aktualizováni 14. 08. 2026)
+## Paperclip — operační pravidla (12. 05. 2026)
 
 Paperclip běží lokálně jako AI management vrstva pro OneMil.
-Režim: **authenticated · private · loopback 127.0.0.1:3100 · strict secrets**. Verze `2026.722.0`.
 Spuštění: `npx paperclipai onboard --yes` z `C:\Users\divis\Desktop\Onemil - Projekt\million-ticket-draw`.
 Detailní setup viz `PAPERCLIP_SETUP_CONTEXT.md`.
 
-### Aktivní agenti (ověřeno v instanci 14. 08. 2026)
+### Aktivní agenti (aktualizováno 13. 08. 2026)
 
-Autoritativní zdroj je `PAPERCLIP_SETUP_CONTEXT.md` **§14**. Tabulka níže je jen zkratka.
+| Agent | Adaptér | Model | Role |
+|-------|---------|-------|------|
+| Provozní ředitel OneMil | codex_local | gpt-5.5 | Manažer, deleguje práci |
+| Martin – vedoucí marketingu OneMil | codex_local | gpt-5.5 | Vede marketingový tým, konsoliduje výstup pro Provozního ředitele |
+| Content & Community Planner OneMil | codex_local | gpt-5.5 | Content plány, copy, captiony, CTA, scénáře, kreativní briefy a community návrhy pro Martina |
+| Performance Analyst OneMil | codex_local | gpt-5.5 | KPI, reporting a vyhodnocení výkonu obsahu pro Martina |
+| Magin – CRM operátor OneMil | codex_local | gpt-5.5 | Denní dávka prvních obchodních e-mailů + zásoba leadů přes úzký adapter |
+| Synchronizátor Paperclip OneMil | codex_local | gpt-5.5 | Read-only snapshot Paperclipu → OneMil STAGING |
+| Meta API Integrator OneMil | codex_local | gpt-5.5 | Technická integrace mezi Metou a OneMil (engineer) |
+| Summarizer | claude_local | claude-haiku-4.5 | Vestavěný, rutina pozastavena |
+| Reflection Coach | codex_local | gpt-5.5 | Vestavěný, rutina pozastavena |
 
-| Agent | Adaptér | Role | Heartbeat |
-|-------|---------|------|-----------|
-| Provozní ředitel OneMil | codex_local | Manažer, deleguje práci, eskaluje Pavlovi | enabled |
-| Magin – CRM operátor OneMil | codex_local | Denní dávka obchodních e-mailů (rutina 07:30) | enabled |
-| Synchronizátor Paperclip OneMil | codex_local | Synchronizace stavu do OneMil STAGING | enabled |
-| Martin – vedoucí marketingu OneMil | codex_local | Řídí Analysta a Plannera | vypnuto |
-| Performance Analyst OneMil | codex_local | Meta KPI, **read-only broker** | vypnuto |
-| Content & Community Planner OneMil | codex_local | Obsah na zadání, **bez Meta brokeru** | vypnuto |
-| Meta API Integrator OneMil | codex_local | Technická integrace | vypnuto |
-| Summarizer / Reflection Coach | claude_local / codex_local | Vestavěné, rutiny pozastavené | vypnuto |
+Marketingová hierarchie je: Pavel → Provozní ředitel OneMil → Martin – vedoucí marketingu OneMil → Content & Community Planner OneMil / Performance Analyst OneMil. Marketingoví agenti jsou přesně tři, bez duplicit, nemají social secrets, publishing práva, ads práva ani možnost utrácet. `ICO-53` už není v permanentních instructions; jednorázové úkoly patří do Paperclip issues. OneMil Brand Kit / Brand Manual je závazný zdroj.
 
-**Agent „Průzkumník obchodních leadů OneMil“ už v instanci neexistuje** — nepoužívat ho v úvahách.
+**Průzkumník obchodních leadů OneMil byl odstraněn z Paperclipu** (11. 08. 2026). Neobnovovat jeho
+zastaralou paralelní lead-research roli bez nového výslovného rozhodnutí Pavla. Doplňování zásoby
+leadů nyní zajišťuje Magin výhradně přes existující OneMil discovery systém a úzký lead-supply
+adapter; segment je pevně `e-shopy`.
 
-**Timerový heartbeat je dnes fakticky vypnutý u všech** (`intervalSec = 0`, `schedulerActive = false`).
-Práci dnes rozjíždí výhradně přiřazení issue (`assignment`) a rutiny (`automation`).
+**Model všech `codex_local` agentů je `gpt-5.5`.** Starší `gpt-5.3-codex` i `gpt-5.6-sol` server
+pro tento ChatGPT účet odmítá (`invalid_request_error`) — nevracet je.
 
-**Meta přístup je výhradně read-only.** Broker referenci mají jen Martin a Performance Analyst;
-Content & Community Planner ji nesmí dostat a Meta informace přebírá jako odvozené zadání.
+**Meta → Supabase broker je produkční read-only integrace (VERIFIED, ověřeno 14. 8. 2026).**
+Referenci na broker mají jen Martin – vedoucí marketingu OneMil a Performance Analyst OneMil;
+Content & Community Planner OneMil ho nemá a nesmí dostat — Meta údaje dostává jen jako odvozené
+zadání od Martina/Analysta. Přístup je výhradně read-only; žádný agent nesmí přes Metu zapisovat,
+publikovat ani utrácet.
+
+**Timerový heartbeat je dnes fakticky vypnutý u všech agentů** (`intervalSec=0`,
+`schedulerActive=false`) — práci rozjíždí jen přiřazení issue, komentář a rutiny, ne pravidelný
+timer. Rozpočtová ochrana (`budgetMonthlyCents`) je u všech `0`, tedy fakticky neaktivní; řešení
+je vědomě odložené. Detail viz `PAPERCLIP_SETUP_CONTEXT.md` §3 (Meta API Integrator / broker) a
+§5 / §11 (heartbeat a rozpočet).
 
 ### Pravidla pro Claude Code při práci s Paperclipem
 
 - **Nikdy nečti `onemil_history.md` automaticky** v kontextu Paperclip agentů — pouze na výslovnou žádost Pavla.
-- Provozní ředitel **deleguje** lead scouting, velké tabulky, marketingový průzkum a repetitivní práci na Průzkumníka. Sám zpracovává, pouze pokud Pavel řekne „zpracuj osobně".
+- Provozní ředitel **deleguje** provozní práci na existující specializované agenty. Lead-supply tok pro obchodní dávky patří Maginovi a běží výhradně přes existující OneMil discovery systém; Provozní ředitel nemá obnovovat paralelní lead-research agenta bez Pavlova schválení.
 - Výstupy se **zveřejňují přímo do komentáře Paperclip issue** (ne jen jako interní soubor).
 - Soubory (CSV, Markdown, reporty) se ukládají do: `C:\Users\divis\Desktop\OneMil Paperclip Outputs`
 - Nový agent se **navrhuje, ale nespouští** bez schválení Pavla Diviše.
@@ -2064,3 +2382,48 @@ Build: `npm run build` prošel. Runtime simulace prošla: desktop bez promptu CT
 Nedotčeno: `public/manifest.webmanifest`, public ikony, `public/OneSignalSDKWorker.js`, Supabase, Stripe, payments, wallet, contests, tickets, winners, Partner Offers, affiliate, Bob, routes, legal pages a unrelated UI.
 
 Zbývá ručně ověřit na telefonu: Android Chrome native install dialog, Android launch z plochy, iPhone Safari `Přidat na plochu`, iPhone launch z plochy skrývá CTA.
+# Sales lead daily email batches — PR 1 safety boundary (04. 08. 2026)
+
+- PR 1 is database foundation only: `sales_lead_email_automation_settings`,
+  `sales_lead_email_batches`, `sales_lead_email_batch_items`, guarded preview/create/cancel/toggle
+  RPCs. The default and post-migration state is always `enabled=false`.
+- Do not connect these tables to `email_queue`. Current `send-sales-lead-email` sends directly via
+  Resend; a later PR must reuse a single shared sales-send implementation rather than create a
+  second set of business guards.
+- Do not add or enable a worker, cron, automatic lead selection, follow-up, reply, catch-up burst,
+  sender call, backfill, or deployment in PR 1. No code in this PR may create `sent` items.
+- Direct client writes remain forbidden. Reads require `sales_leads.manage`; batch creation must
+  recheck eligibility under deterministic locks. Daily capacity and partial unique lead/e-mail
+  indexes cover `pending`, `processing`, `sent`, and `failed`; only `cancelled`/`skipped` release
+  capacity or allow re-enrollment. Idempotency keys are bound to a SHA-256 request fingerprint.
+- Rejected selections are persisted in `sales_lead_email_batch_skips`. Today's first slot is at
+  least five minutes in the future and all slots are before 16:30 Prague time; insufficient time
+  returns `scheduling_window_closed`. Cancellation fails closed while any item is `processing`.
+- PR 2 adds only the shared initial-delivery safety path and connects the manual sender. PR 3 owns
+  UI preview/manual confirmation. A narrowly scoped internal worker with fresh pre-send checks,
+  claim/recovery and one-item-at-a-time dispatch belongs only to PR 4 and needs separate approval.
+# Sales lead initial email delivery — PR 2 safety boundary (05. 08. 2026)
+
+- PR 2 is delivery safety only. The manual initial sender uses the server-only shared module and
+  `sales_lead_email_deliveries`; no public endpoint is added.
+- The service-role-only claim locks the lead and repeats every authoritative barrier before granting
+  one provider call. Resend receives the stable delivery key as its idempotency key.
+- Provider acceptance is persisted before an idempotent atomic commit creates exactly one
+  `email_sent` plus the existing forward-only status transition. A failed commit is resumed without
+  calling the provider. Unknown outcomes are `uncertain` and block automatic retry.
+- Reuse/forward remains on its existing path. Reply and follow-up are unchanged.
+- PR 2 is deployed. Automation remains `enabled=false`; there is no batch worker, cron or batch
+  dispatch. Admin scheduling belongs to PR 3 and the worker belongs to PR 4.
+
+# Sales lead daily email batches — PR 3 safety boundary (05. 08. 2026)
+
+- PR 3 may only prepare manually selected batches through the existing preview/create/cancel RPCs.
+  The server remains authoritative for eligibility, rendering, capacity, schedule and snapshots.
+- With automation disabled, create must persist the batch as `paused` and items as `pending`.
+  Database rows must never invoke a provider or send email.
+- The UI may list the latest 20 batches, items and skips and cancel only `paused`/`scheduled` batches
+  with a reason. It must not expose start, resume, enable-automation or send controls.
+- PR 3 must not add a worker, cron, Edge Function, sender call, Resend call, `email_queue` write,
+  automatic lead selection, follow-up, reply or catch-up behavior.
+- PR 3 is Draft-only and must not be deployed to staging or production. PR 4 owns any worker and
+  controlled activation and requires separate explicit approval.

@@ -1,8 +1,23 @@
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.57.4";
-import { verifyCompanyWebsite, verifyDiscoveredCompanySite } from "../_shared/companyWebsiteVerifier.ts";
-import { generateCandidateUrls } from "../_shared/companyCandidateSearch.ts";
+import {
+  domainBelongsToCompanyName,
+  verifyCompanyWebsite,
+  verifyDiscoveredCompanySite,
+} from "../_shared/companyWebsiteVerifier.ts";
+import {
+  appendDiagnosticsEntry,
+  buildDiagnosticsEntry,
+  generateCandidateUrlsWithDiagnostics,
+  type CandidateSearchDiagnosticsEntry,
+} from "../_shared/companyCandidateSearch.ts";
 import { aresByIco, aresByName, type RegistryRecord } from "../_shared/companyRegistryEnrich.ts";
+import {
+  crawlCompanyWebsite,
+  verifyEmailOnOfficialSourcePage,
+  type VerifiedSourceEmailResult,
+} from "../_shared/companyEmailCrawler.ts";
+import { classificationMatchesJobScope } from "./categoryPolicy.ts";
 
 // ============================================================================
 // sales-lead-discover — WORKER Discovery Jobu (dávkové zpracování).
@@ -13,7 +28,9 @@ import { aresByIco, aresByName, type RegistryRecord } from "../_shared/companyRe
 // PRINCIP: kandidáti z AKTIVNÍHO web search (companyCandidateSearch) — AI
 // nevymýšlí seznam firem. Web se přísně ověří (verifyDiscoveredCompanySite),
 // IČO/DIČ/adresa z ARES (autoritativně), AI JEN klasifikuje obor/relevanci.
-// E-mail se NIKDY nehledá ani neukládá. Nic se neposílá.
+// Veřejný e-mail hledá backendový crawler až na ověřeném oficiálním webu.
+// Přesný nález a URL se ještě jednou ověří sdíleným verifierem; bez důkazu
+// vznikne lead bez e-mailu a bez návrhu. Nic se neposílá.
 // ============================================================================
 
 const AI_MODEL = Deno.env.get("SALES_LEADS_AI_MODEL") ?? "gpt-4o-mini";
@@ -42,7 +59,25 @@ function normName(v: string): string {
   return v.normalize("NFD").replace(/[̀-ͯ]/g, "").toLowerCase().replace(/[^a-z0-9]+/g, " ").trim();
 }
 
-interface Classification { slug: string | null; relevant: boolean; summary: string }
+interface Classification { slug: string | null; relevant: boolean; summary: string; failed?: boolean }
+
+type VerifiedDiscoveryContact = Extract<VerifiedSourceEmailResult, { verified: true }>;
+
+async function findVerifiedDiscoveryContact(
+  website: string,
+  companyName: string,
+): Promise<VerifiedDiscoveryContact | null> {
+  // Crawler je zdroj kandidáta, nikoli důkaz. Důkaz vznikne až druhým stažením
+  // přesné stránky přes stejný verifier jako v sales-lead-enrich-contact.
+  const candidate = await crawlCompanyWebsite(website, companyName, "", "");
+  if (!candidate.found) return null;
+  const verified = await verifyEmailOnOfficialSourcePage({
+    officialWebsite: website,
+    candidateEmail: candidate.email,
+    sourceUrl: candidate.sourceUrl,
+  });
+  return verified.verified ? verified : null;
+}
 
 async function classify(
   name: string, snippet: string, groups: { slug: string; label: string }[], openaiKey: string,
@@ -62,7 +97,7 @@ async function classify(
         messages: [{ role: "system", content: sys }, { role: "user", content: user }],
       }),
     });
-    if (!res.ok) return { slug: null, relevant: false, summary: "" };
+    if (!res.ok) return { slug: null, relevant: false, summary: "", failed: true };
     const j = await res.json();
     const parsed = JSON.parse(j?.choices?.[0]?.message?.content ?? "{}");
     return {
@@ -71,7 +106,7 @@ async function classify(
       summary: typeof parsed.summary === "string" ? parsed.summary.slice(0, 200) : "",
     };
   } catch {
-    return { slug: null, relevant: false, summary: "" };
+    return { slug: null, relevant: false, summary: "", failed: true };
   } finally {
     clearTimeout(timer);
   }
@@ -96,6 +131,7 @@ serve(async (req: Request) => {
   const job = jobRow as Record<string, unknown>;
   const jobId = job.id as string;
   const leadGroup = job.lead_group as string;
+  const autoCreated = job.auto_created === true;
 
   await supabaseAdmin.from("sales_lead_discovery_jobs").update({
     status: "running", started_at: job.started_at ?? new Date().toISOString(), updated_at: new Date().toISOString(),
@@ -110,6 +146,9 @@ serve(async (req: Request) => {
   let cursor = job.cursor as number;
   let searchRounds = job.search_rounds as number;
   let searchExhausted = job.search_exhausted as boolean;
+  // Historie diagnostiky přežívá napříč cron ticky — načti a jen připisuj.
+  let searchDiagnostics: CandidateSearchDiagnosticsEntry[] =
+    Array.isArray(job.search_diagnostics) ? (job.search_diagnostics as CandidateSearchDiagnosticsEntry[]) : [];
   const requested = job.requested_count as number;
   const maxCandidates = job.max_candidates as number;
   const counters = {
@@ -124,6 +163,22 @@ serve(async (req: Request) => {
     with_phone: job.with_phone as number,
   };
 
+  // Trychtyrova diagnostika: pocty po fazich a duvodech. Jen cisla a kody.
+  const funnel: Record<string, unknown> =
+    (job.funnel && typeof job.funnel === "object" && !Array.isArray(job.funnel))
+      ? { ...(job.funnel as Record<string, unknown>) }
+      : {};
+  const bump = (key: string, by = 1) => {
+    funnel[key] = (typeof funnel[key] === "number" ? funnel[key] as number : 0) + by;
+  };
+  const bumpReason = (bucket: string, reason: string) => {
+    const current = (funnel[bucket] && typeof funnel[bucket] === "object" && !Array.isArray(funnel[bucket]))
+      ? { ...(funnel[bucket] as Record<string, number>) } : {};
+    const key = (reason || "unknown").slice(0, 60);
+    current[key] = (current[key] ?? 0) + 1;
+    funnel[bucket] = current;
+  };
+
   const deadline = Date.now() + TIME_BUDGET_MS;
   let processed = 0;
   let emptyRounds = 0;
@@ -135,15 +190,24 @@ serve(async (req: Request) => {
     // Doplň frontu kandidátů, když dojde.
     if (cursor >= pool.length) {
       if (searchExhausted) break;
-      const fresh = await generateCandidateUrls({ leadGroup, round: searchRounds, openaiKey });
-      searchRounds++;
+      const { urls: fresh, diagnostics } = await generateCandidateUrlsWithDiagnostics({
+        leadGroup,
+        round: searchRounds,
+        openaiKey,
+      });
       const added = fresh.filter((u) => !pool.includes(u));
+      searchDiagnostics = appendDiagnosticsEntry(
+        searchDiagnostics,
+        buildDiagnosticsEntry({ round: searchRounds, diagnostics, addedToPool: added.length }),
+      );
+      searchRounds++;
       if (added.length === 0) {
         emptyRounds++;
         if (emptyRounds >= MAX_EMPTY_ROUNDS) { searchExhausted = true; break; }
         continue;
       }
       emptyRounds = 0;
+      bump("candidates_from_search", added.length);
       pool = [...pool, ...added];
     }
 
@@ -153,14 +217,32 @@ serve(async (req: Request) => {
     counters.candidates_checked++;
 
     const site = await verifyDiscoveredCompanySite(url);
-    if (!site.verified || !site.website) { counters.websites_rejected++; continue; }
+    bump("checked");
+    if (!site.verified || !site.website) {
+      counters.websites_rejected++;
+      bumpReason("site_rejected", site.reason || "site_unverified");
+      continue;
+    }
 
     // Autoritativní registr (ARES): podle IČO na webu, jinak podle názvu.
+    //
+    // IČO uvedené přímo na webu je důkaz vazby firmy na doménu. Shoda v ARES
+    // JEN podle názvu ale důkaz není — stejný nebo podobný název může mít cizí
+    // právnická osoba. Takový záznam smí přepsat identitu jen tehdy, když web
+    // sám potvrdí, že doména patří té firmě.
     let reg: RegistryRecord | null = null;
     if (site.icoOnPage) reg = await aresByIco(site.icoOnPage);
-    if (!reg && site.companyName) reg = await aresByName(site.companyName);
+    if (!reg && site.companyName) {
+      const byName = await aresByName(site.companyName);
+      if (byName && site.website && domainBelongsToCompanyName(site.website, byName.legalName)) {
+        reg = byName;
+      } else if (byName) {
+        // Cizí právnická osoba se nesmí uložit jen kvůli podobnému názvu.
+        bump("ares_name_match_rejected");
+      }
+    }
     const name = reg?.legalName ?? site.companyName;
-    if (!name) { counters.websites_rejected++; continue; }
+    if (!name) { counters.websites_rejected++; bump("no_company_name"); continue; }
 
     const ico = reg?.ico ?? site.icoOnPage ?? null;
     const official = await verifyCompanyWebsite({
@@ -170,6 +252,7 @@ serve(async (req: Request) => {
     });
     if (official.status !== "verified" || !official.website) {
       counters.websites_rejected++;
+      bumpReason("official_rejected", official.alternatives?.[0]?.reason || "company_identity_not_confirmed");
       continue;
     }
 
@@ -180,14 +263,44 @@ serve(async (req: Request) => {
     if (ico) orParts.push(`ico.eq.${ico}`);
     dupQuery = dupQuery.or(orParts.join(","));
     const { data: dupRows } = await dupQuery;
-    if (dupRows && dupRows.length > 0) { counters.duplicates++; continue; }
+    if (dupRows && dupRows.length > 0) { counters.duplicates++; bump("duplicates"); continue; }
 
     // AI klasifikace oboru (jen klasifikace/relevance/shrnutí).
     const cls = await classify(name, site.snippet, groups, openaiKey);
-    if (!cls.relevant) { continue; }
-    const targetGroup = cls.slug === leadGroup ? leadGroup : (cls.slug && validSlugs.has(cls.slug) ? cls.slug : null);
-    if (!targetGroup) { counters.wrong_category++; continue; }
+    if (cls.failed) { bump("classifier_failed"); continue; }
+    if (!cls.relevant) { bump("classified_irrelevant"); continue; }
+    // Automaticky zalozeny job smi ulozit jen firmu, kterou klasifikator zaradil
+    // PRESNE do segmentu pozadovaneho jobem. Jiny platny slug i fallback `jine`
+    // jsou wrong_category a hledani pokracuje dalsim kandidatem. Rucni discovery
+    // zachovava dosavadni moznost ulozit firmu do jine platne kategorie.
+    if (!classificationMatchesJobScope({
+      autoCreated,
+      requestedGroup: leadGroup,
+      classifiedGroup: cls.slug,
+    })) {
+      counters.wrong_category++;
+      bump("wrong_category");
+      continue;
+    }
+    // V rucnim discovery zustava dosavadni routovani: kdyz klasifikator
+    // nezvladne urcit kategorii, muze se ARES-identifikovana firma zaradit do
+    // existujici kategorie "jine". Automaticky job uz pripadny fallback vyse
+    // odmitl, protoze vyzaduje presnou klasifikaci do segmentu jobu.
+    let targetGroup = cls.slug === leadGroup ? leadGroup : (cls.slug && validSlugs.has(cls.slug) ? cls.slug : null);
+    // Fallback jen pro firmu s IC z ARES. Bez registrovane identity by se tudy
+    // mohl protahnout katalog nebo agregator, ktery klasifikator nezaradil.
+    if (!targetGroup && ico && validSlugs.has("jine")) {
+      targetGroup = "jine";
+      bump("classified_fallback_other");
+    }
+    if (!targetGroup && !ico) bump("fallback_blocked_no_ico");
+    if (!targetGroup) { counters.wrong_category++; bump("wrong_category"); continue; }
     const isTargetSegment = targetGroup === leadGroup;
+
+    // E-mail je volitelný bonus. Nedoložený výsledek se nikam neukládá a
+    // nebrání vytvoření jinak platného leadu.
+    const verifiedContact = await findVerifiedDiscoveryContact(official.website, name);
+    bump(verifiedContact ? "email_found" : "email_missing");
 
     const nowIso = new Date().toISOString();
     const discoveryMeta = {
@@ -199,7 +312,7 @@ serve(async (req: Request) => {
       },
     };
 
-    const { data: rpcData, error: rpcErr } = await supabaseAdmin.rpc("sales_lead_propose", {
+    const baseRpcArgs = {
       p_created_by: job.created_by,
       p_company_name: name,
       p_lead_group: targetGroup,
@@ -210,12 +323,35 @@ serve(async (req: Request) => {
       p_ico: ico,
       p_city: reg?.city ?? null,
       p_industry: groups.find((g) => g.slug === targetGroup)?.label ?? null,
-    });
-    if (rpcErr) { dbg("rpc_error", { url, error: rpcErr.message }); continue; }
-    const res = (rpcData ?? {}) as { outcome?: string; reason?: string; lead_id?: string };
+    };
+    const rpcName = verifiedContact ? "sales_lead_propose_with_contact" : "sales_lead_propose";
+    const rpcArgs = verifiedContact
+      ? {
+        ...baseRpcArgs,
+        p_email: verifiedContact.email,
+        p_email_source_url: verifiedContact.sourceUrl,
+        p_proposed_by: "backend_verified_official_website",
+      }
+      : baseRpcArgs;
+    const { data: rpcData, error: rpcErr } = await supabaseAdmin.rpc(rpcName, rpcArgs);
+    if (rpcErr) {
+      dbg("rpc_error", { url, error: rpcErr.message });
+      bump("rpc_error");
+      // Jen kod chyby (napr. 23505), nikdy text s daty firmy.
+      bumpReason("rpc_error_code", rpcErr.code || "unknown");
+      continue;
+    }
+    const res = (rpcData ?? {}) as {
+      outcome?: string;
+      reason?: string;
+      lead_id?: string;
+      contact_stored?: boolean;
+      verified_at?: string;
+    };
 
     if (res.outcome !== "created") {
       if (res.outcome === "skipped") counters.duplicates++;
+      bumpReason("rpc_rejected", res.reason || res.outcome || "unknown");
       continue;
     }
 
@@ -229,6 +365,14 @@ serve(async (req: Request) => {
     if (reg?.city) provenance.city = { value: reg.city, source: "ARES", verified_at: nowIso };
     if (site.phone) provenance.phone = { value: site.phone, source: "website", verified_at: nowIso };
     if (site.contactFormUrl) provenance.contact_form = { value: site.contactFormUrl, source: "website", verified_at: nowIso };
+    if (verifiedContact && res.contact_stored === true) {
+      provenance.email = {
+        value: verifiedContact.email,
+        source_url: verifiedContact.sourceUrl,
+        method: "backend_verified_official_website",
+        verified_at: res.verified_at,
+      };
+    }
 
     const leadId = res.lead_id;
     if (leadId) {
@@ -240,12 +384,23 @@ serve(async (req: Request) => {
       }).eq("id", leadId);
     }
 
-    if (isTargetSegment) counters.created_count++; else counters.wrong_category++;
+    // Lead skutecne vznikl v DB. Zapocitej ho jako vytvoreny i kdyz klasifikator
+    // urcil jiny (ale platny a aktivni) obor — jinak job hlasi 0 vytvorenych,
+    // prestoze firmy ulozil, a spotrebuje cely rozpocet kandidatu.
+    counters.created_count++;
+    bump("created");
+    bump(isTargetSegment ? "created_in_target_group" : "created_in_other_group");
     if (ico) counters.with_ico++;
     if (reg?.dic) counters.with_dic++;
     if (reg?.address) counters.with_address++;
     if (site.phone) counters.with_phone++;
-    dbg("saved", { company: name, website: official.website, group: targetGroup, target: isTargetSegment });
+    dbg("saved", {
+      company: name,
+      website: official.website,
+      group: targetGroup,
+      target: isTargetSegment,
+      email_verified: res.contact_stored === true,
+    });
   }
 
   // ── Rozhodni finish stav ───────────────────────────────────────────────────
@@ -258,6 +413,8 @@ serve(async (req: Request) => {
   await supabaseAdmin.from("sales_lead_discovery_jobs").update({
     ...counters,
     candidate_pool: pool, cursor, search_rounds: searchRounds, search_exhausted: searchExhausted,
+    funnel,
+    search_diagnostics: searchDiagnostics,
     status, finish_reason: finishReason,
     finished_at: status === "done" ? new Date().toISOString() : null,
     updated_at: new Date().toISOString(),

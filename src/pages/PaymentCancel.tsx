@@ -5,18 +5,27 @@ import { Button } from '@/components/ui/button';
 import { XCircle } from 'lucide-react';
 import { Header } from '@/components/Header';
 import { toast } from '@/hooks/use-toast';
+import { isNativeApp } from '@/lib/nativeApp';
 
 const PaymentCancel: React.FC = () => {
   const navigate = useNavigate();
+  // Nativní aplikace: platební stránky nejsou dostupné — okamžitý redirect.
+  const nativeApp = isNativeApp();
 
   useEffect(() => {
+    if (nativeApp) {
+      navigate('/games', { replace: true });
+      return;
+    }
     // Show cancel toast
     toast({
       title: "Platba byla zrušena",
       description: "Nákup voucherů byl zrušen. Žádné peníze nebyly účtovány.",
       variant: "destructive"
     });
-  }, []);
+  }, [nativeApp, navigate]);
+
+  if (nativeApp) return null;
 
   return (
     <div className="min-h-screen bg-background">

@@ -1,6 +1,7 @@
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.57.4";
 import { Resend } from "npm:resend@2.0.0";
+import { applyOneMilBrandToLegacyAutomaticEmail } from "../_shared/oneMilEmailTemplate.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -51,22 +52,41 @@ async function tokenDigest(value: string): Promise<string> {
 }
 
 async function isInternalTokenAuthorized(req: Request): Promise<boolean> {
-  const expectedToken = Deno.env.get("INTERNAL_FUNCTION_TOKEN");
   const providedToken = req.headers.get("x-internal-token");
-
-  if (!expectedToken || !providedToken) {
+  if (!providedToken) {
     return false;
   }
 
-  const [expectedDigest, providedDigest] = await Promise.all([
-    tokenDigest(expectedToken),
-    tokenDigest(providedToken),
-  ]);
+  // 1) Match against the deployed Edge secret INTERNAL_FUNCTION_TOKEN.
+  const expectedToken = Deno.env.get("INTERNAL_FUNCTION_TOKEN");
+  if (expectedToken) {
+    const [expectedDigest, providedDigest] = await Promise.all([
+      tokenDigest(expectedToken),
+      tokenDigest(providedToken),
+    ]);
+    if (
+      expectedToken.length === providedToken.length &&
+      expectedDigest === providedDigest
+    ) {
+      return true;
+    }
+  }
 
-  return (
-    expectedToken.length === providedToken.length &&
-    expectedDigest === providedDigest
-  );
+  // 2) Fall back to server-side verification against the current Vault secret
+  //    internal_function_token — the value pg_cron actually sends. Keeps the
+  //    scheduled call working even if the Edge secret has drifted from Vault.
+  try {
+    const supabaseUrl = Deno.env.get("SUPABASE_URL") ?? "";
+    const serviceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "";
+    if (!supabaseUrl || !serviceKey) return false;
+    const client = createClient(supabaseUrl, serviceKey);
+    const { data, error } = await client.rpc("verify_internal_function_token", {
+      p_token: providedToken,
+    });
+    return !error && data === true;
+  } catch (_e) {
+    return false;
+  }
 }
 
 async function authorizeRequest(req: Request): Promise<AuthFailure | null> {
@@ -222,6 +242,7 @@ const handler = async (req: Request): Promise<Response> => {
       .from("email_queue")
       .select("*")
       .eq("status", "pending")
+      .lte("available_at", new Date().toISOString())
       .or("subject.not.ilike.%faktura%,attachment_url.not.is.null,attachment_storage_path.not.is.null")
       .order("created_at", { ascending: true })
       .limit(50);
@@ -270,7 +291,7 @@ const handler = async (req: Request): Promise<Response> => {
           from: "OneMil <noreply@onemil.cz>",
           to: [emailRecord.email],
           subject: emailRecord.subject,
-          html: emailRecord.body,
+          html: applyOneMilBrandToLegacyAutomaticEmail(emailRecord.body),
         };
 
         let attachment: Attachment | null = null;

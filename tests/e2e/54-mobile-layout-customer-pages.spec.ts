@@ -10,7 +10,7 @@
  * Read-only — žádné mutace dat, žádný Supabase write.
  * Používá iPhone SE viewport (375×812).
  *
- * Stránky: / · /games · /wins · /vouchers · /profile · /messages
+ * Stránky: / · /games · /wins · /vouchers · /top-up · /profile · /messages
  */
 
 import { test, expect } from '@playwright/test';
@@ -30,6 +30,7 @@ const PAGES: Array<{ route: string; label: string }> = [
   { route: '/games',     label: 'Games' },
   { route: '/wins',      label: 'Wins' },
   { route: '/vouchers',  label: 'Vouchers' },
+  { route: '/top-up',    label: 'TopUp' },
   { route: '/profile',   label: 'Profile' },
   { route: '/messages',  label: 'Messages' },
 ];

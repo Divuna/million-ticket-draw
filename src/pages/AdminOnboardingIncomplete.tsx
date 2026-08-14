@@ -7,12 +7,11 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Button } from '@/components/ui/button';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
 import { useUserRole } from '@/hooks/useUserRole';
 import { useAuth } from '@/hooks/useAuth';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/hooks/use-toast';
-import { Loader2, AlertCircle, Calendar, RefreshCw, Mail, Send, Download } from 'lucide-react';
+import { Loader2, AlertCircle, Calendar, RefreshCw, Download } from 'lucide-react';
 
 interface IncompleteUser {
   id: string;
@@ -28,8 +27,6 @@ const AdminOnboardingIncomplete: React.FC = () => {
   const [dateFrom, setDateFrom] = useState('');
   const [dateTo, setDateTo] = useState('');
   const [refreshing, setRefreshing] = useState(false);
-  const [sendingEmails, setSendingEmails] = useState(false);
-  const [confirmDialogOpen, setConfirmDialogOpen] = useState(false);
 
   const fetchIncompleteUsers = async () => {
     setLoading(true);
@@ -111,42 +108,6 @@ const AdminOnboardingIncomplete: React.FC = () => {
     fetchIncompleteUsers();
   };
 
-  const handleSendMassEmail = async () => {
-    setConfirmDialogOpen(false);
-    setSendingEmails(true);
-    
-    try {
-      const { data, error } = await supabase.functions.invoke('send-onboarding-reminder');
-      
-      if (error) {
-        console.error('Error sending emails:', error);
-        toast({
-          title: "Chyba",
-          description: "Nepodařilo se odeslat e-maily.",
-          variant: "destructive"
-        });
-        return;
-      }
-      
-      toast({
-        title: "Hromadný e-mail odeslán",
-        description: data.message || `Odesláno: ${data.sent}, Přeskočeno: ${data.skipped}`
-      });
-      
-      // Refresh the list
-      await fetchIncompleteUsers();
-    } catch (err: any) {
-      console.error('Exception:', err);
-      toast({
-        title: "Chyba",
-        description: err.message || "Nepodařilo se odeslat e-maily.",
-        variant: "destructive"
-      });
-    } finally {
-      setSendingEmails(false);
-    }
-  };
-
   const handleExportCSV = () => {
     if (users.length === 0) return;
     
@@ -218,19 +179,6 @@ const AdminOnboardingIncomplete: React.FC = () => {
                 >
                   <Download className="h-4 w-4 mr-2" />
                   Exportovat CSV
-                </Button>
-                <Button
-                  variant="default"
-                  size="sm"
-                  onClick={() => setConfirmDialogOpen(true)}
-                  disabled={sendingEmails || loading || users.length === 0}
-                >
-                  {sendingEmails ? (
-                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                  ) : (
-                    <Send className="h-4 w-4 mr-2" />
-                  )}
-                  Odeslat hromadný e-mail
                 </Button>
                 <Button
                   variant="outline"
@@ -331,27 +279,6 @@ const AdminOnboardingIncomplete: React.FC = () => {
           </CardContent>
         </Card>
       </div>
-
-      {/* Confirmation Dialog */}
-      <AlertDialog open={confirmDialogOpen} onOpenChange={setConfirmDialogOpen}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Potvrzení hromadného odeslání</AlertDialogTitle>
-            <AlertDialogDescription>
-              Opravdu chcete odeslat připomínkový e-mail všem {users.length} uživatelům s nedokončeným onboardingem?
-              <br /><br />
-              <strong>Poznámka:</strong> Uživatelé, kteří již obdrželi připomínku v posledních 7 dnech, budou automaticky přeskočeni.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>Zrušit</AlertDialogCancel>
-            <AlertDialogAction onClick={handleSendMassEmail}>
-              <Mail className="h-4 w-4 mr-2" />
-              Odeslat e-maily
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
     </>
   );
 };

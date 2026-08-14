@@ -1,3 +1,238 @@
+# 13. 08. 2026 — Paperclip marketingový tým OneMil sjednocen pod Martina
+
+- Živý Paperclip stav marketingu byl ověřen a zapsán do dokumentace. Marketingoví agenti jsou přesně tři, bez duplicit.
+- Existující agent **Social Media Strateg OneMil** byl přejmenován na **Martin – vedoucí marketingu OneMil** (`be26a7d0-bb12-4720-b535-a1c656f355ae`) a zůstává pod **Provozním ředitelem OneMil**. Model `gpt-5.5`, status `idle`, `canCreateAgents=false`, `canCreateSkills=false`, `heartbeat.enabled=false`, budget `0 Kč`.
+- **Content & Community Planner OneMil** (`2c257400-e694-4286-be4a-b015d23221f9`) a **Performance Analyst OneMil** (`16844c6f-8960-43a8-a71c-f599e33c3ee2`) byli organizačně nastaveni pod Martina. Oba zůstávají `idle`, model `gpt-5.5`, `canCreateAgents=false`, `canCreateSkills=false`, `heartbeat.enabled=false`, budget `0 Kč`.
+- Z permanentních instructions všech tří marketingových agentů byl odstraněn jednorázový úkol `ICO-53 / první společný úkol`. Jednorázové úkoly patří do Paperclip issues, ne do trvalých instructions. OneMil Brand Kit / Brand Manual zůstal závazný zdroj.
+- Marketingový provozní model: Content & Community Planner a Performance Analyst předávají výstupy Martinovi; Martin odstraňuje duplicity a připravuje jeden konsolidovaný marketingový výstup pro Provozního ředitele.
+- Zachována nulová oprávnění k publikování, placené reklamě a utrácení. Marketingoví agenti nemají social secrets, publishing práva ani ads práva. Žádná nová marketingová rutina nebyla aktivována.
+- Magin a Synchronizátor zůstali nedotčeni: jejich modely, permissions, heartbeat, secrets a rutiny nebyly změněny. Board approval nebyl potřeba, protože nevznikal nový agent.
+
+# 11. 08. 2026 — Paperclip lead role cleanup a Magin lead-supply adapter
+
+- Aktualizován živý Paperclip stav OneMil po odstranění agenta **Průzkumník obchodních leadů OneMil**.
+  Agent byl před odstraněním ověřen jako `idle`, bez live runů; neměl vlastní rutiny. Jeho zastaralý
+  vlastní lead-research úkol `ICO-17` byl zrušen/skryt, dvě pending request-confirmation interakce
+  byly odmítnuty a parent issue Provozního ředitele zůstalo zachované. Žádná OneMil data, discovery
+  joby ani leady nebyly smazány.
+- **Magin – CRM operátor OneMil** nově před původní denní e-mailovou dávkou kontroluje zásobu
+  schválených a odeslatelných leadů. Pokud zásoba nestačí, používá výhradně úzký STAGING adapter
+  `sales-lead-magin-supply-agent`: schvaluje jen backendově ověřené návrhy `navrzeny` a případně
+  zakládá existující OneMil discovery job pouze pro segment `e-shopy`.
+- Maginův segment je pevně `e-shopy`. Magin nesmí vytvářet vlastní vyhledávání, vlastní lead databázi,
+  paralelní CRM proces ani obcházet odmítnuté/neověřené leady. E-maily dál neposílá přímo; rozesílání
+  provádí existující OneMil systém přes `sales-lead-daily-batch-agent`.
+- Stávající Maginova denní rutina zůstala beze změny (`30 7 * * 1-5`, `Europe/Prague`,
+  `sales-lead-daily-batch-agent`, současný plán velikosti dávky a batch secret). OneMil discovery
+  systém nebyl předělán ani nahrazen; adapter jen deleguje na existující OneMil mechanismy.
+
+# 06. 08. 2026 — Přehled reakcí „Mám zájem" / „Nemám zájem" v administraci (Draft)
+
+- Administrace Obchod / Leady dostala samostatný pohled na obě reakce z obchodního e-mailu, aby se
+  žádná neztratila. Nová záložka **„Kontaktovat“** (mezi „Osloveno“ a „Odpovědělo“) ukazuje firmy
+  s potvrzeným zájmem; odmítnutí zůstávají v existující záložce **„Nekontaktovat“** bez duplicitní
+  záložky. Obě mají červený počet nepřečtených reakcí.
+- **Nezavádí se nový stav leadu.** Ověřen stávající stavový systém — lead po „Mám zájem“ zůstává
+  `odpovedel` a „Kontaktovat“ je samostatný pohled nad konečným stavem response tokenu.
+- Read-only audit stagingu potvrdil, že metadata už jsou bezpečně rozlišitelná
+  (`source=interest_link` vs. `source=decline_link`), takže **migrace na doplnění metadat nebyla
+  potřeba**. Ručně nastavené „Nekontaktovat“ metadata nemá, a proto se do počtu nových odmítnutí
+  nikdy nezapočítá; stejně tak běžná e-mailová odpověď nespadne do „Kontaktovat“.
+- Nová `sales_lead_response_overview()` (`STABLE SECURITY DEFINER`, `search_path=''`, guard
+  `sales_leads.manage`/superadmin, bez `anon`, bez zápisu) — tabulka response tokenů je pro
+  `authenticated` zamčená, takže administrace čte autoritativní data jen přes RPC a frontend
+  nepoužívá service-role klíč.
+- Rozšířena **existující** `sales_lead_mark_replies_read(uuid)`, aby označila i odmítnutí z tlačítka.
+  Mění výhradně `read_at`/`read_by` — neruší `do_not_contact`, suppression ani stav `nekontaktovat`.
+- Testy: nový spec 106 (19 testů) + 89 zelených testů modulu, `tsc --noEmit` 0 chyb, produkční build
+  OK. Logika RPC ověřena read-only dotazem proti reálným staging datům.
+- Opraven latentní bug ve specu 105 (čtení migrace bez normalizace CRLF).
+- **Nic nenasazeno, nic nemergnuto, žádný e-mail, žádná dávka, žádná automatika, žádný cron.**
+  Produkce beze změny.
+
+# 06. 08. 2026 — PR 4 interní worker připravených obchodních dávek (Draft)
+
+- Přidán service-role worker pro dávky prvních obchodních e-mailů: `sales_lead_email_batch_claim_next()`
+  (zámek kill switche, jen `scheduled` dávka, dnešní plán a okno podle `Europe/Prague`,
+  `FOR UPDATE SKIP LOCKED`, nejvýše jedna položka, plné znovuověření ochran před `processing`),
+  `sales_lead_email_batch_activate(uuid)` (`paused → scheduled` jen při `enabled=true`, bez změny
+  snapshotů) a `sales_lead_email_batch_item_record_failure(uuid,text,text)` (auditovaný `failed`,
+  `uncertain` se nikdy neopakuje). Zmeškaný den nebo okno = `skipped` s `scheduled_window_missed`,
+  nikdy catch-up.
+- Sdílená delivery vrstva a evidence rozšířeny o `batch_initial`; ruční odesílání zůstává funkčně
+  beze změny (delivery key ověřen jako bit po bitu identický). Batch commit vytvoří právě jednu
+  aktivitu `email_sent` se `sent_by='system'`, `delivery_mode='batch_initial'`, `batch_item_id` a
+  `delivery_id`, označí položku `sent` a přepočítá dávku na `completed`/`failed`.
+- Nová interní Edge Function `process-sales-lead-email-batch` (secret `SALES_LEAD_BATCH_WORKER_SECRET`,
+  POST only, fail-closed, stejná identita odesílatele jako ruční sender) zavolá poskytovatele nejvýše
+  jednou za request; přijatý e-mail se selhaným commitem pokračuje pouze jako `commit_only`.
+- Oprava dvou blokujících chyb z review: (1) větev `commit_only` už nesestavuje delivery vstup z
+  prázdných hodnot (vedlo by k `batch_snapshot_mismatch` a trvale blokované položce) — orchestrace
+  je ve sdíleném `salesLeadBatchWorkerRun.ts` a volá výhradně `sales_lead_initial_email_commit`;
+  (2) batch claim nově znovu ověřuje i `performed_by` = `batch.created_by`, `converted_partner_id`,
+  partnera se stejným IČO, povolenou metodu ověření, `email_verified_at` a `email_source`
+  (neprázdný, max 2048) ještě před vznikem delivery a před provider callem.
+- PR 1, PR 2 i PR 3 jsou v produkci a PR 3 je produkčně ověřené. **PR 4 zůstává pouze Draft:** worker
+  není nasazený, secret není nastavený, cron neexistuje, automatika je stále `enabled=false`, žádný
+  e-mail nebyl odeslán a staging ani produkce nebyly změněny.
+
+# 05. 08. 2026 — PR 3 administrační příprava pozastavených obchodních dávek (Draft)
+
+- Přidáno ruční UI pro výběr leadů, aktivní počáteční šablony a dne, serverový preview a výslovné
+  potvrzení vytvoření dávky. Klient nepočítá způsobilost ani obsah a zapisuje pouze přes existující RPC.
+- Při produkčním `enabled=false` create RPC nově bezpečně uloží dávku jako `paused` a položky jako
+  `pending`. Přehled čte posledních 20 dávek, položky a skip audit; zrušení je dostupné jen pro
+  `paused`/`scheduled` přes existující cancel RPC s důvodem.
+- PR 1 a PR 2 jsou v produkci, ale PR 3 zůstává pouze Draft. Nebyl přidán worker, cron, Edge Function,
+  sender, Resend volání ani `email_queue`; nic nebylo aplikováno na staging/produkci a žádný e-mail
+  nebyl odeslán. Worker a řízené zapnutí patří až do samostatně schváleného PR 4.
+
+# 05. 08. 2026 — PR 2 bezpečné evidence prvního obchodního e-mailu (produkce)
+
+- Připraven společný server-only tok pro ruční první e-mail; provider je injektovaná závislost a
+  testy používají výhradně fake provider.
+- Přidána pasivní `sales_lead_email_deliveries` a service-role-only RPC pro claim, záznam výsledku a
+  atomický commit jediné historie a správného stavového přechodu.
+- Stabilní delivery key je současně Resend idempotency key. Accepted + DB failure pokračuje jen
+  commitem; timeout/neurčitý výsledek se blokuje jako `uncertain`.
+- Nic nebylo nasazeno ani aplikováno na staging/produkci, batch automatika zůstává vypnutá a nebyl
+  odeslán žádný e-mail. UI dávky je PR 3, worker/cron až PR 4.
+
+# 04. 08. 2026 — Stripe refundace: v137, superadmin, Publish, Sandbox webhook a ověřené testy
+
+- **`stripe-refund` nasazena ve verzi v137** (`verify_jwt = true`); `stripe-webhook` zůstává **v338** (`verify_jwt = false`, ověřuje Stripe podpis).
+- **Oprava role (commit `ffc0aac8`):** refundaci smí spustit **`admin` i `superadmin`** — původní kontrola pouštěla jen `admin`, takže superadmin dostával 403.
+- **Lovable Publish proběhl** — administrace zobrazuje dokončené, čekající i selhané refundace.
+- **Stripe Sandbox webhook** pro `https://xkzhjldrojjlrkezorey.supabase.co/functions/v1/stripe-webhook` nastaven přesně na `checkout.session.completed`, `refund.created`, `refund.updated`, `refund.failed`. **Live webhook zůstává jen na `checkout.session.completed`.**
+- **Test 50 Kč:** platba připsala 50 MioCoinů, právě jeden `payment_credit` +50; refundace skončila jako `refunded` se `stripe_refund_status = succeeded`, právě jeden `refund_debit` −50, žádný `refund_reversal`.
+- **Test 300 Kč:** platba připsala 310 MioCoinů včetně balíčkového bonusu; refundace odečetla přesně 310 včetně bonusu; právě jeden `payment_credit` +310 a jeden `refund_debit` −310; Stripe stav `succeeded`; bez duplicity.
+- **Test ochrany proti utraceným MioCoinům:** účet `kutil@opravo.cz` nastaven pro test z 1 427 MioCoinů na 0 (účetní záznam −1 427), poté koupen balíček 50 Kč a utraceno 5 MioCoinů → zůstatek 45. Refundace byla **správně odmítnuta ještě před voláním Stripe**: platba zůstala `completed`, `stripe_refund_id` i `stripe_refund_status` prázdné, nevznikl `refund_debit` ani `refund_reversal`.
+
+# 03. 08. 2026 — Zpevnění Stripe refundací: PR #309 mergnut, DB migrace na produkci
+
+- **PR #309 mergnut do `main`** (merge commit `e0f7514d`) po převodu z Draft na Ready; CI Smoke E2E zelené.
+- **Migrace `20260803090000_harden_stripe_refund_flow.sql` aplikována na produkci `xkzhjldrojjlrkezorey`** (schválení Pavla), v `schema_migrations` jako **`20260803201005`** (apply nástroj razítkuje vlastní čas).
+- **Postcheck ✅:** 3 nové sloupce `payments.stripe_refund_*`/`refund_updated_at`, 3 unikátní indexy, 4 nové funkce (`SECURITY DEFINER` + `search_path=public`, 0 grantů pro `anon`/`authenticated`, EXECUTE jen `service_role`), `admin_manage_payment` s blokovanou refundní větví a bez `admin_refund_credit`, `reverse_failed_stripe_refund` s pojmenovanými argumenty. Data nedotčena: 135 plateb, 139 856,41 MC, 3 733 ledger řádků, checksum `referral_rewards` identický, 0 řádků s vyplněnými refundními poli.
+- **Edge Functions nasazené z `main` (03. 08. 2026, schválení Pavla):** `stripe-refund` **v135 → v136** (`verify_jwt = true` zachováno; **aktuální produkční verze je od 04. 08. 2026 v137**, viz záznam výše), `stripe-webhook` **v337 → v338** (`verify_jwt = false` zachováno kvůli Stripe podpisu). Smoke: refund bez JWT → 401, webhook bez podpisu → `No Stripe signature found`. Refundace z administrace tím jde novou cestou (kontrola zůstatku a odečet PŘED Stripe, `finalize` jen po `succeeded`).
+- **Tehdy ještě neprovedeno (dokončeno 04. 08. 2026, viz záznam výše):** Lovable Publish frontendu a rozšíření Stripe Sandbox webhooku o `refund.created`/`refund.updated`/`refund.failed`.
+- **Data po deployi nedotčena:** 135 plateb (129 completed, 6 refunded, 0 refund_pending), 139 856,41 MC, 3 733 ledger řádků, 0 řádků `refund_debit`/`refund_reversal`, checksum `referral_rewards` identický.
+
+# 03. 08. 2026 — Reverze odměny za doporučení opravena na produkci
+
+- **Migrace `20260803120000_fix_referral_reversal_ambiguous_call.sql` aplikována na produkci `xkzhjldrojjlrkezorey`** (schválení Pavla). V `schema_migrations` je zapsaná jako **`20260803192609`** — apply nástroj razítkuje vlastní čas, takže se produkční verze liší od čísla souboru v repu (stejně jako `restore_wallet_payment_ledger`: soubor `20260802120000`, produkce `20260802205656`).
+- **Problém:** `reverse_referral_reward_on_payment_status_change()` volala `try_credit_wallet_mc(v_referrer, (0 - v_reward))` pozičně. Kvůli overloadu `(uuid, numeric, text DEFAULT 'topup')` bylo volání nejednoznačné (`42725`) a výjimka z triggeru rušila celou transakci — každá změna stavu platby z `completed` u platby s odměnou `earned` se vrátila zpět. Produkce měla 16 odměn `earned` a 0 `reversed`, reverzní větev nikdy neproběhla. Defekt odhalil rollback-only test PR #309.
+- **Oprava:** změněn výhradně ten jeden řádek na pojmenované argumenty `p_user_id => …, p_amount_mc => …`. Ostatní logika, `SECURITY DEFINER`, absence `SET search_path`, owner i trigger beze změny.
+- **Ověřeno rollback-only testem před nasazením** (před opravou selhání `42725`, po opravě všechny kontroly PASS) a **produkčním postcheckem po nasazení**: data nedotčena — 135 plateb, 775 peněženek, 139 856,41 MC, 3 733 ledger řádků, 17 odměn, checksum `referral_rewards` identický. Žádný zpětný doplněk nestornovaných odměn se vědomě nedělá.
+
+# 03. 08. 2026 — Zpevnění Stripe refundací (Draft PR #309, nenasazeno)
+
+- **Rollback-only test proti produkčnímu schématu PROŠEL** (schválení Pavla). Jediný `DO` blok zakončený `RAISE EXCEPTION`, takže se migrace i testovací data vrátily zpět jako jedna atomická operace. **23/23 kontrol PASS** — odečet přesné částky, idempotence přípravy i reverze, odmítnutí `finalize` bez `succeeded`, ochrana terminálních stavů (`succeeded`/`failed`/`canceled`) proti pozdním událostem, návrat platby na `completed` po `failed`/`canceled`, **obnova doporučovací odměny na `earned` a připsání `reward_mc` právě jednou**, blokace nového automatického pokusu, `service_role`-only granty a tři unikátní indexy.
+- **Oprava odhalená testem:** poziční `try_credit_wallet_mc(v_referrer, v_reward_mc)` je v produkci nejednoznačné (`42725`) kvůli overloadu `(uuid, numeric, text DEFAULT 'topup')`; migrace nyní používá pojmenované argumenty `p_user_id => …, p_amount_mc => …`.
+- **⚠️ Pre-existující produkční defekt odhalený testem — mezitím OPRAVEN samostatně:** produkční trigger funkce `reverse_referral_reward_on_payment_status_change()` měla stejné nejednoznačné poziční volání, takže každá změna stavu platby z `completed` u platby s odměnou `earned` skončila chybou `42725` a vrátila se zpět (16 odměn `earned`, 0 `reversed`). Opraveno migrací `20260803120000_fix_referral_reversal_ambiguous_call.sql`, aplikovanou na produkci 03. 08. 2026 se schválením Pavla (v `schema_migrations` jako **`20260803192609`**) — blokátor pro `prepare_stripe_refund` tím odpadl.
+- **Produkce po testu beze změny:** 135 plateb, 775 peněženek, 3 733 ledger řádků, 139 856,41 MC, shodný checksum `referral_rewards`, 0 nových sloupců/funkcí/indexů, migrace nezapsaná, 0 testovacích reziduí. Souběžný posun −35 MC / +10 ledger řádků pocházel z reálné aktivity aplikace (`benefit_purchase`), ne z testu.
+
+- **Pouze Draft PR — produkce `xkzhjldrojjlrkezorey` nebyla změněna.** Migrace není aplikovaná na žádné databázi, Edge Functions `stripe-refund` (produkce v135) ani `stripe-webhook` nebyly nasazené, Stripe webhook konfigurace nebyla změněna, žádná skutečná refundace neproběhla, žádná testovací platba nevznikla.
+- **Doplněno po třetí revizi (přeházené webhook události):** `record_stripe_refund_status` chránila jako terminální jen `succeeded`, takže pozdní `pending`/`requires_action` mohl přepsat uložený `failed`/`canceled` — administrace by přestala zobrazovat „Refundace selhala", `prepare_stripe_refund` by povolil nový automatický pokus a existující `refund_reversal` by způsobil předčasný návrat s platbou uvíznutou v `refund_pending`. **Opraveno:** terminální jsou nyní **`succeeded`, `failed` i `canceled`** — uložený terminální stav už žádná pozdější událost nepřepíše a vrací se `ok: true, ignored: true, code: 'terminal_state'` se skutečně uloženým stavem platby i refundace. Funkce navíc přijímá jen pět skutečných Stripe stavů (jinak `invalid_stripe_status` bez zápisu). Obě Edge Functions po uložení větví podle **efektivního stavu z databáze** (`recorded.stripe_refund_status`), ne podle příchozí proměnné; ignorovanou událost webhook jen potvrdí a nevrací kvůli ní 500. Idempotentní větev `reverse_failed_stripe_refund` nově platbu nikdy nenechá v `refund_pending` — dorovná ji na `completed` a zachová terminální `stripe_refund_status`, aniž by sáhla na peněženku nebo odměnu.
+- **Doplněno po druhé revizi (účetní dopad selhané refundace):** produkční trigger `trg_payments_referral_reverse` → `reverse_referral_reward_on_payment_status_change()` stornuje `referral_rewards` a odečte odměnu doporučujícímu při každém přechodu `completed → cokoli jiného` — tedy i při `completed → refund_pending`. Původní návrh při selhané Stripe refundaci odměnu neobnovil a nechal platbu v samostatném stavu `refund_failed`, takže se přestala počítat jako dokončená, přestože zákazníkovi peníze vráceny nebyly. **Opraveno:** trvalý stav `refund_failed` byl zrušen; `reverse_failed_stripe_refund` nyní v jedné transakci vrátí zákaznické MioCoiny (`refund_reversal`), obnoví odměnu za doporučení (`reversed` + `reverse_reason = 'payment_status_changed:refund_pending'` → `earned`, `reversed_at`/`reverse_reason` na NULL, `reward_mc` zpět přes `try_credit_wallet_mc(uuid, numeric)`; funkce vrací boolean a při neúspěchu se celá transakce vrátí) a vrátí platbu na `completed`, přičemž ponechá `stripe_refund_id` + `stripe_refund_status = failed|canceled`. Nový automatický pokus je zablokovaný (`refund_failed_needs_manual_review`). `record_stripe_refund_status` zavedla ochranu terminálního stavu (po třetí revizi platí pro `succeeded`, `failed` i `canceled` — viz výše). `finalize_stripe_refund` si sám v databázi vyžaduje `stripe_refund_id IS NOT NULL` a `stripe_refund_status = 'succeeded'`. Administrace pozná „Refundace selhala" z `completed` + `stripe_refund_status`, platbu dál počítá do tržeb a nenabízí automatické opakování.
+- **Doplněno po první revizi (Stripe stavy):** Stripe refundace může být `pending`, `requires_action`, `succeeded`, `failed` nebo `canceled`. Původní návrh PR chybně dokončoval platbu i pro `pending`. Nově se `finalize_stripe_refund` volá **jen** po `succeeded`; `pending`/`requires_action` nechává platbu v `refund_pending` (HTTP 202 „Refundace byla přijata a čeká na dokončení u Stripe."); `failed`/`canceled` právě jednou vrátí MioCoiny (`refund_reversal`) — a po druhé revizi i doporučovací odměnu, přičemž platba se vrací na `completed` (viz výše). Platba nově eviduje `stripe_refund_id` / `stripe_refund_status` / `refund_updated_at`; existující refundace se dočítá přes `stripe.refunds.retrieve`, protože opakovaný POST se stejným idempotency key vrací původní uloženou odpověď. Webhook `stripe-webhook` nově zpracovává `refund.created` / `refund.updated` / `refund.failed` (tok `checkout.session.completed` beze změny) a je idempotentní přes unikátní indexy. **Produkční Stripe endpoint bude nutné samostatně přihlásit k novým refundním událostem — v tomto PR se nemění.**
+- **Potvrzený současný tok (read-only ověřeno):** `/admin/payments` → EF `stripe-refund` → **nejdřív Stripe refund, až potom odečet MioCoinů** přes `deduct_wallet_for_refund`, který odečet ořezává na nulu (`GREATEST(0, balance − amount)`). Zákazník tak mohl MioCoiny utratit a přesto dostat celou platbu zpět; selhání odečtu i selhání zápisu stavu se jen zalogovalo a EF vracela `success: true`. Stará `admin_manage_payment` má v refundní větvi opačné znaménko (MioCoiny přičítá, zapisuje `admin_refund_credit`) a `EXECUTE` pro `PUBLIC`/`anon`/`authenticated`; současná administrace ji nevolá a v produkci má 0 řádků.
+- **Nové pravidlo:** refundaci lze zahájit jen s celým zůstatkem MioCoinů z dané platby; jinak se zastaví ještě před Stripe hláškou „Refundaci nelze provést, protože část MioCoinů z této platby již byla použita."
+- **Migrace `20260803090000_harden_stripe_refund_flow.sql`:** unikátní parciální index `uniq_wallet_tx_refund_debit_per_payment`; `prepare_stripe_refund(uuid)` (zámek platby i peněženky, stavy `completed`/`refund_pending`, kontrola celého zůstatku, jednorázový odečet přesné částky, právě jeden záporný `refund_debit` s `reference_id`, posun na `refund_pending`); `finalize_stripe_refund(uuid)` (jen `refund_pending → refunded`, idempotentní); obě `service_role`-only. `admin_manage_payment` má refundní větev natvrdo zablokovanou a odebrané granty pro `PUBLIC`/`anon`/`authenticated`; `update_status` beze změny. `deduct_wallet_for_refund` ponechána beze změny těla, jen označena jako legacy a EF ji už nevolá.
+- **Edge Function `stripe-refund`:** příprava před Stripe, `idempotencyKey = onemil-refund-<payment_id>`, dokončení stavu po `succeeded`/`pending`, při nejasné síťové chybě zůstává `refund_pending` pro bezpečné zopakování, úspěch se nikdy nevrací při selhání odečtu nebo uložení stavu, logy a audit bez Stripe session ID.
+- **`AdminPayments.tsx`:** stav „Refundace čeká" (badge + filtr), tlačítko „Dokončit refundaci", blokace opakovaného klikání, jasné zobrazení chyby o nedostatku MioCoinů.
+- **Kontroly:** `npx tsc --noEmit` exit 0, `npm run build` exit 0, statické kontraktní specy 83/86/87 zelené, CI Smoke E2E zelený. Databázový spec 88 je staging-only opt-in a zatím neproběhl — migrace není nikde aplikovaná. Stripe se v testech nevolá.
+
+# 02. 08. 2026 — Platební trigger: oprava update_wallet_after_payment nasazena na produkci
+
+- Read-only audit toku Stripe → `payments` → `wallets` → `wallet_transactions` odhalil produkční nesoulad: funkce `public.update_wallet_after_payment()` byla zjednodušená na `UPDATE wallets SET balance_coins = balance_coins + NEW.amount`, tedy bez kontroly `status`, bez `SECURITY DEFINER` a bez zápisu do účetní historie.
+- **Příčina:** zpevněná verze z `20260315200000_wallet_hardening.sql` byla aplikovaná a 16.–21. 3. 2026 fungovala (71 řádků `payment_credit`), ale zapisovala do `wallets.balance_vouchers`, který v produkčním schématu neexistuje → chyba u každé dokončené platby a HTTP 500 na Stripe webhooku (PAY03, 30. 06. 2026). Funkce proto byla přepsána starým tělem přímo v DB, mimo migraci. Repozitářní soubory `20260315290000_audit_log_coverage.sql` (ř. 33) a `20260315300000_audit_log_columns.sql` (ř. 44) se zpevněným tělem se na produkci nikdy nespustily — jejich čísla verzí obsadily jiné migrace (`additional_safety_constraints`, `fix_bonus_wallet_ledger`).
+- **Dopad:** pouze účetní historie. 15 dokončených plateb od 22. 3. 2026 nemá řádek ve `wallet_transactions` (dalších 43 pochází z doby před vznikem ledgeru). Zůstatky jsou správné: 0 záporných peněženek, 0 duplicitních `stripe_session_id`, 0 dvojích připsání, 0 plateb bez peněženky; balíčky 50/310/525/1280 sedí.
+- **Připravena migrace `20260802120000_restore_wallet_payment_ledger.sql`** (Draft PR): mění pouze tělo funkce — jen `status = 'completed'`, `SECURITY DEFINER` + `SET search_path TO 'public'`, upsert peněženky, přičtení jen `balance_coins`, žádný `balance_vouchers`, právě jeden řádek `payment_credit` s `reference_id = NEW.id`, idempotence přes existující ledger řádek, v metadatech jen metoda/stav/čas (bez `stripe_session_id`), ochrana proti nekladné částce.
+- **Vědomě neprovedeno:** backfill starých plateb, změna zůstatků, změna refundní logiky, přejmenování kolidujících migrací, UPDATE trigger pro `pending → completed`, jakékoli nasazení.
+- Kontroly: `npx tsc --noEmit` exit 0, `npm run build` exit 0, read-only integritní dotazy bez nálezu.
+- **Rollback-only test proti produkčnímu schématu prošel** (02. 08. 2026, schválení Pavla). Test běžel jako jediný `DO` blok zakončený `RAISE EXCEPTION`, takže se dočasné nasazení funkce i všechny vložené řádky vrátily zpět jako jedna atomická operace. Výsledky: `completed` platba 310 MC → zůstatek **+310** a **přesně 1** ledger řádek; metadata obsahují pouze `method`, `payment_status`, `payment_created_at`; opakované zpracování téže platby **nevytvořilo druhé připsání**; `pending` i `refunded` platba **nepřipsaly nic**; uživateli bez peněženky **vznikla nová peněženka a 1 ledger řádek**. Nekladnou částku nešlo testovat, protože ji databáze blokuje přes `CHECK (amount > 0)` na `payments`.
+- **Po testu zůstala produkce beze změny:** 135 plateb, 775 peněženek, 3 723 ledger řádků, součet zůstatků 139 891,41 MC, původní funkce `update_wallet_after_payment` (139 znaků, bez `SECURITY DEFINER`); 0 testovacích plateb a 0 testovacích ledger řádků.
+- **PR #308 mergnut do `main`** (merge commit `2f607232`) a **migrace aplikována na produkci `xkzhjldrojjlrkezorey`** (výslovné schválení Pavla). Zapsána do `schema_migrations` jako `20260802205656` / `restore_wallet_payment_ledger` — apply nástroj razítkuje vlastní čas, takže repozitářní číslo `20260802120000` v `schema_migrations` není; `db push` se na projektu nepoužívá.
+- **Produkční postcheck:** funkce `SECURITY DEFINER` + `search_path=public`, tělo 1 393 znaků, 0× `balance_vouchers`, zapisuje `payment_credit`, upsert přes `ON CONFLICT (user_id)`, owner `postgres`; trigger `trg_update_wallet_after_payment` (AFTER INSERT) beze změny. Data před i po apply identická (135 / 775 / 3 723 / 90 `payment_credit` / 139 891,41 MC), 0 záporných peněženek, 0 dvojích ledger kreditů. 58 historických `completed` plateb zůstává bez ledger řádku — backfill se vědomě nedělá. Funkce má výchozí `PUBLIC` EXECUTE (existoval i dřív), což není expozice: Postgres odmítá přímé volání funkce vracející `trigger`.
+
+# 02. 08. 2026 — Přidán security.txt (bezpečnostní kontakt)
+
+- Přidán **`public/.well-known/security.txt`** s kontaktem `mailto:podpora@onemil.cz`, `Expires: 2027-08-01T00:00:00.000Z`, `Preferred-Languages: cs, en` a `Canonical: https://onemil.cz/.well-known/security.txt`. Reaguje na nález externího skeneru „chybí soubor pro hlášení bezpečnostních problémů" — před změnou vracely `/.well-known/security.txt` i `/security.txt` HTTP 404.
+- Build ověřen: `npm run build` exit 0, vzniká `dist/.well-known/security.txt` (150 B, shodný obsah). `npx tsc --noEmit` exit 0, ESLint 0 chyb.
+- **Po Lovable Publish má být soubor dostupný na `https://onemil.cz/.well-known/security.txt`;** do publishe zůstává 404.
+- **`Expires` je nutné obnovit před 1. 8. 2027** — dle RFC 9116 je pole povinné a po vypršení je soubor neplatný.
+- **P2 (iframe), P3 (CORP) i SRI zůstávají beze změny.** SRI se u `googletagmanager.com/gtag/js` a `cdn.onesignal.com` záměrně nepoužívá (obě služby mění obsah, hash by je rozbil); protiváhou je CSP allowlist. **CSP zůstává aktivní přes meta tag** z PR #304.
+- Změna se nedotkla bezpečnostních hlaviček, DNS, Lovable, Supabase, produkce ani aplikačního kódu.
+
+# 02. 08. 2026 — Kontrola bezpečnostního stavu: A1–A5, P1 a SPF v pořádku, P2/P3 odložené
+
+- Znovu ověřeno přímo v GitHubu, produkci a veřejném DNS. **PR #302 mergnut** (`a59bd674`) — migrace `20260801180617_secure_admin_activation_summary.sql` a `20260801180912_secure_partner_offer_invoice_creation.sql` jsou v `main`, takže dřívější závěr o chybějících migracích A1/A2 v repu **už neplatí**.
+- **PR #303 uzavřen bez merge** — měnil `vercel.json`, který produkční Lovable hosting nepoužívá; jeho větev `fix/web-security-headers-p1-p3` není aktivní řešení.
+- **PR #304 mergnut** (`93e18dc6`) — P1 CSP je publikované a ověřené na `https://onemil.cz` (meta tag v HTML). **PR #305 mergnut** (`c172d5aaf316d165661c50256d7a3d35cc54ce82`).
+- **DNS znovu ověřeno na dvou veřejných resolverech** (Google Public DNS, Cloudflare DNS): `send.onemil.cz` TXT `v=spf1 include:amazonses.com ~all`; `onemil.cz` právě jeden SPF `v=spf1 a mx include:_spf.websupport.cz -all`; MX `10 mx10.active24.cz` / `100 mx20.active24.cz`, DKIM `resend._domainkey` i DMARC `v=DMARC1; p=quarantine` aktivní.
+- **P2 a P3 zůstávají vědomě odložené a nekritické**; hlavičky na produkci chybí a šlo by je nastavit jen na edge vrstvě. **Cloudflare se nyní nezavádí.**
+- **Zbylé větve `fix/add-missing-a1-a2-migrations` a `fix/web-security-headers-p1-p3` nejsou otevřená chyba** — první je plně obsažená v `main`, druhá patří k uzavřenému PR #303. Jde o neškodné zbytky.
+- Opraven zastaralý stavový popis issue #289 v `onemil_state.md`: PR #290–#297 jsou všechny mergnuté a publikované, takže formulace „připraveno ve worktree / zatím nemergnuto" už neplatí.
+- Kontrola byla čistě read-only: žádná změna v DNS, Active24, Lovable, Supabase, produkci ani v kódu.
+
+# 02. 08. 2026 — DNS: SPF oprava veřejně ověřena, Cloudflare se zatím nezavádí
+
+- **SPF oprava byla 2. 8. 2026 veřejně ověřena.** `onemil.cz` má **právě jeden** SPF záznam `v=spf1 a mx include:_spf.websupport.cz -all`; odesílání přes Amazon SES / Resend je odděleno na `send.onemil.cz` s `v=spf1 include:amazonses.com ~all`. Negativní test potvrdil, že `include:amazonses.com` se na apexu už nevyskytuje.
+- **Pošta zůstala aktivní beze změny:** MX `10 mx10.active24.cz` a `100 mx20.active24.cz`, DKIM `resend._domainkey.onemil.cz` (`p=MIGfMA0GCSqGSIb3DQEBAQU…`), DMARC `v=DMARC1; p=quarantine`.
+- Ověřeno ze tří nezávislých zdrojů: Google Public DNS, Cloudflare DNS a autoritativní `ns1.websupport.cz` — shodné hodnoty. Quad9 DoH byl v době kontroly nedostupný a nahradil ho autoritativní dotaz.
+- **Zastaralá analýza opravena:** dřívější zjištění o **dvou SPF záznamech** na `onemil.cz` (druhý s `include:amazonses.com`) popisovalo stav před opravou a **už neplatí**.
+- **Cloudflare se zatím nezavádí.** Plán předřazení vlastní Cloudflare vrstvy zůstává jen návrhem; **P2** (iframe) a **P3** (CORP) nejsou vyhodnoceny jako kritické a nevyváží riziko migrace celé DNS zóny včetně pošty. **P1 (CSP)** je od 2. 8. 2026 aktivní na produkci přes meta tag z PR #304 (merge `93e18dc6`).
+- Kontrola byla čistě read-only: žádná změna v DNS, Active24, Lovable, Supabase ani produkci; změněna pouze dokumentace.
+
+# 30. 07. 2026 — Issue #289 části A a B: Draft PR #290 otevřen
+
+- **Části A a B issue #289 jsou připravené v Draft PR #290, zatím nejsou mergnuté ani nasazené.**
+- Větev `feat/miocoin-topup-section-extract` (HEAD `cf9198e5`, 4 commity) pushnuta a otevřena jako **Draft** PR #290 do `main` (`84352a02`): https://github.com/Divuna/million-ticket-draw/pull/290
+- Obsah PR: nová stránka `/top-up` (web/PWA), položka `Dobít` ve spodním menu jen pro web/PWA, přesun vstupu do Zpráv do Profilu, badge nepřečtených zpráv na `Můj profil` i v Profilu, partnerský náborový blok na Homepage. Skrytí dobíjení v nativní aplikaci zachováno na třech místech, vždy přes existující `isNativeApp()`.
+- Diff je výhradně frontendový (8 souborů v `src/` + spec 54 + dokumentace). **Žádná změna databáze, Supabase migrací, Edge Functions, Stripe backendu ani platební logiky.**
+- CI na PR: Smoke E2E (Chromium) **pass** (run `30559565243`). Plný staging E2E na této větvi zatím neproběhl.
+- Do issue #289 přidán komentář s odkazem na PR a označením částí A a B jako „připraveno v Draft PR, čeká na kontrolu". **Část C není součástí PR #290.**
+- Nic nemergnuto, nic nenasazeno; po případném merge bude aktivace na produkčním webu vyžadovat ruční Lovable `Share → Publish`.
+
+# 30. 07. 2026 — Issue #289 část B: partnerský náborový blok na Homepage (součást Draft PR #290)
+
+- **Partnerský náborový blok nahradil dobíjení na Homepage; změna je v Draft PR #290, zatím nemergnutá a nenasazená.**
+- Z `src/pages/Homepage.tsx` odstraněn `MioCoinTopUpSection`, box „Probíhající soutěže", box „Koupit voucher se slevou", hook `usePlacementBanners` i s klíči (`miocoin_50/310/525/1280`, `probihajici_souteze`, `koupit_voucher`, `vzhled_karta_vyher` — Homepage už žádný z nich nepoužívala; `vzhled_karta_vyher` si dál načítá `ContestDetail.tsx` samostatně) a nepoužívaný import `MioCoinTopUpSection`.
+- Nový `src/components/PartnerRecruitmentCard.tsx` se schváleným zněním: nadpis „Staňte se partnerem OneMil", hlavní text „Odměňte své zákazníky za nákup. Zaslouží si něco navíc.", pět odrážek (nastavení počtu MioCoinů, automatické odměny po nákupu, platba jen za aktivované/použité MioCoiny, vlastní vouchery a partnerské nabídky, sjednaná provize z budoucích placených dobití registrovaných zákazníků) a CTA „Chci se stát partnerem" → `/partner/register`. Formulace „sjednanou provizi" je závazná — neslibovat automatickou provizi.
+- Blok používá výhradně existující OneMil ikony (`OneMilCartIcon`, `OneMilMioCoinIcon`, `OneMilZapIcon`, `OneMilWalletIcon`, `OneMilVoucherIcon`, `OneMilDiamondIcon`), žádné nové logo ani cizí grafiku (0 `<img>`), a je viditelný i v nativní Android/iOS aplikaci — neobsahuje platby, proto bez `isNativeApp()` guardu.
+- Ověřeno v dev serveru: desktop 1280 px → dva sloupce vedle sebe (x 16 a 641, shodná šířka 609 px i výška 552 px), mobil 375 px → oba bloky pod sebou ve správném pořadí, `scrollWidth` 375 (žádný horizontální overflow). Světlý prémiový vzhled sedí s původním panelem (teplý radiální gradient, border `rgba(200,155,80,0.22)`, bílé dlaždice, oranžový nadpis `rgb(226,99,5)`). CTA prokliknuto — vede na `/partner/register`, formulář „Registrace e-shopu" se načte, 0 chyb v konzoli.
+- Pravý panel `Poslední výherci` beze změny. Bez zásahu: `/top-up`, `MioCoinTopUpSection`, spodní menu, Profil, Stripe backend, platební návratové stránky, databáze, Supabase, platby, soutěže, vouchery.
+- Kontroly: `npx tsc --noEmit` exit 0, `npm run build` exit 0. Commit je součástí Draft PR #290 — nemergnuto, nenasazeno.
+
+# 30. 07. 2026 — Issue #289 část A, třetí krok: spodní menu Dobít + vstup do Zpráv v profilu (součást Draft PR #290)
+
+- **Spodní menu a přesun vstupu do Zpráv jsou v Draft PR #290, zatím nemergnuté a nenasazené.**
+- `src/components/BottomNavigation.tsx`: položka `Zprávy` (`/messages`, `OneMilMessageIcon`) nahrazena položkou `Dobít` (`/top-up`, `OneMilMioCoinIcon`). V nativní Android/iOS aplikaci se položka `Dobít` vůbec nevykresluje — filtr přes existující `isNativeApp()` ze `src/lib/nativeApp.ts`, žádná nová platformní logika. Výsledek: web/PWA `Domů · Vouchery · Soutěže · Výhry · Dobít · Můj profil`, nativní aplikace `Domů · Vouchery · Soutěže · Výhry · Můj profil`.
+- Badge nepřečtených zpráv přesunut z položky `/messages` na `/profile`; zdroj zůstává `useUnreadMessagesCount` (globální store), takže číslo je stejné jako dřív. Badge Výher (`useUnseenWinsCount` na `/wins`) beze změny.
+- `src/pages/Profile.tsx`: nad `RedeemMioCoinCard` přidána karta `Zprávy` (`PremiumCard` + `SectionTile` s `OneMilMessageIcon`), s počtem nepřečtených na dlaždici i v tlačítku a s popisem „Máte N nepřečtených zpráv“ / „Konverzace s podporou OneMil“. Tlačítko `Otevřít zprávy` vede na `/messages` a je dostupné na webu, v PWA i v nativní aplikaci (bez native guardu). Dobíjecí tlačítko `Dobít MioCoiny` a jeho modal zůstaly beze změny včetně stávajícího `isNativeApp()` guardu.
+- Ověřeno v dev serveru: spodní menu na webu vrací přesně `Domů · Vouchery · Soutěže · Výhry · Dobít · Můj profil`, klik na `Dobít` naviguje na `/top-up` (panel + 4 balíčky, aktivní stav na položce `Dobít`), 0 chyb v konzoli. Nativní filtr a runtime badge ověřeny code review — lokální dev míří na produkční Supabase a nepřihlašoval jsem se do něj.
+- Bez zásahu: Homepage, `/top-up`, Stripe backend, platební návratové stránky, databáze, Supabase, migrace, platby, soutěže, vouchery.
+- Kontroly: `npx tsc --noEmit` exit 0, `npm run build` exit 0. Commit je součástí Draft PR #290 — nemergnuto, nenasazeno.
+
+# 30. 07. 2026 — Issue #289 část A, druhý krok: samostatná stránka /top-up (součást Draft PR #290)
+
+- **Samostatná stránka `/top-up` je v Draft PR #290, zatím nemergnutá a nenasazená.** V tomto kroku ještě nebyla dostupná ze spodního menu — vstup `Dobít` přidal až třetí krok.
+- Nový `src/pages/TopUp.tsx` vykresluje sdílenou komponentu `MioCoinTopUpSection` ve stejném obalu jako panel na Homepage: `homepage-light-page` → `homepage-light-content` → `homepage-light-panel homepage-miocoin-panel`, pod zákaznickým motivem `public-customer-theme` (nastavuje `src/App.tsx` na layout wrapperu). Ověřeno v dev serveru: computed styly panelu, dlaždice i tlačítka jsou na `/top-up` shodné s Homepage; světlé pozadí `rgb(251, 250, 247)`; 4 balíčky, 4 tlačítka `Dobít`, odznaky `+10/+25/+80`; žádný horizontální overflow na 1280 px ani 375 px; 0 chyb v konzoli.
+- `src/App.tsx`: přidán import `TopUp`, zákaznická route `/top-up` a `/top-up` do `CUSTOMER_BLOCKED_ROUTES` (zakázaná pro partnera i affiliate).
+- Nativní Android/iOS: `TopUp.tsx` při `isNativeApp() === true` okamžitě přesměruje na `/profile` (`replace: true`) a nevykreslí nic — stejný vzor jako `PaymentSuccess`/`PaymentCancel`. Detekce výhradně přes `src/lib/nativeApp.ts`, žádná nová platformní logika. Ověřeno code review, ne v emulátoru.
+- `tests/e2e/54-mobile-layout-customer-pages.spec.ts`: do stávajícího seznamu zákaznických stránek doplněna route `/top-up` (jeden řádek, beze změny struktury testu).
+- Homepage záměrně nezměněna — dobíjecí komponenta zůstává dočasně i na původním místě; odstranění patří k dalšímu kroku spolu s partnerským blokem.
+- Bez zásahu: spodní navigace, Profil, Stripe backend (`create-stripe-checkout`, `stripe-webhook`), `/payment-success`, `/payment-cancel`, databáze, migrace, Supabase.
+- Kontroly: `npx tsc --noEmit` exit 0, `npm run build` exit 0. Commit je součástí Draft PR #290 — nemergnuto, nenasazeno.
+
+# 30. 07. 2026 — Issue #289 část A, první krok: extrakce dobíjecího panelu (součást Draft PR #290)
+
+- Vytvořen `src/components/MioCoinTopUpSection.tsx` — 1:1 přesun dobíjecího panelu z `src/pages/Homepage.tsx` (nadpis a popis „Dobijte si MioCoiny", čtyři balíčky, jejich placement bannery, `handleCoinPurchase`, `topUpLoading`, Stripe monitoring `logMonitoringEvent`/`logStripeCheckoutClientFailure`, `setPendingPaymentSuccessContext`, guard `isNativeApp()`).
+- Homepage komponentu vykresluje na stejném místě; vzhled, texty, částky i chování beze změny. DOM ověřen v dev serveru — uvnitř panelu zůstaly tři sourozenci ve stejném pořadí, žádný obalový element navíc.
+- Boxy „Probíhající soutěže" a „Koupit voucher se slevou" záměrně ponechány na Homepage; nebyly přesunuty ani smazány.
+- Nevytvořeno a nezměněno: `/top-up`, spodní menu, Profil, routy, `src/App.tsx`, databáze, migrace, Stripe backend (`create-stripe-checkout`, `stripe-webhook`), nativní logika.
+- Kontroly: `npx tsc --noEmit` exit 0, `npm run build` exit 0. Commit je součástí Draft PR #290 — nemergnuto, není na stagingu ani produkci.
+
 # 18. 07. 2026 — Cron auth fix: process-email-queue a send-offer-reminders (PR #241) LIVE na produkci
 
 - PR #241 (`fix/cron-internal-token-auth`) mergnut do `main` a nasazen na produkci `xkzhjldrojjlrkezorey`. Řeší opakované HTTP 401 plánovaných automatů.
@@ -46,6 +281,8 @@
 - PR #211 squash mergnut (`ecbd550c846df6cc187677a6593b5f00dc09f34b`); staging i produkce nasazeny a ověřeny rollback testem. Žádný skutečný e-mail nebyl odeslán a žádná testovací data nezůstala.
 
 # OneMil — DEVELOPMENT HISTORY (CHRONOLOGICAL ONLY)
+
+- **2026-07-19 — Dokončení a integrace Android aplikace:** Android Capacitor projekt sloučen do `main` (PR #266, commit `310e7ff`). Nastaveno Application ID `cz.onemil.app`. Implementováno automatické skrývání nákupu digitálního obsahu (dobíjení, vouchery) v nativním prostředí přes `isNativeApp()` v `ContentPage.tsx` a dalších částech, čímž je zajištěna kompatibilita s pravidly obchodů Play Store a App Store. Ověřeno v emulátoru Android 16.
 
 - **2026-07-16 — Hotfix ikony e-mailu v detailu leadu:** Doplněn chybějící import `Mail` z
   `lucide-react` v `LeadCrmPanel.tsx`. Oprava odstraňuje produkční runtime chybu `Mail is not
@@ -5017,3 +5254,116 @@ Nejmenší safe krok delegace Partner Offers: nový klíč `partner_offers.finan
 Změny: (1) `src/hooks/useAdminPermissions.ts` — `partner_offers.finance.manage` (label „Partnerské nabídky (finance)") do `ADMIN_PERMISSION_KEYS`/`ADMIN_PERMISSION_LABELS`; `ADMIN_ROUTE_PERMISSION['/admin/partner-offers']`; položka v `SUBADMIN_ENTRY_ROUTES` (nav label „Partnerské nabídky"). (2) `src/App.tsx` — `/admin/partner-offers` přepnuto z `RequireSuperadmin` na `RequirePermission("partner_offers.finance.manage")` (jediná změněná routa). (3) `src/components/admin/AdminPrimaryNav.tsx` — ikona `Tag` pro nový klíč. Grant UI v `/admin/admins` se zobrazí automaticky (iteruje `ADMIN_PERMISSION_KEYS`). `AdminPartnerOffers` business logika beze změny.
 
 Rozsah role: jen `/admin/partner-offers` (moderace nabídek + per-offer billing `billing_mode`/`price_per_activation`/`billing_admin_override` + aktivace/kliky — čistě offer tabulky). Superadmin-only zůstává (Slice B/C, mimo tento krok): offer faktury (`partner_invoices type='offer'`, `partner_offer_invoice_lines`) ve smíšených `/admin/invoices` + `/admin/partners-portal`, globální platby, affiliate/influencer commissions+payouts, výherci, prize-delivery, contest internals, audit/system, `/admin/admins`. Superadmin chování beze změny. `npm run build` ✅ exit 0, `npx tsc --noEmit` ✅ 0 chyb. Vyžaduje Lovable Publish + grant klíče subadminovi v `/admin/admins`.
+# 04. 08. 2026 — PR 1 základu ručně plánovaných obchodních dávek (Draft, nenasazeno)
+
+- Read-only audit aktuálního `origin/main` a produkčního Supabase potvrdil tři obchodní sendery,
+  suppression, `sales_lead_email_send_guard`, `email_sent` audit a obecnou `email_queue` s workerem.
+  První obchodní e-mail ale dnes používá přímý Resend sender, nikoli obecnou frontu.
+- Připravena jediná pasivní migrace se settings (`enabled=false`), batch a frozen-item tabulkou,
+  RLS/privileges, read-only preview RPC, atomickým create RPC, cancel RPC a superadmin kill switchem.
+- Bezpečnostní revize před stagingem doplnila trvalý audit přeskočených leadů, skutečný denní limit
+  přes `pending`/`processing`/`sent`/`failed`, stejné stavy do unikátní ochrany leadu a příjemce,
+  fingerprint idempotentního požadavku, dnešní okno s rezervou pěti minut a fail-closed cancel při
+  `processing`. SQL text/HTML renderer je regresně porovnáván se sdíleným TypeScript rendererem.
+- Způsobilost znovu používá současné stavy, suppression a duplicitní guard; doplňuje ověření
+  zdroje/metody/času, historii prvního odeslání na lead i adresu, aktivní dávku, šablonu a proměnné.
+- Žádný worker, cron, Edge Function, sender ani administrační UI nebyly přidány nebo změněny.
+  Migrace nebyla aplikována, data stagingu a produkce zůstala beze změny a žádný e-mail neodešel.
+
+## 11. 08. 2026 — bezpečné propojení pro externího denního agenta (Magin) na produkci
+
+PR #344 mergnut do `main` (merge commit `acd8aa76`). Na produkci `xkzhjldrojjlrkezorey` aplikována
+migrace `20260811090000_sales_lead_daily_batch_agent.sql`, vytvořen secret
+`SALES_LEAD_BATCH_AGENT_SECRET` (produkční hodnota odlišná od stagingové) a nasazena Edge Function
+`sales-lead-daily-batch-agent` (v1 ACTIVE, `verify_jwt=false`).
+
+Důvod vzniku: žádná stávající cesta k založení a aktivaci e-mailové dávky nešla použít externím
+agentem. `sales_lead_email_batch_create`, `_prepare_paused` i `_activate_admin` jsou gatované na
+`auth.uid()` + `has_admin_permission('sales_leads.manage')`, takže volání přes service role končilo
+na `access_denied`. Existující konektor `sales-lead-work-intake` podle vlastní dokumentace dávku
+nikdy nevytváří ani neaktivuje. Agent přitom nesmí držet service-role klíč ani přihlášení admina.
+
+Řešení kopíruje schválený vzor plánovače discovery jobů: RPC `sales_lead_email_batch_agent_run`
+volatelná pouze `service_role` ověří vlastníka přes `sales_lead_pick_discovery_owner()` a pod jeho
+identitou (transakčně lokální `request.jwt.claims`) zavolá existující admin cestu. Agent posílá jen
+datum a počet; skupinu `e-shopy`, šablonu i výběr leadů určuje server.
+
+Staging test (`dxmowysntemfqfnanxua`) odhalil dvě chyby, které kontrola kódu nenašla: čtení
+neexistujícího sloupce `scheduled_at` místo `scheduled_for` (RPC spadla po prepare+activate, celá
+transakce se vrátila zpět a nezůstala žádná dávka) a příliš úzké pravidlo pro výběr šablony
+(vyžadovalo právě jednu aktivní `initial`, což nevystihuje zadání a na stagingu s pěti šablonami
+selhalo). Obojí opraveno commitem `d807f618`. Staging test poté prošel: dávka vytvořena a
+aktivována, položky 08:30–12:30 Europe/Prague, opakovaná volání vrátila stejnou dávku
+s `created_second_batch=false`, žádný e-mail neodešel, testovací data uklizena a automatika vrácena
+na `enabled=false` / limit 20.
+
+Při stagingovém testu přešla stará zbytková dávka z 9. 8. ze `scheduled` na `completed`; její
+položka skončila jako `skipped` s důvodem `scheduled_window_missed`. Žádný e-mail se neodeslal.
+
+Produkční bezpečnostní kontroly proběhly bez vytvoření dávky: bez secretu 401, špatný secret 401,
+GET 405, nepovolené pole 400 `unexpected_field`, neplatné datum 400 `invalid_target_date`.
+Po nasazení zůstal počet dávek 6, počet položek 69, pozastavená dávka z 6. 8. pozastavená, dnešní
+dávka `scheduled/30` beze změny a checksum stavů dávek `b42bb7f7…` shodný před i po. Žádná nová
+dávka, žádný nový e-mail.
+
+Při této příležitosti bylo read-only ověřeno, že produkční automatika je zapnutá, denní limit je 90
+(ne 20 jako uvádí starší dokumentace — to je hodnota stagingu), pásmo je `Europe/Prague`, okno
+`08:30–16:30` a worker běží každých 5 minut přes pg_cron job 30 (288 úspěšných běhů za 24 h).
+
+Agent Magin nebyl vytvořen ani naplánován. První plánovaný počet je 40 e-mailů dne 12. 8. 2026,
+plán `30 7 * * 1-5` v `Europe/Prague`. Schválený profilový obrázek je na cestě
+`C:\Users\divis\Downloads\ChatGPT Image 11. 8. 2026 11_37_39.png`; obrázek MioCoinu se pro Magina
+použít nesmí.
+
+## 11. 08. 2026 (večer) — Paperclip agenti zprovozněni end-to-end
+
+Synchronizátor Paperclip OneMil poprvé doručil snapshot do OneMil STAGING: ingest vrátil HTTP 200,
+úkol `ICO-41` skončil `done` a vznikl snapshot `7be66d9c-e984-42d3-9d1e-1e5e4001260a`
+(`captured_at 17:26:45`, 43 kB, klíče `agents, issues, routines, runs, errors`).
+
+Cesta k tomu odhalila čtyři nezávislé vrstvy, každá se projevila až po odstranění té předchozí:
+
+1. **Rutiny bez `projectId`.** Rutina zakládá úkol se stavem `todo`, ale `heartbeat.js` ho těsně
+   před odesláním přepne na `blocked` s kódem `workspace_worktree_requires_project`, když úkol nemá
+   projekt ani execution workspace (`execution-workspace-policy.js:isUnrunnableWorktreeCombo`).
+   Doplněn projekt OneMil `b9aafaa8-fbf3-4c65-ae28-b11eafd12b3a` na obě rutiny.
+2. **Vypnutý heartbeat.** Úkoly vznikaly, ale nikdo je nezpracoval. Zapnut u čtyř OneMil agentů,
+   vestavěných `Reflection Coach` a `Summarizer` se nedotkl.
+3. **Windows sandbox.** `[windows] sandbox = "elevated"` končí na `CreateProcessWithLogonW failed:
+   1326` a žádný příkaz se nespustí. V Paperclipím per-company `CODEX_HOME` nastaveno
+   `unelevated`, `sandbox_mode = "workspace-write"` a `[sandbox_workspace_write] network_access =
+   true`. Ověřeno, že adaptér tento soubor nepřepisuje: `ensureCopiedFile()` má `if (existing)
+   return;` a `writeManagedCodexMcpConfig()` sahá jen na blok mezi značkami managed MCP.
+4. **HTTP klient a tvar payloadu.** Ve Windows sandboxu selhává PowerShell `Invoke-WebRequest`
+   („Nadřízené připojení bylo uzavřeno") i `curl.exe` (`000`), přestože síť funguje — ověřeno
+   protikladem, že `node -e "fetch(...)"` odpoví korektně. Payload musí být `snake_case`;
+   `capturedAt` místo `captured_at` vracelo `HTTP 400`.
+
+Vedle toho byly modely všech `codex_local` agentů srovnány na `gpt-5.5`. Model nebyl odhadnut —
+server pro tento ChatGPT účet vrací `gpt-5.5`, `gpt-5.4`, `gpt-5.4-mini` a skrytý
+`codex-auto-review`, zatímco dříve nastavené `gpt-5.3-codex` i `gpt-5.6-sol` končí na
+`invalid_request_error`. Opraven i hostitelský `~/.codex/config.toml`, kde `service_tier =
+"default"` rozbíjel codex-cli 0.130.0 úplně.
+
+Secrets: `PAPERCLIP_BRIDGE_SECRET` i `SALES_LEAD_BATCH_AGENT_SECRET` mají v Paperclipu API Access
+binding vázaný vždy jen na jednoho agenta. Přístup k hodnotě vyžaduje run-bound agent JWT, běžící
+heartbeat run a `secrets:read`. Hodnoty secretů nejsou nikde v dokumentaci, gitu, promptu, issue
+ani logu.
+
+Magin má rutinu srovnanou s ověřeným vzorem Synchronizátora a je připravený na první ostrý běh
+12. 8. 2026 v 7:30 Europe/Prague na 40 e-mailů. Skutečným během ověřen není a být nemůže, protože
+každé úspěšné volání jeho Edge Function zakládá reálnou dávku. Dnes žádná dávka nevznikla a žádný
+e-mail neodešel.
+
+Navazující stav téhož dne: **Průzkumník obchodních leadů OneMil byl z Paperclipu odstraněn** a
+doplňování zásoby leadů převzal Magin přes úzký STAGING lead-supply adapter. Existující OneMil
+discovery systém zůstal beze změny; Magin používá pouze segment `e-shopy` a neschvaluje nic mimo
+backendově ověřené návrhy, které adapter dovolí schválit.
+
+Navazující stav téhož dne: **Provozní ředitel OneMil dostal funkční nouzové upozornění přes Telegram
+bota `@OneMilDirectorBot`**. Bot token a `chat_id` jsou uložené pouze v Paperclip `local_encrypted`
+secrets `ONEMIL_DIRECTOR_TELEGRAM_BOT_TOKEN` a `ONEMIL_DIRECTOR_TELEGRAM_CHAT_ID`; oba mají API Access
+`Bound to latest` pouze pro Provozního ředitele. Instrukce Ředitele dovolují Telegram použít jen pro
+chyby, blokace a důležité eskalace podřízených agentů, ne pro běžné statusy, marketing ani zprávy
+leadům. Jedna testovací zpráva byla úspěšně doručena. Žádný OneMil kód, data, discovery systém,
+Maginova denní dávka ani ostatní agenti nebyli změněni.

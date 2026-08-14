@@ -1,6 +1,11 @@
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.57.4";
 import { Resend } from "npm:resend@2.0.0";
+import {
+  escapeEmailHtml,
+  renderOneMilDetailRows,
+  renderOneMilEmail,
+} from "../_shared/oneMilEmailTemplate.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -59,24 +64,48 @@ function json(body: unknown, status: number) {
 async function latestPdfExport(
   supabase: ReturnType<typeof createClient>,
   invoiceId: string,
-): Promise<{ id: string; file_url: string } | null> {
+): Promise<{ id: string; storage_bucket: string; storage_path: string } | null> {
   const { data } = await supabase
     .from("partner_invoice_exports")
-    .select("id, file_url, created_at")
+    .select("id, storage_bucket, storage_path, created_at")
     .eq("invoice_id", invoiceId)
     .eq("format", "pdf")
+    .eq("storage_bucket", "partner-invoices")
+    .not("storage_path", "is", null)
     .order("created_at", { ascending: false })
     .limit(1)
     .maybeSingle();
-  if (data?.file_url) return { id: data.id as string, file_url: data.file_url as string };
+  if (data?.storage_bucket && data?.storage_path) {
+    return {
+      id: data.id as string,
+      storage_bucket: data.storage_bucket as string,
+      storage_path: data.storage_path as string,
+    };
+  }
   return null;
 }
 
-async function buildAttachment(pdfUrl: string, periodStart: string, periodEnd: string) {
-  const res = await fetch(pdfUrl);
-  if (!res.ok) throw new Error(`pdf_fetch_failed_${res.status}`);
-  const arrayBuffer = await res.arrayBuffer();
-  const base64Content = btoa(String.fromCharCode(...new Uint8Array(arrayBuffer)));
+function base64FromBytes(bytes: Uint8Array): string {
+  let binary = "";
+  const chunkSize = 0x8000;
+  for (let i = 0; i < bytes.length; i += chunkSize) {
+    binary += String.fromCharCode(...bytes.subarray(i, i + chunkSize));
+  }
+  return btoa(binary);
+}
+
+async function buildAttachment(
+  supabase: ReturnType<typeof createClient>,
+  exportRow: { storage_bucket: string; storage_path: string },
+  periodStart: string,
+  periodEnd: string,
+) {
+  const { data, error } = await supabase.storage
+    .from(exportRow.storage_bucket)
+    .download(exportRow.storage_path);
+  if (error || !data) throw new Error("pdf_storage_download_failed");
+  const arrayBuffer = await data.arrayBuffer();
+  const base64Content = base64FromBytes(new Uint8Array(arrayBuffer));
   return {
     filename: `faktura-${periodStart}-${periodEnd}.pdf`,
     content: base64Content,
@@ -144,7 +173,7 @@ serve(async (req: Request) => {
 
     let attachment;
     try {
-      attachment = await buildAttachment(pdf.file_url, periodStart, periodEnd);
+      attachment = await buildAttachment(supabase, pdf, periodStart, periodEnd);
     } catch (_e) {
       return json({ error: "pdf_fetch_failed" }, 502);
     }
@@ -186,13 +215,13 @@ serve(async (req: Request) => {
         body: { invoice_id },
         headers: { "x-internal-token": internalToken },
       });
-      if (genError || !gen?.file_url) throw new Error(genError?.message ?? "pdf_generation_failed");
+      if (genError || !gen?.success) throw new Error(genError?.message ?? "pdf_generation_failed");
       pdf = await latestPdfExport(supabase, invoice_id);
       if (!pdf) throw new Error("pdf_unavailable_after_generate");
     }
 
     // 3. Build the attachment from the (reused or freshly generated) PDF.
-    const attachment = await buildAttachment(pdf.file_url, periodStart, periodEnd);
+    const attachment = await buildAttachment(supabase, pdf, periodStart, periodEnd);
 
     // 4. Send exactly one email.
     const resendApiKey = Deno.env.get("RESEND_API_KEY");
@@ -240,14 +269,24 @@ serve(async (req: Request) => {
 function renderEmail(partnerName: string, periodStart: string, periodEnd: string, formattedAmount: string): string {
   // Note: the invoice status is intentionally NOT shown — on the first
   // successful send the invoice is being issued, so "draft" must never appear.
-  return `
-    <h2>Faktura – ${partnerName}</h2>
-    <p>Dobrý den,</p>
-    <p>zasíláme Vám fakturu za období <strong>${periodStart}</strong> – <strong>${periodEnd}</strong>.</p>
-    <table style="border-collapse:collapse;margin:16px 0">
-      <tr><td style="padding:4px 12px 4px 0;color:#666">Celková částka:</td><td style="font-weight:bold">${formattedAmount}</td></tr>
-    </table>
-    <p>PDF faktura je přiložena k tomuto e-mailu.</p>
-    <p>S pozdravem,<br/>Tým OneMil</p>
-  `;
+  return renderOneMilEmail({
+    preheader: `Faktura OneMil za období ${periodStart} až ${periodEnd}.`,
+    eyebrow: "Partnerská fakturace",
+    title: "Vaše faktura OneMil",
+    bodyHtml: `
+      <p style="margin:0 0 18px;">Dobrý den,</p>
+      <p style="margin:0 0 22px;">pro partnera <strong>${escapeEmailHtml(partnerName)}</strong> jsme připravili fakturu. PDF dokument najdete v příloze tohoto e-mailu.</p>
+      <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#F7EBDD;border:1px solid #F2A16B;border-radius:12px;border-collapse:separate;overflow:hidden;">
+        ${renderOneMilDetailRows([
+          { label: "Období", value: `${escapeEmailHtml(periodStart)} – ${escapeEmailHtml(periodEnd)}` },
+          { label: "Celková částka", value: escapeEmailHtml(formattedAmount) },
+        ])}
+      </table>
+    `,
+    action: {
+      label: "Otevřít partnerský portál",
+      url: "https://onemil.cz/partner/dashboard",
+    },
+    footerNote: "PDF faktura je přiložena k tomuto e-mailu.",
+  });
 }

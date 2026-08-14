@@ -22,7 +22,15 @@ const corsHeaders = {
 
 const AI_MODEL = Deno.env.get("SALES_LEADS_AI_MODEL") ?? "gpt-4o-mini";
 const AI_TIMEOUT_MS = 20000;
-const OPT_OUT_SENTENCE = "Pokud si nepřejete být kontaktováni, odpovězte prosím slovem NEKONTAKTOVAT a příště vás nebudeme oslovovat.";
+// Odhlášení řeší VÝHRADNĚ systémové CTA „Nemám zájem“, které se k prvnímu
+// obchodnímu e-mailu přidává automaticky (_shared/salesLeadResponseCta.ts).
+// AI proto nesmí vytvářet žádný konkurenční odhlašovací mechanismus — ani výzvu
+// odpovědět e-mailem, ani mailto, ani vlastní odhlašovací větu.
+// Spec: docs/SALES_LEADS_ADMIN_SPEC.md §25.5.
+const NO_OPT_OUT_RULE =
+  "- NEPŘIDÁVEJ žádnou odhlašovací větu ani výzvu k odpovědi kvůli odhlášení, žádný mailto odkaz "
+  + "a žádnou vlastní možnost odhlášení. Odhlášení řeší systémové tlačítko, které se do e-mailu "
+  + "doplní automaticky.";
 
 // Zakázaná slova — pojistka proti hazardnímu wordingu ve výstupu AI.
 const FORBIDDEN_WORDS = [
@@ -41,7 +49,7 @@ PŘÍSNÁ PRAVIDLA:
 - NESLIBUJ konkrétní čísla, garance ani exkluzivitu.
 - NEPOUŽÍVEJ slova casino, hazard, sázka, loterie, jackpot.
 - Do těla vlož zdvořilé oslovení, 2–3 odstavce (co OneMil je + proč dává smysl pro tuto firmu + výzva k nezávaznému hovoru) a podpis „Tým OneMil, b2b@onemil.cz".
-- Na konec těla přidej větu: "Pokud si nepřejete být kontaktováni, odpovězte prosím slovem NEKONTAKTOVAT a příště vás nebudeme oslovovat."`;
+${NO_OPT_OUT_RULE}`;
 
 const ASSIST_SYSTEM_PROMPT = `Jsi textový asistent obchodního týmu OneMil. Upravuješ výhradně pracovní text v editoru. Nic neukládáš ani neodesíláš.
 
@@ -51,8 +59,7 @@ PŘÍSNÁ PRAVIDLA:
 - Nevymýšlej partnerství, dohody, čísla, garance, exkluzivitu ani informace, které nejsou v kontextu.
 - NEPOUŽÍVEJ slova casino, hazard, sázka, loterie, jackpot.
 - Akce "personalize" přizpůsobí text doloženým údajům firmy; akce "improve" zlepší stručnost, čitelnost a češtinu bez změny významu.
-- U prvního e-mailu a follow-upu musí tělo obsahovat přesně tuto závěrečnou větu: "${OPT_OUT_SENTENCE}"
-- U odpovědi tuto odhlašovací větu nepřidávej, pokud ve vstupním textu už není.`;
+${NO_OPT_OUT_RULE}`;
 
 function jsonResponse(body: Record<string, unknown>, status = 200): Response {
   return new Response(JSON.stringify(body), {
@@ -231,9 +238,6 @@ Vrať JSON {"subject","body"} dle pravidel.`;
     // ── 5. Obsahová pojistka — zakázaný wording ──────────────────────────────
     if (containsForbidden(subject) || containsForbidden(emailBody)) {
       return jsonResponse({ success: false, error: "forbidden_wording_detected" }, 422);
-    }
-    if (assistMode && (emailType === "initial" || emailType === "follow_up") && !emailBody.includes(OPT_OUT_SENTENCE)) {
-      return jsonResponse({ success: false, error: "opt_out_sentence_missing" }, 422);
     }
 
     // Režim asistenta pouze vrací upravený text do existujícího editoru.

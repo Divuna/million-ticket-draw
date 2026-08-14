@@ -2,6 +2,11 @@ import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.57.4";
 import { PDFDocument, rgb } from "https://esm.sh/pdf-lib@1.17.1";
 import fontkit from "npm:@pdf-lib/fontkit@1.1.1";
+import {
+  escapeEmailHtml,
+  renderOneMilDetailRows,
+  renderOneMilEmail,
+} from "../_shared/oneMilEmailTemplate.ts";
 
 const PAYOUT_DOC_BUCKET = "affiliate-payout-docs";
 
@@ -208,16 +213,27 @@ function buildAffiliateEmail(input: {
   documentNumber: string;
   amountTotal: number;
 }) {
-  return `
-    <p>Dobry den,</p>
-    <p>v priloze posilame doklad k vyplate affiliate / obchodni provize.</p>
-    <table style="border-collapse:collapse;margin:16px 0">
-      <tr><td style="padding:4px 12px 4px 0;color:#666">Prijemce:</td><td>${input.recipientName}</td></tr>
-      <tr><td style="padding:4px 12px 4px 0;color:#666">Doklad:</td><td><strong>${input.documentNumber}</strong></td></tr>
-      <tr><td style="padding:4px 12px 4px 0;color:#666">Castka:</td><td><strong>${formatCzk(input.amountTotal)}</strong></td></tr>
-    </table>
-    <p>S pozdravem,<br/>Tym OneMil</p>
-  `;
+  return renderOneMilEmail({
+    preheader: `Doklad ${input.documentNumber} k výplatě provize OneMil.`,
+    eyebrow: "Affiliate provize",
+    title: "Doklad k vaší výplatě",
+    bodyHtml: `
+      <p style="margin:0 0 22px;">Dobrý den,</p>
+      <p style="margin:0 0 22px;">v příloze posíláme doklad k výplatě affiliate nebo obchodní provize.</p>
+      <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#F7EBDD;border:1px solid #F2A16B;border-radius:12px;border-collapse:separate;overflow:hidden;">
+        ${renderOneMilDetailRows([
+          { label: "Příjemce", value: escapeEmailHtml(input.recipientName) },
+          { label: "Doklad", value: escapeEmailHtml(input.documentNumber) },
+          { label: "Částka", value: escapeEmailHtml(formatCzk(input.amountTotal)) },
+        ])}
+      </table>
+    `,
+    action: {
+      label: "Otevřít affiliate přehled",
+      url: "https://onemil.cz/affiliate/dashboard",
+    },
+    footerNote: "Doklad je přiložen ve formátu PDF.",
+  });
 }
 
 function buildAccountingEmail(input: {
@@ -225,15 +241,23 @@ function buildAccountingEmail(input: {
   documentNumber: string;
   amountTotal: number;
 }) {
-  return `
-    <p>Dobry den,</p>
-    <p>v priloze je kopie payout dokladu pro ucetnictvi.</p>
-    <table style="border-collapse:collapse;margin:16px 0">
-      <tr><td style="padding:4px 12px 4px 0;color:#666">Prijemce:</td><td>${input.recipientName}</td></tr>
-      <tr><td style="padding:4px 12px 4px 0;color:#666">Doklad:</td><td><strong>${input.documentNumber}</strong></td></tr>
-      <tr><td style="padding:4px 12px 4px 0;color:#666">Castka:</td><td><strong>${formatCzk(input.amountTotal)}</strong></td></tr>
-    </table>
-  `;
+  return renderOneMilEmail({
+    preheader: `Účetní kopie dokladu ${input.documentNumber}.`,
+    eyebrow: "Účetní kopie",
+    title: "Payout doklad OneMil",
+    bodyHtml: `
+      <p style="margin:0 0 22px;">Dobrý den,</p>
+      <p style="margin:0 0 22px;">v příloze je účetní kopie payout dokladu.</p>
+      <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#F7EBDD;border:1px solid #F2A16B;border-radius:12px;border-collapse:separate;overflow:hidden;">
+        ${renderOneMilDetailRows([
+          { label: "Příjemce", value: escapeEmailHtml(input.recipientName) },
+          { label: "Doklad", value: escapeEmailHtml(input.documentNumber) },
+          { label: "Částka", value: escapeEmailHtml(formatCzk(input.amountTotal)) },
+        ])}
+      </table>
+    `,
+    footerNote: "Automaticky vytvořená účetní kopie. Doklad je přiložen ve formátu PDF.",
+  });
 }
 
 serve(async (req: Request) => {

@@ -172,6 +172,8 @@ export interface SalesLeadRow {
   assigned_admin_id: string | null;
   // Fáze 4B — marketingová skupina (návrhy leadů).
   lead_group: string | null;
+  /** Kdy byl koncept e-mailu naposledy uložen. Vyplněno = „Rozpracovaný". */
+  draft_updated_at: string | null;
 }
 
 export interface DuplicateConflict {
@@ -203,6 +205,8 @@ export interface SalesLeadDetail extends SalesLeadRow {
   contact_phone: string | null;
   email_source: string | null;
   email_verified_by_admin: boolean;
+  email_verification_method: 'admin_manual' | 'backend_verified_official_website' | null;
+  email_verified_at: string | null;
   do_not_contact: boolean;
   do_not_contact_reason: string | null;
   notes: string | null;
@@ -252,6 +256,20 @@ export const RPC_ERROR_MESSAGES: Record<string, string> = {
   ai_request_failed: 'AI požadavek se nezdařil, zkuste to znovu.',
   ai_empty_response: 'AI nevrátila žádný obsah, zkuste to znovu.',
   ai_invalid_format: 'AI vrátila neočekávaný formát, zkuste to znovu.',
+  backend_verification_required: 'AI návrh bez důkazu backendu nelze uložit ani schválit.',
+  contact_already_present: 'Lead už má uložený kontaktní e-mail.',
+  contact_changed_since_lookup: 'Kontakt se během ověřování změnil. Novější údaje nebyly přepsány.',
+  verified_website_changed_since_lookup: 'Ověřený web se během kontroly změnil. Kontakt nebyl uložen.',
+  store_verified_contact_failed: 'Ověřený kontakt se nepodařilo bezpečně uložit.',
+  verified_website_required: 'Nejdřív musí být backendem ověřen oficiální web firmy.',
+  verified_website_revalidation_failed: 'Oficiální web se nepodařilo znovu ověřit. Nic nebylo uloženo.',
+  invalid_email: 'Nalezený e-mail nemá platný formát.',
+  invalid_source_url: 'AI nevrátila platnou přesnou zdrojovou URL.',
+  source_not_on_verified_website: 'Zdrojová stránka není na ověřeném oficiálním webu firmy.',
+  non_official_third_party: 'Katalog, sociální síť ani jiný cizí web nelze použít jako důkaz.',
+  source_fetch_failed: 'Zdrojovou stránku se nepodařilo bezpečně načíst.',
+  redirect_left_verified_website: 'Zdrojová stránka přesměrovala mimo ověřený web firmy.',
+  email_not_found_on_verified_website: 'Backend na zdrojové stránce přesně stejný e-mail nenašel.',
   forbidden_wording_detected: 'Návrh obsahoval nepovolené výrazy a nebyl uložen.',
   // Fáze 3C — odeslání konceptu člověkem.
   email_not_configured: 'Odesílání e-mailů zatím není v tomto prostředí nakonfigurované.',
@@ -272,8 +290,20 @@ export const RPC_ERROR_MESSAGES: Record<string, string> = {
   proposal_not_approved: 'Návrh nejdřív schvalte. Z navrženého leadu nelze odeslat první e-mail.',
   initial_email_status_not_allowed: 'První e-mail lze odeslat pouze ze schváleného leadu před oslovením.',
   status_sync_failed_after_send: 'E-mail byl odeslán, ale stav leadu se nepodařilo synchronizovat. E-mail znovu neposílejte.',
+  email_delivery_outcome_uncertain: 'Výsledek odeslání nelze potvrdit. E-mail znovu neposílejte, dokud nebude stav ověřen.',
+  email_delivery_idempotency_conflict: 'Odeslání je zablokované kvůli konfliktu bezpečnostního klíče. E-mail znovu neposílejte, dokud nebude stav ověřen.',
+  email_delivery_concurrent_idempotency_request: 'Odeslání je zablokované kvůli souběžnému požadavku. E-mail znovu neposílejte, dokud nebude stav ověřen.',
+  email_delivery_in_progress: 'Odeslání tohoto e-mailu už probíhá. Neodesílejte jej znovu.',
+  provider_accepted_commit_failed: 'Poskytovatel e-mail přijal, ale dokončení evidence selhalo. E-mail znovu neposílejte; opakování provede pouze bezpečný zápis evidence.',
+  provider_accepted_result_write_failed: 'Poskytovatel e-mail přijal, ale výsledek se nepodařilo zaznamenat. E-mail znovu neposílejte, dokud nebude stav ověřen.',
+  email_delivery_claim_failed: 'Bezpečné zahájení odeslání selhalo. Nic znovu neposílejte bez ověření stavu.',
+  email_delivery_result_write_failed: 'Výsledek poskytovatele se nepodařilo bezpečně zaznamenat. Před opakováním ověřte stav.',
   initial_email_history_check_failed: 'Nepodařilo se ověřit historii prvního e-mailu. Nic nebylo odesláno.',
   initial_email_already_sent: 'První e-mail už byl tomuto leadu odeslán a nelze jej odeslat znovu.',
+  invalid_recipient: 'Zadejte platnou e-mailovou adresu příjemce.',
+  invalid_reuse_request: 'Požadavek na opětovné použití e-mailu není platný.',
+  reuse_source_not_found: 'Původní odeslaný e-mail nebyl nalezen.',
+  reuse_source_lookup_failed: 'Původní e-mail se nepodařilo bezpečně ověřit. Nic nebylo odesláno.',
 };
 
 export function rpcErrorMessage(code: string | undefined): string {

@@ -527,6 +527,44 @@ Fáze 4 využívá stávající pole a přidává:
 - **UI (detail leadu):** sekce „Kontaktní e-mail" — „Dohledat e-mail", panel
   „Navržený e-mail" + zdroj + „Schválit e-mail"/„Zamítnout e-mail".
 
+#### 17.8.1a Systémové ověření kontaktu na oficiálním webu
+
+Tato část nahrazuje pro `sales-lead-enrich-contact` původní ukládání
+neověřeného AI návrhu. Historická pole `proposed_contact_*` zůstávají kvůli
+kompatibilitě ručních návrhů a auditu, ale AI do nich už nesmí zapisovat.
+
+- AI poskytne pouze kandidátní e-mail a přesnou zdrojovou URL. Bez obou hodnot
+  se nic neukládá.
+- Backend zdroj sám stáhne. Počáteční URL i každý redirect musí zůstat na
+  hostname dříve ověřeného oficiálního webu (toleruje se pouze rozdíl `www`).
+  Katalogy, sociální sítě, cizí weby, nebezpečné URL a netextové odpovědi se
+  odmítají.
+- Přesně stejná normalizovaná adresa musí být nalezena ve viditelném textu nebo
+  `mailto:` odkazu stažené stránky. Text ve skriptech, stylech, komentářích a
+  `noscript` není důkaz.
+- Ověřený kontakt ukládá pouze service-role RPC
+  `sales_lead_store_backend_verified_contact`. Pod řádkovým zámkem znovu ověří,
+  že lead stále nemá kontakt, `updated_at` odpovídá snapshotu před dohledáním a
+  ověřený web ani čas jeho ověření se nezměnily. Zároveň provede existující
+  kontrolu duplicit.
+- Jeden atomický zápis nastaví `contact_email`, přesný `email_source`,
+  `email_verified_by_admin=true` (zpětná kompatibilita odesílacích guardů),
+  `email_verification_method='backend_verified_official_website'`,
+  `email_verified_at`, provenance a aktivitu `contact_approved`.
+- Ručně změněný kontakt trigger označí jako `admin_manual`. Starý AI návrh lze
+  zamítnout, nikoli schválit bez nového backendového důkazu.
+- Existující RPC `sales_lead_propose_with_contact` zůstává dostupné pouze
+  `service_role`, ale je předefinováno fail closed: přijme jen metodu
+  `backend_verified_official_website`, nikdy nevyplňuje `proposed_contact_*`
+  a atomicky vytvoří lead i systémově ověřený kontakt. Starý caller s metodou
+  `ai` nic nezapíše.
+- `sales-lead-discover` používá stejný přesný backend verifier jako enrichment
+  existujícího leadu. Kandidáta najde backendový crawler pouze na již ověřeném
+  oficiálním webu; přesná stránka se znovu stáhne a ověří. Při úspěchu vznikne
+  lead přímo s `contact_email`, zdrojem, metodou a datem. Při neúspěchu vznikne
+  lead přes stávající `sales_lead_propose` bez e-mailu a bez AI návrhu.
+- Změna nemá backfill ani plánovač a sama nevolá žádnou odesílací funkci.
+
 #### 17.8.2 Fáze 5C — automatický discovery vyžaduje veřejný e-mail (implementováno jako soubory)
 - **Tvrdá bariéra:** tlačítko „Najít nové firmy" (EF `sales-lead-discover`)
   nesmí vytvořit lead bez veřejně dohledaného kontaktního e-mailu. AI v jednom
@@ -647,31 +685,26 @@ Fáze 4 využívá stávající pole a přidává:
   segmentu. **Každá firma s vyplněným názvem je „použitelná" a vždy se uloží**
   jako lead ve stavu `navrzeny` — bez ohledu na to, jestli se u ní podaří
   dohledat e-mail:
-  - Pokud website existuje a crawler (Fáze 5D/5E logika beze změny) najde
-    veřejný e-mail na webu firmy, lead se vytvoří přes
-    `sales_lead_propose_with_contact` (Fáze 5C/5D/5E RPC beze změny) —
-    `proposed_contact_email`/`proposed_contact_source_url` vyplněné,
-    `proposed_contact_status='neovereny'`.
+  - Pokud backendový crawler najde kandidáta a sdílený verifier jej na přesné
+    stránce stejného ověřeného webu znovu potvrdí, lead se vytvoří přes
+    `sales_lead_propose_with_contact` přímo s `contact_email`, přesným
+    `email_source`, `email_verified_at` a metodou
+    `backend_verified_official_website`. Žádný `proposed_contact_*` nevzniká.
   - Pokud website chybí, nebo crawler e-mail nenajde, lead se **i tak vytvoří**
     přes `sales_lead_propose` (Fáze 5A RPC beze změny) — bez navrženého
     kontaktu; e-mail lze doplnit ručně později (Fáze 5B ruční dohledání nebo
     ruční editace v detailu leadu).
-  - `contact_email` zůstává vždy `NULL`, `email_verified_by_admin=false` —
-    v obou větvích, beze změny oproti předchozím fázím.
+  - Bez úspěšného backendového důkazu zůstává `contact_email=NULL` a
+    `email_verified_by_admin=false`; neověřený kandidát ani jeho URL se neuloží.
   - Jediný důvod, proč lead vůbec nevznikne, je dedup/blokace na úrovni RPC
     (existující partner, suppression, duplicitní IČO/doména — Fáze 5A/5C
     beze změny) — **nikdy** jen proto, že se e-mail nenašel.
-  - Žádné auto-schválení, žádný auto-send, žádný Resend, žádný zápis do
-    `email_queue`. Žádná nová DB migrace pro tuto změnu chování — jen úprava
-    EF `sales-lead-discover` (existující RPC `sales_lead_propose` a
-    `sales_lead_propose_with_contact` se používají beze změny signatur).
-- **Odpověď EF rozšířena o `created_with_email` a `created_without_email`**
-  (součet dává `created`) — nahrazuje dřívější `skipped_missing_email` /
-  `skipped_email_not_found_on_website`, které už neznamenají přeskočení, ale
-  jen „bez navrženého e-mailu".
-- **UI (`DiscoverLeadsDialog.tsx`):** text už netvrdí, že se uloží jen firmy
-  s dohledaným e-mailem; výsledek běhu ukazuje: kolik firem vzniklo celkem,
-  kolik z nich má navržený e-mail, kolik je bez e-mailu k ručnímu doplnění.
+  - Systémové potvrzení kontaktu není obchodní schválení leadu a nic neodesílá:
+    žádný Resend ani zápis do `email_queue`. Existující RPC se používají se
+    stejnými signaturami; `sales_lead_propose_with_contact` má novou bezpečnou
+    implementaci.
+- **UI (`DiscoverLeadsDialog.tsx`):** vysvětluje, že e-mail je volitelný bonus,
+  uloží se jen po přesném backendovém ověření a jeho nenalezení firmu nezahodí.
 - **Mazání leadů (nová funkcionalita, ne oprava discovery):** aby šlo snadno
   odstranit duplicitní/nepoužitelné návrhy vzniklé masovým always-save
   chováním, přidány dvě nové SECURITY DEFINER RPC (migrace jako soubor,
@@ -867,3 +900,533 @@ Stav nasazení 11. 07. 2026: LIVE na stagingu i produkci; migrace `sales_leads_v
 - Ostatní kandidáti jsou v `alternative_websites` pouze pro audit a nikdy se nepoužijí k enrichmentu.
 - Zdroj, důvěra 0–100, čas ověření a technické důkazy jsou uložené odděleně. Stejná provenance se ukládá pro nalezený e-mail.
 - `sales-lead-enrich-contact` pracuje jen s ověřeným webem, vyžaduje stejnou doménu zdrojové URL a před uložením musí navržený e-mail fyzicky najít v obsahu stránky.
+
+## 21. Opětovné použití odeslaného e-mailu
+
+- Každá odchozí aktivita `email_sent` nabízí `Odeslat znovu` a `Přeposlat na jiný e-mail`.
+- Obě akce pouze otevřou formulář; nic se neodesílá bez ručního kliknutí uživatele s
+  `sales_leads.manage`. Příjemce, předmět i text jsou před odesláním editovatelné.
+- `Odeslat znovu` předvyplní původního příjemce. `Přeposlat na jiný e-mail` ponechá příjemce
+  prázdného, aby musel být výslovně zadán.
+- Odeslání používá existující Edge Function `send-sales-lead-email` a zachovává její serverové
+  kontroly oprávnění, `do_not_contact`, suppression a duplicit.
+- Každé odeslání vloží nový append-only `email_sent`. Metadata obsahují
+  `reused_from_activity_id`, `reuse_mode` a původního příjemce. Zdrojová aktivita ani
+  `sales_leads.contact_email` se nemění; jiný příjemce se nikdy nestává hlavním kontaktem.
+
+## 22. Dynamické filtry seznamu
+
+- Seznam leadů lze filtrovat současně podle stavové záložky, textového hledání, skupiny a oboru.
+- Nabídka skupin se načítá z aktivních záznamů `sales_lead_groups`; pokud číselník v daném
+  prostředí není dostupný, použijí se jedinečné neprázdné hodnoty `sales_leads.lead_group`.
+  Nově vytvořená skupina se po uložení načte do filtru bez změny kódu.
+- Nabídka oborů vzniká výhradně z jedinečných neprázdných hodnot `sales_leads.industry`.
+- Oba filtry obsahují volby `Všechny` a `Bez …`. Akce `Zrušit filtry` nastaví stavovou záložku
+  na `Vše`, vymaže hledání a obnoví oba výběry na `Všechny`.
+
+## 23. Denní dávky prvního e-mailu (PR 1 a PR 2 v produkci; PR 3 Draft)
+
+Migrace `20260804165418_sales_lead_email_batches_foundation.sql` připravuje pouze pasivní
+databázovou vrstvu. PR 1 a bezpečná delivery vrstva PR 2 jsou v produkci; automatika zůstává
+`enabled=false`, dávkové tabulky jsou prázdné a neexistuje batch worker ani batch cron.
+
+- `sales_lead_email_batches` je auditní hlavička ručně potvrzené dávky. Uchovává snapshot názvu
+  šablony, den a skutečně použité pracovní okno v `Europe/Prague`, limit nejvýše 20, idempotency key,
+  deterministický otisk požadavku, počty a audit zrušení.
+- `sales_lead_email_batch_items` ukládá neměnné snapshoty příjemce, zdroje a metody ověření,
+  předmětu, zdrojového formátovaného těla, plain-text a bezpečného HTML, verze šablony a názvu
+  firmy. Změna leadu nebo šablony proto již naplánovaný obsah nepřepíše.
+- `sales_lead_email_batch_skips` trvale eviduje každý vybraný, ale nezařazený lead, snapshot názvu
+  firmy a důvod. Neobsahuje předmět ani tělo zprávy a klient do ní nesmí zapisovat.
+- Read-only RPC `sales_lead_email_batch_preview` vrací způsobilé a nezpůsobilé leady s důvodem.
+  `sales_lead_email_batch_create` provede stejné kontroly znovu pod zámky a atomicky uloží jen
+  způsobilé položky. `sales_lead_email_batch_cancel` odmítne celý požadavek chybou
+  `batch_processing`, pokud se již některá položka zpracovává; jinak označí pouze čekající položky
+  a zachová audit.
+  Kill switch smí měnit jen superadmin přes `sales_lead_email_automation_set_enabled`.
+- Kontrola používá stejné povolené stavy jako současný první sender (`novy`, `priprava`,
+  `schvaleni_ceka`), stávající suppression list a `sales_lead_email_send_guard`. Navíc vyžaduje
+  platný, manuálně nebo backendem ověřený e-mail se zdrojem a časem ověření, absenci předchozího
+  prvního `email_sent`, aktivní šablonu typu `initial`, vyřešené proměnné a stejné obsahové limity.
+- Souběh chrání deterministické transakční/advisory zámky a částečné unikátní indexy pro
+  `pending`, `processing`, `sent` a `failed`, a to pro `lead_id` i normalizovaného příjemce.
+  Idempotency key je unikátní a je svázán s SHA-256 otiskem seřazených unikátních leadů, šablony a data.
+  Globální denní kapacita je serializována přes jediný řádek nastavení; spotřebovávají ji
+  `pending`, `processing`, `sent` a `failed`, takže během dne nikdy nepřesáhne 20.
+- Pro dnešní den se okno otevírá nejdříve pět minut po aktuálním čase a položky se rovnoměrně
+  rozloží do zbývajícího času před `16:30`. Pokud nezbývá bezpečný čas, RPC vrátí
+  `scheduling_window_closed`; žádná catch-up dávka ani čas v minulosti nevznikne.
+- Přímé klientské zápisy jsou zakázané. Tabulky jsou přes RLS čitelné pouze s
+  `sales_leads.manage`; interní pomocné funkce nejsou dostupné rolím `anon` ani `authenticated`.
+
+PR 2 přidává pouze společnou bezpečnou delivery vrstvu pro první e-mail a napojuje na ni ruční sender.
+Administrační výběr, náhled a ruční potvrzení dávky patří do PR 3. Samostatný interní worker, který
+před každým pokusem znovu provede ochrany a bezpečně claimne jednu položku, patří až do PR 4;
+nesmí přidat ranní automatický výběr, follow-upy, odpovědi ani dohánění zmeškaných položek velkou
+dávkou. Zapnutí zůstane samostatným, výslovně schváleným krokem.
+## PR 2 — bezpečná evidence prvního e-mailu (produkce; 05. 08. 2026)
+
+PR 2 zavádí jedinou serverovou cestu pro ruční první obchodní e-mail. Tabulka
+`sales_lead_email_deliveries` zmrazí příjemce, předmět, zdrojové/plain-text/HTML tělo a metadata
+příloh bez binárního obsahu. Atomický claim pod zámkem leadu opakuje stavové, DNC, suppression,
+ověření kontaktu, historii a duplicate guard. Stav `sending`, `provider_accepted`, `uncertain` nebo
+`committed` blokuje další provider call; `provider_rejected` dovoluje nový bezpečný pokus.
+
+Resend dostává stejný deterministický `delivery_key` jako idempotency key. Po přijetí poskytovatelem
+se výsledek nejdřív uloží a idempotentní RPC atomicky vytvoří právě jednu `email_sent` aktivitu,
+status historii, případný posun do `osloveno` a `committed`. Selhání commitu se při opakování opravuje
+pouze DB commitem bez dalšího odeslání. Timeout či neznámý výsledek přechází do `uncertain`.
+
+PR 2 je v produkci. Batch automatika zůstává `enabled=false`; nevznikl worker, cron ani dávkové
+odesílání. Administrační plánování patří do PR 3 a worker až do PR 4.
+
+## PR 3 — administrační příprava pozastavených dávek (Draft; 05. 08. 2026)
+
+- Administrátor vybere nejvýše 100 leadů, aktivní šablonu typu `initial` a den. Náhled vzniká pouze
+  přes `sales_lead_email_batch_preview` a zobrazuje serverem vrácenou způsobilost, důvody vyřazení,
+  denní kapacitu, skutečné pracovní okno a zmrazený výsledný obsah.
+- Vytvoření vyžaduje druhé lidské potvrzení a stabilní idempotency key. Administrační UI volá výhradně
+  `sales_lead_email_batch_prepare_paused`. Wrapper zamkne řádek `sales_lead_email_automation_settings`
+  přes `FOR UPDATE`, pokračuje jen při `enabled=false` (jinak `automation_must_be_disabled`), ve stejné
+  transakci použije stávající `sales_lead_email_batch_create` a přijme pouze výsledek `success=true`
+  + `automation_enabled=false` + `batch_status='paused'`. Jakýkoli jiný výsledek celý pokus rollbackne,
+  takže nevznikne dávka, položka ani skip řádek. Samotný databázový řádek nikdy nevolá poskytovatele
+  ani neodesílá e-mail.
+- Potvrzení v UI je povoleno jen při `preview.automation_enabled === false`; hodnota `true`,
+  `undefined` nebo jakákoli jiná potvrzení zablokuje s hláškou „Automatické odesílání není bezpečně
+  vypnuté. Dávku nyní nelze připravit.“ Za úspěch se považuje pouze `paused` + `automation_enabled=false`;
+  při jiném výsledku se dialog nezavře, výběr se nevyčistí a `onCreated` se nevolá.
+- Přehled načítá posledních 20 dávek, položky a trvalý skip audit. Zrušit lze jen `paused` nebo
+  `scheduled` dávku přes stávající RPC a s povinným důvodem. UI nemá spuštění, obnovení, přepínač
+  automatiky ani odesílací tlačítko.
+- Migrace `20260805160406_sales_lead_email_batch_admin_planning.sql` upravuje create RPC tak, aby při
+  vypnuté automatice bezpečně vytvářelo pozastavené dávky, přidává admin wrapper
+  `sales_lead_email_batch_prepare_paused` (REVOKE PUBLIC/anon, GRANT authenticated) a fail-closed
+  ponechá `enabled=false`. Původní `sales_lead_email_batch_create` zůstává funkční
+  (`enabled=false` → `paused`, `enabled=true` → `scheduled`) pro pozdější PR 4. Nevytváří worker, cron,
+  Edge Function ani zápis do `email_queue`.
+- PR 3 je v produkci a produkčně ověřený. Worker a řízené zapnutí zůstávají výhradně PR 4 a
+  vyžadují nové výslovné schválení.
+
+## PR 4 — interní worker připravených dávek (Draft; 06. 08. 2026)
+
+- **Stav:** PR 1, PR 2 i PR 3 jsou v produkci; PR 3 je produkčně ověřené. **PR 4 je pouze Draft** —
+  worker není nasazený, secret `SALES_LEAD_BATCH_WORKER_SECRET` není nastavený, cron neexistuje,
+  automatika je stále `enabled=false` a PR 4 neodeslal žádný e-mail.
+- **Nic se nevybírá automaticky.** Worker nehledá firmy, nevytváří dávky, nedělá ranní výběr,
+  follow-upy ani odpovědi a nikdy nedohání zmeškané e-maily. Zpracuje výhradně položku, kterou
+  člověk připravil v PR 3 a kterou někdo vědomě aktivoval.
+- **Claim:** `sales_lead_email_batch_claim_next()` (service-role only) zamkne singleton nastavení
+  `FOR UPDATE`, při `enabled IS DISTINCT FROM true` okamžitě vrátí bezpečný no-op, pracuje jen s
+  dávkou `status='scheduled'` (nikdy `paused`, `cancelled`, `completed`, `failed`), jen s dnešním
+  plánem podle `Europe/Prague` a jen uvnitř okna uloženého u dávky. Vybere **nejvýše jednu** právě
+  splatnou položku přes `FOR UPDATE SKIP LOCKED`, znovu ověří všechny ochrany a teprve pak položku
+  atomicky přepne na `processing` (+`attempt_count`). Vrací pouze zmrazené snapshoty.
+- **Znovu ověřované ochrany:** existence leadu, povolený stav, `do_not_contact`, existující partner,
+  shoda aktuálního e-mailu se zmrazeným příjemcem, ověření e-mailu (metoda, čas, zdroj), suppression,
+  předchozí první obchodní e-mail, duplicate guard, jiná blokující delivery, jiná aktivní položka a
+  aktuální stav dávky i položky. Neúspěch = auditovaný `skipped` s přesným důvodem a **konec běhu**.
+- **Zmeškaný čas:** položka ze staršího dne nebo po konci okna se označí `skipped` s důvodem
+  `scheduled_window_missed`. Nikdy se neposílá později jako catch-up.
+- **Řízená aktivace:** `sales_lead_email_batch_activate(uuid)` (service-role only, bez `anon`/
+  `authenticated`) přepne jednu dávku `paused → scheduled`. Vyžaduje `enabled=true`, zamkne
+  nastavení, dávku i položky, odmítne jinou než `paused` dávku, prošlé datum i nepoužitelné okno,
+  nemění snapshoty ani časy položek a nic neodesílá. **PR 4 pro ni nepřidává UI ani automatické
+  volání.**
+- **Delivery:** sdílená vrstva `salesLeadInitialEmailDelivery.ts` nově zná `manual_initial`
+  i `batch_initial`. Ruční cesta zůstává funkčně beze změny (delivery key je bit po bitu stejný);
+  batch fingerprint navíc obsahuje `batch_item_id`. `delivery_key` je zároveň Resend idempotency key.
+  Batch claim v DB ověří neprázdné `batch_item_id`, příslušnost k leadu, `processing` položku,
+  `scheduled` dávku, `enabled=true`, platné datum a okno, `scheduled_for <= now()` a přesnou shodu
+  všech snapshotů; při nesouladu se poskytovatel nevolá.
+- **Poslední bariéra nad zamčeným leadem** (v téže transakci, před vznikem i opakováním delivery a
+  před jakýmkoli provider callem): `p_performed_by` musí přesně odpovídat `v_batch.created_by`,
+  `converted_partner_id IS NULL`, při vyplněném IČO neexistuje partner se stejným IČO,
+  `email_verification_method` je jen `admin_manual` nebo `backend_verified_official_website`,
+  `email_verified_at IS NOT NULL`, `email_source` není prázdný a nepřesahuje 2048 znaků.
+- **`commit_only` nikdy nevolá poskytovatele.** Když claim vrátí `action='commit_only'` (poskytovatel
+  už e-mail přijal), worker nevytváří Resend provider ani outbound capture, nevolá delivery vrstvu a
+  spustí výhradně `sales_lead_initial_email_commit(delivery_id)`; vyžaduje platné `delivery_id`.
+  Při úspěchu vrací `action='committed'` + `email_sent=true`, při neúspěchu zůstane položka bezpečně
+  blokovaná a neproběhne provider call ani zápis neúspěchu.
+- **Commit:** úspěšný batch commit v jedné transakci vytvoří právě jednu aktivitu `email_sent`
+  (`sent_by='system'`, `delivery_mode='batch_initial'`, `batch_item_id`, `delivery_id`), označí
+  delivery `committed`, položku `sent`, synchronizuje stav leadu přes stávající RPC a přepočítá
+  dávku: `completed` (všechny položky terminální, žádná `failed`), `failed` (všechny terminální,
+  aspoň jedna `failed`), jinak zůstane `scheduled`. Staré ruční aktivity zůstávají kompatibilní;
+  kontrola předchozího prvního e-mailu (`sales_lead_initial_email_already_recorded`) rozpozná
+  `sent_by='human'`, `email_delivery_id` i `delivery_mode='batch_initial'`.
+- **Neúspěch:** `sales_lead_email_batch_item_record_failure(uuid,text,text)` (service-role only)
+  zamkne položku, dávku i delivery, přijme jen `processing` položku, uloží přesný `error_code`,
+  označí položku `failed` a přepočítá dávku. Explicitní odmítnutí i neznámý výsledek končí `failed`;
+  `uncertain` delivery zůstává `uncertain`, nikdy se automaticky neopakuje a nikdy se nevrací na
+  `pending`. Když poskytovatel e-mail přijal a selhal až DB commit, položka zůstane `processing` a
+  další běh smí provést pouze `commit_only` — druhý provider call nikdy nenastane.
+- **Edge Function `process-sales-lead-email-batch`:** interní a fail-closed. Jen `POST`; chybějící
+  nebo slabý `SALES_LEAD_BATCH_WORKER_SECRET` → 500 bez jakékoli změny; chybný/chybějící
+  `Authorization: Bearer <secret>` → 401; žádné uživatelské JWT ani veřejné admin volání; chybějící
+  `RESEND_API_KEY` → 503 ještě před claimem. Používá stejnou identitu odesílatele i Reply-To jako
+  ruční sender (`Miroslav | OneMil <b2b@onemil.cz>`), zavolá poskytovatele nejvýše jednou a nikdy
+  nezpracuje druhou položku v jednom requestu. Konfigurace je pouze v repozitáři.
+- **Žádný cron:** PR 4 neobsahuje `cron.schedule`, `pg_cron`, `pg_net`, `net.http_post` ani
+  automatické volání Edge Function a nemění existující produkční crony. Po mergi a nasazení zůstane
+  worker neaktivní, dokud nebudou samostatně schváleny: (1) secret, (2) nasazení funkce,
+  (3) případný cron, (4) `enabled=true`, (5) aktivace konkrétní dávky.
+
+## 24. Přehled reakcí „Mám zájem“ / „Nemám zájem“ v administraci (Draft; 06. 08. 2026)
+
+Navazuje na §23 a na response tlačítka z PR #318–#321. Cílem je, aby se ani jedna reakce
+firmy neztratila: obojí má vlastní pohled i vlastní červený počet nepřečtených.
+
+### 24.1 Zdroj pravdy
+
+- **Autoritativní je konečný stav response tokenu** (`sales_lead_email_response_tokens.status`
+  = `interested` / `declined`). Pro každý lead se bere **nejnovější zodpovězený token**
+  (`DISTINCT ON (lead_id) … ORDER BY responded_at DESC`), takže **jeden lead nikdy nespadne
+  do obou skupin současně**.
+- **Symetrický fallback bez tokenu.** Token na položku dávky kaskáduje
+  (`batch_item_id … ON DELETE CASCADE`), aktivita ne — po smazání položky dávky tedy reakce
+  zůstane jen jako aktivita. Aby se žádná neztratila, platí:
+
+  ```sql
+  COALESCE(s.status,
+    CASE WHEN ia.lead_id IS NOT NULL THEN 'interested'
+         WHEN da.lead_id IS NOT NULL THEN 'declined' END)
+  ```
+
+  Existuje-li token, rozhoduje **vždy** on. Bez tokenu rozhodne aktivita — `interest_link`
+  → `interested`, `decline_link` → `declined`. Výsledek je jediná skalární hodnota, takže lead
+  nikdy nespadne do obou skupin. Bez tokenu a se současně existující interest i decline aktivitou
+  vyhrává `interested` (pořadí CASE větví). **Fallback nesmí být jednostranný** — dřívější verze
+  řešila jen zájem a odmítnutí bez tokenu se ztrácelo z přehledu i z červeného počtu.
+  Zrcadlo pravidla pro testy: `resolveResponseStatus()` v `salesLeadResponses.ts`.
+- Tabulka tokenů má `REVOKE ALL` pro `anon` i `authenticated`. Administrace se k datům dostane
+  **výhradně** přes SECURITY DEFINER RPC `sales_lead_response_overview()`.
+  **Frontend nikdy nepoužívá service-role klíč a tabulku tokenů nečte přímo.**
+
+### 24.2 Ověřená metadata (read-only audit staging, 06. 08. 2026)
+
+Rozlišení už existuje, **nová migrace na metadata nebyla potřeba**:
+
+| Reakce | `activity_type` | `direction` | metadata |
+|---|---|---|---|
+| Mám zájem | `reply_received` | `inbound` | `source='interest_link'`, `interest=true`, `batch_item_id`, `recipient` |
+| Nemám zájem | `do_not_contact_set` | `inbound` | `source='decline_link'`, `declined=true`, `batch_item_id`, `recipient` |
+| Běžná odpověď e-mailem | `reply_received` | `inbound` | **bez `source`** |
+| Ručně nastavené „Nekontaktovat“ | `do_not_contact_set` | — | **bez `source`** |
+
+Proto se do počtů nových odmítnutí **nikdy nezapočítá ručně nastavený stav** a do „Kontaktovat“
+se nikdy nedostane běžná e-mailová odpověď.
+
+### 24.3 Záložky a červené počty
+
+- **„Kontaktovat“** je nová záložka **mezi „Osloveno“ a „Odpovědělo“**. Je to **samostatný pohled**
+  nad potvrzeným zájmem — **NENÍ to nový stav leadu**. Lead zůstává ve stávajícím stavu `odpovedel`.
+  Nový stav `kontaktovat` se **nezavádí**.
+- **Červený počet u „Kontaktovat“** = nepřečtené `reply_received` + `inbound` + `read_at IS NULL`
+  + `source='interest_link'` + `interest=true`.
+- **Červený počet u „Nekontaktovat“** = nepřečtené `do_not_contact_set` + `inbound`
+  + `read_at IS NULL` + `source='decline_link'`. Duplicitní záložka pro odmítnutí **nevzniká**.
+- Vzhled je stejný `bg-destructive` puntík/pilulka, jakou stránka už používá u nepřečtených odpovědí.
+- **Přečtení lead ze záložky neodstraní.** Členství se odvozuje od konečného stavu tokenu, ne od
+  `read_at`; lead odejde až ruční změnou stavu administrátorem.
+- Řazení v „Kontaktovat“: **1) nepřečtené, 2) nejnovější reakce, 3) ostatní.**
+
+### 24.4 Zobrazení
+
+- Seznam „Kontaktovat“: firma, „Má zájem o spolupráci“, kontaktní osoba, telefon, e-mail, datum
+  a čas odpovědi, původní dávka, štítek **Vysoká priorita** (`priority = 1`).
+  **Chybějící jméno/telefon se zobrazí jako „—“, nikdy jako vymyšlená hodnota.**
+- Detail leadu má dva samostatné panely (jen když reakce z tlačítka existuje):
+  - **zájem** — datum a čas, kontaktní osoba, telefon, e-mail, firma, původní dávka;
+  - **odmítnutí** — „Firma nemá zájem o spolupráci a odhlásila se z dalších obchodních nabídek.“,
+    datum a čas, e-mail, důvod blokace, stav odhlášení a informace, že další obchodní e-maily
+    jsou blokované.
+
+### 24.5 Souhrnné karty
+
+Přibyly **„Kontaktovat“** (počet leadů s potvrzeným zájmem) a **„Nemá zájem“** (počet odmítnutých
+přes response link). Obě čtou z RPC. Karta „Odpovědělo“ zůstává **beze změny** — měří stav leadu,
+zatímco „Kontaktovat“ měří reakci na tlačítko. Jsou to různé metriky a každá počítá lead jen jednou;
+lead s potvrzeným zájmem je legitimně zároveň `odpovedel` i „Kontaktovat“.
+
+### 24.6 Značení přečtení (rozšíření §18)
+
+Rozšiřuje se **stávající** funkce `sales_lead_mark_replies_read(uuid)` (stejný název i signatura),
+aby vedle `reply_received` označila i `do_not_contact_set` se `source='decline_link'`.
+
+**Kritický invariant:** funkce mění **výhradně `read_at` / `read_by`**. Nikdy neruší
+`do_not_contact`, `do_not_contact_reason`, suppression ani stav `nekontaktovat` — přečtení je
+pouze UI příznak. Ručně nastavené „Nekontaktovat“ (bez `metadata.source`) se záměrně neoznačuje.
+
+### 24.7 Bezpečnost
+
+`sales_lead_response_overview()` je `STABLE` `SECURITY DEFINER` se `SET search_path = ''`,
+guardem `has_admin_permission('sales_leads.manage') OR is_superadmin()`, bez `anon` execute
+a **bez jakéhokoli zápisu**. Surový token ani jeho hash se nikdy nevrací.
+(Oprávnění `sales_leads.view` v projektu neexistuje — kanonické je `sales_leads.manage`.)
+
+### 24.8 Stav
+
+Draft. Migrace `20260806160000_sales_lead_response_overview.sql` **není aplikovaná** na staging
+ani produkci. Žádná dávka, žádný e-mail, žádná automatika, žádný cron.
+
+## 25. CTA prvního obchodního e-mailu — „Mám zájem“ / „Nemám zájem“ (Draft; 06. 08. 2026)
+
+### 25.1 Zjištěná příčina (read-only audit)
+
+Reálný odeslaný e-mail neobsahoval tlačítko „Mám zájem“ a místo něj měl mailto odkaz
+„Nemám zájem, děkuji“. Příčina je dvojí a **není v kódu**:
+
+1. **Produkce nemá nasazený response systém.** Na `sales_lead_email_batch_items` je v produkci
+   jediný trigger `sales_lead_email_batch_item_preserve_snapshot`. Chybí
+   `trg_sales_lead_email_prepare_response_links` i `trg_sales_lead_email_store_response_token`
+   a tabulka `sales_lead_email_response_tokens` v produkci vůbec neexistuje. DB části PR #318–#322
+   byly aplikovány jen na staging. Bez triggeru se CTA nikdy nepřipojí.
+2. **Věta „Nemám zájem, děkuji“ je ručně uložená v aktivní šabloně.** Je to obsah pole `body`
+   šablony `E - shop Míra 2` (jediná `is_active = true`, typ `initial`) a renderer ji jen převede
+   z markdownu na mailto odkaz. **V repozitáři se tato věta nevyskytuje** a žádný kód ji nepřidává.
+
+### 25.2 Cesty prvního obchodního e-mailu
+
+| Cesta | Kde vzniká tělo | CTA před opravou |
+|---|---|---|
+| Dávka | BEFORE INSERT trigger `sales_lead_email_prepare_response_links` | ✅ přidává (jen staging) |
+| Ruční odeslání | EF `send-sales-lead-email` → `deliverSalesLeadInitialEmail` | ❌ nepřidávalo nic |
+| Náhled | `SalesLeadRichTextEditor` → `renderSalesLeadEmailHtml` | ❌ nezobrazoval |
+
+### 25.3 Oprava
+
+- Nový sdílený builder `supabase/functions/_shared/salesLeadResponseCta.ts` je **jediný zdroj
+  pravdy** pro markup CTA a je 1:1 zrcadlem DB triggeru (hlídá spec 107).
+- **Ruční cesta** razí vlastní token přes novou RPC
+  `sales_lead_issue_manual_response_token(uuid, text)` a CTA připojí **před** vyrenderováním
+  a uložením snapshotu, takže uložený snapshot i odeslaný e-mail obsahují totéž.
+  Cesta je **fail-closed** — bez tokenu se nic neodešle (`response_links_unavailable`).
+- **Náhled** prvního e-mailu zobrazuje stejný CTA blok se zástupným neaktivním tokenem.
+- `sales_lead_email_response_tokens.batch_item_id` je nově **nullable** (ruční e-mail nemá položku
+  dávky). UNIQUE zůstává — Postgres povoluje více NULL hodnot, takže vazba dávka↔token je pro
+  dávkovou cestu stále 1:1.
+- Obě tlačítka vždy míří na `https://onemil.cz/partner-response.html`; **nikdy mailto** a nikdy
+  odpověď na `b2b@onemil.cz` (ta zůstává jen jako odesílatel/reply-to).
+
+### 25.4 Nutný následný krok (NEPROVEDENO)
+
+Aby se CTA objevilo v reálném provozu, je potřeba **samostatně schválit**:
+
+1. aplikovat na produkci DB části PR #318–#322 + migraci `20260806180000` (jinak CTA nevznikne),
+2. **ručně upravit aktivní šablonu `E - shop Míra 2`** a odstranit z jejího těla mailto odkaz
+   „Nemám zájem, děkuji“ — je to produkční **data**, tímto PR se nemění,
+3. nasadit EF `send-sales-lead-email` a frontend.
+
+Staré už vytvořené dávky se nepřepisují; CTA se přidává jen nově vznikajícím e-mailům.
+
+### 25.5 Jediný podporovaný způsob odpovědi
+
+Na první obchodní e-mail lze odpovědět **výhradně** dvěma bezpečnými CTA:
+
+- **Mám zájem** — hlavní oranžové tlačítko,
+- **Nemám zájem** — vedlejší tlačítko (zároveň jediné odhlášení).
+
+Obě míří na `https://onemil.cz/partner-response.html` s vlastním tokenem příjemce.
+
+**Zrušený konkurenční mechanismus.** AI koncept dříve vynucoval závěrečnou větu s výzvou
+odpovědět e-mailem konkrétním slovem (konstanta `OPT_OUT_SENTENCE`, instrukce v obou promptech
+a guard `opt_out_sentence_missing` ve `sales-lead-draft-email`). Po přidání systémového CTA by
+e-mail nesl **dvě konkurenční cesty odhlášení**, proto byl tento mechanismus odstraněn.
+
+**Pravidla (neměnit):**
+
+- AI koncept ani asistent **nesmí** vytvářet odhlašovací větu, výzvu k odpovědi kvůli odhlášení
+  ani mailto odkaz. Zákaz je v obou promptech jako sdílené `NO_OPT_OUT_RULE`.
+- **Follow-up nepřidává žádný vlastní odhlašovací mechanismus** — nemá ani CTA blok, ten patří
+  jen k prvnímu e-mailu.
+- Odhlášení se do prvního e-mailu doplní **pouze systémově** ze sdíleného builderu
+  `_shared/salesLeadResponseCta.ts` (ruční cesta) nebo z DB triggeru (dávková cesta).
+- `opt_out_sentence_missing` se **nesmí vrátit** — AI výstup se kvůli chybějící odhlašovací větě
+  už neodmítá.
+
+### 25.6 Skládání těla ručního e-mailu (oprava po preview na stagingu)
+
+Ruční cesta původně připojila `cta.source` (markdown) k tělu a celek pustila přes obecný renderer.
+`markdownLinksToVisibleText` ale převádí `[popisek](url)` na holý `popisek` a **URL zahodí**:
+
+- plaintext přišel o odkazy úplně — příjemce neměl jak odpovědět,
+- HTML mělo obyčejné odkazy místo tlačítek,
+- ruční a dávková cesta se tím rozešly.
+
+**Pravidlo (neměnit):** CTA se **nikdy** nepouští přes obecný renderer. Renderer dostane výhradně
+text od člověka a CTA se připojí **až za výsledek**, ve správné podobě pro každou verzi:
+
+| Verze | Skládá se jako |
+|---|---|
+| `body_source_snapshot` | `humanBody + cta.source` (markdown) |
+| `body_text_snapshot` | `renderSalesLeadEmailText(humanBody) + cta.text` |
+| `body_html_snapshot` | `renderSalesLeadEmailHtml(humanBody) + cta.html` |
+
+Zajišťuje to sdílená `composeInitialEmailBodies()` v `_shared/salesLeadResponseCta.ts`, kterou volá
+`send-sales-lead-email`. Stejné pořadí (render → append) používá i DB trigger dávkové cesty, takže
+obě cesty dávají funkčně shodný e-mail. `cta = null` (reuse/forward, follow-up) → tělo beze změny.
+
+Spec 108 ověřuje **skutečný výstup pipeline**, ne jen builder — spec 107 to nechytil, protože
+testoval `buildResponseCtaBlock()` a řetězce ve zdrojáku, ale ne výsledek renderování.
+
+## 26. Automatické zakládání discovery jobů (Draft; 07. 08. 2026)
+
+### 26.1 Zjištěný stav před opravou
+
+Discovery worker (`cron → run_sales_lead_discovery_worker() → sales-lead-discover`) je funkční,
+ale **sám nové firmy nehledal**. Rozhodující řádek:
+
+```sql
+IF (0 jobů ve stavu queued/running) THEN RETURN;
+```
+
+Frontu plnil výhradně člověk v administraci. Poslední job vznikl **23. 07. 2026**, takže cron od té
+doby dělal ~1440 prázdných běhů denně a za 24 h i 7 dní vytvořil **0 leadů**.
+
+### 26.2 Doplněný článek
+
+Přidán **pouze plánovač**. Architektura workeru, ověřování webu ani ukládání do Návrhů se nemění:
+
+```
+cron „sales_lead_discovery_scheduler_daily" (20 4 * * *)
+  └─ run_sales_lead_discovery_scheduler()
+       ├─ advisory lock (žádné souběžné spuštění)
+       ├─ IF existuje queued/running job → nevytvoří nic
+       ├─ sales_lead_pick_next_discovery_group()  → rotace kategorií
+       └─ INSERT 1 job (requested_count 5, max_candidates 80, auto_created = true)
+            ↓
+cron „sales_lead_discovery_worker_min" (* * * * *)  — BEZE ZMĚNY
+```
+
+**Frekvence:** 1 job denně, a jen když žádný neběží. Worker si ho pak po dávkách dotáhne.
+
+**Parametry 5 / 80** vycházejí z 13 historických jobů (`requested_count` 5–10, `max_candidates`
+vždy 80). Volena konzervativní varianta — pozdější běhy měly kvůli saturaci vyšší podíl duplicit.
+
+### 26.3 Rotace kategorií
+
+`sales_lead_pick_next_discovery_group()` vybírá **LRU nad skutečným číselníkem**
+`sales_lead_groups`: aktivní skupina, která se v discovery jobech používala nejdéle; nikdy použitá
+má přednost (`ORDER BY last_used ASC NULLS FIRST, sort_order, slug`). Nevymýšlí nové názvy.
+`jine` je vyloučena — je to catch-all pro klasifikaci, ne cílový segment.
+
+### 26.4 Rozšířená deduplikace
+
+`sales_lead_propose` (na kterou `_with_contact` deleguje, takže stačí jedno místo) nově blokuje:
+
+| Kontrola | Důvod |
+|---|---|
+| doména | `duplicate_domain` |
+| IČO | `duplicate_ico` |
+| **contact_email** | `duplicate_email` (nový parametr `p_contact_email`) |
+| **do_not_contact** | `do_not_contact` (podle domény, IČO i e-mailu) |
+| partner s IČO | `already_partner` |
+| doménová suppression | `suppressed_domain` |
+| **suppression přes přesný e-mail** | `suppressed_email` |
+
+**Klíčová oprava:** z kontrol IČO a domény zmizelo `status <> 'archivovan'`. Archivovaná firma
+(i dříve oslovená nebo odpovědělá) se tak už nemůže automaticky založit znovu.
+
+### 26.5 Dohled
+
+Nový sloupec `sales_lead_discovery_jobs.auto_created` odliší automatický job od ručního. Kdy vznikl,
+jakou měl kategorii, kolik kandidátů zpracoval, kolik uložil a kolik přeskočil jako duplicity už
+tabulka nese (`created_at`, `lead_group`, `candidates_checked`, `created_count`, `duplicates`,
+`finish_reason`). **Nový dashboard nevzniká.**
+
+### 26.5b Vlastník automatického jobu (validace `created_by`)
+
+`sales_leads.created_by` je NOT NULL a má FK na `auth.users` (ON DELETE RESTRICT);
+`sales_lead_discovery_jobs` ale FK **nemá**, takže jeho `created_by` může viset na smazaného
+uživatele. Takové UUID by shodilo **každý** insert leadu a job by spálil všech 80 kandidátů s 0
+uloženými leady — tiché selhání vypadající jako saturace kategorie.
+
+Proto `sales_lead_pick_discovery_owner()` vlastníka **vždy validuje**:
+
+- existuje v `auth.users`,
+- má aktuálně roli `admin` nebo `superadmin`,
+- projde kanonickou kontrolou `has_admin_permission('sales_leads.manage')`
+  (ta vrací true i pro superadmina).
+
+Autor posledního jobu je jen **preference uvnitř množiny vhodných uživatelů** (`ORDER BY`), ne
+samostatná větev — nevhodné UUID se tedy do výběru vůbec nedostane. Fallback je deterministický:
+superadmin, pak nejstarší admin. Bez vhodného vlastníka se job **nezaloží**
+(`no_owner_available`) — bez výjimky a bez částečného zápisu. Nezakládá se žádný systémový účet
+a nemění se role ani auth uživatelé.
+
+Ověřeno read-only proti produkčním datům: platný vlastník se použije; neexistující UUID
+i uživatel bez admin role se **nepoužijí** a spadnou na superadmina.
+
+**Pravidlo (neměnit):** nikdy nebrat `created_by` ze starého jobu bez revalidace.
+
+Pojistka: `sales_lead_propose` nově zachytává i `foreign_key_violation` a vrací `invalid_owner`
+místo neodchycené výjimky, takže neplatný vlastník je čitelný místo tiché ztráty celé dávky.
+
+### 26.6 Bezpečnost
+
+Cron příkaz je jen `SELECT public.run_sales_lead_discovery_scheduler();` — **žádný secret**; token
+i URL čte až worker z Vaultu. Obě funkce jsou `SECURITY DEFINER` se `search_path = ''`, execute jen
+`service_role`, bez `anon`/`authenticated`. Plánovač **nevolá Resend, nevytváří e-mailovou dávku,
+nezapíná automatiku, nemění stavy leadů ani nenastavuje `osloveno`** — jeho jediný výstup je jeden
+řádek ve frontě jobů. Nové firmy končí výhradně v `navrzeny`.
+
+### 26.7 Stav
+
+Draft. Migrace `20260807120000_sales_lead_discovery_scheduler.sql` **není aplikovaná** na staging
+ani produkci, cron tedy zatím neexistuje. Rotace ověřena read-only proti produkčním datům: prvních
+5 voleb jsou nikdy nepoužité kategorie (`auto-moto`, `luxusni-zbozi`, `cestovani`, `gastronomie`,
+`lokalni-sluzby`), teprve pak nejstarší `sport`.
+
+## 27. Discovery — OpenAI jako jediný zdroj kandidátů (DDG fallback odstraněn)
+
+### 27.1 Co se změnilo
+
+`companyCandidateSearch` hledá kandidátní firmy **výhradně přes OpenAI Responses API
+`web_search_preview`**. DuckDuckGo fallback byl odstraněn i s helpery (`searchDdg`, `parseDdg`,
+`DDG_TIMEOUT_MS`, browser User-Agent). Discovery už na `duckduckgo.com` neposílá žádný požadavek.
+
+### 27.2 Proč
+
+Měřeno na stagingu přes uloženou diagnostiku (`sales_lead_discovery_jobs.search_diagnostics`),
+job `d2c342d1` / `lokalni-sluzby`, všechna tři kola shodně:
+
+| zdroj | HTTP status | raw URL | závěr |
+|---|---|---|---|
+| OpenAI | **429** | 0 | vyčerpaná kvóta/limit — klíč je platný (jinak 401) |
+| DuckDuckGo | **202** | 0 | anti-bot odpověď z Edge runtime, žádné výsledky |
+
+DDG odpovídal rychle a formálně úspěšně (202 je 2xx, takže `res.ok` = true), ale tělo neobsahovalo
+jediný výsledkový odkaz. Ze stejné infrastruktury přes DB egress přitom stejný dotaz vracel 200
+a použitelné kandidáty — DuckDuckGo tedy blokuje IP rozsahy Edge runtime. **Fallback nebyl zálohou,
+jen tichým zdrojem nuly a údržby navíc.**
+
+### 27.3 Jak se discovery chová teď
+
+- OpenAI dodá použitelné kandidáty → zpracují se jako dřív (ověření webu, ARES, dedup, `navrzeny`).
+- OpenAI nevrátí nic, selže (429/401/timeout/síť) nebo vrátí jen URL, které odpadnou na
+  normalizaci/deny-listu → **kolo bezpečně skončí s 0 kandidáty**. Job se neukončí chybou,
+  `error` zůstává `null` a po `MAX_EMPTY_ROUNDS` prázdných kolech doběhne jako
+  `candidates_exhausted`.
+- Scheduler (`26.`) není dotčen — další plánovaný job to zkusí znovu, takže dočasný výpadek nebo
+  429 se sám vyřeší, jakmile je kvóta zpátky.
+
+### 27.4 Diagnostika
+
+Nové záznamy v `search_diagnostics` nesou pouze OpenAI pole: `openai_http_status`,
+`openai_error_type`, `openai_raw_count`, `openai_usable_count`, `final_candidate_count`,
+`fallback_reason`, `added_to_pool`, `round`, `at`. `fallback_reason` si ponechává stejné hodnoty
+(`none` / `openai_empty` / `openai_no_usable_candidates`), nově ale popisuje výsledek OpenAI, ne
+spuštění fallbacku.
+
+Pole `ddg_http_status`, `ddg_error_type`, `ddg_raw_count`, `ddg_usable_count` se **už nezapisují**.
+V typu `CandidateSearchDiagnosticsEntry` zůstávají jako `@deprecated` volitelná, aby starší uložené
+záznamy zůstaly čitelné. **Historické joby se nepřepisují a nevzniká žádná datová migrace.**
+
+### 27.5 Pravidla (neměnit bez rozhodnutí)
+
+- Discovery nemá druhý vyhledávací zdroj; nulový výsledek je legitimní stav, ne chyba.
+- Nevracet DDG fallback bez důkazu, že z Edge runtime vrací použitelné výsledky.
+- Při trvalém 429 řešit kvótu/limit na OpenAI účtu, **ne rotaci klíče** — 429 znamená, že klíč
+  autentizuje správně.

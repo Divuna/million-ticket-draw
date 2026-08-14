@@ -12,7 +12,7 @@ interface ContestRow {
   id: string;
   title: string;
   status: string;
-  /** From contest_progress view */
+  /** From guarded superadmin progress RPC */
   tickets_total: number;
   tickets_sold: number;
   tickets_remaining: number;
@@ -23,6 +23,14 @@ interface ContestRow {
   tickets_last_24h: number;
   /** From bonus_prizes (positions only — not individual ticket rows) */
   bonus_positions: number[];
+}
+
+interface ContestProgressAdminRow {
+  contest_id: string;
+  tickets_total: number | null;
+  tickets_sold: number | null;
+  tickets_remaining: number | null;
+  sold_percent: number | null;
 }
 
 export const TicketMapAdmin: React.FC = () => {
@@ -61,7 +69,7 @@ export const TicketMapAdmin: React.FC = () => {
         { data: activityRows },
         { data: bonusRows, error: bonusError },
       ] = await Promise.all([
-        supabase.from('contest_progress').select('contest_id,tickets_total,tickets_sold,tickets_remaining,sold_percent').in('contest_id', ids),
+        supabase.rpc('get_contest_progress_admin', { p_contest_ids: ids }),
         supabase.from('contest_revenue').select('contest_id,estimated_revenue').in('contest_id', ids),
         supabase.from('contest_activity_last_24h').select('contest_id,tickets_last_24h').in('contest_id', ids),
         // Bonus positions are few rows compared to 1M tickets — safe to load
@@ -71,7 +79,7 @@ export const TicketMapAdmin: React.FC = () => {
       if (bonusError) console.error('Error fetching bonus prizes:', bonusError);
 
       // Index by contest_id for O(1) lookup
-      const progressMap: Record<string, typeof progressRows[0]> = {};
+      const progressMap: Record<string, ContestProgressAdminRow> = {};
       (progressRows || []).forEach((r) => { progressMap[r.contest_id] = r; });
 
       const revenueMap: Record<string, number> = {};

@@ -2,6 +2,45 @@
 <html lang="cs">
   <head>
     <meta charset="UTF-8" />
+
+    <!--
+      Content-Security-Policy (bezpečnostní nález P1).
+
+      Doručuje se přes meta tag, protože produkční web běží na Lovable a ten
+      nemá podporovaný způsob, jak nastavit vlastní HTTP hlavičky. `vercel.json`
+      v repu se na produkci NEPOUŽÍVÁ (ověřeno: web obsluhuje Cloudflare edge
+      Lovable, hlavičky HSTS/Referrer-Policy/X-Content-Type-Options přicházejí
+      z této vrstvy, ne z repa).
+
+      Omezení meta varianty (nelze obejít v repu):
+      - `frame-ancestors` (P2) a `Cross-Origin-Resource-Policy` (P3) prohlížeč
+        v meta tagu IGNORUJE — musí přijít jako HTTP hlavička z edge vrstvy.
+      - `'unsafe-inline'` u script-src je nutné kvůli inline bootstrapu GA4,
+        Meta Pixelu, OneSignalu a JSON-LD níže v tomto souboru; u style-src
+        kvůli inline `style={{…}}` v Reactu. CSP tak neblokuje inline XSS,
+        ale blokuje načtení skriptů z cizích domén.
+
+      Při přidání nové externí služby je nutné doplnit její doménu sem, jinak
+      ji prohlížeč zablokuje.
+    -->
+    <meta
+      http-equiv="Content-Security-Policy"
+      content="default-src 'self';
+               base-uri 'self';
+               object-src 'none';
+               script-src 'self' 'unsafe-inline' https://www.googletagmanager.com https://www.google-analytics.com https://connect.facebook.net https://cdn.onesignal.com https://*.onesignal.com;
+               style-src 'self' 'unsafe-inline' https://fonts.googleapis.com;
+               font-src 'self' data: https://fonts.gstatic.com;
+               img-src 'self' data: blob: https:;
+               media-src 'self' data: blob: https:;
+               connect-src 'self' https://xkzhjldrojjlrkezorey.supabase.co wss://xkzhjldrojjlrkezorey.supabase.co https://*.supabase.co wss://*.supabase.co https://www.googletagmanager.com https://www.google-analytics.com https://*.google-analytics.com https://*.analytics.google.com https://stats.g.doubleclick.net https://connect.facebook.net https://www.facebook.com https://*.onesignal.com https://onesignal.com;
+               frame-src 'self' https://www.youtube.com https://www.youtube-nocookie.com https://*.onesignal.com;
+               worker-src 'self' blob:;
+               manifest-src 'self';
+               form-action 'self' https://checkout.stripe.com;
+               upgrade-insecure-requests"
+    />
+
     <link rel="icon" type="image/x-icon" href="/favicon.ico" />
     <link rel="manifest" href="/manifest.webmanifest" />
     <link rel="apple-touch-icon" href="/apple-touch-icon.png" />

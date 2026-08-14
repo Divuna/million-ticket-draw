@@ -72,14 +72,7 @@ export const RedeemMioCoinCard = ({ onRedeemed }: RedeemMioCoinCardProps) => {
   };
 
   return (
-    <div
-      className="relative overflow-hidden rounded-2xl"
-      style={{
-        background: 'linear-gradient(135deg, hsl(220, 25%, 8%) 0%, hsl(220, 30%, 12%) 50%, hsl(220, 25%, 8%) 100%)',
-        border: '1px solid rgba(255,138,0,0.2)',
-        boxShadow: '0 8px 32px rgba(0,0,0,0.4), inset 0 1px 0 rgba(255,138,0,0.06)',
-      }}
-    >
+    <div className="homepage-light-panel relative overflow-hidden rounded-2xl border border-[rgba(255,138,0,0.18)] bg-white">
       <div className="p-6">
         <div className="flex items-center gap-4 mb-4">
           <div
@@ -92,8 +85,8 @@ export const RedeemMioCoinCard = ({ onRedeemed }: RedeemMioCoinCardProps) => {
             <OneMilGiftIcon size={24} className="w-6 h-6 text-black" />
           </div>
           <div>
-            <h2 className="text-xl font-bold text-[#E7EBF0]">Uplatnit MioCoin kód</h2>
-            <p className="text-sm text-gray-400">Zadejte MioCoin kód z partnerské akce, kartičky nebo e-mailu a připíšeme vám odměnu do peněženky.</p>
+            <h2 className="text-xl font-bold text-foreground">Uplatnit MioCoin kód</h2>
+            <p className="text-sm text-muted-foreground">Zadejte MioCoin kód z partnerské akce, kartičky nebo e-mailu a připíšeme vám odměnu do peněženky.</p>
           </div>
         </div>
 
