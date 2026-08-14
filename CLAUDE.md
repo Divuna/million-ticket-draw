@@ -1937,18 +1937,35 @@ Toto pravidlo platí vždy, bez výjimky — nikdy nenechávej state/history zm�
 
 ---
 
-## Paperclip — operační pravidla (12. 05. 2026)
+## Paperclip — operační pravidla (12. 05. 2026, agenti aktualizováni 14. 08. 2026)
 
 Paperclip běží lokálně jako AI management vrstva pro OneMil.
+Režim: **authenticated · private · loopback 127.0.0.1:3100 · strict secrets**. Verze `2026.722.0`.
 Spuštění: `npx paperclipai onboard --yes` z `C:\Users\divis\Desktop\Onemil - Projekt\million-ticket-draw`.
 Detailní setup viz `PAPERCLIP_SETUP_CONTEXT.md`.
 
-### Aktivní agenti
+### Aktivní agenti (ověřeno v instanci 14. 08. 2026)
 
-| Agent | Adaptér | Role |
-|-------|---------|------|
-| Provozní ředitel OneMil | claude_local / codex_local | Manažer, deleguje práci |
-| Průzkumník obchodních leadů OneMil | codex_local | Lead research, hledá firmy |
+Autoritativní zdroj je `PAPERCLIP_SETUP_CONTEXT.md` **§14**. Tabulka níže je jen zkratka.
+
+| Agent | Adaptér | Role | Heartbeat |
+|-------|---------|------|-----------|
+| Provozní ředitel OneMil | codex_local | Manažer, deleguje práci, eskaluje Pavlovi | enabled |
+| Magin – CRM operátor OneMil | codex_local | Denní dávka obchodních e-mailů (rutina 07:30) | enabled |
+| Synchronizátor Paperclip OneMil | codex_local | Synchronizace stavu do OneMil STAGING | enabled |
+| Martin – vedoucí marketingu OneMil | codex_local | Řídí Analysta a Plannera | vypnuto |
+| Performance Analyst OneMil | codex_local | Meta KPI, **read-only broker** | vypnuto |
+| Content & Community Planner OneMil | codex_local | Obsah na zadání, **bez Meta brokeru** | vypnuto |
+| Meta API Integrator OneMil | codex_local | Technická integrace | vypnuto |
+| Summarizer / Reflection Coach | claude_local / codex_local | Vestavěné, rutiny pozastavené | vypnuto |
+
+**Agent „Průzkumník obchodních leadů OneMil“ už v instanci neexistuje** — nepoužívat ho v úvahách.
+
+**Timerový heartbeat je dnes fakticky vypnutý u všech** (`intervalSec = 0`, `schedulerActive = false`).
+Práci dnes rozjíždí výhradně přiřazení issue (`assignment`) a rutiny (`automation`).
+
+**Meta přístup je výhradně read-only.** Broker referenci mají jen Martin a Performance Analyst;
+Content & Community Planner ji nesmí dostat a Meta informace přebírá jako odvozené zadání.
 
 ### Pravidla pro Claude Code při práci s Paperclipem
 

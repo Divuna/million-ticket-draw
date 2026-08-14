@@ -1,10 +1,15 @@
 # OneMil — Paperclip setup context
 
 **Status:** permanent Paperclip / AI employee setup context  
-**Last updated:** 2026-05-12  
+**Last updated:** 2026-08-14 (§14 doplněna; §1–§13 ponechány jako historický záznam z 2026-05-12)  
 **Company:** iCONIC POINT s.r.o.  
 **Project:** OneMil  
 **Owner / final decision maker:** Pavel Diviš
+
+> ⚠️ **AKTUÁLNÍ PROVOZNÍ STAV JE V §14.** Sekce §3, §8 a §10 popisují stav z 12. 05. 2026 a v částech
+> „Paperclip settings“, „Active agents“ a „Model“ jsou **neaktuální**. Agenti se pro složení týmu,
+> heartbeat nastavení, adaptéry a přístupy řídí výhradně §14. Obchodní pravidla, lead databáze,
+> restrikce (§9) a schvalovací model (§4) platí beze změny.
 
 This file is the source of truth for setting up Paperclip and AI employees for OneMil.
 
@@ -77,10 +82,13 @@ He processes tasks personally only when Pavel explicitly says: **"zpracuj osobn�
 If no suitable agent exists for a task, he proposes a new agent and waits for Pavel approval.
 
 **Paperclip settings:**
+> ⚠️ **NEAKTUÁLNÍ od 2026-08-14 — platné hodnoty viz §14.** Zejména „Heartbeat: OFF“ už neplatí:
+> Provozní ředitel má `heartbeatEnabled = true`. Ostatní řádky odpovídají realitě.
 - Enable search: OFF
 - Can assign tasks: ON
 - Can create new agents: OFF
-- Heartbeat: OFF
+- Heartbeat: OFF <!-- neplatí, viz §14 -->
+- Reports to: Pavel Diviš; podřízení: Martin, Magin, Synchronizátor, Meta API Integrator
 
 ---
 
@@ -174,7 +182,11 @@ Sales agents should evaluate:
 
 ---
 
-## 8. Active agents (as of 2026-05-12)
+## 8. Active agents (as of 2026-05-12) — HISTORICKÝ ZÁZNAM
+
+> ⚠️ **Tato sekce je historická.** Aktuální složení týmu je v §14. Agent
+> „Průzkumník obchodních leadů OneMil“ **v instanci k 14. 08. 2026 neexistuje** a „Campaign & Offer
+> Planner“ nebyl vytvořen. Nemazáno kvůli historické hodnotě.
 
 ### Provozní ředitel OneMil
 
@@ -278,3 +290,90 @@ Top candidates: Dedoles, Slevomat, Rohlik.cz, Aktin/Vilgain, Vuch, DATART.
 - Provozní ředitel coordinates priorities and presents shortlists to Pavel before any outreach.
 - Outreach drafts are prepared only after Pavel explicitly approves the shortlist.
 - Do not invent missing business rules. Ask Pavel Diviš or mark as TODO until confirmed.
+
+---
+
+## 14. AKTUÁLNÍ PROVOZNÍ STAV (ověřeno 14. 08. 2026, Fáze 0)
+
+Tato sekce je **jediný platný zdroj pravdy** pro složení týmu, runtime nastavení a přístupy.
+Všechny hodnoty níže byly odečteny z běžící instance přes lokální Paperclip API, ne odhadnuty.
+
+### 14.1 Instance
+
+| Položka | Hodnota |
+|---|---|
+| Paperclip | `2026.722.0`, instance `default` |
+| Režim | authenticated · private · loopback `127.0.0.1:3100` · strict secrets |
+| Company | iCONIC POINT s.r.o. — `cbea91fc-fb4b-4c00-bee8-7c3e4e6230d7`, prefix `ICO` |
+| Projekt | OneMil — `b9aafaa8-fbf3-4c65-ae28-b11eafd12b3a` |
+| Nový agent | vyžaduje schválení boardu (`requireBoardApprovalForNewAgents = true`) |
+
+### 14.2 Aktivní agenti (9)
+
+| Agent | Role | Adapter / model | Heartbeat | Reportuje |
+|---|---|---|---|---|
+| Provozní ředitel OneMil | manager, delegační uzel | `codex_local` / gpt-5.5 | **enabled = true** | Pavel |
+| Magin – CRM operátor OneMil | denní dávka obchodních e-mailů | `codex_local` / gpt-5.5 | **enabled = true** | Provozní ředitel |
+| Synchronizátor Paperclip OneMil | synchronizace stavu do OneMil STAGING | `codex_local` / gpt-5.5 | **enabled = true** | Provozní ředitel |
+| Martin – vedoucí marketingu OneMil | řízení marketingu | `codex_local` / gpt-5.5 | enabled = false | Provozní ředitel |
+| Performance Analyst OneMil | vyhodnocení Meta KPI | `codex_local` / gpt-5.5 | enabled = false | Martin |
+| Content & Community Planner OneMil | obsah na zadání | `codex_local` / gpt-5.5 | enabled = false | Martin |
+| Meta API Integrator OneMil | technická integrace (engineer) | `codex_local` / gpt-5.5 | enabled = false | Provozní ředitel |
+| Summarizer | vestavěný, rutina pozastavena | `claude_local` / haiku-4.5 | false | Provozní ředitel |
+| Reflection Coach | vestavěný, rutina pozastavena | `codex_local` | false | Provozní ředitel |
+
+**Agent „Průzkumník obchodních leadů OneMil“ (§8) v instanci neexistuje.**
+
+### 14.3 Heartbeat — skutečný stav
+
+**Timerový heartbeat dnes nikoho nebudí.** U všech devíti agentů platí `intervalSec = 0` a
+`schedulerActive = false`. Příznak `heartbeatEnabled = true` u tří agentů je proto bez efektu,
+dokud není nastaven interval. Veškerá práce se dnes rozjíždí událostmi (`assignment`) a rutinami
+(`automation`).
+
+### 14.4 Rutiny
+
+| Rutina | Agent | Trigger | Concurrency | Catch-up | Stav |
+|---|---|---|---|---|---|
+| Denní dávka prvních obchodních e-mailů | Magin | cron `30 7 * * 1-5`, `Europe/Prague` | `skip_if_active` | `skip_missed` | active |
+| Synchronizace stavu Paperclipu do OneMil STAGING | Synchronizátor | schedule | `skip_if_active` | `skip_missed` | active |
+| Review recent agent trajectories | Reflection Coach | — | `coalesce_if_active` | `skip_missed` | **paused** |
+| Refresh stale summary slots | Summarizer | — | `coalesce_if_active` | `skip_missed` | **paused** |
+
+Maginova rutina volá produkční Edge Function `sales-lead-daily-batch-agent`. Rozesílku a rozložení
+do okna 08:30–16:30 dělá OneMil sám; agent e-maily neodesílá.
+
+### 14.5 Meta → Supabase broker
+
+- Produkční read-only broker je **VERIFIED**.
+- Referenci na broker mají **Martin** a **Performance Analyst**.
+- **Content & Community Planner broker credential nemá a nesmí dostat.** Potřebné údaje dostává
+  výhradně jako odvozené zadání od Martina nebo Analysta.
+- Přístup je **výhradně read-only**. Žádný agent nesmí přes Metu zapisovat, publikovat ani utrácet.
+
+### 14.6 Ověřené chování platformy (Fáze 0)
+
+- **Přiřazení issue probudí agenta i s `heartbeatEnabled = false`.** Ověřeno na reálných bězích
+  Martina, Performance Analysta a Content Plannera — `invocationSource = assignment`,
+  `reason = issue_assigned`, `status = completed`, při `schedulerActive = false`.
+- **Komentář probudí agenta** (`issue_commented`), duplicitní probuzení se slučují (`coalesced`).
+- **Rutina → issue → assignment wake** funguje bez timeru (ověřeno na ICO-138).
+- Wake se **nespustí pro issue ve stavu `backlog`** (ověřeno ve zdrojovém kódu
+  `queueIssueAssignmentWakeup`; runtime test zatím neproveden).
+
+### 14.7 Otevřené provozní nálezy
+
+1. **82 ze 137 issues je `blocked`** a **žádné z nich nepoužívá `blockedByIssueIds`.** Bez
+   first-class blockerů nemůže nikdy nastat `issue_blockers_resolved`, takže se zablokovaná práce
+   sama nikdy neprobudí. Agenti musí přejít na `blockedByIssueIds`.
+2. **Execution policy (review/approval brány) se nepoužívá u žádného issue.** Nadřízený se proto
+   dnes nedozví o dokončené práci podřízeného automaticky.
+3. **Všichni agenti mají `budgetMonthlyCents = 0`**, takže ochrana „zpomal nad 80 %, pauza na 100 %“
+   je fakticky neaktivní.
+
+### 14.8 Model a technické poznámky (nahrazuje §10)
+
+Produkčně používaný model je `gpt-5.5` na `codex_local` u všech OneMil agentů
+(`--skip-git-repo-check`, `fastMode`, sandbox zapnutý — `dangerouslyBypassApprovalsAndSandbox = false`).
+Vestavěný Summarizer běží na `claude_local` / `claude-haiku-4-5`. Údaj „gpt-5.3-codex / o4-mini“ v §10
+je historický.
