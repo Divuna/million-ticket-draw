@@ -2259,6 +2259,9 @@ Detailní setup viz `PAPERCLIP_SETUP_CONTEXT.md`.
 | Performance Analyst OneMil | codex_local | gpt-5.5 | KPI, reporting a vyhodnocení výkonu obsahu pro Martina |
 | Magin – CRM operátor OneMil | codex_local | gpt-5.5 | Denní dávka prvních obchodních e-mailů + zásoba leadů přes úzký adapter |
 | Synchronizátor Paperclip OneMil | codex_local | gpt-5.5 | Read-only snapshot Paperclipu → OneMil STAGING |
+| Meta API Integrator OneMil | codex_local | gpt-5.5 | Technická integrace mezi Metou a OneMil (engineer) |
+| Summarizer | claude_local | claude-haiku-4.5 | Vestavěný, rutina pozastavena |
+| Reflection Coach | codex_local | gpt-5.5 | Vestavěný, rutina pozastavena |
 
 Marketingová hierarchie je: Pavel → Provozní ředitel OneMil → Martin – vedoucí marketingu OneMil → Content & Community Planner OneMil / Performance Analyst OneMil. Marketingoví agenti jsou přesně tři, bez duplicit, nemají social secrets, publishing práva, ads práva ani možnost utrácet. `ICO-53` už není v permanentních instructions; jednorázové úkoly patří do Paperclip issues. OneMil Brand Kit / Brand Manual je závazný zdroj.
 
@@ -2269,6 +2272,18 @@ adapter; segment je pevně `e-shopy`.
 
 **Model všech `codex_local` agentů je `gpt-5.5`.** Starší `gpt-5.3-codex` i `gpt-5.6-sol` server
 pro tento ChatGPT účet odmítá (`invalid_request_error`) — nevracet je.
+
+**Meta → Supabase broker je produkční read-only integrace (VERIFIED, ověřeno 14. 8. 2026).**
+Referenci na broker mají jen Martin – vedoucí marketingu OneMil a Performance Analyst OneMil;
+Content & Community Planner OneMil ho nemá a nesmí dostat — Meta údaje dostává jen jako odvozené
+zadání od Martina/Analysta. Přístup je výhradně read-only; žádný agent nesmí přes Metu zapisovat,
+publikovat ani utrácet.
+
+**Timerový heartbeat je dnes fakticky vypnutý u všech agentů** (`intervalSec=0`,
+`schedulerActive=false`) — práci rozjíždí jen přiřazení issue, komentář a rutiny, ne pravidelný
+timer. Rozpočtová ochrana (`budgetMonthlyCents`) je u všech `0`, tedy fakticky neaktivní; řešení
+je vědomě odložené. Detail viz `PAPERCLIP_SETUP_CONTEXT.md` §3 (Meta API Integrator / broker) a
+§5 / §11 (heartbeat a rozpočet).
 
 ### Pravidla pro Claude Code při práci s Paperclipem
 

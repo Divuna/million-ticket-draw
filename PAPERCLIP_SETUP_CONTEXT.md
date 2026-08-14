@@ -201,6 +201,20 @@ Dvě věci v instrukci rutiny, bez kterých to nefunguje (nevracet zpět):
   a `payload`; `capturedAt` v camelCase vrací `HTTP 400`. Tělo drží pod 1 MB — posílají se jen
   id/název/stav, ne celé objekty ani logy.
 
+### Meta API Integrator OneMil
+
+- Role: technická integrace (engineer) mezi Metou a OneMil.
+- Adapter: `codex_local`
+- Model: `gpt-5.5`
+- Heartbeat enabled: `false`
+- Reports to: Provozní ředitel OneMil
+
+**Meta → Supabase broker (ověřeno 14. 8. 2026, Fáze 0 audit).** Produkční read-only broker je
+**VERIFIED**. Referenci na broker mají pouze **Martin – vedoucí marketingu OneMil** a **Performance
+Analyst OneMil**. **Content & Community Planner OneMil broker credential nemá a nesmí dostat** —
+potřebné údaje z Mety dostává výhradně jako odvozené zadání od Martina nebo Performance Analysta.
+Přístup je **výhradně read-only**; žádný agent nesmí přes Metu zapisovat, publikovat ani utrácet.
+
 ## 4. Vestavění pomocní agenti Paperclipu
 
 `Reflection Coach` a `Summarizer` nejsou hlavní OneMil provozní agenti. Jejich automatické používání se zapíná jen tehdy, když pro ně existuje konkrétní schválený účel.
@@ -222,6 +236,13 @@ Oficiální Paperclip model rozlišuje:
 **Důležité:** pro plánovanou práci používej primárně rutiny. Intervalový heartbeat nepoužívej jako náhradu rutiny, pokud agent nemusí něco skutečně pollovat.
 
 Aktuálně je `heartbeat.enabled=true` u tří hlavních OneMil agentů: Provozní ředitel OneMil, Magin – CRM operátor OneMil a Synchronizátor Paperclip OneMil. Marketingoví agenti Martin, Content & Community Planner OneMil a Performance Analyst OneMil mají `heartbeat.enabled=false` a nemají vlastní aktivní marketingovou rutinu. Před případnou optimalizací spotřeby ověř, zda jde o intervalové buzení nebo jen povolení běhu/wake-on-demand v konkrétní verzi Paperclipu. Nevypínej agenta (`Pause`) jen kvůli omezení zbytečných intervalových běhů — Pause blokuje i legitimní probuzení úkolem/rutinou.
+
+**Technická realita k 14. 8. 2026 (Fáze 0 audit, stále platí).** U všech devíti OneMil agentů platí
+`intervalSec = 0` a `schedulerActive = false` — timerový heartbeat dnes nikoho nebudí, i když je u
+tří agentů `heartbeat.enabled = true`. Veškerá práce se dnes rozjíždí výhradně událostmi (přiřazení
+issue, komentář) a rutinami. Ověřeno i reálným testováním: přiřazení issue probudí agenta i s
+`heartbeatEnabled = false`, komentář probudí agenta a řetězec rutina → issue → přiřazení funguje
+bez timeru.
 
 ## 6. Kritické pravidlo rutin: vždy projekt OneMil
 
@@ -352,6 +373,10 @@ Bez výslovného schválení Pavla žádný Paperclip agent nesmí provést dest
 - zásahy do peněz
 
 U obchodních a komunikačních akcí se řiď konkrétním schváleným workflow. Pokud je akce serverem předem bezpečně omezená (např. Maginova denní dávka), agent smí pouze parametry výslovně povolené daným kontraktem.
+
+**Rozpočtová ochrana je fakticky neaktivní (ověřeno 14. 8. 2026, stále platí).** Všichni agenti mají
+`budgetMonthlyCents = 0`, takže mechanismus „zpomal nad 80 %, pauza na 100 %“ dnes nic nehlídá.
+Řešení je vědomě odložené — nenastavovat rozpočty bez samostatného rozhodnutí Pavla.
 
 ## 12. Výstupy agentů
 
