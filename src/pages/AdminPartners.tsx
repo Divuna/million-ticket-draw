@@ -254,6 +254,7 @@ const AdminPartners = () => {
 
       toast.success("Napojení e-shopu schváleno");
       await loadShoptetRequests();
+      window.dispatchEvent(new Event("shoptet-requests-changed"));
     } catch (error) {
       console.error("Error approving Shoptet request");
       toast.error("Nepodařilo se schválit napojení");
@@ -293,6 +294,7 @@ const AdminPartners = () => {
       setRejectTarget(null);
       setRejectReason("");
       await loadShoptetRequests();
+      window.dispatchEvent(new Event("shoptet-requests-changed"));
     } catch (error) {
       console.error("Error rejecting Shoptet request");
       toast.error("Nepodařilo se zamítnout napojení");

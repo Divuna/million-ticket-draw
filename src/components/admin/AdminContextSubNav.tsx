@@ -107,6 +107,7 @@ export const AdminContextSubNav: React.FC = () => {
   const { unreadCount } = useUnreadMessagesCount();
   const { pendingCount: pendingOffersCount } = usePendingOffersCount();
   const [pendingPartnerRegistrationsCount, setPendingPartnerRegistrationsCount] = useState(0);
+  const [pendingShoptetRequestsCount, setPendingShoptetRequestsCount] = useState(0);
   const [pendingCompanyLeadsCount, setPendingCompanyLeadsCount] = useState(0);
   const [unreadSalesRepliesCount, setUnreadSalesRepliesCount] = useState(0);
 
@@ -146,6 +147,37 @@ export const AdminContextSubNav: React.FC = () => {
 
     return () => {
       cancelled = true;
+    };
+  }, []);
+
+  // Počet čekajících Shoptet žádostí (stejný zdroj/filtr jako badge v záložce
+  // "Shoptet žádosti" na /admin/partners: shoptet_connection_requests, status='submitted').
+  // Poll 60 s + okamžitá aktualizace po schválení/zamítnutí (custom event z AdminPartners).
+  useEffect(() => {
+    let cancelled = false;
+
+    const loadPendingShoptetRequestsCount = async () => {
+      try {
+        const { count, error } = await supabase
+          .from("shoptet_connection_requests")
+          .select("id", { count: "exact", head: true })
+          .eq("status", "submitted");
+        if (!cancelled && !error) {
+          setPendingShoptetRequestsCount(count ?? 0);
+        }
+      } catch {
+        // best-effort — silent fail
+      }
+    };
+
+    loadPendingShoptetRequestsCount();
+    const interval = setInterval(loadPendingShoptetRequestsCount, 60_000);
+    window.addEventListener("shoptet-requests-changed", loadPendingShoptetRequestsCount);
+
+    return () => {
+      cancelled = true;
+      clearInterval(interval);
+      window.removeEventListener("shoptet-requests-changed", loadPendingShoptetRequestsCount);
     };
   }, []);
 
@@ -253,8 +285,11 @@ export const AdminContextSubNav: React.FC = () => {
       const Icon = item.icon;
       const active = isAdminSubNavItemActive(item, location.pathname, location.search);
       const showBadge = item.path === "/admin/messages" && unreadCount > 0;
+      // "Partneři" badge = čekající partnerské registrace + čekající Shoptet žádosti
+      // (stejný zdroj jako badge v záložce "Shoptet žádosti" na /admin/partners).
+      const pendingPartnersNavCount = pendingPartnerRegistrationsCount + pendingShoptetRequestsCount;
       const showPendingPartnerBadge =
-        item.path === "/admin/partners" && pendingPartnerRegistrationsCount > 0;
+        item.path === "/admin/partners" && pendingPartnersNavCount > 0;
       const showPendingCompanyLeadsBadge =
         item.path === "/admin/company-leads" && pendingCompanyLeadsCount > 0;
       const showUnreadSalesRepliesBadge =
@@ -281,7 +316,7 @@ export const AdminContextSubNav: React.FC = () => {
           )}
           {showPendingPartnerBadge && (
             <span className="absolute -top-1 -right-1 min-w-[1.125rem] h-[1.125rem] flex items-center justify-center rounded-full bg-destructive text-[10px] font-bold text-destructive-foreground px-0.5">
-              {pendingPartnerRegistrationsCount > 99 ? "99+" : pendingPartnerRegistrationsCount}
+              {pendingPartnersNavCount > 99 ? "99+" : pendingPartnersNavCount}
             </span>
           )}
           {showPendingCompanyLeadsBadge && (
