@@ -210,8 +210,8 @@ const PartnerDashboard = () => {
   // ── Shoptet self-service connection state ───────────────────────────────────
   const [shoptetReq, setShoptetReq] = useState<ShoptetConnRequest | null>(null);
   const [shoptetShopName, setShoptetShopName] = useState('');
-  const [shoptetRewardCzk, setShoptetRewardCzk] = useState('');
-  const [shoptetRewardMc, setShoptetRewardMc] = useState('');
+  // Konverze MioCoinů se pro Shoptet NEzadává zvlášť — jediný zdroj pravdy je
+  // „Nastavení konverze MioCoinů" (partners.reward_base_czk / reward_mc).
   const [shoptetTrigger, setShoptetTrigger] = useState<'paid' | 'shipped' | 'completed'>('paid');
   const [shoptetNote, setShoptetNote] = useState('');
   const [shoptetUrl, setShoptetUrl] = useState(''); // never prefilled, cleared after submit
@@ -856,8 +856,6 @@ const PartnerDashboard = () => {
     setShoptetReq(req);
     if (req) {
       setShoptetShopName(req.shop_name ?? '');
-      setShoptetRewardCzk(req.reward_czk != null ? String(req.reward_czk) : '');
-      setShoptetRewardMc(req.reward_mc != null ? String(req.reward_mc) : '');
       setShoptetTrigger((['paid', 'shipped', 'completed'].includes(req.trigger_status) ? req.trigger_status : 'paid') as 'paid' | 'shipped' | 'completed');
       setShoptetNote(req.partner_note ?? '');
     }
@@ -865,20 +863,20 @@ const PartnerDashboard = () => {
   };
 
   // Validates and returns the draft field payload, or null with a toast on error.
+  // Konverze se NEZADÁVÁ v Shoptet formuláři — přebírá se z uloženého partnerského
+  // nastavení konverze (partners.reward_base_czk / reward_mc), které je jediným
+  // zdrojem pravdy. Sloupce reward_czk/reward_mc v shoptet_connection_requests jsou
+  // NOT NULL > 0, proto se do nich ukládá snapshot těchto hodnot.
   const buildShoptetDraftPayload = () => {
     const shopName = shoptetShopName.trim();
-    const czk = parseFloat(shoptetRewardCzk);
-    const mc = parseFloat(shoptetRewardMc);
+    const czk = Number(partner?.reward_base_czk ?? 0);
+    const mc = Number(partner?.reward_mc ?? 0);
     if (!shopName) {
       toast.error('Zadejte název e-shopu.');
       return null;
     }
-    if (!Number.isFinite(czk) || czk <= 0) {
-      toast.error('Základ (Kč) musí být kladné číslo.');
-      return null;
-    }
-    if (!Number.isFinite(mc) || mc <= 0) {
-      toast.error('MioCoiny musí být kladné číslo.');
+    if (!Number.isFinite(czk) || czk <= 0 || !Number.isFinite(mc) || mc <= 0) {
+      toast.error('Nejprve nastavte a uložte konverzi MioCoinů v sekci „Nastavení konverze MioCoinů".');
       return null;
     }
     return {
@@ -1828,33 +1826,25 @@ const PartnerDashboard = () => {
                           </SelectContent>
                         </Select>
                       </div>
-                      <div className="space-y-1">
-                        <Label htmlFor="shoptet-reward-czk" className="text-xs">Základ (Kč)</Label>
-                        <Input
-                          id="shoptet-reward-czk"
-                          type="number"
-                          min="1"
-                          step="1"
-                          value={shoptetRewardCzk}
-                          onChange={(e) => setShoptetRewardCzk(e.target.value)}
-                          placeholder="100"
-                          disabled={locked}
-                          className="h-9"
-                        />
-                      </div>
-                      <div className="space-y-1">
-                        <Label htmlFor="shoptet-reward-mc" className="text-xs">MioCoiny</Label>
-                        <Input
-                          id="shoptet-reward-mc"
-                          type="number"
-                          min="0.1"
-                          step="0.1"
-                          value={shoptetRewardMc}
-                          onChange={(e) => setShoptetRewardMc(e.target.value)}
-                          placeholder="1"
-                          disabled={locked}
-                          className="h-9"
-                        />
+                    </div>
+
+                    {/* Konverze MioCoinů — jen read-only informace. Zdroj pravdy je
+                        sekce „Nastavení konverze MioCoinů" výše. */}
+                    <div
+                      data-testid="shoptet-conversion-readonly"
+                      className="flex items-start gap-2 rounded-lg bg-muted/30 border border-border/50 p-3"
+                    >
+                      <Info className="w-4 h-4 text-muted-foreground flex-shrink-0 mt-0.5" />
+                      <div className="text-xs text-muted-foreground leading-relaxed">
+                        <p>
+                          Použije se vaše nastavení konverze:{' '}
+                          <span className="font-medium text-foreground">
+                            {Number(partner?.reward_base_czk ?? 0)} Kč = {Number(partner?.reward_mc ?? 0)} MioCoinů
+                          </span>
+                        </p>
+                        <p className="mt-1">
+                          Konverzi měníte výše v sekci „Nastavení konverze MioCoinů" — pro Shoptet ji nezadáváte znovu.
+                        </p>
                       </div>
                     </div>
 

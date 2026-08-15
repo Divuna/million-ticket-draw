@@ -19,6 +19,11 @@
  *        sekce "API klíče" viditelná → tlačítko "Regenerovat API klíč" viditelné.
  *        (Pokrývá LAUNCH_TODO P05 — sekce API klíče přístupná schválenému partnerovi)
  *
+ * 56d — Shoptet napojení nemá vlastní konverzní pole: konverze se přebírá
+ *        z „Nastavení konverze MioCoinů" (partners.reward_base_czk/reward_mc),
+ *        v Shoptet sekci je jen read-only, a draft žádosti se uloží s těmito
+ *        hodnotami bez druhého zadávání.
+ *
  * Required env vars (všechny přítomny v playwright-staging.yml):
  *   VITE_SUPABASE_URL               — musí obsahovat staging ref dxmowysntemfqfnanxua
  *   VITE_SUPABASE_ANON_KEY
@@ -288,6 +293,85 @@ test.describe('56 — Partner onboarding + dashboard nastavení (P01/P04/P05)', 
     // Tlačítko "Regenerovat API klíč" (schválený partner bez aktivního klíče)
     const rotateBtn = page.getByRole('button', { name: /regenerovat api klíč/i }).first();
     await expect(rotateBtn, 'Tlačítko "Regenerovat API klíč" viditelné').toBeVisible({ timeout: 5_000 });
+  });
+
+  // ── 56d: Shoptet napojení používá jediné nastavení konverze ───────────────
+
+  // Regrese proti dvojímu zadávání konverze: Shoptet sekce NESMÍ mít vlastní
+  // editovatelná pole Základ (Kč)/MioCoiny. Jediný zdroj pravdy je sekce
+  // "Nastavení konverze MioCoinů" (partners.reward_base_czk / reward_mc);
+  // Shoptet žádost si tyto hodnoty bere sama.
+  //
+  // ROZSAH: draft cesta ("Uložit koncept") + přítomnost URL pole a aktivního
+  // tlačítka "Odeslat ke schválení". Reálný submit (EF submit-shoptet-connection)
+  // se zde ZÁMĚRNĚ nespouští — zapsal by URL do stagingového Vaultu, což tento
+  // test neumí uklidit. Payload je pro draft i submit identický
+  // (buildShoptetDraftPayload), takže draft ověřuje stejnou konverzní cestu.
+  test('56d) Shoptet napojení přebírá konverzi z partnerského nastavení', async ({ page }) => {
+    if (!isStaging) test.skip(true, 'Staging secrets not available');
+    test.setTimeout(90_000);
+
+    await loginAsPartner(page);
+
+    // 1) Nastavit konverzi 100 Kč = 5 MC v jediném zdroji pravdy.
+    const baseCzkInput = page.locator('#reward-base-czk');
+    const mcInput      = page.locator('#reward-mc');
+    await expect(baseCzkInput).toBeVisible({ timeout: 10_000 });
+    await baseCzkInput.fill('100');
+    await mcInput.fill('5');
+    await page.getByRole('button', { name: /^Uložit$/i }).first().click();
+    await expect(
+      page.getByText(/nastavení odměn bylo uloženo/i).first(),
+      'Konverze 100/5 uložena',
+    ).toBeVisible({ timeout: 10_000 });
+
+    // 2) Shoptet sekce NESMÍ mít vlastní konverzní inputy.
+    await expect(
+      page.locator('#shoptet-reward-czk'),
+      'Shoptet nemá vlastní input Základ (Kč)',
+    ).toHaveCount(0);
+    await expect(
+      page.locator('#shoptet-reward-mc'),
+      'Shoptet nemá vlastní input MioCoiny',
+    ).toHaveCount(0);
+
+    // 3) Konverze je v Shoptet sekci vidět jen jako read-only informace.
+    const readonlyBox = page.getByTestId('shoptet-conversion-readonly');
+    await expect(readonlyBox, 'Read-only přehled konverze viditelný').toBeVisible({ timeout: 10_000 });
+    await expect(readonlyBox).toContainText('100 Kč = 5 MioCoinů');
+
+    // 4) URL pole a odeslací tlačítko jsou k dispozici bez dalšího zadávání konverze.
+    await expect(page.locator('#shoptet-url'), 'URL pole viditelné').toBeVisible({ timeout: 5_000 });
+    await expect(
+      page.getByRole('button', { name: /odeslat ke schválení/i }).first(),
+      'Tlačítko "Odeslat ke schválení" je aktivní',
+    ).toBeEnabled();
+
+    // 5) Draft uložení projde bez zadávání konverze a použije 100/5.
+    await page.locator('#shoptet-shop-name').fill(`E2E Spec56 Shop ${RUN_ID}`);
+    await page.getByRole('button', { name: /uložit koncept/i }).first().click();
+    await expect(
+      page.getByText(/koncept napojení uložen/i).first(),
+      'Toast "Koncept napojení uložen"',
+    ).toBeVisible({ timeout: 15_000 });
+
+    await page.waitForTimeout(2_000);
+
+    if (ctx.partnerId) {
+      const svc = makeSvc();
+      const { data: reqRow, error: reqErr } = await (svc as any)
+        .from('shoptet_connection_requests')
+        .select('reward_czk, reward_mc, status, url_received')
+        .eq('partner_id', ctx.partnerId)
+        .order('created_at', { ascending: false })
+        .limit(1)
+        .single();
+      if (reqErr) throw new Error(`DB verify failed: ${reqErr.message}`);
+      expect(Number(reqRow.reward_czk), 'DB: reward_czk === 100 (z partner nastavení)').toBe(100);
+      expect(Number(reqRow.reward_mc),  'DB: reward_mc === 5 (z partner nastavení)').toBe(5);
+      expect(reqRow.status, 'DB: request zůstává draft').toBe('draft');
+      expect(reqRow.url_received, 'DB: URL zatím nepřijata').toBe(false);
+    }
   });
 
 });
