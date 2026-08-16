@@ -99,6 +99,23 @@ Partners should be able to control:
 
 The partner has control over how many MioCoins are distributed. OneMil measures what customers actually activate and use.
 
+### 6.0 One partner company can connect several e-shops — confirmed
+
+A partner is a **company**, and one company may operate and connect **several separate
+e-shops** to OneMil. This is a confirmed part of the product model, not a hypothetical.
+
+The consequence to keep in mind everywhere: an order number is unique only **within one
+e-shop**. Two different e-shops of the same company can legitimately issue the same order
+number (a newly launched shop typically starts numbering from the beginning again). Anything
+that identifies an order — deduplication, reward issuance, reporting — therefore has to be tied
+to the **specific e-shop connection**, not just to the partner company.
+
+The relationship to model is:
+
+```text
+partner / company  →  e-shop connection  →  order
+```
+
 ### 6.1 Product-level reward rules — confirmed target model
 
 A partner chooses **how** they reward, in one place in the partner dashboard:

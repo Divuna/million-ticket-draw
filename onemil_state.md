@@ -3,14 +3,49 @@
 > **Autoritativní aktuální stav. Aktualizováno 16. 8. 2026.**
 > Historický vývoj je v `onemil_history.md` a v Git historii. Pokud starší dokumentace odporuje tomuto souboru, pro současný provoz platí tento soubor a skutečný stav ověřený v GitHubu/Supabase.
 
-## 0a. Partnerské produktové MioCoin odměny + Shoptet widget — PRODUKČNĚ NASAZENO (16. 8. 2026)
+## 0a. Partnerské produktové MioCoin odměny + Shoptet widget — HOTOVO A ŽIVĚ OVĚŘENO (16. 8. 2026)
 
-**Backend je LIVE na produkci `xkzhjldrojjlrkezorey`** (výslovné schválení Pavla). Staging
-`dxmowysntemfqfnanxua` má totéž. **Zbývá jediný krok: ruční Lovable Publish frontendu (dělá Pavel).**
+**Celá funkce je dokončená a běží v produkci.** Backend je LIVE na `xkzhjldrojjlrkezorey`
+(výslovné schválení Pavla), staging `dxmowysntemfqfnanxua` má totéž, a **Lovable Publish už
+proběhl — frontend i widget jsou nasazené a na reálném Shoptetu funkční.**
 
-Do publishe je stav bezpečný: všech 12 produkčních partnerů má `reward_mode='whole_shop'`, což je
-bit-for-bit původní chování, a partner si jiný režim nemůže nastavit, dokud UI nevyjde. Widget se
-aktivuje až tím, že si partner sám vloží snippet do Shoptetu.
+Ověřeno 16. 8. 2026 přímo proti produkci: `https://onemil.cz/shoptet-widget.js` vrací 200 a je
+**byte-identický s `main` (`f31d3937`)** (až na CRLF) — obsahuje finální text „Dárek od nás“,
+outline ikonu dárku i logiku produktových karet; `https://onemil.cz/miocoin-icon.png` vrací 200
+(5 725 B). Chování ověřeno na živém Shoptetu `809915.myshoptet.com`, desktop i mobil.
+
+**Produkční main: `f31d3937`.**
+
+### Co widget zobrazuje (vše ověřeno na reálném e-shopu)
+
+1. **Produktové karty** ve výpisu kategorie / homepage — odměna je vidět **před rozkliknutím**.
+2. **Detail produktu** — badge u názvu produktu.
+3. **Košík a checkout** — informace o odměně za nákup.
+
+### Finální vzhled v košíku/checkoutu (neměnit bez nového schválení)
+
+```
+[outline ikona dárku]  Dárek od nás: [MioCoin ikona] X MioCoinů do soutěží OneMil
+```
+
+- Jednoduchá **outline** ikona dárku (inline SVG, `fill="none"`, tenký tmavý tah, 26 px).
+  Nekopíruje žádný Shoptet asset; inline SVG šetří request i druhý publikovaný soubor.
+- **Originální** MioCoin ikona `public/miocoin-icon.png` (17 px) těsně před částkou.
+  Nevytvářet nové MioCoin logo ani symbol.
+- Zvýrazněný je **pouze počet MioCoinů** (`#BD6400`), tělo textu je tmavé (`#2E2E2E`).
+- **Žádný box, rámeček ani gradient**, průhledné pozadí — žádný zásah do grafiky e-shopu.
+- Umístění: **pod souhrnem ceny, nad tlačítkem POKRAČOVAT**.
+- **Widget nikdy nesmí být uvnitř CTA** (`button`, `a`, `[role=button]`, `.btn`,
+  `.next-step-forward`, `.next-step-back`). Hlídá spec 129 plus runtime guard v `render()`,
+  který uzel odstraní, kdyby ho neznámá šablona přesto dostala dovnitř tlačítka.
+
+### Klíčové widget commity
+
+| commit | co přinesl |
+|---|---|
+| `cc44b02f` | MioCoin ikona + odměny na produktových kartách |
+| `9ab78321` | checkout widget přesunut **mimo** CTA (dřív se vykresloval uvnitř tlačítka POKRAČOVAT) |
+| `f31d3937` | finální vzhled „Dárek od nás“ |
 
 ### Produkční nasazení (16. 8. 2026)
 
@@ -49,16 +84,56 @@ kolik mu OneMil po objednávce skutečně vydá.
 - [x] **Partner Order API items** — `partner-activate` přijímá volitelné `items[]`
 - [x] **widget preview endpoint** — EF `partner-reward-preview` (produkce i staging ACTIVE, verify_jwt=false)
 - [x] **Shoptet widget snippet** — `public/shoptet-widget.js` (badge u produktu + povinný košík)
-- [x] **E2E** — spec 124 (parser, 9) + spec 125 (invariant, 7); spec 123 zelený
+- [x] **E2E** — specy 123–129, 51 zelených
 - [x] **production validation** — 3 migrace + 3 Edge Functions nasazeny a ověřeny na produkci (16. 8. 2026, schválení Pavla)
-- [ ] **frontend Lovable Publish** — jediný zbývající krok, provádí ručně Pavel
+- [x] **frontend Lovable Publish** — proběhl; produkce servíruje widget shodný s `f31d3937`
+- [x] **widget na produktových kartách / detailu / v košíku** — ověřeno na `809915.myshoptet.com`
+
+**Funkce je uzavřená.** Otevřený zůstává jen jeden nález — viz „Otevřený problém: idempotence“ níže.
 
 ### KRITICKÝ INVARIANT (neměnit)
 
 Existuje **jediný** výpočet odměny: `public.compute_partner_reward(uuid, numeric, jsonb)`.
-Volají ho `create_partner_order_reward` (skutečné vydání MC) i budoucí widget preview endpoint
-(zobrazení zákazníkovi). **Nikdy neimplementovat druhý výpočet** v TypeScriptu, ve widget JS ani
-v jiné RPC — jinak se to, co zákazník vidí v košíku, rozejde s tím, co dostane.
+Volají ho `create_partner_order_reward` (skutečné vydání MC) i widget preview endpoint
+`partner-reward-preview` (zobrazení zákazníkovi). **Widget nesmí počítat MioCoiny sám** a nikde
+nesmí vzniknout druhý výpočet — ani v TypeScriptu, ani ve widget JS, ani v jiné RPC. Jinak se to,
+co zákazník vidí v košíku, rozejde s tím, co skutečně dostane. Widget smí pouze sestavit vstup
+(SKU, množství, cena po slevě, `order_total_czk`) a zobrazit vrácené číslo.
+
+### ⚠️ OTEVŘENÝ PROBLÉM: idempotence je vázaná na partnera, ne na e-shop (nález 16. 8. 2026)
+
+**Nic z toho zatím není opravené — jde o zaznamenaný požadavek, ne o provedenou změnu.**
+
+Ochrana proti duplicitě objednávky dnes používá dvojici **`partner_id + external_order_id`**
+(unikátní index `idx_partner_reward_codes_order_api_idempotency` + advisory lock v
+`create_partner_order_reward`).
+
+**Co se stalo:** nový Shoptet e-shop **téhož partnera** začal číslovat objednávky od začátku a
+znovu použil číslo `2026000001`. OneMil ji podle dvojice `partner_id + external_order_id`
+vyhodnotil jako **už existující objednávku**, vrátil `duplicate: true` a **novou MioCoin odměnu
+nevytvořil**.
+
+**Potvrzený produktový požadavek:** jedna partnerská firma může provozovat a připojit **více
+samostatných e-shopů**. Čísla objednávek jsou proto unikátní jen v rámci jednoho e-shopu, ne
+v rámci firmy.
+
+**Cílový datový model** musí rozlišovat tři úrovně:
+
+```
+partner / firma  →  konkrétní e-shopové napojení  →  objednávka
+```
+
+Idempotence má být svázaná s **konkrétním e-shopovým napojením + `external_order_id`**, nikoli
+s `partner_id + external_order_id`.
+
+**Dotčená místa, až se to bude řešit** (dnes nezměněná): unikátní index na
+`partner_reward_codes`, advisory lock a duplicate-check v `create_partner_order_reward`,
+`shoptet_connection_requests` (dnes 1 napojení na partnera), `import-shoptet-orders`
+(dispatch podle `partner_id`), `partner_seen_products` a `partner_product_reward_rules`
+(dnes klíčované jen `partner_id`).
+
+Změna se dotkne financí a existujících odměn, takže vyžaduje samostatný návrh, migraci
+a výslovné schválení Pavla. **Neopravovat mimochodem.**
 
 ### Potvrzená pravidla zakódovaná v engine
 

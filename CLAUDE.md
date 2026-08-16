@@ -1,3 +1,76 @@
+# SHOPTET MIOCOIN WIDGET + PRODUKTOVÉ ODMĚNY — TRVALÉ INVARIANTY (16. 08. 2026)
+
+Funkce je hotová, nasazená a živě ověřená. Produkční `main` v době zápisu: `f31d3937`.
+Klíčové commity: `cc44b02f` (MioCoin ikona + produktové karty), `9ab78321` (checkout widget mimo
+CTA), `f31d3937` (finální vzhled „Dárek od nás“).
+
+## Jediný výpočet odměny (neměnit)
+
+`public.compute_partner_reward(uuid, numeric, jsonb)` je **jediné místo**, kde se počítají
+MioCoiny. Volá ho `create_partner_order_reward` (skutečné vydání) i veřejný preview endpoint
+`partner-reward-preview` (zobrazení zákazníkovi).
+
+- **Widget nesmí počítat MioCoiny sám.** Smí jen sestavit vstup (SKU, množství, cena po slevě,
+  `order_total_czk`) a zobrazit číslo, které dostal zpět.
+- Nikdy nevytvářet druhý výpočet — ani v TypeScriptu, ani ve widget JS, ani v jiné RPC. Jinak se
+  rozejde to, co zákazník vidí v košíku, s tím, co skutečně dostane.
+- Zakódovaná pravidla: množství násobí odměnu; poměrová odměna používá **cenu po slevě**;
+  zaokrouhlení **právě jednou** na součtu celé objednávky, nikdy po položkách.
+- `whole_shop` (výchozí u všech partnerů) ignoruje položky a počítá z `order_total_czk` — widget ho
+  proto musí posílat vždy, jinak endpoint vrátí `invalid_order_total_czk` a zákazník neuvidí nic.
+
+## Widget v cizím e-shopu (neměnit)
+
+- **Nikdy nevkládat widget do CTA partnera** — `button`, `a`, `[role=button]`, `.btn`,
+  `.next-step-forward`, `.next-step-back`. `.next-step-forward` **je samotné tlačítko
+  „Pokračovat“** (v košíku `<a>`, v checkoutu `<button>`), ne kontejner. Checkout note se vkládá
+  jako sourozenec **před blok `.next-step`** — pod souhrn ceny, nad tlačítko. V `render()` je
+  runtime guard, který uzel odstraní, kdyby ho neznámá šablona přesto dostala dovnitř; neodstraňovat.
+- Vzhled v košíku/checkoutu: `Dárek od nás: X MioCoinů do soutěží OneMil`, vlevo **outline** ikona
+  dárku (inline SVG, `fill="none"`), před částkou **originální** `public/miocoin-icon.png` (17 px),
+  zvýrazněná jen částka. **Žádný box, rámeček, gradient ani přebarvování prvků e-shopu.**
+- **Nevytvářet nové MioCoin logo ani symbol.** Jediný povolený zdroj je `src/assets/miocoin.png`;
+  webová kopie se generuje `scripts/make-miocoin-icon.mjs` do `public/miocoin-icon.png`.
+- Widget **nesmí obsahovat žádný secret** (API klíč, service_role, Shoptet export URL, Vault).
+  Preview endpoint je vědomě veřejný, jen čte a vrací číslo.
+- Výchozí endpoint ve `public/shoptet-widget.js` musí mířit na **produkci** (`xkzhjldrojjlrkezorey`).
+  Staging default by partnerům servíroval cizí data — už se to jednou stalo.
+- Selektory ověřovat proti **reálné** Shoptet šabloně, ne odhadovat. Skutečné zdroje:
+  `window.dataLayer[i].shoptet` (`product.codes[]`, `product.priceWithVat`, `cart[]` s
+  `priceWithVat` = cena po slevě), v DOM `data-micro-sku`, `input[name="amount"]`,
+  `[data-micro-price]`. Košíkové řádky jsou `[data-micro="cartItem"]` — **ne** `[data-micro-product-id]`,
+  který mají i karty ve výpisu (jinak se kategorie čte jako košík).
+
+## ⚠️ OTEVŘENÝ PROBLÉM — idempotence je vázaná na partnera, ne na e-shop
+
+**Neopravovat mimochodem. Zatím jen zaznamenáno.**
+
+Duplicita objednávky se dnes hlídá dvojicí **`partner_id + external_order_id`**. 16. 08. 2026 se
+ukázalo, že nový e-shop **téhož partnera** znovu použil číslo objednávky `2026000001`; OneMil ji
+vyhodnotil jako už existující a **novou odměnu nevytvořil**.
+
+Potvrzený produktový požadavek: **jedna firma může mít více samostatných e-shopů**, takže čísla
+objednávek jsou unikátní jen v rámci jednoho e-shopu. Cílový model:
+`partner/firma → konkrétní e-shopové napojení → objednávka`, a idempotence má být vázaná na
+**e-shopové napojení + `external_order_id`**.
+
+Dotčená místa: unikátní index na `partner_reward_codes`, advisory lock a duplicate-check
+v `create_partner_order_reward`, `shoptet_connection_requests`, `import-shoptet-orders`,
+`partner_seen_products`, `partner_product_reward_rules`. Dotýká se financí a existujících odměn →
+samostatný návrh, migrace a **výslovné schválení Pavla**.
+
+## Ověřování typů — `npx tsc --noEmit` je v tomto repu NO-OP
+
+Kořenový `tsconfig.json` je solution-style (`"files": []` + `references`), takže
+`npx tsc --noEmit` **nekontroluje vůbec nic**. Správně je:
+
+```bash
+npx tsc -p tsconfig.app.json --noEmit
+```
+
+Na `main` hlásí **18 předexistujících chyb** (mj. `AddSalesLeadDialog.tsx`, `LeadCrmPanel.tsx`).
+Historické zápisy „tsc --noEmit 0 chyb“ proto nic nedokazovaly.
+
 # Bezpečné propojení pro externího denního agenta (PRODUKCE, 11. 08. 2026)
 
 **Nasazeno na produkci `xkzhjldrojjlrkezorey`** po výslovném schválení Pavla. PR #344 mergnut do

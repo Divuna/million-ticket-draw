@@ -1,3 +1,63 @@
+# 16. 08. 2026 — Shoptet MioCoin widget dokončen a živě ověřen + nalezen problém s idempotencí
+
+## Dokončeno a nasazeno
+
+- **Produktové MioCoin odměny a Shoptet widget jsou hotové.** Backend (3 migrace + 3 Edge
+  Functions) byl nasazen na produkci `xkzhjldrojjlrkezorey` se schválením Pavla, **Lovable Publish
+  proběhl** a widget je na reálném Shoptetu funkční. Produkční `main`: `f31d3937`.
+- **Ověřeno proti produkci:** `https://onemil.cz/shoptet-widget.js` vrací 200 a je byte-identický
+  s `main` (až na CRLF), `https://onemil.cz/miocoin-icon.png` vrací 200 (5 725 B). Chování ověřeno
+  na živém e-shopu `809915.myshoptet.com`, desktop i mobil.
+- **Widget zobrazuje odměnu na třech místech:** na produktových kartách ve výpisu (viditelné ještě
+  před rozkliknutím), na detailu produktu a v košíku/checkoutu.
+
+### Průběh dne — tři opravy nalezené reálným testováním
+
+1. **`cc44b02f` — MioCoin ikona + produktové karty.** Odměna přibyla na karty ve výpisu.
+   Ikona vznikla jako optimalizovaná webová kopie originálu `src/assets/miocoin.png`
+   (1024×1024 / 1,7 MB → 48×48 / 5,6 kB, `scripts/make-miocoin-icon.mjs`); žádný nový symbol.
+   Při stavbě se ukázalo, že `.prices` má na reálné šabloně jen ~125 px, takže badge musel jít do
+   obalu `[data-micro="offer"]` (~260 px), jinak se text lámal na tři řádky.
+2. **`9ab78321` — checkout widget přesunut mimo CTA.** Na `/objednavka/krok-1/` neexistuje
+   `.cart-summary`, takže fallback dopadl na `.next-step-forward` — a to **je samotné tlačítko**
+   („Pokračovat“; `<a>` v košíku, `<button>` v checkoutu). Text se vykresloval **uvnitř partnerova
+   CTA** a roztahoval ho. Nově se vkládá jako sourozenec **před blok `.next-step`**, tedy pod
+   souhrn ceny a nad tlačítko. Přibyl runtime guard, který uzel odstraní, kdyby ho neznámá šablona
+   přesto dostala do `button`/`a`.
+3. **`f31d3937` — finální vzhled „Dárek od nás“.** Text
+   „Dárek od nás: X MioCoinů do soutěží OneMil“ (slovo „přibližně“ vypuštěno na pokyn Pavla),
+   vlevo jednoduchá outline ikona dárku (inline SVG, `fill="none"`, tenký tmavý tah, 26 px, nic
+   zkopírovaného ze Shoptetu), originální MioCoin ikona (17 px) před částkou, zvýrazněná pouze
+   částka. Bez boxu, rámečku i gradientu — působí jako informační řádek e-shopu, ne jako reklama.
+
+### Testy
+
+Sada 123–129, **51 zelených**, build OK. Nové specy: 126 (order_total_czk), 127 (reálná Shoptet
+šablona), 128 (produktové karty), 129 (checkout nikdy uvnitř CTA — včetně kontroly, že se tlačítko
+partnera nezměnilo ve velikosti, pozadí ani třídě). U klíčových oprav ověřeno i obráceně, že testy
+bez opravy skutečně padají.
+
+## ⚠️ Nalezený otevřený problém — idempotence vázaná na partnera, ne na e-shop
+
+**Nezměněno, pouze zaznamenáno.**
+
+Ochrana proti duplicitě objednávky používá dvojici **`partner_id + external_order_id`**. Nový
+Shoptet e-shop **téhož partnera** začal číslovat od začátku a znovu použil číslo objednávky
+`2026000001`. OneMil ji proto vyhodnotil jako už existující, vrátil `duplicate: true` a **novou
+MioCoin odměnu nevytvořil**.
+
+Potvrzený produktový požadavek: **jedna partnerská firma může mít více samostatných e-shopů**.
+Čísla objednávek jsou unikátní jen v rámci jednoho e-shopu.
+
+Budoucí datový model musí rozlišovat `partner/firma → konkrétní e-shopové napojení → objednávka`
+a idempotenci vázat na **e-shopové napojení + `external_order_id`**.
+
+Změna se dotýká financí a existujících odměn (unikátní index na `partner_reward_codes`, advisory
+lock v `create_partner_order_reward`, `shoptet_connection_requests`, `import-shoptet-orders`,
+`partner_seen_products`, `partner_product_reward_rules`), takže vyžaduje samostatný návrh, migraci
+a výslovné schválení Pavla. Databáze, migrace, RLS, Edge Functions ani produkční data nebyly
+v rámci tohoto zápisu měněny.
+
 # 16. 08. 2026 — Produktové MioCoin odměny: PRODUKČNÍ NASAZENÍ (schválení Pavla)
 
 - **Nasazeno na produkci `xkzhjldrojjlrkezorey`:** 3 migrace v pořadí `20260816100000` (datový
@@ -27,6 +87,8 @@
   0 invalid, 0 created, 5 status_updated, 0 failed. Baseline po běhu nezměněn.
 - **Bezpečný mezistav do Lovable Publish:** všech 12 produkčních partnerů má `reward_mode=whole_shop`
   (bit-for-bit původní chování) a jiný režim si nemůže nastavit, dokud UI nevyjde.
+  *(Doplněno: Lovable Publish proběhl ještě týž den — viz zápis „Shoptet MioCoin widget dokončen
+  a živě ověřen“ na začátku souboru. Tento mezistav už neplatí.)*
 - **Nález mimo rozsah:** `npx tsc --noEmit` je v tomto repu no-op (kořenový tsconfig je
   solution-style); správně je `npx tsc -p tsconfig.app.json --noEmit` → 18 předexistujících chyb
   na `main`, tato práce nepřidala žádnou.
