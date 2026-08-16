@@ -1,3 +1,59 @@
+# 16. 08. 2026 — MioCoin: dořešeny dva zbývající zdroje porušení pravidla (NENASAZENO)
+
+Navazuje na commit `4d2807a1` na větvi `claude/miocoin-decimal-unify`.
+
+## 1. Legacy druhý reward engine odstraněn
+
+`public.activate_partner_coins_from_order` počítala partnerskou odměnu sama a zapisovala rovnou
+do `partner_coin_activations`. Read-only audit produkce potvrdil, že jediný SQL volající je
+wrapper `api_activate_partner_coins`, který sám žádného volajícího nemá — a že žádný trigger,
+view, RLS policy, column default, pg_cron job ani řádek repozitáře na ně neodkazuje.
+Všechny 4 existující aktivace mají vyplněný `code`, tedy pocházejí z
+`log_partner_coin_activation_from_reward`; legacy cesta nikdy nic nevytvořila.
+
+Obě funkce se proto **dropují** (`20260817130000`), nikoli přesměrovávají: přesměrování na
+`compute_partner_reward` by udrželo naživu paralelní vydávací cestu, která stejně obchází
+vydání kódu, práh 0,5 MC i logiku reward módů. Migrace má guard, který ji přeruší, kdyby se
+mezitím objevil nový volající.
+
+Vedle porušeného invariantu se přitom ukázalo, že obě funkce měly `EXECUTE` pro
+`PUBLIC`/`anon`/`authenticated` a wrapper byl `SECURITY DEFINER` — kdokoli s partnerským API
+klíčem mohl obcházet RLS a zakládat fakturovatelné aktivace. Drop to zavírá.
+
+## 2. Význam `payments.amount` ověřen a budoucí wallet cesta opravena
+
+**`payments.amount` je počet MioCoinů, ne CZK.** `stripe-webhook` odvodí celé Kč z Stripe
+`amount_total`, převede je přes `miocoinsForCzkPrice` (50→50, 300→310, 500→525, 1200→1280,
+jinak 1:1) a uloží **výsledný počet MioCoinů**. CZK cena se do `payments` neukládá vůbec.
+Protože webhook odmítne částku, která není celé Kč, je `coinsToCredit` vždy celé číslo —
+a všech 136 reálných plateb to potvrzuje. Jediné dva nekonformní řádky (`999.99`) mají
+`method='test'` a `method='test_crud'`.
+
+Mezi `payments` a `wallets` ale hodnotu nic nenormalizovalo. Migrace `20260817140000` proto
+normalizuje na 1 desetinné místo všechny tři MioCoin veličiny odvozené z `payments.amount`:
+kredit v `update_wallet_after_payment`, symetrický odečet v `prepare_stripe_refund` (asymetrie
+by po refundaci nechala v peněžence zlomkový zbytek) a `create_referral_reward_from_payment`.
+
+Ten poslední byl **reálné porušení mimo testovací data**: `ROUND(amount * 0,05, 2)` dával pro
+živý balíček 500 Kč (525 MC) odměnu `26,25 MC`, a `referral_rewards.reward_mc` se do peněženky
+skutečně dostane přes `try_credit_wallet_mc`. Provizní sazba 0,05 se nemění.
+
+Žádná CZK hodnota se neomezuje: `payments.amount` si drží `numeric(18,2)` a **nedostává CHECK** —
+selhal by na dvou testovacích řádcích a testovací data se před ostrým spuštěním resetují.
+
+## Co se vědomě nezměnilo
+
+Existující testovací data (2× `payments` 999,99, 1× `wallet_transactions` 999,99,
+`wallets.balance_coins` 10117,91, 1 řádek `referral_rewards` se 2 desetinnými místy) **nebyla
+migrována, zaokrouhlena ani smazána**. Migrace obsahují pouze definice funkcí a dropy, žádný
+backfill. Pro každou reálnou platbu platí `round(x, 1) = x`, takže se chování živých dat nemění.
+
+Multi-shop idempotence zůstává otevřená a nedotčená.
+
+**NENASAZENO DO PRODUKCE.**
+
+---
+
 # 16. 08. 2026 — MioCoin: pravidlo 1 desetinného místa potvrzeno a implementováno na větvi (NENASAZENO)
 
 Pavel potvrdil trvalé pravidlo: **MioCoiny mají maximálně 1 desetinné místo**, minimální

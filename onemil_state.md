@@ -45,6 +45,10 @@ odměna spadne na 0 → widget nic nezobrazí a reward code nemůže vzniknout.
   `generate_partner_reward_code` (`integer → numeric` + stejná validace),
   `update_partner_order_reward_status` (zákaznický e-mail přes `format_miocoin_cz`),
   nový `public.format_miocoin_cz(numeric)`.
+- `supabase/migrations/20260817130000_drop_legacy_partner_coin_bypass.sql` — drop legacy
+  druhého reward enginu (viz níže).
+- `supabase/migrations/20260817140000_payment_credit_miocoin_one_decimal.sql` — normalizace
+  MioCoin veličin odvozených z `payments.amount` (viz níže).
 - Frontend/EF: `src/lib/miocoin.ts` (sdílený formátovač + validátor), `public/shoptet-widget.js`
   (české desetinné čárky a skloňování), `partner-reward-preview` (odstraněn `Math.floor`),
   `generate-partner-invoice-pdf` (`formatCoins`, oprava sčítání numeric stringů),
@@ -57,20 +61,65 @@ odměna spadne na 0 → widget nic nezobrazí a reward code nemůže vzniknout.
 nemůže poškodit historická data (12 partnerů, 1 produktové pravidlo, 13 reward kódů,
 4 aktivace, 1 fakturační řádek, 6 faktur — vše v pořádku).
 
-### ⚠️ OPEN ISSUE — 2 wallet řádky se 2 desetinnými místy
+### Legacy druhý reward engine — ODSTRANĚN (migrace připravena, nenasazeno)
+
+`public.activate_partner_coins_from_order(uuid, uuid, text, numeric)` počítala odměnu sama
+(`ROUND((amount / reward_base_czk) * reward_mc, 1)`) a zapisovala rovnou do
+`partner_coin_activations` — druhý reward engine mimo `compute_partner_reward`.
+
+**Migrace `20260817130000_drop_legacy_partner_coin_bypass.sql` obě funkce dropuje** —
+`api_activate_partner_coins(text, uuid, text, integer)` (tenký wrapper) i samotný bypass.
+Nepřesměrovává se: přesměrování na engine by udrželo naživu paralelní vydávací cestu, která
+stejně obchází vydání kódu, práh 0,5 MC i logiku reward módů, tedy druhý způsob, jak partnerovi
+fakturovat. Migrace obsahuje guard, který ji přeruší, kdyby se objevil nový volající.
+
+**Audit závislostí (read-only produkce):** SQL volající pouze `api_activate_partner_coins`
+(ten sám nemá volajícího) · triggery 0 · views 0 · RLS policy 0 · column defaults 0 · pg_cron 0 ·
+repo 0 (jen generovaný `types.ts`) · řádků vzniklých touto cestou **0** (všechny 4 aktivace mají
+`code`, tedy pocházejí z `log_partner_coin_activation_from_reward`).
+
+**Vedlejší bezpečnostní přínos:** obě funkce měly `EXECUTE` pro `PUBLIC`/`anon`/`authenticated`
+a wrapper byl `SECURITY DEFINER` — kdokoli s partnerským API klíčem mohl obcházet RLS a zakládat
+fakturovatelné aktivace. Drop to zavírá.
+
+### Platba → MioCoin → peněženka — BUDOUCÍ ZDROJ OPRAVEN (migrace připravena, nenasazeno)
+
+**`payments.amount` je počet MioCoinů, ne CZK.** `stripe-webhook` počítá
+`priceCzk = amount_total / 100` (celé Kč, jinak platbu odmítne) →
+`coinsToCredit = miocoinsForCzkPrice(priceCzk)` (50→50, 300→310, 500→525, 1200→1280, jinak 1:1)
+→ `payments.insert({ amount: coinsToCredit })`. **CZK cena se do `payments` neukládá vůbec**,
+zůstává ve Stripe; `numeric(18,2)` je jen historický pozůstatek. Všech 136 reálných plateb
+(`stripe`/`stripe_test`) je celé číslo; jediné dva nekonformní řádky jsou `method='test'`
+a `method='test_crud'`, oba `999.99` — testovací data.
+
+Mezi `payments` a `wallets` ale hodnotu nic nenormalizovalo, takže jakýkoli jiný zapisovatel
+`payments` mohl vložit dvoudesetinnou MC hodnotu rovnou do `wallets.balance_coins` — přesně tak
+vznikl řádek 999,99 MC. **Migrace `20260817140000_payment_credit_miocoin_one_decimal.sql`**
+normalizuje všechny tři MioCoin veličiny odvozené z `payments.amount`:
+
+1. `update_wallet_after_payment` — kredit `round(NEW.amount, 1)`; do `balance_coins` i do
+   `wallet_transactions.amount` jde normalizovaná hodnota, syrová částka zůstává jen v metadatech.
+2. `prepare_stripe_refund` — odečet `round(v_payment.amount, 1)`, **musí být symetrický**
+   s kreditem, jinak by refundace nechala v peněžence zlomkový zbytek.
+3. `create_referral_reward_from_payment` — `ROUND(amount * 0,05, 2)` → `ROUND(..., 1)`.
+   `referral_rewards.reward_mc` je MioCoin veličina, která se do peněženky skutečně dostane
+   (`try_credit_wallet_mc`), a balíček 500 Kč (525 MC) dával `26,25 MC` — **reálné porušení
+   pravidla mimo testovací data.** Provizní sazba 0,05 se nemění.
+
+**Peníze nejsou dotčeny:** `payments.amount` si drží `numeric(18,2)` a **nedostává CHECK**
+(na dvou testovacích řádcích by selhal a testovací data se před spuštěním resetují).
+Fakturační částky, DPH a `price_per_coin` zůstávají na 2 desetinných místech.
+
+**Pro každou reálnou platbu platí `round(x, 1) = x`, takže se chování živých dat nemění.**
+
+### ⚠️ OPEN ISSUE — 2 wallet řádky se 2 desetinnými místy (testovací data)
 
 `wallets.balance_coins` má **1 řádek `10117.91`** a `wallet_transactions.amount` má
-**1 řádek `999.99`** (2026-03-16). Pocházejí z CZK dobíjecí cesty, ne z partnerských odměn.
-**Nic se nemigrovalo ani nezaokrouhlovalo** a připravené migrace se peněženek nedotýkají —
-peněženkové sloupce záměrně nedostaly CHECK na 1 desetinné místo, protože by na těchto datech
-selhal. Rozhodnutí, zda se obecné pravidlo vztahuje i na dobíjecí zůstatky, je na Pavlovi.
-
-### ⚠️ OPEN ISSUE — druhá reward matematika mimo engine
-
-`public.activate_partner_coins_from_order(uuid, uuid, text, numeric)` počítá odměnu sama
-(`ROUND((amount / reward_base_czk) * reward_mc, 1)`) místo volání `compute_partner_reward`.
-Nemá dnes žádného volajícího v aplikaci ani v Edge Functions, takže se v tomto úkolu neopravovala.
-Po migraci sloupců by aspoň neztrácela desetinné místo, ale porušuje invariant jediného enginu.
+**1 řádek `999.99`** (2026-03-16, `method='test'`); `payments` má 2 řádky `999.99`
+(`test`, `test_crud`) a `referral_rewards` 1 řádek s 2 desetinnými místy.
+**Nic se nemigrovalo, nezaokrouhlovalo ani nemazalo** — opravený je pouze budoucí zdroj.
+Tato data budou před ostrým spuštěním resetována. Peněženkové sloupce proto záměrně nedostaly
+CHECK na 1 desetinné místo.
 
 ### ⚠️ OPEN ISSUE — ISDOC export plete množství a částku
 

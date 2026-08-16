@@ -89,6 +89,31 @@ Nevracet je na `integer`. `wallets.balance_coins`, `wallets.bonus_balance_coins`
 a `wallet_transactions.amount` už `numeric` jsou a jen prochází hodnotu dál
 (`redeem_miocoin_code`, `log_partner_coin_activation_from_reward` nic nezaokrouhlují).
 
+## Platba → MioCoin → peněženka
+
+`payments.amount` je **počet MioCoinů, ne CZK.** `stripe-webhook` odvodí celé Kč z Stripe
+`amount_total` a uloží až výsledek `miocoinsForCzkPrice(priceCzk)`. CZK cena se do `payments`
+neukládá; `numeric(18,2)` je historický pozůstatek. **Nezaměňovat s finanční částkou.**
+
+Všechny tři MioCoin veličiny odvozené z `payments.amount` musí být normalizovány
+`round(x, 1)` před zápisem — a **symetricky**:
+
+- `update_wallet_after_payment` — kredit
+- `prepare_stripe_refund` — odečet (asymetrie nechá po refundaci zlomkový zbytek)
+- `create_referral_reward_from_payment` — `referral_rewards.reward_mc` (je to MioCoin veličina,
+  která se do peněženky dostane přes `try_credit_wallet_mc`; sazba 0,05 se nemění)
+
+`payments.amount` **nedostává CHECK na 1 desetinné místo** — testovací řádky `999.99` se před
+ostrým spuštěním resetují, nemigrují.
+
+## Žádný druhý partnerský reward engine
+
+`activate_partner_coins_from_order` + `api_activate_partner_coins` byly dropnuty
+(migrace `20260817130000`) — počítaly odměnu vlastní matematikou a zapisovaly rovnou do
+`partner_coin_activations`, navíc s `EXECUTE` pro `anon`/`authenticated`. **Neobnovovat.**
+Jediná podporovaná cesta je `create_partner_order_reward` → `partner_reward_codes` →
+`redeem_miocoin_code` → `log_partner_coin_activation_from_reward` → `partner_coin_activations`.
+
 ## MioCoin množství vs. peníze
 
 MioCoin množství: max 1 desetinné místo. Finanční částky CZK (faktury, DPH, ceny za coin):

@@ -45,6 +45,9 @@ const dashboard = read('src/pages/PartnerDashboard.tsx');
 const invoicePdf = read('supabase/functions/generate-partner-invoice-pdf/index.ts');
 const adminInvoices = read('src/pages/AdminInvoices.tsx');
 const partnersPortal = read('src/pages/AdminPartnersPortal.tsx');
+const dropLegacy = read('supabase/migrations/20260817130000_drop_legacy_partner_coin_bypass.sql');
+const paymentCredit = read('supabase/migrations/20260817140000_payment_credit_miocoin_one_decimal.sql');
+const stripeWebhook = read('supabase/functions/stripe-webhook/index.ts');
 
 /** Strips comments so "must not contain" assertions test real code, not safety notes. */
 const codeOnly = (src: string) =>
@@ -353,4 +356,118 @@ test('130 — no second reward calculation was introduced', () => {
     expect(code, `${name} must not read the raw conversion rate`).not.toMatch(/reward_base_czk\s*[*/]/);
     expect(code, `${name} must not multiply a per-SKU rule`).not.toMatch(/fixed_mc\s*[*/]/);
   }
+});
+
+// ── legacy second reward engine ──────────────────────────────────────────────
+
+test.describe('130 — no second partner reward engine survives', () => {
+  test('the legacy bypass and its wrapper are dropped', () => {
+    expect(dropLegacy).toContain(
+      'DROP FUNCTION IF EXISTS public.api_activate_partner_coins(text, uuid, text, integer);',
+    );
+    expect(dropLegacy).toContain(
+      'DROP FUNCTION IF EXISTS public.activate_partner_coins_from_order(uuid, uuid, text, numeric);',
+    );
+  });
+
+  test('the drop is guarded against a caller appearing after the audit', () => {
+    expect(dropLegacy).toContain('RAISE EXCEPTION');
+    expect(dropLegacy).toContain('unexpected caller(s) of activate_partner_coins_from_order');
+  });
+
+  test('no replacement second engine was introduced in its place', () => {
+    const sql = codeOnly(dropLegacy);
+    // The migration may only drop. No CREATE FUNCTION, no INSERT into activations.
+    expect(sql).not.toMatch(/CREATE\s+(OR\s+REPLACE\s+)?FUNCTION\s+public\.(activate_partner_coins|api_activate_partner_coins)/i);
+    expect(sql).not.toMatch(/INSERT INTO public\.partner_coin_activations/i);
+    // And it must not smuggle the old formula back in.
+    expect(sql).not.toMatch(/reward_base_czk\s*[*/]/);
+  });
+
+  test('nothing in the repo calls the dropped functions', () => {
+    for (const [name, src] of [
+      ['preview endpoint', preview],
+      ['widget', widget],
+      ['dashboard', dashboard],
+      ['stripe webhook', stripeWebhook],
+    ] as const) {
+      expect(src, `${name} must not call the legacy bypass`).not.toContain('activate_partner_coins_from_order');
+      expect(src, `${name} must not call the legacy wrapper`).not.toContain('api_activate_partner_coins');
+    }
+  });
+
+  test('partner activations still arrive only through the reward-code flow', () => {
+    // log_partner_coin_activation_from_reward remains the single writer, and the
+    // reward itself still comes from compute_partner_reward via issuance.
+    expect(issuance).toContain('public.compute_partner_reward(p_partner_id, v_order_total, p_items)');
+    // The drop migration itself must not touch the surviving activation writer.
+    expect(codeOnly(dropLegacy)).not.toContain('log_partner_coin_activation_from_reward');
+  });
+});
+
+// ── payment → MioCoin → wallet ───────────────────────────────────────────────
+
+test.describe('130 — payment credit cannot create a >1 decimal MioCoin balance', () => {
+  test('payments.amount is a MioCoin quantity derived from a whole CZK price', () => {
+    // Documented source of truth for the semantics asserted below.
+    expect(stripeWebhook).toContain('const priceCzk = amountTotal / 100');
+    expect(stripeWebhook).toContain('const coinsToCredit = miocoinsForCzkPrice(priceCzk)');
+    expect(stripeWebhook).toContain('amount: coinsToCredit,');
+    // A non-whole CZK total is rejected, so coinsToCredit is always an integer.
+    expect(stripeWebhook).toContain('amountTotal % 100 !== 0');
+  });
+
+  test('the wallet credit is normalised to one decimal before it is written', () => {
+    expect(paymentCredit).toContain('v_coins := round(NEW.amount, 1);');
+    // Both the balance and the ledger row use the normalised value, not NEW.amount.
+    expect(paymentCredit).toContain('VALUES (NEW.user_id, v_coins, now())');
+    const fn = paymentCredit.slice(
+      paymentCredit.indexOf('FUNCTION public.update_wallet_after_payment'),
+      paymentCredit.indexOf('FUNCTION public.prepare_stripe_refund'),
+    );
+    // The raw amount survives only as audit metadata, never as a credited value.
+    expect(fn).toContain("'payment_amount',     NEW.amount");
+    expect(fn).toContain("'credited_mc',        v_coins");
+    expect(fn).not.toMatch(/balance_coins\s*\+\s*NEW\.amount/);
+  });
+
+  test('the refund debit uses the identical normalisation', () => {
+    // Asymmetry here would leave a fractional residue in the wallet after a refund.
+    expect(paymentCredit).toContain('v_debit := round(v_payment.amount, 1);');
+    expect(paymentCredit).toContain('SET balance_coins = balance_coins - v_debit');
+    expect(paymentCredit).toContain('-v_debit,');
+    const fn = paymentCredit.slice(paymentCredit.indexOf('FUNCTION public.prepare_stripe_refund'));
+    expect(fn).not.toMatch(/balance_coins\s*-\s*v_payment\.amount/);
+  });
+
+  test('the referral reward is a MioCoin quantity rounded to one decimal', () => {
+    // 525 MC * 0.05 = 26.25 under the old ROUND(..., 2).
+    expect(paymentCredit).toContain('v_reward := ROUND(NEW.amount * v_rate, 1);');
+    // codeOnly: the header legitimately names the 2-decimal formula it replaces.
+    expect(codeOnly(paymentCredit)).not.toContain('ROUND(NEW.amount * v_rate, 2)');
+    // The commission rate itself is unchanged — no new business rate invented.
+    expect(paymentCredit).toContain('v_rate numeric := 0.05;');
+  });
+
+  test('money keeps two decimals — no CZK value is constrained or re-rounded', () => {
+    const sql = codeOnly(paymentCredit);
+    // payments.amount must not gain a CHECK, and no column type is altered.
+    expect(sql).not.toMatch(/ALTER TABLE public\.payments/i);
+    expect(sql).not.toMatch(/CHECK\s*\(\s*amount/i);
+  });
+
+  test('historical data is not migrated, rounded or deleted', () => {
+    const sql = codeOnly(paymentCredit);
+    // Function bodies legitimately contain UPDATE/INSERT; what must not exist is a
+    // top-level backfill. Every write statement here sits inside a function body.
+    for (const forbidden of [
+      /^\s*UPDATE public\.wallet_transactions/im,
+      /^\s*DELETE FROM/im,
+      /round\(balance_coins/i,
+      /round\(amount, 1\)\s+WHERE/i,
+    ]) {
+      expect(sql).not.toMatch(forbidden);
+    }
+    expect(codeOnly(dropLegacy)).not.toMatch(/^\s*(UPDATE|DELETE)\s/im);
+  });
 });
