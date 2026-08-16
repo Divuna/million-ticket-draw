@@ -11,8 +11,8 @@ ručně zadaná hodnota s více než 1 desetinným místem se **odmítne**, auto
 zaokrouhlí **právě jednou** na výsledku celé objednávky.
 
 **Stav: implementace je hotová na větvi `claude/miocoin-decimal-unify`.
-Migrace 1–4 jsou APLIKOVÁNY NA STAGING `dxmowysntemfqfnanxua` a celý partnerský tok je tam
-E2E OVĚŘEN. Migrace 5 (payment → wallet) je ZADRŽENA kvůli staging driftu.
+Migrace 1–5 jsou APLIKOVÁNY NA STAGING `dxmowysntemfqfnanxua` a celý tok — partnerská odměna
+i payment → MioCoin → peněženka — je tam E2E OVĚŘEN.
 Nic nebylo mergnuto do `main`. PRODUKCE `xkzhjldrojjlrkezorey` NENASAZENA a nezměněna.**
 
 ### STAGING OVĚŘENO / PRODUKCE NENASAZENA (16. 8. 2026)
@@ -51,26 +51,56 @@ nemazalo** — jen `reward_mc 0 → 0.5`; protože `reward_base_czk` zůstal 0, 
 | ISDOC payload | `0.6 / 1.2 / 2.5`, `coins_total 4.3` — bez ztráty desetinné části |
 | legacy `activate_partner_coins_from_order` | **neexistuje** (0) |
 
-### ⚠️ ZADRŽENO — migrace 5 (payment → wallet) kvůli staging driftu
+### STAGING PLATEBNÍ DRIFT SROVNÁN + MIGRACE 5 OVĚŘENA (16. 8. 2026)
 
-Staging se v platební vrstvě **výrazně liší od produkce**, takže migrace 5 nebyla aplikována:
+**Příčina driftu (dohledáno v repu, ne odhad):** hardened `update_wallet_after_payment`
+z `20260315200000_wallet_hardening.sql` zapisovala do sloupce `wallets.balance_vouchers`, který
+v schématu neexistuje → každá dokončená platba skončila chybou a Stripe webhook vracel 500
+(incident PAY03, 30. 06. 2026). Funkce byla tehdy **přímo v databázi přepsána zpět na krátký stub,
+mimo jakoukoli migraci**. Produkce byla opravena migrací `20260802120000_restore_wallet_payment_ledger.sql`
+a zpevněna `20260803090000_harden_stripe_refund_flow.sql`; **staging ani jednu z nich nikdy nedostal.**
+Ani jedna z těchto dvou migrací není zapsaná v `supabase_migrations.schema_migrations` v žádném
+z projektů — obě byly aplikovány ručně přes SQL Editor, což odpovídá pracovnímu postupu projektu.
 
-| funkce | staging | produkce |
-|---|---|---|
-| `update_wallet_after_payment` | **131 znaků** — jen `UPDATE wallets SET balance_coins = balance_coins + NEW.amount`; **žádný `status='completed'` guard, žádná idempotence, žádný zápis do `wallet_transactions`** | 1393 (plná verze) |
-| `prepare_stripe_refund` | **NEEXISTUJE** | 4322 |
-| `reverse_failed_stripe_refund` | **NEEXISTUJE** | 5469 |
-| `create_referral_reward_from_payment` | 843, sémanticky shodná (`ROUND(…, 2)`) | 1131 |
+**Zdroj baseline definic:** výhradně existující soubory v repu
+`supabase/migrations/20260802120000_restore_wallet_payment_ledger.sql` a
+`supabase/migrations/20260803090000_harden_stripe_refund_flow.sql`. **Žádná nová logika nevznikla.**
+Šlo o dorovnání historického staging driftu, proto **nevznikla nová produkční migrace**.
 
-Aplikace migrace 5 na staging by nebyla „jen“ MioCoin zaokrouhlení — nainstalovala by na staging
-celou produkční platební hardening vrstvu (status guard, idempotenci, ledger zápisy, refund funkce)
-a mohla by změnit chování stávajících staging speců 86/87/88. **Vyžaduje rozhodnutí Pavla.**
+**Dorovnáno na stagingu:** `update_wallet_after_payment` (stub → plná verze),
+`prepare_stripe_refund` (chyběla), `reverse_failed_stripe_refund` (chyběla),
+sloupce `payments.stripe_refund_id` / `stripe_refund_status` / `refund_updated_at`,
+indexy `uniq_payments_stripe_refund_id`, `uniq_wallet_tx_refund_debit_per_payment`,
+`uniq_wallet_tx_refund_reversal_per_payment`.
 
-Aritmetika migrace 5 přesto ověřena read-only na stagingu: `round(999.99, 1) = 1000.0`,
-`round(525 × 0,05, 1) = 26.3` (staré `ROUND(…, 2)` dávalo `26.25`), kredit i odečet používají
-identickou normalizaci. V transakci s rollbackem bylo navíc reprodukováno **současné rozbité
-chování**: platba 999,99 vytvořila zůstatek `5944.29` (2 desetinná místa) — přesně to, co migrace 5
-opravuje. Transakce vrácena, žádná data nezměněna.
+**Baseline ověřena hashem proti produkci** (`prosrc` bez komentářů a bílých znaků) — všechny čtyři
+funkce se shodují:
+
+| funkce | staging | produkce | shoda |
+|---|---|---|---|
+| `update_wallet_after_payment` | `5cfd1ad5…` | `5cfd1ad5…` | ✅ (navíc byte-přesně, md5 `894bd1b1…`) |
+| `prepare_stripe_refund` | `66a0b51e…` | `66a0b51e…` | ✅ (byte-přesně, md5 `350fe06b…`) |
+| `reverse_failed_stripe_refund` | `d7d5acd7…` | `d7d5acd7…` | ✅ (kód shodný; repo verze má o 476 znaků delší komentáře) |
+| `create_referral_reward_from_payment` | `59ca0879…` | `59ca0879…` | ✅ (lišila se jen formátováním) |
+
+Shodují se i sloupce, tři unikátní indexy a všechny čtyři triggery na `payments`.
+
+**Teprve poté aplikována migrace 5** `20260817140000_payment_credit_miocoin_one_decimal.sql`.
+
+### Ověřený staging výsledek payment → MioCoin → peněženka
+
+| test | výsledek |
+|---|---|
+| A — platba 999,99 MC | peněženka `4944.30 → 5944.30` = **+1000,0**, ledger `1000.0`, `payment_amount` 999.99 zachován v metadatech |
+| B — refundace téže platby | odečteno přesně **`-1000.0`**, peněženka zpět na `4944.30`, **žádný zlomkový zbytek** |
+| C — referral 525 MC × 5 % | raw 26,25 → **`26.3`** (staré `ROUND(…,2)` dávalo `26.25`), sazba 0,05 beze změny |
+| D — reálné balíčky | 50 → 50 · 310 → 310 · 525 → 525 · 1280 → 1280, **beze změny** |
+| E — opakovaný webhook/trigger | přesně **1** řádek `payment_credit`, žádné druhé připsání |
+| F — reverze selhané refundace | obnoveno přesně **`1000.0`** (= odečtená částka), 1 řádek `refund_reversal`, platba zpět na `completed` |
+
+Před opravou dávala tatáž platba 999,99 zůstatek `5944.29`. Všechny testy proběhly v transakcích
+s rollbackem; na stagingu nezůstal žádný testovací `payments`, `wallet_transactions`, `referrals`
+ani `referral_rewards` řádek a **žádný zůstatek peněženky se dvěma desetinnými místy** (0).
 
 ### ⚠️ NEDOKONČENO — staging PDF Edge Function nebyla přenasazena
 
@@ -121,7 +151,7 @@ odměna spadne na 0 → widget nic nezobrazí a reward code nemůže vzniknout.
 - `supabase/migrations/20260817130000_drop_legacy_partner_coin_bypass.sql` — drop legacy
   druhého reward enginu (viz níže).
 - `supabase/migrations/20260817140000_payment_credit_miocoin_one_decimal.sql` — normalizace
-  MioCoin veličin odvozených z `payments.amount` (viz níže).
+  MioCoin veličin odvozených z `payments.amount` (viz níže). **Aplikováno na staging.**
 - Frontend/EF: `src/lib/miocoin.ts` (sdílený formátovač + validátor), `public/shoptet-widget.js`
   (české desetinné čárky a skloňování), `partner-reward-preview` (odstraněn `Math.floor`),
   `generate-partner-invoice-pdf` (`formatCoins`, oprava sčítání numeric stringů),

@@ -1,3 +1,52 @@
+# 16. 08. 2026 — Staging platební drift srovnán, migrace 5 ověřena (PRODUKCE NENASAZENA)
+
+Navazuje na předchozí zápis, kde byla migrace 5 zadržena kvůli driftu.
+
+## Příčina driftu
+
+Dohledáno v repu, ne odhadem. Hardened `update_wallet_after_payment` z
+`20260315200000_wallet_hardening.sql` zapisovala do sloupce `wallets.balance_vouchers`, který
+ve schématu neexistuje → každá dokončená platba skončila chybou a Stripe webhook vracel 500
+(incident PAY03, 30. 06. 2026). Funkce byla tehdy **přepsána přímo v databázi zpět na krátký stub,
+mimo jakoukoli migraci**. Produkci to opravila migrace `20260802120000_restore_wallet_payment_ledger.sql`
+a zpevnila `20260803090000_harden_stripe_refund_flow.sql` — **staging ale ani jednu nikdy nedostal**,
+takže tam zůstal stub bez status guardu, bez idempotence a bez ledger zápisu, a refundní funkce
+tam vůbec neexistovaly. Ani jedna z těch dvou migrací není zapsaná v `schema_migrations` v žádném
+projektu; obě byly aplikovány ručně přes SQL Editor, což odpovídá pracovnímu postupu projektu.
+
+## Co bylo dorovnáno
+
+Pouze ze **stávajících souborů v repu** — žádná nová logika, žádná nová produkční migrace, protože
+šlo o dorovnání historického staging driftu. Na staging doplněno: plná
+`update_wallet_after_payment`, chybějící `prepare_stripe_refund` a `reverse_failed_stripe_refund`,
+tři `payments` refund sloupce a tři unikátní indexy.
+
+Baseline pak ověřena **hashem `prosrc` proti produkci** (bez komentářů a bílých znaků): všechny
+čtyři sledované funkce se shodují. `update_wallet_after_payment` a `prepare_stripe_refund` sedí
+dokonce byte-přesně (md5 `894bd1b1…` a `350fe06b…`). U `reverse_failed_stripe_refund` má repo
+verze o 476 znaků delší komentáře než to, co je nasazené v produkci — **spustitelný kód je
+identický** (`b57a8bba…`, 3790 znaků na obou stranách). `create_referral_reward_from_payment` se
+lišila jen formátováním.
+
+## Migrace 5 a její test
+
+Teprve po srovnání baseline aplikována `20260817140000_payment_credit_miocoin_one_decimal.sql`.
+
+Ověřeno na stagingu (vše v transakcích s rollbackem): platba 999,99 MC připsala **1000,0 MC**
+(před opravou dávala zůstatek `5944.29`); refundace téže platby odečetla přesně **−1000,0**
+a nenechala zlomkový zbytek; referral 525 × 5 % dal **26,3 MC** místo 26,25; reálné balíčky
+50/310/525/1280 zůstaly beze změny; opakovaný webhook vytvořil právě jeden `payment_credit`;
+reverze selhané refundace vrátila přesně stejných 1000,0 MC.
+
+Po testu na stagingu nezůstal žádný testovací `payments`, `wallet_transactions`, `referrals` ani
+`referral_rewards` řádek a žádný zůstatek peněženky se dvěma desetinnými místy.
+
+**Produkce `xkzhjldrojjlrkezorey` byla po celou dobu jen read-only a je nezměněná** — ověřeno na
+konci: engine stále `floor`, coin sloupce stále `integer`, 0 constraintů, legacy bypass stále
+přítomen, `update_wallet_after_payment` bez normalizace, referral stále `ROUND(…, 2)`.
+
+---
+
 # 16. 08. 2026 — MioCoin desetinné místo: STAGING OVĚŘENO, PRODUKCE NENASAZENA
 
 Migrace 1–4 z větve `claude/miocoin-decimal-unify` aplikovány na staging `dxmowysntemfqfnanxua`
