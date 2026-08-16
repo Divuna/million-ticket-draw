@@ -61,14 +61,27 @@
     for (var i = 0; i < nodes.length; i++) nodes[i].remove();
   }
 
-  function preview(payload) {
+  // Rendering the badge mutates the page, which wakes the MutationObserver, which
+  // would refresh again forever. Repeating an identical request is always pointless,
+  // so the last payload/response pair is reused instead of re-querying.
+  var lastPayload = {};
+  var lastResult = {};
+
+  function preview(kind, payload) {
+    var key = JSON.stringify(payload);
+    if (lastPayload[kind] === key && lastResult[kind] !== undefined) {
+      return Promise.resolve(lastResult[kind]);
+    }
+    lastPayload[kind] = key;
+
     return fetch(API, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(payload),
     })
       .then(function (r) { return r.json(); })
-      .catch(function () { return null; });
+      .catch(function () { return null; })
+      .then(function (res) { lastResult[kind] = res; return res; });
   }
 
   function czPlural(n) {
@@ -226,10 +239,16 @@
 
   // ── product page badge (partner can switch this off) ───────────────────────
   function updateProductBadge() {
-    // Only on a product detail page — the cart also exposes a SKU, and the badge
-    // must not leak onto it.
+    // Only on a product detail page. The cart rows also carry data-micro-sku, so
+    // without this guard the badge would appear on the basket — and when no
+    // dataLayer is present it would read a cart SKU with no price at all.
     var s = shoptetData();
-    if (s && s.pageType && s.pageType !== 'productDetail') return;
+    if (s && s.pageType) {
+      if (s.pageType !== 'productDetail') return;
+    } else if (document.querySelector('tr[data-micro="cartItem"], .cart-content')) {
+      // No pageType to trust: a visible cart table means this is not a detail page.
+      return;
+    }
 
     var code = currentProductCode();
     if (!code) return;
@@ -239,7 +258,7 @@
     var price = currentProductPrice();
     var items = [{ code: code, quantity: 1, unit_price_czk: price }];
 
-    preview({
+    preview('product', {
       partner_id: partnerId,
       items: items,
       order_total_czk: itemsValue(items),
@@ -277,7 +296,7 @@
 
     // order_total_czk is required by the engine in whole_shop mode (the default),
     // and is harmlessly ignored when per-product rules drive the result.
-    preview({
+    preview('cart', {
       partner_id: partnerId,
       items: coded,
       order_total_czk: total,
