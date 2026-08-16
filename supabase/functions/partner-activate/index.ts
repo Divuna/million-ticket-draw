@@ -1,5 +1,18 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
+// Optional order line item. The partner never sends a MioCoin amount — OneMil
+// computes it from the partner's own reward rules.
+type RequestItem = {
+  code?: string;
+  sku?: string;
+  product_code?: string;
+  name?: string;
+  quantity?: number | string;
+  amount?: number | string;
+  unit_price_czk?: number | string;
+  unit_price?: number | string;
+};
+
 type RequestBody = {
   action?: string;
   reward_code?: string;
@@ -9,12 +22,46 @@ type RequestBody = {
   customer_email?: string;
   status?: string;
   order_status?: string;
+  items?: unknown;
   coins?: unknown;
   miocoins?: unknown;
   miocoin_amount?: unknown;
   reward_amount?: unknown;
   reward_coins?: unknown;
 };
+
+/**
+ * Normalises partner-supplied items into the shape compute_partner_reward expects.
+ * Returns null when no usable item was sent, which keeps the whole-shop
+ * calculation for every existing integration.
+ *
+ * Common aliases are accepted (sku/product_code, amount) because partners map these
+ * payloads by hand from their own e-shop data model.
+ */
+function normalizeItems(raw: unknown): Array<Record<string, unknown>> | null {
+  if (!Array.isArray(raw) || raw.length === 0) return null;
+
+  const out: Array<Record<string, unknown>> = [];
+  for (const entry of raw) {
+    if (!entry || typeof entry !== "object") continue;
+    const item = entry as RequestItem;
+
+    const code = String(item.code ?? item.sku ?? item.product_code ?? "").trim();
+    if (!code) continue;
+
+    const quantity = Number(item.quantity ?? item.amount ?? 1);
+    const unitPrice = Number(item.unit_price_czk ?? item.unit_price ?? 0);
+
+    out.push({
+      code,
+      name: typeof item.name === "string" ? item.name.trim() : "",
+      quantity: Number.isFinite(quantity) && quantity > 0 ? quantity : 1,
+      unit_price_czk: Number.isFinite(unitPrice) && unitPrice > 0 ? unitPrice : 0,
+    });
+  }
+
+  return out.length > 0 ? out : null;
+}
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -153,6 +200,9 @@ Deno.serve(async (req) => {
         p_order_total_czk: orderTotal,
         p_customer_email: body.customer_email,
         p_metadata: { api_action: "create_order_reward" },
+        // Optional. Without items the partner's whole-shop conversion applies,
+        // exactly as before. With items the shared engine can apply per-product rules.
+        p_items: normalizeItems(body.items),
       });
 
       if (error) {

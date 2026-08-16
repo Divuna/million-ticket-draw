@@ -15,10 +15,45 @@ import { toast } from 'sonner';
 import { Loader2, Building2, Coins, Key, FileText, TrendingUp, Calendar, Upload, Image, Clock, CheckCircle, XCircle, Mail, BookOpen, Rocket, ListChecks, ExternalLink, AlertCircle, Info, Gift, RefreshCw, Copy, Eye, EyeOff, Activity, Settings, Save, Plus, Send, RotateCcw, Tag, Receipt, Download } from 'lucide-react';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Switch } from '@/components/ui/switch';
 import PartnerBillingForm from '@/components/PartnerBillingForm';
 import { format, startOfWeek, endOfWeek, subWeeks, subDays, isAfter } from 'date-fns';
 import { cs } from 'date-fns/locale';
 import { useUserRole } from '@/hooks/useUserRole';
+
+// How the partner rewards customers. The reward itself is always computed
+// server-side by compute_partner_reward — this only selects which rules apply.
+type RewardMode = 'whole_shop' | 'selected_products' | 'whole_shop_with_exceptions';
+
+const REWARD_MODE_LABELS: Record<RewardMode, string> = {
+  whole_shop: 'Celý e-shop',
+  selected_products: 'Vybrané produkty',
+  whole_shop_with_exceptions: 'Celý e-shop + výjimky',
+};
+
+const REWARD_MODE_HINTS: Record<RewardMode, string> = {
+  whole_shop:
+    'Zákazník dostane MioCoiny za celou objednávku podle vaší konverze výše.',
+  selected_products:
+    'MioCoiny dostane zákazník jen za produkty, které přidáte níže. Ostatní produkty nic nedávají.',
+  whole_shop_with_exceptions:
+    'Standardně platí vaše konverze výše. U produktů přidaných níže platí místo ní jejich vlastní odměna.',
+};
+
+// Product reward rule. Matched strictly by product_key (Shoptet product code / SKU).
+interface ProductRewardRule {
+  id: string;
+  product_key: string;
+  product_label: string | null;
+  reward_type: 'fixed_mc' | 'ratio';
+  fixed_mc: number | null;
+  active: boolean;
+}
+
+interface SeenProduct {
+  product_key: string;
+  last_seen_name: string | null;
+}
 
 interface Partner {
   id: string;
@@ -33,6 +68,8 @@ interface Partner {
   vat_rate: number;
   reward_base_czk: number;
   reward_mc: number;
+  reward_mode: RewardMode;
+  product_badge_enabled: boolean;
   ico: string | null;
   dic: string | null;
   billing_street: string | null;
@@ -194,7 +231,20 @@ const PartnerDashboard = () => {
   const [rewardBaseCzk, setRewardBaseCzk] = useState<string>('');
   const [rewardMc, setRewardMc] = useState<string>('');
   const [savingRewardSettings, setSavingRewardSettings] = useState(false);
-  
+
+  // ── Product-level reward rules ──────────────────────────────────────────────
+  const [rewardMode, setRewardMode] = useState<RewardMode>('whole_shop');
+  const [productBadgeEnabled, setProductBadgeEnabled] = useState(true);
+  const [savingRewardMode, setSavingRewardMode] = useState(false);
+  const [productRules, setProductRules] = useState<ProductRewardRule[]>([]);
+  const [seenProducts, setSeenProducts] = useState<SeenProduct[]>([]);
+  const [newRuleKey, setNewRuleKey] = useState('');
+  const [newRuleLabel, setNewRuleLabel] = useState('');
+  const [newRuleMc, setNewRuleMc] = useState('');
+  const [addingRule, setAddingRule] = useState(false);
+  const [ruleActionId, setRuleActionId] = useState<string | null>(null);
+
+
   // Activate reward modal state
   const [activateModalOpen, setActivateModalOpen] = useState(false);
   const [rewardCodeInput, setRewardCodeInput] = useState('');
@@ -766,6 +816,10 @@ const PartnerDashboard = () => {
       setPartner(partnerData);
       setRewardBaseCzk(String(partnerData.reward_base_czk ?? 0));
       setRewardMc(String(partnerData.reward_mc ?? 0));
+      setRewardMode(((partnerData as { reward_mode?: RewardMode }).reward_mode ?? 'whole_shop') as RewardMode);
+      setProductBadgeEnabled((partnerData as { product_badge_enabled?: boolean }).product_badge_enabled ?? true);
+      // Load product reward rules + the product picker source
+      await loadProductRewardData(partnerData.id);
       // Load partner offers
       await loadPartnerOffers(partnerData.id);
       // Load offer billing
@@ -1066,6 +1120,158 @@ const PartnerDashboard = () => {
         return <Badge variant="destructive" className="bg-red-500/10 text-red-600 border-red-500/20"><XCircle className="w-3 h-3 mr-1" />Zamítnuto</Badge>;
       default:
         return <Badge variant="outline"><Image className="w-3 h-3 mr-1" />Není nahráno</Badge>;
+    }
+  };
+
+  // ── Product reward rules ────────────────────────────────────────────────────
+  // RLS: the partner sees and edits only their own rows. partner_seen_products is
+  // read-only for the partner and is filled by the importer / Partner Order API.
+  const loadProductRewardData = async (partnerId: string) => {
+    const [rulesRes, seenRes] = await Promise.all([
+      supabase
+        .from('partner_product_reward_rules')
+        .select('id, product_key, product_label, reward_type, fixed_mc, active')
+        .eq('partner_id', partnerId)
+        .order('product_key'),
+      supabase
+        .from('partner_seen_products')
+        .select('product_key, last_seen_name')
+        .eq('partner_id', partnerId)
+        .order('last_seen_at', { ascending: false })
+        .limit(200),
+    ]);
+
+    setProductRules((rulesRes.data as ProductRewardRule[] | null) ?? []);
+    setSeenProducts((seenRes.data as SeenProduct[] | null) ?? []);
+  };
+
+  const handleSaveRewardMode = async (nextMode: RewardMode, nextBadge: boolean) => {
+    if (!partner) return;
+
+    const prevMode = rewardMode;
+    const prevBadge = productBadgeEnabled;
+    setSavingRewardMode(true);
+    setRewardMode(nextMode);
+    setProductBadgeEnabled(nextBadge);
+
+    try {
+      // .select() + affected-rows check: without it an RLS-blocked UPDATE returns
+      // no error and would show a false success (same guard as the conversion save).
+      const { data: updated, error } = await supabase
+        .from('partners')
+        .update({ reward_mode: nextMode, product_badge_enabled: nextBadge })
+        .eq('id', partner.id)
+        .select('id');
+
+      if (error) throw error;
+      if (!updated || updated.length === 0) throw new Error('no_rows_updated');
+
+      setPartner({ ...partner, reward_mode: nextMode, product_badge_enabled: nextBadge });
+      toast.success('Nastavení odměn bylo uloženo');
+    } catch {
+      setRewardMode(prevMode);
+      setProductBadgeEnabled(prevBadge);
+      toast.error('Nepodařilo se uložit nastavení odměn');
+    } finally {
+      setSavingRewardMode(false);
+    }
+  };
+
+  const handleAddProductRule = async () => {
+    if (!partner) return;
+
+    const productKey = newRuleKey.trim();
+    const mc = parseFloat(newRuleMc);
+
+    if (!productKey) {
+      toast.error('Zadejte kód produktu.');
+      return;
+    }
+    if (!Number.isFinite(mc) || mc <= 0) {
+      toast.error('Zadejte kladný počet MioCoinů.');
+      return;
+    }
+    if (productRules.some((r) => r.product_key.toLowerCase() === productKey.toLowerCase())) {
+      toast.error('Pravidlo pro tento kód produktu už existuje.');
+      return;
+    }
+
+    setAddingRule(true);
+    try {
+      const label =
+        newRuleLabel.trim() ||
+        seenProducts.find((p) => p.product_key.toLowerCase() === productKey.toLowerCase())?.last_seen_name ||
+        null;
+
+      const { error } = await supabase.from('partner_product_reward_rules').insert({
+        partner_id: partner.id,
+        product_key: productKey,
+        product_label: label,
+        reward_type: 'fixed_mc',
+        fixed_mc: mc,
+        active: true,
+      });
+      if (error) throw error;
+
+      setNewRuleKey('');
+      setNewRuleLabel('');
+      setNewRuleMc('');
+      await loadProductRewardData(partner.id);
+      toast.success('Produkt byl přidán');
+    } catch {
+      toast.error('Nepodařilo se přidat produkt');
+    } finally {
+      setAddingRule(false);
+    }
+  };
+
+  const handleUpdateProductRule = async (
+    ruleId: string,
+    patch: { fixed_mc?: number; active?: boolean },
+  ) => {
+    if (!partner) return;
+
+    setRuleActionId(ruleId);
+    try {
+      const { data: updated, error } = await supabase
+        .from('partner_product_reward_rules')
+        .update(patch)
+        .eq('id', ruleId)
+        .eq('partner_id', partner.id)
+        .select('id');
+
+      if (error) throw error;
+      if (!updated || updated.length === 0) throw new Error('no_rows_updated');
+
+      await loadProductRewardData(partner.id);
+      toast.success('Pravidlo bylo upraveno');
+    } catch {
+      toast.error('Nepodařilo se upravit pravidlo');
+      await loadProductRewardData(partner.id);
+    } finally {
+      setRuleActionId(null);
+    }
+  };
+
+  const handleDeleteProductRule = async (ruleId: string) => {
+    if (!partner) return;
+
+    setRuleActionId(ruleId);
+    try {
+      const { error } = await supabase
+        .from('partner_product_reward_rules')
+        .delete()
+        .eq('id', ruleId)
+        .eq('partner_id', partner.id);
+
+      if (error) throw error;
+
+      await loadProductRewardData(partner.id);
+      toast.success('Produkt byl odebrán');
+    } catch {
+      toast.error('Nepodařilo se odebrat produkt');
+    } finally {
+      setRuleActionId(null);
     }
   };
 
@@ -1643,6 +1849,202 @@ const PartnerDashboard = () => {
                   )}
                   Uložit
                 </Button>
+              </div>
+
+              {/* ── Reward mode + per-product rules ──────────────────────────── */}
+              <div className="border-t border-border/50 pt-4 space-y-4">
+                <div>
+                  <h4 className="text-sm font-medium flex items-center gap-2 mb-1">
+                    <Tag className="w-4 h-4 text-[hsl(var(--neon-gold))]" />
+                    Jak chcete odměňovat zákazníky?
+                  </h4>
+                  <p className="text-xs text-muted-foreground">
+                    Odměnu vždy počítá OneMil podle tohoto nastavení — zákazník uvidí v e-shopu stejné číslo, jaké mu pak přijde.
+                  </p>
+                </div>
+
+                <div className="grid gap-2 sm:grid-cols-3">
+                  {(Object.keys(REWARD_MODE_LABELS) as RewardMode[]).map((mode) => (
+                    <button
+                      key={mode}
+                      type="button"
+                      data-testid={`reward-mode-${mode}`}
+                      aria-pressed={rewardMode === mode}
+                      disabled={savingRewardMode}
+                      onClick={() => handleSaveRewardMode(mode, productBadgeEnabled)}
+                      className={`text-left rounded-lg border p-3 transition-colors disabled:opacity-60 ${
+                        rewardMode === mode
+                          ? 'border-[hsl(var(--neon-gold)/0.5)] bg-[hsl(var(--neon-gold)/0.08)]'
+                          : 'border-border/50 bg-muted/20 hover:border-border'
+                      }`}
+                    >
+                      <span className="text-sm font-medium block mb-1">{REWARD_MODE_LABELS[mode]}</span>
+                      <span className="text-[11px] text-muted-foreground leading-relaxed block">
+                        {REWARD_MODE_HINTS[mode]}
+                      </span>
+                    </button>
+                  ))}
+                </div>
+
+                {rewardMode !== 'whole_shop' && (
+                  <div className="space-y-3">
+                    {/* Item-level export requirement — the honest constraint, not a surprise later */}
+                    <div className="flex items-start gap-2 rounded-lg bg-muted/30 border border-border/50 p-3">
+                      <Info className="w-4 h-4 text-muted-foreground flex-shrink-0 mt-0.5" />
+                      <p className="text-xs text-muted-foreground leading-relaxed">
+                        Pro odměny za konkrétní produkty musí mít váš Shoptet export zapnuté
+                        <span className="font-medium text-foreground"> „Exportovat jednotlivé položky objednávky"</span> —
+                        jinak OneMil nevidí, které produkty zákazník koupil.
+                      </p>
+                    </div>
+
+                    <h5 className="text-sm font-medium">Produkty s vlastní odměnou</h5>
+
+                    {productRules.length === 0 ? (
+                      <p className="text-xs text-muted-foreground">
+                        Zatím nemáte žádný produkt. Přidejte ho níže.
+                      </p>
+                    ) : (
+                      <div className="space-y-2">
+                        {productRules.map((rule) => (
+                          <div
+                            key={rule.id}
+                            data-testid="product-rule-row"
+                            className="flex flex-wrap items-center gap-2 rounded-lg border border-border/50 bg-muted/20 p-2.5"
+                          >
+                            <div className="min-w-0 flex-1">
+                              <p className="text-sm font-medium truncate">
+                                {rule.product_label || rule.product_key}
+                              </p>
+                              <p className="text-[11px] text-muted-foreground font-mono">{rule.product_key}</p>
+                            </div>
+                            <div className="flex items-center gap-1.5">
+                              <Input
+                                type="number"
+                                min="0.1"
+                                step="0.1"
+                                defaultValue={rule.fixed_mc ?? ''}
+                                disabled={ruleActionId === rule.id}
+                                onBlur={(e) => {
+                                  const val = parseFloat(e.target.value);
+                                  if (Number.isFinite(val) && val > 0 && val !== Number(rule.fixed_mc)) {
+                                    handleUpdateProductRule(rule.id, { fixed_mc: val });
+                                  }
+                                }}
+                                className="h-8 w-20 text-sm"
+                                aria-label={`MioCoiny za ${rule.product_key}`}
+                              />
+                              <span className="text-xs text-muted-foreground">MC / ks</span>
+                            </div>
+                            <div className="flex items-center gap-1.5">
+                              <Switch
+                                checked={rule.active}
+                                disabled={ruleActionId === rule.id}
+                                onCheckedChange={(checked) =>
+                                  handleUpdateProductRule(rule.id, { active: checked })
+                                }
+                                aria-label={`Aktivní pravidlo pro ${rule.product_key}`}
+                              />
+                              <span className="text-xs text-muted-foreground">
+                                {rule.active ? 'Aktivní' : 'Vypnuto'}
+                              </span>
+                            </div>
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              className="h-8 px-2"
+                              disabled={ruleActionId === rule.id}
+                              onClick={() => handleDeleteProductRule(rule.id)}
+                              aria-label={`Odebrat ${rule.product_key}`}
+                            >
+                              <XCircle className="w-4 h-4 text-muted-foreground" />
+                            </Button>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+
+                    {/* Add rule. The picker lists products actually seen in this partner's
+                        imported orders, so the code is guaranteed to match real orders.
+                        Free text stays possible for a product not yet ordered. */}
+                    <div className="rounded-lg border border-border/50 bg-muted/20 p-3 space-y-2">
+                      <p className="text-xs font-medium">Přidat produkt</p>
+                      <div className="grid gap-2 sm:grid-cols-[1fr_1fr_auto_auto]">
+                        <Input
+                          list="partner-seen-products"
+                          value={newRuleKey}
+                          onChange={(e) => {
+                            const val = e.target.value;
+                            setNewRuleKey(val);
+                            const match = seenProducts.find(
+                              (p) => p.product_key.toLowerCase() === val.trim().toLowerCase(),
+                            );
+                            if (match?.last_seen_name) setNewRuleLabel(match.last_seen_name);
+                          }}
+                          placeholder="Kód produktu / SKU"
+                          maxLength={120}
+                          className="h-9"
+                          aria-label="Kód produktu"
+                        />
+                        <datalist id="partner-seen-products">
+                          {seenProducts.map((p) => (
+                            <option key={p.product_key} value={p.product_key}>
+                              {p.last_seen_name ?? p.product_key}
+                            </option>
+                          ))}
+                        </datalist>
+                        <Input
+                          value={newRuleLabel}
+                          onChange={(e) => setNewRuleLabel(e.target.value)}
+                          placeholder="Název (volitelné)"
+                          maxLength={300}
+                          className="h-9"
+                          aria-label="Název produktu"
+                        />
+                        <Input
+                          type="number"
+                          min="0.1"
+                          step="0.1"
+                          value={newRuleMc}
+                          onChange={(e) => setNewRuleMc(e.target.value)}
+                          placeholder="MC / ks"
+                          className="h-9 sm:w-24"
+                          aria-label="MioCoiny za kus"
+                        />
+                        <Button
+                          size="sm"
+                          className="h-9 gap-2"
+                          onClick={handleAddProductRule}
+                          disabled={addingRule}
+                        >
+                          {addingRule ? <Loader2 className="w-4 h-4 animate-spin" /> : <Plus className="w-4 h-4" />}
+                          Přidat
+                        </Button>
+                      </div>
+                      <p className="text-[11px] text-muted-foreground leading-relaxed">
+                        Produkt se páruje podle kódu/SKU. Zákazník dostane odměnu za každý kus —
+                        například 10 MioCoinů a 2 kusy znamenají 20 MioCoinů.
+                        {seenProducts.length > 0 && ' Nabídka vychází z produktů z vašich objednávek.'}
+                      </p>
+                    </div>
+                  </div>
+                )}
+
+                {/* Badge toggle. The cart summary is intentionally NOT toggleable. */}
+                <div className="flex items-start justify-between gap-3 rounded-lg border border-border/50 bg-muted/20 p-3">
+                  <div className="min-w-0">
+                    <p className="text-sm font-medium">Zobrazit odměnu u produktu v e-shopu</p>
+                    <p className="text-[11px] text-muted-foreground leading-relaxed">
+                      Informace v košíku, kolik MioCoinů zákazník za nákup získá, se zobrazuje vždy.
+                    </p>
+                  </div>
+                  <Switch
+                    checked={productBadgeEnabled}
+                    disabled={savingRewardMode}
+                    onCheckedChange={(checked) => handleSaveRewardMode(rewardMode, checked)}
+                    aria-label="Zobrazit odměnu u produktu"
+                  />
+                </div>
               </div>
 
               {/* Marketingová investice (simulace) - Compact KPI section */}

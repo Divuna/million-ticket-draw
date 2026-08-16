@@ -18,8 +18,8 @@ kolik mu OneMil po objednávce skutečně vydá.
 - [x] **shared reward engine** — `20260816110000_compute_partner_reward_engine.sql`
 - [x] **create_partner_order_reward integration** — `20260816120000_create_partner_order_reward_items.sql`
 - [x] **Shoptet item CSV parser** — `import-shoptet-orders/csv.ts` + spec 124 (9 zelených)
-- [ ] partner product UI (`PartnerDashboard`)
-- [ ] Partner Order API items (`partner-activate`)
+- [x] **partner product UI** — režim + pravidla v `PartnerDashboard` (rozšíření stávající sekce konverze)
+- [x] **Partner Order API items** — `partner-activate` přijímá volitelné `items[]`
 - [ ] widget preview endpoint
 - [ ] Shoptet widget snippet
 - [ ] E2E
@@ -43,6 +43,20 @@ v jiné RPC — jinak se to, co zákazník vidí v košíku, rozejde s tím, co 
 - `selected_products` **bez položek odmítne** (`items_required_for_reward_mode`) — tichý fallback na
   celou objednávku by vyplatil pravý opak toho, co partner nastavil.
 - `whole_shop_with_exceptions` bez položek bezpečně degraduje na globální sazbu z ceny objednávky.
+
+### ⚠️ Nález: `npx tsc --noEmit` je no-op (16. 8. 2026)
+
+Kořenový `tsconfig.json` je solution-style (`"files": []` + `references`), takže
+`npx tsc --noEmit` **nekontroluje vůbec nic** — ověřeno tím, že ani
+`export const x: number = "není číslo"` v `src/` nevyvolá chybu.
+
+**Správný příkaz je `npx tsc -p tsconfig.app.json --noEmit`.** Ten na `origin/main`
+(a54cd022) hlásí **18 předexistujících chyb** (mj. `AddSalesLeadDialog.tsx`,
+`LeadCrmPanel.tsx`), které dosud nikdo neviděl. Tato větev přidává **0 nových chyb**
+(18 před i po, žádná v dotčených souborech).
+
+Historické zápisy „tsc --noEmit 0 chyb" v dokumentaci jsou proto bezcenné.
+Oprava příkazu + 18 chyb je mimo rozsah této větve.
 
 ### Staging ověřeno (16. 8. 2026, throwaway partner, uklizeno)
 
