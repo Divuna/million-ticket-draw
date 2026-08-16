@@ -34,6 +34,9 @@
     'https://xkzhjldrojjlrkezorey.supabase.co/functions/v1/partner-reward-preview';
 
   var CLS = 'onemil-mc-widget';
+  // Product-listing cards get their own class: the cart clears its own badge when
+  // the basket empties, and must never wipe the badges on a category page.
+  var CLS_CARD = 'onemil-mc-card';
 
   // ── styling ────────────────────────────────────────────────────────────────
   var style = document.createElement('style');
@@ -42,7 +45,10 @@
     'border-radius:999px;background:linear-gradient(135deg,#FF8A00,#FFB547);color:#0A0B0F;' +
     'font-weight:700;font-size:13px;line-height:1.3;}' +
     '.' + CLS + '--cart{display:flex;width:100%;justify-content:center;border-radius:10px;' +
-    'padding:10px 14px;font-size:14px;}';
+    'padding:10px 14px;font-size:14px;}' +
+    // Listing cards: a quiet one-liner under the price, not a loud pill.
+    '.' + CLS_CARD + '{display:block;margin:4px 0 0;font-size:12px;line-height:1.35;' +
+    'font-weight:600;color:#B35F00;white-space:nowrap;}';
   document.head.appendChild(style);
 
   function render(target, text, isCart) {
@@ -56,6 +62,7 @@
     existing.textContent = text;
   }
 
+  // Only clears the cart/detail badge. Listing card badges are managed separately.
   function removeAll() {
     var nodes = document.querySelectorAll('.' + CLS);
     for (var i = 0; i < nodes.length; i++) nodes[i].remove();
@@ -190,11 +197,15 @@
       if (out.length) return out;
     }
 
-    // DOM fallback, using this template's real attributes.
-    var rows = document.querySelectorAll('tr[data-micro="cartItem"], [data-micro-sku], [data-micro-product-id], .cart-item');
+    // DOM fallback, using this template's real attributes. Scoped to genuine cart
+    // rows: a listing card is <div data-micro="product"> and also carries
+    // data-micro-product-id / data-micro-sku, so a loose selector here would make a
+    // category page look like a basket.
+    var rows = document.querySelectorAll('tr[data-micro="cartItem"], [data-micro="cartItem"], .cart-item');
     var items = [];
     for (var i = 0; i < rows.length; i++) {
       var row = rows[i];
+      if (row.getAttribute('data-micro') === 'product') continue;
       var code =
         row.getAttribute('data-micro-sku') ||
         row.getAttribute('data-micro-product-code') ||
@@ -280,6 +291,154 @@
     });
   }
 
+  // ── product listing cards ──────────────────────────────────────────────────
+  //
+  // Verified card structure on the real storefront (category page):
+  //
+  //   <div class="p" data-micro="product" data-micro-product-id="39"
+  //        data-testid="productItem">
+  //     ...
+  //     <div data-micro="offer" data-micro-price="50.00">      <- clean numeric price
+  //       <div class="prices">
+  //         <div class="price price-final">50 Kč</div>          <- badge goes under this
+  //       </div>
+  //     </div>
+  //     <span class="p-code">Kód: <span data-micro="sku">49396/FIA</span></span>
+  //   </div>
+  //
+  // The category dataLayer has no per-product array, so the cards themselves are
+  // the source — and they carry both a clean price attribute and the SKU.
+
+  // Cache keyed by code|price. Survives AJAX re-renders, so filtering or paging
+  // back to a product never re-asks. Value: coins (number) or null when unknown.
+  var cardCoins = {};
+  var cardInFlight = {};
+  var badgesDisabled = false;
+  var cardQueue = [];
+  var cardActive = 0;
+  var CARD_CONCURRENCY = 4;
+
+  function listingCards() {
+    return document.querySelectorAll('.p[data-micro="product"], [data-testid="productItem"]');
+  }
+
+  function cardData(card) {
+    var skuEl = card.querySelector('[data-micro="sku"]');
+    var code = skuEl
+      ? (skuEl.textContent || '').trim()
+      : (card.getAttribute('data-micro-sku') || '').trim();
+
+    var priceEl = card.querySelector('[data-micro-price]');
+    var price = priceEl
+      ? parsePrice(priceEl.getAttribute('data-micro-price'))
+      : parsePrice((card.querySelector('.price-final') || {}).textContent);
+
+    return { code: code, price: price };
+  }
+
+  // Under the price, inside the card.
+  function cardTarget(card) {
+    return card.querySelector('.prices') ||
+           card.querySelector('.price-final') ||
+           card.querySelector('.p-bottom');
+  }
+
+  function renderCard(card, coins) {
+    var target = cardTarget(card);
+    if (!target || coins <= 0) return;
+    var el = target.querySelector('.' + CLS_CARD);
+    if (!el) {
+      el = document.createElement('span');
+      el.className = CLS_CARD;
+      target.appendChild(el);
+    }
+    el.textContent = 'Získáte ' + coins + ' ' + czPlural(coins);
+  }
+
+  function pumpCardQueue() {
+    while (cardActive < CARD_CONCURRENCY && cardQueue.length) {
+      (function (job) {
+        cardActive++;
+        preview('card:' + job.key, {
+          partner_id: partnerId,
+          items: [{ code: job.code, quantity: 1, unit_price_czk: job.price }],
+          order_total_czk: job.price,
+        }).then(function (res) {
+          cardActive--;
+          delete cardInFlight[job.key];
+
+          if (res && res.status === 'ok' && res.product_badge_enabled === false) {
+            // Partner switched product badges off — stop asking for the rest.
+            badgesDisabled = true;
+            cardQueue.length = 0;
+            var stale = document.querySelectorAll('.' + CLS_CARD);
+            for (var i = 0; i < stale.length; i++) stale[i].remove();
+            return;
+          }
+
+          if (res && res.status === 'ok' && res.enabled) {
+            var coins = (res.items && res.items[0] && res.items[0].coins) || res.coins || 0;
+            cardCoins[job.key] = coins;
+            // Re-resolve the card: an AJAX re-render may have replaced the node.
+            paintKnownCards();
+          } else {
+            cardCoins[job.key] = 0;
+          }
+          pumpCardQueue();
+        });
+      })(cardQueue.shift());
+    }
+  }
+
+  // Paints every currently visible card whose value is already known.
+  function paintKnownCards() {
+    if (badgesDisabled) return;
+    var cards = listingCards();
+    for (var i = 0; i < cards.length; i++) {
+      var d = cardData(cards[i]);
+      if (!d.code || d.price <= 0) continue;
+      var key = d.code + '|' + d.price;
+      if (cardCoins[key] !== undefined) renderCard(cards[i], cardCoins[key]);
+    }
+  }
+
+  function queueCard(card) {
+    if (badgesDisabled) return;
+    var d = cardData(card);
+    if (!d.code || d.price <= 0) return;
+
+    var key = d.code + '|' + d.price;
+    if (cardCoins[key] !== undefined) { renderCard(card, cardCoins[key]); return; }
+    if (cardInFlight[key]) return;
+
+    cardInFlight[key] = true;
+    cardQueue.push({ key: key, code: d.code, price: d.price });
+    pumpCardQueue();
+  }
+
+  // Only ask for cards the shopper can actually see; the rest are requested as they
+  // scroll in. Keeps a 40-product category from firing 40 requests at once.
+  var cardObserver = window.IntersectionObserver
+    ? new IntersectionObserver(function (entries) {
+        for (var i = 0; i < entries.length; i++) {
+          if (entries[i].isIntersecting) {
+            queueCard(entries[i].target);
+            cardObserver.unobserve(entries[i].target);
+          }
+        }
+      }, { rootMargin: '200px' })
+    : null;
+
+  function updateListingCards() {
+    if (badgesDisabled) return;
+    var cards = listingCards();
+    for (var i = 0; i < cards.length; i++) {
+      if (cardObserver) cardObserver.observe(cards[i]);
+      else queueCard(cards[i]);
+    }
+    paintKnownCards();
+  }
+
   // ── cart summary (always shown while the connection is active) ─────────────
   function updateCart() {
     var allLines = cartItems();
@@ -318,6 +477,7 @@
     clearTimeout(timer);
     timer = setTimeout(function () {
       updateProductBadge();
+      updateListingCards();
       updateCart();
     }, 250);
   }
@@ -338,11 +498,22 @@
       document.querySelector('.cart-content') ||
       document.querySelector('#content-wrapper') ||
       document.body;
+    // Ignore anything we inserted ourselves, otherwise painting a badge wakes the
+    // observer, which repaints, which wakes it again.
+    var isOurs = function (n) {
+      return !!(n && n.classList && (n.classList.contains(CLS) || n.classList.contains(CLS_CARD)));
+    };
+    var onlyOurNodes = function (list) {
+      if (!list || !list.length) return false;
+      for (var j = 0; j < list.length; j++) if (!isOurs(list[j])) return false;
+      return true;
+    };
+
     new MutationObserver(function (muts) {
       for (var i = 0; i < muts.length; i++) {
-        // Ignore our own badge insertions, otherwise the observer loops.
-        var t = muts[i].target;
-        if (t && t.classList && t.classList.contains(CLS)) continue;
+        var m = muts[i];
+        if (isOurs(m.target)) continue;
+        if (onlyOurNodes(m.addedNodes) || onlyOurNodes(m.removedNodes)) continue;
         refresh();
         return;
       }
