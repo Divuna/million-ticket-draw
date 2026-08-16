@@ -96,6 +96,35 @@
             el.textContent || '').trim() || null;
   }
 
+  // Parses a Czech price string ("1 234,50 Kč") or a microdata attribute.
+  function parsePrice(raw) {
+    var n = parseFloat(
+      String(raw == null ? '' : raw).replace(/\s/g, '').replace(/ /g, '').replace(/[^\d,.-]/g, '').replace(',', '.'),
+    );
+    return isFinite(n) && n > 0 ? n : 0;
+  }
+
+  // Current price of the product being viewed, for the product detail badge.
+  function currentProductPrice() {
+    try {
+      var dl = window.dataLayer || [];
+      for (var i = dl.length - 1; i >= 0; i--) {
+        var e = dl[i];
+        if (e && e.ecommerce && e.ecommerce.detail && e.ecommerce.detail.products) {
+          var p = e.ecommerce.detail.products[0];
+          if (p && p.price) {
+            var dlPrice = parsePrice(p.price);
+            if (dlPrice > 0) return dlPrice;
+          }
+        }
+      }
+    } catch (_) { /* fall through to DOM */ }
+
+    var el = document.querySelector('[data-micro-price], .price-final-holder, .price-final, .p-final-price');
+    if (!el) return 0;
+    return parsePrice(el.getAttribute('data-micro-price') || el.textContent);
+  }
+
   function cartItems() {
     var rows = document.querySelectorAll('[data-micro-product-id], .cart-item, tr[data-micro]');
     var items = [];
@@ -111,18 +140,30 @@
       var qty = qtyEl ? parseFloat(qtyEl.value || qtyEl.getAttribute('value') || '1') : 1;
 
       var priceEl = row.querySelector('[data-micro-price], .p-price, .price');
-      var price = priceEl
-        ? parseFloat(String(priceEl.getAttribute('data-micro-price') || priceEl.textContent)
-            .replace(/[^\d,.-]/g, '').replace(/\s/g, '').replace(',', '.'))
-        : 0;
+      var price = priceEl ? parsePrice(priceEl.getAttribute('data-micro-price') || priceEl.textContent) : 0;
 
       items.push({
         code: String(code).trim(),
         quantity: qty > 0 ? qty : 1,
-        unit_price_czk: isFinite(price) && price > 0 ? price : 0,
+        unit_price_czk: price,
       });
     }
     return items;
+  }
+
+  // Current goods value of the basket: sum(unit_price * quantity).
+  //
+  // This is NOT a reward calculation — it is the order value the engine needs as
+  // input. compute_partner_reward requires order_total_czk in whole_shop mode (the
+  // default for every partner), and without it the endpoint answers
+  // `invalid_order_total_czk` and the widget renders nothing. No MioCoin amount is
+  // ever derived here; the engine remains the only thing that turns money into MC.
+  function itemsValue(items) {
+    var total = 0;
+    for (var i = 0; i < items.length; i++) {
+      total += items[i].unit_price_czk * items[i].quantity;
+    }
+    return total;
   }
 
   // ── product page badge (partner can switch this off) ───────────────────────
@@ -130,10 +171,22 @@
     var code = currentProductCode();
     if (!code) return;
 
-    preview({ partner_id: partnerId, items: [{ code: code, quantity: 1 }] }).then(function (res) {
+    // A single unit of this product. order_total_czk is that unit's price, so the
+    // badge works in whole_shop mode too — not only when a SKU rule exists.
+    var price = currentProductPrice();
+    var items = [{ code: code, quantity: 1, unit_price_czk: price }];
+
+    preview({
+      partner_id: partnerId,
+      items: items,
+      order_total_czk: itemsValue(items),
+    }).then(function (res) {
       if (!res || res.status !== 'ok' || !res.enabled) return;
       if (res.product_badge_enabled === false) return;
 
+      // whole_shop returns an empty per-item breakdown, so fall back to the order
+      // total; selected_products returns the SKU's own figure. Either way the
+      // number comes from the engine.
       var coins = (res.items && res.items[0] && res.items[0].coins) || res.coins || 0;
       if (coins <= 0) return;
 
@@ -150,7 +203,13 @@
     var items = cartItems();
     if (items.length === 0) { removeAll(); return; }
 
-    preview({ partner_id: partnerId, items: items }).then(function (res) {
+    // order_total_czk is required by the engine in whole_shop mode (the default),
+    // and is harmlessly ignored when per-product rules drive the result.
+    preview({
+      partner_id: partnerId,
+      items: items,
+      order_total_czk: itemsValue(items),
+    }).then(function (res) {
       if (!res || res.status !== 'ok' || !res.enabled || !res.coins) { removeAll(); return; }
 
       var target =
