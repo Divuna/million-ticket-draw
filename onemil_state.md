@@ -30,6 +30,11 @@ jen **5 objednávek** (DEMO000001–05, 3 položky na objednávku) — export je
 Původní kód považoval každý řádek za samostatnou objednávku a volal RPC 15×; zachránil ho jen
 idempotenční guard. Nový kód správně seskupí na 5. Výsledek obou běhů shodný: 0 created, 0 failed.
 
+**Živý cron ověřen po nasazení:** běh 16. 8. 2026 09:15 UTC (job 26, `*/15 * * * *`) —
+`trigger=cron, mode=live, status=ok`, 15 řádků → **5 objednávek**, 0 invalid, 0 created,
+5 status_updated, 0 failed. Automatická produkční cesta funguje s novým importérem.
+Baseline po tomto běhu stále 13 / 181 / `d0d4d588857649f771c203dd21069101`.
+
 Cíl: partner může měnit globální konverzi za provozu, odměňovat celý e-shop / jen vybrané produkty /
 celý e-shop s výjimkami, a zákazník vidí v Shoptetu (produkt + povinně košík) přesně tolik MioCoinů,
 kolik mu OneMil po objednávce skutečně vydá.

@@ -23,6 +23,8 @@
   **5 objednávek** (DEMO000001–05, 3 položky na objednávku) — export je už teď položkový. Původní
   kód považoval každý řádek za samostatnou objednávku a volal RPC 15× (zachránil ho jen idempotenční
   guard); nový kód správně seskupí na 5. Oba běhy: 0 created, 0 failed.
+- **Živý cron ověřen po nasazení:** běh 09:15 UTC (job 26) status ok, 15 řádků → 5 objednávek,
+  0 invalid, 0 created, 5 status_updated, 0 failed. Baseline po běhu nezměněn.
 - **Bezpečný mezistav do Lovable Publish:** všech 12 produkčních partnerů má `reward_mode=whole_shop`
   (bit-for-bit původní chování) a jiný režim si nemůže nastavit, dokud UI nevyjde.
 - **Nález mimo rozsah:** `npx tsc --noEmit` je v tomto repu no-op (kořenový tsconfig je
