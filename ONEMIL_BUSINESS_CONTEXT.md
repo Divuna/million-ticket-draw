@@ -99,6 +99,46 @@ Partners should be able to control:
 
 The partner has control over how many MioCoins are distributed. OneMil measures what customers actually activate and use.
 
+### 6.1 Product-level reward rules — confirmed target model
+
+A partner chooses **how** they reward, in one place in the partner dashboard:
+
+1. **Whole e-shop** — the partner's global conversion applies to the whole order
+   (`100 Kč = 5 MioCoins`). This is the default and today's behaviour.
+2. **Selected products only** — only products with an explicit rule earn MioCoins.
+   Everything else in the basket earns nothing.
+3. **Whole e-shop + exceptions** — the global conversion applies, but individual
+   products can override it.
+
+Confirmed rules:
+
+- The partner can change the global conversion at any time (`100/5 → 100/10`) **without any
+  superadmin approval**. The new rate applies to new orders only. Orders and MioCoin rewards that
+  already exist are never recalculated.
+- A product rule is matched **only by the stable product code / SKU**. The product name is
+  display-only information for the partner. Example: `ABC123 — Parfém do auta — 10 MioCoins`.
+- **Quantity multiplies the reward.** `ABC123 = 10 MC` and the customer buys 2 pieces → 20 MioCoins.
+- A ratio-based product reward uses the **real after-discount price** of the product.
+- Rounding happens **once**, on the reward for the whole relevant purchase — never separately per
+  item.
+
+### 6.2 What the customer sees in the partner's Shoptet
+
+A small OneMil widget (one JS snippet, no secret key) shows the customer, before they buy:
+
+- a badge on the product listing and product detail — e.g. *"Za tento produkt získáte 10 MioCoinů"*
+- the expected reward for the current basket — e.g. *"Za tento nákup získáte přibližně 37 MioCoinů"*
+
+The basket figure recalculates whenever quantity, products or prices change. The partner can switch
+the **product badge** off; the **basket information stays on** whenever the Shoptet MioCoin
+connection is active.
+
+**Non-negotiable technical invariant:** the amount shown to the customer and the amount OneMil
+actually issues after the order are produced by **one shared server-side reward engine**. The widget
+only displays the result of that engine — it never calculates a reward itself. The Shoptet import and
+the Partner Order API issue MioCoins through the same engine, so a preview and a real payout can
+never drift apart.
+
 ---
 
 ## 7. Performance-based billing model

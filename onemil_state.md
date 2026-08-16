@@ -1,7 +1,59 @@
 # OneMil – aktuální stav projektu
 
-> **Autoritativní aktuální stav. Aktualizováno 13. 8. 2026.**
+> **Autoritativní aktuální stav. Aktualizováno 16. 8. 2026.**
 > Historický vývoj je v `onemil_history.md` a v Git historii. Pokud starší dokumentace odporuje tomuto souboru, pro současný provoz platí tento soubor a skutečný stav ověřený v GitHubu/Supabase.
+
+## 0a. Partnerské produktové MioCoin odměny + Shoptet widget (rozpracováno, 16. 8. 2026)
+
+Větev `claude/partner-product-rewards`. **Produkce `xkzhjldrojjlrkezorey` NEDOTČENA** — vše zatím
+jen na stagingu `dxmowysntemfqfnanxua`. Produkční apply migrací vyžaduje výslovné schválení Pavla.
+
+Cíl: partner může měnit globální konverzi za provozu, odměňovat celý e-shop / jen vybrané produkty /
+celý e-shop s výjimkami, a zákazník vidí v Shoptetu (produkt + povinně košík) přesně tolik MioCoinů,
+kolik mu OneMil po objednávce skutečně vydá.
+
+### Checklist fází
+
+- [x] **datový model** — `20260816100000_partner_product_reward_rules.sql`
+- [x] **shared reward engine** — `20260816110000_compute_partner_reward_engine.sql`
+- [x] **create_partner_order_reward integration** — `20260816120000_create_partner_order_reward_items.sql`
+- [ ] Shoptet item CSV parser (`import-shoptet-orders`)
+- [ ] partner product UI (`PartnerDashboard`)
+- [ ] Partner Order API items (`partner-activate`)
+- [ ] widget preview endpoint
+- [ ] Shoptet widget snippet
+- [ ] E2E
+- [ ] production validation (**vyžaduje schválení Pavla**)
+
+### KRITICKÝ INVARIANT (neměnit)
+
+Existuje **jediný** výpočet odměny: `public.compute_partner_reward(uuid, numeric, jsonb)`.
+Volají ho `create_partner_order_reward` (skutečné vydání MC) i budoucí widget preview endpoint
+(zobrazení zákazníkovi). **Nikdy neimplementovat druhý výpočet** v TypeScriptu, ve widget JS ani
+v jiné RPC — jinak se to, co zákazník vidí v košíku, rozejde s tím, co dostane.
+
+### Potvrzená pravidla zakódovaná v engine
+
+- Množství násobí odměnu (SKU = 10 MC, 2 ks → 20 MC).
+- Poměrová odměna používá **skutečnou cenu po slevě** (`unit_price_czk` z importu).
+- **Zaokrouhlení právě jednou** na součtu celé objednávky, nikdy po položkách.
+  Ověřeno: 3× 33 Kč při 100/5 → raw 4,95 → **4 MC** (po položkách by vyšlo 3).
+- Párování produktu **výhradně podle kódu/SKU**, case-insensitive + trim; název je jen zobrazovací.
+- `whole_shop` ignoruje položky úplně → bit-for-bit původní chování.
+- `selected_products` **bez položek odmítne** (`items_required_for_reward_mode`) — tichý fallback na
+  celou objednávku by vyplatil pravý opak toho, co partner nastavil.
+- `whole_shop_with_exceptions` bez položek bezpečně degraduje na globální sazbu z ceny objednávky.
+
+### Staging ověřeno (16. 8. 2026, throwaway partner, uklizeno)
+
+Legacy 5-arg volání RPC dál funguje beze změny (Edge Functions se nemusely měnit); item cesta,
+idempotence (`partner_id + external_order_id`, duplicitní volání vrátí stejný kód i coins),
+audit snapshot v `metadata` (`reward_mode`, `reward_computed_from`, `reward_items`, `reward_raw_total_mc`),
+plnění `partner_seen_products` pro produktový picker.
+
+**Změna konverze za provozu ověřena:** po přepnutí 100/5 → 100/10 a pravidla 10 → 20 MC dostala nová
+objednávka 40 MC, zatímco starší kódy zůstaly na 20 a 25 MC s původním snapshotem `5.0000`.
+Existující reward codes se **nikdy zpětně nepřepočítávají**.
 
 ## 0b. Paperclip marketingový tým OneMil (ověřeno 13. 8. 2026)
 

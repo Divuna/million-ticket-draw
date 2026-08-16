@@ -1,3 +1,36 @@
+# 16. 08. 2026 — Partnerské produktové MioCoin odměny: datový model + sdílený reward engine (staging)
+
+- Založena větev `claude/partner-product-rewards`. Cíl: partner může měnit globální konverzi za
+  provozu, odměňovat celý e-shop / jen vybrané produkty / celý e-shop s výjimkami, a zákazník uvidí
+  v Shoptetu (produkt + povinně košík) přesně tolik MioCoinů, kolik mu OneMil po objednávce vydá.
+- **Fáze 1 — datový model** (`20260816100000_partner_product_reward_rules.sql`): aditivní
+  `partners.reward_mode` (default `whole_shop` → nikdo z existujících partnerů nemění chování) a
+  `partners.product_badge_enabled`; nové tabulky `partner_product_reward_rules` (párování výhradně
+  podle SKU, case-insensitive unique index) a `partner_seen_products` (zdroj pro produktový picker).
+  RLS: partner spravuje vlastní pravidla (stejná důvěra jako existující `partners_update_own`),
+  `partner_seen_products` je pro partnera read-only a plní ho jen service_role.
+- **Fáze 2 — sdílený reward engine** (`20260816110000_compute_partner_reward_engine.sql`):
+  `compute_partner_reward(uuid, numeric, jsonb)`, `STABLE SECURITY DEFINER`, EXECUTE jen
+  `service_role`. Čistý výpočet bez zápisů. **Jediné místo, kde se odměna počítá** — widget preview
+  i skutečné vydání MC musí procházet touto funkcí.
+- **Fáze 3 — integrace** (`20260816120000_create_partner_order_reward_items.sql`):
+  `create_partner_order_reward` přestal počítat inline a volá engine; přibyl volitelný `p_items`.
+  Stará 5-arg signatura dropnuta (žádný ambiguous overload), volání s původními pěti pojmenovanými
+  parametry se rozřeší na novou funkci → `import-shoptet-orders` i `partner-activate` fungují beze
+  změny. Audit snapshot v `metadata` rozšířen o `reward_mode`, `reward_computed_from`,
+  `reward_raw_total_mc` a `reward_items`.
+- **Staging ověřeno** na throwaway partnerovi (poté uklizeno, `partners`/pravidla/kódy = 0):
+  whole_shop ignoruje položky (500 Kč @100/5 → 25 MC, stejně s položkami i bez nich); množství
+  násobí (SKU 10 MC × 2 ks → 20 MC); `selected_products` bez položek správně odmítne; výjimkový
+  režim kombinuje pravidlo + globální sazbu (20 + 15 → 35 MC); **jednorázové zaokrouhlení** ověřeno
+  (3× 33 Kč → raw 4,95 → 4 MC, po položkách by vyšlo 3); idempotence zachovaná (druhé volání vrátí
+  stejný kód i coins a ignoruje odlišné položky).
+- **Změna konverze za provozu ověřena:** po přepnutí 100/5 → 100/10 a pravidla 10 → 20 MC dostala
+  nová objednávka 40 MC, starší kódy zůstaly na 20 a 25 MC s původním snapshotem `5.0000`.
+  Existující reward codes se zpětně nepřepočítávají.
+- **Produkce `xkzhjldrojjlrkezorey` nedotčena.** Žádný Edge Function deploy, žádný frontend, žádný
+  e-mail, žádná peněženka. Produkční apply migrací vyžaduje výslovné schválení Pavla.
+
 # 13. 08. 2026 — Paperclip marketingový tým OneMil sjednocen pod Martina
 
 - Živý Paperclip stav marketingu byl ověřen a zapsán do dokumentace. Marketingoví agenti jsou přesně tři, bez duplicit.
