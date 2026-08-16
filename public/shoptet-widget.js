@@ -51,15 +51,21 @@
     '.' + CLS + '{display:inline-flex;align-items:center;gap:6px;margin:8px 0;padding:6px 12px;' +
     'border-radius:999px;background:linear-gradient(135deg,#FF8A00,#FFB547);color:#0A0B0F;' +
     'font-weight:700;font-size:13px;line-height:1.3;}' +
-    // Cart / checkout: a discreet standalone note, NOT a branded pill. It sits in a
-    // stranger's checkout right above their CTA, so it stays on a transparent
-    // background and never restyles or overlaps the shop's own buttons.
+    // Cart / checkout: a plain informational row in the shop's own visual language,
+    // like their shipping/gift lines — outline icon, dark text, no box of any kind.
+    // It sits in a stranger's checkout right above their CTA, so it never carries a
+    // background, border or gradient that would read as our advert over their design.
     '.' + CLS + '--cart{display:flex;align-items:center;justify-content:flex-start;' +
-    'width:100%;box-sizing:border-box;margin:8px 0;padding:8px 0;border:0;border-radius:0;' +
-    'background:none;background-image:none;color:#BD6400;font-weight:700;font-size:13px;' +
-    'line-height:1.35;text-align:left;}' +
-    '.' + CLS + '-ico{display:inline-block;width:17px;height:17px;margin-right:6px;' +
+    'gap:8px;width:100%;box-sizing:border-box;margin:8px 0;padding:8px 0;border:0;' +
+    'border-radius:0;background:none;background-image:none;color:#2E2E2E;font-weight:400;' +
+    'font-size:13px;line-height:1.35;text-align:left;}' +
+    // Generic outline gift box — thin dark stroke, no fill, no background.
+    '.' + CLS + '-gift{width:26px;height:26px;flex-shrink:0;color:#333;}' +
+    // The original MioCoin artwork, inline just before the value.
+    '.' + CLS + '-ico{display:inline-block;width:17px;height:17px;margin:0 4px 0 2px;' +
     'vertical-align:-4px;border-radius:50%;flex-shrink:0;}' +
+    // Only the amount carries the OneMil accent.
+    '.' + CLS + '-val{color:#BD6400;font-weight:700;white-space:nowrap;}' +
     // Listing cards: a wide orange rule under the price, then the MioCoin icon and
     // the reward line. The rule carries the visual accent, which lets the text stay
     // dark enough to read (a full #FF8A00 text on white would fail contrast).
@@ -81,6 +87,21 @@
     return !!(el && el.closest && el.closest(CTA_SEL));
   }
 
+  // Places a freshly built node at the resolved target, refusing to sit inside the
+  // shop's own button/link. Returns false when it had to back out.
+  function place(node, target) {
+    if (target.parent) target.parent.insertBefore(node, target.before);
+    else target.appendChild(node);
+
+    // Safety net: if a template we have not seen still lands us inside a button
+    // or link, back out rather than deface the shop's CTA.
+    if (isInsideCta(node.parentElement)) {
+      node.remove();
+      return false;
+    }
+    return true;
+  }
+
   function render(target, text, isCart) {
     if (!target) return;
     var existing = target.parent
@@ -90,32 +111,87 @@
     if (!existing) {
       existing = document.createElement('div');
       existing.className = CLS + (isCart ? ' ' + CLS + '--cart' : '');
-
-      if (isCart) {
-        var ico = document.createElement('img');
-        ico.className = CLS + '-ico';
-        ico.src = ICON_URL;
-        ico.alt = '';
-        ico.setAttribute('aria-hidden', 'true');
-        ico.width = 17;
-        ico.height = 17;
-        existing.appendChild(ico);
-        existing.appendChild(document.createElement('span'));
-      }
-
-      if (target.parent) target.parent.insertBefore(existing, target.before);
-      else target.appendChild(existing);
-
-      // Safety net: if a template we have not seen still lands us inside a button
-      // or link, back out rather than deface the shop's CTA.
-      if (isInsideCta(existing.parentElement)) {
-        existing.remove();
-        return;
-      }
+      if (!place(existing, target)) return;
     }
 
-    var slot = isCart ? existing.querySelector('span') : null;
-    (slot || existing).textContent = text;
+    existing.textContent = text;
+  }
+
+  // Simple outline gift box, drawn inline so it costs no request and copies no
+  // third-party asset. Thin dark stroke, no fill — the same visual weight as the
+  // shop's own shipping/gift glyphs.
+  function giftIcon() {
+    var NS = 'http://www.w3.org/2000/svg';
+    var svg = document.createElementNS(NS, 'svg');
+    svg.setAttribute('class', CLS + '-gift');
+    svg.setAttribute('viewBox', '0 0 24 24');
+    svg.setAttribute('fill', 'none');
+    svg.setAttribute('stroke', 'currentColor');
+    svg.setAttribute('stroke-width', '1.5');
+    svg.setAttribute('stroke-linecap', 'round');
+    svg.setAttribute('stroke-linejoin', 'round');
+    svg.setAttribute('aria-hidden', 'true');
+    svg.setAttribute('focusable', 'false');
+
+    var paths = [
+      'M3.5 10.5h17V20a1 1 0 0 1-1 1h-15a1 1 0 0 1-1-1v-9.5Z', // box
+      'M2.5 6.5h19v4h-19z',                                     // lid
+      'M12 6.5V21',                                             // ribbon
+      'M12 6.5S10.6 3 8.6 3 6 4.1 6 5s.8 1.5 2 1.5h4Z',        // left bow loop
+      'M12 6.5S13.4 3 15.4 3 18 4.1 18 5s-.8 1.5-2 1.5h-4Z',   // right bow loop
+    ];
+    for (var i = 0; i < paths.length; i++) {
+      var p = document.createElementNS(NS, 'path');
+      p.setAttribute('d', paths[i]);
+      svg.appendChild(p);
+    }
+    return svg;
+  }
+
+  /**
+   * The checkout note, laid out as:
+   *   [gift outline]  Dárek od nás: [MioCoin] 15 MioCoinů do soutěží OneMil
+   * Only the amount is highlighted; everything else is the shop's normal dark text.
+   */
+  function renderCartNote(target, coins) {
+    if (!target) return;
+    var existing = target.parent
+      ? target.parent.querySelector('.' + CLS)
+      : target.querySelector('.' + CLS);
+
+    if (!existing) {
+      existing = document.createElement('div');
+      existing.className = CLS + ' ' + CLS + '--cart';
+      existing.appendChild(giftIcon());
+
+      var body = document.createElement('span');
+      body.className = CLS + '-body';
+
+      // Trailing space so the sentence still reads correctly if the icon between
+      // the colon and the amount ever fails to load.
+      body.appendChild(document.createTextNode('Dárek od nás: '));
+
+      var ico = document.createElement('img');
+      ico.className = CLS + '-ico';
+      ico.src = ICON_URL;
+      ico.alt = '';
+      ico.setAttribute('aria-hidden', 'true');
+      ico.width = 17;
+      ico.height = 17;
+      body.appendChild(ico);
+
+      var val = document.createElement('span');
+      val.className = CLS + '-val';
+      body.appendChild(val);
+
+      body.appendChild(document.createTextNode(' do soutěží OneMil'));
+      existing.appendChild(body);
+
+      if (!place(existing, target)) return;
+    }
+
+    var valEl = existing.querySelector('.' + CLS + '-val');
+    if (valEl) valEl.textContent = coins + ' ' + czPlural(coins);
   }
 
   // Only clears the cart/detail badge. Listing card badges are managed separately.
@@ -581,7 +657,7 @@
     }).then(function (res) {
       if (!res || res.status !== 'ok' || !res.enabled || !res.coins) { removeAll(); return; }
 
-      render(cartTarget(), 'Získáte přibližně ' + res.coins + ' ' + czPlural(res.coins), true);
+      renderCartNote(cartTarget(), res.coins);
     });
   }
 

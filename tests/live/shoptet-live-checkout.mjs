@@ -40,7 +40,7 @@ async function check(label, file) {
       parent: `${w.parentElement.tagName.toLowerCase()}.${String(w.parentElement.className).trim().split(/\s+/).slice(0,3).join('.')}`,
       aboveButtons: nextStep ? (w.compareDocumentPosition(nextStep) & Node.DOCUMENT_POSITION_FOLLOWING) !== 0 : null,
       bg: s.backgroundColor, bgImg: s.backgroundImage, color: s.color,
-      hasIcon: !!w.querySelector('img'),
+      hasIcon: !!w.querySelector('img'), hasGift: !!w.querySelector('svg'), giftStroke: w.querySelector('svg')?getComputedStyle(w.querySelector('svg')).color:null, giftW: w.querySelector('svg')?Math.round(w.querySelector('svg').getBoundingClientRect().width):null, valColor: w.querySelector('.onemil-mc-widget-val')?getComputedStyle(w.querySelector('.onemil-mc-widget-val')).color:null,
       overflow: document.documentElement.scrollWidth,
     };
   });

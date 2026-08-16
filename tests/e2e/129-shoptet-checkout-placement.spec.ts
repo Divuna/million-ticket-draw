@@ -128,7 +128,7 @@ test.describe('129 — checkout placement never touches the shop CTA', () => {
   test('129a) basket: renders outside the CTA, above the button block', async ({ page }) => {
     await stubPreview(page);
     await mount(page, BASKET_DOM);
-    await expect(page.locator('.onemil-mc-widget')).toContainText('Získáte přibližně 2 MioCoiny');
+    await expect(page.locator('.onemil-mc-widget')).toContainText('Dárek od nás: 2 MioCoiny do soutěží OneMil');
 
     await assertOutsideCta(page);
 
@@ -143,7 +143,7 @@ test.describe('129 — checkout placement never touches the shop CTA', () => {
   test('129b) checkout step: the exact case that used to land inside the button', async ({ page }) => {
     await stubPreview(page);
     await mount(page, CHECKOUT_DOM);
-    await expect(page.locator('.onemil-mc-widget')).toContainText('Získáte přibližně 2 MioCoiny');
+    await expect(page.locator('.onemil-mc-widget')).toContainText('Dárek od nás: 2 MioCoiny do soutěží OneMil');
 
     await assertOutsideCta(page);
 
@@ -173,7 +173,7 @@ test.describe('129 — checkout placement never touches the shop CTA', () => {
   test('129c) even with no .next-step wrapper it stays out of the bare CTA', async ({ page }) => {
     await stubPreview(page);
     await mount(page, BARE_CTA_DOM);
-    await expect(page.locator('.onemil-mc-widget')).toContainText('Získáte přibližně 2 MioCoiny');
+    await expect(page.locator('.onemil-mc-widget')).toContainText('Dárek od nás: 2 MioCoiny do soutěží OneMil');
 
     await assertOutsideCta(page);
     const inBtn = await page.$eval('#orderFormButton', (el) => !!el.querySelector('.onemil-mc-widget'));
@@ -189,23 +189,80 @@ test.describe('129 — checkout placement never touches the shop CTA', () => {
       const c = getComputedStyle(el);
       return { bg: c.backgroundColor, bgImage: c.backgroundImage, color: c.color, border: c.borderTopWidth };
     });
-    // Transparent, no gradient — it must not read as a button of ours.
+    // Transparent, no gradient, no border — it must read as the shop's own info
+    // line, not as an advert pasted over their design.
     expect(s.bgImage).toBe('none');
     expect(s.bg).toBe('rgba(0, 0, 0, 0)');
-    expect(s.color).toBe('rgb(189, 100, 0)');
     expect(s.border).toBe('0px');
+    // Body text is dark; only the amount carries the OneMil accent.
+    expect(s.color).toBe('rgb(46, 46, 46)');
 
-    // Small MioCoin icon from the project's own artwork.
+    const val = await page.$eval('.onemil-mc-widget-val', (el) => ({
+      color: getComputedStyle(el).color,
+      text: el.textContent!.trim(),
+    }));
+    expect(val.color, 'the amount is the only highlighted part').toBe('rgb(189, 100, 0)');
+    expect(val.text).toBe('2 MioCoiny');
+
+    // Outline gift glyph: thin dark stroke, no fill, no background of its own.
+    const gift = await page.$eval('.onemil-mc-widget-gift', (el) => {
+      const c = getComputedStyle(el);
+      return {
+        tag: el.tagName.toLowerCase(),
+        w: parseFloat(c.width),
+        h: parseFloat(c.height),
+        fill: el.getAttribute('fill'),
+        stroke: el.getAttribute('stroke'),
+        strokeWidth: el.getAttribute('stroke-width'),
+        color: c.color,
+        bg: c.backgroundColor,
+        ariaHidden: el.getAttribute('aria-hidden'),
+      };
+    });
+    expect(gift.tag).toBe('svg');
+    expect(gift.fill, 'outline only — never filled').toBe('none');
+    expect(gift.stroke).toBe('currentColor');
+    expect(parseFloat(gift.strokeWidth!)).toBeLessThanOrEqual(2);
+    expect(gift.w).toBeGreaterThanOrEqual(24);
+    expect(gift.w).toBeLessThanOrEqual(28);
+    expect(gift.h).toBe(gift.w);
+    expect(gift.color, 'dark stroke, not orange').toBe('rgb(51, 51, 51)');
+    expect(gift.bg).toBe('rgba(0, 0, 0, 0)');
+    expect(gift.ariaHidden).toBe('true');
+
+    // Original MioCoin artwork, immediately before the amount.
+    // naturalWidth is 0 until the file has actually decoded, so wait for it rather
+    // than racing the render.
+    await expect
+      .poll(() => page.$eval('.onemil-mc-widget img', (el) => (el as HTMLImageElement).naturalWidth),
+        { timeout: 10_000 })
+      .toBeGreaterThan(0);
+
     const ico = await page.$eval('.onemil-mc-widget img', (el) => {
       const c = getComputedStyle(el);
       const img = el as HTMLImageElement;
-      return { src: img.getAttribute('src'), w: parseFloat(c.width), natural: img.naturalWidth, alt: img.getAttribute('alt') };
+      return {
+        src: img.getAttribute('src'), w: parseFloat(c.width),
+        natural: img.naturalWidth, alt: img.getAttribute('alt'),
+        nextIsValue: (img.nextElementSibling as HTMLElement | null)?.className ?? '',
+      };
     });
     expect(ico.src).toContain('miocoin-icon.png');
     expect(ico.w).toBeGreaterThanOrEqual(16);
     expect(ico.w).toBeLessThanOrEqual(18);
     expect(ico.natural, 'icon must load').toBeGreaterThan(0);
     expect(ico.alt).toBe('');
+    expect(ico.nextIsValue, 'coin sits right before the amount').toContain('-val');
+
+    // Reading order: gift glyph, then the sentence.
+    const firstChild = await page.$eval('.onemil-mc-widget',
+      (el) => el.firstElementChild!.tagName.toLowerCase());
+    expect(firstChild).toBe('svg');
+
+    // The word "přibližně" was deliberately dropped from this copy.
+    const full = await page.$eval('.onemil-mc-widget', (el) => el.textContent!.trim());
+    expect(full).toBe('Dárek od nás: 2 MioCoiny do soutěží OneMil');
+    expect(full).not.toContain('přibližně');
   });
 
   test('129e) the shop\'s own CTA styling is left completely alone', async ({ page }) => {

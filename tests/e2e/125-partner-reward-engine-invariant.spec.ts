@@ -109,7 +109,7 @@ test.describe('125 — one shared reward engine', () => {
     expect(code.toLowerCase()).not.toContain('bearer');
     // Cart figure is mandatory; only the product badge is partner-toggleable.
     expect(widget).toContain('product_badge_enabled');
-    expect(widget).toContain('Získáte přibližně');
+    expect(widget).toContain('Dárek od nás:');
     expect(widget).toContain('Za tento produkt získáte');
     // It must react to basket changes.
     expect(widget).toContain('MutationObserver');
