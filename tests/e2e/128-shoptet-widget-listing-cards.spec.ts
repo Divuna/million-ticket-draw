@@ -142,9 +142,18 @@ test.describe('128 — MioCoin badge on listing cards', () => {
       ]),
     );
 
-    // Positioned under the price, inside the card's price block.
-    const parentClass = await page.$eval('.onemil-mc-card', (e) => e.parentElement!.className);
-    expect(parentClass).toContain('prices');
+    // Positioned under the price block, in the full-width offer wrapper. .prices is
+    // only ~125px on the real template (price and buy button share a row), which
+    // wrapped the line onto three lines and clipped the rule.
+    const placement = await page.$eval('.onemil-mc-card', (e) => ({
+      parentMicro: e.parentElement!.getAttribute('data-micro'),
+      // Must come after the price, and before the description when there is one.
+      afterPrices: !!e.parentElement!.querySelector('.prices')
+        && (e.parentElement!.querySelector('.prices')!.compareDocumentPosition(e)
+            & Node.DOCUMENT_POSITION_FOLLOWING) !== 0,
+    }));
+    expect(placement.parentMicro).toBe('offer');
+    expect(placement.afterPrices, 'badge renders below the price').toBe(true);
   });
 
   test('128b) product_badge_enabled=false shows nothing on the cards', async ({ page }) => {
@@ -234,7 +243,7 @@ test.describe('128 — MioCoin badge on listing cards', () => {
     expect((await badgeTexts(page)).length).toBe(1);
   });
 
-  test('128h) approved look: short orange rule above orange text, price untouched', async ({ page }) => {
+  test('128h) approved look: wide orange rule, MioCoin icon + orange text, price untouched', async ({ page }) => {
     await stubPreview(page);
     await mountListing(page, LISTING);
     await expect.poll(() => badgeTexts(page).then((b) => b.length), { timeout: 10_000 }).toBe(3);
@@ -246,25 +255,62 @@ test.describe('128 — MioCoin badge on listing cards', () => {
         display: s.display,
         color: s.color,
         fontWeight: s.fontWeight,
-        ruleWidth: rule.width,
+        ruleWidth: parseFloat(rule.width),
         ruleHeight: rule.height,
         ruleBg: rule.backgroundColor,
         ruleDisplay: rule.display,
       };
     });
 
-    // Variant 1: a short vivid brand-orange rule, then a stronger orange text line.
+    // Approved: a wide vivid brand-orange rule, then icon + orange text.
     expect(look.ruleDisplay).toBe('block');
-    expect(look.ruleWidth).toBe('28px');
+    expect(look.ruleWidth, 'rule should read as a bold 110-130px line').toBeGreaterThanOrEqual(110);
+    expect(look.ruleWidth).toBeLessThanOrEqual(130);
     expect(look.ruleHeight).toBe('3px');
     expect(look.ruleBg).toBe('rgb(255, 138, 0)');   // Energy Orange
     expect(look.color).toBe('rgb(189, 100, 0)');    // readable orange text
     expect(look.fontWeight).toBe('700');
     expect(look.display).toBe('block');
 
+    // The MioCoin icon: the project's own artwork, small and aligned with the text.
+    const ico = await page.$eval('.onemil-mc-card .onemil-mc-card-ico', (el) => {
+      const s = getComputedStyle(el);
+      const img = el as HTMLImageElement;
+      return {
+        src: img.getAttribute('src') ?? '',
+        width: parseFloat(s.width),
+        height: parseFloat(s.height),
+        naturalWidth: img.naturalWidth,   // 0 would mean the file failed to load
+        alt: img.getAttribute('alt'),
+        ariaHidden: img.getAttribute('aria-hidden'),
+      };
+    });
+    expect(ico.src, 'icon comes from the widget origin, next to the script').toContain('miocoin-icon.png');
+    expect(ico.width).toBeGreaterThanOrEqual(16);
+    expect(ico.width).toBeLessThanOrEqual(18);
+    expect(ico.height).toBe(ico.width);
+    expect(ico.naturalWidth, 'icon file must actually load').toBeGreaterThan(0);
+    // Decorative: the sentence next to it already says the same thing.
+    expect(ico.alt).toBe('');
+    expect(ico.ariaHidden).toBe('true');
+
+    // Icon sits before the text, on the same line.
+    const firstChildClass = await page.$eval('.onemil-mc-card',
+      (el) => (el.firstElementChild as HTMLElement).className);
+    expect(firstChildClass).toContain('-ico');
+
     // The shop's own price element must not be restyled by us.
     const priceColor = await page.$eval('.price-final', (el) => getComputedStyle(el).color);
     expect(priceColor).not.toBe('rgb(189, 100, 0)');
+  });
+
+  test('128j) the icon is a small optimized copy served from public/', async ({ page }) => {
+    // The 1024x1024 / ~1.7 MB source asset must never be shipped to a storefront.
+    const r = await page.request.get('/miocoin-icon.png');
+    expect(r.status()).toBe(200);
+    expect(r.headers()['content-type']).toContain('image/png');
+    const bytes = (await r.body()).length;
+    expect(bytes, 'icon must stay tiny — it repeats on every card').toBeLessThan(30 * 1024);
   });
 
   test('128i) badge wraps instead of overflowing on a narrow mobile card', async ({ page }) => {

@@ -8,9 +8,13 @@ import { resolve } from 'node:path';
 
 const SHOP = 'https://809915.myshoptet.com';
 const WIDGET = readFileSync(resolve('public/shoptet-widget.js'), 'utf8');
+const ICON = readFileSync(resolve('public/miocoin-icon.png'));
 
 const browser = await chromium.launch();
 const page = await browser.newPage();
+// The icon is not published yet, so serve the local copy too.
+await page.route('https://onemil.cz/miocoin-icon.png', (r) =>
+  r.fulfill({ status: 200, contentType: 'image/png', body: ICON }));
 await page.route('https://onemil.cz/shoptet-widget.js', (r) =>
   r.fulfill({ status: 200, contentType: 'text/javascript; charset=utf-8', body: WIDGET }));
 

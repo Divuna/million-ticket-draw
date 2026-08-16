@@ -38,6 +38,13 @@
   // the basket empties, and must never wipe the badges on a category page.
   var CLS_CARD = 'onemil-mc-card';
 
+  // The MioCoin icon sits next to this file, so it is resolved from the script's own
+  // URL. That keeps it correct on the partner's domain (absolute onemil.cz URL) and
+  // in tests (localhost) without a second setting to configure.
+  var ICON_URL = script.src
+    ? script.src.replace(/[^/]*$/, 'miocoin-icon.png')
+    : 'https://onemil.cz/miocoin-icon.png';
+
   // ── styling ────────────────────────────────────────────────────────────────
   var style = document.createElement('style');
   style.textContent =
@@ -46,16 +53,17 @@
     'font-weight:700;font-size:13px;line-height:1.3;}' +
     '.' + CLS + '--cart{display:flex;width:100%;justify-content:center;border-radius:10px;' +
     'padding:10px 14px;font-size:14px;}' +
-    // Listing cards: a short orange rule under the price, then the reward line.
-    // Deliberately text-only — the project's MioCoin artwork is a ~1.7 MB bundled
-    // asset with a build-hashed filename, so it has no stable URL to reference from
-    // a partner's storefront and would be far too heavy to repeat on every card.
-    // The rule carries the visual accent, which keeps the text itself dark enough
-    // to stay legible (a full #FF8A00 text on white would fail contrast).
+    // Listing cards: a wide orange rule under the price, then the MioCoin icon and
+    // the reward line. The rule carries the visual accent, which lets the text stay
+    // dark enough to read (a full #FF8A00 text on white would fail contrast).
+    // max-width keeps the rule inside a narrow mobile card.
     '.' + CLS_CARD + '{display:block;margin:6px 0 0;font-size:12.5px;line-height:1.35;' +
     'font-weight:700;color:#BD6400;}' +
-    '.' + CLS_CARD + '::before{content:"";display:block;width:28px;height:3px;' +
-    'margin:0 0 4px;border-radius:2px;background:#FF8A00;}';
+    '.' + CLS_CARD + '::before{content:"";display:block;width:120px;max-width:100%;' +
+    'height:3px;margin:0 0 5px;border-radius:2px;background:#FF8A00;}' +
+    // Icon is the original MioCoin artwork, downscaled — see scripts/make-miocoin-icon.mjs.
+    '.' + CLS_CARD + '-ico{display:inline-block;width:17px;height:17px;margin-right:5px;' +
+    'vertical-align:-4px;border-radius:50%;flex-shrink:0;}';
   document.head.appendChild(style);
 
   function render(target, text, isCart) {
@@ -343,11 +351,17 @@
     return { code: code, price: price };
   }
 
-  // Under the price, inside the card.
+  // Under the price block, at full card width.
+  //
+  // Measured on the real template: .prices is only ~125px because the price and the
+  // buy button sit side by side, which forces "Získáte 11 MioCoinů" onto three lines
+  // and clips the 120px rule. The [data-micro="offer"] wrapper around them is ~260px,
+  // so the badge goes there — still directly under the price, but on one clean line.
   function cardTarget(card) {
-    return card.querySelector('.prices') ||
-           card.querySelector('.price-final') ||
-           card.querySelector('.p-bottom');
+    return card.querySelector('[data-micro="offer"]') ||
+           card.querySelector('.p-bottom') ||
+           card.querySelector('.prices') ||
+           card.querySelector('.price-final');
   }
 
   function renderCard(card, coins) {
@@ -357,9 +371,30 @@
     if (!el) {
       el = document.createElement('span');
       el.className = CLS_CARD;
-      target.appendChild(el);
+
+      // Decorative only — the sentence beside it already carries the meaning, so the
+      // icon is hidden from assistive tech rather than read out as a second label.
+      var ico = document.createElement('img');
+      ico.className = CLS_CARD + '-ico';
+      ico.src = ICON_URL;
+      ico.alt = '';
+      ico.setAttribute('aria-hidden', 'true');
+      ico.setAttribute('loading', 'lazy');
+      ico.width = 17;
+      ico.height = 17;
+
+      var txt = document.createElement('span');
+      txt.className = CLS_CARD + '-txt';
+
+      el.appendChild(ico);
+      el.appendChild(txt);
+      // Sit above the short description when the template has one, so the badge
+      // stays visually attached to the price rather than drifting to the card
+      // bottom. insertBefore(null) is a plain append, so both layouts work.
+      target.insertBefore(el, target.querySelector('.p-desc'));
     }
-    el.textContent = 'Získáte ' + coins + ' ' + czPlural(coins);
+    var textNode = el.querySelector('.' + CLS_CARD + '-txt') || el;
+    textNode.textContent = 'Získáte ' + coins + ' ' + czPlural(coins);
   }
 
   function pumpCardQueue() {
