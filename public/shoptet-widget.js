@@ -46,9 +46,16 @@
     'font-weight:700;font-size:13px;line-height:1.3;}' +
     '.' + CLS + '--cart{display:flex;width:100%;justify-content:center;border-radius:10px;' +
     'padding:10px 14px;font-size:14px;}' +
-    // Listing cards: a quiet one-liner under the price, not a loud pill.
-    '.' + CLS_CARD + '{display:block;margin:4px 0 0;font-size:12px;line-height:1.35;' +
-    'font-weight:600;color:#B35F00;white-space:nowrap;}';
+    // Listing cards: a short orange rule under the price, then the reward line.
+    // Deliberately text-only — the project's MioCoin artwork is a ~1.7 MB bundled
+    // asset with a build-hashed filename, so it has no stable URL to reference from
+    // a partner's storefront and would be far too heavy to repeat on every card.
+    // The rule carries the visual accent, which keeps the text itself dark enough
+    // to stay legible (a full #FF8A00 text on white would fail contrast).
+    '.' + CLS_CARD + '{display:block;margin:6px 0 0;font-size:12.5px;line-height:1.35;' +
+    'font-weight:700;color:#BD6400;}' +
+    '.' + CLS_CARD + '::before{content:"";display:block;width:28px;height:3px;' +
+    'margin:0 0 4px;border-radius:2px;background:#FF8A00;}';
   document.head.appendChild(style);
 
   function render(target, text, isCart) {

@@ -233,4 +233,51 @@ test.describe('128 — MioCoin badge on listing cards', () => {
     expect(captured.map((c) => c.items?.[0].code)).toEqual(['GOOD']);
     expect((await badgeTexts(page)).length).toBe(1);
   });
+
+  test('128h) approved look: short orange rule above orange text, price untouched', async ({ page }) => {
+    await stubPreview(page);
+    await mountListing(page, LISTING);
+    await expect.poll(() => badgeTexts(page).then((b) => b.length), { timeout: 10_000 }).toBe(3);
+
+    const look = await page.$eval('.onemil-mc-card', (el) => {
+      const s = getComputedStyle(el);
+      const rule = getComputedStyle(el, '::before');
+      return {
+        display: s.display,
+        color: s.color,
+        fontWeight: s.fontWeight,
+        ruleWidth: rule.width,
+        ruleHeight: rule.height,
+        ruleBg: rule.backgroundColor,
+        ruleDisplay: rule.display,
+      };
+    });
+
+    // Variant 1: a short vivid brand-orange rule, then a stronger orange text line.
+    expect(look.ruleDisplay).toBe('block');
+    expect(look.ruleWidth).toBe('28px');
+    expect(look.ruleHeight).toBe('3px');
+    expect(look.ruleBg).toBe('rgb(255, 138, 0)');   // Energy Orange
+    expect(look.color).toBe('rgb(189, 100, 0)');    // readable orange text
+    expect(look.fontWeight).toBe('700');
+    expect(look.display).toBe('block');
+
+    // The shop's own price element must not be restyled by us.
+    const priceColor = await page.$eval('.price-final', (el) => getComputedStyle(el).color);
+    expect(priceColor).not.toBe('rgb(189, 100, 0)');
+  });
+
+  test('128i) badge wraps instead of overflowing on a narrow mobile card', async ({ page }) => {
+    await page.setViewportSize({ width: 375, height: 812 });
+    await stubPreview(page, { coinsFor: () => 1234 });
+    await mountListing(page, LISTING);
+    await expect.poll(() => badgeTexts(page).then((b) => b.length), { timeout: 10_000 }).toBe(3);
+
+    // white-space:nowrap here would push the card (and the page) sideways.
+    const overflow = await page.evaluate(() => document.documentElement.scrollWidth);
+    expect(overflow, 'no horizontal overflow on mobile').toBeLessThanOrEqual(375);
+
+    const ws = await page.$eval('.onemil-mc-card', (el) => getComputedStyle(el).whiteSpace);
+    expect(ws).not.toBe('nowrap');
+  });
 });

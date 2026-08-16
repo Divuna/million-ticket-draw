@@ -39,5 +39,14 @@ console.log(`REQUESTS SENT   : ${calls.length}`);
 
 mkdirSync('test-results', { recursive: true });
 await page.screenshot({ path: 'test-results/live-shoptet-listing.png', fullPage: false });
+
+// MOBILE check
+await page.setViewportSize({ width: 375, height: 812 });
+await page.waitForTimeout(1500);
+await page.evaluate(()=>window.scrollTo(0,520));
+await page.waitForTimeout(1500);
+const overflow = await page.evaluate(()=>document.documentElement.scrollWidth);
+console.log('MOBILE scrollWidth (must be <=375):', overflow);
+await page.screenshot({ path: 'test-results/live-shoptet-listing-mobile.png', fullPage: false });
 console.log('screenshot: test-results/live-shoptet-listing.png');
 await browser.close();
