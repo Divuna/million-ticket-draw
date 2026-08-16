@@ -1,3 +1,52 @@
+# POVINNÉ UZAVŘENÍ KAŽDÉHO DOKONČENÉHO ÚKOLU (trvalé pravidlo pro všechny AI pracovníky)
+
+Stejné pravidlo je i v `AGENTS.md` a `.cursorrules` — jsou to tři kopie téhož, ne tři různé režimy.
+
+**Po každé skutečně dokončené, ověřené a mergnuté změně musíš ještě před ukončením práce
+zkontrolovat, zda změna ovlivnila dokumentaci projektu.**
+
+Pokud ano, aktualizuj **ve stejném pracovním toku** existující zdroje pravdy:
+
+- **`onemil_state.md`** — aktuální skutečný stav systému: co je hotové, co je nasazené a co
+  zůstává otevřené.
+- **`onemil_history.md`** — stručný historický záznam dokončené práce, důležitých rozhodnutí,
+  oprav a nalezených problémů.
+- **`CLAUDE.md`** — **pouze** nové trvalé technické nebo bezpečnostní invarianty, které musí znát
+  budoucí AI pracovníci.
+- **`ONEMIL_BUSINESS_CONTEXT.md`** — **pouze** pokud vznikla nebo byla Pavlem potvrzena nová
+  obchodní, produktová, partnerská nebo marketingová skutečnost.
+
+## Pravidla
+
+- **Neaktualizovat dokumentaci mechanicky po každé malé změně.** Jen tehdy, když se změnil
+  skutečný stav, chování systému, architektura, produktové pravidlo, bezpečnostní invariant, nebo
+  vznikl důležitý otevřený problém.
+- **Nikdy nevytvářet nový podobný state/context/business soubor** bez výslovného schválení Pavla.
+- **`ONEMIL_BUSINESS_CONTEXT.md` zůstává jediný hlavní obchodní a produktový zdroj pravdy.**
+- **Historické záznamy nepřepisovat tak, aby se měnila historie.** Nové skutečnosti přidávat jako
+  novější stav; starý zápis byl v době vzniku pravdivý.
+- **Dokumentace musí popisovat pouze skutečně ověřený stav**, ne plán ani domněnku.
+- **Pokud změna ještě není nasazená, musí být jasně označená jako nenasazená.**
+- **Pokud existuje otevřený problém, který se nemá právě opravovat, zaznamenat ho jako
+  `OPEN ISSUE`** — včetně toho, co přesně je špatně a co by oprava obnášela.
+- **Dokumentační aktualizace je součástí definice „hotovo“.** Úkol není považován za kompletně
+  uzavřený, dokud tato kontrola neproběhne.
+
+## Kontrola na konci úkolu
+
+Pokud je odpověď na kteroukoli otázku „ano“, dokumentaci aktualizuj:
+
+1. Změnilo se, co je nasazené nebo jak se systém reálně chová?
+2. Vznikl nový trvalý invariant, který by budoucí agent mohl omylem porušit?
+3. Potvrdil Pavel novou obchodní nebo produktovou skutečnost?
+4. Našel jsem problém, který teď vědomě neopravuji?
+
+Toto pravidlo neobchází žádné dosavadní omezení: produkční migrace, změny RLS, zásahy do
+peněženek, plateb a soutěžní logiky a destruktivní operace nad produkčními daty dál vyžadují
+výslovné schválení Pavla.
+
+---
+
 # SHOPTET MIOCOIN WIDGET + PRODUKTOVÉ ODMĚNY — TRVALÉ INVARIANTY (16. 08. 2026)
 
 Funkce je hotová, nasazená a živě ověřená. Produkční `main` v době zápisu: `f31d3937`.
