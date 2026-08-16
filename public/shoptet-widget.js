@@ -25,9 +25,13 @@
   var partnerId = script.getAttribute('data-onemil-partner');
   if (!partnerId) return;
 
+  // PRODUCTION endpoint. This file is served to real storefronts, so the default
+  // must never point at staging — a partner pasting the documented snippet would
+  // otherwise be quoted from staging data (wrong rate, or no partner row at all).
+  // data-onemil-api stays available purely for testing.
   var API =
     script.getAttribute('data-onemil-api') ||
-    'https://dxmowysntemfqfnanxua.supabase.co/functions/v1/partner-reward-preview';
+    'https://xkzhjldrojjlrkezorey.supabase.co/functions/v1/partner-reward-preview';
 
   var CLS = 'onemil-mc-widget';
 
