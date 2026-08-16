@@ -1,3 +1,34 @@
+# 16. 08. 2026 — Produktové MioCoin odměny: PRODUKČNÍ NASAZENÍ (schválení Pavla)
+
+- **Nasazeno na produkci `xkzhjldrojjlrkezorey`:** 3 migrace v pořadí `20260816100000` (datový
+  model) → `20260816110000` (sdílený reward engine) → `20260816120000` (integrace issuance),
+  a 3 Edge Functions: `partner-reward-preview` (nová, veřejná read-only), `import-shoptet-orders`,
+  `partner-activate`. Každý krok měl vlastní postcheck.
+- **Produkční data se nezměnila.** Baseline před zásahem i po úklidu je identický: 13 reward codes,
+  181 coins, checksum `d0d4d588857649f771c203dd21069101`, wallets `138474.41`, 4 aktivace,
+  138 plateb, 1 pending e-mail (pre-existující faktura z 12. 7.). Ověřovací throwaway partner byl
+  po testech odstraněn, bez rezidua.
+- **Parita ověřena na všech 8 reálných partnerech** — engine vrací přesně to, co původní inline
+  vzorec `floor(total/base*mc)`, včetně BOHEMIA (100/5), partnera s 99/10 a necelé částky 317,50 Kč.
+- **Produkční smoke prošel:** legacy 5-arg volání (500 Kč → 25 MC), idempotence (druhé volání vrátí
+  stejný kód i coins), SKU pravidlo + množství (10 MC × 2 ks → 20 MC), `selected_products` bez
+  položek odmítne, výjimkový režim (20 + 15 → 35 MC), sleva (cena po slevě 200 místo 500 → 10 MC),
+  jednorázové zaokrouhlení (3× 33 Kč → raw 4,95 → 4 MC), fallback bez položek (500 Kč → 25 MC).
+- **Kritický invariant ověřen přímo na produkci:** widget preview stejného košíku vrátil 35 MC
+  a skutečně vydáno bylo 35 MC. Po změně konverze 100/5→100/10 a pravidla 10→25 MC nová objednávka
+  dostala 80 MC, zatímco starší kódy zůstaly na 20/25/35 MC s původním snapshotem `5.0000`.
+- **Bezpečnost veřejného endpointu na produkci:** GET→405, neplatné UUID→400, neznámý partner→404,
+  žádný leak export URL / Vault secretu / API klíče / zákaznických dat.
+- **Nález (zlepšení, ne regrese):** dry-run reálného BOHEMIA exportu ukázal 15 CSV řádků, ale jen
+  **5 objednávek** (DEMO000001–05, 3 položky na objednávku) — export je už teď položkový. Původní
+  kód považoval každý řádek za samostatnou objednávku a volal RPC 15× (zachránil ho jen idempotenční
+  guard); nový kód správně seskupí na 5. Oba běhy: 0 created, 0 failed.
+- **Bezpečný mezistav do Lovable Publish:** všech 12 produkčních partnerů má `reward_mode=whole_shop`
+  (bit-for-bit původní chování) a jiný režim si nemůže nastavit, dokud UI nevyjde.
+- **Nález mimo rozsah:** `npx tsc --noEmit` je v tomto repu no-op (kořenový tsconfig je
+  solution-style); správně je `npx tsc -p tsconfig.app.json --noEmit` → 18 předexistujících chyb
+  na `main`, tato práce nepřidala žádnou.
+
 # 16. 08. 2026 — Produktové odměny: Shoptet položkový import, partner UI, widget (staging)
 
 - **Fáze 4 — položkový Shoptet import.** Parsing přesunut do `import-shoptet-orders/csv.ts`

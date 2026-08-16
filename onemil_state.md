@@ -3,10 +3,32 @@
 > **Autoritativní aktuální stav. Aktualizováno 16. 8. 2026.**
 > Historický vývoj je v `onemil_history.md` a v Git historii. Pokud starší dokumentace odporuje tomuto souboru, pro současný provoz platí tento soubor a skutečný stav ověřený v GitHubu/Supabase.
 
-## 0a. Partnerské produktové MioCoin odměny + Shoptet widget (rozpracováno, 16. 8. 2026)
+## 0a. Partnerské produktové MioCoin odměny + Shoptet widget — PRODUKČNĚ NASAZENO (16. 8. 2026)
 
-Větev `claude/partner-product-rewards`. **Produkce `xkzhjldrojjlrkezorey` NEDOTČENA** — vše zatím
-jen na stagingu `dxmowysntemfqfnanxua`. Produkční apply migrací vyžaduje výslovné schválení Pavla.
+**Backend je LIVE na produkci `xkzhjldrojjlrkezorey`** (výslovné schválení Pavla). Staging
+`dxmowysntemfqfnanxua` má totéž. **Zbývá jediný krok: ruční Lovable Publish frontendu (dělá Pavel).**
+
+Do publishe je stav bezpečný: všech 12 produkčních partnerů má `reward_mode='whole_shop'`, což je
+bit-for-bit původní chování, a partner si jiný režim nemůže nastavit, dokud UI nevyjde. Widget se
+aktivuje až tím, že si partner sám vloží snippet do Shoptetu.
+
+### Produkční nasazení (16. 8. 2026)
+
+**Migrace (v tomto pořadí):** `20260816100000` → `20260816110000` → `20260816120000`.
+**Edge Functions:** `partner-reward-preview` (nová, `verify_jwt=false`), `import-shoptet-orders`,
+`partner-activate`.
+
+**Baseline před zásahem a po úklidu je identický:** 13 reward codes / 181 coins /
+checksum `d0d4d588857649f771c203dd21069101`; wallets `138474.41`; 4 aktivace; 138 plateb.
+Ověřovací data (throwaway partner) byla po testech odstraněna, žádné reziduum.
+
+**Parita engine vs. původní vzorec ověřena na všech 8 reálných partnerech** (včetně BOHEMIA 100/5
+a partnera s 99/10, i na necelé částce 317,50 Kč) — `floor(total/base*mc)` == engine, beze změny.
+
+**Nález při dry-runu BOHEMIA (zlepšení, ne regrese):** reálný export BOHEMIA má 15 CSV řádků, ale
+jen **5 objednávek** (DEMO000001–05, 3 položky na objednávku) — export je tedy už teď položkový.
+Původní kód považoval každý řádek za samostatnou objednávku a volal RPC 15×; zachránil ho jen
+idempotenční guard. Nový kód správně seskupí na 5. Výsledek obou běhů shodný: 0 created, 0 failed.
 
 Cíl: partner může měnit globální konverzi za provozu, odměňovat celý e-shop / jen vybrané produkty /
 celý e-shop s výjimkami, a zákazník vidí v Shoptetu (produkt + povinně košík) přesně tolik MioCoinů,
@@ -20,10 +42,11 @@ kolik mu OneMil po objednávce skutečně vydá.
 - [x] **Shoptet item CSV parser** — `import-shoptet-orders/csv.ts` + spec 124 (9 zelených)
 - [x] **partner product UI** — režim + pravidla v `PartnerDashboard` (rozšíření stávající sekce konverze)
 - [x] **Partner Order API items** — `partner-activate` přijímá volitelné `items[]`
-- [x] **widget preview endpoint** — EF `partner-reward-preview` (staging v1 ACTIVE, verify_jwt=false)
+- [x] **widget preview endpoint** — EF `partner-reward-preview` (produkce i staging ACTIVE, verify_jwt=false)
 - [x] **Shoptet widget snippet** — `public/shoptet-widget.js` (badge u produktu + povinný košík)
 - [x] **E2E** — spec 124 (parser, 9) + spec 125 (invariant, 7); spec 123 zelený
-- [ ] production validation (**vyžaduje schválení Pavla**)
+- [x] **production validation** — 3 migrace + 3 Edge Functions nasazeny a ověřeny na produkci (16. 8. 2026, schválení Pavla)
+- [ ] **frontend Lovable Publish** — jediný zbývající krok, provádí ručně Pavel
 
 ### KRITICKÝ INVARIANT (neměnit)
 
