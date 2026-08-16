@@ -75,19 +75,48 @@
   }
 
   // ── reading the storefront ─────────────────────────────────────────────────
-  // Shoptet exposes order/product data through the dataLayer on most templates.
-  // Selector fallbacks cover templates that do not.
-  function currentProductCode() {
+  //
+  // Verified against a real Shoptet storefront (809915.myshoptet.com). Shoptet's
+  // own object is `window.dataLayer[i].shoptet` and it is authoritative and
+  // updated IN PLACE as the basket changes:
+  //
+  //   shoptet.pageType            "productDetail" | "cart" | ...
+  //   shoptet.product.codes[]     [{code:"49396/ZEL"}, ...]   (several when variants)
+  //   shoptet.product.priceWithVat 50
+  //   shoptet.cart[]              [{code, quantity, priceWithVat, priceWithoutDiscount, name}]
+  //
+  // Note the cart carries BOTH priceWithVat (after discount) and
+  // priceWithoutDiscount — we must use priceWithVat, matching the confirmed rule
+  // that ratio rewards are based on the real after-discount price.
+  //
+  // The DOM fallbacks below are the selectors this template really uses
+  // (data-micro-sku, input[name="amount"]) — NOT data-micro-product-code or
+  // input[name*="quantity"], which do not exist here.
+  function shoptetData() {
     try {
       var dl = window.dataLayer || [];
       for (var i = dl.length - 1; i >= 0; i--) {
-        var e = dl[i];
-        if (e && e.ecommerce && e.ecommerce.detail && e.ecommerce.detail.products) {
-          var p = e.ecommerce.detail.products[0];
-          if (p && (p.id || p.code)) return String(p.id || p.code);
-        }
+        if (dl[i] && dl[i].shoptet) return dl[i].shoptet;
       }
-    } catch (_) { /* fall through to DOM */ }
+    } catch (_) { /* ignore */ }
+    return null;
+  }
+
+  function currentProductCode() {
+    // The visible SKU reflects the selected variant, so it wins over the raw
+    // codes[] list when the product has several variants.
+    var metaSku = document.querySelector('meta[itemprop="sku"], [data-micro-sku]');
+    if (metaSku) {
+      var fromMeta = (metaSku.getAttribute('content') || metaSku.getAttribute('data-micro-sku') || '').trim();
+      if (fromMeta) return fromMeta;
+    }
+
+    var s = shoptetData();
+    if (s && s.product && s.product.codes && s.product.codes.length) {
+      var first = s.product.codes[0];
+      var code = typeof first === 'string' ? first : (first && first.code);
+      if (code) return String(code).trim();
+    }
 
     var el = document.querySelector('[data-micro-product-code], [data-product-code], .p-code .value');
     if (!el) return null;
@@ -106,19 +135,19 @@
 
   // Current price of the product being viewed, for the product detail badge.
   function currentProductPrice() {
-    try {
-      var dl = window.dataLayer || [];
-      for (var i = dl.length - 1; i >= 0; i--) {
-        var e = dl[i];
-        if (e && e.ecommerce && e.ecommerce.detail && e.ecommerce.detail.products) {
-          var p = e.ecommerce.detail.products[0];
-          if (p && p.price) {
-            var dlPrice = parsePrice(p.price);
-            if (dlPrice > 0) return dlPrice;
-          }
-        }
-      }
-    } catch (_) { /* fall through to DOM */ }
+    var s = shoptetData();
+    if (s && s.product && s.product.priceWithVat) {
+      var dlPrice = parsePrice(s.product.priceWithVat);
+      if (dlPrice > 0) return dlPrice;
+    }
+
+    // schema.org offer price is present on the detail template and tracks the
+    // selected variant.
+    var metaPrice = document.querySelector('meta[itemprop="price"]');
+    if (metaPrice) {
+      var fromMeta = parsePrice(metaPrice.getAttribute('content'));
+      if (fromMeta > 0) return fromMeta;
+    }
 
     var el = document.querySelector('[data-micro-price], .price-final-holder, .price-final, .p-final-price');
     if (!el) return 0;
@@ -126,24 +155,49 @@
   }
 
   function cartItems() {
-    var rows = document.querySelectorAll('[data-micro-product-id], .cart-item, tr[data-micro]');
+    // Preferred: Shoptet's own cart array. It is updated in place on quantity
+    // changes and already carries the after-discount unit price.
+    var s = shoptetData();
+    if (s && s.cart && s.cart.length) {
+      var out = [];
+      for (var c = 0; c < s.cart.length; c++) {
+        var line = s.cart[c];
+        if (!line) continue;
+        var lq = parseFloat(line.quantity);
+        out.push({
+          code: String(line.code == null ? '' : line.code).trim(),
+          quantity: lq > 0 ? lq : 1,
+          unit_price_czk: parsePrice(line.priceWithVat),
+        });
+      }
+      if (out.length) return out;
+    }
+
+    // DOM fallback, using this template's real attributes.
+    var rows = document.querySelectorAll('tr[data-micro="cartItem"], [data-micro-sku], [data-micro-product-id], .cart-item');
     var items = [];
     for (var i = 0; i < rows.length; i++) {
       var row = rows[i];
       var code =
+        row.getAttribute('data-micro-sku') ||
         row.getAttribute('data-micro-product-code') ||
         row.getAttribute('data-product-code') ||
-        (row.querySelector('[data-micro-product-code]') || {}).textContent;
-      if (!code) continue;
+        ((row.querySelector('[data-micro-sku]') || {}).getAttribute
+          ? row.querySelector('[data-micro-sku]').getAttribute('data-micro-sku')
+          : '');
 
-      var qtyEl = row.querySelector('input[name*="quantity"], .quantity input, [data-testid="quantity"]');
+      var qtyEl = row.querySelector('input[name="amount"], input.amount, input[name*="quantity"], .quantity input');
       var qty = qtyEl ? parseFloat(qtyEl.value || qtyEl.getAttribute('value') || '1') : 1;
 
       var priceEl = row.querySelector('[data-micro-price], .p-price, .price');
       var price = priceEl ? parsePrice(priceEl.getAttribute('data-micro-price') || priceEl.textContent) : 0;
 
+      // A line with no readable code is still kept: in whole_shop (the default)
+      // the reward comes from order_total_czk, so dropping the line would
+      // understate the basket. The engine ignores code-less entries when
+      // per-product rules apply.
       items.push({
-        code: String(code).trim(),
+        code: String(code == null ? '' : code).trim(),
         quantity: qty > 0 ? qty : 1,
         unit_price_czk: price,
       });
@@ -168,6 +222,11 @@
 
   // ── product page badge (partner can switch this off) ───────────────────────
   function updateProductBadge() {
+    // Only on a product detail page — the cart also exposes a SKU, and the badge
+    // must not leak onto it.
+    var s = shoptetData();
+    if (s && s.pageType && s.pageType !== 'productDetail') return;
+
     var code = currentProductCode();
     if (!code) return;
 
@@ -200,15 +259,24 @@
 
   // ── cart summary (always shown while the connection is active) ─────────────
   function updateCart() {
-    var items = cartItems();
-    if (items.length === 0) { removeAll(); return; }
+    var allLines = cartItems();
+    if (allLines.length === 0) { removeAll(); return; }
+
+    // The basket value covers EVERY line, including any whose code could not be
+    // read, so the global whole_shop calculation is never understated. Only coded
+    // lines are sent as items[] — they are the ones per-product rules can match.
+    var total = itemsValue(allLines);
+    var coded = [];
+    for (var i = 0; i < allLines.length; i++) {
+      if (allLines[i].code) coded.push(allLines[i]);
+    }
 
     // order_total_czk is required by the engine in whole_shop mode (the default),
     // and is harmlessly ignored when per-product rules drive the result.
     preview({
       partner_id: partnerId,
-      items: items,
-      order_total_czk: itemsValue(items),
+      items: coded,
+      order_total_czk: total,
     }).then(function (res) {
       if (!res || res.status !== 'ok' || !res.enabled || !res.coins) { removeAll(); return; }
 
