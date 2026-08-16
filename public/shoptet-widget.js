@@ -51,8 +51,15 @@
     '.' + CLS + '{display:inline-flex;align-items:center;gap:6px;margin:8px 0;padding:6px 12px;' +
     'border-radius:999px;background:linear-gradient(135deg,#FF8A00,#FFB547);color:#0A0B0F;' +
     'font-weight:700;font-size:13px;line-height:1.3;}' +
-    '.' + CLS + '--cart{display:flex;width:100%;justify-content:center;border-radius:10px;' +
-    'padding:10px 14px;font-size:14px;}' +
+    // Cart / checkout: a discreet standalone note, NOT a branded pill. It sits in a
+    // stranger's checkout right above their CTA, so it stays on a transparent
+    // background and never restyles or overlaps the shop's own buttons.
+    '.' + CLS + '--cart{display:flex;align-items:center;justify-content:flex-start;' +
+    'width:100%;box-sizing:border-box;margin:8px 0;padding:8px 0;border:0;border-radius:0;' +
+    'background:none;background-image:none;color:#BD6400;font-weight:700;font-size:13px;' +
+    'line-height:1.35;text-align:left;}' +
+    '.' + CLS + '-ico{display:inline-block;width:17px;height:17px;margin-right:6px;' +
+    'vertical-align:-4px;border-radius:50%;flex-shrink:0;}' +
     // Listing cards: a wide orange rule under the price, then the MioCoin icon and
     // the reward line. The rule carries the visual accent, which lets the text stay
     // dark enough to read (a full #FF8A00 text on white would fail contrast).
@@ -66,15 +73,49 @@
     'vertical-align:-4px;border-radius:50%;flex-shrink:0;}';
   document.head.appendChild(style);
 
+  // Anything that is, or lives inside, one of the shop's own buttons/links. The
+  // widget must never end up in there — it would become part of their CTA.
+  var CTA_SEL = 'button, a, [role="button"], .btn, .next-step-forward, .next-step-back';
+
+  function isInsideCta(el) {
+    return !!(el && el.closest && el.closest(CTA_SEL));
+  }
+
   function render(target, text, isCart) {
     if (!target) return;
-    var existing = target.querySelector('.' + CLS);
+    var existing = target.parent
+      ? target.parent.querySelector('.' + CLS)
+      : target.querySelector('.' + CLS);
+
     if (!existing) {
       existing = document.createElement('div');
       existing.className = CLS + (isCart ? ' ' + CLS + '--cart' : '');
-      target.appendChild(existing);
+
+      if (isCart) {
+        var ico = document.createElement('img');
+        ico.className = CLS + '-ico';
+        ico.src = ICON_URL;
+        ico.alt = '';
+        ico.setAttribute('aria-hidden', 'true');
+        ico.width = 17;
+        ico.height = 17;
+        existing.appendChild(ico);
+        existing.appendChild(document.createElement('span'));
+      }
+
+      if (target.parent) target.parent.insertBefore(existing, target.before);
+      else target.appendChild(existing);
+
+      // Safety net: if a template we have not seen still lands us inside a button
+      // or link, back out rather than deface the shop's CTA.
+      if (isInsideCta(existing.parentElement)) {
+        existing.remove();
+        return;
+      }
     }
-    existing.textContent = text;
+
+    var slot = isCart ? existing.querySelector('span') : null;
+    (slot || existing).textContent = text;
   }
 
   // Only clears the cart/detail badge. Listing card badges are managed separately.
@@ -481,6 +522,42 @@
     paintKnownCards();
   }
 
+  // Where the cart/checkout note goes.
+  //
+  // Verified on the real checkout (/objednavka/krok-1/):
+  //   .cart-content
+  //     ├── .order-summary  ... "Celkem k úhradě 50 Kč"
+  //     └── .next-step      <- a.next-step-back + button.next-step-forward
+  //
+  // `.next-step-forward` is the "Pokračovat" control itself (an <a> in the basket,
+  // a <button> at checkout). Targeting it appended our text INSIDE the shop's CTA.
+  // We now insert as a sibling BEFORE the whole .next-step block: below the totals,
+  // above the buttons, never part of them.
+  //
+  // Returns either {parent, before} for sibling insertion, or a plain element to
+  // append to.
+  function cartTarget() {
+    var nextStep = document.querySelector('.next-step');
+    if (nextStep && nextStep.parentElement && !isInsideCta(nextStep.parentElement)) {
+      return { parent: nextStep.parentElement, before: nextStep };
+    }
+
+    // No .next-step wrapper: climb out of the CTA to a safe block and go above it.
+    var cta = document.querySelector('.next-step-forward, #orderFormButton');
+    if (cta) {
+      var block = cta.parentElement;
+      while (block && isInsideCta(block)) block = block.parentElement;
+      if (block && block.parentElement) return { parent: block.parentElement, before: block };
+    }
+
+    // Basket page and generic templates.
+    var summary = document.querySelector('.cart-summary') || document.querySelector('#cart-summary');
+    if (summary && !isInsideCta(summary)) return summary;
+
+    var content = document.querySelector('.cart-content');
+    return content && !isInsideCta(content) ? content : null;
+  }
+
   // ── cart summary (always shown while the connection is active) ─────────────
   function updateCart() {
     var allLines = cartItems();
@@ -504,12 +581,7 @@
     }).then(function (res) {
       if (!res || res.status !== 'ok' || !res.enabled || !res.coins) { removeAll(); return; }
 
-      var target =
-        document.querySelector('.cart-summary') ||
-        document.querySelector('#cart-summary') ||
-        document.querySelector('.next-step-forward') ||
-        document.querySelector('.cart-content');
-      render(target, 'Za tento nákup získáte přibližně ' + res.coins + ' ' + czPlural(res.coins), true);
+      render(cartTarget(), 'Získáte přibližně ' + res.coins + ' ' + czPlural(res.coins), true);
     });
   }
 

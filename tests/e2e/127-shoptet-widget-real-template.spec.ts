@@ -143,7 +143,7 @@ test.describe('127 — widget matches the real Shoptet template', () => {
     expect(call.order_total_czk).toBe(50);
     expect(call.items?.[0].unit_price_czk, 'must be the after-discount price, not 60').not.toBe(60);
 
-    await expect(page.locator('.onemil-mc-widget')).toContainText('Za tento nákup získáte přibližně 2 MioCoiny');
+    await expect(page.locator('.onemil-mc-widget')).toContainText('Získáte přibližně 2 MioCoiny');
   });
 
   test('127c) cart quantity 3 gives order_total 150', async ({ page }) => {
@@ -189,7 +189,7 @@ test.describe('127 — widget matches the real Shoptet template', () => {
     // Only the cart call, never a single-item product call, and one rendered node.
     expect(captured.every((c) => (c.items?.length ?? 0) === 1 && c.order_total_czk === 50)).toBe(true);
     await expect(page.locator('.onemil-mc-widget')).toHaveCount(1);
-    await expect(page.locator('.onemil-mc-widget')).toContainText('Za tento nákup');
+    await expect(page.locator('.onemil-mc-widget')).toContainText('Získáte přibližně');
   });
 
   test('127g) rendering does not retrigger itself into a request loop', async ({ page }) => {

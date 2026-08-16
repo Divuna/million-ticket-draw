@@ -117,7 +117,7 @@ test.describe('126 — widget sends order_total_czk', () => {
     ]);
 
     // Cart wording stays an estimate — shipping/discounts can still move the final order.
-    await expect(page.locator('.onemil-mc-widget')).toContainText('Za tento nákup získáte přibližně 24 MioCoinů');
+    await expect(page.locator('.onemil-mc-widget')).toContainText('Získáte přibližně 24 MioCoinů');
   });
 
   test('126b) whole_shop PRODUCT badge: sends unit price as order_total_czk and renders', async ({ page }) => {
@@ -187,7 +187,7 @@ test.describe('126 — widget sends order_total_czk', () => {
 
     // Cart: the summary is NOT toggleable and must still render.
     await mountWidget(page, CART_DOM);
-    await expect(page.locator('.onemil-mc-widget')).toContainText('Za tento nákup získáte přibližně 24 MioCoinů');
+    await expect(page.locator('.onemil-mc-widget')).toContainText('Získáte přibližně 24 MioCoinů');
   });
 
   test('126f) widget renders the engine figure verbatim — no reward maths in JS', async ({ page }) => {
