@@ -10,8 +10,81 @@ v `CLAUDE.md`): MioCoiny mají max. 1 desetinné místo, minimální partnerská
 ručně zadaná hodnota s více než 1 desetinným místem se **odmítne**, automatický výpočet se
 zaokrouhlí **právě jednou** na výsledku celé objednávky.
 
-**Stav: implementace je hotová na větvi `claude/miocoin-decimal-unify`. Nic nebylo mergnuto do
-`main` a nic nebylo nasazeno do produkce. Produkční data nebyla změněna.**
+**Stav: implementace je hotová na větvi `claude/miocoin-decimal-unify`.
+Migrace 1–4 jsou APLIKOVÁNY NA STAGING `dxmowysntemfqfnanxua` a celý partnerský tok je tam
+E2E OVĚŘEN. Migrace 5 (payment → wallet) je ZADRŽENA kvůli staging driftu.
+Nic nebylo mergnuto do `main`. PRODUKCE `xkzhjldrojjlrkezorey` NENASAZENA a nezměněna.**
+
+### STAGING OVĚŘENO / PRODUKCE NENASAZENA (16. 8. 2026)
+
+**Aplikováno na staging (migrace 1–4):**
+`20260817100000` (coin sloupce → numeric + 8 CHECK guardů + `miocoin_min_partner_reward_mc()`) ·
+`20260817110000` (engine `round(v_total_mc,1)`, `issuable`, `mc_display`) ·
+`20260817120000` (issuance + `format_miocoin_cz`) ·
+`20260817130000` (drop legacy bypassu).
+Edge Function `partner-reward-preview` nasazena jako **staging v2** (`verify_jwt=false` beze změny).
+
+**Blokující staging data před migrací:** 19 partnerských řádků mělo `reward_mc = 0` (1× `E2E Affiliate
+Test Partner`, 18× `E2E Spec56 Partner <ts>`). Všechny měly současně `reward_base_czk = 0` a **nulové
+reference** (0 reward kódů, aktivací, faktur, API klíčů, produktových pravidel, nabídek). **Nic se
+nemazalo** — jen `reward_mc 0 → 0.5`; protože `reward_base_czk` zůstal 0, engine pro ně dál vrací
+`invalid_partner_conversion_settings`, takže se efektivní chování nezměnilo. Pravidlo nebylo oslabeno.
+
+**Ověřený staging E2E výsledek (fixture `E2E Decimal MioCoin Test`, produkt `DECIMAL-06`, 0,6 MC):**
+
+| krok | výsledek |
+|---|---|
+| engine 0,6 MC | `coins = 0.6`, `issuable = true` |
+| 99 Kč @ 100 Kč = 5 MC | raw `4.95` → **`5.0`** |
+| 97 Kč | raw `4.85` → **`4.9`** |
+| 96,80 Kč | raw `4.84` → **`4.8`** |
+| jedno zaokrouhlení na součtu | raw `1.32` → **`1.3`** (po položkách by dalo 1.2) |
+| preview EF (živý staging endpoint) | `{"coins":0.6}`, per-item `0.6`, neflooruje |
+| widget výpis | `Získáte 0,6 MioCoinu` |
+| widget detail | `Za tento produkt získáte 0,6 MioCoinu` |
+| widget košík | `Dárek od nás: 0,6 MioCoinu do soutěží OneMil`, sourozenec **před** `.next-step`, mimo CTA |
+| reward code | `coins = 0.6`, `pending → issued` beze ztráty |
+| peněženka | `4940.00 → 4940.60` = přesně **+0,6** |
+| `wallet_transactions.amount` | `0.6` |
+| `partner_coin_activations.coins` | `0.6` |
+| faktura | řádky `0.6 + 1.2 + 2.5`, `coins_total = 4.3`, `amount_net = 4.30 Kč` |
+| ISDOC payload | `0.6 / 1.2 / 2.5`, `coins_total 4.3` — bez ztráty desetinné části |
+| legacy `activate_partner_coins_from_order` | **neexistuje** (0) |
+
+### ⚠️ ZADRŽENO — migrace 5 (payment → wallet) kvůli staging driftu
+
+Staging se v platební vrstvě **výrazně liší od produkce**, takže migrace 5 nebyla aplikována:
+
+| funkce | staging | produkce |
+|---|---|---|
+| `update_wallet_after_payment` | **131 znaků** — jen `UPDATE wallets SET balance_coins = balance_coins + NEW.amount`; **žádný `status='completed'` guard, žádná idempotence, žádný zápis do `wallet_transactions`** | 1393 (plná verze) |
+| `prepare_stripe_refund` | **NEEXISTUJE** | 4322 |
+| `reverse_failed_stripe_refund` | **NEEXISTUJE** | 5469 |
+| `create_referral_reward_from_payment` | 843, sémanticky shodná (`ROUND(…, 2)`) | 1131 |
+
+Aplikace migrace 5 na staging by nebyla „jen“ MioCoin zaokrouhlení — nainstalovala by na staging
+celou produkční platební hardening vrstvu (status guard, idempotenci, ledger zápisy, refund funkce)
+a mohla by změnit chování stávajících staging speců 86/87/88. **Vyžaduje rozhodnutí Pavla.**
+
+Aritmetika migrace 5 přesto ověřena read-only na stagingu: `round(999.99, 1) = 1000.0`,
+`round(525 × 0,05, 1) = 26.3` (staré `ROUND(…, 2)` dávalo `26.25`), kredit i odečet používají
+identickou normalizaci. V transakci s rollbackem bylo navíc reprodukováno **současné rozbité
+chování**: platba 999,99 vytvořila zůstatek `5944.29` (2 desetinná místa) — přesně to, co migrace 5
+opravuje. Transakce vrácena, žádná data nezměněna.
+
+### ⚠️ NEDOKONČENO — staging PDF Edge Function nebyla přenasazena
+
+`generate-partner-invoice-pdf` na stagingu je stále **předchozí verze** (bez `formatCoins` a bez
+`Number()` u sčítání). Binární PDF test proto neproběhl. Logika opravy ověřena deterministicky
+mimo DB proti reálným hodnotám faktury: nová verze dává řádky `0,6 | 1,2 | 2,5` a součet `4,3`,
+zatímco stará `totalCoins += act.coins` nad numeric stringy z PostgREST dává **`"00.61.22.5"`**.
+Přenasazení 721řádkové fakturační EF ručně nebylo provedeno kvůli riziku chyby v přepisu.
+
+### ⚠️ OPEN ISSUE — zaokrouhlení peněz na faktuře (předexistující, mimo rozsah)
+
+Testovací faktura: `amount_net = 4.30`, `vat_amount = 0.90`, ale `amount_gross = 5.203`
+(tj. `4.30 + 0.903` bez zaokrouhlení) místo `5.20`. Týká se **peněz**, ne MioCoinů; na malých
+částkách je to vidět. Nemění se v tomto úkolu.
 
 ### Ověřený produkční bug (read-only audit `xkzhjldrojjlrkezorey`, 16. 8. 2026)
 

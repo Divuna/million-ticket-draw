@@ -1,3 +1,58 @@
+# 16. 08. 2026 — MioCoin desetinné místo: STAGING OVĚŘENO, PRODUKCE NENASAZENA
+
+Migrace 1–4 z větve `claude/miocoin-decimal-unify` aplikovány na staging `dxmowysntemfqfnanxua`
+a celý partnerský tok desetinných MioCoinů tam ověřen end-to-end. Produkce `xkzhjldrojjlrkezorey`
+zůstala **read-only a nezměněná** (ověřeno na konci: engine stále `floor`, coin sloupce stále
+`integer`, 0 nových constraintů, legacy bypass stále přítomen).
+
+## Blokující staging data
+
+Nové CHECK pravidlo (min 0,5 MC) blokovalo 19 partnerských řádků s `reward_mc = 0` — 1× `E2E
+Affiliate Test Partner` a 18× `E2E Spec56 Partner <timestamp>`, tedy leaklé E2E fixtures. Všechny
+měly zároveň `reward_base_czk = 0` a nulové reference ve všech navazujících tabulkách. Zvolena
+nejméně destruktivní cesta: **nic se nemazalo**, jen `reward_mc 0 → 0.5`. Protože `reward_base_czk`
+zůstal 0, engine pro ně dál vrací `invalid_partner_conversion_settings` — efektivní chování se
+nezměnilo a pravidlo nebylo oslabeno.
+
+## Co staging E2E prokázal
+
+Fixture `E2E Decimal MioCoin Test` (`selected_products`, 100 Kč = 5 MC, produkt `DECIMAL-06` =
+0,6 MC) prošel celou reálnou cestou: engine → živý preview endpoint → widget → reward code →
+aktivace → peněženka → faktura → ISDOC.
+
+Klíčové výsledky: `0,6 → 0,6` všude; `4,95 → 5,0`, `4,85 → 4,9`, `4,84 → 4,8`; zaokrouhlení
+proběhlo **jednou na součtu** (raw 1,32 → 1,3, zatímco po položkách by vyšlo 1,2); peněženka
+`4940,00 → 4940,60`; faktura `0,6 + 1,2 + 2,5 = 4,3 MC` → `amount_net = 4,30 Kč`; widget zobrazil
+`Získáte 0,6 MioCoinu`, `Za tento produkt získáte 0,6 MioCoinu` a `Dárek od nás: 0,6 MioCoinu do
+soutěží OneMil` mimo partnerovo CTA. Legacy `activate_partner_coins_from_order` na stagingu
+zmizel.
+
+## Co se vědomě nedokončilo
+
+1. **Migrace 5 (payment → wallet) ZADRŽENA.** Staging má v platební vrstvě velký drift:
+   `update_wallet_after_payment` je tam 131znakový stub bez status guardu, idempotence i ledger
+   zápisu, a `prepare_stripe_refund` ani `reverse_failed_stripe_refund` na stagingu vůbec
+   neexistují. Aplikace migrace by tedy na staging nainstalovala celou produkční platební
+   hardening vrstvu — daleko nad rámec MioCoin zaokrouhlení. Vyžaduje rozhodnutí Pavla.
+   Aritmetika ověřena zvlášť: `round(999.99,1)=1000.0`, `round(525×0,05,1)=26.3` (staré 26.25),
+   a v rolled-back transakci reprodukováno současné rozbité chování (zůstatek `5944.29`).
+2. **Staging PDF EF nepřenasazena** — binární PDF test neproběhl; logika opravy ověřena
+   deterministicky (stará verze dává součet `"00.61.22.5"`, nová `4,3`).
+
+## Nalezeno navíc
+
+Testovací faktura odhalila **předexistující zaokrouhlení peněz**: `amount_net 4.30` +
+`vat_amount 0.90`, ale `amount_gross 5.203` místo `5.20`. Týká se peněz, ne MioCoinů; neopravováno.
+
+## Úklid
+
+Fixture partner a všechny jeho odvozené řádky smazány. `wallet_transactions` je **immutable
+ledger** (`fn_wallet_transactions_immutable`) — 3 testovací kreditní řádky proto zůstávají a
+zůstatek peněženky E2E uživatele byl ponechán v souladu s nimi, aby se nerozbila integrita
+ledger ↔ zůstatek.
+
+---
+
 # 16. 08. 2026 — MioCoin: dořešeny dva zbývající zdroje porušení pravidla (NENASAZENO)
 
 Navazuje na commit `4d2807a1` na větvi `claude/miocoin-decimal-unify`.
