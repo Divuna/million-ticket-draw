@@ -20,9 +20,9 @@ kolik mu OneMil po objednávce skutečně vydá.
 - [x] **Shoptet item CSV parser** — `import-shoptet-orders/csv.ts` + spec 124 (9 zelených)
 - [x] **partner product UI** — režim + pravidla v `PartnerDashboard` (rozšíření stávající sekce konverze)
 - [x] **Partner Order API items** — `partner-activate` přijímá volitelné `items[]`
-- [ ] widget preview endpoint
-- [ ] Shoptet widget snippet
-- [ ] E2E
+- [x] **widget preview endpoint** — EF `partner-reward-preview` (staging v1 ACTIVE, verify_jwt=false)
+- [x] **Shoptet widget snippet** — `public/shoptet-widget.js` (badge u produktu + povinný košík)
+- [x] **E2E** — spec 124 (parser, 9) + spec 125 (invariant, 7); spec 123 zelený
 - [ ] production validation (**vyžaduje schválení Pavla**)
 
 ### KRITICKÝ INVARIANT (neměnit)
@@ -43,6 +43,24 @@ v jiné RPC — jinak se to, co zákazník vidí v košíku, rozejde s tím, co 
 - `selected_products` **bez položek odmítne** (`items_required_for_reward_mode`) — tichý fallback na
   celou objednávku by vyplatil pravý opak toho, co partner nastavil.
 - `whole_shop_with_exceptions` bez položek bezpečně degraduje na globální sazbu z ceny objednávky.
+
+### Ověření kritického invariantu (16. 8. 2026, staging, uklizeno)
+
+Skutečný end-to-end důkaz, že widget neklame zákazníka — stejný košík poslán do
+veřejného preview endpointu i do reálné vydávací cesty:
+
+| krok | widget preview | skutečně vydáno |
+|---|---|---|
+| ABC123 ×2 (pravidlo 10 MC) + XYZ999 300 Kč (globální 100/5) | **35 MC** | **35 MC** |
+| po změně pravidla 10→25 MC a konverze 100/5→100/10 | **80 MC** | **80 MC** |
+
+Starší kód z prvního kroku zůstal na 35 MC se snapshotem `5.0000` — změna nastavení
+se zpětně nepromítla.
+
+**Bezpečnost veřejného endpointu ověřena:** GET → 405, neplatné UUID → 400, neznámý
+partner → 404, neschválený partner → `enabled:false`. Odpověď neobsahuje export URL,
+Vault secret, API klíč ani zákaznická data (leak check prázdný). Endpoint jen čte
+(`STABLE`, žádné zápisy, žádné vydávání kódů).
 
 ### ⚠️ Nález: `npx tsc --noEmit` je no-op (16. 8. 2026)
 

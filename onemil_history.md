@@ -1,3 +1,34 @@
+# 16. 08. 2026 — Produktové odměny: Shoptet položkový import, partner UI, widget (staging)
+
+- **Fáze 4 — položkový Shoptet import.** Parsing přesunut do `import-shoptet-orders/csv.ts`
+  (bez závislostí), takže stejný modul používá Edge Function i spec 124 — žádná druhá
+  implementace. Řádky se seskupují podle kódu objednávky (jedna objednávka s N produkty
+  zůstane JEDNA objednávka), doprava/platba/kupóny se filtrují podle typu, přednost má cena
+  po slevě. Legacy hlavičkový export beze změny (`p_items = null`). Testy odhalily skutečnou
+  mezeru: kandidáti hlaviček neznali české „Kód objednávky“ — doplněno před nedotčené anglické.
+- **Fáze 5 — partner UI.** Rozšířena existující sekce konverze (žádná nová stránka): výběr
+  režimu, seznam produktových pravidel (název + SKU + MC/ks, inline editace, vypnutí, odebrání),
+  přidání produktu s našeptávačem z `partner_seen_products`, přepínač produktového badge.
+  Košíková informace vypínatelná není. Uložení režimu ověřuje affected rows.
+- **Fáze 6 — Partner Order API.** `partner-activate` přijímá volitelné `items[]` a normalizuje
+  je (aliasy sku/product_code, amount) do stejné RPC. Zákaz posílat vlastní částku MC zůstal.
+- **Fáze 7 — veřejný preview endpoint.** `partner-reward-preview` (staging v1 ACTIVE,
+  `verify_jwt=false`) pouze přeposílá dotaz do `compute_partner_reward` a vrací číslo.
+  Vědomě bez klíče — widget běží v cizím storefrontu, kde by byl každý secret čitelný.
+- **Fáze 8 — widget.** `public/shoptet-widget.js`, jeden snippet do Shoptet HTML kódu.
+  Neobsahuje žádný výpočet ani secret; čte košík z dataLayer/DOM, přepočítává při změně
+  (debounce + MutationObserver + change/click).
+- **Kritický invariant ověřen end-to-end na stagingu:** stejný košík → widget 35 MC,
+  skutečně vydáno 35 MC. Po změně pravidla 10→25 MC a konverze 100/5→100/10 → widget 80 MC,
+  vydáno 80 MC. Starší kód zůstal na 35 MC s původním snapshotem. Bezpečnost endpointu:
+  GET→405, neplatné UUID→400, neznámý partner→404, žádný leak export URL/Vault/API klíče.
+- **Nález mimo rozsah:** `npx tsc --noEmit` je v tomto repu **no-op** (kořenový tsconfig je
+  solution-style s `files: []`), takže historické zápisy „0 chyb“ nic nedokazovaly. Správně je
+  `npx tsc -p tsconfig.app.json --noEmit` → na `origin/main` **18 předexistujících chyb**.
+  Tato větev přidává 0 nových.
+- **Produkce nedotčena.** Vše jen na stagingu; produkční apply migrací a deploy EF vyžaduje
+  výslovné schválení Pavla. Testovací data po každém kroku uklizena.
+
 # 16. 08. 2026 — Partnerské produktové MioCoin odměny: datový model + sdílený reward engine (staging)
 
 - Založena větev `claude/partner-product-rewards`. Cíl: partner může měnit globální konverzi za

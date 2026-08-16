@@ -184,6 +184,13 @@ verify_jwt = false
 
 [functions.approve-shoptet-connection]
 verify_jwt = false
+
+# Public read-only reward preview for the Shoptet widget. Intentionally
+# unauthenticated: the widget runs in the partner's storefront, where any secret
+# would be readable. Returns only the MioCoin figure for a given basket — never the
+# export URL, Vault secret, API key or any customer data. Writes nothing.
+[functions.partner-reward-preview]
+verify_jwt = false
 [functions.send-sales-lead-reply]
 verify_jwt = false
 
