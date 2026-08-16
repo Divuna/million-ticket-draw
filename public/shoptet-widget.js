@@ -191,7 +191,7 @@
     }
 
     var valEl = existing.querySelector('.' + CLS + '-val');
-    if (valEl) valEl.textContent = coins + ' ' + czPlural(coins);
+    if (valEl) valEl.textContent = czCoins(coins);
   }
 
   // Only clears the cart/detail badge. Listing card badges are managed separately.
@@ -223,11 +223,46 @@
       .then(function (res) { lastResult[kind] = res; return res; });
   }
 
+  // ── MioCoin formatting ─────────────────────────────────────────────────────
+  //
+  // Deliberate copy of src/lib/miocoin.ts: this file is standalone vanilla JS
+  // served into a partner storefront and cannot import from src/. Keep in sync.
+  //
+  // This is FORMATTING ONLY. The widget must never derive, round or "fix" a
+  // reward — every number rendered below comes verbatim from the server engine
+  // (public.compute_partner_reward via partner-reward-preview). MioCoin values
+  // carry at most one decimal place, so 0.6 must render as "0,6", never as 0 or 1.
+
+  // Half-away-from-zero to one decimal, matching Postgres round(numeric, 1).
+  // Only used to decide the wording/decimal display of a value the server sent.
+  function czRound1(n) {
+    if (typeof n !== 'number' || !isFinite(n)) return 0;
+    var scaled = Math.abs(n) * 10;
+    var r = Math.round(scaled + Number.EPSILON * scaled) / 10;
+    return n < 0 ? -r : r;
+  }
+
+  function czNumber(n) {
+    var v = czRound1(n);
+    // Czech decimal comma; whole numbers stay without a trailing ",0".
+    return (Math.round(v * 10) % 10 === 0)
+      ? String(Math.round(v))
+      : String(v).replace('.', ',');
+  }
+
   function czPlural(n) {
-    // 1 MioCoin / 2–4 MioCoiny / 5+ MioCoinů
-    if (n === 1) return 'MioCoin';
-    if (n >= 2 && n <= 4) return 'MioCoiny';
+    // 1 MioCoin / 2–4 MioCoiny / 5+ MioCoinů / any decimal → MioCoinu
+    var v = czRound1(n);
+    if (Math.round(v * 10) % 10 !== 0) return 'MioCoinu';
+    var whole = Math.abs(Math.round(v));
+    if (whole === 1) return 'MioCoin';
+    if (whole >= 2 && whole <= 4) return 'MioCoiny';
     return 'MioCoinů';
+  }
+
+  // "0,6 MioCoinu" / "1 MioCoin" / "3 MioCoiny" / "5 MioCoinů"
+  function czCoins(n) {
+    return czNumber(n) + ' ' + czPlural(n);
   }
 
   // ── reading the storefront ─────────────────────────────────────────────────
@@ -419,7 +454,7 @@
         document.querySelector('.p-detail-inner-header') ||
         document.querySelector('.p-info-wrapper') ||
         document.querySelector('.product-top');
-      render(target, 'Za tento produkt získáte ' + coins + ' ' + czPlural(coins), false);
+      render(target, 'Za tento produkt získáte ' + czCoins(coins), false);
     });
   }
 
@@ -511,7 +546,7 @@
       target.insertBefore(el, target.querySelector('.p-desc'));
     }
     var textNode = el.querySelector('.' + CLS_CARD + '-txt') || el;
-    textNode.textContent = 'Získáte ' + coins + ' ' + czPlural(coins);
+    textNode.textContent = 'Získáte ' + czCoins(coins);
   }
 
   function pumpCardQueue() {

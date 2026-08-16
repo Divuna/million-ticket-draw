@@ -1,3 +1,48 @@
+# 16. 08. 2026 — MioCoin: pravidlo 1 desetinného místa potvrzeno a implementováno na větvi (NENASAZENO)
+
+Pavel potvrdil trvalé pravidlo: **MioCoiny mají maximálně 1 desetinné místo**, minimální
+partnerská odměna je **0,5 MC**, ručně zadaná hodnota s více než 1 desetinným místem se
+**odmítne** (nikdy tiše nezaokrouhlí), a automatický výpočet z poměru se zaokrouhlí
+**právě jednou** na výsledku celé objednávky (`4,95 → 5,0`, `4,85 → 4,9`, `4,84 → 4,8`).
+Zapsáno do `ONEMIL_BUSINESS_CONTEXT.md` §8.1 a jako technický invariant do `CLAUDE.md`.
+
+## Co se ukázalo read-only auditem produkce
+
+`compute_partner_reward` vracela `floor(v_total_mc)::integer` a celý partnerský coin řetězec
+(`partner_reward_codes.coins`, `partner_coin_activations.coins`, `partner_invoice_lines.coins`,
+`partner_invoices.coins_activated`) byl `integer`. Desetinná partnerská odměna proto nemohla
+existovat nikde mezi produktovou kartou a fakturou — pro BOHEMIA (`selected_products`,
+produkt `64`) se sub-1 MC odměna utnula na 0, takže widget nic nezobrazil a reward code nevznikl.
+Peněženka (`wallets.balance_coins`, `wallet_transactions.amount`) a `partner_invoices.coins_total`
+už `numeric` byly a hodnotu jen propouštějí dál.
+
+## Připraveno na větvi `claude/miocoin-decimal-unify`
+
+Tři migrace (sloupce + CHECK guardy, engine s jediným `round(x, 1)`, issuance cesty + český
+formátovač `format_miocoin_cz`), sdílený `src/lib/miocoin.ts`, české formátování ve widgetu,
+odstranění `Math.floor` z `partner-reward-preview`, formátování MioCoin množství ve fakturačním
+PDF a v admin/partner UI, a nový regresní spec `130-miocoin-one-decimal.spec.ts`.
+
+Coin sloupce jsou záměrně `numeric` **bez** `(x,1)`: `numeric(x,1)` by hodnotu `1.25` tiše
+zaokrouhlil na `1.3`, kdežto potvrzené pravidlo vyžaduje odmítnutí.
+
+**Nic nebylo mergnuto do `main`, nic nebylo nasazeno do produkce a produkční data se nezměnila.**
+
+## Nalezené, vědomě neopravené problémy (OPEN ISSUE)
+
+1. **2 wallet řádky se 2 skutečnými desetinnými místy** (`wallets.balance_coins = 10117.91`,
+   `wallet_transactions.amount = 999.99` z 16. 3. 2026) — z CZK dobíjecí cesty, ne z partnerských
+   odměn. Nemigrováno, nezaokrouhleno; peněženkové sloupce proto nedostaly CHECK na 1 desetinné
+   místo. Vyžaduje rozhodnutí Pavla.
+2. **`activate_partner_coins_from_order`** počítá odměnu vlastní matematikou místo
+   `compute_partner_reward`. Bez volajícího v aplikaci, ale porušuje invariant jediného enginu.
+3. **`generate-isdoc`** posílá počet MioCoinů do `<LineExtensionAmount>` (peněžní pole)
+   a `<InvoicedQuantity>` má natvrdo `1` — předexistující chyba finanční sémantiky.
+4. **Multi-shop idempotence** (`partner_id + external_order_id`) zůstává otevřená z 16. 8. —
+   v tomto úkolu se vědomě neřešila.
+
+---
+
 # 16. 08. 2026 — Shoptet MioCoin widget dokončen a živě ověřen + nalezen problém s idempotencí
 
 ## Dokončeno a nasazeno

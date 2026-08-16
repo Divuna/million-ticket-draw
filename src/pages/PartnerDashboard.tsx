@@ -20,6 +20,12 @@ import PartnerBillingForm from '@/components/PartnerBillingForm';
 import { format, startOfWeek, endOfWeek, subWeeks, subDays, isAfter } from 'date-fns';
 import { cs } from 'date-fns/locale';
 import { useUserRole } from '@/hooks/useUserRole';
+import {
+  MIN_PARTNER_REWARD_MC,
+  MIOCOIN_STEP,
+  formatMioCoinNumber,
+  validateManualRewardMc,
+} from '@/lib/miocoin';
 
 // How the partner rewards customers. The reward itself is always computed
 // server-side by compute_partner_reward — this only selects which rules apply.
@@ -842,10 +848,10 @@ const PartnerDashboard = () => {
       if (codesData) {
         const totalIssued = codesData.length;
         const totalActivated = codesData.filter(c => c.status === 'activated').length;
-        const totalIssuedCoins = codesData.reduce((sum, c) => sum + c.coins, 0);
+        const totalIssuedCoins = codesData.reduce((sum, c) => sum + Number(c.coins || 0), 0);
         const totalActivatedCoins = codesData
           .filter(c => c.status === 'activated')
-          .reduce((sum, c) => sum + c.coins, 0);
+          .reduce((sum, c) => sum + Number(c.coins || 0), 0);
 
         setStats({ totalIssued, totalActivated, totalIssuedCoins, totalActivatedCoins });
 
@@ -864,11 +870,11 @@ const PartnerDashboard = () => {
             week_start: format(weekStart, 'dd.MM.yyyy', { locale: cs }),
             week_end: format(weekEnd, 'dd.MM.yyyy', { locale: cs }),
             issued_count: weekCodes.length,
-            issued_coins: weekCodes.reduce((sum, c) => sum + c.coins, 0),
+            issued_coins: weekCodes.reduce((sum, c) => sum + Number(c.coins || 0), 0),
             activated_count: weekCodes.filter(c => c.status === 'activated').length,
             activated_coins: weekCodes
               .filter(c => c.status === 'activated')
-              .reduce((sum, c) => sum + c.coins, 0),
+              .reduce((sum, c) => sum + Number(c.coins || 0), 0),
           });
         }
         setWeeklyReports(reports);
@@ -1187,8 +1193,9 @@ const PartnerDashboard = () => {
       toast.error('Zadejte kód produktu.');
       return;
     }
-    if (!Number.isFinite(mc) || mc <= 0) {
-      toast.error('Zadejte kladný počet MioCoinů.');
+    const mcError = validateManualRewardMc(mc);
+    if (mcError) {
+      toast.error(mcError);
       return;
     }
     if (productRules.some((r) => r.product_key.toLowerCase() === productKey.toLowerCase())) {
@@ -1286,8 +1293,11 @@ const PartnerDashboard = () => {
       toast.error('Částka v Kč musí být větší než 0');
       return;
     }
-    if (isNaN(mcValue) || mcValue <= 0) {
-      toast.error('Počet MioCoinů musí být větší než 0');
+    // MioCoin rule: min 0,5 and at most one decimal place. An out-of-spec value is
+    // REJECTED here and by the DB CHECK — never silently rounded (1,25 → 1,3).
+    const mcError = validateManualRewardMc(mcValue);
+    if (mcError) {
+      toast.error(mcError);
       return;
     }
 
@@ -1352,9 +1362,9 @@ const PartnerDashboard = () => {
     const investmentPercentage = totalRevenue > 0 ? (investmentNet / totalRevenue) * 100 : 0;
     
     return {
-      sampleMc: sampleMc.toFixed(1),
+      sampleMc: formatMioCoinNumber(sampleMc),
       totalRevenue: totalRevenue.toFixed(0),
-      totalMc: totalMc.toFixed(1),
+      totalMc: formatMioCoinNumber(totalMc),
       investmentNet: investmentNet.toFixed(2),
       investmentVat: investmentVat.toFixed(2),
       investmentGross: investmentGross.toFixed(2),
@@ -1602,7 +1612,7 @@ const PartnerDashboard = () => {
             </div>
             <div>
               <div className="text-2xl font-bold text-[hsl(var(--text-silver))]">{stats.totalIssued}</div>
-              <p className="text-xs text-[hsl(var(--text-muted-gray))]">{stats.totalIssuedCoins.toLocaleString(undefined, { minimumFractionDigits: 1, maximumFractionDigits: 1 })} MioCoinů</p>
+              <p className="text-xs text-[hsl(var(--text-muted-gray))]">{formatMioCoinNumber(stats.totalIssuedCoins)} MioCoinů</p>
             </div>
           </div>
 
@@ -1613,7 +1623,7 @@ const PartnerDashboard = () => {
             </div>
             <div>
               <div className="text-2xl font-bold text-[hsl(var(--neon-gold))]">{stats.totalActivated}</div>
-              <p className="text-xs text-[hsl(var(--text-muted-gray))]">{stats.totalActivatedCoins.toLocaleString(undefined, { minimumFractionDigits: 1, maximumFractionDigits: 1 })} MioCoinů</p>
+              <p className="text-xs text-[hsl(var(--text-muted-gray))]">{formatMioCoinNumber(stats.totalActivatedCoins)} MioCoinů</p>
             </div>
           </div>
 
@@ -1794,17 +1804,11 @@ const PartnerDashboard = () => {
                   <Input
                     id="reward-mc"
                     type="number"
-                    min="0.1"
-                    step="0.1"
+                    min={MIN_PARTNER_REWARD_MC}
+                    step={MIOCOIN_STEP}
                     value={rewardMc}
                     onChange={(e) => setRewardMc(e.target.value)}
-                    onBlur={(e) => {
-                      const val = parseFloat(e.target.value);
-                      if (!isNaN(val)) {
-                        setRewardMc((Math.round(val * 10) / 10).toFixed(1));
-                      }
-                    }}
-                    placeholder="0.0"
+                    placeholder="0,5"
                     className="h-9"
                   />
                 </div>
@@ -1921,15 +1925,21 @@ const PartnerDashboard = () => {
                             <div className="flex items-center gap-1.5">
                               <Input
                                 type="number"
-                                min="0.1"
-                                step="0.1"
+                                min={MIN_PARTNER_REWARD_MC}
+                                step={MIOCOIN_STEP}
                                 defaultValue={rule.fixed_mc ?? ''}
                                 disabled={ruleActionId === rule.id}
                                 onBlur={(e) => {
                                   const val = parseFloat(e.target.value);
-                                  if (Number.isFinite(val) && val > 0 && val !== Number(rule.fixed_mc)) {
-                                    handleUpdateProductRule(rule.id, { fixed_mc: val });
+                                  if (val === Number(rule.fixed_mc)) return;
+                                  // Reject 0,4 / 1,25 instead of quietly storing a corrected value.
+                                  const err = validateManualRewardMc(val);
+                                  if (err) {
+                                    toast.error(err);
+                                    e.target.value = String(rule.fixed_mc ?? '');
+                                    return;
                                   }
+                                  handleUpdateProductRule(rule.id, { fixed_mc: val });
                                 }}
                                 className="h-8 w-20 text-sm"
                                 aria-label={`MioCoiny za ${rule.product_key}`}
@@ -2003,8 +2013,8 @@ const PartnerDashboard = () => {
                         />
                         <Input
                           type="number"
-                          min="0.1"
-                          step="0.1"
+                          min={MIN_PARTNER_REWARD_MC}
+                          step={MIOCOIN_STEP}
                           value={newRuleMc}
                           onChange={(e) => setNewRuleMc(e.target.value)}
                           placeholder="MC / ks"
@@ -2732,9 +2742,9 @@ const PartnerDashboard = () => {
                       {report.week_start} – {report.week_end}
                     </TableCell>
                     <TableCell className="text-right">{report.issued_count}</TableCell>
-                    <TableCell className="text-right">{report.issued_coins.toLocaleString(undefined, { minimumFractionDigits: 1, maximumFractionDigits: 1 })}</TableCell>
+                    <TableCell className="text-right">{formatMioCoinNumber(report.issued_coins)}</TableCell>
                     <TableCell className="text-right text-[hsl(var(--neon-gold))]">{report.activated_count}</TableCell>
-                    <TableCell className="text-right text-[hsl(var(--neon-gold))]">{report.activated_coins.toLocaleString(undefined, { minimumFractionDigits: 1, maximumFractionDigits: 1 })}</TableCell>
+                    <TableCell className="text-right text-[hsl(var(--neon-gold))]">{formatMioCoinNumber(report.activated_coins)}</TableCell>
                   </TableRow>
                 ))}
                 {weeklyReports.length === 0 && (

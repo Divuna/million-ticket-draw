@@ -47,6 +47,66 @@ výslovné schválení Pavla.
 
 ---
 
+# MIOCOIN — PRAVIDLO JEDNOHO DESETINNÉHO MÍSTA (TRVALÝ INVARIANT, 16. 08. 2026)
+
+Obchodní pravidlo je v `ONEMIL_BUSINESS_CONTEXT.md` §8.1. Zde je jeho technická podoba.
+
+**Výsledné MioCoin hodnoty nesmí obsahovat více než 1 desetinné místo.**
+
+## Reward engine
+
+- `public.compute_partner_reward(uuid, numeric, jsonb)` je **jediné místo výpočtu partnerské
+  MioCoin odměny**.
+- Všechny položky se nejprve vypočítají a sečtou s plnou interní `numeric` přesností.
+- Výsledná odměna celé objednávky se zaokrouhlí **právě jednou**: `round(v_total_mc, 1)`.
+- Jednotlivé položky se **nikdy nezaokrouhlují před součtem**.
+- Engine vrací `coins` jako `numeric` (ne integer), `raw_total_mc` pro audit,
+  `min_reward_mc` a `issuable`.
+- **Žádná další vrstva nesmí provádět vlastní reward rounding** — ani Edge Function,
+  ani widget, ani frontend, ani importér, ani Partner Order API. `Math.floor`/`Math.round`
+  nad MioCoin odměnou je zakázané; vrstvy jen zobrazují to, co engine vrátil.
+  Per-položkový `mc_display` (zaokrouhlený jen pro badge) generuje také engine, ne klient.
+
+## Minimum a validace ručních hodnot
+
+- Minimální vydatelná partnerská odměna je **0,5 MC** (`public.miocoin_min_partner_reward_mc()`).
+  Výsledek pod 0,5 MC se **nevydá** (`reward_amount_too_low`).
+- Ručně nastavitelné MioCoin hodnoty (`partners.reward_mc`,
+  `partner_product_reward_rules.fixed_mc`, `partner_product_reward_rules.ratio_mc`,
+  `shoptet_connection_requests.reward_mc`) mají DB CHECK: `>= 0.5` **a** `= round(x, 1)`.
+- Neplatná hodnota se **odmítne** (`1.25` → chyba), nikdy se tiše nezaokrouhlí.
+  Frontend `min`/`step` je jen UX; autoritativní je DB constraint.
+
+## Sloupce
+
+Partnerský coin řetězec je `numeric` s CHECK `= round(coins, 1)` (ne integer, a **ne**
+`numeric(x,1)` — ten by tiše zaokrouhloval místo odmítnutí):
+`partner_reward_codes.coins`, `partner_coin_activations.coins`,
+`partner_invoice_lines.coins`, `partner_invoices.coins_activated`,
+`partner_invoices.coins_total`.
+
+Nevracet je na `integer`. `wallets.balance_coins`, `wallets.bonus_balance_coins`
+a `wallet_transactions.amount` už `numeric` jsou a jen prochází hodnotu dál
+(`redeem_miocoin_code`, `log_partner_coin_activation_from_reward` nic nezaokrouhlují).
+
+## MioCoin množství vs. peníze
+
+MioCoin množství: max 1 desetinné místo. Finanční částky CZK (faktury, DPH, ceny za coin):
+standardně 2 desetinná místa. **Nemíchat.** Affiliate provize se dál počítá ze skutečné
+finanční částky faktury — nezavádět jiný affiliate reward výpočet.
+
+## Formátování
+
+`src/lib/miocoin.ts` (`formatMioCoin`, `mioCoinPlural`, `isValidManualRewardMc`) je sdílený
+zdroj pro frontend; `public/shoptet-widget.js` má vlastní zrcadlovou kopii (standalone vanilla
+JS ve výloze partnera, nemůže importovat). Obě musí zůstat konzistentní: české desetinné čárky
+a skloňování — `0,6 MioCoinu`, `1,2 MioCoinu`, `1 MioCoin`, `3 MioCoiny`, `5 MioCoinů`.
+
+**Stav:** připraveno na větvi `claude/miocoin-decimal-unify`, **NENÍ nasazeno do produkce.**
+Produkce dnes stále používá `floor(v_total_mc)::integer` a integer coin sloupce.
+
+---
+
 # SHOPTET MIOCOIN WIDGET + PRODUKTOVÉ ODMĚNY — TRVALÉ INVARIANTY (16. 08. 2026)
 
 Funkce je hotová, nasazená a živě ověřená. Produkční `main` v době zápisu: `f31d3937`.

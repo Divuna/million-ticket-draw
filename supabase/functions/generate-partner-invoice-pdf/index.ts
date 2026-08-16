@@ -52,6 +52,22 @@ function formatCurrency(amount: number): string {
   return amount.toLocaleString('cs-CZ', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + ' CZK';
 }
 
+/**
+ * MioCoin QUANTITY on an invoice: Czech decimal comma, at most one decimal place.
+ *
+ * This is deliberately different from formatCurrency: MioCoin amounts carry one
+ * decimal (0,6 MC), CZK amounts carry two (0,60 CZK). Mixing the two rules is how
+ * a 0,6 MC activation would silently become 0 or 1 on a partner's invoice.
+ *
+ * The coin columns are `numeric`, so PostgREST delivers them as strings — Number()
+ * is a parse, not a re-computation. Nothing here re-rounds a reward.
+ */
+function formatCoins(value: unknown): string {
+  const n = Number(value ?? 0);
+  if (!Number.isFinite(n)) return '0';
+  return n.toLocaleString('cs-CZ', { minimumFractionDigits: 0, maximumFractionDigits: 1 });
+}
+
 function buildSpayd(invoice: any): string {
   const vs = (invoice.variable_symbol || '').replace(/\D/g, '');
   const amount = Number(invoice.amount_gross ?? invoice.amount_inc_vat ?? 0).toFixed(2);
@@ -433,7 +449,7 @@ serve(async (req) => {
     const firstLabel = isOfferInvoice ? 'Celkem aktivací:' : 'Celkem coinů:';
     const firstValue = isOfferInvoice
       ? String(lines.length)
-      : String(invoice.coins_total ?? invoice.coins_activated ?? 0);
+      : formatCoins(invoice.coins_total ?? invoice.coins_activated ?? 0);
 
     const summaryItems = [
       { label: firstLabel,       value: firstValue },
@@ -504,7 +520,7 @@ serve(async (req) => {
           currentPage.drawText(String(i + 1),               { x: leftMargin + 5,   y: y + 1, size: 8, font });
           currentPage.drawText(formatDate(line.activated_at), { x: leftMargin + 30,  y: y + 1, size: 8, font });
           currentPage.drawText(line.external_order_id || '-', { x: leftMargin + 180, y: y + 1, size: 8, font, color: rgb(0.4, 0.4, 0.4) });
-          currentPage.drawText(String(line.coins),           { x: leftMargin + 400, y: y + 1, size: 8, font: fontBold });
+          currentPage.drawText(formatCoins(line.coins),           { x: leftMargin + 400, y: y + 1, size: 8, font: fontBold });
           y -= 15;
         }
       }
@@ -579,7 +595,8 @@ serve(async (req) => {
         for (let i = 0; i < activations.length; i++) {
           if (y < 60) { currentPage = pdfDoc.addPage([595, 842]); y = 842 - 50; }
           const act     = activations[i];
-          totalCoins   += act.coins;
+          // Number(): numeric arrives from PostgREST as a string, so a bare += would concatenate.
+          totalCoins   += Number(act.coins || 0);
           const bgColor = i % 2 === 0 ? rgb(1, 1, 1) : rgb(0.97, 0.97, 0.98);
           currentPage.drawRectangle({ x: leftMargin, y: y - 2, width: 495, height: 14, color: bgColor });
 
@@ -590,7 +607,7 @@ serve(async (req) => {
           currentPage.drawText(email,                        { x: leftMargin + 25,  y: y + 1, size: 7, font });
           currentPage.drawText(formatDate(act.activated_at), { x: leftMargin + 200, y: y + 1, size: 7, font });
           currentPage.drawText(act.code || '-',              { x: leftMargin + 320, y: y + 1, size: 7, font, color: rgb(0.4, 0.4, 0.4) });
-          currentPage.drawText(String(act.coins),            { x: leftMargin + 430, y: y + 1, size: 7, font: fontBold });
+          currentPage.drawText(formatCoins(act.coins),            { x: leftMargin + 430, y: y + 1, size: 7, font: fontBold });
           y -= 14;
         }
 
@@ -598,7 +615,7 @@ serve(async (req) => {
         if (y < 40) { currentPage = pdfDoc.addPage([595, 842]); y = 842 - 50; }
         currentPage.drawRectangle({ x: leftMargin, y: y - 2, width: 495, height: 16, color: rgb(0.92, 0.92, 0.95) });
         currentPage.drawText('Celkem:',          { x: leftMargin + 320, y: y + 2, size: 8, font: fontBold });
-        currentPage.drawText(String(totalCoins), { x: leftMargin + 430, y: y + 2, size: 8, font: fontBold });
+        currentPage.drawText(formatCoins(totalCoins), { x: leftMargin + 430, y: y + 2, size: 8, font: fontBold });
         y -= 25;
       }
     } // end else (coin)

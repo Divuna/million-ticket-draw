@@ -3,6 +3,83 @@
 > **Autoritativní aktuální stav. Aktualizováno 16. 8. 2026.**
 > Historický vývoj je v `onemil_history.md` a v Git historii. Pokud starší dokumentace odporuje tomuto souboru, pro současný provoz platí tento soubor a skutečný stav ověřený v GitHubu/Supabase.
 
+## 0. MioCoin — pravidlo 1 desetinného místa — PŘIPRAVENO NA VĚTVI, **NENASAZENO** (16. 8. 2026)
+
+**Obchodní pravidlo potvrzeno Pavlem** (`ONEMIL_BUSINESS_CONTEXT.md` §8.1, technický invariant
+v `CLAUDE.md`): MioCoiny mají max. 1 desetinné místo, minimální partnerská odměna je 0,5 MC,
+ručně zadaná hodnota s více než 1 desetinným místem se **odmítne**, automatický výpočet se
+zaokrouhlí **právě jednou** na výsledku celé objednávky.
+
+**Stav: implementace je hotová na větvi `claude/miocoin-decimal-unify`. Nic nebylo mergnuto do
+`main` a nic nebylo nasazeno do produkce. Produkční data nebyla změněna.**
+
+### Ověřený produkční bug (read-only audit `xkzhjldrojjlrkezorey`, 16. 8. 2026)
+
+`public.compute_partner_reward` vrací `floor(v_total_mc)::integer`, a celý partnerský coin
+řetězec je v produkci `integer`:
+
+| sloupec | produkční typ |
+|---|---|
+| `partner_reward_codes.coins` | `integer` |
+| `partner_coin_activations.coins` | `integer` |
+| `partner_invoice_lines.coins` | `integer` |
+| `partner_invoices.coins_activated` | `integer` |
+| `partner_invoices.coins_total` | `numeric` ✅ |
+| `wallets.balance_coins` / `bonus_balance_coins` | `numeric(10,2)` ✅ |
+| `wallet_transactions.amount` | `numeric` ✅ |
+
+BOHEMIA INFINITY má `reward_mode='selected_products'` a jediné aktivní produktové pravidlo
+(produkt `64`, `fixed_mc = 1.1`). Jakákoli odměna pod 2 MC se dnes zaokrouhlí dolů, sub-1 MC
+odměna spadne na 0 → widget nic nezobrazí a reward code nemůže vzniknout.
+
+### Co je připraveno v repozitáři (neaplikováno)
+
+- `supabase/migrations/20260817100000_miocoin_one_decimal_columns.sql` — 4 coin sloupce
+  `integer → numeric`, CHECK `= round(x,1)`, CHECK min 0,5 + 1 desetinné místo na
+  `partners.reward_mc`, `partner_product_reward_rules.fixed_mc`/`ratio_mc`,
+  `shoptet_connection_requests.reward_mc`, helper `miocoin_min_partner_reward_mc()`.
+- `supabase/migrations/20260817110000_compute_partner_reward_one_decimal.sql` — engine vrací
+  `round(v_total_mc, 1)` jako `numeric`, `issuable`/`min_reward_mc`, per-položkový `mc_display`.
+- `supabase/migrations/20260817120000_partner_reward_issuance_one_decimal.sql` —
+  `create_partner_order_reward` (numeric coins + práh 0,5),
+  `generate_partner_reward_code` (`integer → numeric` + stejná validace),
+  `update_partner_order_reward_status` (zákaznický e-mail přes `format_miocoin_cz`),
+  nový `public.format_miocoin_cz(numeric)`.
+- Frontend/EF: `src/lib/miocoin.ts` (sdílený formátovač + validátor), `public/shoptet-widget.js`
+  (české desetinné čárky a skloňování), `partner-reward-preview` (odstraněn `Math.floor`),
+  `generate-partner-invoice-pdf` (`formatCoins`, oprava sčítání numeric stringů),
+  `PartnerDashboard` / `AdminInvoices` / `AdminPartnersPortal` / `RedeemMioCoinCard`.
+- Testy: nový `tests/e2e/130-miocoin-one-decimal.spec.ts`, upravený spec 125.
+
+### Read-only audit existujících dat
+
+Žádná partnerská MioCoin hodnota v produkci nemá dnes více než 1 desetinné místo, takže migrace
+nemůže poškodit historická data (12 partnerů, 1 produktové pravidlo, 13 reward kódů,
+4 aktivace, 1 fakturační řádek, 6 faktur — vše v pořádku).
+
+### ⚠️ OPEN ISSUE — 2 wallet řádky se 2 desetinnými místy
+
+`wallets.balance_coins` má **1 řádek `10117.91`** a `wallet_transactions.amount` má
+**1 řádek `999.99`** (2026-03-16). Pocházejí z CZK dobíjecí cesty, ne z partnerských odměn.
+**Nic se nemigrovalo ani nezaokrouhlovalo** a připravené migrace se peněženek nedotýkají —
+peněženkové sloupce záměrně nedostaly CHECK na 1 desetinné místo, protože by na těchto datech
+selhal. Rozhodnutí, zda se obecné pravidlo vztahuje i na dobíjecí zůstatky, je na Pavlovi.
+
+### ⚠️ OPEN ISSUE — druhá reward matematika mimo engine
+
+`public.activate_partner_coins_from_order(uuid, uuid, text, numeric)` počítá odměnu sama
+(`ROUND((amount / reward_base_czk) * reward_mc, 1)`) místo volání `compute_partner_reward`.
+Nemá dnes žádného volajícího v aplikaci ani v Edge Functions, takže se v tomto úkolu neopravovala.
+Po migraci sloupců by aspoň neztrácela desetinné místo, ale porušuje invariant jediného enginu.
+
+### ⚠️ OPEN ISSUE — ISDOC export plete množství a částku
+
+`supabase/functions/generate-isdoc/index.ts` posílá **počet MioCoinů** do
+`<LineExtensionAmount>` (tj. jako peněžní částku) a `<InvoicedQuantity>` má natvrdo `1`.
+Předexistující chyba finanční sémantiky, mimo rozsah tohoto úkolu; kód nebyl měněn, jen okomentován.
+
+---
+
 ## 0a. Partnerské produktové MioCoin odměny + Shoptet widget — HOTOVO A ŽIVĚ OVĚŘENO (16. 8. 2026)
 
 **Celá funkce je dokončená a běží v produkci.** Backend je LIVE na `xkzhjldrojjlrkezorey`
