@@ -1,5 +1,8 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+// Single shared CSV parser — also imported directly by the Playwright specs, so
+// the tested parser and the deployed parser are literally the same code.
+import { parseShoptetCsv, shouldIssue, toRpcStatus, type ImportRow } from "./csv.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -7,21 +10,6 @@ const corsHeaders = {
 };
 
 type ImportMode = "dry_run" | "live";
-
-// Five-bucket Shoptet order status taxonomy.
-// completed: fully fulfilled  → issue for all trigger thresholds.
-// shipped:   dispatched       → issue for 'paid' and 'shipped' thresholds.
-// paid:      payment received → issue only for 'paid' threshold.
-// cancelled: stopped/returned → always cancel the reward code.
-// pending:   below threshold  → leave reward code as pending.
-type ShoptetStatus = "paid" | "shipped" | "completed" | "cancelled" | "pending";
-
-type ImportRow = {
-  orderId: string;
-  total: number;
-  customerEmail: string;
-  shoptetStatus: ShoptetStatus;
-};
 
 type RpcResult = {
   success?: boolean;
@@ -79,85 +67,6 @@ async function authorize(req: Request, admin: ReturnType<typeof createClient>) {
     .maybeSingle();
   if (!roleRow) return { status: 403, error: "access_denied_superadmin_only" };
   return null;
-}
-
-function detectDelimiter(headerLine: string): string {
-  const semi = (headerLine.match(/;/g) || []).length;
-  const comma = (headerLine.match(/,/g) || []).length;
-  return semi >= comma ? ";" : ",";
-}
-
-function parseCsvLine(line: string, delim: string): string[] {
-  const out: string[] = [];
-  let cur = "";
-  let inQuotes = false;
-  for (let i = 0; i < line.length; i++) {
-    const ch = line[i];
-    if (ch === '"') {
-      if (inQuotes && line[i + 1] === '"') {
-        cur += '"';
-        i++;
-      } else {
-        inQuotes = !inQuotes;
-      }
-    } else if (ch === delim && !inQuotes) {
-      out.push(cur);
-      cur = "";
-    } else {
-      cur += ch;
-    }
-  }
-  out.push(cur);
-  return out.map((s) => s.trim());
-}
-
-function norm(s: string): string {
-  return (s ?? "").toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g, "");
-}
-
-const HEADER_CANDIDATES = {
-  order: ["code", "cislo objednavky", "order", "order_number", "objednavka"],
-  total: ["total", "celkem", "cena celkem", "price", "totalprice", "grand total", "amount"],
-  email: ["email", "e-mail", "mail"],
-  status: ["status", "stav"],
-};
-
-function findCol(headers: string[], candidates: string[]): number {
-  const normalized = headers.map((h) => norm(h));
-  for (const c of candidates) {
-    const idx = normalized.findIndex((h) => h.includes(c));
-    if (idx >= 0) return idx;
-  }
-  return -1;
-}
-
-// Maps raw Shoptet status string to 5-bucket taxonomy.
-// completed must be checked BEFORE shipped and paid — Czech "vyřízená" (vyriz)
-// would otherwise match the paid pattern first.
-function mapStatus(raw: string): ShoptetStatus {
-  const s = norm(raw);
-  if (/(completed|dokon|vyriz|dorucen|delivered)/.test(s))                     return "completed";
-  if (/(shipped|odeslan|dispatched)/.test(s))                                   return "shipped";
-  if (/(zaplac|paid|pripravena|processing|vyrizuje)/.test(s))                   return "paid";
-  if (/(storn|zrusen|cancel|vracen|returned|nevyzved|unpaid|nezaplac)/.test(s)) return "cancelled";
-  return "pending";
-}
-
-// Returns true if the reward code should be issued NOW given the partner's threshold.
-function shouldIssue(status: ShoptetStatus, triggerThreshold: string): boolean {
-  if (status === "completed") return true;                              // all thresholds
-  if (status === "shipped")   return triggerThreshold !== "completed";  // 'paid' + 'shipped'
-  if (status === "paid")      return triggerThreshold === "paid";       // 'paid' only
-  return false;                                                         // pending, cancelled
-}
-
-// Maps ShoptetStatus → value accepted by update_partner_order_reward_status.
-// RPC positive set: 'paid', 'delivered', 'completed'. 'shipped' is not accepted → 'delivered'.
-function toRpcStatus(s: ShoptetStatus): string {
-  if (s === "completed") return "completed";
-  if (s === "shipped")   return "delivered";
-  if (s === "paid")      return "paid";
-  return "cancelled";
 }
 
 function asMode(raw: unknown): ImportMode {
@@ -249,31 +158,21 @@ serve(async (req) => {
     }
 
     const text = await resp.text();
-    const lines = text.split(/\r?\n/).filter((l) => l.trim().length > 0);
-    if (lines.length < 1) {
+    const parsed = parseShoptetCsv(text);
+
+    if (parsed.missingHeaders.length === 1 && parsed.missingHeaders[0] === "empty_csv") {
       await finalize({ status: "failed", error_summary: "empty_csv" });
       return json({ status: "error", error: "empty_csv", run_id: runId }, 400);
     }
 
-    const delim = detectDelimiter(lines[0]);
-    const headers = parseCsvLine(lines[0], delim);
-    const colOrder = findCol(headers, HEADER_CANDIDATES.order);
-    const colTotal = findCol(headers, HEADER_CANDIDATES.total);
-    const colEmail = findCol(headers, HEADER_CANDIDATES.email);
-    const colStatus = findCol(headers, HEADER_CANDIDATES.status);
-
-    const missing: string[] = [];
-    if (colOrder < 0) missing.push("order_code");
-    if (colTotal < 0) missing.push("total");
-    if (colEmail < 0) missing.push("email");
-    if (missing.length > 0) {
-      await finalize({ status: "failed", error_summary: `missing_headers:${missing.join(",")}` });
-      return json({ status: "error", error: "missing_required_headers", missing, run_id: runId }, 400);
+    if (parsed.missingHeaders.length > 0) {
+      await finalize({ status: "failed", error_summary: `missing_headers:${parsed.missingHeaders.join(",")}` });
+      return json({ status: "error", error: "missing_required_headers", missing: parsed.missingHeaders, run_id: runId }, 400);
     }
 
-    const dataRows = lines.slice(1);
+    const isItemLevel = parsed.isItemLevel;
     let rowsValid = 0;
-    let rowsInvalid = 0;
+    let rowsInvalid = parsed.invalidRows.length;
     let rowsWouldCreate = 0;
     let rowsWouldStatusUpdate = 0;
     let rowsSkipDup = 0;
@@ -288,35 +187,34 @@ serve(async (req) => {
       .eq("partner_id", partnerId);
     const existingIds = new Set((existing ?? []).map((r: { external_order_id: string }) => r.external_order_id));
 
-    const validRows: ImportRow[] = [];
     const logBatch: Array<Record<string, unknown>> = [];
-    for (const line of dataRows) {
-      const cols = parseCsvLine(line, delim);
-      const orderId = (cols[colOrder] ?? "").trim();
-      const totalRaw = (cols[colTotal] ?? "").replace(/\s/g, "").replace(",", ".");
-      const total = Number(totalRaw);
-      const customerEmail = (cols[colEmail] ?? "").trim();
-      const emailPresent = customerEmail.includes("@");
-      const shoptetStatus: ShoptetStatus = colStatus >= 0 ? mapStatus(cols[colStatus] ?? "") : "pending";
+    for (const inv of parsed.invalidRows) {
+      logBatch.push({ run_id: runId, external_order_id: inv.orderId, action: "invalid", result: "skipped" });
+    }
 
-      if (!orderId || !Number.isFinite(total) || total <= 0 || !emailPresent) {
-        rowsInvalid++;
-        logBatch.push({ run_id: runId, external_order_id: orderId || null, action: "invalid", result: "skipped" });
-        continue;
-      }
-
+    // Per-order validity, dedup and dry-run projections. parseShoptetCsv already
+    // grouped item-level rows, so one order with N products is ONE entry here.
+    const validRows: ImportRow[] = [];
+    for (const row of parsed.orders) {
+      const orderId = row.orderId;
       rowsValid++;
+
       if (mode === "dry_run" && existingIds.has(orderId)) {
         rowsSkipDup++;
         logBatch.push({ run_id: runId, external_order_id: orderId, action: "skip_dup", result: "exists" });
         continue;
       }
 
-      validRows.push({ orderId, total, customerEmail, shoptetStatus });
+      validRows.push(row);
       if (!existingIds.has(orderId)) {
         rowsWouldCreate++;
-        logBatch.push({ run_id: runId, external_order_id: orderId, action: "would_create", result: shoptetStatus });
-        if (shouldIssue(shoptetStatus, triggerThreshold) || shoptetStatus === "cancelled") {
+        logBatch.push({
+          run_id: runId,
+          external_order_id: orderId,
+          action: "would_create",
+          result: row.shoptetStatus,
+        });
+        if (shouldIssue(row.shoptetStatus, triggerThreshold) || row.shoptetStatus === "cancelled") {
           rowsWouldStatusUpdate++;
         }
       }
@@ -340,6 +238,9 @@ serve(async (req) => {
               source_detail: "shoptet_import",
               shoptet_import_run_id: runId,
             },
+            // Only sent for item-level exports. NULL keeps the legacy whole-shop
+            // calculation, so partners on the old export are unaffected.
+            p_items: row.items.length > 0 ? row.items : null,
           });
 
           if (createErr || !isSuccessResult(createResult)) {
@@ -388,7 +289,7 @@ serve(async (req) => {
     }
 
     const summary = {
-      rows_total: dataRows.length,
+      rows_total: parsed.dataRowCount,
       rows_valid: rowsValid,
       rows_invalid: rowsInvalid,
       rows_would_create: rowsWouldCreate,
@@ -417,7 +318,14 @@ serve(async (req) => {
       }, summary.status === "ok" ? 200 : 500);
     }
 
-    return json({ status: "ok", mode, run_id: runId, ...summary });
+    return json({
+      status: "ok",
+      mode,
+      run_id: runId,
+      item_level_export: isItemLevel,
+      items_total: validRows.reduce((n, r) => n + r.items.length, 0),
+      ...summary,
+    });
   } catch (e) {
     await finalize({ status: "failed", error_summary: "unexpected_error" });
     console.error("import-shoptet-orders error:", (e as Error)?.message);

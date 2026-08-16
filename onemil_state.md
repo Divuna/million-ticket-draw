@@ -17,7 +17,7 @@ kolik mu OneMil po objednávce skutečně vydá.
 - [x] **datový model** — `20260816100000_partner_product_reward_rules.sql`
 - [x] **shared reward engine** — `20260816110000_compute_partner_reward_engine.sql`
 - [x] **create_partner_order_reward integration** — `20260816120000_create_partner_order_reward_items.sql`
-- [ ] Shoptet item CSV parser (`import-shoptet-orders`)
+- [x] **Shoptet item CSV parser** — `import-shoptet-orders/csv.ts` + spec 124 (9 zelených)
 - [ ] partner product UI (`PartnerDashboard`)
 - [ ] Partner Order API items (`partner-activate`)
 - [ ] widget preview endpoint
