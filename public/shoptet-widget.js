@@ -418,7 +418,8 @@
       var target =
         document.querySelector('.p-detail-inner-header') ||
         document.querySelector('.p-info-wrapper') ||
-        document.querySelector('.product-top');
+        document.querySelector('.product-top') ||
+        document.querySelector('.p-detail-inner');
       render(target, 'Za tento produkt získáte ' + coins + ' ' + czPlural(coins), false);
     });
   }
