@@ -150,36 +150,10 @@ export const AdminContextSubNav: React.FC = () => {
     };
   }, []);
 
-  // Počet čekajících Shoptet žádostí (stejný zdroj/filtr jako badge v záložce
-  // "Shoptet žádosti" na /admin/partners: shoptet_connection_requests, status='submitted').
-  // Poll 60 s + okamžitá aktualizace po schválení/zamítnutí (custom event z AdminPartners).
-  useEffect(() => {
-    let cancelled = false;
+  // Shoptet napojení už nemá ruční admin schvalování — partner se schvaluje jednou
+  // a Shoptet export se po validaci aktivuje sám. Žádný Shoptet badge v navigaci.
 
-    const loadPendingShoptetRequestsCount = async () => {
-      try {
-        const { count, error } = await supabase
-          .from("shoptet_connection_requests")
-          .select("id", { count: "exact", head: true })
-          .eq("status", "submitted");
-        if (!cancelled && !error) {
-          setPendingShoptetRequestsCount(count ?? 0);
-        }
-      } catch {
-        // best-effort — silent fail
-      }
-    };
 
-    loadPendingShoptetRequestsCount();
-    const interval = setInterval(loadPendingShoptetRequestsCount, 60_000);
-    window.addEventListener("shoptet-requests-changed", loadPendingShoptetRequestsCount);
-
-    return () => {
-      cancelled = true;
-      clearInterval(interval);
-      window.removeEventListener("shoptet-requests-changed", loadPendingShoptetRequestsCount);
-    };
-  }, []);
 
   // Poll pending company leads count every 60 seconds
   useEffect(() => {
