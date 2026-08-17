@@ -11,6 +11,7 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { supabase } from '@/integrations/supabase/client';
 import { openPartnerInvoiceExport } from '@/lib/partnerInvoiceDownload';
+import { buildShoptetWidgetSnippet } from '@/lib/shoptetWidgetSnippet';
 import { toast } from 'sonner';
 import { Loader2, Building2, Coins, Key, FileText, TrendingUp, Calendar, Upload, Image, Clock, CheckCircle, XCircle, Mail, BookOpen, Rocket, ListChecks, ExternalLink, AlertCircle, Info, Gift, RefreshCw, Copy, Eye, EyeOff, Activity, Settings, Save, Plus, Send, RotateCcw, Tag, Receipt, Download } from 'lucide-react';
 import { Textarea } from '@/components/ui/textarea';
@@ -423,6 +424,17 @@ const PartnerDashboard = () => {
     try {
       await navigator.clipboard.writeText(newApiKey);
       toast.success('API klíč byl zkopírován do schránky');
+    } catch {
+      toast.error('Nepodařilo se zkopírovat do schránky');
+    }
+  };
+
+  // The snippet is built for this partner, so the partner never has to look up their
+  // own id. Nothing secret is copied — see src/lib/shoptetWidgetSnippet.ts.
+  const copyShoptetSnippetToClipboard = async (snippet: string) => {
+    try {
+      await navigator.clipboard.writeText(snippet);
+      toast.success('Kód byl zkopírován do schránky');
     } catch {
       toast.error('Nepodařilo se zkopírovat do schránky');
     }
@@ -1381,6 +1393,14 @@ const PartnerDashboard = () => {
   const isLogoApproved = partner.logo_status === 'approved';
   const hasActiveApiKeys = apiKeys.filter(k => !k.revoked_at).length > 0;
 
+  // The storefront snippet is only offered once OneMil has actually approved the
+  // connection. 'approved' and 'active' are the same two states the status badge and
+  // the form lock already treat as live — the second, manual admin approval of a
+  // Shoptet connection stays exactly as it is; this only reads its result.
+  const isShoptetConnectionLive =
+    shoptetReq?.status === 'approved' || shoptetReq?.status === 'active';
+  const shoptetWidgetSnippet = buildShoptetWidgetSnippet(partner.id);
+
   return (
     <div className="min-h-screen bg-background">
       <main className="container mx-auto px-4 py-8 space-y-8">
@@ -2317,6 +2337,62 @@ const PartnerDashboard = () => {
                   </div>
                 );
               })()}
+            </CardContent>
+          </Card>
+        )}
+
+        {/* Zobrazení MioCoinů v e-shopu — storefront snippet.
+            Shown ONLY once the Shoptet connection is approved/active, so a partner is
+            never handed a storefront tag for a connection OneMil has not reviewed. */}
+        {isAccountApproved && isShoptetConnectionLive && shoptetWidgetSnippet && (
+          <Card
+            data-testid="shoptet-widget-snippet-section"
+            className="border-[hsl(var(--neon-gold)/0.15)] hover:border-[hsl(var(--neon-gold)/0.25)] transition-colors"
+          >
+            <CardHeader className="pb-3">
+              <CardTitle className="flex items-center gap-2 text-[hsl(var(--text-silver))]">
+                <Gift className="w-5 h-5 text-[hsl(var(--neon-gold))]" />
+                Zobrazení MioCoinů v e-shopu
+              </CardTitle>
+              <CardDescription>
+                Aby zákazníci viděli, kolik MioCoinů za nákup získají, vložte do e-shopu tento kód.
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <p className="text-sm text-muted-foreground leading-relaxed">
+                V Shoptetu otevři <span className="font-medium text-foreground">Vzhled a obsah</span>{' '}
+                → <span className="font-medium text-foreground">Editor HTML kódu</span> a do části pro
+                kód na všech stránkách vlož:
+              </p>
+
+              <div className="space-y-2">
+                <pre
+                  data-testid="shoptet-widget-snippet-code"
+                  className="overflow-x-auto rounded-lg border border-border/50 bg-muted/40 p-3 text-xs leading-relaxed"
+                >
+                  <code className="whitespace-pre">{shoptetWidgetSnippet}</code>
+                </pre>
+                <div className="flex justify-end">
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant="outline"
+                    className="gap-2"
+                    onClick={() => copyShoptetSnippetToClipboard(shoptetWidgetSnippet)}
+                  >
+                    <Copy className="w-4 h-4" />
+                    Kopírovat kód
+                  </Button>
+                </div>
+              </div>
+
+              <div className="flex items-start gap-2 rounded-lg bg-muted/30 border border-border/50 p-3">
+                <Info className="w-4 h-4 text-muted-foreground flex-shrink-0 mt-0.5" />
+                <p className="text-xs text-muted-foreground leading-relaxed">
+                  Po vložení kódu a uložení se informace o MioCoinech zobrazí automaticky podle
+                  vašeho aktuálního nastavení v OneMil.
+                </p>
+              </div>
             </CardContent>
           </Card>
         )}
