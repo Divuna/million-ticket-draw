@@ -3,6 +3,10 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 // Single shared CSV parser — also imported directly by the Playwright specs, so
 // the tested parser and the deployed parser are literally the same code.
 import { parseShoptetCsv, shouldIssue, toRpcStatus, type ImportRow } from "./csv.ts";
+// Delta fetch: limits the download to orders created/changed since the last
+// successful live run, so the cron can poll every minute without re-downloading
+// the partner's whole order history. See delta.ts for the timezone reasoning.
+import { computeDeltaFrom, formatShoptetUpdateTime, withUpdateTimeFrom } from "./delta.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -132,6 +136,30 @@ serve(async (req) => {
     return json({ status: "skipped", reason: "already_running", partner_id: partnerId }, 200);
   }
 
+  // Delta watermark: the started_at of the most recent live run that finished
+  // 'ok'. Only 'ok' advances it — a 'partial'/'failed' run leaves the watermark
+  // where it was, so the next run re-offers everything that run may have dropped.
+  // Only live runs count: a dry run imports nothing, so letting it move the
+  // watermark would silently skip orders.
+  //
+  // Dry runs deliberately keep downloading the FULL export — an admin running a
+  // dry run is inspecting their export configuration and must see all of it, not
+  // just the last few minutes.
+  let deltaFrom: Date | null = null;
+  if (mode === "live") {
+    const { data: lastOkRun } = await admin
+      .from("shoptet_import_runs")
+      .select("started_at")
+      .eq("partner_id", partnerId)
+      .eq("mode", "live")
+      .eq("status", "ok")
+      .order("started_at", { ascending: false })
+      .limit(1)
+      .maybeSingle();
+    // No successful live run yet → null → full export, exactly as before.
+    deltaFrom = computeDeltaFrom(lastOkRun?.started_at as string | undefined);
+  }
+
   const { data: run, error: runErr } = await admin
     .from("shoptet_import_runs")
     .insert({ partner_id: partnerId, trigger, mode, status: "running" })
@@ -151,7 +179,11 @@ serve(async (req) => {
       return json({ status: "error", error: "export_url_unavailable", run_id: runId }, 400);
     }
 
-    const resp = await fetch(url, { redirect: "follow" });
+    // The delta parameter is appended to the raw URL string so the permanent
+    // link's own parameters (patternId, partnerId, hash) stay byte-identical.
+    // Neither `url` nor `fetchUrl` is ever logged, returned, or persisted.
+    const fetchUrl = deltaFrom ? withUpdateTimeFrom(url, deltaFrom) : url;
+    const resp = await fetch(fetchUrl, { redirect: "follow" });
     if (!resp.ok) {
       await finalize({ status: "failed", error_summary: `fetch_failed_http_${resp.status}` });
       return json({ status: "error", error: "fetch_failed", http_status: resp.status, run_id: runId }, 502);
@@ -307,6 +339,9 @@ serve(async (req) => {
         status: summary.status,
         mode,
         run_id: runId,
+        // Cutoff actually sent to Shoptet, or null for a full export. A plain
+        // timestamp — no URL, no hash, nothing secret.
+        delta_from: deltaFrom ? formatShoptetUpdateTime(deltaFrom) : null,
         rows_total: summary.rows_total,
         rows_valid: summary.rows_valid,
         rows_invalid: summary.rows_invalid,
