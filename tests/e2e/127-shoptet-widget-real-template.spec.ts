@@ -87,6 +87,31 @@ const PRODUCT_DOM = `
   </form>
   <div class="price-final-holder"><span class="price-final">50 Kč</span></div>`;
 
+// Tango's product detail uses .p-detail-inner instead of the other standard
+// product target containers; its dataLayer still carries the same product shape.
+const TANGO_PRODUCT_DL = JSON.stringify([{
+  shoptet: {
+    pageType: 'productDetail',
+    product: {
+      hasVariants: true,
+      codes: [{ code: '525/38' }, { code: '525/39' }, { code: '525/40' }],
+      priceWithVat: 3190,
+    },
+    cart: [],
+  },
+}]);
+
+const TANGO_PRODUCT_DOM = `
+  <div class="p-detail-inner">
+    <h1>UA ULTRARANGE EXO SE</h1>
+    <form action="/action/Cart/addCartItem/" id="product-detail-form">
+      <meta itemprop="sku" content="525/38">
+      <meta itemprop="price" content="3190.00">
+      <select id="parameter-id-5" name="parameterValueId[5]"><option>Zvolte variantu</option><option>38</option><option>39</option></select>
+    </form>
+    <div class="p-detail-inner-controls"><button class="add-to-cart-button">Do košíku</button></div>
+  </div>`;
+
 // Real cart dataLayer: note priceWithVat 50 vs priceWithoutDiscount 60.
 const cartDl = (qty: number) => JSON.stringify([{
   shoptet: {
@@ -130,6 +155,19 @@ test.describe('127 — widget matches the real Shoptet template', () => {
     expect(call.order_total_czk).toBe(50);
 
     await expect(page.locator('.onemil-mc-widget')).toContainText('Za tento produkt získáte 2 MioCoiny');
+  });
+
+  test('127a2) Tango product detail: uses the .p-detail-inner fallback without entering the CTA', async ({ page }) => {
+    const captured = await stubPreview(page, OK(4));
+    await mountShoptet(page, { dataLayer: TANGO_PRODUCT_DL, body: TANGO_PRODUCT_DOM });
+
+    await expect.poll(() => captured.length, { timeout: 10_000 }).toBeGreaterThan(0);
+    expect(captured[0].items).toEqual([{ code: '525/38', quantity: 1, unit_price_czk: 3190 }]);
+    expect(captured[0].order_total_czk).toBe(3190);
+
+    await expect(page.locator('.onemil-mc-widget')).toContainText('Za tento produkt získáte 4 MioCoiny');
+    await expect(page.locator('.p-detail-inner > .onemil-mc-widget')).toHaveCount(1);
+    await expect(page.locator('.add-to-cart-button .onemil-mc-widget')).toHaveCount(0);
   });
 
   test('127b) cart: reads shoptet.cart and sends the AFTER-DISCOUNT price', async ({ page }) => {
