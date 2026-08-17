@@ -1,3 +1,37 @@
+# 17. 08. 2026 — Fakturační PDF ověřeno skutečným souborem na stagingu (PRODUKCE NENASAZENA)
+
+Poslední otevřený kus MioCoin desetinné práce: `generate-partner-invoice-pdf` byla na stagingu
+stále v předchozí verzi, takže binární PDF test dosud neproběhl.
+
+Funkce nasazena na staging **v39 → v40**, `verify_jwt=false` zachováno. Diff proti baseline
+obsahuje výhradně podporu desetinných MioCoinů — nový `formatCoins()`, jeho použití na čtyřech
+místech a oprava `totalCoins += Number(act.coins || 0)`; bez toho se numeric stringy z PostgREST
+zřetězily do `"00.61.22.5"`.
+
+Testovací faktura vznikla přes skutečnou fakturační cestu (`create_partner_order_reward` →
+`update_partner_order_reward_status` → `redeem_miocoin_code` → `create_partner_invoices_for_period`)
+s aktivacemi 0,6 + 1,2 + 2,5 MC a `price_per_coin = 1 Kč`. PDF se generovalo přes existující
+`request_partner_invoice_pdf()` (pg_net + Vault token), takže se nesahalo na žádný secret ani na
+autorizační model funkce.
+
+Výsledek: HTTP **200**, soubor **27 999 B**, `%PDF-1.7`, ukončeno `%%EOF`. V PDF stojí řádky
+`0,6 / 1,2 / 2,5`, kontrolní přehled `0,6 / 1,2 / 2,5`, `Celkem: 4,3`, `Celkem coinů: 4,3`
+a `Cena bez DPH: 4,30 CZK` — MioCoin množství na 1 desetinné místo a peníze na 2 zároveň na jedné
+faktuře. Vizuální kontrola proběhla skutečně: PDF bylo staženo ze staging Storage, vyrenderováno
+do PNG a prohlédnuto — bez překryvů, s korektní českou diakritikou a desetinnými čárkami.
+
+Při té příležitosti upřesněno k dřívějšímu OPEN ISSUE: `amount_gross` je v DB stále `5.203`,
+ale PDF díky `formatCurrency` zobrazí `5,20 CZK`. Neopravováno.
+
+Úklid: testovací faktura, exporty, aktivace, reward kódy, produktová pravidla, fixture partner
+i vygenerované PDF ve Storage smazány. `wallet_transactions` je immutable ledger, takže tři
+kreditní řádky (0,6 / 1,2 / 2,5) zůstávají a zůstatek peněženky E2E uživatele je ponechán
+v souladu s nimi (4954,30).
+
+**Produkce `xkzhjldrojjlrkezorey` nebyla nijak změněna.**
+
+---
+
 # 16. 08. 2026 — Staging platební drift srovnán, migrace 5 ověřena (PRODUKCE NENASAZENA)
 
 Navazuje na předchozí zápis, kde byla migrace 5 zadržena kvůli driftu.

@@ -102,19 +102,45 @@ Před opravou dávala tatáž platba 999,99 zůstatek `5944.29`. Všechny testy 
 s rollbackem; na stagingu nezůstal žádný testovací `payments`, `wallet_transactions`, `referrals`
 ani `referral_rewards` řádek a **žádný zůstatek peněženky se dvěma desetinnými místy** (0).
 
-### ⚠️ NEDOKONČENO — staging PDF Edge Function nebyla přenasazena
+### PDF Edge Function — NASAZENA NA STAGING A OVĚŘENA SKUTEČNÝM PDF (17. 8. 2026)
 
-`generate-partner-invoice-pdf` na stagingu je stále **předchozí verze** (bez `formatCoins` a bez
-`Number()` u sčítání). Binární PDF test proto neproběhl. Logika opravy ověřena deterministicky
-mimo DB proti reálným hodnotám faktury: nová verze dává řádky `0,6 | 1,2 | 2,5` a součet `4,3`,
-zatímco stará `totalCoins += act.coins` nad numeric stringy z PostgREST dává **`"00.61.22.5"`**.
-Přenasazení 721řádkové fakturační EF ručně nebylo provedeno kvůli riziku chyby v přepisu.
+`generate-partner-invoice-pdf` nasazena na staging **v39 → v40**, `verify_jwt=false` beze změny.
+Diff proti baseline obsahuje **výhradně** podporu desetinných MioCoinů: nový `formatCoins()`,
+jeho použití v souhrnu / řádcích faktury / kontrolním přehledu / součtu, a oprava
+`totalCoins += Number(act.coins || 0)` (dřív se numeric stringy z PostgREST **zřetězily**).
+
+**Skutečné PDF vygenerováno a ověřeno**, ne jen kontrola zdrojáku. Volání proběhlo přes existující
+`public.request_partner_invoice_pdf()` (pg_net + Vault `internal_function_token`), takže se
+nesahalo na žádný secret a nezměnil se autorizační model funkce.
+
+| kontrola | výsledek |
+|---|---|
+| HTTP status | **200** |
+| Content-Type odpovědi EF | `application/json` (EF vrací metadata, PDF ukládá do Storage — její kontrakt) |
+| `activation_overview_total_coins` | `4.3` |
+| soubor ve Storage | `application/pdf`, **27 999 B**, hlavička `%PDF-1.7`, ukončeno `%%EOF` — platné, neprázdné |
+| řádky faktury (Coiny) | **`0,6` · `1,2` · `2,5`** |
+| kontrolní přehled aktivací (MioCoiny) | **`0,6` · `1,2` · `2,5`** |
+| `Celkem:` v přehledu aktivací | **`4,3`** (nikoli `"00.61.22.5"`) |
+| `Celkem coinů:` v souhrnu | **`4,3`** |
+| `Cena bez DPH` | **`4,30 CZK`** |
+| `DPH 21 %` / `Cena s DPH` | `0,90 CZK` / `5,20 CZK` |
+
+Nevzniklo `0`, `1`, `4`, `4,30 MC` ani technický string. MioCoin množství drží 1 desetinné místo,
+peníze 2 — obojí zároveň na jedné faktuře.
+
+**Vizuální kontrola proběhla skutečně:** PDF bylo staženo ze staging Storage (Supabase CLI,
+explicitní `--project-ref dxmowysntemfqfnanxua`), vyrenderováno do PNG a prohlédnuto. Text se
+nepřekrývá, tabulky nejsou rozbité, české desetinné čárky i diakritika (`Kontrolní přehled aktivací
+MioCoinů`, `Položky faktury`, `Odběratel`) se vykreslují správně, součet je viditelný, QR kód je
+vykreslený.
 
 ### ⚠️ OPEN ISSUE — zaokrouhlení peněz na faktuře (předexistující, mimo rozsah)
 
 Testovací faktura: `amount_net = 4.30`, `vat_amount = 0.90`, ale `amount_gross = 5.203`
-(tj. `4.30 + 0.903` bez zaokrouhlení) místo `5.20`. Týká se **peněz**, ne MioCoinů; na malých
-částkách je to vidět. Nemění se v tomto úkolu.
+(tj. `4.30 + 0.903` bez zaokrouhlení) místo `5.20`. Týká se **peněz**, ne MioCoinů.
+V PDF se to neprojeví — `formatCurrency` zobrazí `5,20 CZK` — ale **v databázi zůstává 5.203**.
+Nemění se v tomto úkolu.
 
 ### Ověřený produkční bug (read-only audit `xkzhjldrojjlrkezorey`, 16. 8. 2026)
 
