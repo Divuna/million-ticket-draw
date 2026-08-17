@@ -155,7 +155,9 @@ Tyto funkce zakládají `partner_invoices`, přidělují čísla faktur a přep�
 - `generate_partner_invoice(uuid, date, date)`
 - `run_monthly_partner_invoicing(date, date)`
 
-`PUBLIC`, `anon` ani `authenticated` jim **nesmí vrátit EXECUTE** (migrace `20260817160000`).
+`PUBLIC`, `anon` ani `authenticated` jim **nesmí vrátit EXECUTE** (migrace `20260817160000`,
+**aplikována na staging i na produkci** 17. 08. 2026 po výslovném schválení Pavla; ověřeno
+read-only — u všech čtyř `anon=false`, `authenticated=false`, `service_role=true`).
 Ověřený stav callerů: cron 17 → `run_partner_invoice_weekly_automation()` (SECURITY DEFINER,
 Vault token) → EF `partner-invoice-auto-send` (service role) → weekly funkce; ostatní volá jen
 service-role E2E spec, resp. `run_monthly_partner_invoicing` nemá caller žádný.
@@ -164,6 +166,47 @@ těchto RPC.
 
 Starší `20260718090000_lock_partner_invoice_weekly_function.sql` zamykala jen weekly funkci;
 **nepřepisovat ji**, nová migrace ji doplňuje a je idempotentní.
+
+## ISDOC export partnerské faktury (TRVALÝ INVARIANT)
+
+ISDOC je **reprezentace faktury, která už existuje** — nikdy se v něm nic nepočítá znovu.
+Všechny částky a data pocházejí z `partner_invoices` přes `build_isdoc_payload`
+(migrace `20260817170000`). Zakázáno: vymýšlet číslo faktury, odvozovat `IssueDate`,
+`TaxPointDate` nebo splatnost z `now()`, nebo počítat DPH ve funkci.
+
+**Množství ≠ peníze.** Počet MioCoinů patří do `<InvoicedQuantity>` (max 1 desetinné místo,
+`unitCode="ks"`), cena za coin do `<UnitPrice>`; `<LineExtensionAmount>` je peněžní částka na
+2 desetinná místa. Nevracet stav, kdy se počet coinů psal do `LineExtensionAmount`
+a `InvoicedQuantity` bylo natvrdo `1`.
+
+**Jeden agregovaný `InvoiceLine` na fakturu**, ne řádek na aktivaci: ISDOC nese DPH per řádek
+a zaokrouhlení DPH po jednotlivých aktivacích rozejde součet řádků s fakturou o haléře.
+Detail zůstává v `partner_invoice_lines` a v kontrolním přehledu na PDF.
+
+`<Percent>` je **sazba v procentech** (`21`), zatímco `partner_invoices.vat_rate` je zlomek
+(`0.21`) — převádí `vatFraction()`/`vatPercent()`. DB hodnotu neměnit.
+
+Dodavatel je **`iCONIC POINT s.r.o.`, IČO 17795851, DIČ CZ17795851** (`COMPANY_CONTEXT.md`).
+„OneMil s.r.o.“ neexistuje a nesmí se objevit jako právní strana.
+
+**`PaymentMeans` se negeneruje** — `COMPANY_CONTEXT.md` zakazuje bankovní údaje v repozitáři,
+element je volitelný a vymyslet účet kvůli schématu je horší než ho vynechat. Splatnost nese
+`Note`. Do ISDOC ani do jeho zdroje nepsat IBAN, `BankAccount` ani `účet/kód banky`.
+
+Pořadí prvků je součástí validity (`xs:sequence`) — **při jakékoli úpravě znovu ověřit proti
+oficiálnímu XSD** `https://isdoc.cz/6.0.1/xsd/isdoc-invoice-6.0.1.xsd`. Částky nesmí mít
+atribut `currencyID` (v 6.0.1 nepovolený); měna je jednou v `<LocalCurrencyCode>`.
+Oficiální Schematron `.sch` se **nepublikuje** (všechny obvyklé adresy vrací 404), proto
+pravidla, která by kontroloval, hlídá spec `tests/e2e/131-isdoc-partner-invoice.spec.ts`.
+
+`generate-isdoc` **musí autorizovat uvnitř funkce** (interní token / service role /
+superadmin JWT — stejný model jako `generate-partner-invoice-pdf`). Spoléhat jen na
+`verify_jwt` je díra: pak může kterýkoli přihlášený uživatel exportovat cizí fakturu.
+Export se ukládá do **privátního** bucketu (`file_url: null`), nikdy přes `getPublicUrl`.
+
+**Stav:** opraveno a ověřeno na stagingu (v15). **Produkce má dosud starou vadnou verzi
+a `verify_jwt` bez vnitřní kontroly** — rollout vyžaduje samostatné schválení Pavla.
+V produkci zatím nemá živého callera (volání v `AdminInvoices.tsx` je zakomentované).
 
 ## Formátování
 

@@ -1,0 +1,114 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<Invoice xmlns="http://isdoc.cz/namespace/2013" version="6.0.1">
+  <DocumentType>1</DocumentType>
+  <ID>OMA-20260001</ID>
+  <UUID>256cd634-d5ad-4e43-b55f-d45f4b7be1c5</UUID>
+  <ReferenceNumber>20260001</ReferenceNumber>
+  <IssueDate>2026-08-17</IssueDate>
+  <TaxPointDate>2026-08-17</TaxPointDate>
+  <VATApplicable>true</VATApplicable>
+  <ElectronicPossibilityAgreementReference>Souhlas s elektronickou fakturací</ElectronicPossibilityAgreementReference>
+  <Note>Fakturační období 2026-08-17 - 2026-08-17. Odměny MioCoin aktivované zákazníky (platforma OneMil). Datum splatnosti 2026-08-31.</Note>
+  <LocalCurrencyCode>CZK</LocalCurrencyCode>
+  <CurrRate>1</CurrRate>
+  <RefCurrRate>1</RefCurrRate>
+  <AccountingSupplierParty>
+    <Party>
+      <PartyIdentification>
+        <ID>17795851</ID>
+      </PartyIdentification>
+      <PartyName>
+        <Name>iCONIC POINT s.r.o.</Name>
+      </PartyName>
+      <PostalAddress>
+        <StreetName>Na Folimance</StreetName>
+        <BuildingNumber>2155/15</BuildingNumber>
+        <CityName>Praha 2</CityName>
+        <PostalZone>120 00</PostalZone>
+        <Country>
+          <IdentificationCode>CZ</IdentificationCode>
+          <Name>Česká republika</Name>
+        </Country>
+      </PostalAddress>
+      <PartyTaxScheme>
+        <CompanyID>CZ17795851</CompanyID>
+        <TaxScheme>VAT</TaxScheme>
+      </PartyTaxScheme>
+    </Party>
+  </AccountingSupplierParty>
+  <AccountingCustomerParty>
+    <Party>
+      <PartyIdentification>
+        <ID>12345678</ID>
+      </PartyIdentification>
+      <PartyName>
+        <Name>ISDOC Decimal Test s.r.o.</Name>
+      </PartyName>
+      <PostalAddress>
+        <StreetName>Testovaci</StreetName>
+        <BuildingNumber>1024/7</BuildingNumber>
+        <CityName>Brno</CityName>
+        <PostalZone>602 00</PostalZone>
+        <Country>
+          <IdentificationCode>CZ</IdentificationCode>
+          <Name>Česká republika</Name>
+        </Country>
+      </PostalAddress>
+      <PartyTaxScheme>
+        <CompanyID>CZ12345678</CompanyID>
+        <TaxScheme>VAT</TaxScheme>
+      </PartyTaxScheme>
+      <Contact>
+        <ElectronicMail>isdoc-decimal-test@onemil.cz</ElectronicMail>
+      </Contact>
+    </Party>
+  </AccountingCustomerParty>
+  <InvoiceLines>
+    <InvoiceLine>
+      <ID>1</ID>
+      <InvoicedQuantity unitCode="ks">4.3</InvoicedQuantity>
+      <LineExtensionAmount>4.30</LineExtensionAmount>
+      <LineExtensionAmountTaxInclusive>5.20</LineExtensionAmountTaxInclusive>
+      <LineExtensionTaxAmount>0.90</LineExtensionTaxAmount>
+      <UnitPrice>1.00</UnitPrice>
+      <UnitPriceTaxInclusive>1.21</UnitPriceTaxInclusive>
+      <ClassifiedTaxCategory>
+        <Percent>21</Percent>
+        <VATCalculationMethod>0</VATCalculationMethod>
+        <VATApplicable>true</VATApplicable>
+      </ClassifiedTaxCategory>
+      <Item>
+        <Description>MioCoiny aktivované zákazníky (OneMil)</Description>
+      </Item>
+    </InvoiceLine>
+  </InvoiceLines>
+  <TaxTotal>
+    <TaxSubTotal>
+      <TaxableAmount>4.30</TaxableAmount>
+      <TaxAmount>0.90</TaxAmount>
+      <TaxInclusiveAmount>5.20</TaxInclusiveAmount>
+      <AlreadyClaimedTaxableAmount>0.00</AlreadyClaimedTaxableAmount>
+      <AlreadyClaimedTaxAmount>0.00</AlreadyClaimedTaxAmount>
+      <AlreadyClaimedTaxInclusiveAmount>0.00</AlreadyClaimedTaxInclusiveAmount>
+      <DifferenceTaxableAmount>4.30</DifferenceTaxableAmount>
+      <DifferenceTaxAmount>0.90</DifferenceTaxAmount>
+      <DifferenceTaxInclusiveAmount>5.20</DifferenceTaxInclusiveAmount>
+      <TaxCategory>
+        <Percent>21</Percent>
+        <TaxScheme>VAT</TaxScheme>
+      </TaxCategory>
+    </TaxSubTotal>
+    <TaxAmount>0.90</TaxAmount>
+  </TaxTotal>
+  <LegalMonetaryTotal>
+    <TaxExclusiveAmount>4.30</TaxExclusiveAmount>
+    <TaxInclusiveAmount>5.20</TaxInclusiveAmount>
+    <AlreadyClaimedTaxExclusiveAmount>0.00</AlreadyClaimedTaxExclusiveAmount>
+    <AlreadyClaimedTaxInclusiveAmount>0.00</AlreadyClaimedTaxInclusiveAmount>
+    <DifferenceTaxExclusiveAmount>4.30</DifferenceTaxExclusiveAmount>
+    <DifferenceTaxInclusiveAmount>5.20</DifferenceTaxInclusiveAmount>
+    <PayableRoundingAmount>0.00</PayableRoundingAmount>
+    <PaidDepositsAmount>0.00</PaidDepositsAmount>
+    <PayableAmount>5.20</PayableAmount>
+  </LegalMonetaryTotal>
+</Invoice>

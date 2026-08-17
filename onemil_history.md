@@ -1,4 +1,68 @@
-# 17. 08. 2026 — Fakturační funkce zamčeny na service_role (staging; PRODUKCE NENASAZENA)
+# 17. 08. 2026 — ISDOC 6.0.1 partnerská faktura opravena (staging; PRODUKCE NEZMĚNĚNA)
+
+Export partnerské faktury do ISDOC nebyl použitelný účetní doklad. Opraveno a ověřeno
+**skutečně vygenerovaným souborem** ze staging Edge Function, ne kontrolou zdrojáku.
+
+## Co bylo špatně
+
+Množství a peníze byly zaměněné: `<InvoicedQuantity>` bylo natvrdo `1` a počet MioCoinů se
+psal do `<LineExtensionAmount>`, tedy do peněžního pole — 4,3 MC se četlo jako „4,30 Kč
+za 1 kus“. Dodavatel byl natvrdo „OneMil s.r.o., Na příkopě 1, Praha“, což je **neexistující
+právnická osoba** (OneMil je značka `iCONIC POINT s.r.o.`). Číslo faktury se vymýšlelo jako
+`INV-<rok>-<uuid>`, přestože `partner_invoices.invoice_number` existuje; data vydání a
+splatnosti se odvozovala z `now()`, takže doklad se měnil podle dne exportu. Sazba DPH se
+posílala jako zlomek `0.21` místo `21`. A chyběly povinné elementy — soubor **neprošel
+validací proti oficiálnímu XSD**.
+
+Při auditu se navíc ukázalo, že funkce **neměla žádnou vnitřní autorizaci** a spoléhala jen
+na `verify_jwt`: kterýkoli přihlášený uživatel mohl exportovat cizí partnerskou fakturu.
+
+## Oprava
+
+Nová migrace `20260817170000_build_isdoc_payload_real_invoice_fields.sql` (aditivní) rozšiřuje
+`build_isdoc_payload` o skutečná fakturační pole; peněžní klíče zůstávají holými odkazy na
+sloupce `partner_invoices`, funkce nic nepočítá a nemá zápis. `generate-isdoc` byl přepsán —
+prvky i jejich pořadí podle `xs:sequence` z XSD — a autorizace se dělá uvnitř funkce stejným
+modelem jako u PDF (interní token / service role / superadmin JWT).
+
+Jeden agregovaný řádek místo řádku na aktivaci: ISDOC nese DPH per řádek a zaokrouhlování DPH
+zvlášť z 0,6 / 1,2 / 2,5 MC by rozešlo součet řádků s fakturou o celé haléře. Detail zůstává
+v `partner_invoice_lines` a v kontrolním přehledu na PDF.
+
+`PaymentMeans` se záměrně negeneruje: `COMPANY_CONTEXT.md` zakazuje bankovní údaje v repozitáři,
+element je v ISDOC volitelný, a vymyslet účet kvůli schématu by bylo horší než vynechat
+volitelný blok.
+
+## Ověření
+
+Faktura vznikla reálnou fakturační cestou (0,6 + 1,2 + 2,5 MC → redemption →
+`create_partner_invoices_for_period`): `4.3` MC, `4.30` / `0.90` / `5.20` Kč. Soubor vygenerovala
+**nasazená** staging funkce, byl stažen ze Storage a **prošel validací proti oficiálnímu
+XSD 6.0.1**. Že validátor není no-op, ověřily negativní kontroly nad týmž souborem — přehození
+pořadí, odebrání povinného elementu, vrácení `currencyID`, cizí element i nečíselná částka
+skončily INVALID.
+
+**Schematron spustit nešlo**: oficiální `.sch` se nepublikuje — všechny obvyklé adresy vrací
+HTTP 404, zatímco `.xsd` na témže hostu vrací 200. Pravidla, která by kontroloval, jsou proto
+ověřena přímo v testech.
+
+Autorizace ověřena živě v pěti případech: bez auth 401, špatný interní token 401, anon klíč 401,
+**skutečný přihlášený běžný uživatel 403**, superadmin 200.
+
+Testovací data byla uklizena (0 zbytků, 0 e-mailů). Peněženkový ledger se neobcházel — kredit
+4,3 MC byl skutečná redemption a `wallet_transactions` je immutable triggerem.
+
+Nový spec `tests/e2e/131-isdoc-partner-invoice.spec.ts` (13 testů) drží účetní invarianty,
+oddělení množství od peněz, identitu dodavatele, nepřítomnost bankovních údajů, pořadí prvků
+i autorizaci. Fixture je byte-for-byte ten soubor, který nasazená funkce vygenerovala.
+
+**Produkce nezměněna.** Rollout (migrace + EF deploy) vyžaduje samostatné schválení Pavla.
+Produkční `generate-isdoc` má dosud starou verzi bez vnitřní autorizace, ale nemá živého
+callera — volání v `AdminInvoices.tsx` je zakomentované a existuje 0 isdoc exportů.
+
+---
+
+# 17. 08. 2026 — Fakturační funkce zamčeny na service_role (staging **i produkce**)
 
 Navazuje na OPEN ISSUE z předchozího zápisu — a zároveň **opravuje jeho formulaci**.
 
@@ -27,8 +91,10 @@ V `src/` je jediný výskyt generovaný `types.ts`; frontend faktury pouze čte.
 
 ## Oprava
 
-Migrace `20260817160000_lock_partner_invoice_creation_functions.sql` (staging only) zamyká všechny
-čtyři na `service_role`. `run_monthly_partner_invoicing` je zahrnutá, protože je SECURITY INVOKER
+Migrace `20260817160000_lock_partner_invoice_creation_functions.sql` zamyká všechny
+čtyři na `service_role`. (Původně zapsána jako staging-only; 17. 08. 2026 byla po výslovném
+schválení Pavla aplikována **také na produkci** a read-only ověřena — u všech čtyř funkcí
+`anon=false`, `authenticated=false`, `service_role=true`. Fakturační data se nezměnila.) `run_monthly_partner_invoicing` je zahrnutá, protože je SECURITY INVOKER
 a jen obaluje `generate_partner_invoice`. Starší migrace nebyla přepsána; nová je idempotentní
 díky `to_regprocedure` guardu. Mění se výhradně oprávnění — žádné tělo funkce, výpočet, data, RLS
 ani status logika.

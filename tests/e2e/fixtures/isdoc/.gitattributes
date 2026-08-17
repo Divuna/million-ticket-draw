@@ -1,0 +1,5 @@
+# These files are captured output, not source. They are the exact bytes a deployed
+# Edge Function wrote to Storage, kept so a regression test can assert against the
+# real artifact. Git must not rewrite their line endings on checkout, or the fixture
+# stops being what was actually produced and validated.
+*.isdoc -text

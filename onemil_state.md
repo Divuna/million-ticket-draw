@@ -217,8 +217,8 @@ Kdokoli s veřejným anon klíčem je mohl volat přes PostgREST.
 
 V `src/` nevolá tyto funkce nic — frontend, admin i partner portál faktury pouze čtou z tabulek.
 
-**Migrace `20260817160000_lock_partner_invoice_creation_functions.sql`** (aplikováno pouze na
-staging) zamyká všechny čtyři: `REVOKE ALL ... FROM PUBLIC, anon, authenticated` +
+**Migrace `20260817160000_lock_partner_invoice_creation_functions.sql`** (aplikováno na staging
+**i na produkci** — viz níže) zamyká všechny čtyři: `REVOKE ALL ... FROM PUBLIC, anon, authenticated` +
 `GRANT EXECUTE ... TO service_role`. `run_monthly_partner_invoicing` je zahrnutá, protože je
 SECURITY INVOKER a jen obaluje `generate_partner_invoice` — ponechat ji otevřenou by z díry
 udělalo jen matoucí runtime chybu. Starší migrace `20260718090000` **nebyla přepsána**;
@@ -238,6 +238,15 @@ zvolené tak, aby ani při průchodu nevznikla faktura):
 | `run_monthly_partner_invoicing(date,date)` | `42501` | `42501` | **proběhlo** (no-op) |
 
 ACL po migraci u všech čtyř: `postgres=X/postgres | service_role=X/postgres`.
+
+**Produkce `xkzhjldrojjlrkezorey` — APLIKOVÁNO** (17. 08. 2026, po výslovném schválení Pavla).
+Read-only postcheck 17. 08. 2026 potvrdil u všech čtyř funkcí `anon=false`,
+`authenticated=false`, `service_role=true`, ACL `postgres=X/postgres | service_role=X/postgres`.
+Fakturační data se nezměnila — migrace mění výhradně oprávnění.
+
+> Dřívější zápisy na této větvi tvrdily, že jde o staging-only migraci. To už neplatí a bylo
+> opraveno; produkce byla před touto migrací zamčená jen částečně (pouze weekly funkce přes
+> `20260718090000`), zbylé tři byly volatelné `anon` i `authenticated`.
 
 **PRODUKCE touto migrací NENÍ změněna** — tam jsou `create_partner_invoices_for_period`,
 `generate_partner_invoice` a `run_monthly_partner_invoicing` **stále otevřené pro anon
@@ -282,12 +291,15 @@ odměna spadne na 0 → widget nic nezobrazí a reward code nemůže vzniknout.
 - `supabase/migrations/20260817150000_partner_invoice_money_rounding.sql` — CZK částky
   partnerských faktur na 2 desetinná místa (viz níže). **Aplikováno na staging.**
 - `supabase/migrations/20260817160000_lock_partner_invoice_creation_functions.sql` — fakturační
-  funkce jen pro `service_role` (viz níže). **Aplikováno na staging.**
+  funkce jen pro `service_role` (viz níže). **Aplikováno na staging i na produkci.**
+- `supabase/migrations/20260817170000_build_isdoc_payload_real_invoice_fields.sql` — ISDOC payload
+  vrací skutečná fakturační pole (viz níže). **Aplikováno na staging.**
 - Frontend/EF: `src/lib/miocoin.ts` (sdílený formátovač + validátor), `public/shoptet-widget.js`
   (české desetinné čárky a skloňování), `partner-reward-preview` (odstraněn `Math.floor`),
   `generate-partner-invoice-pdf` (`formatCoins`, oprava sčítání numeric stringů),
   `PartnerDashboard` / `AdminInvoices` / `AdminPartnersPortal` / `RedeemMioCoinCard`.
-- Testy: nový `tests/e2e/130-miocoin-one-decimal.spec.ts`, upravený spec 125.
+- Testy: nový `tests/e2e/130-miocoin-one-decimal.spec.ts`, nový
+  `tests/e2e/131-isdoc-partner-invoice.spec.ts`, upravený spec 125.
 
 ### Read-only audit existujících dat
 
@@ -355,11 +367,85 @@ Fakturační částky, DPH a `price_per_coin` zůstávají na 2 desetinných mí
 Tato data budou před ostrým spuštěním resetována. Peněženkové sloupce proto záměrně nedostaly
 CHECK na 1 desetinné místo.
 
-### ⚠️ OPEN ISSUE — ISDOC export plete množství a částku
+### ISDOC export — VYŘEŠENO, ověřeno na stagingu proti oficiálnímu XSD (17. 08. 2026)
 
-`supabase/functions/generate-isdoc/index.ts` posílá **počet MioCoinů** do
-`<LineExtensionAmount>` (tj. jako peněžní částku) a `<InvoicedQuantity>` má natvrdo `1`.
-Předexistující chyba finanční sémantiky, mimo rozsah tohoto úkolu; kód nebyl měněn, jen okomentován.
+Dřívější OPEN ISSUE („ISDOC plete množství a částku“) je uzavřený — viz sekce 0d níže.
+
+---
+
+## 0d. ISDOC 6.0.1 partnerská faktura — OPRAVENO, OVĚŘENO NA STAGINGU (17. 08. 2026)
+
+**Nasazeno pouze na staging `dxmowysntemfqfnanxua`. Produkce `xkzhjldrojjlrkezorey`
+NEZMĚNĚNA** (v tomto kroku pouze read-only kontrola oprávnění fakturačních funkcí).
+
+### Co bylo špatně
+
+Původní `generate-isdoc` (staging v14) nebyl použitelný účetní doklad:
+
+| chyba | dopad |
+|---|---|
+| `<InvoicedQuantity>` natvrdo `1`, počet MioCoinů v `<LineExtensionAmount>` | 4,3 MC se četlo jako „4,30 Kč za 1 kus“ — množství vydávané za peníze |
+| dodavatel natvrdo „OneMil s.r.o., Na příkopě 1, Praha“ | **neexistující právnická osoba**; OneMil je značka `iCONIC POINT s.r.o.` |
+| číslo faktury `INV-<rok>-<8 znaků uuid>` | vymyšlené — `partner_invoices.invoice_number` (`OMA-20260001`) se ignorovalo |
+| `IssueDate`/`TaxPointDate` = dnešek, splatnost = dnešek + 14 | doklad se měnil podle dne exportu, ne podle faktury |
+| `<Percent>0.21</Percent>` | ISDOC chce sazbu v procentech (`21`), ne zlomek |
+| chybějící povinné elementy (`UnitPrice`, `UnitPriceTaxInclusive`, `LineExtensionTaxAmount`, `ClassifiedTaxCategory`, …), `Item/Name` (v `ItemType` neexistuje), `currencyID` atributy | **soubor neprošel validací proti XSD** |
+| **žádná vnitřní autorizace**, spoléhalo se jen na `verify_jwt` | kterýkoli přihlášený uživatel mohl exportovat cizí partnerskou fakturu |
+
+### Oprava
+
+- **`supabase/migrations/20260817170000_build_isdoc_payload_real_invoice_fields.sql`**
+  (aplikováno na staging) — čistě aditivní: payload nově vrací `invoice_number`,
+  `variable_symbol`, `issue_date`, `due_date`, `taxable_date`, `price_per_coin`,
+  `coins_activated` a per-řádek `unit_price_czk`. Money klíče zůstávají **holé odkazy na
+  sloupce** `partner_invoices` — funkce nic nepočítá a nemá žádný zápis.
+- **`supabase/functions/generate-isdoc/index.ts`** přepsán (staging **v15**,
+  `verify_jwt: false`, autorizace uvnitř). Prvky i jejich **pořadí** odpovídají `xs:sequence`
+  z oficiálního XSD.
+
+### Ověření skutečným souborem (ne unit testem stringu)
+
+Faktura vytvořena **reálnou fakturační cestou**: 3 odměny 0,6 + 1,2 + 2,5 MC z
+`compute_partner_reward` → `redeem_miocoin_code` zákazníkem → `create_partner_invoices_for_period`
+(1,00 Kč/MC, 21 %). DB: `coins_total 4.3` · `amount_net 4.30` · `vat_amount 0.90` ·
+`amount_gross 5.20`. `.isdoc` vygenerován **nasazenou** staging funkcí, stažen ze Storage a:
+
+- **XSD 6.0.1: VALID** (`xmllint`, oficiální `isdoc.cz/6.0.1/xsd/isdoc-invoice-6.0.1.xsd`).
+  Validátor ověřen negativními kontrolami nad **týmž souborem** — přehození `UnitPrice`,
+  odebrání povinného elementu, vrácení `currencyID`, cizí element i nečíselná částka
+  vždy INVALID.
+- **Schematron NESPUŠTĚN** — oficiální `.sch` se nikde nepublikuje: `isdoc.cz/6.0.1/…sch`
+  ve variantách `/`, `/xsd/`, `/sch/`, http i https vrací **HTTP 404**, zatímco `.xsd` na
+  témže hostu vrací 200. Pravidla, která by Schematron kontroloval, jsou proto ověřena
+  přímo ve spec 131.
+- Součty: `4.30 + 0.90 = 5.20` přesně v setinách; `TaxSubTotal`, `LegalMonetaryTotal`
+  i `PayableAmount` sedí na řádek; `4.3 ks × 1.00 Kč = 4.30 Kč`.
+
+**Autorizace ověřena živě** proti nasazené funkci — 5 případů:
+bez auth → `401 missing_authorization` · špatný `x-internal-token` → `401` ·
+anon klíč jako bearer → `401 invalid_authorization_token` ·
+**skutečný přihlášený běžný uživatel → `403 access_denied_superadmin_only`** ·
+superadmin → `200`. Interní token (Vault, přes `pg_net`) → `200`.
+
+### Bankovní údaje
+
+`COMPANY_CONTEXT.md` zakazuje ukládat bankovní spojení do repozitáře. `PaymentMeans` je
+v ISDOC volitelný (`minOccurs="0"`), a jeho vyplnění by vyžadovalo celou skupinu `BankAccount`.
+**Vymyslet účet kvůli schématu je horší než vynechat volitelný blok**, takže se `PaymentMeans`
+negeneruje; datum splatnosti nese `Note`. Spec 131 hlídá, že se do souboru ani do zdroje
+nedostane IBAN, `BankAccount` ani vzor `účet/kód banky`.
+
+### Úklid
+
+Testovací partner, 3 reward kódy, 3 aktivace, faktura, 2 řádky `partner_invoice_exports`,
+2 objekty ve Storage a probe uživatel **smazány** (postcheck 0 u všech). Odeslané e-maily: **0**.
+Peněženkový ledger **nebyl obcházen** — `wallet_transactions` je immutable triggerem a kredit
+4,3 MC byl skutečnou redemption, takže zůstává.
+
+**Otevřeno:** produkční rollout ISDOC opravy (migrace 170000 + EF deploy) — vyžaduje
+samostatné schválení Pavla. Produkční `generate-isdoc` má dosud starou vadnou verzi
+**a `verify_jwt` bez vnitřní autorizace**; v produkci ale zatím **nemá živého callera**
+(volání v `AdminInvoices.tsx` je zakomentované, 0 isdoc exportů).
 
 ---
 
