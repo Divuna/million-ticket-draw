@@ -107,7 +107,6 @@ export const AdminContextSubNav: React.FC = () => {
   const { unreadCount } = useUnreadMessagesCount();
   const { pendingCount: pendingOffersCount } = usePendingOffersCount();
   const [pendingPartnerRegistrationsCount, setPendingPartnerRegistrationsCount] = useState(0);
-  const [pendingShoptetRequestsCount, setPendingShoptetRequestsCount] = useState(0);
   const [pendingCompanyLeadsCount, setPendingCompanyLeadsCount] = useState(0);
   const [unreadSalesRepliesCount, setUnreadSalesRepliesCount] = useState(0);
 
@@ -259,9 +258,9 @@ export const AdminContextSubNav: React.FC = () => {
       const Icon = item.icon;
       const active = isAdminSubNavItemActive(item, location.pathname, location.search);
       const showBadge = item.path === "/admin/messages" && unreadCount > 0;
-      // "Partneři" badge = čekající partnerské registrace + čekající Shoptet žádosti
-      // (stejný zdroj jako badge v záložce "Shoptet žádosti" na /admin/partners).
-      const pendingPartnersNavCount = pendingPartnerRegistrationsCount + pendingShoptetRequestsCount;
+      // "Partneři" badge = pouze čekající partnerské registrace.
+      // Shoptet napojení se aktivuje automaticky, admin ho neschvaluje.
+      const pendingPartnersNavCount = pendingPartnerRegistrationsCount;
       const showPendingPartnerBadge =
         item.path === "/admin/partners" && pendingPartnersNavCount > 0;
       const showPendingCompanyLeadsBadge =
