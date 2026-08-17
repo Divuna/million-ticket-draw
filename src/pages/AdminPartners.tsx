@@ -35,9 +35,7 @@ import {
   UserPlus,
   BookOpen,
   Save,
-  Rocket,
-  Coins,
-} from "lucide-react";
+  } from "lucide-react";
 import { Textarea } from "@/components/ui/textarea";
 import { NavigateToLogin } from "@/components/NavigateToLogin";
 import { format } from "date-fns";
