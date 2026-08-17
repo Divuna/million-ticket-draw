@@ -1,0 +1,42 @@
+name: tmp-cherry-pick-shoptet-widget
+
+on:
+  push:
+    branches:
+      - fix/partner-shoptet-widget-snippet
+    paths:
+      - .github/workflows/tmp-cherry-pick-shoptet-widget.yml
+
+permissions:
+  contents: write
+
+jobs:
+  cherry-pick:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: fix/partner-shoptet-widget-snippet
+          fetch-depth: 0
+
+      - name: Cherry-pick approved widget snippet change
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git cherry-pick c7720282ea18c8945515fec86939a879c19aaa0e
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Test widget snippet
+        run: npx playwright test tests/e2e/132-partner-shoptet-widget-snippet.spec.ts --project=chromium
+
+      - name: Build
+        run: npm run build
+
+      - name: Remove temporary workflow and push
+        run: |
+          rm .github/workflows/tmp-cherry-pick-shoptet-widget.yml
+          git add .github/workflows/tmp-cherry-pick-shoptet-widget.yml
+          git commit -m "chore: remove temporary cherry-pick workflow"
+          git push origin HEAD:fix/partner-shoptet-widget-snippet
