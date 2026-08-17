@@ -41,6 +41,37 @@ stažení objednávek."* ([podpora.shoptet.cz/export-objednavek](https://podpora
 
 `hash=aB+cD...` dorazil neporušený. E-maily zákazníkům: **0**. Kódy: 2 = 2 unikátní objednávky.
 
+### PRODUKČNÍ DEPLOY EF (17. 8. 2026) — ⚠️ SHOPTET PARAMETR IGNORUJE, CRON ZŮSTÁVÁ 15 MIN
+
+`import-shoptet-orders` nasazena na produkci **v52 → v53** (ACTIVE, `verify_jwt=false`).
+Cron migrace **NEAPLIKOVÁNA** — produkce běží dál `*/15 * * * *`.
+
+**Zjištění z prvního produkčního běhu (22:15):** naše strana funguje, Shoptet parametr **ignoruje**.
+
+```
+BOHEMIA:   "delta_from":"2026-08-17 21:45:03", "rows_total":22
+vereonika: "delta_from":"2026-08-17 21:45:04", "rows_total":22
+```
+
+`delta_from` se odeslalo správně (poslední `ok` běh − 15 min), ale `rows_total=22` je
+**identické jako před deployem** a konzistentní 2 hodiny zpět. Kdyby Shoptet parametr
+respektoval, běh by vrátil výrazně méně řádků.
+
+**Příčina (dle dokumentace):** `updateTimeFrom` platí jen pro export nastavený jako
+**„nové nebo změněné objednávky"**. Exporty obou partnerů jsou nastavené jinak
+(„Vše" / pevný rozsah), a v tom režimu Shoptet parametr ignoruje.
+
+**Důsledek — cron NEPŘEPÍNAT na 1 minutu.** Žádná delta neexistuje; minutový cron by jen
+15× častěji stahoval plný export.
+
+**Cesta k nápravě (vyžaduje partnera, ne kód):** partner v Shoptet administraci přenastaví
+export na „nové nebo změněné objednávky", vygeneruje nový permanentní odkaz a pošle ho
+přes existující flow změny exportního odkazu. Delta se pak aktivuje sama, bez zásahu do kódu.
+
+**Deploy je bezpečný a může zůstat:** ignorovaný parametr = chování identické s v52.
+Postcheck: 0 e-mailů, 0 duplicit, 0 neúspěšných běhů, oba partneři `ok`.
+Rollback point: **v52**.
+
 **⚠️ Nelze ověřit na stagingu:** staging BOHEMIA export vrací **HTTP 404 od 23. 7. 2026**
 (2397 po sobě jdoucích `failed` běhů, pre-existující problém — viz issue o 404 exportu).
 Vereonika sro na stagingu neexistuje. Skutečnou serverovou interpretaci `updateTimeFrom`
