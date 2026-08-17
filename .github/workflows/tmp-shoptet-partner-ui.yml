@@ -27,38 +27,32 @@ jobs:
           p = Path('src/pages/PartnerDashboard.tsx')
           s = p.read_text(encoding='utf-8')
 
-          replacements = {
-            "  // Submits the request to admin review with the Shoptet export URL.\n":
-              "  // Validates and activates the Shoptet connection with the export URL.\n",
-            "      toast.error('Zadejte URL Shoptet exportu pro odeslání.');":
-              "      toast.error('Zadejte URL Shoptet exportu pro aktivaci.');",
-            "        toast.error('Nepodařilo se odeslat žádost ke schválení.');":
-              "        const errorCode = efResult?.error ?? await extractFunctionErrorCode((efError as { context?: Response } | null)?.context);\n        const errorMessages: Record<string, string> = {\n          export_url_unreachable: 'URL exportu se nepodařilo načíst. Zkontrolujte ji v Shoptetu a zkuste to znovu.',\n          export_invalid_format: 'Export nemá správný formát Shoptet objednávek. Zkontrolujte nastavení exportu.',\n          export_empty: 'Export je prázdný. Zkontrolujte, že Shoptet export obsahuje objednávky.',\n          export_too_large: 'Export je příliš velký pro automatické ověření. Kontaktujte podporu OneMil.',\n          partner_not_approved: 'Partnerský účet ještě není schválený.',\n        };\n        toast.error((errorCode && errorMessages[errorCode]) || 'Napojení se nepodařilo ověřit. Zkontrolujte URL exportu a zkuste to znovu.');",
-            "      toast.success('Žádost o napojení odeslána ke schválení.');":
-              "      toast.success('E-shop byl ověřen a napojení je aktivní.');",
-            "      toast.error('Nepodařilo se odeslat žádost ke schválení.');":
-              "      toast.error('Napojení se nepodařilo ověřit. Zkontrolujte URL exportu a zkuste to znovu.');",
-            "<Badge variant=\"secondary\" className=\"gap-1\"><Clock className=\"w-3 h-3\" /> Odesláno ke schválení</Badge>":
-              "<Badge variant=\"secondary\" className=\"gap-1\"><Clock className=\"w-3 h-3\" /> Čeká na dokončení</Badge>",
-            "URL ukládáme bezpečně a nikdy ji nezobrazujeme zpět. Koncept můžete uložit i bez URL; pro odeslání ke schválení je URL nutná.":
-              "URL ukládáme bezpečně a nikdy ji nezobrazujeme zpět. Koncept můžete uložit i bez URL; pro ověření a aktivaci je URL nutná.",
-            "                          Odeslat ke schválení":
-              "                          Ověřit a aktivovat",
-            "<Clock className=\"w-3 h-3\" /> Žádost čeká na schválení OneMil. Po schválení se napojení aktivuje automaticky.":
-              "<Clock className=\"w-3 h-3\" /> Toto napojení pochází ze staršího procesu. Pro dokončení kontaktujte podporu OneMil."
-          }
+          replacements = [
+            ("  // Submits the request to admin review with the Shoptet export URL.\n",
+             "  // Validates and activates the Shoptet connection with the export URL.\n"),
+            ("      toast.error('Zadejte URL Shoptet exportu pro odeslání.');",
+             "      toast.error('Zadejte URL Shoptet exportu pro aktivaci.');"),
+            ("        toast.error('Nepodařilo se odeslat žádost ke schválení.');",
+             "        const errorCode = efResult?.error ?? await extractFunctionErrorCode((efError as { context?: Response } | null)?.context);\n        const errorMessages: Record<string, string> = {\n          export_url_unreachable: 'URL exportu se nepodařilo načíst. Zkontrolujte ji v Shoptetu a zkuste to znovu.',\n          export_invalid_format: 'Export nemá správný formát Shoptet objednávek. Zkontrolujte nastavení exportu.',\n          export_empty: 'Export je prázdný. Zkontrolujte, že Shoptet export obsahuje objednávky.',\n          export_too_large: 'Export je příliš velký pro automatické ověření. Kontaktujte podporu OneMil.',\n          partner_not_approved: 'Partnerský účet ještě není schválený.',\n        };\n        toast.error((errorCode && errorMessages[errorCode]) || 'Napojení se nepodařilo ověřit. Zkontrolujte URL exportu a zkuste to znovu.');"),
+            ("      toast.success('Žádost o napojení odeslána ke schválení.');",
+             "      toast.success('E-shop byl ověřen a napojení je aktivní.');"),
+            ("      toast.error('Nepodařilo se odeslat žádost ke schválení.');",
+             "      toast.error('Napojení se nepodařilo ověřit. Zkontrolujte URL exportu a zkuste to znovu.');"),
+            ("<Badge variant=\"secondary\" className=\"gap-1\"><Clock className=\"w-3 h-3\" /> Odesláno ke schválení</Badge>",
+             "<Badge variant=\"secondary\" className=\"gap-1\"><Clock className=\"w-3 h-3\" /> Čeká na dokončení</Badge>"),
+            ("URL ukládáme bezpečně a nikdy ji nezobrazujeme zpět. Koncept můžete uložit i bez URL; pro odeslání ke schválení je URL nutná.",
+             "URL ukládáme bezpečně a nikdy ji nezobrazujeme zpět. Koncept můžete uložit i bez URL; pro ověření a aktivaci je URL nutná."),
+            ("                          Odeslat ke schválení",
+             "                          Ověřit a aktivovat"),
+            ("<Clock className=\"w-3 h-3\" /> Žádost čeká na schválení OneMil. Po schválení se napojení aktivuje automaticky.",
+             "<Clock className=\"w-3 h-3\" /> Toto napojení pochází ze staršího procesu. Pro dokončení kontaktujte podporu OneMil.")
+          ]
 
-          for old, new in replacements.items():
+          for old, new in replacements:
               count = s.count(old)
               if count != 1:
                   raise SystemExit(f'Expected exactly one occurrence, got {count}: {old[:100]}')
               s = s.replace(old, new, 1)
-
-          # The generic catch message appears once after the specific EF branch replacement.
-          old = "      toast.error('Nepodařilo se odeslat žádost ke schválení.');"
-          if s.count(old) != 1:
-              raise SystemExit(f'Expected one catch occurrence, got {s.count(old)}')
-          s = s.replace(old, "      toast.error('Napojení se nepodařilo ověřit. Zkontrolujte URL exportu a zkuste to znovu.');", 1)
 
           p.write_text(s, encoding='utf-8')
 
