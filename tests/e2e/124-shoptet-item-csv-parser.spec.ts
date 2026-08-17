@@ -20,6 +20,9 @@ import {
  *   124e) English item columns never hijack order-header detection
  *   124f) continuation rows with a blank order code attach to the previous order
  *   124g) invalid orders are still rejected per order, not per item row
+ *   124i) Shoptet's own DEFAULT column names (orderItemCode, …) parse identically
+ *   124j) default names do not let an item column hijack the order code
+ *   124k) the discounted default price wins over the plain default price
  */
 
 // Real Shoptet Czech column names, as offered by the custom order export.
@@ -202,6 +205,106 @@ test.describe('124 — Shoptet item-level CSV parser', () => {
     expect(parsed.orders).toHaveLength(1);
     expect(parsed.orders[0].orderId).toBe('2026000061');
     expect(parsed.orders[0].items).toHaveLength(2);
+  });
+
+  // ── Shoptet's own default column names ──────────────────────────────────────
+  // A partner who exports with the stock column set gets camelCase headers with no
+  // separator. Every older candidate contains a space, dash or underscore, so none
+  // of them could match: the export parsed as legacy, items[] came back empty and
+  // the order silently fell back to the whole-order rate.
+
+  // Header copied from a real default Shoptet item export.
+  const H_DEFAULT = [
+    'code',
+    'statusName',
+    'totalPriceWithVat',
+    'email',
+    'orderItemType',
+    'orderItemName',
+    'orderItemAmount',
+    'orderItemCode',
+    'orderItemUnitDiscountPriceWithVat',
+  ].join(';');
+
+  test('124i) default Shoptet column names produce one order with items[]', () => {
+    const csv = [
+      H_DEFAULT,
+      '2026000123;Zaplacená;930;zakaznik@onemil.cz;product;Stolní lampička Tiny Tim;1;DS99987698;310',
+      '2026000123;Zaplacená;930;zakaznik@onemil.cz;product;Odpadkový koš CURVER 25L;2;64;310',
+      '2026000123;Zaplacená;930;zakaznik@onemil.cz;shipping;Balíkovna;1;SHIP-1;0',
+    ].join('\n');
+
+    const parsed = parseShoptetCsv(csv);
+
+    expect(parsed.isItemLevel, 'orderItemCode is recognised as an item column').toBe(true);
+    expect(parsed.missingHeaders).toEqual([]);
+    expect(parsed.invalidRows).toHaveLength(0);
+
+    // Three rows, one order — grouping is unchanged.
+    expect(parsed.orders).toHaveLength(1);
+    const order = parsed.orders[0];
+    expect(order.orderId).toBe('2026000123');
+    expect(order.total).toBe(930);
+    expect(order.customerEmail).toBe('zakaznik@onemil.cz');
+    expect(order.shoptetStatus).toBe('paid');
+
+    // Shipping is filtered by the same isNonProductItemType rule as the Czech export.
+    expect(order.items).toEqual([
+      { code: 'DS99987698', name: 'Stolní lampička Tiny Tim', quantity: 1, unit_price_czk: 310 },
+      { code: '64', name: 'Odpadkový koš CURVER 25L', quantity: 2, unit_price_czk: 310 },
+    ]);
+  });
+
+  test('124j) "code" resolves to the order, never to orderItemCode', () => {
+    // The order candidate "code" is a substring of "orderItemCode". Item columns are
+    // detected first and excluded, so the order code must still win — otherwise the
+    // importer would group by product and create one order per line.
+    const csv = [
+      H_DEFAULT,
+      '2026000200;Vyřízená;100;c@onemil.cz;product;Věc;1;SKU-ABC;100',
+    ].join('\n');
+
+    const parsed = parseShoptetCsv(csv);
+
+    expect(parsed.orders).toHaveLength(1);
+    expect(parsed.orders[0].orderId).toBe('2026000200');
+    expect(parsed.orders[0].orderId).not.toBe('SKU-ABC');
+    expect(parsed.orders[0].items[0].code).toBe('SKU-ABC');
+  });
+
+  test('124k) discounted default price wins; plain default price is the fallback', () => {
+    // Both columns present → the after-discount one is authoritative, exactly as
+    // with the Czech pair.
+    const both = [
+      'code;statusName;totalPriceWithVat;email;orderItemCode;orderItemAmount;orderItemUnitPriceWithVat;orderItemUnitDiscountPriceWithVat',
+      '2026000300;Zaplacená;180;d@onemil.cz;SKU-1;1;250;180',
+    ].join('\n');
+    expect(parseShoptetCsv(both).orders[0].items[0].unit_price_czk).toBe(180);
+
+    // Only the plain column → used as the fallback rather than leaving the price 0,
+    // which would have paid a ratio-rule partner nothing.
+    const plainOnly = [
+      'code;statusName;totalPriceWithVat;email;orderItemCode;orderItemAmount;orderItemUnitPriceWithVat',
+      '2026000301;Zaplacená;250;e@onemil.cz;SKU-2;1;250',
+    ].join('\n');
+    expect(parseShoptetCsv(plainOnly).orders[0].items[0].unit_price_czk).toBe(250);
+  });
+
+  test('124l) a default-name export without item columns stays on the legacy path', () => {
+    // The stock order-level export (no item columns) must keep behaving exactly as
+    // before: no items[], whole-order rate, byte-for-byte identical reward input.
+    const csv = [
+      'code;statusName;totalPriceWithVat;email',
+      '2026000400;Zaplacená;500;f@onemil.cz',
+    ].join('\n');
+
+    const parsed = parseShoptetCsv(csv);
+
+    expect(parsed.isItemLevel).toBe(false);
+    expect(parsed.orders).toHaveLength(1);
+    expect(parsed.orders[0].orderId).toBe('2026000400');
+    expect(parsed.orders[0].total).toBe(500);
+    expect(parsed.orders[0].items).toEqual([]);
   });
 
   test('124h) status taxonomy and trigger thresholds are unchanged', () => {

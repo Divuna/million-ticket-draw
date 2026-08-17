@@ -95,25 +95,41 @@ export const HEADER_CANDIDATES = {
 // Item-level columns from the Shoptet "Exportovat jednotlivé položky objednávky"
 // export. Candidates are deliberately specific ("polozka" / "order item") so they
 // can never be confused with the order-header columns above.
+//
+// Each list ends with Shoptet's own DEFAULT header names (orderItemCode,
+// orderItemName, …). Those are camelCase with no separator, so none of the older
+// candidates — which all contain a space, dash or underscore — could ever match
+// them: a partner exporting with Shoptet's stock column names produced no items at
+// all, and the order fell back to the whole-order rate.
+//
+// They are appended, never inserted, so on an export carrying both spellings the
+// previously-chosen column still wins and existing partners resolve exactly as
+// before.
 export const ITEM_HEADER_CANDIDATES = {
-  itemCode: ["polozka objednavky - kod", "polozka - kod", "order item - code", "order item code", "item code", "item_code"],
-  itemName: ["polozka objednavky - nazev", "polozka - nazev", "order item - name", "order item name", "item name", "item_name"],
-  itemQty: ["polozka objednavky - mnozstvi", "polozka - mnozstvi", "order item - amount", "order item amount", "item amount", "item quantity", "item_quantity"],
+  itemCode: ["polozka objednavky - kod", "polozka - kod", "order item - code", "order item code", "item code", "item_code", "orderitemcode"],
+  itemName: ["polozka objednavky - nazev", "polozka - nazev", "order item - name", "order item name", "item name", "item_name", "orderitemname"],
+  itemQty: ["polozka objednavky - mnozstvi", "polozka - mnozstvi", "order item - amount", "order item amount", "item amount", "item quantity", "item_quantity", "orderitemamount"],
   // After-discount unit price is the confirmed source for ratio rewards.
   itemUnitPriceAfterDiscount: [
     "polozka objednavky - cena s dani za jednotku po sleve",
     "polozka - cena s dani za jednotku po sleve",
     "order item - unit price with vat after discount",
     "item unit price after discount",
+    "orderitemunitdiscountpricewithvat",
   ],
   // Fallback when the export only carries the plain unit price.
+  // The default-name pair mirrors the Czech pair above: the discounted column is
+  // preferred, this one is used only when the export has no discounted price.
+  // "orderitemunitpricewithvat" cannot swallow the discounted column, because
+  // "orderitemunitdiscountpricewithvat" does not contain it as a substring.
   itemUnitPrice: [
     "polozka objednavky - cena s dani za jednotku",
     "polozka - cena s dani za jednotku",
     "order item - unit price with vat",
     "item unit price",
+    "orderitemunitpricewithvat",
   ],
-  itemType: ["polozka objednavky - typ", "polozka - typ", "order item - type", "item type", "item_type"],
+  itemType: ["polozka objednavky - typ", "polozka - typ", "order item - type", "item type", "item_type", "orderitemtype"],
 };
 
 // `exclude` keeps header detection from latching onto an item column. Without it an
