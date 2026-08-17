@@ -373,10 +373,11 @@ Dřívější OPEN ISSUE („ISDOC plete množství a částku“) je uzavřený
 
 ---
 
-## 0d. ISDOC 6.0.1 partnerská faktura — OPRAVENO, OVĚŘENO NA STAGINGU (17. 08. 2026)
+## 0d. ISDOC 6.0.1 partnerská faktura — OPRAVENO A **NASAZENO NA PRODUKCI** (17. 08. 2026)
 
-**Nasazeno pouze na staging `dxmowysntemfqfnanxua`. Produkce `xkzhjldrojjlrkezorey`
-NEZMĚNĚNA** (v tomto kroku pouze read-only kontrola oprávnění fakturačních funkcí).
+**Nasazeno na staging `dxmowysntemfqfnanxua` (EF v15) i na produkci `xkzhjldrojjlrkezorey`
+(EF v179), po výslovném schválení Pavla.** Obě prostředí mají shodný `ezbr_sha256`
+`97eec29e…`, tedy bit po bitu tentýž kód.
 
 ### Co bylo špatně
 
@@ -442,10 +443,39 @@ Testovací partner, 3 reward kódy, 3 aktivace, faktura, 2 řádky `partner_invo
 Peněženkový ledger **nebyl obcházen** — `wallet_transactions` je immutable triggerem a kredit
 4,3 MC byl skutečnou redemption, takže zůstává.
 
-**Otevřeno:** produkční rollout ISDOC opravy (migrace 170000 + EF deploy) — vyžaduje
-samostatné schválení Pavla. Produkční `generate-isdoc` má dosud starou vadnou verzi
-**a `verify_jwt` bez vnitřní autorizace**; v produkci ale zatím **nemá živého callera**
-(volání v `AdminInvoices.tsx` je zakomentované, 0 isdoc exportů).
+### Produkční rollout (17. 08. 2026, výslovné schválení Pavla)
+
+**⚠️ Produkce byla na tom hůř než staging.** `generate-isdoc` v178 měla `verify_jwt=false`
+**a žádnou vnitřní autorizaci** — byla tedy zcela veřejná. Ověřeno probem PŘED nasazením:
+POST bez jakékoli auth hlavičky prošel až do business logiky (`500 Invoice not found`), takže
+se skutečným `invoice_id` by komukoli na internetu vygenerovala cizí partnerskou fakturu.
+
+| krok | výsledek |
+|---|---|
+| migrace `20260817170000` | `{"success": true}` |
+| EF deploy | **v179 ACTIVE**, `verify_jwt=false`, `ezbr_sha256` shodný se staging v15 |
+| tentýž probe po nasazení | **`401 missing_authorization`** — díra uzavřena |
+| špatný `x-internal-token` / nesmyslný bearer | `401` / `401 invalid_authorization_token` |
+
+**Pozitivní ověření skutečnou produkční fakturou `OMA-20260003`** (BOHEMIA INFINITY,
+3 MC, `3.00 / 0.63 / 3.63`): soubor vygenerován nasazenou produkční funkcí přes interní
+token, stažen ze Storage a **XSD 6.0.1: VALID**. Obsahuje skutečné `OMA-20260003`, VS
+`20260003`, `IssueDate 2026-07-06` a `TaxPointDate 2026-07-05` — **různá data**, což
+prokazuje čtení skutečného `taxable_date`; stará verze psala do obou dnešek. Řádek:
+`3 ks × 1.00 Kč = 3.00`, DPH `0.63`, celkem `3.63`, dodavatel `iCONIC POINT s.r.o.`
+(IČO 17795851), odběratel `BOHEMIA INFINITY s.r.o.`
+
+**Ověřovací artefakt uklizen** — storage objekt i řádek `partner_invoice_exports` smazány.
+Postcheck: 6 faktur, 14 exportů, 0 isdoc exportů (přesně výchozí stav), `OMA-20260003`
+nezměněna. Žádná fakturační data se nezměnila; migrace mění jen tělo read-only funkce.
+
+**Rollback:** předchozí zdroj EF uložen jako
+`ROLLBACK-prod-v178-generate-isdoc.ts` (scratchpad); `build_isdoc_payload` lze vrátit na
+tvar vracející jen období/totaly/řádky. Rollback EF by ale **znovu otevřel veřejný endpoint**
+— při jakémkoli návratu je nutné zachovat `authorizeRequest`.
+
+**Frontend:** volání v `AdminInvoices.tsx` zůstává zakomentované; ISDOC tlačítko se nezapínalo.
+Pokud se v budoucnu zapne, musí volat s JWT superadmina (funkce má fallback větev).
 
 ---
 

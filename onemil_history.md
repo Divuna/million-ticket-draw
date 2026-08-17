@@ -1,4 +1,31 @@
-# 17. 08. 2026 — ISDOC 6.0.1 partnerská faktura opravena (staging; PRODUKCE NEZMĚNĚNA)
+# 17. 08. 2026 — ISDOC oprava nasazena do produkce (v179) + uzavřen veřejný endpoint
+
+Po ověření na stagingu Pavel schválil produkční nasazení. Aplikována migrace
+`20260817170000`, nasazena EF **v179** — `ezbr_sha256` je shodný se staging v15, takže obě
+prostředí běží bit po bitu tentýž kód.
+
+**Při nasazení se ukázalo, že produkce byla na tom hůř než staging.** Zatímco staging měl
+alespoň `verify_jwt=true`, produkční v178 měla `verify_jwt=false` **a žádnou vnitřní
+autorizaci** — endpoint byl tedy zcela veřejný. Probe před nasazením to potvrdil: POST bez
+jakékoli hlavičky prošel až do business logiky (`500 Invoice not found`), takže se skutečným
+`invoice_id` by komukoli vygeneroval cizí partnerskou fakturu. Po nasazení tentýž probe vrací
+`401 missing_authorization`.
+
+Pozitivně ověřeno skutečnou produkční fakturou `OMA-20260003` (3 MC, 3.00 / 0.63 / 3.63):
+soubor vygenerovala nasazená produkční funkce, byl stažen ze Storage a **prošel validací proti
+oficiálnímu XSD 6.0.1**. `IssueDate 2026-07-06` a `TaxPointDate 2026-07-05` se liší, což
+prokazuje, že se čte skutečné `taxable_date` — stará verze psala do obou dnešek.
+
+Ověřovací artefakt byl uklizen (storage objekt i řádek exportu smazány), takže produkce je
+zpátky na výchozích počtech: 6 faktur, 14 exportů, 0 isdoc exportů. Fakturační data se
+nezměnila.
+
+Rollback EF by veřejný endpoint znovu otevřel — při jakémkoli návratu se musí zachovat
+`authorizeRequest`.
+
+---
+
+# 17. 08. 2026 — ISDOC 6.0.1 partnerská faktura opravena (ověřeno na stagingu)
 
 Export partnerské faktury do ISDOC nebyl použitelný účetní doklad. Opraveno a ověřeno
 **skutečně vygenerovaným souborem** ze staging Edge Function, ne kontrolou zdrojáku.

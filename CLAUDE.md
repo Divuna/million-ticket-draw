@@ -204,9 +204,15 @@ superadmin JWT — stejný model jako `generate-partner-invoice-pdf`). Spoléhat
 `verify_jwt` je díra: pak může kterýkoli přihlášený uživatel exportovat cizí fakturu.
 Export se ukládá do **privátního** bucketu (`file_url: null`), nikdy přes `getPublicUrl`.
 
-**Stav:** opraveno a ověřeno na stagingu (v15). **Produkce má dosud starou vadnou verzi
-a `verify_jwt` bez vnitřní kontroly** — rollout vyžaduje samostatné schválení Pavla.
-V produkci zatím nemá živého callera (volání v `AdminInvoices.tsx` je zakomentované).
+**Stav: NASAZENO NA PRODUKCI** (17. 08. 2026, po výslovném schválení Pavla) — migrace
+`20260817170000` + EF **v179**, `verify_jwt=false` s vnitřní autorizací. Staging má v15
+a **stejný `ezbr_sha256`**, takže obě prostředí běží bit po bitu tentýž kód.
+
+⚠️ **Bezpečnostní kontext nasazení:** produkční `generate-isdoc` v178 měla `verify_jwt=false`
+**a žádnou vnitřní autorizaci** — byla tedy zcela veřejná. Ověřeno probem před nasazením:
+POST bez jakékoli hlavičky prošel až do business logiky (`500 Invoice not found`), takže se
+skutečným `invoice_id` by komukoli vygenerovala cizí partnerskou fakturu. Po nasazení stejný
+probe vrací `401 missing_authorization`. **Nikdy nevracet stav bez `authorizeRequest`.**
 
 ## Formátování
 
