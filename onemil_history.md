@@ -1,3 +1,57 @@
+# 17. 08. 2026 — Peněžní zaokrouhlení partnerských faktur opraveno (PRODUKCE NENASAZENA)
+
+Navazuje na OPEN ISSUE z předchozího zápisu (`amount_gross = 5.203` místo `5.20`).
+
+## Root cause
+
+Tři živé funkce vytvářející coin faktury peníze vůbec nezaokrouhlovaly. Navenek to bylo vidět
+jen na dvou sloupcích, protože `amount_ex_vat`, `vat_amount` a `amount_inc_vat` jsou
+`numeric(14,2)` a typ je zaokrouhlil sám, kdežto `amount_net` a `amount_gross` jsou neomezené
+`numeric` a uložily surový součin.
+
+`create_partner_invoices_for_period` byla nejhorší: psala výrazy přímo do INSERTu a **gross
+odvozovala vlastním vzorcem** `coins * price * (1 + vat_rate)`, ne z `net + DPH`. Ukázalo se, že
+pouhé zaokrouhlení tří nezávislých výrazů nestačí — u půlhaléřového netto (0,125 / 0,075 / 1,125)
+vyjde `round(coins*price*1,21, 2)` o haléř níž než `net + DPH` a faktura by nesouhlasila
+v součtu. Proto se gross počítá ze zaokrouhlených částí.
+
+## Oprava
+
+Migrace `20260817150000_partner_invoice_money_rounding.sql` (staging only) sjednocuje
+`create_partner_invoices_for_last_week`, `create_partner_invoices_for_period`
+a `generate_partner_invoice` na `net = round(coins*price, 2)`,
+`DPH = round(net*vat_rate, 2)` a `gross = round(net + DPH, 2)`, s aliasy
+`amount_ex_vat = amount_net` a `amount_inc_vat = amount_gross`.
+
+`create_partner_offer_invoices_for_period` zůstala nedotčená — audit potvrdil, že je už správně
+(její `net_amount` je `numeric(12,2)`, takže `round(net*1,21, 2)` je identicky
+`net + round(net*0,21, 2)`).
+
+Sazby, ceny, období, číslování, statusy, řádky faktury, affiliate provize, signatury ani granty
+se nezměnily a **žádná historická data se neupravovala** — migrace neobsahuje jediný `UPDATE`.
+
+## Staging test
+
+Skutečnou fakturační cestou vznikla faktura z aktivací 0,6 + 1,2 + 2,5 MC při 1 Kč/MC a 21 % DPH:
+`amount_net 4.30`, `amount_ex_vat 4.30`, `vat_amount 0.90`, `amount_gross 5.20`,
+`amount_inc_vat 5.20`, a `gross = net + DPH` platí. Skutečné PDF (HTTP 200, 28 197 B) ukazuje
+`Cena bez DPH: 4,30 CZK`, `DPH 21 %: 0,90 CZK`, `Cena s DPH: 5,20 CZK` a `Celkem coinů: 4,3`.
+Ověřeno i na dalších částkách se třetím desetinným místem — vždy `gross = net + DPH`
+a nikde víc než 2 desetinná místa.
+
+## Nalezeno navíc
+
+Staging **nemá** aplikovanou repo migraci `20260718090000_lock_partner_invoice_weekly_function.sql`,
+takže tamní fakturační funkce mají stále EXECUTE pro `anon`/`authenticated` (produkce je
+zamčená). Stejná třída driftu jako u platební vrstvy. `CREATE OR REPLACE` granty zachovává,
+takže se stav nezměnil; zaznamenáno jako OPEN ISSUE, vědomě neopraveno.
+
+ISDOC `LineExtensionAmount` / `InvoicedQuantity` zůstává otevřený a neopravený.
+
+**Produkce `xkzhjldrojjlrkezorey` nebyla nijak změněna.**
+
+---
+
 # 17. 08. 2026 — Fakturační PDF ověřeno skutečným souborem na stagingu (PRODUKCE NENASAZENA)
 
 Poslední otevřený kus MioCoin desetinné práce: `generate-partner-invoice-pdf` byla na stagingu

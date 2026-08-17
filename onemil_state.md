@@ -135,12 +135,67 @@ nepřekrývá, tabulky nejsou rozbité, české desetinné čárky i diakritika 
 MioCoinů`, `Položky faktury`, `Odběratel`) se vykreslují správně, součet je viditelný, QR kód je
 vykreslený.
 
-### ⚠️ OPEN ISSUE — zaokrouhlení peněz na faktuře (předexistující, mimo rozsah)
+### Zaokrouhlení peněz na partnerské faktuře — OPRAVENO (17. 8. 2026, staging)
 
-Testovací faktura: `amount_net = 4.30`, `vat_amount = 0.90`, ale `amount_gross = 5.203`
-(tj. `4.30 + 0.903` bez zaokrouhlení) místo `5.20`. Týká se **peněz**, ne MioCoinů.
-V PDF se to neprojeví — `formatCurrency` zobrazí `5,20 CZK` — ale **v databázi zůstává 5.203**.
-Nemění se v tomto úkolu.
+**Root cause:** tři živé funkce vytvářející coin faktury peníze vůbec nezaokrouhlovaly.
+Projevilo se to jen ve dvou sloupcích, protože `amount_ex_vat`, `vat_amount` a `amount_inc_vat`
+jsou `numeric(14,2)` (typ zaokrouhlí sám), zatímco **`amount_net` a `amount_gross` jsou
+neomezené `numeric`** a uložily surový součin (`4.30000` / `5.203000000`).
+
+Nejhorší byla `create_partner_invoices_for_period`: psala výrazy přímo do INSERTu a **gross
+odvozovala vlastním vzorcem** `coins * price * (1 + vat_rate)` místo z `net + DPH`. Samotné
+zaokrouhlení tří nezávislých výrazů by nestačilo — u „půlhaléřového“ netto (`0.125`, `0.075`,
+`1.125`) vyjde `round(coins*price*1.21, 2)` **o haléř níž** než `net + DPH`, tj. faktura by
+nesouhlasila v součtu. Proto se gross počítá ze **zaokrouhlených částí**.
+
+**Migrace `20260817150000_partner_invoice_money_rounding.sql`** (aplikováno pouze na staging)
+opravuje `create_partner_invoices_for_last_week`, `create_partner_invoices_for_period`
+a `generate_partner_invoice` na:
+
+```
+amount_net   = round(coins_total * price_per_coin, 2)
+vat_amount   = round(amount_net * vat_rate, 2)     -- z už zaokrouhleného netto
+amount_gross = round(amount_net + vat_amount, 2)   -- nikdy vlastním vzorcem
+amount_ex_vat = amount_net ·  amount_inc_vat = amount_gross
+```
+
+`create_partner_offer_invoices_for_period` **záměrně nezměněna** — audit potvrdil, že je už
+správně: její `net_amount` je `numeric(12,2)`, a pro netto přesné na 2 desetinná místa platí
+identita `round(net*1.21, 2) = net + round(net*0.21, 2)`.
+
+**Nezměněno:** `vat_rate`, `price_per_coin`, cena MioCoinu, období, číslování faktur, status
+logika, řádky faktury, affiliate provize, signatury funkcí ani jejich EXECUTE granty.
+**Žádná historická data se neupravovala** — migrace neobsahuje jediný `UPDATE` ani backfill.
+
+**Staging test (skutečná fakturační cesta):** aktivace 0,6 + 1,2 + 2,5 MC = **4,3 MC**,
+`price_per_coin = 1 Kč`, `vat_rate = 0,21`:
+
+| sloupec | hodnota |
+|---|---|
+| `coins_total` | `4.3` |
+| `amount_net` | **`4.30`** |
+| `amount_ex_vat` | **`4.30`** |
+| `vat_amount` | **`0.90`** |
+| `amount_gross` | **`5.20`** |
+| `amount_inc_vat` | **`5.20`** |
+| `amount_gross = amount_net + vat_amount` | **true** |
+
+Skutečné PDF (HTTP 200, 28 197 B, `%PDF-1.7`) ukazuje `Celkem coinů: 4,3`,
+`Cena bez DPH: 4,30 CZK`, `DPH 21 %: 0,90 CZK`, `Cena s DPH: 5,20 CZK` a řádky `0,6 / 1,2 / 2,5`.
+
+Ověřeno i na dalších částkách se třetím desetinným místem (`12,7 × 0,99`, `100,5 × 1,15`,
+`33,3 × 3,33`, `250,4 × 1,07`, `1000,9 × 0,55`, `4,9 × 9,99`): vždy platí
+`gross = net + DPH` a žádná CZK hodnota nemá víc než 2 desetinná místa.
+
+### ⚠️ OPEN ISSUE — staging nemá grant lock na fakturační funkce
+
+Při auditu se ukázalo, že `create_partner_invoices_for_last_week`,
+`create_partner_invoices_for_period` i `generate_partner_invoice` mají **na stagingu stále
+EXECUTE pro `anon` a `authenticated`**. Repo migrace
+`20260718090000_lock_partner_invoice_weekly_function.sql` (REVOKE + grant jen `service_role`)
+byla aplikována na produkci, ale **na staging nikdy** — stejná třída driftu jako u platební
+vrstvy. `CREATE OR REPLACE` granty zachovává, takže tato migrace stav nezměnila.
+Vědomě neopraveno (mimo zadání), zaznamenáno k rozhodnutí.
 
 ### Ověřený produkční bug (read-only audit `xkzhjldrojjlrkezorey`, 16. 8. 2026)
 
@@ -178,6 +233,8 @@ odměna spadne na 0 → widget nic nezobrazí a reward code nemůže vzniknout.
   druhého reward enginu (viz níže).
 - `supabase/migrations/20260817140000_payment_credit_miocoin_one_decimal.sql` — normalizace
   MioCoin veličin odvozených z `payments.amount` (viz níže). **Aplikováno na staging.**
+- `supabase/migrations/20260817150000_partner_invoice_money_rounding.sql` — CZK částky
+  partnerských faktur na 2 desetinná místa (viz níže). **Aplikováno na staging.**
 - Frontend/EF: `src/lib/miocoin.ts` (sdílený formátovač + validátor), `public/shoptet-widget.js`
   (české desetinné čárky a skloňování), `partner-reward-preview` (odstraněn `Math.floor`),
   `generate-partner-invoice-pdf` (`formatCoins`, oprava sčítání numeric stringů),

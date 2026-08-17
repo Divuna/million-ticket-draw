@@ -48,6 +48,7 @@ const partnersPortal = read('src/pages/AdminPartnersPortal.tsx');
 const dropLegacy = read('supabase/migrations/20260817130000_drop_legacy_partner_coin_bypass.sql');
 const paymentCredit = read('supabase/migrations/20260817140000_payment_credit_miocoin_one_decimal.sql');
 const stripeWebhook = read('supabase/functions/stripe-webhook/index.ts');
+const invoiceMoney = read('supabase/migrations/20260817150000_partner_invoice_money_rounding.sql');
 
 /** Strips comments so "must not contain" assertions test real code, not safety notes. */
 const codeOnly = (src: string) =>
@@ -469,5 +470,105 @@ test.describe('130 — payment credit cannot create a >1 decimal MioCoin balance
       expect(sql).not.toMatch(forbidden);
     }
     expect(codeOnly(dropLegacy)).not.toMatch(/^\s*(UPDATE|DELETE)\s/im);
+  });
+});
+
+// ── invoice money rounding (CZK, 2 decimals) ─────────────────────────────────
+//
+// Separate rule from the MioCoin one: a MioCoin QUANTITY carries at most one
+// decimal, a CZK AMOUNT carries two. Both live on the same invoice, so the two
+// rules must not be conflated.
+
+/** Reference implementation of the confirmed invoice money rule. */
+const money = (coins: number, pricePerCoin: number, vatRate: number) => {
+  const r2 = (v: number) => Math.round((v + Number.EPSILON * Math.abs(v)) * 100) / 100;
+  const net = r2(coins * pricePerCoin);
+  const vat = r2(net * vatRate);
+  return { net, vat, gross: r2(net + vat) };
+};
+
+test.describe('130 — partner invoice CZK amounts round to 2 decimals', () => {
+  test('the confirmed case: 4.3 MC at 1 Kč, 21 % VAT', () => {
+    const { net, vat, gross } = money(4.3, 1.0, 0.21);
+    expect(net).toBe(4.3);    // stored as 4.30
+    expect(vat).toBe(0.9);    // stored as 0.90  (raw 0.903)
+    expect(gross).toBe(5.2);  // stored as 5.20  (raw 5.203)
+  });
+
+  test('gross always equals net + vat, and nothing exceeds 2 decimals', () => {
+    const cases: Array<[number, number]> = [
+      [4.3, 1.0], [4.3, 1.2], [12.7, 0.99], [100.5, 1.15], [7.1, 2.35],
+      [0.6, 1.0], [33.3, 3.33], [250.4, 1.07], [1000.9, 0.55], [4.9, 9.99],
+    ];
+    for (const [coins, ppc] of cases) {
+      const { net, vat, gross } = money(coins, ppc, 0.21);
+      expect(gross, `${coins} MC x ${ppc} Kč`).toBeCloseTo(net + vat, 10);
+      for (const [label, v] of [['net', net], ['vat', vat], ['gross', gross]] as const) {
+        expect(Math.round(v * 100), `${label} of ${coins}x${ppc} must have <= 2 decimals`)
+          .toBeCloseTo(v * 100, 6);
+      }
+    }
+  });
+
+  test('gross must come from the rounded parts, not from its own formula', () => {
+    // Half-cent nets are where `coins * price * (1 + vat)` disagrees with
+    // net + vat even after rounding — the naive fix would be one haléř short.
+    for (const [coins, ppc] of [[0.5, 0.25], [0.5, 0.15], [1.5, 0.75], [2.5, 0.05]] as const) {
+      const { net, vat, gross } = money(coins, ppc, 0.21);
+      const naive = Math.round(coins * ppc * 1.21 * 100) / 100;
+      expect(gross).toBeCloseTo(net + vat, 10);
+      expect(gross, `${coins} x ${ppc}: naive formula must differ`).not.toBeCloseTo(naive, 10);
+    }
+  });
+});
+
+test.describe('130 — invoice money migration contract', () => {
+  test('all three coin-invoice creators round money', () => {
+    for (const fn of [
+      'FUNCTION public.create_partner_invoices_for_last_week()',
+      'FUNCTION public.create_partner_invoices_for_period(p_period_from date, p_period_to date)',
+      'FUNCTION public.generate_partner_invoice(p_partner_id uuid, p_period_from date, p_period_to date)',
+    ]) {
+      expect(invoiceMoney).toContain(fn);
+    }
+    // net rounded, VAT from the ROUNDED net, gross from the rounded parts.
+    expect(invoiceMoney.match(/v_amount_net\s+:=\s+round\(/g) ?? []).toHaveLength(3);
+    expect(invoiceMoney.match(/v_vat_amount\s+:=\s+round\(v_amount_net \*/g) ?? []).toHaveLength(3);
+    expect(invoiceMoney.match(/v_amount_gross :=\s+round\(v_amount_net \+ v_vat_amount, 2\)/g) ?? []).toHaveLength(3);
+  });
+
+  test('the old unrounded inline expressions are gone', () => {
+    const sql = codeOnly(invoiceMoney);
+    expect(sql).not.toContain('(v_coins * p.price_per_coin)');
+    expect(sql).not.toMatch(/\(1 \+ p\.vat_rate\)/);
+    expect(sql).not.toMatch(/v_amount_net\s+:=\s+v_coins_total \* v_partner\.price_per_coin;/);
+  });
+
+  test('legacy alias columns stay equal to their canonical column', () => {
+    // amount_ex_vat = amount_net and amount_inc_vat = amount_gross in both
+    // functions that write the aliases.
+    expect(invoiceMoney).toContain('v_amount_net, v_amount_net, v_partner.vat_rate');
+    expect(invoiceMoney).toContain('v_vat_amount, v_amount_gross, v_amount_gross');
+    expect(invoiceMoney.match(/v_amount_net,\n\s+v_amount_net,/g) ?? []).toHaveLength(1);
+    expect(invoiceMoney.match(/v_amount_gross,\n\s+v_amount_gross,/g) ?? []).toHaveLength(1);
+  });
+
+  test('the migration touches no historical data and no unrelated function', () => {
+    const sql = codeOnly(invoiceMoney);
+    expect(sql).not.toMatch(/^\s*UPDATE public\.partner_invoices/im);
+    expect(sql).not.toMatch(/^\s*DELETE FROM/im);
+    // The offer invoicing path was audited as already correct and must stay untouched.
+    expect(sql).not.toContain('create_partner_offer_invoices_for_period');
+    // Signatures preserved.
+    expect(invoiceMoney).toContain('RETURNS TABLE(invoice_id uuid)');
+    expect(invoiceMoney).toContain('RETURNS void');
+    expect(invoiceMoney).toContain('RETURNS uuid');
+  });
+
+  test('MioCoin quantity rules are not touched by the money fix', () => {
+    const sql = codeOnly(invoiceMoney);
+    // Coin values are carried through, never re-rounded to 2 decimals.
+    expect(sql).not.toMatch(/round\(\s*coins\s*,\s*2\s*\)/);
+    expect(sql).not.toMatch(/round\(v_coins(_total)?\s*,\s*2\s*\)/);
   });
 });

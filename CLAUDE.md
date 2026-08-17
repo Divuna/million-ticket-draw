@@ -120,6 +120,30 @@ MioCoin množství: max 1 desetinné místo. Finanční částky CZK (faktury, D
 standardně 2 desetinná místa. **Nemíchat.** Affiliate provize se dál počítá ze skutečné
 finanční částky faktury — nezavádět jiný affiliate reward výpočet.
 
+## Peněžní zaokrouhlení partnerské faktury (TRVALÝ INVARIANT)
+
+Všechny funkce vytvářející coin fakturu musí ukládat CZK na 2 desetinná místa v tomto pořadí:
+
+```
+amount_net   = round(coins_total * price_per_coin, 2)
+vat_amount   = round(amount_net * vat_rate, 2)     -- z UŽ zaokrouhleného netto
+amount_gross = round(amount_net + vat_amount, 2)   -- NIKDY vlastním vzorcem
+amount_ex_vat = amount_net ·  amount_inc_vat = amount_gross
+```
+
+**`amount_gross` se nikdy nesmí počítat jako `coins * price * (1 + vat_rate)`.** U netto
+s půlhaléřem (0,125 / 0,075 / 1,125) vyjde takový vzorec i po zaokrouhlení o haléř níž než
+`net + DPH` a faktura nesouhlasí v součtu.
+
+Pozor na sloupce: `amount_ex_vat`, `vat_amount`, `amount_inc_vat` jsou `numeric(14,2)`
+(zaokrouhlí samy), ale **`amount_net` a `amount_gross` jsou neomezené `numeric`** — bez
+explicitního `round(..., 2)` uloží surový součin. Nespoléhat na typ sloupce.
+
+Platí pro `create_partner_invoices_for_last_week`, `create_partner_invoices_for_period`
+a `generate_partner_invoice` (migrace `20260817150000`).
+`create_partner_offer_invoices_for_period` je správně už teď a **nemá se měnit** — její
+`net_amount` je `numeric(12,2)`, takže `round(net*1.21, 2) ≡ net + round(net*0.21, 2)`.
+
 ## Formátování
 
 `src/lib/miocoin.ts` (`formatMioCoin`, `mioCoinPlural`, `isValidManualRewardMc`) je sdílený
