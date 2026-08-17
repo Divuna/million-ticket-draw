@@ -291,6 +291,29 @@ Sekce **„Zobrazení MioCoinů v e-shopu“** v `/partner/dashboard` generuje p
 Hlídá spec `tests/e2e/132-partner-shoptet-widget-snippet.spec.ts`; 132d nesrovnává řetězce,
 ale pustí vygenerovaný snippet do reálného widgetu a ověří, že z něj widget partnera vytáhne.
 
+## Partnerské návody (TRVALÝ INVARIANT, 17. 08. 2026)
+
+Sekce **„Návody“** v partnerském portálu (`/partner/navody`, `src/pages/PartnerGuides.tsx`),
+první návod **„Jak propojit Shoptet s OneMil“**.
+
+- **Obsah má jediný zdroj:** `src/content/partnerGuides/shoptetGuide.ts`. Stránku i PDF
+  renderuje tentýž modul, aby se nemohly rozejít. **Nepsat text kroků do stránky ani do
+  generátoru natvrdo.**
+- PDF generuje `scripts/build-partner-guide-pdf.mjs` (`npm run build:partner-guide-pdf`) do
+  `public/navody/OneMil-navod-Shoptet.pdf`. **Po každé změně obsahu PDF přegenerovat ve stejném
+  commitu** — spec 133m selže, když je PDF starší než obsahový modul.
+- Generátor vkládá screenshoty jako **data URI**. `file://` obrázek uvnitř `setContent` stránky
+  Chromium zablokuje a PDF se vysází s prázdnými rámečky, aniž by cokoli spadlo. Proto je ve
+  skriptu kontrola `naturalWidth === 0` → `Screenshots did not render`. **Neodstraňovat.**
+- Screenshoty v `public/navody/shoptet/` pocházejí z balíčku `OneMil_Shoptet_navod_balicek`
+  a jsou **už anonymizované** (rozmazaný permanentní odkaz exportu, rozmazaný widget snippet
+  s partner UUID, skrytý název e-shopu, URL pole jako password-dots). **Nikdy je nenahrazovat
+  neanonymizovaným snímkem** a nepsat do návodu skutečný exportní odkaz, hash ani partner UUID.
+- Stránka je **jen ke čtení** — nesahá na odměny, widget, platby, schvalování ani Shoptet import.
+- Změna se týká **pouze partnerské navigace**; zákaznická a admin navigace zůstávají beze změny.
+
+Hlídá spec `tests/e2e/133-partner-guides-shoptet.spec.ts`.
+
 ## ⚠️ OTEVŘENÝ PROBLÉM — idempotence je vázaná na partnera, ne na e-shop
 
 **Neopravovat mimochodem. Zatím jen zaznamenáno.**

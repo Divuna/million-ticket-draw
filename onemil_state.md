@@ -3,6 +3,42 @@
 > **Autoritativní aktuální stav. Aktualizováno 16. 8. 2026.**
 > Historický vývoj je v `onemil_history.md` a v Git historii. Pokud starší dokumentace odporuje tomuto souboru, pro současný provoz platí tento soubor a skutečný stav ověřený v GitHubu/Supabase.
 
+## 0a0. Partnerské návody — HOTOVO NA VĚTVI, **NENASAZENO** (17. 8. 2026)
+
+Partnerský portál má novou sekci **„Návody“** (`/partner/navody`) a v ní první návod
+**„Jak propojit Shoptet s OneMil“** — 6 kroků, každý jako samostatná karta s číslem, krátkým
+textem a screenshotem pod příslušnou částí. Obrázky jdou po kliknutí zvětšit. Na stránce je
+tlačítko **„Stáhnout PDF návod“**.
+
+- Nové: `src/content/partnerGuides/shoptetGuide.ts` (jediný zdroj obsahu),
+  `src/pages/PartnerGuides.tsx`, `scripts/build-partner-guide-pdf.mjs`,
+  `public/navody/shoptet/*.png` (11 snímků), `public/navody/OneMil-navod-Shoptet.pdf`,
+  spec `tests/e2e/133-partner-guides-shoptet.spec.ts`. Upraveno: `src/App.tsx` (route + položka
+  „Návody“ v partnerské hlavičce), `package.json` (`build:partner-guide-pdf`).
+- **Web i PDF renderuje tentýž obsahový modul**, takže se nemohou rozejít; spec 133m navíc
+  selže, když je PDF starší než obsah.
+- Podklady pocházejí z balíčku `OneMil_Shoptet_navod_balicek.zip`. Screenshoty jsou použité
+  tak, jak byly dodané — **už anonymizované** (rozmazaný permanentní odkaz exportu, rozmazaný
+  widget snippet s partner UUID, skrytý název e-shopu). Ověřeno vizuálně u všech 11 snímků
+  a strojově (PDF i PNG) — jediný nález byl interní název XObjectu v PDF, ne citlivý údaj.
+- **Pořadí kroků v balíčku neodpovídalo zadání** (slučovalo zkopírování odkazu s odesláním
+  do OneMilu a mělo vlastní krok 6). Web i nově generované PDF drží **zadané pořadí**:
+  1) přístup k exportu → 2) export objednávek → 3) permanentní odkaz → 4) odeslání v OneMilu
+  → 5) čekání na schválení → 6) zapnutí zobrazení MioCoinů + tři ukázky pro zákazníka.
+- **Bez DB migrace, bez Edge Function, bez SQL.** Shoptet import, výpočet MioCoinů, widget,
+  schvalování ani platby se nezměnily. Zákaznická a admin navigace nedotčeny.
+
+Ověřeno v prohlížeči proti stagingu (dočasný partner + přihlášení, obojí smazáno): položka
+„Návody“ v partnerské hlavičce, stránka se 6 kroky ve správném pořadí, všech 12 obrázků
+načtených, zvětšení po kliknutí, PDF se servíruje jako `application/pdf` (`%PDF-`, 1 027 011 B),
+mobil 375 px **bez horizontálního přetečení**. PDF zkontrolováno stránku po stránce v renderu.
+
+Testy: 141 passed (specy 125–133). `npm run build` exit 0, assety jsou v `dist/navody/`.
+`npx tsc -p tsconfig.app.json --noEmit` = **18 chyb = nezměněná baseline**, žádná v dotčených
+souborech. **Nasazeno nikam — do produkce až Lovable Publishem.**
+
+---
+
 ## 0a1. Snippet widgetu v partnerském dashboardu — HOTOVO NA VĚTVI, **NENASAZENO** (17. 8. 2026)
 
 Partner se schváleným Shoptet napojením vidí v `/partner/dashboard` sekci **„Zobrazení MioCoinů

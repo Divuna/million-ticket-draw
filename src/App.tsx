@@ -18,7 +18,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
-import { Building2, Key, LogOut, CheckCircle, Clock, XCircle, FileText, MessageCircle } from "lucide-react";
+import { Building2, Key, LogOut, CheckCircle, Clock, XCircle, FileText, MessageCircle, BookOpen } from "lucide-react";
 
 import Homepage from "@/pages/Homepage";
 import Login from "@/pages/Login";
@@ -71,6 +71,7 @@ import PartnerLogin from "@/pages/PartnerLogin";
 import PartnerRegister from "@/pages/PartnerRegister";
 import PartnerDashboard from "@/pages/PartnerDashboard";
 import PartnerInvoices from "@/pages/PartnerInvoices";
+import PartnerGuides from "@/pages/PartnerGuides";
 import PartnerMessages from "@/pages/PartnerMessages";
 import InfluencerLanding from "@/pages/InfluencerLanding";
 import InfluencerHowToEarn from "@/pages/InfluencerHowToEarn";
@@ -208,6 +209,15 @@ function PartnerHeader({ partnerName, partnerLogoUrl, partnerStatus }: PartnerHe
           </TooltipContent>
         </Tooltip>
         <div className="flex items-center gap-2">
+          <Link to="/partner/navody">
+            <Button variant="ghost" size="sm" className="hidden sm:flex">
+              <BookOpen className="w-4 h-4 mr-2" />
+              Návody
+            </Button>
+            <Button variant="ghost" size="icon" className="sm:hidden" aria-label="Návody">
+              <BookOpen className="w-4 h-4" />
+            </Button>
+          </Link>
           <Link to="/partner/messages">
             <Button variant="ghost" size="sm" className="hidden sm:flex">
               <MessageCircle className="w-4 h-4 mr-2" />
@@ -691,6 +701,7 @@ function AppContent() {
             <Route path="/affiliate/register" element={<AffiliateRegister />} />
             <Route path="/affiliate/dashboard" element={<AffiliateDashboard />} />
           <Route path="/partner/dashboard" element={<PartnerDashboard />} />
+          <Route path="/partner/navody" element={<PartnerGuides />} />
           <Route path="/partner/invoices" element={<PartnerInvoices />} />
           <Route path="/partner/messages" element={<PartnerMessages />} />
           <Route path="/unsubscribe/marketing" element={<UnsubscribeMarketing />} />

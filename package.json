@@ -15,6 +15,7 @@
     "test:concurrency": "node scripts/concurrency-test-race-condition.mjs",
     "test:chat-mode": "node scripts/test-chat-mode.mjs",
     "build:dev": "vite build --mode development",
+    "build:partner-guide-pdf": "node scripts/build-partner-guide-pdf.mjs",
     "lint": "eslint .",
     "preview": "vite preview",
     "functions:serve": "supabase functions serve",
