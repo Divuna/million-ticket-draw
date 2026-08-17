@@ -269,6 +269,28 @@ MioCoiny. Volá ho `create_partner_order_reward` (skutečné vydání) i veřejn
   `[data-micro-price]`. Košíkové řádky jsou `[data-micro="cartItem"]` — **ne** `[data-micro-product-id]`,
   který mají i karty ve výpisu (jinak se kategorie čte jako košík).
 
+## Snippet pro partnera v dashboardu (TRVALÝ INVARIANT, 17. 08. 2026)
+
+Sekce **„Zobrazení MioCoinů v e-shopu“** v `/partner/dashboard` generuje partnerovi hotový
+`<script>` tag ke vložení do Shoptetu (Vzhled a obsah → Editor HTML kódu).
+
+- Formát je **ten, který `public/shoptet-widget.js` už čte** — jediný identifikátor je
+  `data-onemil-partner` s prostým `partners.id`. Widget začíná
+  `if (!partnerId) return;`, takže jiný název atributu by v e-shopu **selhal tiše**.
+  **Nezavádět druhý identifikátor, token ani per-shop klíč.**
+- Snippet staví `src/lib/shoptetWidgetSnippet.ts` přes `buildPublicUrl()` — proto míří na
+  `https://onemil.cz` i v preview/localhost buildu. **Nikdy nedávat partnerovi tag na preview
+  host.** Bez `partners.id` vrací `null`, ne tag s prázdným atributem.
+- `data-onemil-api` se do snippetu **nepřidává** — výchozí endpoint ve widgetu je produkční
+  a druhé místo k udržování by se rozešlo.
+- Sekce se zobrazí **jen při `shoptet_connection_requests.status` `approved`/`active`**, tedy
+  až po **druhém ručním schválení adminem OneMil**. Dashboard stav pouze **čte** — nikdy ho
+  nenastavuje a neobchází `submit-shoptet-connection`.
+- Snippet je veřejný údaj: **žádný API klíč, service_role, Shoptet export URL ani Vault.**
+
+Hlídá spec `tests/e2e/132-partner-shoptet-widget-snippet.spec.ts`; 132d nesrovnává řetězce,
+ale pustí vygenerovaný snippet do reálného widgetu a ověří, že z něj widget partnera vytáhne.
+
 ## ⚠️ OTEVŘENÝ PROBLÉM — idempotence je vázaná na partnera, ne na e-shop
 
 **Neopravovat mimochodem. Zatím jen zaznamenáno.**

@@ -1,3 +1,27 @@
+# 17. 08. 2026 — Partner si zkopíruje kód widgetu přímo z dashboardu (frontend, NENASAZENO)
+
+Po schválení Shoptet napojení dostane partner v `/partner/dashboard` novou sekci **„Zobrazení
+MioCoinů v e-shopu“**: instrukci pro Shoptet (Vzhled a obsah → Editor HTML kódu), hotový
+`<script>` tag s **předvyplněným vlastním `partners.id`**, tlačítko „Kopírovat kód“ a větu, že
+se údaje zobrazí podle aktuálního nastavení v OneMil.
+
+Dosud musel partner snippet složit ručně a doplnit si do něj svoje partner ID — přitom
+`partners.id` nikde v portálu nevidí a špatné UUID by zákazníkům tiše ukazovalo cizí sazbu.
+
+Snippet se nevymýšlí: formát je ten, který `public/shoptet-widget.js` už čte
+(`data-onemil-partner`), a URL staví `buildPublicUrl()`, takže i v preview/localhost buildu
+míří na `https://onemil.cz`. Ověřeno v prohlížeči proti stagingu — vygenerovaný tag skutečně
+obsahoval produkční URL, i když `VITE_APP_URL` bylo `http://localhost:5173`.
+
+Sekce se zobrazí **jen u napojení ve stavu `approved`/`active`**; ověřeno i negativně —
+u stavu „Odesláno ke schválení“ zmizí. **Druhé ruční schválení adminem zůstává beze změny**,
+dashboard stav pouze čte. Odměny, widget, platby ani Shoptet import se nezměnily.
+
+Nasazeno nikam — jen větev `claude/miocoin-decimal-unify`; do produkce se dostane až
+Lovable Publishem.
+
+---
+
 # 17. 08. 2026 — ISDOC oprava nasazena do produkce (v179) + uzavřen veřejný endpoint
 
 Po ověření na stagingu Pavel schválil produkční nasazení. Aplikována migrace

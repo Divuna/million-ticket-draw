@@ -3,6 +3,33 @@
 > **Autoritativní aktuální stav. Aktualizováno 16. 8. 2026.**
 > Historický vývoj je v `onemil_history.md` a v Git historii. Pokud starší dokumentace odporuje tomuto souboru, pro současný provoz platí tento soubor a skutečný stav ověřený v GitHubu/Supabase.
 
+## 0a1. Snippet widgetu v partnerském dashboardu — HOTOVO NA VĚTVI, **NENASAZENO** (17. 8. 2026)
+
+Partner se schváleným Shoptet napojením vidí v `/partner/dashboard` sekci **„Zobrazení MioCoinů
+v e-shopu“**: instrukci (Vzhled a obsah → Editor HTML kódu), hotový `<script>` tag s vlastním
+`partners.id`, tlačítko „Kopírovat kód“ a informaci, že se údaje zobrazí podle aktuálního
+nastavení v OneMil. **Partner si své partner ID nikde nedohledává.**
+
+- Nové: `src/lib/shoptetWidgetSnippet.ts` (`buildShoptetWidgetSnippet`, `getShoptetWidgetSrc`),
+  sekce v `src/pages/PartnerDashboard.tsx`, spec `tests/e2e/132-partner-shoptet-widget-snippet.spec.ts`.
+- `src/lib/publicAppUrl.ts`: `import.meta.env?.` (optional chaining) — modul je tím importovatelný
+  i v Playwright runneru; chování ve Vite beze změny.
+- **Bez DB migrace, bez Edge Function, bez SQL.** Odměny, widget, platby ani Shoptet import
+  nezměněny. Druhé ruční schválení Shoptet napojení adminem zůstává; dashboard stav jen čte.
+
+**Ověřeno v prohlížeči proti stagingu** (dočasný partner + přihlášení, obojí smazáno):
+sekce se vykreslila, snippet obsahoval skutečné `partners.id` a **`https://onemil.cz`** i při
+`VITE_APP_URL=http://localhost:5173`; tlačítko zkopírovalo přesně zobrazený kód
+(„Kód byl zkopírován do schránky“); po přepnutí napojení na `submitted` sekce **zmizela**.
+Zápis do schránky v automatizovaném prohlížeči blokuje oprávnění (`NotAllowedError`) — proto byl
+úspěšný průchod ověřen se stubnutým `writeText`; chybová větev zobrazuje českou hlášku.
+
+Testy: 136 passed (specy 124–132). `npm run build` exit 0.
+`npx tsc -p tsconfig.app.json --noEmit` = **18 chyb = nezměněná baseline**, žádná v dotčených
+souborech. **Nasazeno nikam — do produkce až Lovable Publishem.**
+
+---
+
 ## 0. MioCoin — pravidlo 1 desetinného místa — PŘIPRAVENO NA VĚTVI, **NENASAZENO** (16. 8. 2026)
 
 **Obchodní pravidlo potvrzeno Pavlem** (`ONEMIL_BUSINESS_CONTEXT.md` §8.1, technický invariant
