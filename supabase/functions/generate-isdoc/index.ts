@@ -56,6 +56,15 @@ function generateIsdocXml(payload: IsdocPayload, partner: PartnerInfo, invoiceNu
   const dueDate = new Date(Date.now() + 14 * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
   
   // Build invoice lines XML
+  //
+  // MioCoin quantities carry at most ONE decimal place (0.6 MC is a valid line).
+  // build_isdoc_payload returns them as JSON numbers, so `${line.coins}` already
+  // emits "0.6" without loss — do NOT wrap this in a rounding/parseInt "fix".
+  //
+  // OPEN ISSUE (pre-existing, out of scope for the MioCoin decimal work):
+  // LineExtensionAmount is currently fed the COIN QUANTITY rather than the CZK
+  // line amount, and InvoicedQuantity is hardcoded to 1. That is a financial
+  // semantics bug in the ISDOC export and needs its own change + approval.
   const linesXml = payload.lines.map((line, idx) => `
     <InvoiceLine>
       <ID>${idx + 1}</ID>

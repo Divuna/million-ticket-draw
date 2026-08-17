@@ -5,6 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Loader2 } from 'lucide-react';
 import { OneMilGiftIcon } from '@/components/icons/OneMilIcons';
+import { formatMioCoin } from '@/lib/miocoin';
 
 interface RedeemMioCoinCardProps {
   /** Called after a successful redemption so the parent can refresh wallet balance. */
@@ -51,7 +52,7 @@ export const RedeemMioCoinCard = ({ onRedeemed }: RedeemMioCoinCardProps) => {
       if (result?.success) {
         toast({
           title: 'Kód uplatněn',
-          description: `Kód byl úspěšně uplatněn. Připsáno ${Number(result.coins ?? 0).toLocaleString('cs-CZ')} MioCoinů.`,
+          description: `Kód byl úspěšně uplatněn. Připsáno ${formatMioCoin(Number(result.coins ?? 0))}.`,
         });
         setCode('');
         onRedeemed?.();

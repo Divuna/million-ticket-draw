@@ -47,6 +47,47 @@ výslovné schválení Pavla.
 
 ---
 
+# MIOCOIN — PRAVIDLO 1 DESETINNÉHO MÍSTA (větev `claude/miocoin-one-decimal`, 18. 08. 2026)
+
+**Staging ověřeno, PRODUKCE NENASAZENA.** Produkce dnes stále vrací `floor()` na celé číslo.
+
+Potvrzené pravidlo (`ONEMIL_BUSINESS_CONTEXT.md` §8.1): MioCoin má **maximálně 1 desetinné
+místo**, minimální vydatelná partnerská odměna je **0,5 MC**, ručně zadaná hodnota mimo spec se
+**odmítne** (nikdy tiše nezaokrouhlí), a automatický výpočet se zaokrouhlí **právě jednou** na
+součtu celé objednávky.
+
+**Závazné invarianty (neměnit):**
+
+- `compute_partner_reward` zaokrouhluje `round(v_total_mc, 1)` — **právě dvakrát v souboru**,
+  jednou na každé návratové cestě (order_total a items). **`floor(...)::integer` se nesmí vrátit.**
+- **Položky se sčítají v plné přesnosti.** V item smyčce se nikdy nezaokrouhluje před součtem;
+  `mc_display` je jen zobrazovací hodnota pro badge jednoho produktu a **nikdy se nesčítá**.
+- **Žádná vrstva nad enginem nesmí zaokrouhlovat.** `partner-reward-preview` hodnotu jen parsuje
+  (`Number()`), widget a UI ji jen formátují. `Math.floor` v preview endpointu byl přesně to, co
+  z 0,6 MC dělalo 0 a badge úplně skrylo — spec 125 i 130 to hlídají.
+- Práh 0,5 MC má **jeden zdroj**: `public.miocoin_min_partner_reward_mc()`. Engine ho vrací jako
+  `issuable`/`min_reward_mc`; issuance i preview ho čtou odtud, nikdo si ho nedefinuje sám.
+- Coin sloupce jsou **plain `numeric`**, ne `numeric(x,1)` — `numeric(x,1)` by 1,25 tiše změnil
+  na 1,3 dřív, než by CHECK vůbec proběhl. Odmítnutí zajišťuje `CHECK (coins = round(coins, 1))`.
+- **Množství vs. peníze se nemíchá:** MioCoin množství 1 desetinné místo, CZK částky 2. Faktura
+  má proto dva formátovače (`formatCoins` vs `formatCurrency`).
+- PostgREST vrací `numeric` jako **string** — `sum + c.coins` by tiše zřetězil `"00.6"`.
+  Všude, kde se coiny sčítají, musí být `Number(...)`.
+- **Jediný engine zůstává jediný.** `activate_partner_coins_from_order` + wrapper
+  `api_activate_partner_coins` byly **dropnuty** (měly vlastní výpočet odměny a EXECUTE pro
+  anon/authenticated/PUBLIC). Neobnovovat — legitimní cesta je
+  `create_partner_order_reward → partner_reward_codes → redeem → log_partner_coin_activation_from_reward`.
+
+**Mimo rozsah (vědomě nezměněno):** Stripe top-up / refundace / referral odměna
+(`payments.amount` → `wallets.balance_coins`), `reward_mode` logika, Shoptet CSV parser,
+minutový import, idempotence `partner_id + external_order_id`, `price_per_coin` (1 MC = 1 Kč).
+**Žádná retroaktivní změna už vydaných kódů** — migrace pouze mění typ sloupce a definice funkcí,
+neprovádí žádný UPDATE/backfill.
+
+Hlídá spec `tests/e2e/130-miocoin-one-decimal.spec.ts` (51 testů) + aktualizovaný spec 125.
+
+---
+
 # SHOPTET MIOCOIN WIDGET + PRODUKTOVÉ ODMĚNY — TRVALÉ INVARIANTY (16. 08. 2026)
 
 Funkce je hotová, nasazená a živě ověřená. Produkční `main` v době zápisu: `f31d3937`.

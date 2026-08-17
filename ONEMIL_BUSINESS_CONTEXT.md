@@ -218,6 +218,54 @@ MioCoins cannot be withdrawn or exchanged back for money.
 
 MioCoin must never be publicly described as a gambling token, betting token, casino chip, or money-equivalent withdrawal product.
 
+### 8.1 MioCoin decimal rule — confirmed (16. 08. 2026)
+
+**MioCoiny mají maximálně 1 desetinné místo.**
+
+Platné hodnoty: `0,5` · `0,6` · `1,0` · `1,2` · `4,9` · `5,0` · `15,7`.
+Neplatné jako výsledná MioCoin hodnota: `1,25` · `4,333` · `0,55`.
+
+**Partnerská odměna**
+
+- Minimální výsledná odměna je **0,5 MC**. Pokud je výsledná odměna po zaokrouhlení
+  menší než 0,5 MC, odměna se **nevydá**.
+- Ručně zadávaná partnerská odměna musí být **minimálně 0,5 MC** a smí mít
+  **maximálně 1 desetinné místo**.
+- `0,4` je neplatné · `1,25` je neplatné · `0,6` je platné · `1,2` je platné.
+- Neplatná ručně zadaná hodnota se **odmítne**, nikdy se tiše nezaokrouhlí
+  (`1,25` se nesmí sama změnit na `1,3`).
+
+**Automatický výpočet z poměru**
+
+Interní mezivýpočet (např. `100 Kč = 5 MC`, objednávka 99 Kč → `4,95`) smí mít
+libovolnou přesnost. **Zaokrouhlení na 1 desetinné místo se provede právě jednou,
+až na výsledku celé objednávky** — nikdy po jednotlivých položkách.
+
+- `4,95 MC` → `5,0 MC`
+- `4,85 MC` → `4,9 MC`
+- `4,84 MC` → `4,8 MC`
+- `24,42 MC` → `24,4 MC` (660 Kč při 100 Kč = 3,7 MC)
+
+**MioCoin množství vs. peníze:** MioCoin množství má max. 1 desetinné místo;
+finanční částky v CZK (faktury, DPH, ceny) zůstávají standardně na 2 desetinných
+místech. Tato dvě pravidla se nemíchají.
+
+**1 MC = 1 Kč** (`partners.price_per_coin`) tímto pravidlem není dotčeno — mění se
+jen počet desetinných míst množství, nikoli cena za MioCoin.
+
+> **Stav implementace (18. 08. 2026):** obchodní pravidlo je potvrzené a technická
+> implementace pro **partnerský reward řetězec** (numerické coin sloupce,
+> `compute_partner_reward`, issuance, widget, preview, fakturace) je hotová
+> a **ověřená na stagingu** na větvi `claude/miocoin-one-decimal`.
+> **Do produkce NENASAZENO.** Produkce dnes stále zaokrouhluje partnerskou odměnu
+> dolů na celé číslo (`floor`), takže desetinné partnerské MioCoiny v produkci
+> zatím nefungují.
+>
+> **Mimo rozsah této změny:** Stripe top-up / refundace / referral odměna
+> (`payments.amount` → `wallets.balance_coins`). Je to samostatná odměnová cesta;
+> `payments.amount` je dnes vždy celé číslo, protože `stripe-webhook` odmítne
+> jinou než celou CZK částku.
+
 ---
 
 ## 9. Coupon, voucher, and partner offer

@@ -1,3 +1,47 @@
+# 18. 08. 2026 — MioCoin konečně unese desetinu (staging, PRODUKCE NENASAZENA)
+
+Partner vereonika sro nastavil `100 Kč = 3,7 MC`. Košík 660 Kč tedy vychází na 24,42 MC, ale
+zákazníkovi se ve widgetu ukazovalo 24. Engine počítal celou dobu správně — číslo mu uřízl
+`floor()` až na konci, v návratové hodnotě. Stejná jedna funkce dělala z produktové odměny pod
+1 MC nulu, takže badge u levnějšího zboží prostě nebyl.
+
+Pravidlo bylo potvrzené už dřív a řešení dokonce jednou napsané (větev
+`claude/miocoin-decimal-unify`), ale nikdy nemergnuté. Mezitím se `main` posunul o 583 commitů,
+takže starou větev nešlo prostě sloučit — bylo potřeba projít, co z ní ještě platí.
+
+Co se z ní vzalo beze změny: čtyři migrace, `src/lib/miocoin.ts`, formátování v adminu a na
+faktuře. Co se muselo upravit: `PartnerDashboard.tsx` se mezitím rozrostl o celý Shoptet
+onboarding a změnu exportního odkazu, takže se změny musely zasadit ručně; spec 125 odkazoval na
+migrace starými čísly; a spec 130 se zúžil — původní verze sahala i na Stripe top-up a referral
+odměnu, což je samostatná odměnová cesta a do téhle změny nepatří.
+
+Dvě rozhodnutí, která nejsou zřejmá:
+
+**Coin sloupce jsou `numeric`, ne `numeric(x,1)`.** Vypadá to jako zbytečná volnost, ale
+`numeric(x,1)` by 1,25 tiše přepsal na 1,3 ještě dřív, než by CHECK vůbec proběhl. Potvrzené
+pravidlo přitom říká, že nesmyslná ručně zadaná hodnota se má **odmítnout**, ne opravit za zády.
+Plain `numeric` + `CHECK (coins = round(coins, 1))` dělá přesně to.
+
+**Položky se sčítají v plné přesnosti a zaokrouhluje se až součet.** Tři položky po 0,44 MC dají
+po zaokrouhlení jednotlivě 1,2 MC, ale zaokrouhlením až součtu 1,3 MC. Zaokrouhlovat po
+položkách znamená systematicky okrádat zákazníka o zlomky — proto v item smyčce žádné
+zaokrouhlení není a `mc_display` slouží jen k zobrazení badge jednoho produktu, nikdy se nesčítá.
+
+Při té příležitosti zmizel druhý reward engine. `activate_partner_coins_from_order` si počítal
+odměnu sám (`ROUND(... , 1)` s vlastním vzorcem) a zapisoval rovnou do aktivací — a měl EXECUTE
+pro anon, authenticated i PUBLIC. Nikdy nevyprodukoval jediný řádek (všechny 4 aktivace nesou
+`code`, tedy přišly legitimní cestou), takže se nedropoval naslepo: migrace má guard, který
+odmítne proběhnout, kdyby se mezitím objevil volající.
+
+Ověřeno na stagingu proti throwaway partnerovi: 660 Kč → 24,4 · 350 Kč → 13,0 · 10 Kč → 0,4 MC
+a odměna se nevydá · quantity, sleva, všechny tři reward_mode · preview a skutečné vydání dají
+u téhož košíku shodných 3,9 MC · aktivace připíše do peněženky 24,40 · faktura spočítá
+24,40 Kč net / 5,12 DPH / 29,52 gross · `1,25` i `0,4` odmítnuty jak CHECKem, tak RPC.
+Existující celočíselné kódy zůstaly nedotčené, peněženka taky (redemption běžel v rollbacku).
+
+Vedlejší efekt, který stojí za zmínku: BOHEMIA má `100 Kč = 1 MC`, takže jí 660 Kč nově dá 6,6
+místo dosavadních 6. To není regrese, to je přesně ta oprava.
+
 # 17. 08. 2026 — Shoptet delta import: cron z 15 minut na 1 minutu (staging, PRODUKCE NENASAZENA)
 
 Import objednávek běžel každých 15 minut z jediného důvodu: každý běh stahoval **celý**

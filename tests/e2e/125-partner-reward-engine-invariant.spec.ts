@@ -27,8 +27,10 @@ const codeOnly = (src: string) =>
     .filter((l) => !l.trim().startsWith('//'))
     .join('\n');
 
-const engine = read('supabase/migrations/20260816110000_compute_partner_reward_engine.sql');
-const issuance = read('supabase/migrations/20260816120000_create_partner_order_reward_items.sql');
+// The engine and the issuance RPC were each superseded by the MioCoin one-decimal
+// migrations; the specs below assert the CURRENT definition, not the historical one.
+const engine = read('supabase/migrations/20260818100100_compute_partner_reward_one_decimal.sql');
+const issuance = read('supabase/migrations/20260818100200_partner_reward_issuance_one_decimal.sql');
 const preview = read('supabase/functions/partner-reward-preview/index.ts');
 const widget = read('public/shoptet-widget.js');
 const importer = read('supabase/functions/import-shoptet-orders/index.ts');
@@ -42,8 +44,13 @@ test.describe('125 — one shared reward engine', () => {
     // STABLE + no writes = safe to call from a public preview path.
     expect(engine).toContain('STABLE');
     expect(engine).not.toMatch(/\bINSERT INTO\b|\bUPDATE public\.|\bDELETE FROM\b/);
-    // Rounding happens once, on the summed total (confirmed rule D).
-    expect(engine).toMatch(/floor\(v_total_mc\)::integer/);
+    // Rounding happens once, on the summed total (confirmed rule D), to ONE decimal.
+    // `floor(...)::integer` is what used to destroy sub-1 MC rewards — it must stay gone.
+    // SQL comments stripped: the migration header legitimately names the floor()
+    // bug it removes, so only executable lines may be asserted against.
+    const engineSql = engine.split('\n').filter((l) => !l.trim().startsWith('--')).join('\n');
+    expect(engineSql).not.toMatch(/floor\(v_total_mc\)/);
+    expect(engine.match(/round\(v_total_mc, 1\)/g) ?? []).toHaveLength(2); // one per return path
     expect(engine).toContain("REVOKE ALL ON FUNCTION public.compute_partner_reward");
     expect(engine).toContain('GRANT EXECUTE ON FUNCTION public.compute_partner_reward(uuid, numeric, jsonb) TO service_role');
   });
@@ -67,6 +74,9 @@ test.describe('125 — one shared reward engine', () => {
     expect(preview).not.toMatch(/reward_base_czk\s*[*/]/);
     expect(preview).not.toMatch(/fixed_mc\s*[*/]/);
     expect(preview).not.toContain('ratio_base_czk');
+    // And no rounding of its own: the Math.floor that used to sit here turned a
+    // 0.6 MC product reward into 0 and hid the badge entirely.
+    expect(codeOnly(preview)).not.toMatch(/Math\.(floor|round|ceil|trunc)/);
   });
 
   test('the preview endpoint exposes no secret and is read-only', () => {

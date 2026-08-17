@@ -116,9 +116,11 @@ Deno.serve(async (req) => {
 
   const result = (typeof reward === "string" ? JSON.parse(reward) : reward) as {
     success?: boolean;
-    coins?: number;
+    coins?: number | string;
+    issuable?: boolean;
+    min_reward_mc?: number | string;
     reward_mode?: string;
-    items?: Array<{ code?: string; mc?: number }>;
+    items?: Array<{ code?: string; mc?: number | string; mc_display?: number | string }>;
     error?: string;
   } | null;
 
@@ -133,14 +135,36 @@ Deno.serve(async (req) => {
     });
   }
 
+  // MioCoin values carry at most one decimal place and the engine has ALREADY
+  // applied the single rounding on the order total. This endpoint must not round,
+  // floor or truncate — a previous `Math.floor` here is exactly what made a 0.6 MC
+  // reward render as 0 and disappear from the storefront. Numeric columns arrive
+  // from PostgREST as strings, so they are only parsed, never re-rounded.
+  const coins = Number(result.coins ?? 0);
+
+  // Below the 0.5 MC minimum nothing would be issued, so nothing is promised.
+  if (result.issuable === false) {
+    return json({
+      status: "ok",
+      enabled: false,
+      coins: 0,
+      reason: "reward_amount_too_low",
+    });
+  }
+
   return json({
     status: "ok",
     enabled: true,
-    coins: result.coins ?? 0,
+    coins,
+    min_reward_mc: Number(result.min_reward_mc ?? 0.5),
     reward_mode: result.reward_mode,
     // Per-item breakdown so the widget can render a product badge without a
-    // second round trip. Only code → MioCoins, nothing else.
-    items: (result.items ?? []).map((i) => ({ code: i.code, coins: Math.floor(Number(i.mc ?? 0)) })),
+    // second round trip. Only code → MioCoins, nothing else. `mc_display` is the
+    // engine's own per-item display value; the raw `mc` fallback is never rounded here.
+    items: (result.items ?? []).map((i) => ({
+      code: i.code,
+      coins: Number(i.mc_display ?? i.mc ?? 0),
+    })),
     // Product badges are partner-controlled; the cart summary always shows.
     product_badge_enabled: partner.product_badge_enabled !== false,
   });

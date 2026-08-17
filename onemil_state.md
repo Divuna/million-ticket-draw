@@ -2,6 +2,58 @@
 
 > **Autoritativní aktuální stav. Aktualizováno 16. 8. 2026.**
 
+## 0a. MioCoin — pravidlo 1 desetinného místa — STAGING OVĚŘENO, **PRODUKCE NENASAZENA** (18. 8. 2026)
+
+Partner vereonika sro má konverzi `100 Kč = 3,7 MC`. Košík 660 Kč vychází na `24,42 MC`, ale
+widget zákazníkovi ukazoval **24** — engine počítal správně a pak výsledek uřízl `floor()` na
+celé číslo. Stejná chyba dělala z produktové odměny pod 1 MC nulu a badge úplně skryla.
+
+Nově se zaokrouhluje **jednou, na 1 desetinné místo, až na součtu celé objednávky**:
+`24,42 → 24,4`. Minimální vydatelná odměna je **0,5 MC**; pod ní se kód nevydá.
+
+- Nové: 4 migrace (`20260818100000`–`20260818100300`), `src/lib/miocoin.ts`,
+  spec `tests/e2e/130-miocoin-one-decimal.spec.ts` (51 testů).
+  Upraveno: `compute_partner_reward`, `create_partner_order_reward`,
+  `generate_partner_reward_code`, `update_partner_order_reward_status`,
+  `partner-reward-preview`, `shoptet-widget.js`, `PartnerDashboard`, `AdminInvoices`,
+  `AdminPartnersPortal`, `RedeemMioCoinCard`, invoice PDF, ISDOC, spec 125.
+- **Coin sloupce `integer` → `numeric`** (+ CHECK na 1 desetinné místo):
+  `partner_reward_codes.coins`, `partner_coin_activations.coins`,
+  `partner_invoice_lines.coins`, `partner_invoices.coins_activated`.
+- **Dropnut druhý reward engine** `activate_partner_coins_from_order` + wrapper
+  `api_activate_partner_coins` (vlastní výpočet odměny, EXECUTE pro anon/authenticated/PUBLIC,
+  0 řádků kdy vyprodukoval). Guard v migraci to odmítne provést, kdyby se objevil volající.
+- **Nezměněno:** 1 MC = 1 Kč, `reward_mode` logika, Shoptet CSV parser, minutový import,
+  idempotence, wallet balances, už vydané kódy. **Žádný UPDATE ani backfill.**
+
+**Reálné staging ověření** (throwaway partner `100 Kč = 3,7 MC`, vše uklizeno):
+
+| případ | očekáváno | výsledek |
+|---|---|---|
+| 660 Kč, whole_shop | 24,4 | **24,4** (raw 24,42) |
+| 350 Kč, whole_shop | 13,0 | **13** (raw 12,95) |
+| 10 Kč → 0,4 MC | nevydat | `issuable=false`, issuance `reward_amount_too_low` |
+| selected_products, 3× SKU @1,3 | 3,9 | **3,9** |
+| whole_shop_with_exceptions | 1,3 + 7,4 | **8,7** |
+| sleva: 2× @75 Kč ratio 3,7/100 | 5,6 | **5,6** (raw 5,55) |
+| preview vs. vydání (stejný košík) | shodné | **3,9 = 3,9** |
+| aktivace → peněženka | 24,4 | wallet 24,40, tx 24,4, aktivace 24,4 |
+| fakturace | 24,4 MC | net 24,40 Kč, DPH 5,12, gross 29,52 |
+| `1,25` / `0,4` ručně | odmítnout | **odmítnuto** (CHECK i RPC) |
+| existující integer kódy | beze změny | 3 / 5 / 6 / 11 nedotčeny |
+| BOHEMIA 660 Kč @1 MC | 6,6 | **6,6** (dřív 6 — to je ta oprava) |
+
+E-maily: **0**. Peněženka nezměněna (redemption testován v rollback transakci).
+Testy: spec 130 **51 passed**, spec 125 **7 passed**, specy 123–129/132–134 **94 passed**
+bez regrese. `npm run build` exit 0. `npx tsc -p tsconfig.app.json --noEmit` = **18 chyb =
+nezměněná baseline**, žádná v dotčených souborech.
+
+**⚠️ Mimo rozsah:** Stripe top-up / refundace / referral odměna
+(`payments.amount` → `wallets.balance_coins`) je samostatná odměnová cesta a **nebyla měněna**.
+`payments.amount` je dnes vždy celé číslo (`stripe-webhook` odmítne jinou než celou CZK částku).
+Na staré větvi `claude/miocoin-decimal-unify` k tomu existuje připravená migrace
+(`payment_credit_miocoin_one_decimal`) — **záměrně nepřevzata**, patří do samostatného rozhodnutí.
+
 ## 0a0. Shoptet delta import (`updateTimeFrom`) + cron 15 min → 1 min — STAGING OVĚŘENO, **PRODUKCE NENASAZENA** (17. 8. 2026)
 
 Import běžel každých 15 minut, protože každý běh stahoval **celý** exportní soubor partnera.
