@@ -1,3 +1,34 @@
+# 17. 08. 2026 — Partnerský portál má sekci Návody (frontend, NENASAZENO)
+
+V partnerské hlavičce přibyla položka **Návody** a stránka `/partner/navody` s prvním návodem
+**„Jak propojit Shoptet s OneMil“** — 6 kroků jako samostatné karty, screenshot vždy pod částí,
+které se týká, obrázky se po kliknutí zvětší. K tomu tlačítko **Stáhnout PDF návod**.
+
+Podklady jsou z balíčku `OneMil_Shoptet_navod_balicek.zip` a screenshoty jsou použité tak, jak
+byly dodané. **Pořadí kroků v balíčku ale neodpovídalo zadání** — slučovalo zkopírování
+permanentního odkazu s odesláním do OneMilu a mělo vlastní krok „Zkontrolujte, jak MioCoiny
+vidí zákazník“. Web i nově vygenerované PDF proto drží zadané pořadí a ukázky pro zákazníka
+jsou až na konci. Balíček navíc dával snímek dialogu „Přidat šablonu exportu objednávek“ ke
+kroku 1 (Zabezpečení exportů), kam nepatří; přesunut ke kroku 2.
+
+Obsah má jediný zdroj (`src/content/partnerGuides/shoptetGuide.ts`), ze kterého se renderuje
+stránka i PDF, takže se nemohou rozejít.
+
+Při generování PDF se ukázalo, proč je na to potřeba kontrola: `file://` obrázky uvnitř stránky
+vytvořené přes `setContent` Chromium blokuje, takže první PDF (161 kB) vyšlo s prázdnými rámečky
+místo screenshotů — a skript přitom doběhl bez chyby. Obrázky se proto vkládají jako data URI
+a skript nově tvrdě ověřuje, že se každý snímek skutečně vykreslil.
+
+Bezpečnostní kontrola: všech 11 snímků prohlédnuto vizuálně a PDF i PNG proskenované strojově.
+Citlivé údaje jsou už rozmazané u zdroje (permanentní odkaz exportu, widget snippet s partner
+UUID, název e-shopu). Jediný strojový nález byl interní název XObjectu v PDF, ne citlivý údaj.
+
+Shoptet import, výpočet MioCoinů, widget, schvalování ani platby se nezměnily; zákaznická
+a admin navigace nedotčeny. Nasazeno nikam — jen větev `claude/partner-navody-shoptet-clean`,
+odbočená z aktuálního `main`.
+
+---
+
 # 17. 08. 2026 — Partner si zkopíruje kód widgetu přímo z dashboardu (frontend, NENASAZENO)
 
 Po schválení Shoptet napojení dostane partner v `/partner/dashboard` novou sekci **„Zobrazení
