@@ -108,6 +108,7 @@ export const AdminContextSubNav: React.FC = () => {
   const { pendingCount: pendingOffersCount } = usePendingOffersCount();
   const [pendingPartnerRegistrationsCount, setPendingPartnerRegistrationsCount] = useState(0);
   const [pendingShoptetRequestsCount, setPendingShoptetRequestsCount] = useState(0);
+  const [pendingLogoApprovalsCount, setPendingLogoApprovalsCount] = useState(0);
   const [pendingCompanyLeadsCount, setPendingCompanyLeadsCount] = useState(0);
   const [unreadSalesRepliesCount, setUnreadSalesRepliesCount] = useState(0);
 
@@ -178,6 +179,36 @@ export const AdminContextSubNav: React.FC = () => {
       cancelled = true;
       clearInterval(interval);
       window.removeEventListener("shoptet-requests-changed", loadPendingShoptetRequestsCount);
+    };
+  }, []);
+
+  // Počet čekajících schválení log (stejný zdroj/filtr jako v AdminPartners).
+  // Poll 60 s + okamžitá aktualizace po schválení/zamítnutí (custom event z AdminPartners).
+  useEffect(() => {
+    let cancelled = false;
+
+    const loadPendingLogoApprovalsCount = async () => {
+      try {
+        const { count, error } = await supabase
+          .from("partners")
+          .select("id", { count: "exact", head: true })
+          .eq("logo_status", "pending");
+        if (!cancelled && !error) {
+          setPendingLogoApprovalsCount(count ?? 0);
+        }
+      } catch {
+        // best-effort — silent fail
+      }
+    };
+
+    loadPendingLogoApprovalsCount();
+    const interval = setInterval(loadPendingLogoApprovalsCount, 60_000);
+    window.addEventListener("partner-logo-requests-changed", loadPendingLogoApprovalsCount);
+
+    return () => {
+      cancelled = true;
+      clearInterval(interval);
+      window.removeEventListener("partner-logo-requests-changed", loadPendingLogoApprovalsCount);
     };
   }, []);
 
@@ -285,9 +316,9 @@ export const AdminContextSubNav: React.FC = () => {
       const Icon = item.icon;
       const active = isAdminSubNavItemActive(item, location.pathname, location.search);
       const showBadge = item.path === "/admin/messages" && unreadCount > 0;
-      // "Partneři" badge = čekající partnerské registrace + čekající Shoptet žádosti
-      // (stejný zdroj jako badge v záložce "Shoptet žádosti" na /admin/partners).
-      const pendingPartnersNavCount = pendingPartnerRegistrationsCount + pendingShoptetRequestsCount;
+      // "Partneři" badge = čekající registrace + Shoptet žádosti + schválení log.
+      const pendingPartnersNavCount =
+        pendingPartnerRegistrationsCount + pendingShoptetRequestsCount + pendingLogoApprovalsCount;
       const showPendingPartnerBadge =
         item.path === "/admin/partners" && pendingPartnersNavCount > 0;
       const showPendingCompanyLeadsBadge =
