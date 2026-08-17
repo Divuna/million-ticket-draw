@@ -43,7 +43,6 @@ jobs:
           commit = 'c7720282ea18c8945515fec86939a879c19aaa0e'
           parent = 'e6914180fc4384225d148ccb597fa62283122b29'
 
-          # History: c772 only prepended one new dated block to the parent version.
           parent_history = subprocess.check_output(['git', 'show', f'{parent}:onemil_history.md'], text=True)
           target_history = subprocess.check_output(['git', 'show', f'{commit}:onemil_history.md'], text=True)
           if not target_history.endswith(parent_history):
@@ -55,7 +54,6 @@ jobs:
           if marker not in current_history:
               history_path.write_text(new_history_block + current_history, encoding='utf-8')
 
-          # State: extract the complete new 0a1 section and insert it near the top.
           target_state = subprocess.check_output(['git', 'show', f'{commit}:onemil_state.md'], text=True)
           start = target_state.index('## 0a1. Snippet widgetu v partnerském dashboardu')
           end = target_state.index('\n## 0. MioCoin', start)
@@ -73,6 +71,9 @@ jobs:
 
       - name: Install dependencies
         run: npm ci
+
+      - name: Install Chromium
+        run: npx playwright install --with-deps chromium
 
       - name: Test widget snippet
         run: npx playwright test tests/e2e/132-partner-shoptet-widget-snippet.spec.ts --project=chromium
