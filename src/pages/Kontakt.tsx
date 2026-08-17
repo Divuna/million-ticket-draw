@@ -184,7 +184,7 @@ const Kontakt: React.FC = () => {
                 </a>
 
                 <a
-                  href="tel:+420776532562"
+                  href="tel:+420731215816"
                   className="flex items-center gap-4 p-5 bg-muted/30 rounded-xl border border-border/20 transition-all hover:bg-muted/40 hover:border-[rgba(255,138,0,0.35)]"
                 >
                   <div className="w-10 h-10 bg-[hsl(var(--heading-gold))]/10 rounded-full flex items-center justify-center flex-shrink-0">
@@ -192,7 +192,7 @@ const Kontakt: React.FC = () => {
                   </div>
                   <div className="space-y-0.5">
                     <p className="text-xs uppercase tracking-wider text-muted-foreground/70 font-medium">Telefon</p>
-                    <span className="text-[hsl(var(--heading-gold))] font-medium text-[15px] md:text-base">+420 776 532 562</span>
+                    <span className="text-[hsl(var(--heading-gold))] font-medium text-[15px] md:text-base">+420 731 215 816</span>
                   </div>
                 </a>
               </div>
