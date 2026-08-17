@@ -117,6 +117,9 @@ interface ShoptetConnRequest {
   submitted_at: string | null;
   reviewed_at: string | null;
   created_at: string;
+  // 'initial' = the first connection, 'url_change' = replacing the export URL of
+  // an already active one. Older rows predate the column and are treated as initial.
+  request_kind?: string | null;
 }
 
 const PARTNER_ROTATE_ERROR_MESSAGES: Record<string, string> = {
@@ -267,6 +270,11 @@ const PartnerDashboard = () => {
   const [shoptetTrigger, setShoptetTrigger] = useState<'paid' | 'shipped' | 'completed'>('paid');
   const [shoptetNote, setShoptetNote] = useState('');
   const [shoptetUrl, setShoptetUrl] = useState(''); // never prefilled, cleared after submit
+  // Export URL change on an already active connection.
+  const [shoptetChangeReq, setShoptetChangeReq] = useState<ShoptetConnRequest | null>(null);
+  const [shoptetChangeOpen, setShoptetChangeOpen] = useState(false);
+  const [shoptetChangeUrl, setShoptetChangeUrl] = useState(''); // never prefilled, cleared after submit
+  const [shoptetChangeSubmitting, setShoptetChangeSubmitting] = useState(false);
   const [shoptetSavingDraft, setShoptetSavingDraft] = useState(false);
   const [shoptetSubmitting, setShoptetSubmitting] = useState(false);
 
@@ -910,25 +918,114 @@ const PartnerDashboard = () => {
 
 
   // ── Shoptet self-service handlers ────────────────────────────────────────────
-  const SHOPTET_SELECT = 'id, shop_name, trigger_status, reward_czk, reward_mc, url_received, status, partner_note, rejection_reason, submitted_at, reviewed_at, created_at';
+  const SHOPTET_SELECT = 'id, shop_name, trigger_status, reward_czk, reward_mc, url_received, status, partner_note, rejection_reason, submitted_at, reviewed_at, created_at, request_kind';
 
+  // The connection and a pending URL change are loaded SEPARATELY on purpose.
+  // A change request is a newer row, so a single "latest row" query would make an
+  // active partner look like they were back to waiting for approval — hiding the
+  // widget snippet and unlocking the onboarding form while the shop is still live.
   const loadShoptetRequest = async (partnerId: string) => {
-    const { data } = await supabase
-      .from('shoptet_connection_requests')
-      .select(SHOPTET_SELECT)
-      .eq('partner_id', partnerId)
-      .order('created_at', { ascending: false })
-      .limit(1)
-      .maybeSingle();
+    const [connectionRes, changeRes] = await Promise.all([
+      supabase
+        .from('shoptet_connection_requests')
+        .select(SHOPTET_SELECT)
+        .eq('partner_id', partnerId)
+        .eq('request_kind', 'initial')
+        .order('created_at', { ascending: false })
+        .limit(1)
+        .maybeSingle(),
+      supabase
+        .from('shoptet_connection_requests')
+        .select(SHOPTET_SELECT)
+        .eq('partner_id', partnerId)
+        .eq('request_kind', 'url_change')
+        .order('created_at', { ascending: false })
+        .limit(1)
+        .maybeSingle(),
+    ]);
 
-    const req = (data as ShoptetConnRequest | null) ?? null;
+    const req = (connectionRes.data as ShoptetConnRequest | null) ?? null;
     setShoptetReq(req);
+    setShoptetChangeReq((changeRes.data as ShoptetConnRequest | null) ?? null);
     if (req) {
       setShoptetShopName(req.shop_name ?? '');
       setShoptetTrigger((['paid', 'shipped', 'completed'].includes(req.trigger_status) ? req.trigger_status : 'paid') as 'paid' | 'shipped' | 'completed');
       setShoptetNote(req.partner_note ?? '');
     }
-    // shoptetUrl is intentionally never set from server data.
+    // Neither URL is ever set from server data — the export URL is Vault-only.
+  };
+
+  // Files a request to replace the export URL of an already active connection.
+  // The draft row is created only here, at submit time, so an abandoned form never
+  // leaves an orphan row behind. The URL goes straight to the Edge Function and
+  // from there to Vault — it is never written to a table or held after the call.
+  const handleShoptetChangeSubmit = async () => {
+    if (!partner || !shoptetReq) return;
+
+    const url = shoptetChangeUrl.trim();
+    if (!url) {
+      toast.error('Zadejte nový URL Shoptet exportu.');
+      return;
+    }
+    try {
+      const parsed = new URL(url);
+      if (parsed.protocol !== 'https:') {
+        toast.error('URL musí začínat https://');
+        return;
+      }
+    } catch {
+      toast.error('Zadejte platnou URL adresu.');
+      return;
+    }
+
+    setShoptetChangeSubmitting(true);
+    try {
+      const { data: draft, error: draftError } = await supabase
+        .from('shoptet_connection_requests')
+        .insert({
+          partner_id: partner.id,
+          // Carried over from the live connection: a URL change never re-negotiates
+          // the shop name, the reward trigger or the conversion rate.
+          shop_name: shoptetReq.shop_name,
+          trigger_status: shoptetReq.trigger_status,
+          reward_czk: shoptetReq.reward_czk,
+          reward_mc: shoptetReq.reward_mc,
+          request_kind: 'url_change',
+        })
+        .select('id')
+        .single();
+
+      if (draftError || !draft) throw draftError ?? new Error('draft_failed');
+
+      const { data: efData, error: efError } = await supabase.functions.invoke('submit-shoptet-connection', {
+        body: { request_id: draft.id, url },
+      });
+
+      setShoptetChangeUrl('');
+
+      if (efError || !(efData as { success?: boolean } | null)?.success) {
+        const code = (efData as { error?: string } | null)?.error;
+        if (code === 'change_already_pending') {
+          toast.error('Změna odkazu už čeká na schválení.');
+        } else {
+          toast.error('Odeslání nového odkazu se nezdařilo.');
+        }
+        // Drop the draft so a failed attempt cannot be resubmitted half-finished.
+        await supabase.from('shoptet_connection_requests').delete().eq('id', draft.id);
+        await loadShoptetRequest(partner.id);
+        return;
+      }
+
+      toast.success('Nový odkaz byl odeslán ke schválení.');
+      setShoptetChangeOpen(false);
+      await loadShoptetRequest(partner.id);
+    } catch {
+      console.error('shoptet url change failed');
+      setShoptetChangeUrl('');
+      toast.error('Odeslání nového odkazu se nezdařilo.');
+    } finally {
+      setShoptetChangeSubmitting(false);
+    }
   };
 
   // Validates and returns the draft field payload, or null with a toast on error.
@@ -1399,6 +1496,9 @@ const PartnerDashboard = () => {
   // Shoptet connection stays exactly as it is; this only reads its result.
   const isShoptetConnectionLive =
     shoptetReq?.status === 'approved' || shoptetReq?.status === 'active';
+  // A submitted change is awaiting review. The connection stays live throughout —
+  // this only hides the action so a partner cannot queue a second change.
+  const shoptetChangePending = shoptetChangeReq?.status === 'submitted';
   const shoptetWidgetSnippet = buildShoptetWidgetSnippet(partner.id);
 
   return (
@@ -2337,6 +2437,122 @@ const PartnerDashboard = () => {
                   </div>
                 );
               })()}
+
+              {/* Export URL change — only for a connection that is already live.
+                  The live connection keeps running the whole time; a change is a
+                  separate request and takes effect only once OneMil approves it. */}
+              {isShoptetConnectionLive && (
+                <div data-testid="shoptet-url-change" className="space-y-3 border-t border-border/50 pt-4">
+                  <div>
+                    <h4 className="text-sm font-medium flex items-center gap-2">
+                      <Key className="w-4 h-4 text-[hsl(var(--neon-gold))]" />
+                      Exportní odkaz
+                    </h4>
+                    <p className="text-xs text-muted-foreground mt-1 leading-relaxed">
+                      Vygenerovali jste v Shoptetu nový permanentní odkaz exportu? Pošlete nám ho —
+                      napojení běží dál a přepneme ho až po kontrole.
+                    </p>
+                  </div>
+
+                  {shoptetChangePending ? (
+                    <div
+                      data-testid="shoptet-url-change-pending"
+                      className="rounded-lg border border-amber-500/30 bg-amber-500/5 p-3 space-y-1"
+                    >
+                      <p className="text-sm flex items-center gap-2">
+                        <Clock className="w-4 h-4 text-amber-500 flex-shrink-0" />
+                        <span className="font-medium">Změna odkazu čeká na schválení</span>
+                      </p>
+                      <p className="text-xs text-muted-foreground leading-relaxed">
+                        Do schválení se objednávky dál načítají z původního odkazu — napojení
+                        zůstává aktivní.
+                      </p>
+                    </div>
+                  ) : (
+                    <>
+                      {shoptetChangeReq?.status === 'rejected' && (
+                        <div className="rounded-lg border border-destructive/30 bg-destructive/5 p-3 space-y-1">
+                          <p className="text-sm font-medium text-destructive flex items-center gap-2">
+                            <XCircle className="w-4 h-4 flex-shrink-0" />
+                            Poslední změna odkazu byla zamítnuta
+                          </p>
+                          {shoptetChangeReq.rejection_reason && (
+                            <p className="text-xs text-muted-foreground">
+                              Důvod: {shoptetChangeReq.rejection_reason}
+                            </p>
+                          )}
+                          <p className="text-xs text-muted-foreground">
+                            Původní odkaz zůstal aktivní. Můžete poslat nový.
+                          </p>
+                        </div>
+                      )}
+
+                      {!shoptetChangeOpen ? (
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="sm"
+                          className="gap-2"
+                          onClick={() => setShoptetChangeOpen(true)}
+                        >
+                          <RefreshCw className="w-4 h-4" />
+                          Změnit exportní odkaz
+                        </Button>
+                      ) : (
+                        <div className="space-y-2">
+                          <div className="space-y-1">
+                            <Label htmlFor="shoptet-change-url" className="text-xs flex items-center gap-1">
+                              <Key className="w-3 h-3" /> Nový URL Shoptet exportu objednávek
+                            </Label>
+                            <Input
+                              id="shoptet-change-url"
+                              type="password"
+                              autoComplete="off"
+                              value={shoptetChangeUrl}
+                              onChange={(e) => setShoptetChangeUrl(e.target.value)}
+                              placeholder="https://…"
+                              disabled={shoptetChangeSubmitting}
+                              className="h-9"
+                            />
+                            <p className="text-[11px] text-muted-foreground leading-relaxed">
+                              Odkaz ukládáme bezpečně a nikdy ho nezobrazujeme zpět. Původní odkaz
+                              funguje dál, dokud OneMil změnu neschválí.
+                            </p>
+                          </div>
+                          <div className="flex flex-wrap justify-end gap-2">
+                            <Button
+                              type="button"
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => {
+                                setShoptetChangeOpen(false);
+                                setShoptetChangeUrl('');
+                              }}
+                              disabled={shoptetChangeSubmitting}
+                            >
+                              Zrušit
+                            </Button>
+                            <Button
+                              type="button"
+                              size="sm"
+                              className="gap-2"
+                              onClick={handleShoptetChangeSubmit}
+                              disabled={shoptetChangeSubmitting}
+                            >
+                              {shoptetChangeSubmitting ? (
+                                <Loader2 className="w-4 h-4 animate-spin" />
+                              ) : (
+                                <Send className="w-4 h-4" />
+                              )}
+                              Odeslat ke schválení
+                            </Button>
+                          </div>
+                        </div>
+                      )}
+                    </>
+                  )}
+                </div>
+              )}
             </CardContent>
           </Card>
         )}

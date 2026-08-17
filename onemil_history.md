@@ -1,3 +1,39 @@
+# 18. 08. 2026 — Partner může vyměnit Shoptet exportní odkaz (staging, PRODUKCE NENASAZENA)
+
+Dosud šel exportní odkaz nastavit jen jednou, při onboardingu. Když ho partner musel
+přegenerovat — nová šablona exportu, znovu vytvořený přístup, nebo 404 z issue #352 —
+nebyla jiná cesta než ruční zásah do Vaultu. Partner s aktivním napojením teď může poslat
+nový odkaz ke schválení a napojení mu přitom běží dál.
+
+Klíčové rozhodnutí: nový odkaz je **žádost, ne přepnutí**. Do schválení leží jen v pending
+Vault klíči a importy čtou starý odkaz. Umožnil to sloupec `request_kind` a rozdělení
+původního unikátního indexu — ten dovoloval jediný živý řádek na partnera, takže aktivní
+partner neměl kam změnu zapsat.
+
+Novou Vault RPC to nepotřebovalo: `promote_shoptet_pending_url` už existující finální klíč
+přepisuje, takže změna má stejný životní cyklus jako první připojení.
+
+Schválení změny je vědomě **oddělená větev** od onboardingu a nesahá na `partners` vůbec.
+Kdyby se použila onboardingová větev, přepsala by živému partnerovi delivery mód, reward
+trigger a import flag na výchozí hodnoty. Ověřeno na stagingu: partner s ručně nastaveným
+`reward_trigger_status='shipped'` ho má po schválení změny pořád.
+
+**Nalezená a opravená latentní chyba:** `admin.rpc(...).catch(...)` v obou Shoptet EF.
+`PostgrestBuilder` je thenable, ale `.catch` nemá — chaining hodí `TypeError` a shodí handler
+na holé 500. V původním kódu to nikdy nevyplavalo, protože cleanup větev se nespouštěla;
+první duplicitní žádost o změnu ji trefila okamžitě. Přepsáno na `try/catch`.
+
+Ověřeno reálným E2E proti stagingu (throwaway partner, vše uklizeno): starý odkaz zůstal živý
+po celou dobu čekání, druhá žádost dostala 409 a nic po sobě nenechala ve Vaultu, schválení
+přepnulo jen URL, zamítnutí nechalo původní odkaz být, první onboarding funguje beze změny
+a do aplikační tabulky neunikla žádná URL.
+
+Provozní poznámka: schvalování Shoptet žádostí je superadmin-only — admin dostane 403.
+
+Nasazeno pouze na staging (migrace + obě EF). Produkce nedotčena.
+
+---
+
 # 17. 08. 2026 — Partnerský portál má sekci Návody (frontend, NENASAZENO)
 
 V partnerské hlavičce přibyla položka **Návody** a stránka `/partner/navody` s prvním návodem

@@ -2,6 +2,48 @@
 
 > **Autoritativní aktuální stav. Aktualizováno 16. 8. 2026.**
 
+## 0a00. Změna Shoptet exportního odkazu — STAGING OVĚŘENO, **PRODUKCE NENASAZENA** (18. 8. 2026)
+
+Partner s aktivním napojením může v `/partner/dashboard` poslat nový permanentní CSV odkaz
+ke schválení. Do schválení běží napojení dál ze starého odkazu. Motivace: issue #352 —
+po opravě exportní šablony partner potřebuje předat nový odkaz a dosud na to nebyla cesta.
+
+- Nové: migrace `20260818090000_shoptet_export_url_change_requests.sql`
+  (sloupec `request_kind`, rozdělení unikátních indexů), spec
+  `tests/e2e/134-shoptet-export-url-change.spec.ts`.
+  Upraveno: `submit-shoptet-connection`, `approve-shoptet-connection`,
+  `src/pages/PartnerDashboard.tsx`, `src/pages/AdminPartners.tsx`,
+  `src/integrations/supabase/types.ts`.
+- **Žádná nová Vault RPC** — stávající trojice pokrývá i změnu.
+- **Aplikováno POUZE na staging `dxmowysntemfqfnanxua`** (migrace + obě EF).
+  **Produkce `xkzhjldrojjlrkezorey` NEDOTČENA.**
+
+**Ověřeno reálným E2E na stagingu** (throwaway partner s živým Vault klíčem, vše uklizeno):
+
+| krok | výsledek |
+|---|---|
+| partner podá změnu | `submitted`, nový odkaz jen v pending Vault klíči |
+| během čekání | živý odkaz = **starý**, `import_enabled=true`, napojení `active` |
+| druhá žádost | **409 `change_already_pending`**, ve Vaultu nic nezůstalo |
+| admin schválí | živý odkaz = **nový**, pending klíč smazán |
+| po schválení | `reward_trigger_status` zůstal `shipped`, delivery `onemil`, konverze i `reward_mode` beze změny |
+| admin zamítne další změnu | živý odkaz **nezměněn**, pending smazán, partner beze změny |
+| první onboarding (regrese) | funguje: `import_enabled=true`, delivery `onemil`, trigger z žádosti |
+| `url_change` bez aktivního napojení | odmítnuto (`no_active_connection`) |
+| únik URL do tabulky | **0** |
+
+**Nález opravený mimochodem:** `admin.rpc(...).catch(...)` v obou EF shazoval handler na holé
+500 (`PostgrestBuilder` nemá `.catch`). Byla to latentní chyba už v původním kódu — cleanup
+větev se do teď nikdy nespustila. Přepsáno na `try/catch`.
+
+**Provozní poznámka:** schvalování Shoptet žádostí je **superadmin-only** (admin dostane 403).
+
+Testy: 92 passed (specy 124–129, 132–134). `npm run build` exit 0.
+`npx tsc -p tsconfig.app.json --noEmit` = **18 chyb = nezměněná baseline**, žádná v dotčených
+souborech.
+
+---
+
 ## 0a0. Partnerské návody — HOTOVO NA VĚTVI, **NENASAZENO** (17. 8. 2026)
 
 Partnerský portál má novou sekci **„Návody“** (`/partner/navody`) a v ní první návod

@@ -135,6 +135,34 @@ první návod **„Jak propojit Shoptet s OneMil“**.
 
 Hlídá spec `tests/e2e/133-partner-guides-shoptet.spec.ts`.
 
+## Změna Shoptet exportního odkazu (TRVALÝ INVARIANT, 18. 08. 2026)
+
+Partner s **aktivním** napojením může poslat nový permanentní CSV odkaz ke schválení
+(`request_kind='url_change'` v `shoptet_connection_requests`).
+
+- **Nový odkaz nikdy není okamžitě aktivní.** Do schválení leží jen v pending Vault klíči
+  a importy běží dál ze starého odkazu. Napojení se během čekání **nevypíná**.
+- **Žádná nová Vault RPC.** `store_shoptet_pending_url` / `promote_shoptet_pending_url` /
+  `delete_shoptet_pending_url` na to stačí — promote už existující finální klíč přepisuje.
+  URL se dál nesmí dostat do aplikační tabulky, logu ani odpovědi.
+- **Schválení změny přepíná POUZE URL.** Větev `url_change` v `approve-shoptet-connection`
+  **nesmí** sahat na `shoptet_customer_delivery`, `shoptet_import_enabled`,
+  `reward_trigger_status`, `reward_mode` ani na nic dalšího v `partners` — partner už je
+  živý a onboardingové defaulty by mu přepsaly ručně doladěná nastavení.
+  Před promote se ověří, že `partners.shoptet_export_secret_name` ukazuje na očekávaný klíč
+  (`partner_key_mismatch`) — jinak by se přepsal klíč, který importer nečte.
+- **Zamítnutí maže jen pending klíč.** Původní odkaz zůstává a import jede dál.
+- **Duplicitu hlídá databáze**, ne UI: parciální unikátní index
+  `scr_partner_pending_change_unique` (`status='submitted' AND request_kind='url_change'`).
+  Submit mapuje `23505` na `409 change_already_pending`.
+- Dashboard musí načítat **připojení a změnu odděleně** (`request_kind`). Jediný dotaz na
+  „nejnovější řádek“ by u aktivního partnera přepnul stav na „čeká na schválení“ a schoval
+  sekci s widget snippetem.
+- **Vault cleanup nikdy nepsat jako `rpc(...).catch(...)`** — `PostgrestBuilder` `.catch`
+  nemá, takže to hodí `TypeError` a shodí celý handler na holé 500. Používat `try/catch`.
+
+Hlídá spec `tests/e2e/134-shoptet-export-url-change.spec.ts`.
+
 ## ⚠️ OTEVŘENÝ PROBLÉM — idempotence je vázaná na partnera, ne na e-shop
 
 **Neopravovat mimochodem. Zatím jen zaznamenáno.**
