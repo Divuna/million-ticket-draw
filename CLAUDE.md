@@ -144,6 +144,27 @@ a `generate_partner_invoice` (migrace `20260817150000`).
 `create_partner_offer_invoices_for_period` je správně už teď a **nemá se měnit** — její
 `net_amount` je `numeric(12,2)`, takže `round(net*1.21, 2) ≡ net + round(net*0.21, 2)`.
 
+## Vytváření partnerských faktur je interní operace (TRVALÝ INVARIANT)
+
+Tyto funkce zakládají `partner_invoices`, přidělují čísla faktur a přepínají
+`partner_coin_activations.invoiced` — tedy **fakturují partnerovi**. Smí je spouštět
+**pouze `service_role`**:
+
+- `create_partner_invoices_for_last_week()`
+- `create_partner_invoices_for_period(date, date)`
+- `generate_partner_invoice(uuid, date, date)`
+- `run_monthly_partner_invoicing(date, date)`
+
+`PUBLIC`, `anon` ani `authenticated` jim **nesmí vrátit EXECUTE** (migrace `20260817160000`).
+Ověřený stav callerů: cron 17 → `run_partner_invoice_weekly_automation()` (SECURITY DEFINER,
+Vault token) → EF `partner-invoice-auto-send` (service role) → weekly funkce; ostatní volá jen
+service-role E2E spec, resp. `run_monthly_partner_invoicing` nemá caller žádný.
+**Frontend faktury pouze čte z tabulek a nikdy je nevytváří** — nepřidávat browser volání
+těchto RPC.
+
+Starší `20260718090000_lock_partner_invoice_weekly_function.sql` zamykala jen weekly funkci;
+**nepřepisovat ji**, nová migrace ji doplňuje a je idempotentní.
+
 ## Formátování
 
 `src/lib/miocoin.ts` (`formatMioCoin`, `mioCoinPlural`, `isValidManualRewardMc`) je sdílený

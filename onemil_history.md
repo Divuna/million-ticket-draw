@@ -1,3 +1,56 @@
+# 17. 08. 2026 — Fakturační funkce zamčeny na service_role (staging; PRODUKCE NENASAZENA)
+
+Navazuje na OPEN ISSUE z předchozího zápisu — a zároveň **opravuje jeho formulaci**.
+
+## Oprava dřívějšího předpokladu
+
+Dřívější zápis naznačoval, že produkce je zamčená a jen staging zaostává. Read-only kontrola
+ukázala, že to není pravda: repo migrace `20260718090000_lock_partner_invoice_weekly_function.sql`
+zamyká **jedinou** funkci, `create_partner_invoices_for_last_week()`. Na produkci proto zůstávaly
+`create_partner_invoices_for_period`, `generate_partner_invoice` i `run_monthly_partner_invoicing`
+otevřené pro `anon` i `authenticated`. Na stagingu byly otevřené všechny čtyři.
+
+Tyto funkce zakládají faktury, přidělují čísla faktur a označují aktivace jako fakturované —
+kdokoli s veřejným anon klíčem je mohl volat přes PostgREST.
+
+## Audit callerů
+
+Žádný browser/user caller neexistuje:
+
+- weekly funkci volá cron 17 → `run_partner_invoice_weekly_automation()` (SECURITY DEFINER,
+  Vault token) → EF `partner-invoice-auto-send` (service role klient),
+- `create_partner_invoices_for_period` volá jen E2E spec 43 přes service-role klíč,
+- `generate_partner_invoice` volá jen `run_monthly_partner_invoicing`,
+- `run_monthly_partner_invoicing` nevolá nikdo.
+
+V `src/` je jediný výskyt generovaný `types.ts`; frontend faktury pouze čte.
+
+## Oprava
+
+Migrace `20260817160000_lock_partner_invoice_creation_functions.sql` (staging only) zamyká všechny
+čtyři na `service_role`. `run_monthly_partner_invoicing` je zahrnutá, protože je SECURITY INVOKER
+a jen obaluje `generate_partner_invoice`. Starší migrace nebyla přepsána; nová je idempotentní
+díky `to_regprocedure` guardu. Mění se výhradně oprávnění — žádné tělo funkce, výpočet, data, RLS
+ani status logika.
+
+## Ověření
+
+Nejen ACL, ale skutečné spuštění pod každou rolí (v transakci s rollbackem, s argumenty, které
+ani při průchodu nevytvoří fakturu): `anon` i `authenticated` dostali u všech čtyř `42501`,
+`service_role` prošel u všech čtyř — u `generate_partner_invoice` až do těla funkce
+(`P0001 Partner not found`), což potvrzuje, že selhala až business validace, ne oprávnění.
+Interní fakturační cesta tedy dál funguje; `create_partner_invoices_for_last_week()` pod
+service_role doběhla a vrátila 0 draftů. Po rollbacku zůstal počet faktur na stagingu beze změny.
+
+Při prvním pokusu vyšlo `service_role` jako „denied“ i tam, kde být nemělo — ukázalo se, že to byl
+artefakt `SET LOCAL ROLE` uvnitř `DO` bloku s výjimkami, ne skutečné oprávnění. Ověřeno znovu
+izolovaně na každé funkci zvlášť.
+
+**PRODUKCE `xkzhjldrojjlrkezorey` touto migrací NENÍ změněna** — tam jsou tři ze čtyř funkcí
+stále otevřené pro `anon` i `authenticated`.
+
+---
+
 # 17. 08. 2026 — Peněžní zaokrouhlení partnerských faktur opraveno (PRODUKCE NENASAZENA)
 
 Navazuje na OPEN ISSUE z předchozího zápisu (`amount_gross = 5.203` místo `5.20`).

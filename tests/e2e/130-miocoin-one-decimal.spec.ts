@@ -49,6 +49,7 @@ const dropLegacy = read('supabase/migrations/20260817130000_drop_legacy_partner_
 const paymentCredit = read('supabase/migrations/20260817140000_payment_credit_miocoin_one_decimal.sql');
 const stripeWebhook = read('supabase/functions/stripe-webhook/index.ts');
 const invoiceMoney = read('supabase/migrations/20260817150000_partner_invoice_money_rounding.sql');
+const invoiceLock = read('supabase/migrations/20260817160000_lock_partner_invoice_creation_functions.sql');
 
 /** Strips comments so "must not contain" assertions test real code, not safety notes. */
 const codeOnly = (src: string) =>
@@ -570,5 +571,56 @@ test.describe('130 — invoice money migration contract', () => {
     // Coin values are carried through, never re-rounded to 2 decimals.
     expect(sql).not.toMatch(/round\(\s*coins\s*,\s*2\s*\)/);
     expect(sql).not.toMatch(/round\(v_coins(_total)?\s*,\s*2\s*\)/);
+  });
+});
+
+// ── invoice creation is internal-only ────────────────────────────────────────
+
+test.describe('130 — partner invoice creation is service_role only', () => {
+  test('every invoice-creating function is revoked from PUBLIC/anon/authenticated', () => {
+    for (const sig of [
+      'public.create_partner_invoices_for_last_week()',
+      'public.create_partner_invoices_for_period(date, date)',
+      'public.generate_partner_invoice(uuid, date, date)',
+      'public.run_monthly_partner_invoicing(date, date)',
+    ]) {
+      expect(invoiceLock, `missing signature: ${sig}`).toContain(`'${sig}'`);
+    }
+    expect(invoiceLock).toContain("REVOKE ALL ON FUNCTION %s FROM PUBLIC, anon, authenticated");
+    expect(invoiceLock).toContain("GRANT EXECUTE ON FUNCTION %s TO service_role");
+  });
+
+  test('the lock is idempotent and safe on an already-locked database', () => {
+    // to_regprocedure guard means a missing signature is skipped, not an error,
+    // and REVOKE/GRANT are naturally repeatable.
+    expect(invoiceLock).toContain('to_regprocedure(v_sig) IS NULL');
+    expect(invoiceLock).toContain('CONTINUE;');
+  });
+
+  test('the lock changes privileges only — no data, no bodies', () => {
+    const sql = codeOnly(invoiceLock);
+    expect(sql).not.toMatch(/^\s*UPDATE\s/im);
+    expect(sql).not.toMatch(/^\s*DELETE FROM/im);
+    expect(sql).not.toMatch(/^\s*INSERT INTO/im);
+    expect(sql).not.toMatch(/CREATE OR REPLACE FUNCTION/i);
+    expect(sql).not.toMatch(/ALTER TABLE/i);
+    expect(sql).not.toMatch(/POLICY/i);
+  });
+
+  test('the earlier single-function lock migration is not rewritten', () => {
+    const old = read('supabase/migrations/20260718090000_lock_partner_invoice_weekly_function.sql');
+    expect(old).toContain('REVOKE ALL ON FUNCTION public.create_partner_invoices_for_last_week()');
+    expect(old).not.toContain('create_partner_invoices_for_period');
+    expect(old).not.toContain('generate_partner_invoice');
+  });
+
+  test('no frontend code calls an invoice-creating function', () => {
+    // The UI reads invoices from tables; it must never create them.
+    for (const src of [dashboard, adminInvoices, partnersPortal]) {
+      expect(src).not.toContain('create_partner_invoices_for_last_week');
+      expect(src).not.toContain('create_partner_invoices_for_period');
+      expect(src).not.toContain('generate_partner_invoice');
+      expect(src).not.toContain('run_monthly_partner_invoicing');
+    }
   });
 });

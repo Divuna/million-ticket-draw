@@ -187,15 +187,61 @@ Ověřeno i na dalších částkách se třetím desetinným místem (`12,7 × 0
 `33,3 × 3,33`, `250,4 × 1,07`, `1000,9 × 0,55`, `4,9 × 9,99`): vždy platí
 `gross = net + DPH` a žádná CZK hodnota nemá víc než 2 desetinná místa.
 
-### ⚠️ OPEN ISSUE — staging nemá grant lock na fakturační funkce
+### Fakturační funkce jsou interní (service_role only) — OPRAVENO na stagingu (17. 8. 2026)
 
-Při auditu se ukázalo, že `create_partner_invoices_for_last_week`,
-`create_partner_invoices_for_period` i `generate_partner_invoice` mají **na stagingu stále
-EXECUTE pro `anon` a `authenticated`**. Repo migrace
-`20260718090000_lock_partner_invoice_weekly_function.sql` (REVOKE + grant jen `service_role`)
-byla aplikována na produkci, ale **na staging nikdy** — stejná třída driftu jako u platební
-vrstvy. `CREATE OR REPLACE` granty zachovává, takže tato migrace stav nezměnila.
-Vědomě neopraveno (mimo zadání), zaznamenáno k rozhodnutí.
+**Oprava dřívějšího předpokladu:** produkce **nikdy nebyla plně zamčená**. Repo migrace
+`20260718090000_lock_partner_invoice_weekly_function.sql` zamyká **jedinou** funkci
+(`create_partner_invoices_for_last_week()`). Read-only kontrola produkce potvrdila:
+
+| funkce | anon | authenticated | service_role |
+|---|---|---|---|
+| `create_partner_invoices_for_last_week()` | NE | NE | ANO |
+| `create_partner_invoices_for_period(date,date)` | **ANO** | **ANO** | ANO |
+| `generate_partner_invoice(uuid,date,date)` | **ANO** | **ANO** | ANO |
+| `run_monthly_partner_invoicing(date,date)` | **ANO** | **ANO** | ANO |
+
+Na stagingu byly otevřené všechny čtyři. Tyto funkce zakládají `partner_invoices`, přidělují
+čísla faktur a přepínají `partner_coin_activations.invoiced` — tedy fakturují partnerovi.
+Kdokoli s veřejným anon klíčem je mohl volat přes PostgREST.
+
+**Audit callerů (repo + DB) — žádný browser/user caller neexistuje:**
+
+- `create_partner_invoices_for_last_week()` — cron job 17 `weekly_partner_invoices` →
+  `run_partner_invoice_weekly_automation()` (SECURITY DEFINER, Vault token) →
+  Edge Function `partner-invoice-auto-send` (klient se `SUPABASE_SERVICE_ROLE_KEY`) → funkce.
+- `create_partner_invoices_for_period(date,date)` — jen `tests/e2e/43-partner-invoices.spec.ts`
+  přes `E2E_SUPABASE_SERVICE_ROLE_KEY`.
+- `generate_partner_invoice(uuid,date,date)` — jen `run_monthly_partner_invoicing(date,date)`.
+- `run_monthly_partner_invoicing(date,date)` — **žádný caller** (v `src/` jen generovaný
+  `types.ts`).
+
+V `src/` nevolá tyto funkce nic — frontend, admin i partner portál faktury pouze čtou z tabulek.
+
+**Migrace `20260817160000_lock_partner_invoice_creation_functions.sql`** (aplikováno pouze na
+staging) zamyká všechny čtyři: `REVOKE ALL ... FROM PUBLIC, anon, authenticated` +
+`GRANT EXECUTE ... TO service_role`. `run_monthly_partner_invoicing` je zahrnutá, protože je
+SECURITY INVOKER a jen obaluje `generate_partner_invoice` — ponechat ji otevřenou by z díry
+udělalo jen matoucí runtime chybu. Starší migrace `20260718090000` **nebyla přepsána**;
+nová je idempotentní (`to_regprocedure` guard), takže na už zamčené DB projde.
+
+**Nezměněno:** těla funkcí, výpočty, fakturační data, RLS, status logika, číslování faktur.
+Žádný `UPDATE`, `DELETE` ani backfill.
+
+**Skutečné ověření na stagingu** (ne jen ACL tabulka; vše v transakci s rollbackem, argumenty
+zvolené tak, aby ani při průchodu nevznikla faktura):
+
+| funkce | anon | authenticated | service_role |
+|---|---|---|---|
+| `create_partner_invoices_for_last_week()` | `42501` | `42501` | **proběhlo** (0 draftů) |
+| `create_partner_invoices_for_period(date,date)` | `42501` | `42501` | **proběhlo** (no-op) |
+| `generate_partner_invoice(uuid,date,date)` | `42501` | `42501` | **proběhlo** — došlo až do těla (`P0001 Partner not found`) |
+| `run_monthly_partner_invoicing(date,date)` | `42501` | `42501` | **proběhlo** (no-op) |
+
+ACL po migraci u všech čtyř: `postgres=X/postgres | service_role=X/postgres`.
+
+**PRODUKCE touto migrací NENÍ změněna** — tam jsou `create_partner_invoices_for_period`,
+`generate_partner_invoice` a `run_monthly_partner_invoicing` **stále otevřené pro anon
+i authenticated**.
 
 ### Ověřený produkční bug (read-only audit `xkzhjldrojjlrkezorey`, 16. 8. 2026)
 
@@ -235,6 +281,8 @@ odměna spadne na 0 → widget nic nezobrazí a reward code nemůže vzniknout.
   MioCoin veličin odvozených z `payments.amount` (viz níže). **Aplikováno na staging.**
 - `supabase/migrations/20260817150000_partner_invoice_money_rounding.sql` — CZK částky
   partnerských faktur na 2 desetinná místa (viz níže). **Aplikováno na staging.**
+- `supabase/migrations/20260817160000_lock_partner_invoice_creation_functions.sql` — fakturační
+  funkce jen pro `service_role` (viz níže). **Aplikováno na staging.**
 - Frontend/EF: `src/lib/miocoin.ts` (sdílený formátovač + validátor), `public/shoptet-widget.js`
   (české desetinné čárky a skloňování), `partner-reward-preview` (odstraněn `Math.floor`),
   `generate-partner-invoice-pdf` (`formatCoins`, oprava sčítání numeric stringů),
