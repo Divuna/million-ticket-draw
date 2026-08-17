@@ -1,3 +1,40 @@
+# 17. 08. 2026 — Shoptet delta import: cron z 15 minut na 1 minutu (staging, PRODUKCE NENASAZENA)
+
+Import objednávek běžel každých 15 minut z jediného důvodu: každý běh stahoval **celý**
+exportní soubor partnera. Frekvence tedy nebyla omezená naší logikou, ale objemem přenosu.
+
+Řešení nebylo vymyšlené — Shoptet ho sám předepisuje. Permanentní export objednávek přijímá
+parametr `updateTimeFrom` a dokumentace k němu říká: *„Pokud stahujete objednávky více než
+jednou za 15 minut, lze využít pouze tento způsob stažení objednávek."* Delta stahování tedy
+není optimalizace navíc, ale podmínka pro rychlejší polling.
+
+Dvě rozhodnutí, která nejsou zřejmá a stojí za zapamatování:
+
+**Timezone se posílá v UTC, i když Shoptet žádnou nedokumentuje.** Nejednoznačnost je
+nebezpečná jen jedním směrem. Pošleme-li UTC a Shoptet ho čte jako lokální čas, hranice okna
+se posune o 1–2 hodiny do minulosti a načte se něco navíc — což je díky idempotenci neškodné.
+Pošleme-li lokální čas a Shoptet ho čte jako UTC, hranice se posune do **budoucnosti** a
+objednávky tiše zmizí. Přetečení se dá opravit, ztráta ne.
+
+**Watermark je `started_at`, ne `finished_at`.** Objednávka změněná v průběhu běhu se do jeho
+snapshotu exportu dostat mohla i nemusela. Kotva na `started_at` zaručí, že ji příští běh
+dostane znovu. Posunout ho smí jen běh `mode='live'` **a** `status='ok'` — `partial` nebo
+`failed` běh watermark nechá stát, takže se příště zopakuje i to, co mohl upustit. K tomu
+15minutový překryv jako druhá pojistka.
+
+Parametr se k odkazu lepí řetězcově. Průchod přes `URLSearchParams` by přepsal `+` na `%20`
+a rozbil `hash` permanentního odkazu — což je přesně ten typ chyby, která se projeví až
+v produkci a vypadá jako výpadek Shoptetu.
+
+Ověřeno na stagingu proti řízenému mock exportu: první běh bez historie stáhl plný export
+(2 objednávky), druhý běh poslal okno `−15 min` a dostal **0 řádků**, třetí běh po změně
+jedné objednávky dostal **přesně 1 řádek**, nevytvořil duplicitu a promítl změnu stavu.
+
+Co ověřit nešlo: staging BOHEMIA export vrací HTTP 404 od 23. 7. 2026 (2397 po sobě jdoucích
+neúspěšných běhů, pre-existující problém), vereonika sro na stagingu není. Skutečnou
+serverovou interpretaci `updateTimeFrom` potvrdí až první běh proti živému exportu — proto
+je to explicitní podmínka produkčního nasazení, ne dokončená položka.
+
 # 18. 08. 2026 — Partner může vyměnit Shoptet exportní odkaz (staging, PRODUKCE NENASAZENA)
 
 Dosud šel exportní odkaz nastavit jen jednou, při onboardingu. Když ho partner musel

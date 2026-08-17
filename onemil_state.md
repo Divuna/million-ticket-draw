@@ -2,6 +2,50 @@
 
 > **Autoritativní aktuální stav. Aktualizováno 16. 8. 2026.**
 
+## 0a0. Shoptet delta import (`updateTimeFrom`) + cron 15 min → 1 min — STAGING OVĚŘENO, **PRODUKCE NENASAZENA** (17. 8. 2026)
+
+Import běžel každých 15 minut, protože každý běh stahoval **celý** exportní soubor partnera.
+Nově se posílá Shoptet parametr `updateTimeFrom`, takže se stahují jen objednávky vytvořené
+nebo změněné od posledního bezpečně dokončeného importu → běh je malý → cron může jet 1×/min.
+
+Shoptet to sám dokumentuje jako povinnou cestu:
+*„Pokud stahujete objednávky více než jednou za 15 minut, lze využít pouze tento způsob
+stažení objednávek."* ([podpora.shoptet.cz/export-objednavek](https://podpora.shoptet.cz/export-objednavek/))
+
+- Nové: `supabase/functions/import-shoptet-orders/delta.ts`,
+  migrace `20260817120000_shoptet_auto_import_1min.sql`,
+  spec `tests/e2e/135-shoptet-delta-import.spec.ts` (14 testů).
+  Upraveno pouze: `supabase/functions/import-shoptet-orders/index.ts`.
+- **Nezměněno:** parser (`csv.ts`), výpočet MioCoinů, reward engine,
+  `run_shoptet_cron_imports()` včetně overlap guardu, partner nastavení, Vault flow.
+
+**Závazná pravidla (neměnit):**
+- Watermark = `started_at` posledního běhu s `mode='live'` **a** `status='ok'`.
+  Nikdy `finished_at` (objednávka změněná během běhu by vypadla) a nikdy `partial`/`failed`/`dry_run`.
+- Bezpečnostní překryv **15 minut** (`DELTA_OVERLAP_MINUTES`) — musí zůstat výrazně větší než perioda cronu.
+- `updateTimeFrom` se posílá v **UTC**. Shoptet timezone nedokumentuje; při čtení jako
+  lokální čas se okno posune do minulosti (načte se něco navíc = neškodné, idempotentní).
+  Lokální čas by se při čtení jako UTC posunul do **budoucnosti** a objednávky by se ztratily.
+- Parametr se lepí **řetězcově**, ne přes `URLSearchParams` — round-trip by přepsal `+`/`=`
+  v `hash` permanentního odkazu.
+- Partner **bez** úspěšného live běhu → parametr se neposílá → plný export (jako dosud).
+- `dry_run` stahuje vždy plný export (admin kontroluje konfiguraci, ne posledních pár minut).
+
+**Reálné staging ověření** (throwaway partner + řízený mock export, vše uklizeno):
+
+| běh | `updateTimeFrom` | řádků z exportu | vytvořeno | duplicit | status update |
+|---|---|---|---|---|---|
+| 1 (bez historie) | *neposláno* | 2 | 2 | 0 | 2 |
+| 2 (beze změn) | `21:06:52` = běh 1 − 15 min | **0** | 0 | 0 | 0 |
+| 3 (1 změněná objednávka) | `21:07:28` = běh 2 − 15 min | **1** | **0** | **1** | **1** |
+
+`hash=aB+cD...` dorazil neporušený. E-maily zákazníkům: **0**. Kódy: 2 = 2 unikátní objednávky.
+
+**⚠️ Nelze ověřit na stagingu:** staging BOHEMIA export vrací **HTTP 404 od 23. 7. 2026**
+(2397 po sobě jdoucích `failed` běhů, pre-existující problém — viz issue o 404 exportu).
+Vereonika sro na stagingu neexistuje. Skutečnou serverovou interpretaci `updateTimeFrom`
+(zejména timezone) proto **potvrdí až první běh proti živému Shoptet exportu**.
+
 ## 0a00. Změna Shoptet exportního odkazu — STAGING OVĚŘENO, **PRODUKCE NENASAZENA** (18. 8. 2026)
 
 Partner s aktivním napojením může v `/partner/dashboard` poslat nový permanentní CSV odkaz
