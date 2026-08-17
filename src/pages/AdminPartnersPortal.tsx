@@ -18,6 +18,7 @@ import { Loader2, Building2, CheckCircle, XCircle, Eye, Coins, FileText, Calenda
 import { format, startOfMonth, endOfMonth } from 'date-fns';
 import { cs } from 'date-fns/locale';
 import { jsPDF } from 'jspdf';
+import { formatMioCoinNumber } from '@/lib/miocoin';
 
 type PartnerStatus = 'pending' | 'approved' | 'suspended' | 'rejected';
 type InvoiceStatus = 'draft' | 'issued' | 'paid' | 'void';
@@ -406,7 +407,7 @@ const AdminPartnersPortal = () => {
 
       const invoiceSummary = {
         totalActivations: monthActivationsRes.data?.length || 0,
-        totalCoins: monthActivationsRes.data?.reduce((sum, a) => sum + a.coins, 0) || 0,
+        totalCoins: monthActivationsRes.data?.reduce((sum, a) => sum + Number(a.coins || 0), 0) || 0,
         periodStart: format(startOfMonth(new Date()), 'dd.MM.yyyy', { locale: cs }),
         periodEnd: format(endOfMonth(new Date()), 'dd.MM.yyyy', { locale: cs }),
       };
@@ -497,7 +498,7 @@ const AdminPartnersPortal = () => {
         : (linesRes.data || [])
             .slice(0, 20)
             .map((line: any) =>
-              `${line.coins} MioCoins (${format(new Date(line.activated_at), 'dd.MM.', { locale: cs })})`
+              `${formatMioCoinNumber(Number(line.coins || 0))} MioCoins (${format(new Date(line.activated_at), 'dd.MM.', { locale: cs })})`
             )
             .join(', ');
 
@@ -617,7 +618,7 @@ const AdminPartnersPortal = () => {
       const col2 = 130;
       
       doc.text('MioCoiny celkem:', col1, yPos);
-      doc.text(`${(selectedInvoice.coins_total || 0).toLocaleString()}`, col2, yPos);
+      doc.text(`${formatMioCoinNumber(Number(selectedInvoice.coins_total || 0))}`, col2, yPos);
       yPos += 10;
       
       doc.text('Castka netto:', col1, yPos);
@@ -1037,7 +1038,7 @@ const AdminPartnersPortal = () => {
                           </TableCell>
                           <TableCell className="font-medium">{invoice.partner_name}</TableCell>
                           <TableCell className="text-right font-medium text-primary">
-                            {(invoice.coins_total || 0).toLocaleString()}
+                            {formatMioCoinNumber(Number(invoice.coins_total || 0))}
                           </TableCell>
                           <TableCell className="text-right">
                             {(invoice.amount_net || 0).toLocaleString()} Kč
@@ -1263,7 +1264,7 @@ const AdminPartnersPortal = () => {
                         <TableRow key={index}>
                           <TableCell className="font-mono text-sm">{activation.code}</TableCell>
                           <TableCell className="text-right font-medium text-primary">
-                            {activation.coins.toLocaleString()}
+                            {formatMioCoinNumber(Number(activation.coins || 0))}
                           </TableCell>
                           <TableCell className="text-sm text-muted-foreground">
                             {activation.external_order_id || '—'}
@@ -1343,7 +1344,7 @@ const AdminPartnersPortal = () => {
                   <CardContent>
                     <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 text-center">
                       <div>
-                        <div className="text-2xl font-bold text-primary">{(selectedInvoice.coins_total || 0).toLocaleString()}</div>
+                        <div className="text-2xl font-bold text-primary">{formatMioCoinNumber(Number(selectedInvoice.coins_total || 0))}</div>
                         <div className="text-xs text-muted-foreground">MioCoinů</div>
                       </div>
                       <div>
@@ -1464,7 +1465,7 @@ const AdminPartnersPortal = () => {
                 </div>
                 <div className="flex justify-between">
                   <span className="text-muted-foreground">MioCoiny:</span>
-                  <span className="font-medium text-primary">{(selectedInvoice.coins_total || 0).toLocaleString()}</span>
+                  <span className="font-medium text-primary">{formatMioCoinNumber(Number(selectedInvoice.coins_total || 0))}</span>
                 </div>
                 <div className="flex justify-between">
                   <span className="text-muted-foreground">Celkem:</span>

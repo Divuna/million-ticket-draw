@@ -16,6 +16,7 @@ import { NavigateToLogin } from '@/components/NavigateToLogin';
 import { useAuth } from '@/hooks/useAuth';
 import { useUserRole } from '@/hooks/useUserRole';
 import { openPartnerInvoiceExport } from '@/lib/partnerInvoiceDownload';
+import { formatMioCoinNumber } from '@/lib/miocoin';
 
 type InvoiceStatus = 'draft' | 'issued' | 'paid';
 
@@ -429,7 +430,7 @@ const AdminInvoices: React.FC = () => {
                           {format(new Date(invoice.period_start), 'd. M.', { locale: cs })} – {format(new Date(invoice.period_end), 'd. M.', { locale: cs })}
                         </TableCell>
                         <TableCell className="text-right">
-                          {(invoice.coins_total ?? 0).toLocaleString('cs-CZ')}
+                          {formatMioCoinNumber(Number(invoice.coins_total ?? 0))}
                         </TableCell>
                         <TableCell className="text-right">
                           {formatCurrency(Number(invoice.amount_net ?? 0))}
@@ -477,7 +478,7 @@ const AdminInvoices: React.FC = () => {
               <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
                 <div className="bg-muted/50 rounded-lg p-3">
                   <div className="text-xs text-muted-foreground">Coiny</div>
-                  <div className="font-semibold">{(selectedInvoice.coins_total ?? 0).toLocaleString('cs-CZ')}</div>
+                  <div className="font-semibold">{formatMioCoinNumber(Number(selectedInvoice.coins_total ?? 0))}</div>
                 </div>
                 <div className="bg-muted/50 rounded-lg p-3">
                   <div className="text-xs text-muted-foreground">Netto</div>
@@ -527,7 +528,7 @@ const AdminInvoices: React.FC = () => {
                             {line.external_order_id || '–'}
                           </TableCell>
                           <TableCell className="text-right font-medium">
-                            {line.coins.toLocaleString('cs-CZ')}
+                            {formatMioCoinNumber(Number(line.coins ?? 0))}
                           </TableCell>
                         </TableRow>
                       ))}
