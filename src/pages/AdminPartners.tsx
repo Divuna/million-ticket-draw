@@ -548,6 +548,7 @@ const AdminPartners = () => {
 
       if (error) throw error;
       toast.success(newStatus === "approved" ? "Logo bylo schváleno" : "Logo bylo zamítnuto");
+      window.dispatchEvent(new Event("partner-logo-requests-changed"));
     } catch (error) {
       console.error("Error updating logo status:", error);
       setPartners(previousPartners);
