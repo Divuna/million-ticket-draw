@@ -156,7 +156,7 @@ export const Footer: React.FC = () => {
           <p>Zapsáno v obchodním rejstříku vedeném Městským soudem v Praze, oddíl C, vložka 376856</p>
           <p>
             <span className="font-medium text-heading-gold">E-mail:</span> <a href="mailto:podpora@onemil.cz" className="text-heading-gold hover:underline">podpora@onemil.cz</a> | 
-            <span className="font-medium text-heading-gold"> Tel:</span> <a href="tel:+420776532562" className="text-heading-gold hover:underline">+420 776 532 562</a>
+            <span className="font-medium text-heading-gold"> Tel:</span> <a href="tel:+420731215816" className="text-heading-gold hover:underline">+420 731 215 816</a>
           </p>
         </div>
       </div>
