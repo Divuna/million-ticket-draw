@@ -107,6 +107,7 @@ export const AdminContextSubNav: React.FC = () => {
   const { unreadCount } = useUnreadMessagesCount();
   const { pendingCount: pendingOffersCount } = usePendingOffersCount();
   const [pendingPartnerRegistrationsCount, setPendingPartnerRegistrationsCount] = useState(0);
+  const [pendingShoptetRequestsCount, setPendingShoptetRequestsCount] = useState(0);
   const [pendingCompanyLeadsCount, setPendingCompanyLeadsCount] = useState(0);
   const [unreadSalesRepliesCount, setUnreadSalesRepliesCount] = useState(0);
 
@@ -149,10 +150,36 @@ export const AdminContextSubNav: React.FC = () => {
     };
   }, []);
 
-  // Shoptet napojení už nemá ruční admin schvalování — partner se schvaluje jednou
-  // a Shoptet export se po validaci aktivuje sám. Žádný Shoptet badge v navigaci.
+  // Počet čekajících Shoptet žádostí (stejný zdroj/filtr jako badge v záložce
+  // "Shoptet žádosti" na /admin/partners: shoptet_connection_requests, status='submitted').
+  // Poll 60 s + okamžitá aktualizace po schválení/zamítnutí (custom event z AdminPartners).
+  useEffect(() => {
+    let cancelled = false;
 
+    const loadPendingShoptetRequestsCount = async () => {
+      try {
+        const { count, error } = await supabase
+          .from("shoptet_connection_requests")
+          .select("id", { count: "exact", head: true })
+          .eq("status", "submitted");
+        if (!cancelled && !error) {
+          setPendingShoptetRequestsCount(count ?? 0);
+        }
+      } catch {
+        // best-effort — silent fail
+      }
+    };
 
+    loadPendingShoptetRequestsCount();
+    const interval = setInterval(loadPendingShoptetRequestsCount, 60_000);
+    window.addEventListener("shoptet-requests-changed", loadPendingShoptetRequestsCount);
+
+    return () => {
+      cancelled = true;
+      clearInterval(interval);
+      window.removeEventListener("shoptet-requests-changed", loadPendingShoptetRequestsCount);
+    };
+  }, []);
 
   // Poll pending company leads count every 60 seconds
   useEffect(() => {
@@ -258,9 +285,9 @@ export const AdminContextSubNav: React.FC = () => {
       const Icon = item.icon;
       const active = isAdminSubNavItemActive(item, location.pathname, location.search);
       const showBadge = item.path === "/admin/messages" && unreadCount > 0;
-      // "Partneři" badge = pouze čekající partnerské registrace.
-      // Shoptet napojení se aktivuje automaticky, admin ho neschvaluje.
-      const pendingPartnersNavCount = pendingPartnerRegistrationsCount;
+      // "Partneři" badge = čekající partnerské registrace + čekající Shoptet žádosti
+      // (stejný zdroj jako badge v záložce "Shoptet žádosti" na /admin/partners).
+      const pendingPartnersNavCount = pendingPartnerRegistrationsCount + pendingShoptetRequestsCount;
       const showPendingPartnerBadge =
         item.path === "/admin/partners" && pendingPartnersNavCount > 0;
       const showPendingCompanyLeadsBadge =

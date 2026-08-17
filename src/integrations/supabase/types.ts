@@ -1190,119 +1190,6 @@ export type Database = {
         }
         Relationships: []
       }
-      contest_bundle_purchases: {
-        Row: {
-          charged_miocoins: number
-          completed_at: string | null
-          contest_id: string
-          created_at: string
-          failure_code: string | null
-          id: string
-          idempotency_key: string
-          status: string
-          ticket_id: string | null
-          user_id: string
-          voucher_issuance_id: string | null
-        }
-        Insert: {
-          charged_miocoins: number
-          completed_at?: string | null
-          contest_id: string
-          created_at?: string
-          failure_code?: string | null
-          id?: string
-          idempotency_key: string
-          status?: string
-          ticket_id?: string | null
-          user_id: string
-          voucher_issuance_id?: string | null
-        }
-        Update: {
-          charged_miocoins?: number
-          completed_at?: string | null
-          contest_id?: string
-          created_at?: string
-          failure_code?: string | null
-          id?: string
-          idempotency_key?: string
-          status?: string
-          ticket_id?: string | null
-          user_id?: string
-          voucher_issuance_id?: string | null
-        }
-        Relationships: [
-          {
-            foreignKeyName: "contest_bundle_purchases_contest_id_fkey"
-            columns: ["contest_id"]
-            isOneToOne: false
-            referencedRelation: "admin_contest_status"
-            referencedColumns: ["contest_id"]
-          },
-          {
-            foreignKeyName: "contest_bundle_purchases_contest_id_fkey"
-            columns: ["contest_id"]
-            isOneToOne: false
-            referencedRelation: "admin_winner_delivery_stats"
-            referencedColumns: ["contest_id"]
-          },
-          {
-            foreignKeyName: "contest_bundle_purchases_contest_id_fkey"
-            columns: ["contest_id"]
-            isOneToOne: false
-            referencedRelation: "contest_analytics"
-            referencedColumns: ["contest_id"]
-          },
-          {
-            foreignKeyName: "contest_bundle_purchases_contest_id_fkey"
-            columns: ["contest_id"]
-            isOneToOne: false
-            referencedRelation: "contest_integrity_check"
-            referencedColumns: ["contest_id"]
-          },
-          {
-            foreignKeyName: "contest_bundle_purchases_contest_id_fkey"
-            columns: ["contest_id"]
-            isOneToOne: false
-            referencedRelation: "contest_progress"
-            referencedColumns: ["contest_id"]
-          },
-          {
-            foreignKeyName: "contest_bundle_purchases_contest_id_fkey"
-            columns: ["contest_id"]
-            isOneToOne: false
-            referencedRelation: "contest_revenue"
-            referencedColumns: ["contest_id"]
-          },
-          {
-            foreignKeyName: "contest_bundle_purchases_contest_id_fkey"
-            columns: ["contest_id"]
-            isOneToOne: false
-            referencedRelation: "contests"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "contest_bundle_purchases_ticket_id_fkey"
-            columns: ["ticket_id"]
-            isOneToOne: true
-            referencedRelation: "tickets"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "contest_bundle_purchases_user_id_fkey"
-            columns: ["user_id"]
-            isOneToOne: false
-            referencedRelation: "users"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "contest_bundle_purchases_voucher_issuance_id_fkey"
-            columns: ["voucher_issuance_id"]
-            isOneToOne: true
-            referencedRelation: "voucher_issuances"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
       contest_economy: {
         Row: {
           contest_id: string
@@ -1630,10 +1517,8 @@ export type Database = {
           attachment_storage_bucket: string | null
           attachment_storage_path: string | null
           attachment_url: string | null
-          available_at: string
           body: string
           created_at: string | null
-          dedupe_key: string | null
           email: string
           id: string
           sent_at: string | null
@@ -1647,10 +1532,8 @@ export type Database = {
           attachment_storage_bucket?: string | null
           attachment_storage_path?: string | null
           attachment_url?: string | null
-          available_at?: string
           body: string
           created_at?: string | null
-          dedupe_key?: string | null
           email: string
           id?: string
           sent_at?: string | null
@@ -1664,10 +1547,8 @@ export type Database = {
           attachment_storage_bucket?: string | null
           attachment_storage_path?: string | null
           attachment_url?: string | null
-          available_at?: string
           body?: string
           created_at?: string | null
-          dedupe_key?: string | null
           email?: string
           id?: string
           sent_at?: string | null
@@ -2413,153 +2294,6 @@ export type Database = {
           },
         ]
       }
-      partner_invoice_item_sources: {
-        Row: {
-          created_at: string
-          id: string
-          partner_invoice_item_id: string
-          source_id: string
-          source_type: string
-        }
-        Insert: {
-          created_at?: string
-          id?: string
-          partner_invoice_item_id: string
-          source_id: string
-          source_type: string
-        }
-        Update: {
-          created_at?: string
-          id?: string
-          partner_invoice_item_id?: string
-          source_id?: string
-          source_type?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "partner_invoice_item_sources_partner_invoice_item_id_fkey"
-            columns: ["partner_invoice_item_id"]
-            isOneToOne: false
-            referencedRelation: "partner_invoice_items"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      partner_invoice_items: {
-        Row: {
-          amount_ex_vat: number
-          amount_inc_vat: number
-          contest_id: string | null
-          created_at: string
-          currency: string
-          description_snapshot: string
-          id: string
-          invoice_id: string
-          item_type: string
-          quantity: number
-          unit_price_ex_vat: number
-          vat_amount: number
-          vat_rate_percent: number
-          voucher_id: string | null
-        }
-        Insert: {
-          amount_ex_vat: number
-          amount_inc_vat: number
-          contest_id?: string | null
-          created_at?: string
-          currency?: string
-          description_snapshot: string
-          id?: string
-          invoice_id: string
-          item_type: string
-          quantity: number
-          unit_price_ex_vat: number
-          vat_amount: number
-          vat_rate_percent?: number
-          voucher_id?: string | null
-        }
-        Update: {
-          amount_ex_vat?: number
-          amount_inc_vat?: number
-          contest_id?: string | null
-          created_at?: string
-          currency?: string
-          description_snapshot?: string
-          id?: string
-          invoice_id?: string
-          item_type?: string
-          quantity?: number
-          unit_price_ex_vat?: number
-          vat_amount?: number
-          vat_rate_percent?: number
-          voucher_id?: string | null
-        }
-        Relationships: [
-          {
-            foreignKeyName: "partner_invoice_items_contest_id_fkey"
-            columns: ["contest_id"]
-            isOneToOne: false
-            referencedRelation: "admin_contest_status"
-            referencedColumns: ["contest_id"]
-          },
-          {
-            foreignKeyName: "partner_invoice_items_contest_id_fkey"
-            columns: ["contest_id"]
-            isOneToOne: false
-            referencedRelation: "admin_winner_delivery_stats"
-            referencedColumns: ["contest_id"]
-          },
-          {
-            foreignKeyName: "partner_invoice_items_contest_id_fkey"
-            columns: ["contest_id"]
-            isOneToOne: false
-            referencedRelation: "contest_analytics"
-            referencedColumns: ["contest_id"]
-          },
-          {
-            foreignKeyName: "partner_invoice_items_contest_id_fkey"
-            columns: ["contest_id"]
-            isOneToOne: false
-            referencedRelation: "contest_integrity_check"
-            referencedColumns: ["contest_id"]
-          },
-          {
-            foreignKeyName: "partner_invoice_items_contest_id_fkey"
-            columns: ["contest_id"]
-            isOneToOne: false
-            referencedRelation: "contest_progress"
-            referencedColumns: ["contest_id"]
-          },
-          {
-            foreignKeyName: "partner_invoice_items_contest_id_fkey"
-            columns: ["contest_id"]
-            isOneToOne: false
-            referencedRelation: "contest_revenue"
-            referencedColumns: ["contest_id"]
-          },
-          {
-            foreignKeyName: "partner_invoice_items_contest_id_fkey"
-            columns: ["contest_id"]
-            isOneToOne: false
-            referencedRelation: "contests"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "partner_invoice_items_invoice_id_fkey"
-            columns: ["invoice_id"]
-            isOneToOne: false
-            referencedRelation: "partner_invoices"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "partner_invoice_items_voucher_id_fkey"
-            columns: ["voucher_id"]
-            isOneToOne: false
-            referencedRelation: "vouchers"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
       partner_invoice_lines: {
         Row: {
           activated_at: string
@@ -2608,7 +2342,6 @@ export type Database = {
           amount_gross: number | null
           amount_inc_vat: number
           amount_net: number | null
-          auto_email_sent_at: string | null
           coins_activated: number
           coins_total: number | null
           created_at: string
@@ -2635,7 +2368,6 @@ export type Database = {
           amount_gross?: number | null
           amount_inc_vat?: number
           amount_net?: number | null
-          auto_email_sent_at?: string | null
           coins_activated?: number
           coins_total?: number | null
           created_at?: string
@@ -2662,7 +2394,6 @@ export type Database = {
           amount_gross?: number | null
           amount_inc_vat?: number
           amount_net?: number | null
-          auto_email_sent_at?: string | null
           coins_activated?: number
           coins_total?: number | null
           created_at?: string
@@ -3186,63 +2917,6 @@ export type Database = {
           },
         ]
       }
-      partner_product_reward_rules: {
-        Row: {
-          active: boolean
-          created_at: string
-          fixed_mc: number | null
-          id: string
-          partner_id: string
-          product_key: string
-          product_label: string | null
-          ratio_base_czk: number | null
-          ratio_mc: number | null
-          reward_type: string
-          updated_at: string
-        }
-        Insert: {
-          active?: boolean
-          created_at?: string
-          fixed_mc?: number | null
-          id?: string
-          partner_id: string
-          product_key: string
-          product_label?: string | null
-          ratio_base_czk?: number | null
-          ratio_mc?: number | null
-          reward_type?: string
-          updated_at?: string
-        }
-        Update: {
-          active?: boolean
-          created_at?: string
-          fixed_mc?: number | null
-          id?: string
-          partner_id?: string
-          product_key?: string
-          product_label?: string | null
-          ratio_base_czk?: number | null
-          ratio_mc?: number | null
-          reward_type?: string
-          updated_at?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "partner_product_reward_rules_partner_id_fkey"
-            columns: ["partner_id"]
-            isOneToOne: false
-            referencedRelation: "partners"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "partner_product_reward_rules_partner_id_fkey"
-            columns: ["partner_id"]
-            isOneToOne: false
-            referencedRelation: "public_partners"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
       partner_reward_codes: {
         Row: {
           activated_at: string | null
@@ -3306,45 +2980,6 @@ export type Database = {
           },
         ]
       }
-      partner_seen_products: {
-        Row: {
-          id: string
-          last_seen_at: string
-          last_seen_name: string | null
-          partner_id: string
-          product_key: string
-        }
-        Insert: {
-          id?: string
-          last_seen_at?: string
-          last_seen_name?: string | null
-          partner_id: string
-          product_key: string
-        }
-        Update: {
-          id?: string
-          last_seen_at?: string
-          last_seen_name?: string | null
-          partner_id?: string
-          product_key?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "partner_seen_products_partner_id_fkey"
-            columns: ["partner_id"]
-            isOneToOne: false
-            referencedRelation: "partners"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "partner_seen_products_partner_id_fkey"
-            columns: ["partner_id"]
-            isOneToOne: false
-            referencedRelation: "public_partners"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
       partners: {
         Row: {
           approved_at: string | null
@@ -3372,12 +3007,10 @@ export type Database = {
           payout_ready: boolean
           payout_updated_at: string | null
           price_per_coin: number
-          product_badge_enabled: boolean
           referred_by_affiliate_id: string | null
           rejected_at: string | null
           reward_base_czk: number
           reward_mc: number
-          reward_mode: string
           reward_trigger_status: string
           shoptet_customer_delivery: string
           shoptet_export_secret_name: string | null
@@ -3415,12 +3048,10 @@ export type Database = {
           payout_ready?: boolean
           payout_updated_at?: string | null
           price_per_coin?: number
-          product_badge_enabled?: boolean
           referred_by_affiliate_id?: string | null
           rejected_at?: string | null
           reward_base_czk?: number
           reward_mc?: number
-          reward_mode?: string
           reward_trigger_status?: string
           shoptet_customer_delivery?: string
           shoptet_export_secret_name?: string | null
@@ -3458,12 +3089,10 @@ export type Database = {
           payout_ready?: boolean
           payout_updated_at?: string | null
           price_per_coin?: number
-          product_badge_enabled?: boolean
           referred_by_affiliate_id?: string | null
           rejected_at?: string | null
           reward_base_czk?: number
           reward_mc?: number
-          reward_mode?: string
           reward_trigger_status?: string
           shoptet_customer_delivery?: string
           shoptet_export_secret_name?: string | null
@@ -3491,10 +3120,7 @@ export type Database = {
           created_at: string
           id: string
           method: string
-          refund_updated_at: string | null
           status: string
-          stripe_refund_id: string | null
-          stripe_refund_status: string | null
           stripe_session_id: string | null
           user_id: string
         }
@@ -3503,10 +3129,7 @@ export type Database = {
           created_at?: string
           id?: string
           method: string
-          refund_updated_at?: string | null
           status?: string
-          stripe_refund_id?: string | null
-          stripe_refund_status?: string | null
           stripe_session_id?: string | null
           user_id: string
         }
@@ -3515,10 +3138,7 @@ export type Database = {
           created_at?: string
           id?: string
           method?: string
-          refund_updated_at?: string | null
           status?: string
-          stripe_refund_id?: string | null
-          stripe_refund_status?: string | null
           stripe_session_id?: string | null
           user_id?: string
         }
@@ -3919,16 +3539,13 @@ export type Database = {
           completed_by: string | null
           created_at: string
           direction: string | null
-          email_delivery_id: string | null
           email_message_id: string | null
           id: string
           lead_id: string
           metadata: Json
           performed_by: string | null
-          provider_thread_id: string | null
           read_at: string | null
           read_by: string | null
-          rfc_message_id: string | null
           scheduled_for: string | null
           subject: string | null
         }
@@ -3942,16 +3559,13 @@ export type Database = {
           completed_by?: string | null
           created_at?: string
           direction?: string | null
-          email_delivery_id?: string | null
           email_message_id?: string | null
           id?: string
           lead_id: string
           metadata?: Json
           performed_by?: string | null
-          provider_thread_id?: string | null
           read_at?: string | null
           read_by?: string | null
-          rfc_message_id?: string | null
           scheduled_for?: string | null
           subject?: string | null
         }
@@ -3965,27 +3579,17 @@ export type Database = {
           completed_by?: string | null
           created_at?: string
           direction?: string | null
-          email_delivery_id?: string | null
           email_message_id?: string | null
           id?: string
           lead_id?: string
           metadata?: Json
           performed_by?: string | null
-          provider_thread_id?: string | null
           read_at?: string | null
           read_by?: string | null
-          rfc_message_id?: string | null
           scheduled_for?: string | null
           subject?: string | null
         }
         Relationships: [
-          {
-            foreignKeyName: "sales_lead_activities_email_delivery_id_fkey"
-            columns: ["email_delivery_id"]
-            isOneToOne: false
-            referencedRelation: "sales_lead_email_deliveries"
-            referencedColumns: ["id"]
-          },
           {
             foreignKeyName: "sales_lead_activities_lead_id_fkey"
             columns: ["lead_id"]
@@ -3994,99 +3598,6 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
-      }
-      sales_lead_discovery_jobs: {
-        Row: {
-          auto_created: boolean
-          candidate_pool: Json
-          candidates_checked: number
-          created_at: string
-          created_by: string | null
-          created_count: number
-          cursor: number
-          duplicates: number
-          error: string | null
-          finish_reason: string | null
-          finished_at: string | null
-          funnel: Json
-          id: string
-          lead_group: string
-          max_candidates: number
-          requested_count: number
-          search_diagnostics: Json
-          search_exhausted: boolean
-          search_rounds: number
-          started_at: string | null
-          status: string
-          updated_at: string
-          websites_rejected: number
-          with_address: number
-          with_dic: number
-          with_ico: number
-          with_phone: number
-          wrong_category: number
-        }
-        Insert: {
-          auto_created?: boolean
-          candidate_pool?: Json
-          candidates_checked?: number
-          created_at?: string
-          created_by?: string | null
-          created_count?: number
-          cursor?: number
-          duplicates?: number
-          error?: string | null
-          finish_reason?: string | null
-          finished_at?: string | null
-          funnel?: Json
-          id?: string
-          lead_group: string
-          max_candidates?: number
-          requested_count: number
-          search_diagnostics?: Json
-          search_exhausted?: boolean
-          search_rounds?: number
-          started_at?: string | null
-          status?: string
-          updated_at?: string
-          websites_rejected?: number
-          with_address?: number
-          with_dic?: number
-          with_ico?: number
-          with_phone?: number
-          wrong_category?: number
-        }
-        Update: {
-          auto_created?: boolean
-          candidate_pool?: Json
-          candidates_checked?: number
-          created_at?: string
-          created_by?: string | null
-          created_count?: number
-          cursor?: number
-          duplicates?: number
-          error?: string | null
-          finish_reason?: string | null
-          finished_at?: string | null
-          funnel?: Json
-          id?: string
-          lead_group?: string
-          max_candidates?: number
-          requested_count?: number
-          search_diagnostics?: Json
-          search_exhausted?: boolean
-          search_rounds?: number
-          started_at?: string | null
-          status?: string
-          updated_at?: string
-          websites_rejected?: number
-          with_address?: number
-          with_dic?: number
-          with_ico?: number
-          with_phone?: number
-          wrong_category?: number
-        }
-        Relationships: []
       }
       sales_lead_duplicate_overrides: {
         Row: {
@@ -4136,435 +3647,6 @@ export type Database = {
           },
         ]
       }
-      sales_lead_email_automation_settings: {
-        Row: {
-          daily_limit: number
-          enabled: boolean
-          singleton: boolean
-          timezone: string
-          updated_at: string
-          updated_by: string | null
-          window_end: string
-          window_start: string
-        }
-        Insert: {
-          daily_limit?: number
-          enabled?: boolean
-          singleton?: boolean
-          timezone?: string
-          updated_at?: string
-          updated_by?: string | null
-          window_end?: string
-          window_start?: string
-        }
-        Update: {
-          daily_limit?: number
-          enabled?: boolean
-          singleton?: boolean
-          timezone?: string
-          updated_at?: string
-          updated_by?: string | null
-          window_end?: string
-          window_start?: string
-        }
-        Relationships: []
-      }
-      sales_lead_email_batch_items: {
-        Row: {
-          attempt_count: number
-          batch_id: string
-          body_html_snapshot: string
-          body_source_snapshot: string
-          body_text_snapshot: string
-          company_name_snapshot: string
-          created_at: string
-          email_source_snapshot: string
-          email_verification_method_snapshot: string
-          email_verified_at_snapshot: string
-          error_code: string | null
-          id: string
-          lead_id: string
-          recipient_snapshot: string
-          response_token_hash: string | null
-          scheduled_for: string
-          skip_reason: string | null
-          status: string
-          subject_snapshot: string
-          template_id_snapshot: string
-          template_updated_at_snapshot: string
-          updated_at: string
-        }
-        Insert: {
-          attempt_count?: number
-          batch_id: string
-          body_html_snapshot: string
-          body_source_snapshot: string
-          body_text_snapshot: string
-          company_name_snapshot: string
-          created_at?: string
-          email_source_snapshot: string
-          email_verification_method_snapshot: string
-          email_verified_at_snapshot: string
-          error_code?: string | null
-          id?: string
-          lead_id: string
-          recipient_snapshot: string
-          response_token_hash?: string | null
-          scheduled_for: string
-          skip_reason?: string | null
-          status?: string
-          subject_snapshot: string
-          template_id_snapshot: string
-          template_updated_at_snapshot: string
-          updated_at?: string
-        }
-        Update: {
-          attempt_count?: number
-          batch_id?: string
-          body_html_snapshot?: string
-          body_source_snapshot?: string
-          body_text_snapshot?: string
-          company_name_snapshot?: string
-          created_at?: string
-          email_source_snapshot?: string
-          email_verification_method_snapshot?: string
-          email_verified_at_snapshot?: string
-          error_code?: string | null
-          id?: string
-          lead_id?: string
-          recipient_snapshot?: string
-          response_token_hash?: string | null
-          scheduled_for?: string
-          skip_reason?: string | null
-          status?: string
-          subject_snapshot?: string
-          template_id_snapshot?: string
-          template_updated_at_snapshot?: string
-          updated_at?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "sales_lead_email_batch_items_batch_id_fkey"
-            columns: ["batch_id"]
-            isOneToOne: false
-            referencedRelation: "sales_lead_email_batches"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "sales_lead_email_batch_items_lead_id_fkey"
-            columns: ["lead_id"]
-            isOneToOne: false
-            referencedRelation: "sales_leads"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      sales_lead_email_batch_skips: {
-        Row: {
-          batch_id: string
-          company_name_snapshot: string | null
-          created_at: string
-          id: string
-          reason: string
-          requested_lead_id: string
-        }
-        Insert: {
-          batch_id: string
-          company_name_snapshot?: string | null
-          created_at?: string
-          id?: string
-          reason: string
-          requested_lead_id: string
-        }
-        Update: {
-          batch_id?: string
-          company_name_snapshot?: string | null
-          created_at?: string
-          id?: string
-          reason?: string
-          requested_lead_id?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "sales_lead_email_batch_skips_batch_id_fkey"
-            columns: ["batch_id"]
-            isOneToOne: false
-            referencedRelation: "sales_lead_email_batches"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      sales_lead_email_batches: {
-        Row: {
-          cancel_reason: string | null
-          cancelled_at: string | null
-          cancelled_by: string | null
-          created_at: string
-          created_by: string
-          daily_limit: number
-          id: string
-          idempotency_key: string
-          request_fingerprint: string
-          scheduled_count: number
-          scheduled_date: string
-          skipped_count: number
-          status: string
-          template_id: string | null
-          template_name_snapshot: string
-          timezone: string
-          updated_at: string
-          window_end: string
-          window_start: string
-        }
-        Insert: {
-          cancel_reason?: string | null
-          cancelled_at?: string | null
-          cancelled_by?: string | null
-          created_at?: string
-          created_by: string
-          daily_limit?: number
-          id?: string
-          idempotency_key: string
-          request_fingerprint: string
-          scheduled_count?: number
-          scheduled_date: string
-          skipped_count?: number
-          status?: string
-          template_id?: string | null
-          template_name_snapshot: string
-          timezone?: string
-          updated_at?: string
-          window_end?: string
-          window_start?: string
-        }
-        Update: {
-          cancel_reason?: string | null
-          cancelled_at?: string | null
-          cancelled_by?: string | null
-          created_at?: string
-          created_by?: string
-          daily_limit?: number
-          id?: string
-          idempotency_key?: string
-          request_fingerprint?: string
-          scheduled_count?: number
-          scheduled_date?: string
-          skipped_count?: number
-          status?: string
-          template_id?: string | null
-          template_name_snapshot?: string
-          timezone?: string
-          updated_at?: string
-          window_end?: string
-          window_start?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "sales_lead_email_batches_template_id_fkey"
-            columns: ["template_id"]
-            isOneToOne: false
-            referencedRelation: "sales_lead_email_templates"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      sales_lead_email_deliveries: {
-        Row: {
-          attachment_metadata: Json
-          attempt_count: number
-          batch_item_id: string | null
-          body_html_snapshot: string
-          body_source_snapshot: string
-          body_text_snapshot: string
-          committed_at: string | null
-          created_at: string
-          delivery_key: string
-          id: string
-          last_error_code: string | null
-          lead_id: string
-          mode: string
-          outbound_capture_id: string
-          performed_by: string
-          provider: string
-          provider_accepted_at: string | null
-          provider_message_id: string | null
-          recipient_snapshot: string
-          request_fingerprint: string
-          status: string
-          subject_snapshot: string
-          updated_at: string
-        }
-        Insert: {
-          attachment_metadata?: Json
-          attempt_count?: number
-          batch_item_id?: string | null
-          body_html_snapshot: string
-          body_source_snapshot: string
-          body_text_snapshot: string
-          committed_at?: string | null
-          created_at?: string
-          delivery_key: string
-          id?: string
-          last_error_code?: string | null
-          lead_id: string
-          mode: string
-          outbound_capture_id: string
-          performed_by: string
-          provider?: string
-          provider_accepted_at?: string | null
-          provider_message_id?: string | null
-          recipient_snapshot: string
-          request_fingerprint: string
-          status: string
-          subject_snapshot: string
-          updated_at?: string
-        }
-        Update: {
-          attachment_metadata?: Json
-          attempt_count?: number
-          batch_item_id?: string | null
-          body_html_snapshot?: string
-          body_source_snapshot?: string
-          body_text_snapshot?: string
-          committed_at?: string | null
-          created_at?: string
-          delivery_key?: string
-          id?: string
-          last_error_code?: string | null
-          lead_id?: string
-          mode?: string
-          outbound_capture_id?: string
-          performed_by?: string
-          provider?: string
-          provider_accepted_at?: string | null
-          provider_message_id?: string | null
-          recipient_snapshot?: string
-          request_fingerprint?: string
-          status?: string
-          subject_snapshot?: string
-          updated_at?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "sales_lead_email_deliveries_batch_item_id_fkey"
-            columns: ["batch_item_id"]
-            isOneToOne: false
-            referencedRelation: "sales_lead_email_batch_items"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "sales_lead_email_deliveries_lead_id_fkey"
-            columns: ["lead_id"]
-            isOneToOne: false
-            referencedRelation: "sales_leads"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      sales_lead_email_draft_attachments: {
-        Row: {
-          content_type: string
-          created_at: string
-          filename: string
-          id: string
-          lead_id: string
-          size_bytes: number
-          storage_bucket: string
-          storage_path: string
-          uploaded_by: string
-        }
-        Insert: {
-          content_type?: string
-          created_at?: string
-          filename: string
-          id?: string
-          lead_id: string
-          size_bytes: number
-          storage_bucket?: string
-          storage_path: string
-          uploaded_by: string
-        }
-        Update: {
-          content_type?: string
-          created_at?: string
-          filename?: string
-          id?: string
-          lead_id?: string
-          size_bytes?: number
-          storage_bucket?: string
-          storage_path?: string
-          uploaded_by?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "sales_lead_email_draft_attachments_lead_id_fkey"
-            columns: ["lead_id"]
-            isOneToOne: false
-            referencedRelation: "sales_leads"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      sales_lead_email_response_tokens: {
-        Row: {
-          batch_item_id: string | null
-          created_at: string
-          expires_at: string
-          id: string
-          lead_id: string
-          recipient_snapshot: string
-          responded_at: string | null
-          response_name: string | null
-          response_phone: string | null
-          status: string
-          token_hash: string
-          updated_at: string
-        }
-        Insert: {
-          batch_item_id?: string | null
-          created_at?: string
-          expires_at: string
-          id?: string
-          lead_id: string
-          recipient_snapshot: string
-          responded_at?: string | null
-          response_name?: string | null
-          response_phone?: string | null
-          status?: string
-          token_hash: string
-          updated_at?: string
-        }
-        Update: {
-          batch_item_id?: string | null
-          created_at?: string
-          expires_at?: string
-          id?: string
-          lead_id?: string
-          recipient_snapshot?: string
-          responded_at?: string | null
-          response_name?: string | null
-          response_phone?: string | null
-          status?: string
-          token_hash?: string
-          updated_at?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "sales_lead_email_response_tokens_batch_item_id_fkey"
-            columns: ["batch_item_id"]
-            isOneToOne: true
-            referencedRelation: "sales_lead_email_batch_items"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "sales_lead_email_response_tokens_lead_id_fkey"
-            columns: ["lead_id"]
-            isOneToOne: false
-            referencedRelation: "sales_leads"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
       sales_lead_email_suppression: {
         Row: {
           created_at: string
@@ -4586,84 +3668,6 @@ export type Database = {
           email_pattern?: string
           id?: string
           reason?: string
-        }
-        Relationships: []
-      }
-      sales_lead_email_templates: {
-        Row: {
-          body: string
-          created_at: string
-          created_by: string
-          id: string
-          is_active: boolean
-          name: string
-          sort_order: number
-          subject: string
-          template_type: string
-          updated_at: string
-          updated_by: string
-        }
-        Insert: {
-          body: string
-          created_at?: string
-          created_by: string
-          id?: string
-          is_active?: boolean
-          name: string
-          sort_order?: number
-          subject: string
-          template_type: string
-          updated_at?: string
-          updated_by: string
-        }
-        Update: {
-          body?: string
-          created_at?: string
-          created_by?: string
-          id?: string
-          is_active?: boolean
-          name?: string
-          sort_order?: number
-          subject?: string
-          template_type?: string
-          updated_at?: string
-          updated_by?: string
-        }
-        Relationships: []
-      }
-      sales_lead_groups: {
-        Row: {
-          auto_discovery_enabled: boolean
-          created_at: string
-          created_by: string | null
-          description: string | null
-          is_active: boolean
-          label: string
-          slug: string
-          sort_order: number
-          updated_at: string
-        }
-        Insert: {
-          auto_discovery_enabled?: boolean
-          created_at?: string
-          created_by?: string | null
-          description?: string | null
-          is_active?: boolean
-          label: string
-          slug: string
-          sort_order?: number
-          updated_at?: string
-        }
-        Update: {
-          auto_discovery_enabled?: boolean
-          created_at?: string
-          created_by?: string | null
-          description?: string | null
-          is_active?: boolean
-          label?: string
-          slug?: string
-          sort_order?: number
-          updated_at?: string
         }
         Relationships: []
       }
@@ -4732,7 +3736,6 @@ export type Database = {
           lead_id: string
           note: string | null
           status: string
-          task_type: string
           title: string
           updated_at: string
         }
@@ -4747,7 +3750,6 @@ export type Database = {
           lead_id: string
           note?: string | null
           status?: string
-          task_type?: string
           title: string
           updated_at?: string
         }
@@ -4762,7 +3764,6 @@ export type Database = {
           lead_id?: string
           note?: string | null
           status?: string
-          task_type?: string
           title?: string
           updated_at?: string
         }
@@ -4776,233 +3777,15 @@ export type Database = {
           },
         ]
       }
-      sales_lead_unassigned_emails: {
-        Row: {
-          assigned_activity_id: string | null
-          assigned_lead_id: string | null
-          body_snapshot: string | null
-          created_at: string
-          from_email: string
-          from_name: string | null
-          id: string
-          in_reply_to: string | null
-          provider_thread_id: string | null
-          received_at: string
-          references_ids: string[]
-          resend_email_id: string
-          resolution_note: string | null
-          resolved_at: string | null
-          resolved_by: string | null
-          rfc_message_id: string | null
-          status: string
-          subject: string | null
-          to_addresses: string[]
-          updated_at: string
-        }
-        Insert: {
-          assigned_activity_id?: string | null
-          assigned_lead_id?: string | null
-          body_snapshot?: string | null
-          created_at?: string
-          from_email: string
-          from_name?: string | null
-          id?: string
-          in_reply_to?: string | null
-          provider_thread_id?: string | null
-          received_at?: string
-          references_ids?: string[]
-          resend_email_id: string
-          resolution_note?: string | null
-          resolved_at?: string | null
-          resolved_by?: string | null
-          rfc_message_id?: string | null
-          status?: string
-          subject?: string | null
-          to_addresses?: string[]
-          updated_at?: string
-        }
-        Update: {
-          assigned_activity_id?: string | null
-          assigned_lead_id?: string | null
-          body_snapshot?: string | null
-          created_at?: string
-          from_email?: string
-          from_name?: string | null
-          id?: string
-          in_reply_to?: string | null
-          provider_thread_id?: string | null
-          received_at?: string
-          references_ids?: string[]
-          resend_email_id?: string
-          resolution_note?: string | null
-          resolved_at?: string | null
-          resolved_by?: string | null
-          rfc_message_id?: string | null
-          status?: string
-          subject?: string | null
-          to_addresses?: string[]
-          updated_at?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "sales_lead_unassigned_emails_assigned_activity_id_fkey"
-            columns: ["assigned_activity_id"]
-            isOneToOne: false
-            referencedRelation: "sales_lead_activities"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "sales_lead_unassigned_emails_assigned_lead_id_fkey"
-            columns: ["assigned_lead_id"]
-            isOneToOne: false
-            referencedRelation: "sales_leads"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      sales_lead_work_intake_items: {
-        Row: {
-          attempt_count: number
-          claimed_at: string | null
-          created_at: string
-          email_source_url: string
-          id: string
-          lead_id: string | null
-          normalized_domain: string | null
-          normalized_email: string | null
-          normalized_source_url: string | null
-          normalized_website: string | null
-          position: number
-          processed_at: string | null
-          public_email: string
-          reason: string | null
-          run_id: string
-          status: string
-          verification_evidence: Json
-          website: string
-        }
-        Insert: {
-          attempt_count?: number
-          claimed_at?: string | null
-          created_at?: string
-          email_source_url: string
-          id?: string
-          lead_id?: string | null
-          normalized_domain?: string | null
-          normalized_email?: string | null
-          normalized_source_url?: string | null
-          normalized_website?: string | null
-          position: number
-          processed_at?: string | null
-          public_email: string
-          reason?: string | null
-          run_id: string
-          status?: string
-          verification_evidence?: Json
-          website: string
-        }
-        Update: {
-          attempt_count?: number
-          claimed_at?: string | null
-          created_at?: string
-          email_source_url?: string
-          id?: string
-          lead_id?: string | null
-          normalized_domain?: string | null
-          normalized_email?: string | null
-          normalized_source_url?: string | null
-          normalized_website?: string | null
-          position?: number
-          processed_at?: string | null
-          public_email?: string
-          reason?: string | null
-          run_id?: string
-          status?: string
-          verification_evidence?: Json
-          website?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "sales_lead_work_intake_items_lead_id_fkey"
-            columns: ["lead_id"]
-            isOneToOne: false
-            referencedRelation: "sales_leads"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "sales_lead_work_intake_items_run_id_fkey"
-            columns: ["run_id"]
-            isOneToOne: false
-            referencedRelation: "sales_lead_work_intake_runs"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      sales_lead_work_intake_runs: {
-        Row: {
-          accepted_count: number
-          completed_at: string | null
-          created_by: string
-          created_count: number
-          external_batch_id: string
-          id: string
-          item_count: number
-          last_error: string | null
-          rejected_count: number
-          request_fingerprint: string
-          schema_version: number
-          skipped_count: number
-          started_at: string | null
-          status: string
-          submitted_at: string
-        }
-        Insert: {
-          accepted_count: number
-          completed_at?: string | null
-          created_by: string
-          created_count?: number
-          external_batch_id: string
-          id?: string
-          item_count: number
-          last_error?: string | null
-          rejected_count?: number
-          request_fingerprint: string
-          schema_version?: number
-          skipped_count?: number
-          started_at?: string | null
-          status?: string
-          submitted_at?: string
-        }
-        Update: {
-          accepted_count?: number
-          completed_at?: string | null
-          created_by?: string
-          created_count?: number
-          external_batch_id?: string
-          id?: string
-          item_count?: number
-          last_error?: string | null
-          rejected_count?: number
-          request_fingerprint?: string
-          schema_version?: number
-          skipped_count?: number
-          started_at?: string | null
-          status?: string
-          submitted_at?: string
-        }
-        Relationships: []
-      }
       sales_leads: {
         Row: {
           address: string | null
           ai_research_at: string | null
           ai_research_summary: string | null
-          alternative_websites: Json
           assigned_admin_id: string | null
           city: string | null
           company_name: string
           company_size: string | null
-          contact_data_provenance: Json
           contact_email: string | null
           contact_person: string | null
           contact_phone: string | null
@@ -5020,7 +3803,6 @@ export type Database = {
           draft_email_body: string | null
           draft_email_subject: string | null
           draft_prepared_by: string | null
-          draft_updated_at: string | null
           email_source: string | null
           email_verification_method: string | null
           email_verified_at: string | null
@@ -5042,23 +3824,16 @@ export type Database = {
           status: string
           updated_at: string
           website: string | null
-          website_confidence: number | null
           website_domain: string | null
-          website_verification_evidence: Json
-          website_verification_source: string | null
-          website_verification_status: string
-          website_verified_at: string | null
         }
         Insert: {
           address?: string | null
           ai_research_at?: string | null
           ai_research_summary?: string | null
-          alternative_websites?: Json
           assigned_admin_id?: string | null
           city?: string | null
           company_name: string
           company_size?: string | null
-          contact_data_provenance?: Json
           contact_email?: string | null
           contact_person?: string | null
           contact_phone?: string | null
@@ -5076,7 +3851,6 @@ export type Database = {
           draft_email_body?: string | null
           draft_email_subject?: string | null
           draft_prepared_by?: string | null
-          draft_updated_at?: string | null
           email_source?: string | null
           email_verification_method?: string | null
           email_verified_at?: string | null
@@ -5098,23 +3872,16 @@ export type Database = {
           status?: string
           updated_at?: string
           website?: string | null
-          website_confidence?: number | null
           website_domain?: string | null
-          website_verification_evidence?: Json
-          website_verification_source?: string | null
-          website_verification_status?: string
-          website_verified_at?: string | null
         }
         Update: {
           address?: string | null
           ai_research_at?: string | null
           ai_research_summary?: string | null
-          alternative_websites?: Json
           assigned_admin_id?: string | null
           city?: string | null
           company_name?: string
           company_size?: string | null
-          contact_data_provenance?: Json
           contact_email?: string | null
           contact_person?: string | null
           contact_phone?: string | null
@@ -5132,7 +3899,6 @@ export type Database = {
           draft_email_body?: string | null
           draft_email_subject?: string | null
           draft_prepared_by?: string | null
-          draft_updated_at?: string | null
           email_source?: string | null
           email_verification_method?: string | null
           email_verified_at?: string | null
@@ -5154,12 +3920,7 @@ export type Database = {
           status?: string
           updated_at?: string
           website?: string | null
-          website_confidence?: number | null
           website_domain?: string | null
-          website_verification_evidence?: Json
-          website_verification_source?: string | null
-          website_verification_status?: string
-          website_verified_at?: string | null
         }
         Relationships: [
           {
@@ -5175,13 +3936,6 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "public_partners"
             referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "sales_leads_lead_group_fk"
-            columns: ["lead_group"]
-            isOneToOne: false
-            referencedRelation: "sales_lead_groups"
-            referencedColumns: ["slug"]
           },
         ]
       }
@@ -5723,7 +4477,6 @@ export type Database = {
       }
       user_vouchers: {
         Row: {
-          acquisition_source: string
           created_at: string
           id: string
           redeemed: boolean
@@ -5733,7 +4486,6 @@ export type Database = {
           voucher_id: string
         }
         Insert: {
-          acquisition_source?: string
           created_at?: string
           id?: string
           redeemed?: boolean
@@ -5743,7 +4495,6 @@ export type Database = {
           voucher_id: string
         }
         Update: {
-          acquisition_source?: string
           created_at?: string
           id?: string
           redeemed?: boolean
@@ -5830,48 +4581,6 @@ export type Database = {
         }
         Relationships: []
       }
-      voucher_audit_events: {
-        Row: {
-          actor_role: string | null
-          actor_user_id: string | null
-          after_data: Json
-          before_data: Json
-          correlation_id: string | null
-          created_at: string
-          entity_id: string
-          entity_type: string
-          event_type: string
-          id: string
-          reason: string | null
-        }
-        Insert: {
-          actor_role?: string | null
-          actor_user_id?: string | null
-          after_data?: Json
-          before_data?: Json
-          correlation_id?: string | null
-          created_at?: string
-          entity_id: string
-          entity_type: string
-          event_type: string
-          id?: string
-          reason?: string | null
-        }
-        Update: {
-          actor_role?: string | null
-          actor_user_id?: string | null
-          after_data?: Json
-          before_data?: Json
-          correlation_id?: string | null
-          created_at?: string
-          entity_id?: string
-          entity_type?: string
-          event_type?: string
-          id?: string
-          reason?: string | null
-        }
-        Relationships: []
-      }
       voucher_code_batches: {
         Row: {
           created_at: string
@@ -5925,7 +4634,6 @@ export type Database = {
           code: string
           created_at: string
           created_by: string | null
-          distribution_order_id: string | null
           id: string
           issued_at: string | null
           issued_to_user_id: string | null
@@ -5942,7 +4650,6 @@ export type Database = {
           code: string
           created_at?: string
           created_by?: string | null
-          distribution_order_id?: string | null
           id?: string
           issued_at?: string | null
           issued_to_user_id?: string | null
@@ -5959,7 +4666,6 @@ export type Database = {
           code?: string
           created_at?: string
           created_by?: string | null
-          distribution_order_id?: string | null
           id?: string
           issued_at?: string | null
           issued_to_user_id?: string | null
@@ -5977,13 +4683,6 @@ export type Database = {
             columns: ["batch_id"]
             isOneToOne: false
             referencedRelation: "voucher_code_batches"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "voucher_codes_distribution_order_id_fkey"
-            columns: ["distribution_order_id"]
-            isOneToOne: false
-            referencedRelation: "voucher_distribution_orders"
             referencedColumns: ["id"]
           },
           {
@@ -6009,446 +4708,10 @@ export type Database = {
           },
         ]
       }
-      voucher_distribution_orders: {
-        Row: {
-          billable_issued_quantity: number
-          contest_id: string
-          created_at: string
-          currency_snapshot: string | null
-          decided_at: string | null
-          decided_by: string | null
-          decision_reason: string | null
-          id: string
-          issued_quantity: number
-          partner_id: string
-          price_rule_id: string | null
-          requested_quantity: number
-          status: string
-          submitted_at: string
-          submitted_by: string | null
-          unit_price_ex_vat_snapshot: number | null
-          updated_at: string
-          vat_rate_percent_snapshot: number | null
-          voucher_id: string
-          voucher_version_id: string
-        }
-        Insert: {
-          billable_issued_quantity?: number
-          contest_id: string
-          created_at?: string
-          currency_snapshot?: string | null
-          decided_at?: string | null
-          decided_by?: string | null
-          decision_reason?: string | null
-          id?: string
-          issued_quantity?: number
-          partner_id: string
-          price_rule_id?: string | null
-          requested_quantity: number
-          status?: string
-          submitted_at?: string
-          submitted_by?: string | null
-          unit_price_ex_vat_snapshot?: number | null
-          updated_at?: string
-          vat_rate_percent_snapshot?: number | null
-          voucher_id: string
-          voucher_version_id: string
-        }
-        Update: {
-          billable_issued_quantity?: number
-          contest_id?: string
-          created_at?: string
-          currency_snapshot?: string | null
-          decided_at?: string | null
-          decided_by?: string | null
-          decision_reason?: string | null
-          id?: string
-          issued_quantity?: number
-          partner_id?: string
-          price_rule_id?: string | null
-          requested_quantity?: number
-          status?: string
-          submitted_at?: string
-          submitted_by?: string | null
-          unit_price_ex_vat_snapshot?: number | null
-          updated_at?: string
-          vat_rate_percent_snapshot?: number | null
-          voucher_id?: string
-          voucher_version_id?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "voucher_distribution_orders_contest_id_fkey"
-            columns: ["contest_id"]
-            isOneToOne: false
-            referencedRelation: "admin_contest_status"
-            referencedColumns: ["contest_id"]
-          },
-          {
-            foreignKeyName: "voucher_distribution_orders_contest_id_fkey"
-            columns: ["contest_id"]
-            isOneToOne: false
-            referencedRelation: "admin_winner_delivery_stats"
-            referencedColumns: ["contest_id"]
-          },
-          {
-            foreignKeyName: "voucher_distribution_orders_contest_id_fkey"
-            columns: ["contest_id"]
-            isOneToOne: false
-            referencedRelation: "contest_analytics"
-            referencedColumns: ["contest_id"]
-          },
-          {
-            foreignKeyName: "voucher_distribution_orders_contest_id_fkey"
-            columns: ["contest_id"]
-            isOneToOne: false
-            referencedRelation: "contest_integrity_check"
-            referencedColumns: ["contest_id"]
-          },
-          {
-            foreignKeyName: "voucher_distribution_orders_contest_id_fkey"
-            columns: ["contest_id"]
-            isOneToOne: false
-            referencedRelation: "contest_progress"
-            referencedColumns: ["contest_id"]
-          },
-          {
-            foreignKeyName: "voucher_distribution_orders_contest_id_fkey"
-            columns: ["contest_id"]
-            isOneToOne: false
-            referencedRelation: "contest_revenue"
-            referencedColumns: ["contest_id"]
-          },
-          {
-            foreignKeyName: "voucher_distribution_orders_contest_id_fkey"
-            columns: ["contest_id"]
-            isOneToOne: false
-            referencedRelation: "contests"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "voucher_distribution_orders_partner_id_fkey"
-            columns: ["partner_id"]
-            isOneToOne: false
-            referencedRelation: "partners"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "voucher_distribution_orders_partner_id_fkey"
-            columns: ["partner_id"]
-            isOneToOne: false
-            referencedRelation: "public_partners"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "voucher_distribution_orders_price_rule_id_fkey"
-            columns: ["price_rule_id"]
-            isOneToOne: false
-            referencedRelation: "voucher_distribution_price_rules"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "voucher_distribution_orders_voucher_id_fkey"
-            columns: ["voucher_id"]
-            isOneToOne: false
-            referencedRelation: "vouchers"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "voucher_distribution_orders_voucher_version_id_fkey"
-            columns: ["voucher_version_id"]
-            isOneToOne: false
-            referencedRelation: "voucher_versions"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      voucher_distribution_price_rules: {
-        Row: {
-          active: boolean
-          created_at: string
-          created_by: string | null
-          currency: string
-          id: string
-          partner_id: string | null
-          scope: string
-          unit_price_ex_vat: number
-          updated_at: string
-          valid_from: string
-          valid_until: string | null
-          vat_rate_percent: number
-        }
-        Insert: {
-          active?: boolean
-          created_at?: string
-          created_by?: string | null
-          currency?: string
-          id?: string
-          partner_id?: string | null
-          scope: string
-          unit_price_ex_vat: number
-          updated_at?: string
-          valid_from?: string
-          valid_until?: string | null
-          vat_rate_percent?: number
-        }
-        Update: {
-          active?: boolean
-          created_at?: string
-          created_by?: string | null
-          currency?: string
-          id?: string
-          partner_id?: string | null
-          scope?: string
-          unit_price_ex_vat?: number
-          updated_at?: string
-          valid_from?: string
-          valid_until?: string | null
-          vat_rate_percent?: number
-        }
-        Relationships: [
-          {
-            foreignKeyName: "voucher_distribution_price_rules_partner_id_fkey"
-            columns: ["partner_id"]
-            isOneToOne: false
-            referencedRelation: "partners"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "voucher_distribution_price_rules_partner_id_fkey"
-            columns: ["partner_id"]
-            isOneToOne: false
-            referencedRelation: "public_partners"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      voucher_issuances: {
-        Row: {
-          billable: boolean
-          billing_reason: string
-          created_at: string
-          currency_snapshot: string
-          distribution_order_id: string
-          id: string
-          issued_at: string
-          status: string
-          ticket_id: string
-          unit_price_ex_vat_snapshot: number
-          user_id: string
-          user_voucher_id: string
-          vat_rate_percent_snapshot: number
-          voucher_code_id: string
-          voucher_id: string
-          voucher_version_id: string
-        }
-        Insert: {
-          billable: boolean
-          billing_reason: string
-          created_at?: string
-          currency_snapshot?: string
-          distribution_order_id: string
-          id?: string
-          issued_at?: string
-          status?: string
-          ticket_id: string
-          unit_price_ex_vat_snapshot: number
-          user_id: string
-          user_voucher_id: string
-          vat_rate_percent_snapshot?: number
-          voucher_code_id: string
-          voucher_id: string
-          voucher_version_id: string
-        }
-        Update: {
-          billable?: boolean
-          billing_reason?: string
-          created_at?: string
-          currency_snapshot?: string
-          distribution_order_id?: string
-          id?: string
-          issued_at?: string
-          status?: string
-          ticket_id?: string
-          unit_price_ex_vat_snapshot?: number
-          user_id?: string
-          user_voucher_id?: string
-          vat_rate_percent_snapshot?: number
-          voucher_code_id?: string
-          voucher_id?: string
-          voucher_version_id?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "voucher_issuances_distribution_order_id_fkey"
-            columns: ["distribution_order_id"]
-            isOneToOne: false
-            referencedRelation: "voucher_distribution_orders"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "voucher_issuances_ticket_id_fkey"
-            columns: ["ticket_id"]
-            isOneToOne: true
-            referencedRelation: "tickets"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "voucher_issuances_user_id_fkey"
-            columns: ["user_id"]
-            isOneToOne: false
-            referencedRelation: "users"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "voucher_issuances_user_voucher_id_fkey"
-            columns: ["user_voucher_id"]
-            isOneToOne: true
-            referencedRelation: "user_vouchers"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "voucher_issuances_voucher_code_id_fkey"
-            columns: ["voucher_code_id"]
-            isOneToOne: true
-            referencedRelation: "voucher_codes"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "voucher_issuances_voucher_id_fkey"
-            columns: ["voucher_id"]
-            isOneToOne: false
-            referencedRelation: "vouchers"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "voucher_issuances_voucher_version_id_fkey"
-            columns: ["voucher_version_id"]
-            isOneToOne: false
-            referencedRelation: "voucher_versions"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      voucher_versions: {
-        Row: {
-          approved_at: string | null
-          approved_by: string | null
-          approved_code_count: number | null
-          banner_url: string | null
-          benefit_kind: string
-          benefit_value: number | null
-          code_source: string
-          created_at: string
-          created_by: string | null
-          currency: string
-          customer_price_miocoins: number | null
-          decision_reason: string | null
-          how_to_use_text: string
-          id: string
-          image_url: string | null
-          minimum_purchase_amount: number | null
-          name: string
-          rejected_at: string | null
-          rejected_by: string | null
-          requested_code_count: number
-          short_description: string | null
-          status: string
-          submitted_at: string | null
-          submitted_by: string | null
-          terms_text: string
-          updated_at: string
-          usage_description: string | null
-          valid_from: string | null
-          valid_until: string | null
-          version_number: number
-          voucher_id: string
-        }
-        Insert: {
-          approved_at?: string | null
-          approved_by?: string | null
-          approved_code_count?: number | null
-          banner_url?: string | null
-          benefit_kind: string
-          benefit_value?: number | null
-          code_source: string
-          created_at?: string
-          created_by?: string | null
-          currency?: string
-          customer_price_miocoins?: number | null
-          decision_reason?: string | null
-          how_to_use_text: string
-          id?: string
-          image_url?: string | null
-          minimum_purchase_amount?: number | null
-          name: string
-          rejected_at?: string | null
-          rejected_by?: string | null
-          requested_code_count: number
-          short_description?: string | null
-          status?: string
-          submitted_at?: string | null
-          submitted_by?: string | null
-          terms_text: string
-          updated_at?: string
-          usage_description?: string | null
-          valid_from?: string | null
-          valid_until?: string | null
-          version_number: number
-          voucher_id: string
-        }
-        Update: {
-          approved_at?: string | null
-          approved_by?: string | null
-          approved_code_count?: number | null
-          banner_url?: string | null
-          benefit_kind?: string
-          benefit_value?: number | null
-          code_source?: string
-          created_at?: string
-          created_by?: string | null
-          currency?: string
-          customer_price_miocoins?: number | null
-          decision_reason?: string | null
-          how_to_use_text?: string
-          id?: string
-          image_url?: string | null
-          minimum_purchase_amount?: number | null
-          name?: string
-          rejected_at?: string | null
-          rejected_by?: string | null
-          requested_code_count?: number
-          short_description?: string | null
-          status?: string
-          submitted_at?: string | null
-          submitted_by?: string | null
-          terms_text?: string
-          updated_at?: string
-          usage_description?: string | null
-          valid_from?: string | null
-          valid_until?: string | null
-          version_number?: number
-          voucher_id?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "voucher_versions_voucher_id_fkey"
-            columns: ["voucher_id"]
-            isOneToOne: false
-            referencedRelation: "vouchers"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
       vouchers: {
         Row: {
-          approved_at: string | null
-          approved_by: string | null
           banner_url: string | null
           created_at: string
-          current_approved_version_id: string | null
-          decision_reason: string | null
-          distribution_mode: string
           end_date: string | null
           how_to_use_text: string | null
           id: string
@@ -6456,29 +4719,18 @@ export type Database = {
           is_public: boolean
           max_quantity: number | null
           name: string
-          partner_id: string | null
           redeem_price_vouchers: number
           redeemed_count: number
-          rejected_at: string | null
-          rejected_by: string | null
           short_description: string | null
           start_date: string | null
-          submitted_at: string | null
-          submitted_by: string | null
           terms_text: string | null
           updated_at: string | null
           usage_description: string | null
           user_id: string | null
-          workflow_status: string
         }
         Insert: {
-          approved_at?: string | null
-          approved_by?: string | null
           banner_url?: string | null
           created_at?: string
-          current_approved_version_id?: string | null
-          decision_reason?: string | null
-          distribution_mode?: string
           end_date?: string | null
           how_to_use_text?: string | null
           id?: string
@@ -6486,29 +4738,18 @@ export type Database = {
           is_public?: boolean
           max_quantity?: number | null
           name?: string
-          partner_id?: string | null
           redeem_price_vouchers?: number
           redeemed_count?: number
-          rejected_at?: string | null
-          rejected_by?: string | null
           short_description?: string | null
           start_date?: string | null
-          submitted_at?: string | null
-          submitted_by?: string | null
           terms_text?: string | null
           updated_at?: string | null
           usage_description?: string | null
           user_id?: string | null
-          workflow_status?: string
         }
         Update: {
-          approved_at?: string | null
-          approved_by?: string | null
           banner_url?: string | null
           created_at?: string
-          current_approved_version_id?: string | null
-          decision_reason?: string | null
-          distribution_mode?: string
           end_date?: string | null
           how_to_use_text?: string | null
           id?: string
@@ -6516,43 +4757,16 @@ export type Database = {
           is_public?: boolean
           max_quantity?: number | null
           name?: string
-          partner_id?: string | null
           redeem_price_vouchers?: number
           redeemed_count?: number
-          rejected_at?: string | null
-          rejected_by?: string | null
           short_description?: string | null
           start_date?: string | null
-          submitted_at?: string | null
-          submitted_by?: string | null
           terms_text?: string | null
           updated_at?: string | null
           usage_description?: string | null
           user_id?: string | null
-          workflow_status?: string
         }
         Relationships: [
-          {
-            foreignKeyName: "vouchers_current_approved_version_id_fkey"
-            columns: ["current_approved_version_id"]
-            isOneToOne: false
-            referencedRelation: "voucher_versions"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "vouchers_partner_id_fkey"
-            columns: ["partner_id"]
-            isOneToOne: false
-            referencedRelation: "partners"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "vouchers_partner_id_fkey"
-            columns: ["partner_id"]
-            isOneToOne: false
-            referencedRelation: "public_partners"
-            referencedColumns: ["id"]
-          },
           {
             foreignKeyName: "vouchers_user_id_fkey"
             columns: ["user_id"]
@@ -7647,11 +5861,6 @@ export type Database = {
         }
         Returns: Json
       }
-      assert_admin_validation_rpc_allowed: { Args: never; Returns: undefined }
-      assign_contest_ticket_atomic: {
-        Args: { p_contest_id: string; p_user_id: string }
-        Returns: Json
-      }
       assign_partner_offer_to_ticket: {
         Args: { p_contest_id: string; p_ticket_id?: string; p_user_id: string }
         Returns: string
@@ -7689,19 +5898,7 @@ export type Database = {
             Returns: undefined
           }
         | { Args: { p_bonus_prize_id: string }; Returns: undefined }
-      claim_partner_invoice_for_auto_send: {
-        Args: { p_invoice_id: string }
-        Returns: boolean
-      }
       close_contest: { Args: { p_contest_id: string }; Returns: undefined }
-      compute_partner_reward: {
-        Args: {
-          p_items?: Json
-          p_order_total_czk: number
-          p_partner_id: string
-        }
-        Returns: Json
-      }
       create_affiliate_payout_batch: {
         Args: { p_commission_ids: string[] }
         Returns: Json
@@ -7731,12 +5928,7 @@ export type Database = {
         Args: { p_partner_id: string }
         Returns: string
       }
-      create_partner_invoices_for_last_week: {
-        Args: never
-        Returns: {
-          invoice_id: string
-        }[]
-      }
+      create_partner_invoices_for_last_week: { Args: never; Returns: undefined }
       create_partner_invoices_for_period: {
         Args: { p_period_from: string; p_period_to: string }
         Returns: undefined
@@ -7749,7 +5941,6 @@ export type Database = {
         Args: {
           p_customer_email: string
           p_external_order_id: string
-          p_items?: Json
           p_metadata?: Json
           p_order_total_czk: number
           p_partner_id: string
@@ -7788,10 +5979,6 @@ export type Database = {
             }
             Returns: undefined
           }
-      enqueue_send_push_edge_request: {
-        Args: { p_push_log_id: string }
-        Returns: number
-      }
       ensure_referral_code: { Args: { p_user_id: string }; Returns: string }
       ensure_wallet_exists: { Args: { p_user_id: string }; Returns: undefined }
       finalize_affiliate_bank_export: {
@@ -7816,7 +6003,6 @@ export type Database = {
         }
         Returns: Json
       }
-      finalize_stripe_refund: { Args: { p_payment_id: string }; Returns: Json }
       fn_close_contest: { Args: { p_contest: string }; Returns: undefined }
       forward_event_to_sofinity: {
         Args: { v_payload: Json }
@@ -7926,20 +6112,6 @@ export type Database = {
         }[]
       }
       get_admin_top_bar_stats: { Args: never; Returns: Json }
-      get_admin_users_overview: {
-        Args: never
-        Returns: {
-          created_at: string
-          email: string
-          first_name: string
-          full_name: string
-          has_user_role: boolean
-          is_partner_account: boolean
-          last_name: string
-          role: string
-          user_id: string
-        }[]
-      }
       get_available_vouchers: {
         Args: { p_user_id?: string }
         Returns: {
@@ -8003,13 +6175,13 @@ export type Database = {
         Returns: number
       }
       get_contest_progress_admin: {
-        Args: { p_contest_ids?: string[] }
+        Args: { p_contest_ids?: string[] | null }
         Returns: {
           contest_id: string
-          sold_percent: number
-          tickets_remaining: number
-          tickets_sold: number
-          tickets_total: number
+          sold_percent: number | null
+          tickets_remaining: number | null
+          tickets_sold: number | null
+          tickets_total: number | null
         }[]
       }
       get_contests_json: { Args: never; Returns: Json }
@@ -8029,10 +6201,6 @@ export type Database = {
           valid_to: string
         }[]
       }
-      get_guaranteed_benefit_offer: {
-        Args: { p_contest_id: string }
-        Returns: Json
-      }
       get_latest_winners: {
         Args: { winners_limit?: number }
         Returns: {
@@ -8046,35 +6214,6 @@ export type Database = {
           type: string
           user_avatar_url: string
           user_id: string
-          user_name: string
-          user_nickname: string
-        }[]
-      }
-      get_latest_winners_homepage_public: {
-        Args: { winners_limit?: number }
-        Returns: {
-          contest_title: string
-          created_at: string
-          prize_image_url: string
-          prize_name: string
-          public_id: string
-          type: string
-          user_avatar_url: string
-          user_name: string
-          user_nickname: string
-        }[]
-      }
-      get_latest_winners_public: {
-        Args: { winners_limit?: number }
-        Returns: {
-          contest_title: string
-          created_at: string
-          prize_image_url: string
-          prize_name: string
-          public_id: string
-          ticket_number: number
-          type: string
-          user_avatar_url: string
           user_name: string
           user_nickname: string
         }[]
@@ -8162,7 +6301,6 @@ export type Database = {
         Returns: undefined
       }
       is_admin: { Args: never; Returns: boolean }
-      is_partner_invoice_auto_send_enabled: { Args: never; Returns: boolean }
       is_self_referral: {
         Args: { p_referred_user_id: string; p_referrer_user_id: string }
         Returns: boolean
@@ -8205,23 +6343,6 @@ export type Database = {
         Returns: undefined
       }
       mark_wins_as_seen: { Args: never; Returns: undefined }
-      meta_broker_get_page_access_token: { Args: never; Returns: string }
-      meta_broker_get_runtime_config: {
-        Args: never
-        Returns: {
-          broker_key_sha256: string
-          instagram_account_id: string
-          page_id: string
-        }[]
-      }
-      meta_broker_set_client_key_hash: {
-        Args: { p_sha256: string }
-        Returns: undefined
-      }
-      meta_broker_store_page_access_token: {
-        Args: { p_token: string }
-        Returns: undefined
-      }
       next_affiliate_payout_document_number: { Args: never; Returns: string }
       notify_sofinity_event: {
         Args: {
@@ -8268,7 +6389,6 @@ export type Database = {
         Args: { p_commission_id: string }
         Returns: Json
       }
-      prepare_stripe_refund: { Args: { p_payment_id: string }; Returns: Json }
       process_event_queue_miocoin: { Args: never; Returns: undefined }
       process_push_retries: { Args: never; Returns: undefined }
       process_referral_inactivity: { Args: never; Returns: number }
@@ -8289,14 +6409,6 @@ export type Database = {
           status_code: number
         }[]
       }
-      purchase_guaranteed_benefit_bundle_atomic: {
-        Args: {
-          p_contest_id: string
-          p_idempotency_key: string
-          p_user_id: string
-        }
-        Returns: Json
-      }
       recalculate_bonus_wallet: { Args: never; Returns: undefined }
       record_affiliate_company_ref: {
         Args: { p_partner_id: string; p_via_code: string }
@@ -8308,10 +6420,6 @@ export type Database = {
       }
       record_affiliate_customer_ref: {
         Args: { p_ref_code: string }
-        Returns: Json
-      }
-      record_stripe_refund_status: {
-        Args: { p_payment_id: string; p_refund_id: string; p_status: string }
         Returns: Json
       }
       redeem_miocoin: {
@@ -8356,20 +6464,12 @@ export type Database = {
             }
             Returns: Json
           }
-      release_partner_invoice_auto_send_claim: {
-        Args: { p_invoice_id: string }
-        Returns: undefined
-      }
       request_partner_invoice_pdf: {
         Args: { p_invoice_id: string }
         Returns: undefined
       }
       resolve_partner_by_api_key: { Args: { p_key: string }; Returns: string }
       resume_contest: { Args: { contest_id: string }; Returns: undefined }
-      reverse_failed_stripe_refund: {
-        Args: { p_payment_id: string; p_stripe_status?: string }
-        Returns: Json
-      }
       revise_partner_offer: { Args: { p_offer_id: string }; Returns: undefined }
       rotate_partner_api_key: {
         Args: { p_partner_id: string }
@@ -8379,10 +6479,6 @@ export type Database = {
         }[]
       }
       run_complete_admin_test_suite: { Args: never; Returns: Json }
-      run_complete_admin_test_suite_internal_20260718195819: {
-        Args: never
-        Returns: Json
-      }
       run_deep_sofinity_test_suite: {
         Args: { p_performance_events?: number }
         Returns: Json
@@ -8391,49 +6487,11 @@ export type Database = {
         Args: { p_period_from: string; p_period_to: string }
         Returns: undefined
       }
-      run_partner_invoice_weekly_automation: { Args: never; Returns: undefined }
       run_pipeline_alerts: { Args: never; Returns: undefined }
-      run_process_email_queue_cron: { Args: never; Returns: Json }
-      run_sales_lead_discovery_scheduler: { Args: never; Returns: Json }
-      run_sales_lead_discovery_worker: { Args: never; Returns: undefined }
-      run_sales_lead_email_batch_worker_cron: { Args: never; Returns: number }
-      run_send_offer_reminders_cron: { Args: never; Returns: Json }
       run_shoptet_cron_imports: { Args: never; Returns: Json }
       safe_send_message: {
         Args: { p_content: string; p_sender: string; p_user_id: string }
         Returns: undefined
-      }
-      sales_lead_approve_proposed: {
-        Args: {
-          p_address: string
-          p_city: string
-          p_company_name: string
-          p_company_size: string
-          p_contact_email: string
-          p_contact_person: string
-          p_contact_phone: string
-          p_contact_role: string
-          p_dic: string
-          p_duplicate_override?: boolean
-          p_duplicate_override_reason?: string
-          p_email_source: string
-          p_email_verified_by_admin: boolean
-          p_ico: string
-          p_industry: string
-          p_lead_id: string
-          p_notes: string
-          p_website: string
-        }
-        Returns: Json
-      }
-      sales_lead_autosave_draft: {
-        Args: {
-          p_body: string
-          p_client_updated_at: string
-          p_lead_id: string
-          p_subject: string
-        }
-        Returns: Json
       }
       sales_lead_check_duplicate: {
         Args: { p_contact_email: string; p_exclude_lead_id?: string }
@@ -8462,187 +6520,12 @@ export type Database = {
       }
       sales_lead_delete: { Args: { p_lead_id: string }; Returns: Json }
       sales_lead_delete_bulk: { Args: { p_lead_ids: string[] }; Returns: Json }
-      sales_lead_discovery_job_create: {
-        Args: { p_lead_group: string; p_requested_count: number }
-        Returns: Json
-      }
-      sales_lead_discovery_job_stop: { Args: { p_id: string }; Returns: Json }
       sales_lead_duplicate_matches: {
         Args: { p_contact_email: string; p_exclude_lead_id?: string }
         Returns: Json
       }
-      sales_lead_email_automation_set_enabled: {
-        Args: { p_enabled: boolean }
-        Returns: Json
-      }
-      sales_lead_email_batch_activate: {
-        Args: { p_batch_id: string }
-        Returns: Json
-      }
-      sales_lead_email_batch_activate_admin: {
-        Args: { p_batch_id: string }
-        Returns: Json
-      }
-      sales_lead_email_batch_agent_run: {
-        Args: { p_requested_count: number; p_scheduled_date: string }
-        Returns: Json
-      }
-      sales_lead_email_batch_cancel: {
-        Args: { p_batch_id: string; p_reason: string }
-        Returns: Json
-      }
-      sales_lead_email_batch_check_one: {
-        Args: { p_lead_id: string; p_template_id: string }
-        Returns: Json
-      }
-      sales_lead_email_batch_claim_next: { Args: never; Returns: Json }
-      sales_lead_email_batch_create: {
-        Args: {
-          p_idempotency_key: string
-          p_lead_ids: string[]
-          p_scheduled_date: string
-          p_template_id: string
-        }
-        Returns: Json
-      }
-      sales_lead_email_batch_item_record_failure: {
-        Args: {
-          p_batch_item_id: string
-          p_error_code: string
-          p_outcome: string
-        }
-        Returns: Json
-      }
-      sales_lead_email_batch_prepare_paused: {
-        Args: {
-          p_idempotency_key: string
-          p_lead_ids: string[]
-          p_scheduled_date: string
-          p_template_id: string
-        }
-        Returns: Json
-      }
-      sales_lead_email_batch_preview: {
-        Args: {
-          p_lead_ids: string[]
-          p_scheduled_date: string
-          p_template_id: string
-        }
-        Returns: Json
-      }
-      sales_lead_email_batch_recalculate_status: {
-        Args: { p_batch_id: string }
-        Returns: string
-      }
-      sales_lead_email_batch_render_emphasis_html: {
-        Args: { p_value: string }
-        Returns: string
-      }
-      sales_lead_email_batch_render_html: {
-        Args: { p_value: string }
-        Returns: string
-      }
-      sales_lead_email_batch_render_inline_html: {
-        Args: { p_value: string }
-        Returns: string
-      }
-      sales_lead_email_batch_render_source: {
-        Args: {
-          p_city: string
-          p_company_name: string
-          p_contact_person: string
-          p_contact_role: string
-          p_value: string
-          p_website: string
-        }
-        Returns: string
-      }
-      sales_lead_email_batch_render_text: {
-        Args: { p_value: string }
-        Returns: string
-      }
-      sales_lead_email_batch_schedule_window: {
-        Args: {
-          p_item_count: number
-          p_now?: string
-          p_scheduled_date: string
-          p_timezone: string
-          p_window_end: string
-          p_window_start: string
-        }
-        Returns: Json
-      }
-      sales_lead_email_response_submit: {
-        Args: {
-          p_action: string
-          p_name?: string
-          p_phone?: string
-          p_token_hash: string
-        }
-        Returns: Json
-      }
       sales_lead_email_send_guard: {
         Args: { p_lead_id: string }
-        Returns: Json
-      }
-      sales_lead_email_template_set_active: {
-        Args: { p_id: string; p_is_active: boolean }
-        Returns: Json
-      }
-      sales_lead_email_template_upsert: {
-        Args: {
-          p_body: string
-          p_id: string
-          p_name: string
-          p_sort_order?: number
-          p_subject: string
-          p_template_type: string
-        }
-        Returns: Json
-      }
-      sales_lead_group_create: { Args: { p_label: string }; Returns: Json }
-      sales_lead_group_slugify: { Args: { p_label: string }; Returns: string }
-      sales_lead_initial_email_already_recorded: {
-        Args: {
-          p_exclude_delivery_id?: string
-          p_lead_id: string
-          p_recipient: string
-        }
-        Returns: boolean
-      }
-      sales_lead_initial_email_claim: {
-        Args: {
-          p_attachment_metadata: Json
-          p_batch_item_id: string
-          p_body_html: string
-          p_body_source: string
-          p_body_text: string
-          p_delivery_key: string
-          p_lead_id: string
-          p_mode: string
-          p_outbound_capture_id: string
-          p_performed_by: string
-          p_recipient: string
-          p_request_fingerprint: string
-          p_subject: string
-        }
-        Returns: Json
-      }
-      sales_lead_initial_email_commit: {
-        Args: { p_delivery_id: string }
-        Returns: Json
-      }
-      sales_lead_initial_email_record_provider_result: {
-        Args: {
-          p_delivery_id: string
-          p_error_code?: string
-          p_provider_message_id?: string
-          p_result: string
-        }
-        Returns: Json
-      }
-      sales_lead_issue_manual_response_token: {
-        Args: { p_lead_id: string; p_recipient: string }
         Returns: Json
       }
       sales_lead_log_activity: {
@@ -8668,25 +6551,14 @@ export type Database = {
         Args: { p_lead_id: string }
         Returns: Json
       }
-      sales_lead_normalize_domain: {
-        Args: { p_value: string }
-        Returns: string
-      }
       sales_lead_overview: {
         Args: { p_from?: string; p_to?: string }
         Returns: Json
       }
-      sales_lead_partner_match_reason: {
-        Args: { p_email: string; p_ico?: string; p_website: string }
-        Returns: string
-      }
-      sales_lead_pick_discovery_owner: { Args: never; Returns: string }
-      sales_lead_pick_next_discovery_group: { Args: never; Returns: string }
       sales_lead_propose: {
         Args: {
           p_city?: string
           p_company_name: string
-          p_contact_email?: string
           p_created_by: string
           p_discovery_meta?: Json
           p_discovery_source: string
@@ -8704,6 +6576,18 @@ export type Database = {
           p_email: string
           p_lead_id: string
           p_proposed_by?: string
+          p_source_url: string
+        }
+        Returns: Json
+      }
+      sales_lead_store_backend_verified_contact: {
+        Args: {
+          p_created_by: string
+          p_email: string
+          p_expected_updated_at: string
+          p_expected_website: string
+          p_expected_website_verified_at: string
+          p_lead_id: string
           p_source_url: string
         }
         Returns: Json
@@ -8735,17 +6619,12 @@ export type Database = {
         }
         Returns: undefined
       }
-      sales_lead_response_overview: { Args: never; Returns: Json }
       sales_lead_review_contact: {
         Args: { p_decision: string; p_lead_id: string }
         Returns: Json
       }
       sales_lead_save_draft: {
         Args: { p_body: string; p_lead_id: string; p_subject: string }
-        Returns: Json
-      }
-      sales_lead_scheduled_activity_reschedule: {
-        Args: { p_activity_id: string; p_scheduled_for: string }
         Returns: Json
       }
       sales_lead_scheduled_activity_set_status: {
@@ -8766,43 +6645,18 @@ export type Database = {
         Args: { p_lead_id: string; p_new_status: string; p_reason?: string }
         Returns: Json
       }
-      sales_lead_store_backend_verified_contact: {
-        Args: {
-          p_created_by: string
-          p_email: string
-          p_expected_updated_at: string
-          p_expected_website: string
-          p_expected_website_verified_at: string
-          p_lead_id: string
-          p_source_url: string
-        }
-        Returns: Json
-      }
       sales_lead_task_create: {
         Args: {
           p_assigned_admin_id: string
           p_due_at: string
           p_lead_id: string
           p_note?: string
-          p_task_type?: string
           p_title: string
         }
         Returns: Json
       }
-      sales_lead_task_reschedule: {
-        Args: { p_due_at: string; p_task_id: string }
-        Returns: Json
-      }
       sales_lead_task_set_status: {
         Args: { p_status: string; p_task_id: string }
-        Returns: Json
-      }
-      sales_lead_unassigned_email_assign: {
-        Args: { p_email_id: string; p_lead_id: string }
-        Returns: Json
-      }
-      sales_lead_unassigned_email_set_status: {
-        Args: { p_email_id: string; p_note?: string; p_status: string }
         Returns: Json
       }
       sales_lead_update_discovery: {
@@ -8837,42 +6691,6 @@ export type Database = {
         }
         Returns: Json
       }
-      sales_lead_work_intake_claim: {
-        Args: { p_run_id: string }
-        Returns: Json
-      }
-      sales_lead_work_intake_commit: {
-        Args: {
-          p_domain: string
-          p_email: string
-          p_evidence: Json
-          p_item_id: string
-          p_source_url: string
-          p_website: string
-        }
-        Returns: Json
-      }
-      sales_lead_work_intake_finish_item: {
-        Args: {
-          p_evidence?: Json
-          p_item_id: string
-          p_outcome: string
-          p_reason: string
-        }
-        Returns: Json
-      }
-      sales_lead_work_intake_refresh: {
-        Args: { p_run_id: string }
-        Returns: undefined
-      }
-      sales_lead_work_intake_submit: {
-        Args: {
-          p_external_batch_id: string
-          p_items: Json
-          p_request_fingerprint: string
-        }
-        Returns: Json
-      }
       send_push_via_onesignal: {
         Args: {
           p_message: string
@@ -8901,51 +6719,12 @@ export type Database = {
         Returns: undefined
       }
       setup_crud_test_data: { Args: { p_user_email?: string }; Returns: Json }
-      setup_crud_test_data_internal_20260718195819: {
-        Args: { p_user_email?: string }
-        Returns: Json
-      }
       store_shoptet_pending_url: {
         Args: { p_request_id: string; p_url: string }
         Returns: string
       }
-      superadmin_review_guaranteed_benefit_version: {
-        Args: {
-          p_approved_code_count?: number
-          p_decision: string
-          p_reason?: string
-          p_version_id: string
-        }
-        Returns: undefined
-      }
-      superadmin_review_voucher_distribution_order: {
-        Args: {
-          p_order_id: string
-          p_price_rule_id?: string
-          p_reason?: string
-          p_status: string
-        }
-        Returns: undefined
-      }
-      superadmin_set_guaranteed_benefit_status: {
-        Args: { p_reason: string; p_status: string; p_voucher_id: string }
-        Returns: undefined
-      }
-      superadmin_set_voucher_distribution_price: {
-        Args: {
-          p_currency?: string
-          p_partner_id: string
-          p_unit_price_ex_vat: number
-          p_vat_rate_percent?: number
-        }
-        Returns: string
-      }
       sync_partner_offer_activations: { Args: never; Returns: Json }
       test_admin_crud_operations: { Args: never; Returns: Json }
-      test_admin_crud_operations_internal_20260718195819: {
-        Args: never
-        Returns: Json
-      }
       test_admin_security_rls: { Args: never; Returns: Json }
       test_audit_logging: { Args: never; Returns: Json }
       test_deep_data_integrity: { Args: never; Returns: Json }
@@ -9065,10 +6844,6 @@ export type Database = {
           sample_metadata: Json
         }[]
       }
-      verify_internal_function_token: {
-        Args: { p_token: string }
-        Returns: boolean
-      }
       verify_partner_api_key: {
         Args: { p_api_key: string }
         Returns: {
@@ -9077,11 +6852,6 @@ export type Database = {
         }[]
       }
       verify_shoptet_cron_token: { Args: { p_token: string }; Returns: boolean }
-      voucher_audit_has_raw_code_key: {
-        Args: { payload: Json }
-        Returns: boolean
-      }
-      winner_email_html_escape: { Args: { p_value: string }; Returns: string }
     }
     Enums: {
       app_role: "admin" | "superadmin" | "user"
