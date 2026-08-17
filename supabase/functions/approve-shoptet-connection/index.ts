@@ -93,12 +93,118 @@ Deno.serve(async (req) => {
   // ── 4. Load submitted request ──────────────────────────────────────────────
   const { data: scr, error: scrErr } = await admin
     .from("shoptet_connection_requests")
-    .select("id, partner_id, trigger_status, status")
+    .select("id, partner_id, trigger_status, status, request_kind")
     .eq("id", request_id)
     .eq("status", "submitted")
     .maybeSingle();
   if (scrErr) { console.error("scr lookup:", scrErr.message); return err(500, "internal_error", "Internal error"); }
   if (!scr) return err(404, "request_not_found", "No submitted request found with this id");
+
+  const requestKind = (scr.request_kind as string | null) ?? "initial";
+
+  // ── 5a-change. APPROVE a URL CHANGE ────────────────────────────────────────
+  // Deliberately separate from the onboarding branch. Approving a change must swap
+  // the Vault URL and NOTHING else: the partner is already live, so re-applying
+  // onboarding defaults here would silently rewrite settings an admin may have
+  // tuned since (delivery mode, reward trigger, import enabled).
+  if (action === "approve" && requestKind === "url_change") {
+    const expectedKeyName = "shoptet_export_url_" + scr.partner_id.replace(/-/g, "");
+
+    // The promote RPC writes into the partner's permanent key. If the partner row
+    // points somewhere else, promoting would update a key the importer never reads
+    // and the change would look applied while imports kept using the old URL.
+    const { data: partnerRow, error: partnerReadErr } = await admin
+      .from("partners")
+      .select("shoptet_export_secret_name, shoptet_import_enabled")
+      .eq("id", scr.partner_id)
+      .maybeSingle();
+    if (partnerReadErr) {
+      console.error("partner read:", partnerReadErr.message);
+      return err(500, "internal_error", "Internal error");
+    }
+    if (!partnerRow || partnerRow.shoptet_export_secret_name !== expectedKeyName) {
+      return err(
+        409,
+        "partner_key_mismatch",
+        "Partner is not pointed at the expected Shoptet Vault key",
+      );
+    }
+
+    // Swap the URL inside the existing key. Until this line the old URL is live;
+    // after it the new one is, with no window where the partner has no URL.
+    const { error: promoteErr } = await admin.rpc("promote_shoptet_pending_url", {
+      p_request_id: request_id,
+      p_partner_id: scr.partner_id,
+    });
+    if (promoteErr) {
+      console.error("vault promote (change):", promoteErr.message);
+      // Nothing was written — the old URL is untouched and imports keep working.
+      return err(500, "vault_error", "Failed to apply the new export URL");
+    }
+
+    // partners: intentionally NOT updated. shoptet_export_secret_name already
+    // holds expectedKeyName, and every other column must survive a URL change.
+
+    const { error: scrUpdateErr } = await admin
+      .from("shoptet_connection_requests")
+      .update({
+        status: "approved",
+        reviewed_at: new Date().toISOString(),
+        reviewed_by: user.id,
+      })
+      .eq("id", request_id)
+      .eq("status", "submitted"); // race guard
+    if (scrUpdateErr) {
+      console.error("scr change approved:", scrUpdateErr.message);
+      // The URL is already swapped; the row is the only thing out of step.
+      console.warn("export URL swapped but request row not updated for partner", scr.partner_id);
+      return err(500, "status_update_error", "Failed to close the change request");
+    }
+
+    try {
+      const { data: p } = await admin
+        .from("partners")
+        .select("auth_user_id, name")
+        .eq("id", scr.partner_id)
+        .maybeSingle();
+      if (p?.auth_user_id) {
+        const { data: authUser } = await admin.auth.admin.getUserById(p.auth_user_id);
+        const partnerEmail = authUser?.user?.email;
+        const partnerName = p.name ?? "Partner";
+        if (partnerEmail) {
+          await admin.from("email_queue").insert({
+            email: partnerEmail,
+            subject: "Nový exportní odkaz Shoptetu byl schválen",
+            body: renderOneMilEmail({
+              preheader: "Váš nový Shoptet exportní odkaz je aktivní.",
+              eyebrow: "Shoptet propojení",
+              title: "Nový exportní odkaz je aktivní",
+              bodyHtml: `
+                <p style="margin:0 0 16px;">Dobrý den, <strong>${escapeEmailHtml(partnerName)}</strong>,</p>
+                <p style="margin:0 0 16px;">váš nový exportní odkaz Shoptetu byl schválen a od této chvíle se objednávky načítají z něj.</p>
+                <p style="margin:0;">Ostatní nastavení propojení zůstávají beze změny.</p>
+              `,
+              action: {
+                label: "Otevřít partnerský portál",
+                url: "https://onemil.cz/partner/dashboard",
+              },
+              footerNote: "Nastavení propojení můžete kdykoli zkontrolovat v partnerském portálu.",
+            }),
+          });
+        }
+      }
+    } catch (notifErr) {
+      console.warn("change notification skipped:", (notifErr as Error).message);
+    }
+
+    return ok({
+      success: true,
+      request_id,
+      status: "approved",
+      request_kind: "url_change",
+      import_enabled: partnerRow.shoptet_import_enabled,
+    });
+  }
 
   // ── 5a. APPROVE ────────────────────────────────────────────────────────────
   if (action === "approve") {
@@ -189,10 +295,18 @@ Deno.serve(async (req) => {
   }
 
   // ── 5b. REJECT ─────────────────────────────────────────────────────────────
+  // Shared by both kinds, and correct for both without branching: only the PENDING
+  // key is removed. For a url_change that means the live export URL is left exactly
+  // as it was and imports carry on from the old link.
   // Delete pending Vault key (best-effort; key is encrypted, lingering is safe but wasteful).
-  await admin.rpc("delete_shoptet_pending_url", { p_request_id: request_id }).catch((e: Error) => {
-    console.warn("vault delete:", e.message);
-  });
+  // try/catch, not .catch(): a PostgrestBuilder is a thenable but exposes no .catch,
+  // so chaining one throws a TypeError and turns a recoverable cleanup failure into
+  // a crashed request.
+  try {
+    await admin.rpc("delete_shoptet_pending_url", { p_request_id: request_id });
+  } catch (e) {
+    console.warn("vault delete:", (e as Error).message);
+  }
 
   // Transition request: submitted → rejected
   const { error: scrRejectErr } = await admin
@@ -212,7 +326,9 @@ Deno.serve(async (req) => {
     return err(500, "status_update_error", "Failed to set request rejected");
   }
 
-  // partners: NO changes — shoptet_import_enabled stays false, delivery stays 'partner' (default).
+  // partners: NO changes. For an initial request that leaves shoptet_import_enabled
+  // false and delivery 'partner' (defaults); for a url_change it leaves the live
+  // connection completely untouched.
 
   // Best-effort rejection notification.
   try {
@@ -254,5 +370,5 @@ Deno.serve(async (req) => {
     console.warn("rejection notification skipped:", (notifErr as Error).message);
   }
 
-  return ok({ success: true, request_id, status: "rejected" });
+  return ok({ success: true, request_id, status: "rejected", request_kind: requestKind });
 });

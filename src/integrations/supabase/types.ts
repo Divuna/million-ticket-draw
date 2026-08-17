@@ -3964,6 +3964,7 @@ export type Database = {
           partner_id: string
           partner_note: string | null
           rejection_reason: string | null
+          request_kind: string
           reviewed_at: string | null
           reviewed_by: string | null
           reward_czk: number
@@ -3981,6 +3982,7 @@ export type Database = {
           partner_id: string
           partner_note?: string | null
           rejection_reason?: string | null
+          request_kind?: string
           reviewed_at?: string | null
           reviewed_by?: string | null
           reward_czk: number
@@ -3998,6 +4000,7 @@ export type Database = {
           partner_id?: string
           partner_note?: string | null
           rejection_reason?: string | null
+          request_kind?: string
           reviewed_at?: string | null
           reviewed_by?: string | null
           reward_czk?: number

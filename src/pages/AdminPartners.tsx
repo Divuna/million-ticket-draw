@@ -99,6 +99,10 @@ interface ShoptetRequest {
   created_at: string;
   partner_name: string | null;
   partner_email: string | null;
+  // 'initial' = first connection, 'url_change' = swapping the export URL of an
+  // already active connection. The two are approved very differently, so the card
+  // has to say which one the admin is looking at.
+  request_kind: string;
 }
 
 const shoptetTriggerLabels: Record<string, string> = {
@@ -204,7 +208,7 @@ const AdminPartners = () => {
       const { data, error } = await supabase
         .from("shoptet_connection_requests")
         .select(
-          "id, partner_id, shop_name, trigger_status, reward_czk, reward_mc, url_received, status, partner_note, submitted_at, created_at, partners(name, contact_email)"
+          "id, partner_id, shop_name, trigger_status, reward_czk, reward_mc, url_received, status, partner_note, submitted_at, created_at, request_kind, partners(name, contact_email)"
         )
         .eq("status", "submitted")
         .order("submitted_at", { ascending: true });
@@ -227,6 +231,7 @@ const AdminPartners = () => {
           created_at: r.created_at as string,
           partner_name: partner?.name ?? null,
           partner_email: partner?.contact_email ?? null,
+          request_kind: (r.request_kind as string | null) ?? "initial",
         };
       });
       setShoptetRequests(mapped);
@@ -853,8 +858,27 @@ const AdminPartners = () => {
                 ) : (
                   <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
                     {shoptetRequests.map((req) => (
-                      <Card key={req.id} className="border-border/50">
+                      <Card
+                        key={req.id}
+                        data-testid={`shoptet-request-${req.request_kind}`}
+                        className={
+                          req.request_kind === "url_change"
+                            ? "border-amber-500/40 bg-amber-500/[0.03]"
+                            : "border-border/50"
+                        }
+                      >
                         <CardHeader className="pb-2">
+                          {/* Approving a change swaps a live partner's export URL, so the
+                              kind is called out before anything else on the card. */}
+                          {req.request_kind === "url_change" ? (
+                            <Badge className="w-fit gap-1 bg-amber-500 text-black hover:bg-amber-500 text-[10px]">
+                              <RefreshCw className="w-3 h-3" /> Změna exportního odkazu
+                            </Badge>
+                          ) : (
+                            <Badge variant="outline" className="w-fit gap-1 text-[10px]">
+                              <Rocket className="w-3 h-3" /> První napojení
+                            </Badge>
+                          )}
                           <CardTitle className="text-base">{req.shop_name}</CardTitle>
                           <CardDescription className="text-xs">
                             {req.partner_name || "Neznámý partner"}
@@ -871,22 +895,32 @@ const AdminPartners = () => {
                                   : "—"}
                               </span>
                             </div>
+                            {/* Only shown for a first connection: these values are what
+                                approval would APPLY. A change request carries copies of
+                                the live settings and applies none of them, so printing
+                                them here would suggest a decision the admin is not making. */}
+                            {req.request_kind !== "url_change" && (
+                              <>
+                                <div className="flex justify-between gap-2">
+                                  <span className="text-muted-foreground">Vydat odměnu:</span>
+                                  <span className="text-right text-xs">
+                                    {shoptetTriggerLabels[req.trigger_status] || req.trigger_status}
+                                  </span>
+                                </div>
+                                <div className="flex justify-between gap-2">
+                                  <span className="text-muted-foreground flex items-center gap-1">
+                                    <Coins className="w-3 h-3" /> Konverze:
+                                  </span>
+                                  <span className="font-medium">
+                                    {req.reward_czk} Kč = {req.reward_mc} MC
+                                  </span>
+                                </div>
+                              </>
+                            )}
                             <div className="flex justify-between gap-2">
-                              <span className="text-muted-foreground">Vydat odměnu:</span>
-                              <span className="text-right text-xs">
-                                {shoptetTriggerLabels[req.trigger_status] || req.trigger_status}
+                              <span className="text-muted-foreground">
+                                {req.request_kind === "url_change" ? "Nová export URL:" : "Export URL:"}
                               </span>
-                            </div>
-                            <div className="flex justify-between gap-2">
-                              <span className="text-muted-foreground flex items-center gap-1">
-                                <Coins className="w-3 h-3" /> Konverze:
-                              </span>
-                              <span className="font-medium">
-                                {req.reward_czk} Kč = {req.reward_mc} MC
-                              </span>
-                            </div>
-                            <div className="flex justify-between gap-2">
-                              <span className="text-muted-foreground">Export URL:</span>
                               {req.url_received ? (
                                 <Badge variant="success" className="text-[10px] gap-1">
                                   <CheckCircle className="w-3 h-3" /> Přijata
@@ -896,6 +930,12 @@ const AdminPartners = () => {
                               )}
                             </div>
                           </div>
+                          {req.request_kind === "url_change" && (
+                            <p className="rounded-md border border-amber-500/30 bg-amber-500/5 p-2 text-xs leading-relaxed text-muted-foreground">
+                              Partner je už napojený. Schválení přepne <strong>pouze exportní odkaz</strong> —
+                              ostatní nastavení zůstávají. Zamítnutí ponechá v provozu původní odkaz.
+                            </p>
+                          )}
                           {req.partner_note && (
                             <div className="rounded-md bg-muted/30 border border-border/50 p-2">
                               <p className="text-xs text-muted-foreground whitespace-pre-wrap">
