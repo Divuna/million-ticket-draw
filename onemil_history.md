@@ -1,3 +1,19 @@
+# 18. 08. 2026 — Automatické uplatnění MioCoinů z e-mailu a Historie MioCoinů (větev, NENASAZENO)
+
+Na větvi `codex/miocoin-profile-wallet-history` je připravena související zákaznická úprava. **Není mergnutá, není nasazená ani publikovaná.** Žádná databázová migrace nebyla aplikována, žádná Edge Function nebyla nasazena a do produkčních peněženek, MioCoin zůstatků, kódů, odměn nebo objednávek se nepsalo.
+
+E-mail už odměnu odkazuje na existující `/profile?miocoin_code=…`. Profil nyní tento parametr přečte, pokud je zákazník přihlášený automaticky zavolá výhradně kanonické `redeem_miocoin_code`, zobrazí připsanou přesnou hodnotu a z URL kód odstraní. Opakované otevření/refresh proto už klientsky neopakuje pokus; skutečná ochrana proti druhému připsání zůstává databázová: row lock `FOR UPDATE` a stav kódu `activated`. Ruční vložení kódu nebylo nahrazeno ani odstraněno.
+
+Pro návaznost bez přihlášení se zachoval existující bezpečný `redirect` do stejné URL profilu. Login už redirect používal při návratu zákazníka; nově jej předá i odkaz do registrace. E-mailová registrace předává validovaný cíl do `signUp` jako `emailRedirectTo`, takže i potvrzovací e-mail vrátí zákazníka na URL s MioCoin kódem; při okamžité registraci se naviguje na stejný cíl. OAuth předání redirectu bylo už součástí stávající implementace.
+
+Původní „Historie převodů“ zobrazovala jen `bonus_transfer_history`. Nová „Historie MioCoinů“ má číst reálný ledger `wallet_transactions` a existující historii bonusových převodů. Pro partnerské aktivace doplní název partnera, skutečný web a číslo objednávky výhradně z `partner_coin_activations`, `partner_reward_codes` a `partners`; nic se nedopočítává ani neodhaduje. Připravená neaplikovaná migrace `20260818120000_customer_miocoin_history.sql` obsahuje jediné read-only `get_my_miocoin_history(integer)`, bez parametru uživatele a s filtrem `auth.uid()` v obou zdrojích. Veřejné/anon oprávnění nemá; customer nemůže získat cizí historii.
+
+Zobrazení používá existující `formatMioCoin`, tedy desetinnou čárku a nejvýše jedno desetinné místo. Příchozí pohyby jsou zelené s `+`, odchozí červené s `−`; známé skutečné typy zahrnují partner code credit, dobíjení, bonus, převod bonusu, soutěž, benefit, voucher, refundaci a ruční úpravu.
+
+Nový statický regresní spec `136-miocoin-profile-wallet-history.spec.ts` prošel **9/9**. `npm run build` prošel. Správný typecheck `npx tsc -p tsconfig.app.json --noEmit` nyní končí na 17 starších chybách v 11 jiných souborech: tato větev současně opravila dřívější nesoulad čtyřargumentového volání `signUp` proti jeho tříargumentovému typu. Žádná chyba není v nových souborech nebo v nově změněných řádcích. Cílený linter nových souborů je čistý; projektový lint dál obsahuje 839 starších problémů, z nichž 3 jsou v existujících řádcích Login/Register mimo tento zásah.
+
+---
+
 # 18. 08. 2026 — Desetinné partnerské MioCoiny NASAZENY DO PRODUKCE
 
 Navazuje na staging zápis níže, který byl v době vzniku pravdivý. Změna je nyní živá

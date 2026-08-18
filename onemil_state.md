@@ -2,6 +2,18 @@
 
 > **Autoritativní aktuální stav. Aktualizováno 16. 8. 2026.**
 
+## 0. Automatické uplatnění MioCoinů z e-mailu + Historie MioCoinů — HOTOVO NA VĚTVI, **NENASAZENO** (18. 8. 2026)
+
+Větev `codex/miocoin-profile-wallet-history`, odvozená z aktuálního `origin/main`, připravuje související úpravu zákaznického profilu. **Není mergnutá, není publikovaná, žádná migrace ani Edge Function nebyla aplikována a produkční data, peněženky, MioCoin zůstatky i existující odměny zůstaly nedotčené.**
+
+- E-mailový odkaz s existujícím parametrem `?miocoin_code=…` nyní na `/profile` automaticky zavolá výhradně kanonické `redeem_miocoin_code`. URL se po dokončeném pokusu vyčistí, takže refresh nevyvolá další klientský pokus; databázový `FOR UPDATE` + přechod kódu na `activated` zůstávají autoritou proti dvojímu připsání. Ruční formulář pro vložení kódu zůstává zachovaný.
+- Neověřený zákazník se vrátí přes existující bezpečný `redirect` po přihlášení na stejnou URL profilu; stejný redirect se nyní předá také z přihlášení do registrace. E-mailová registrace jej předá autentizační vrstvě jako bezpečné `emailRedirectTo` pro případ povinného potvrzení e-mailu a po okamžité registraci naviguje na stejný cíl. OAuth už ho předával.
+- „Historie převodů“ v peněžence je nahrazena „Historií MioCoinů“. Připravena je pouze **neaplikovaná** migrace `20260818120000_customer_miocoin_history.sql`: přidává read-only RPC `get_my_miocoin_history(integer)` bez parametru uživatele. Čte skutečný ledger `wallet_transactions`, doplňuje partnerský název/web/objednávku pouze z `partner_coin_activations` + `partner_reward_codes` + `partners` a přidává existující `bonus_transfer_history`. Každý zdroj filtruje `auth.uid()`; zákazník tak nemůže načíst cizí historii.
+- Historie rozlišuje existující příchozí a odchozí typy (partnerské připsání, dobíjení, bonus, převod bonusu, soutěž, benefit, voucher, refundace a ruční úprava) pomocí zeleného `+` / červeného `−`; zobrazení používá sdílený formát MioCoinů s jedním desetinným místem.
+- Regresní spec `136-miocoin-profile-wallet-history.spec.ts`: **9 passed**. `npm run build`: exit 0. `npx tsc -p tsconfig.app.json --noEmit` končí na **17 předexistujících chybách** v 11 nedotčených souborech; tato změna opravila dřívější nesoulad mezi čtyřargumentovým voláním `signUp` a jeho tříargumentovým typem. Žádná chyba není v nových souborech nebo v nově změněných řádcích.
+
+---
+
 ## 0a. MioCoin — pravidlo 1 desetinného místa — STAGING OVĚŘENO, **PRODUKCE NENASAZENA** (18. 8. 2026)
 
 Partner vereonika sro má konverzi `100 Kč = 3,7 MC`. Košík 660 Kč vychází na `24,42 MC`, ale

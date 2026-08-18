@@ -14,7 +14,7 @@ import { useAuth } from '@/hooks/useAuth';
 import { supabase } from '@/integrations/supabase/client';
 import { Header } from '@/components/Header';
 import { toast } from '@/hooks/use-toast';
-import { RefreshCw, GamepadIcon, Check, Volume2, VolumeX, Camera, Loader2, ChevronDown, CheckCircle, XCircle } from 'lucide-react';
+import { RefreshCw, GamepadIcon, Check, Volume2, VolumeX, Camera, Loader2, CheckCircle, XCircle } from 'lucide-react';
 import {
   OneMilBellIcon,
   OneMilCoinsIcon,
@@ -29,6 +29,7 @@ import {
 } from '@/components/icons/OneMilIcons';
 import ReferralSection from '@/components/ReferralSection';
 import { RedeemMioCoinCard } from '@/components/RedeemMioCoinCard';
+import { MioCoinHistory } from '@/components/MioCoinHistory';
 import RecommendShopMailtoCard from '@/components/RecommendShopMailtoCard';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { Link } from 'react-router-dom';
@@ -47,12 +48,6 @@ interface UserWallet {
   name: string;
   balance_coins: number;
   bonus_balance_coins: number;
-  created_at: string;
-}
-
-interface BonusTransfer {
-  id: string;
-  amount: number;
   created_at: string;
 }
 
@@ -169,10 +164,8 @@ const Profile: React.FC = () => {
   const [editMode, setEditMode] = useState(false);
   const [testingNotification, setTestingNotification] = useState(false);
   const [avatarUploading, setAvatarUploading] = useState(false);
-  const [historyExpanded, setHistoryExpanded] = useState(false);
   const [transferring, setTransferring] = useState(false);
-  const [bonusTransfers, setBonusTransfers] = useState<BonusTransfer[]>([]);
-  const [bonusTransfersLoading, setBonusTransfersLoading] = useState(true);
+  const [walletHistoryRefreshKey, setWalletHistoryRefreshKey] = useState(0);
   const [marketingStatus, setMarketingStatus] = useState<'active' | 'revoked' | 'none' | null>(null);
   const [marketingSubscribing, setMarketingSubscribing] = useState(false);
   const [marketingDialogOpen, setMarketingDialogOpen] = useState(false);
@@ -188,7 +181,6 @@ const Profile: React.FC = () => {
     if (user) {
       fetchUserWallet();
       fetchUserProfile();
-      fetchBonusTransfers();
       fetchMarketingStatus();
     }
   }, [user]);
@@ -199,30 +191,6 @@ const Profile: React.FC = () => {
       return () => clearTimeout(timer);
     }
   }, [loading]);
-
-  const fetchBonusTransfers = async () => {
-    if (!user?.id) return;
-    setBonusTransfersLoading(true);
-    try {
-      const { data, error } = await supabase
-        .from('bonus_transfer_history')
-        .select('id, amount, created_at')
-        .eq('user_id', user.id)
-        .order('created_at', { ascending: false });
-      
-      if (error) {
-        console.error('Error fetching bonus transfers:', error);
-        setBonusTransfers([]);
-      } else {
-        setBonusTransfers(data || []);
-      }
-    } catch (error) {
-      console.error('Error:', error);
-      setBonusTransfers([]);
-    } finally {
-      setBonusTransfersLoading(false);
-    }
-  };
 
   const fetchMarketingStatus = async () => {
     if (!user?.id) return;
@@ -483,7 +451,7 @@ const Profile: React.FC = () => {
       if (error) throw error;
       
       await fetchUserWallet();
-      await fetchBonusTransfers();
+      setWalletHistoryRefreshKey((version) => version + 1);
 
       toast({
         title: "Úspěch",
@@ -505,6 +473,7 @@ const Profile: React.FC = () => {
     setRefreshing(true);
     try {
       await fetchUserWallet();
+      setWalletHistoryRefreshKey((version) => version + 1);
       toast({
         title: "Úspěch",
         description: "Zůstatek byl aktualizován."
@@ -816,61 +785,7 @@ const Profile: React.FC = () => {
                 </Button>
               </div>
 
-              {/* Transfer history */}
-              <div className="pt-5 border-t border-[rgba(255,138,0,0.12)]">
-                <div className="flex items-center justify-between mb-3">
-                  <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider">Historie převodů</h3>
-                  {bonusTransfers.length > 3 && (
-                    <Button variant="ghost" size="sm"
-                      onClick={() => setHistoryExpanded(!historyExpanded)}
-                      className="text-xs text-muted-foreground hover:text-[#FF8A00] flex items-center gap-1">
-                      {historyExpanded ? 'Skrýt historii' : 'Zobrazit celou historii'}
-                      <ChevronDown className={`h-4 w-4 transition-transform duration-200 ${historyExpanded ? 'rotate-180' : ''}`} />
-                    </Button>
-                  )}
-                </div>
-                {bonusTransfersLoading ? (
-                  <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                    <Loader2 className="h-4 w-4 animate-spin" />
-                    Načítám...
-                  </div>
-                ) : bonusTransfers.length === 0 ? (
-                  <p className="text-sm text-muted-foreground italic">Zatím žádné převody bonusových MioCoinů</p>
-                ) : (
-                  <div
-                    className={`space-y-2 pr-1 ${
-                      historyExpanded ? 'max-h-64 overflow-y-auto' : 'overflow-hidden'
-                    }`}
-                  >
-                    {(historyExpanded ? bonusTransfers : bonusTransfers.slice(0, 3)).map((transfer, index) => (
-                      <div 
-                        key={transfer.id} 
-                        className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 py-3 px-4 rounded-xl bg-gradient-to-r from-green-500/5 via-transparent to-green-500/5 border border-green-500/10 hover:border-green-500/20 transition-all duration-300"
-                        style={{ animationDelay: `${index * 50}ms` }}
-                      >
-                        <div className="flex items-center gap-3">
-                          <div className="p-1.5 rounded-lg bg-green-500/15">
-                            <OneMilCoinsIcon size={16} className="h-4 w-4 text-green-500" />
-                          </div>
-                          <span className="text-sm text-foreground">Převod bonusových MioCoinů</span>
-                        </div>
-                        <div className="flex items-center gap-4 pl-8 sm:pl-0">
-                          <span className="text-sm font-bold text-green-700">+{transfer.amount} MioCoinů</span>
-                          <span className="text-xs text-muted-foreground">
-                            {new Date(transfer.created_at).toLocaleString('cs-CZ', {
-                              day: '2-digit',
-                              month: '2-digit',
-                              year: 'numeric',
-                              hour: '2-digit',
-                              minute: '2-digit'
-                            })}
-                          </span>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                )}
-              </div>
+              <MioCoinHistory refreshKey={walletHistoryRefreshKey} />
             </div>
           </PremiumCard>
 
@@ -917,7 +832,12 @@ const Profile: React.FC = () => {
           </PremiumCard>
 
           {/* MioCoin code redemption — separate from referral code */}
-          <RedeemMioCoinCard onRedeemed={fetchUserWallet} />
+          <RedeemMioCoinCard
+            onRedeemed={() => {
+              void fetchUserWallet();
+              setWalletHistoryRefreshKey((version) => version + 1);
+            }}
+          />
 
           {/* Osobni udaje */}
           <PremiumCard>

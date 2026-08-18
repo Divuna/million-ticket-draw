@@ -10,20 +10,7 @@ import { toast } from "@/hooks/use-toast";
 import { toast as sonnerToast } from "sonner";
 import logo from "@/assets/logo-onemil.png";
 import { ENABLED_OAUTH_PROVIDERS, type OAuthProvider } from "@/config/socialAuth";
-
-/** Same-origin path only (open-redirect safe). Lives in this file only. */
-function safeRedirectPath(raw: string | null): string | null {
-  if (raw == null || typeof raw !== "string") return null;
-  let decoded: string;
-  try {
-    decoded = decodeURIComponent(raw.trim());
-  } catch {
-    return null;
-  }
-  if (!decoded.startsWith("/") || decoded.startsWith("//")) return null;
-  if (/^[a-zA-Z][a-zA-Z\d+.-]*:/.test(decoded)) return null;
-  return decoded;
-}
+import { getSafeRedirectPath } from '@/lib/loginRedirect';
 
 const GoogleIcon = () => (
   <svg aria-hidden="true" viewBox="0 0 24 24" className="h-6 w-6 shrink-0">
@@ -103,7 +90,7 @@ const Login: React.FC = () => {
       }
 
       // 3) Customer / competitor — proceed into the game app.
-      const redirectTarget = safeRedirectPath(redirectRaw);
+      const redirectTarget = getSafeRedirectPath(redirectRaw);
       navigate(redirectTarget || "/profile", { replace: true });
     } catch (error) {
       toast({
@@ -217,7 +204,10 @@ const Login: React.FC = () => {
 
             <p className="text-sm text-muted-foreground text-center">
               Nemáte účet?{" "}
-              <Link to="/register" className="text-primary hover:underline">
+              <Link
+                to={redirectRaw ? `/register?redirect=${encodeURIComponent(redirectRaw)}` : '/register'}
+                className="text-primary hover:underline"
+              >
                 Zaregistrujte se
               </Link>
             </p>
