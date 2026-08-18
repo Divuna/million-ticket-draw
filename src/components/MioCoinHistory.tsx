@@ -30,7 +30,7 @@ export function MioCoinHistory({ refreshKey = 0 }: MioCoinHistoryProps) {
     const loadHistory = async () => {
       setLoading(true);
       try {
-        const rpc = supabase.rpc as unknown as MioCoinHistoryRpc;
+        const rpc = supabase.rpc.bind(supabase) as unknown as MioCoinHistoryRpc;
         const { data, error } = await rpc('get_my_miocoin_history', {
           p_limit: 100,
         });

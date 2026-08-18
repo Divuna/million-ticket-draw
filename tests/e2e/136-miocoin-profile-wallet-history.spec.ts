@@ -25,6 +25,7 @@ const read = (path: string) =>
 const redeemCard = read('src/components/RedeemMioCoinCard.tsx');
 const historyComponent = read('src/components/MioCoinHistory.tsx');
 const historyHelpers = read('src/lib/miocoinHistory.ts');
+const redeemClient = read('src/lib/miocoinRedeem.ts');
 const profile = read('src/pages/Profile.tsx');
 const login = read('src/pages/Login.tsx');
 const register = read('src/pages/Register.tsx');
@@ -45,6 +46,7 @@ test.describe('136 — MioCoin code from an e-mail link', () => {
     expect(getMioCoinCodeFromSearch('?other=value')).toBeNull();
     expect(withoutMioCoinCode('?miocoin_code=ABC-123&tab=wallet')).toBe('?tab=wallet');
     expect(redeemCard).toContain("redeemMioCoinCode(codeFromUrl)");
+    expect(redeemClient).toContain('supabase.rpc.bind(supabase)');
     expect(redeemCard).toContain('automaticallyAttemptedCode.current === codeFromUrl');
     expect(redeemCard).toContain('withoutMioCoinCode(location.search)');
     expect(redeemCard).toContain("title: automatic ? 'MioCoiny uplatněny' : 'Kód uplatněn'");
@@ -87,6 +89,7 @@ test.describe('136 — customer MioCoin history', () => {
     expect(profile).not.toContain('Historie převodů');
     expect(profile).toContain('onRedeemed={() => {');
     expect(profile).toContain('setWalletHistoryRefreshKey((version) => version + 1);');
+    expect(historyComponent).toContain('supabase.rpc.bind(supabase)');
   });
 
   test('partner reward rows use only existing partner, website and order data', () => {

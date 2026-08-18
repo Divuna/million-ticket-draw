@@ -23,7 +23,7 @@ type RedeemRpc = (
 
 /** Invokes the canonical, row-locked database redemption RPC for one code. */
 export async function redeemMioCoinCode(code: string): Promise<RedeemResult> {
-  const rpc = supabase.rpc as unknown as RedeemRpc;
+  const rpc = supabase.rpc.bind(supabase) as unknown as RedeemRpc;
   const { data, error } = await rpc('redeem_miocoin_code', {
     p_code: code.trim(),
   });
