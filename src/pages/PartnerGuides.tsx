@@ -13,7 +13,9 @@ import {
   SHOPTET_GUIDE_RESULT_TITLE,
   SHOPTET_GUIDE_STEPS,
   SHOPTET_GUIDE_TITLE,
+  type GuideFieldMapping,
   type GuideShot,
+  type GuideSubstep,
 } from '@/content/partnerGuides/shoptetGuide';
 
 /**
@@ -67,6 +69,71 @@ function Shot({ shot, onOpen }: ShotProps) {
         <figcaption className="text-xs leading-relaxed text-muted-foreground">{shot.note}</figcaption>
       )}
     </figure>
+  );
+}
+
+function ExportFieldsTable({ fields }: { fields: GuideFieldMapping[] }) {
+  return (
+    <div className="overflow-x-auto rounded-lg border border-border/60 bg-background">
+      <table className="min-w-[46rem] w-full border-collapse text-left text-sm">
+        <thead className="bg-muted/60 text-xs uppercase tracking-wide text-muted-foreground">
+          <tr>
+            <th scope="col" className="px-3 py-2 font-semibold">Zákaznická skupina</th>
+            <th scope="col" className="px-3 py-2 font-semibold">Zaškrtnout</th>
+            <th scope="col" className="px-3 py-2 font-semibold">Exportovat jako</th>
+          </tr>
+        </thead>
+        <tbody>
+          {fields.map((mapping) => (
+            <tr key={`${mapping.group}-${mapping.field}`} className="border-t border-border/60 align-top">
+              <td className="px-3 py-2 font-medium text-foreground">{mapping.group}</td>
+              <td className="px-3 py-2 text-muted-foreground">{mapping.field}</td>
+              <td className="px-3 py-2 font-mono text-[13px] font-semibold text-foreground">{mapping.exportAs}</td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+  );
+}
+
+function GuideSubstepCard({ substep, onOpen }: { substep: GuideSubstep; onOpen: (shot: GuideShot) => void }) {
+  return (
+    <section className="space-y-4 rounded-xl border border-[hsl(var(--neon-gold)/0.4)] bg-[hsl(var(--neon-gold)/0.05)] p-4 sm:p-5">
+      <div className="flex items-start gap-3">
+        <span className="flex h-9 min-w-9 items-center justify-center rounded-full bg-[hsl(var(--neon-gold))] px-1 text-sm font-bold text-black">
+          {substep.number}
+        </span>
+        <div>
+          <p className="text-[11px] font-bold tracking-wider text-[hsl(var(--neon-gold))]">KROK {substep.number}</p>
+          <h3 className="mt-0.5 text-lg font-semibold text-[hsl(var(--text-silver))] sm:text-xl">{substep.title}</h3>
+        </div>
+      </div>
+
+      <div className="space-y-2">
+        {substep.body.map((paragraph, index) => (
+          <p key={index} className="text-sm leading-relaxed text-muted-foreground">
+            {renderEmphasis(paragraph)}
+          </p>
+        ))}
+      </div>
+
+      {substep.shots.map((shot) => (
+        <Shot key={shot.src} shot={shot} onOpen={onOpen} />
+      ))}
+
+      <ExportFieldsTable fields={substep.fields} />
+
+      <p className="rounded-lg border border-[hsl(var(--neon-gold)/0.45)] bg-[hsl(var(--neon-gold)/0.12)] p-3 text-sm font-bold leading-relaxed text-[hsl(var(--text-silver))]">
+        {substep.important}
+      </p>
+
+      {substep.next && (
+        <p className="rounded-lg border border-[hsl(var(--neon-gold)/0.3)] bg-background/70 p-3 text-sm font-medium leading-relaxed text-[hsl(var(--text-silver))]">
+          {substep.next}
+        </p>
+      )}
+    </section>
   );
 }
 
@@ -162,9 +229,18 @@ const PartnerGuides: React.FC = () => {
               </div>
 
               <div className="space-y-4">
-                {step.shots.map((shot) => (
+                {step.shots.slice(0, step.substepAfterFirstShot ? 1 : step.shots.length).map((shot) => (
                   <Shot key={shot.src + shot.alt} shot={shot} onOpen={setZoomed} />
                 ))}
+
+                {step.substepAfterFirstShot && (
+                  <GuideSubstepCard substep={step.substepAfterFirstShot} onOpen={setZoomed} />
+                )}
+
+                {step.substepAfterFirstShot &&
+                  step.shots.slice(1).map((shot) => (
+                    <Shot key={shot.src + shot.alt} shot={shot} onOpen={setZoomed} />
+                  ))}
               </div>
 
               {step.next && (

@@ -79,6 +79,35 @@ test('133b each step keeps the instructions that make it followable', () => {
   expect(body(6)).toContain('Vzhled a obsah → Editor HTML kódu → Zápatí (před koncovým tagem BODY)');
 });
 
+test('133b1 the guide includes the required export-field substep after step 2', () => {
+  const substep = SHOPTET_GUIDE_STEPS[1].substepAfterFirstShot;
+  expect(substep).toBeTruthy();
+  expect(substep?.number).toBe('2.1');
+  expect(substep?.title).toBe('Přidejte potřebná pole do exportu');
+  expect(substep?.body.join(' ')).toContain('PŘIDAT');
+  expect(substep?.body.join(' ')).toContain('Přidat pole do šablony exportu objednávek');
+  expect(substep?.body.join(' ')).toContain('Zákaznická skupina');
+  expect(substep?.important).toBe('Důležité: názvy ve sloupci „Exportovat jako“ napište přesně podle tabulky.');
+  expect(substep?.fields).toEqual([
+    { group: 'Objednávka', field: 'kód', exportAs: 'code' },
+    { group: '', field: 'status', exportAs: 'statusName' },
+    { group: 'Celková cena objednávky', field: 'celková cena s daní', exportAs: 'totalPriceWithVat' },
+    { group: '', field: 'zaplaceno', exportAs: 'paid' },
+    { group: 'Základní informace o zákazníkovi', field: 'e-mail', exportAs: 'email' },
+    { group: 'Položky objednávky', field: 'položka objednávky - typ', exportAs: 'orderItemType' },
+    { group: '', field: 'položka objednávky - název', exportAs: 'orderItemName' },
+    { group: '', field: 'položka objednávky - množství', exportAs: 'orderItemAmount' },
+    { group: '', field: 'položka objednávky - kód', exportAs: 'orderItemCode' },
+    {
+      group: '',
+      field: 'položka objednávky - cena s daní za jednotku po slevě',
+      exportAs: 'orderItemUnitDiscountPriceWithVat',
+    },
+  ]);
+  expect(substep?.shots).toHaveLength(1);
+  expect(substep?.shots[0].src).toBe('/navody/shoptet/03a-shoptet-pridat-pole-exportu-objednavek.png');
+});
+
 test('133c every step but the last hands over to the next one', () => {
   for (const step of SHOPTET_GUIDE_STEPS) {
     expect(step.next, `step ${step.number} has a closing line`).toBeTruthy();
@@ -104,7 +133,13 @@ test('133d the guide ends with the three customer-facing results', () => {
 // ───────────────────────────────────────────────────────────────────────────────
 
 test('133e every referenced screenshot exists in public/', () => {
-  const all = [...SHOPTET_GUIDE_STEPS.flatMap((s) => s.shots), ...SHOPTET_GUIDE_RESULTS];
+  const all = [
+    ...SHOPTET_GUIDE_STEPS.flatMap((step) => [
+      ...step.shots,
+      ...(step.substepAfterFirstShot?.shots ?? []),
+    ]),
+    ...SHOPTET_GUIDE_RESULTS,
+  ];
   expect(all.length).toBeGreaterThan(0);
 
   for (const shot of all) {
