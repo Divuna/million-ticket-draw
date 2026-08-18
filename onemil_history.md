@@ -1,3 +1,19 @@
+# 18. 08. 2026 — Produkční konvergence MioCoinů, Shoptetu a partnerské dokumentace
+
+Tento zápis je novější než stagingové a branch-only zápisy níže, které byly v době svého vzniku pravdivé. Stav byl synchronizován podle aktuálního `origin/main`, GitHubu, veřejně dostupného produkčního PDF a read-only kontroly produkčního Supabase projektu `xkzhjldrojjlrkezorey`.
+
+- **Desetinné partnerské MioCoiny jsou v produkci.** Produkční reward řetězec používá maximálně jedno desetinné místo, minimum 0,5 MC, zaokrouhlení jednou na součtu objednávky a jediný engine `compute_partner_reward`; legacy druhý reward engine zůstává odstraněný. Starší hlavičky „PRODUKCE NENASAZENA“ jsou tímto překonané.
+- **Shoptet importer je aktivní v produkci.** Main obsahuje opravy windows-1250, `Nevyřízená`, `Nezaplaceno`/`unpaid` i oddělení lifecycle a payment osy. Produkční `import-shoptet-orders` je ACTIVE a cron `shoptet_auto_import_1min` je aktivní s plánem `* * * * *`; `paid` je skutečný platební signál. Partner proto musí v exportu poskytnout i přesné pole `paid`.
+- **Česká diakritika zákaznického MioCoin e-mailu je produkční.** PR #361 byl mergnut do `main` (merge `7bda0adf`) a produkční historie migrací obsahuje `partner_reward_customer_email_czech`.
+- **Automatické uplatnění MioCoinu a Historie MioCoinů jsou produkční.** PR #362 byl mergnut do `main` (merge `2f85a026`); produkční historie migrací obsahuje `customer_miocoin_history`. Read-only postcheck potvrdil `public.get_my_miocoin_history(integer)` jako `SECURITY DEFINER` se `search_path=''` a EXECUTE pouze pro `authenticated` a `service_role`. Automatický odkaz, ruční vložení, databázová ochrana proti dvojímu připsání, zelené příjmy / červené výdaje a partnerský kontext historie jsou součástí vydané změny.
+- **Jediné nedokončené ověření je stagingová nová registrace.** Supabase Auth na stagingu při ní vrací `429 over_email_send_rate_limit` (vestavěný SMTP limit 2 e-maily/h). Jde o testovací omezení, nikoli o produkční chybu. Při dřívějším chybně cíleném testu vznikl jeden produkční Auth účet `49873513-56dc-4eed-8be1-8e122fe34c67`; read-only kontrola potvrdila, že stále není ověřený. Nebyl a nesmí být mazán bez samostatného schválení.
+- **Partnerský Shoptet návod je zveřejněný.** PR #363 byl mergnut do `main` (merge `9c755d47`). Přidal KROK 2.1 s dialogem **PŘIDAT**, screenshotem a přesnými názvy `Exportovat jako`; veřejné `https://onemil.cz/navody/OneMil-navod-Shoptet.pdf` je `application/pdf`, textově obsahuje krok 2.1 a jeho SHA-256 se shoduje s PDF na aktuálním `main`.
+- **E-mailová fronta je samostatný provozní proces.** Produkční cron `process_email_queue_every_10_min` je aktivní a každých 10 minut volá `run_process_email_queue_cron()`; není součástí minutového Shoptet importu ani se v tomto dni neměnil.
+
+Dokumentační synchronizace aktualizovala `CLAUDE.md`, `onemil_state.md` a `ONEMIL_BUSINESS_CONTEXT.md`. Starší historické záznamy níže se nemění, protože zachycují tehdejší stav práce.
+
+---
+
 # 18. 08. 2026 — Automatické uplatnění MioCoinů z e-mailu a Historie MioCoinů (větev, NENASAZENO)
 
 Na větvi `codex/miocoin-profile-wallet-history` je připravena související zákaznická úprava. **Není mergnutá, není nasazená ani publikovaná.** Migrace `20260818120000_customer_miocoin_history.sql` byla následně aplikována pouze na staging `dxmowysntemfqfnanxua`; žádná Edge Function nebyla nasazena a do produkčních peněženek, MioCoin zůstatků, kódů, odměn nebo objednávek se nepsalo.

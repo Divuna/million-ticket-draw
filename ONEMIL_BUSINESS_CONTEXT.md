@@ -156,6 +156,31 @@ only displays the result of that engine — it never calculates a reward itself.
 the Partner Order API issue MioCoins through the same engine, so a preview and a real payout can
 never drift apart.
 
+### 6.3 Required Shoptet order-export fields — confirmed partner setup
+
+For OneMil to import a partner order correctly, the partner creates a custom Shoptet **CSV order
+export**, uses **PŘIDAT** to add fields to the export template, and enters the exact values in the
+**Exportovat jako** column below. The source of the live partner guide is
+`src/content/partnerGuides/shoptetGuide.ts`; its published PDF is
+`public/navody/OneMil-navod-Shoptet.pdf`.
+
+| Zákaznická skupina | Pole | Exportovat jako |
+|---|---|---|
+| Objednávka | kód | `code` |
+| Objednávka | status | `statusName` |
+| Celková cena objednávky | celková cena s daní | `totalPriceWithVat` |
+| Celková cena objednávky | zaplaceno | `paid` |
+| Základní informace o zákazníkovi | e-mail | `email` |
+| Položky objednávky | položka objednávky - typ | `orderItemType` |
+| Položky objednávky | položka objednávky - název | `orderItemName` |
+| Položky objednávky | položka objednávky - množství | `orderItemAmount` |
+| Položky objednávky | položka objednávky - kód | `orderItemCode` |
+| Položky objednávky | položka objednávky - cena s daní za jednotku po slevě | `orderItemUnitDiscountPriceWithVat` |
+
+> **Important:** names in **Exportovat jako** must be entered exactly as shown in the table.
+> `paid` is the actual payment signal; it remains separate from the order lifecycle value
+> `statusName`.
+
 ---
 
 ## 7. Performance-based billing model
@@ -253,13 +278,11 @@ místech. Tato dvě pravidla se nemíchají.
 **1 MC = 1 Kč** (`partners.price_per_coin`) tímto pravidlem není dotčeno — mění se
 jen počet desetinných míst množství, nikoli cena za MioCoin.
 
-> **Stav implementace (18. 08. 2026):** obchodní pravidlo je potvrzené a technická
-> implementace pro **partnerský reward řetězec** (numerické coin sloupce,
-> `compute_partner_reward`, issuance, widget, preview, fakturace) je hotová
-> a **ověřená na stagingu** na větvi `claude/miocoin-one-decimal`.
-> **Do produkce NENASAZENO.** Produkce dnes stále zaokrouhluje partnerskou odměnu
-> dolů na celé číslo (`floor`), takže desetinné partnerské MioCoiny v produkci
-> zatím nefungují.
+> **Stav implementace (18. 08. 2026):** technická implementace pro **partnerský
+> reward řetězec** (numerické coin sloupce, `compute_partner_reward`, issuance,
+> widget, preview a fakturace) je **nasazená v produkci** `xkzhjldrojjlrkezorey`.
+> Produkce používá pravidlo nejvýše jednoho desetinného místa; staré chování
+> `floor()` na celé číslo už pro partnerskou odměnu neplatí.
 >
 > **Mimo rozsah této změny:** Stripe top-up / refundace / referral odměna
 > (`payments.amount` → `wallets.balance_coins`). Je to samostatná odměnová cesta;

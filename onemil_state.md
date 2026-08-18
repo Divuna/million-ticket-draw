@@ -1,22 +1,29 @@
 # OneMil – aktuální stav projektu
 
-> **Autoritativní aktuální stav. Aktualizováno 16. 8. 2026.**
+> **Autoritativní aktuální stav. Synchronizováno 18. 8. 2026 podle `origin/main`, GitHubu a read-only produkční kontroly Supabase.**
 
-## 0. Automatické uplatnění MioCoinů z e-mailu + Historie MioCoinů — STAGING OVĚŘENO, **PRODUKCE NENASAZENA** (18. 8. 2026)
+## 0. Aktuální ověřený provozní stav (18. 8. 2026)
 
-Větev `codex/miocoin-profile-wallet-history`, odvozená z aktuálního `origin/main`, obsahuje související úpravu zákaznického profilu. **Není mergnutá ani publikovaná.** Jediná migrace `20260818120000_customer_miocoin_history.sql` byla aplikována výhradně do stagingu `dxmowysntemfqfnanxua`; produkce `xkzhjldrojjlrkezorey`, její data, peněženky, MioCoin zůstatky a existující odměny zůstaly nedotčené.
+| Oblast | Aktuální stav |
+|---|---|
+| Desetinné partnerské MioCoiny | **PRODUKCE NASAZENA.** Produkční reward engine používá nejvýše jedno desetinné místo a minimální vydatelnou odměnu 0,5 MC. |
+| Shoptet import | **PRODUKCE AKTIVNÍ.** `import-shoptet-orders` je ACTIVE a cron `shoptet_auto_import_1min` běží každou minutu. Import rozlišuje lifecycle a platební osu; `paid` je skutečný platební signál. |
+| Zákaznický MioCoin e-mail | **HOTOVO V PRODUKCI.** PR #361 je mergnutý a produkční migrace `partner_reward_customer_email_czech` je evidována. Nové zákaznické e-maily používají českou diakritiku. |
+| Automatické uplatnění + Historie MioCoinů | **HOTOVO V PRODUKCI.** PR #362 je mergnutý; produkce má `public.get_my_miocoin_history(integer)` jako `SECURITY DEFINER` s EXECUTE pouze pro `authenticated` a `service_role`. |
+| Shoptet partnerský návod | **ZVEŘEJNĚNO V PRODUKCI.** PR #363 je mergnutý; veřejné PDF `public/navody/OneMil-navod-Shoptet.pdf` je dostupné na `https://onemil.cz/navody/OneMil-navod-Shoptet.pdf`, odpovídá souboru na `main` a obsahuje KROK 2.1. |
+| Produkční e-mailová fronta | **AKTIVNÍ, SAMOSTATNÝ PROCES.** Cron `process_email_queue_every_10_min` běží každých 10 minut a volá `run_process_email_queue_cron()`; není to Shoptet import. |
 
-- E-mailový odkaz s existujícím parametrem `?miocoin_code=…` nyní na `/profile` automaticky zavolá výhradně kanonické `redeem_miocoin_code`. URL se po dokončeném pokusu vyčistí, takže refresh nevyvolá další klientský pokus; databázový `FOR UPDATE` + přechod kódu na `activated` zůstávají autoritou proti dvojímu připsání. Ruční formulář pro vložení kódu zůstává zachovaný.
-- Neověřený zákazník se vrátí přes existující bezpečný `redirect` po přihlášení na stejnou URL profilu; stejný redirect se nyní předá také z přihlášení do registrace. E-mailová registrace jej předá autentizační vrstvě jako bezpečné `emailRedirectTo` pro případ povinného potvrzení e-mailu a po okamžité registraci naviguje na stejný cíl. OAuth už ho předával.
-- „Historie převodů“ v peněžence je nahrazena „Historií MioCoinů“. Staging migrace `20260818120000_customer_miocoin_history.sql` přidala read-only RPC `get_my_miocoin_history(integer)` bez parametru uživatele. Čte skutečný ledger `wallet_transactions`, doplňuje partnerský název/web/objednávku pouze z `partner_coin_activations` + `partner_reward_codes` + `partners` a přidává existující `bonus_transfer_history`. Každý zdroj filtruje `auth.uid()`; staging test druhého zákazníka vrátil prázdnou historii, ne data prvního zákazníka.
-- Historie rozlišuje existující příchozí a odchozí typy (partnerské připsání, dobíjení, bonus, převod bonusu, soutěž, benefit, voucher, refundace a ruční úprava) pomocí zeleného `+` / červeného `−`; zobrazení používá sdílený formát MioCoinů s jedním desetinným místem.
-- Staging browser E2E prošel pro přihlášený e-mailový odkaz, nepřihlášený odkaz → login → automatické uplatnění, ruční vložení, vyčištění URL, refresh bez druhého RPC, partnerský kontext historie, desetinných `31,3`, dobíjení a výdaj. Během ověření byla nalezena a opravena ztráta `this` vazby při přetypování `supabase.rpc`; oba RPC nyní používají `supabase.rpc.bind(supabase)`. Regresní spec `136-miocoin-profile-wallet-history.spec.ts`: **9 passed**. `npm run build`: exit 0. `npx tsc -p tsconfig.app.json --noEmit` končí na **17 předexistujících chybách** v 11 nedotčených souborech; žádná chyba není v nových souborech nebo v nově změněných řádcích.
-- Skutečný UI průchod nové e-mailové registrace a potvrzovacího e-mailu se ve stagingu nepodařilo dokončit, protože Supabase Auth vrátil `email rate limit exceeded`. Kód bezpečné `emailRedirectTo` předává a regresní kontrakt jej kontroluje; před PR je potřeba pouze tento jeden scénář zopakovat po uvolnění staging mail rate limitu.
-- Všechny odstranitelné staging artefakty vytvořené pro test (3 auth účty, 2 public users, partner, 9 kódů, 9 aktivací a wallet) byly smazány. 11 záznamů `wallet_transactions` zůstalo neodstranitelných, protože staging trigger striktně zakazuje jakýkoli delete; nebyl obcházen ani změněn. Odkazy na účty, peněženku, partnera, kódy a aktivace již neexistují.
+### 0.1 Automatické uplatnění MioCoinů z e-mailu + Historie MioCoinů — PRODUKCE NASAZENA
+
+PR #362 (`2f85a026`) je mergnutý do `main` a produkční migrace `customer_miocoin_history` je aplikovaná. E-mailový odkaz s `?miocoin_code=…` na `/profile` automaticky použije jen kanonické `redeem_miocoin_code`, po dokončení vyčistí URL a ruční vložení kódu zůstává funkční. Databázový `FOR UPDATE` a přechod kódu na `activated` zůstávají autoritou proti druhému připsání.
+
+„Historie převodů“ je nahrazena „Historií MioCoinů“. Produkční `get_my_miocoin_history(integer)` čte ledger `wallet_transactions` a historii bonusových převodů; partnerský název, web a číslo objednávky doplňuje jen z partner activation/reward dat. Každý zdroj filtruje `auth.uid()`. Příjmy jsou zelené s `+`, výdaje červené s `−` a hodnoty používají formát s nejvýše jedním desetinným místem.
+
+**OPEN ISSUE — pouze omezení stagingového testu, ne produkční chyba:** poslední scénář „nový zákazník → registrace → potvrzovací e-mail → návrat s MioCoin kódem“ nelze dokončit, dokud staging Supabase Auth vrací `429 over_email_send_rate_limit` (vestavěný SMTP limit 2 e-maily/h). Ostatní relevantní průchody včetně login redirectu, ručního vložení, URL cleanupu, refresh ochrany, izolace historie a desetinných hodnot prošly. Při dřívějším chybně konfigurovaném lokálním testu vznikl produkční Auth účet `49873513-56dc-4eed-8be1-8e122fe34c67`; read-only kontrola 18. 8. potvrzuje, že je stále neověřený. **Nemaže se bez samostatného schválení.**
 
 ---
 
-## 0a. MioCoin — pravidlo 1 desetinného místa — STAGING OVĚŘENO, **PRODUKCE NENASAZENA** (18. 8. 2026)
+## 0a. MioCoin — pravidlo 1 desetinného místa — PRODUKCE NASAZENA (18. 8. 2026)
 
 Partner vereonika sro má konverzi `100 Kč = 3,7 MC`. Košík 660 Kč vychází na `24,42 MC`, ale
 widget zákazníkovi ukazoval **24** — engine počítal správně a pak výsledek uřízl `floor()` na
@@ -68,7 +75,7 @@ nezměněná baseline**, žádná v dotčených souborech.
 Na staré větvi `claude/miocoin-decimal-unify` k tomu existuje připravená migrace
 (`payment_credit_miocoin_one_decimal`) — **záměrně nepřevzata**, patří do samostatného rozhodnutí.
 
-## 0a0. Shoptet delta import (`updateTimeFrom`) + cron 15 min → 1 min — STAGING OVĚŘENO, **PRODUKCE NENASAZENA** (17. 8. 2026)
+## 0a0. Shoptet delta import (`updateTimeFrom`) + cron 15 min → 1 min — PRODUKCE NASAZENA (18. 8. 2026)
 
 Import běžel každých 15 minut, protože každý běh stahoval **celý** exportní soubor partnera.
 Nově se posílá Shoptet parametr `updateTimeFrom`, takže se stahují jen objednávky vytvořené
@@ -82,6 +89,7 @@ stažení objednávek."* ([podpora.shoptet.cz/export-objednavek](https://podpora
   migrace `20260817120000_shoptet_auto_import_1min.sql`,
   spec `tests/e2e/135-shoptet-delta-import.spec.ts` (14 testů).
   Upraveno pouze: `supabase/functions/import-shoptet-orders/index.ts`.
+- **Produkční postcheck (18. 8.):** migrace `shoptet_auto_import_1min_prod` je evidována, Edge Function `import-shoptet-orders` je ACTIVE a cron `shoptet_auto_import_1min` má aktivní plán `* * * * *`.
 - **Nezměněno:** parser (`csv.ts`), výpočet MioCoinů, reward engine,
   `run_shoptet_cron_imports()` včetně overlap guardu, partner nastavení, Vault flow.
 
@@ -112,7 +120,7 @@ stažení objednávek."* ([podpora.shoptet.cz/export-objednavek](https://podpora
 Vereonika sro na stagingu neexistuje. Skutečnou serverovou interpretaci `updateTimeFrom`
 (zejména timezone) proto **potvrdí až první běh proti živému Shoptet exportu**.
 
-## 0a00. Změna Shoptet exportního odkazu — STAGING OVĚŘENO, **PRODUKCE NENASAZENA** (18. 8. 2026)
+## 0a00. Změna Shoptet exportního odkazu — PRODUKČNÍ MIGRACE A MAIN AKTUÁLNÍ (18. 8. 2026)
 
 Partner s aktivním napojením může v `/partner/dashboard` poslat nový permanentní CSV odkaz
 ke schválení. Do schválení běží napojení dál ze starého odkazu. Motivace: issue #352 —
@@ -125,8 +133,7 @@ po opravě exportní šablony partner potřebuje předat nový odkaz a dosud na 
   `src/pages/PartnerDashboard.tsx`, `src/pages/AdminPartners.tsx`,
   `src/integrations/supabase/types.ts`.
 - **Žádná nová Vault RPC** — stávající trojice pokrývá i změnu.
-- **Aplikováno POUZE na staging `dxmowysntemfqfnanxua`** (migrace + obě EF).
-  **Produkce `xkzhjldrojjlrkezorey` NEDOTČENA.**
+- Produkční historie migrací nyní obsahuje `shoptet_export_url_change_requests`; odpovídající změna je součástí aktuálního `main`. Detailní produkční průchod změny URL nebyl v tomto dokumentačním auditu znovu spouštěn, protože by vyžadoval zápis do Vaultu.
 
 **Ověřeno reálným E2E na stagingu** (throwaway partner s živým Vault klíčem, vše uklizeno):
 
@@ -154,7 +161,7 @@ souborech.
 
 ---
 
-## 0a0. Partnerské návody — HOTOVO NA VĚTVI, **NENASAZENO** (17. 8. 2026)
+## 0a0. Partnerské návody — PRODUKCE ZVEŘEJNĚNA (18. 8. 2026)
 
 Partnerský portál má novou sekci **„Návody“** (`/partner/navody`) a v ní první návod
 **„Jak propojit Shoptet s OneMil“** — 6 kroků, každý jako samostatná karta s číslem, krátkým
@@ -163,9 +170,10 @@ tlačítko **„Stáhnout PDF návod“**.
 
 - Nové: `src/content/partnerGuides/shoptetGuide.ts` (jediný zdroj obsahu),
   `src/pages/PartnerGuides.tsx`, `scripts/build-partner-guide-pdf.mjs`,
-  `public/navody/shoptet/*.png` (11 snímků), `public/navody/OneMil-navod-Shoptet.pdf`,
+  `public/navody/shoptet/*.png`, `public/navody/OneMil-navod-Shoptet.pdf`,
   spec `tests/e2e/133-partner-guides-shoptet.spec.ts`. Upraveno: `src/App.tsx` (route + položka
   „Návody“ v partnerské hlavičce), `package.json` (`build:partner-guide-pdf`).
+- PR #363 přidal KROK 2.1 „Přidejte potřebná pole do exportu“, screenshot dialogu a přesné mapování skupin/polí do hodnot `Exportovat jako` včetně `paid`. Veřejné produkční PDF se shoduje s artefaktem na `main` a tento krok obsahuje.
 - **Web i PDF renderuje tentýž obsahový modul**, takže se nemohou rozejít; spec 133m navíc
   selže, když je PDF starší než obsah.
 - Podklady pocházejí z balíčku `OneMil_Shoptet_navod_balicek.zip`. Screenshoty jsou použité
@@ -186,11 +194,11 @@ mobil 375 px **bez horizontálního přetečení**. PDF zkontrolováno stránku 
 
 Testy: 22 passed (specy 132 + 133) na čisté větvi z `main`. `npm run build` exit 0, assety jsou
 v `dist/navody/`. `npx tsc -p tsconfig.app.json --noEmit` = **18 chyb = nezměněná baseline**,
-žádná v dotčených souborech. **Nasazeno nikam — do produkce až Lovable Publishem.**
+žádná v dotčených souborech. **Zveřejněno v produkci:** veřejné PDF na `onemil.cz` je dostupné jako `application/pdf`, jeho SHA-256 je shodný se souborem na aktuálním `main` a text obsahuje KROK 2.1.
 
 ---
 
-## 0a1. Snippet widgetu v partnerském dashboardu — HOTOVO NA VĚTVI, **NENASAZENO** (17. 8. 2026)
+## 0a1. Snippet widgetu v partnerském dashboardu — MERGNUTO DO MAIN, PUBLIKOVÁNÍ NAVÁZÁNO NA AKTUÁLNÍ FRONTEND (18. 8. 2026)
 
 Partner se schváleným Shoptet napojením vidí v `/partner/dashboard` sekci **„Zobrazení MioCoinů
 v e-shopu“**: instrukci (Vzhled a obsah → Editor HTML kódu), hotový `<script>` tag s vlastním
@@ -213,7 +221,7 @@ Zápis do schránky v automatizovaném prohlížeči blokuje oprávnění (`NotA
 
 Testy: 136 passed (specy 124–132). `npm run build` exit 0.
 `npx tsc -p tsconfig.app.json --noEmit` = **18 chyb = nezměněná baseline**, žádná v dotčených
-souborech. **Nasazeno nikam — do produkce až Lovable Publishem.**
+souborech. Změna je součástí aktuálního `main`; tento audit samostatně neprováděl zápisový partnerský UI průchod.
 
 ---
 

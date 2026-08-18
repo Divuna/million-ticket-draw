@@ -47,9 +47,9 @@ výslovné schválení Pavla.
 
 ---
 
-# MIOCOIN — PRAVIDLO 1 DESETINNÉHO MÍSTA (větev `claude/miocoin-one-decimal`, 18. 08. 2026)
+# MIOCOIN — PRAVIDLO 1 DESETINNÉHO MÍSTA (produkce, 18. 08. 2026)
 
-**Staging ověřeno, PRODUKCE NENASAZENA.** Produkce dnes stále vrací `floor()` na celé číslo.
+**Produkčně nasazeno a ověřeno.** Produkční partnerský reward engine již nevrací `floor()` na celé číslo.
 
 Potvrzené pravidlo (`ONEMIL_BUSINESS_CONTEXT.md` §8.1): MioCoin má **maximálně 1 desetinné
 místo**, minimální vydatelná partnerská odměna je **0,5 MC**, ručně zadaná hodnota mimo spec se
@@ -85,6 +85,31 @@ minutový import, idempotence `partner_id + external_order_id`, `price_per_coin`
 neprovádí žádný UPDATE/backfill.
 
 Hlídá spec `tests/e2e/130-miocoin-one-decimal.spec.ts` (51 testů) + aktualizovaný spec 125.
+
+---
+
+# ZÁKAZNICKÝ MIOCOIN ODKAZ A HISTORIE — PRODUKČNÍ INVARIANTY (18. 08. 2026)
+
+PR #362 je v `main` a produkce má `get_my_miocoin_history(integer)`. E-mailový odkaz,
+login/registrace redirect a historie jsou zákaznické čtecí/připisovací cesty; nesmí se obcházet
+jejich kanonické databázové ochrany.
+
+- Automatické i ruční uplatnění smí volat pouze `redeem_miocoin_code`. Vyčištění
+  `miocoin_code` z URL chrání klient před dalším pokusem po refreshi, ale **není** ochranou proti
+  dvojímu připsání; tu poskytuje databázový row lock a přechod kódu na `activated`.
+- Když se `supabase.rpc` předává jako samostatná funkce, musí zůstat vazba klienta:
+  `supabase.rpc.bind(supabase)`. Přetypování bez bindu ztratí `this` a RPC selže při čtení
+  PostgREST klienta.
+- `get_my_miocoin_history(integer)` nesmí přijímat identifikátor uživatele. Každý zdroj musí
+  filtrovat `auth.uid()`, funkce zůstává `SECURITY DEFINER` se `search_path=''` a EXECUTE jen pro
+  `authenticated` a `service_role` — nikdy pro `anon` nebo `PUBLIC`.
+- Partnerův název, web a číslo objednávky v historii se čtou pouze z reálných
+  `partner_coin_activations` / `partner_reward_codes` / `partners`; nic se nedopočítává ani
+  neodhaduje. Příjmy jsou zelené `+`, výdaje červené `−` a MioCoin hodnota má nejvýše jedno
+  desetinné místo.
+- **Otevřené pouze pro staging:** nový zákazník → registrace → potvrzovací e-mail → návrat s
+  kódem není dokončený, dokud vestavěný Supabase Auth SMTP vrací
+  `429 over_email_send_rate_limit` (2 e-maily/h). Není to produkční regresní chyba.
 
 ---
 
@@ -161,6 +186,11 @@ první návod **„Jak propojit Shoptet s OneMil“**.
 - **Obsah má jediný zdroj:** `src/content/partnerGuides/shoptetGuide.ts`. Stránku i PDF
   renderuje tentýž modul, aby se nemohly rozejít. **Nepsat text kroků do stránky ani do
   generátoru natvrdo.**
+- KROK 2.1 je součástí tohoto zdroje a vysvětluje nastavení Shoptet exportu: dialog **PŘIDAT**,
+  skupiny polí a přesné hodnoty `Exportovat jako` (`code`, `statusName`, `totalPriceWithVat`,
+  `paid`, `email`, `orderItemType`, `orderItemName`, `orderItemAmount`, `orderItemCode`,
+  `orderItemUnitDiscountPriceWithVat`). Tyto identifikátory se nesmí svévolně přejmenovat;
+  `paid` je skutečný platební signál a není náhradou za lifecycle `statusName`.
 - PDF generuje `scripts/build-partner-guide-pdf.mjs` (`npm run build:partner-guide-pdf`) do
   `public/navody/OneMil-navod-Shoptet.pdf`. **Po každé změně obsahu PDF přegenerovat ve stejném
   commitu** — spec 133m selže, když je PDF starší než obsahový modul.
@@ -786,7 +816,7 @@ Shoptet Phase 2 self-service e-shop connection **staging E2E test ✅ PASSED**. 
 - BOHEMIA: ✅ shoptet_customer_delivery='partner' unchanged
 - Production: ✅ untouched
 
-**Produkční rollout:** dokončen 29. 06. 2026 (viz sekce výše). Frontend Lovable Publish zbývá.
+**Produkční rollout:** dokončen 29. 06. 2026 (viz sekce výše). Frontend byl následně publikován; staré tvrzení, že Lovable Publish zbývá, už neplatí.
 
 ## SHOPTET PHASE 2 — PRODUKTOVÉ ROZHODNUTÍ: TŘI ZPŮSOBY NAPOJENÍ E-SHOPU (28. 06. 2026, opraveno 28. 06. 2026)
 
