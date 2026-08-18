@@ -154,8 +154,10 @@ test.describe('135 — Shoptet delta import (updateTimeFrom)', () => {
       ['code;email;total;status', '2026000001;a@onemil.cz;500;Vyřízená'].join('\n'),
     );
 
-    expect(before.orders[0].shoptetStatus).toBe('paid');
-    expect(after.orders[0].shoptetStatus).toBe('completed');
+    // "Zaplaceno" is payment, not a lifecycle stage; "Vyřízená" is the lifecycle move.
+    expect(before.orders[0].lifecycle).toBe('pending');
+    expect(before.orders[0].payment).toBe('paid');
+    expect(after.orders[0].lifecycle).toBe('completed');
     expect(after.orders[0].orderId).toBe(before.orders[0].orderId);
   });
 
