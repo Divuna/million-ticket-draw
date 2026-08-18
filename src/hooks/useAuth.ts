@@ -21,6 +21,10 @@ function safeRedirectPath(raw: string | null): string | null {
   return decoded;
 }
 
+type AuthOperationResult = {
+  error: Error | null;
+};
+
 interface AuthContextType {
   user: User | null;
   session: Session | null;
@@ -30,8 +34,14 @@ interface AuthContextType {
    *  Route guards must not redirect while this is true. */
   isPasswordRecovery: boolean;
   passwordRecoveryRoute: '/reset-password' | '/partner/set-password';
-  signUp: (email: string, password: string, marketingConsent?: boolean) => Promise<{ error: any }>;
-  signIn: (email: string, password: string) => Promise<{ error: any }>;
+  signUp: (
+    email: string,
+    password: string,
+    marketingConsent?: boolean,
+    adultConfirmed?: boolean,
+    redirectAfterSignUp?: string | null,
+  ) => Promise<AuthOperationResult>;
+  signIn: (email: string, password: string) => Promise<AuthOperationResult>;
   signOut: () => Promise<void>;
   signInWithOAuth: (provider: 'google' | 'apple' | 'facebook', redirectAfterLogin?: string | null) => Promise<void>;
 }
@@ -116,9 +126,12 @@ export const useAuthState = () => {
     password: string,
     marketingConsent: boolean = false,
     adultConfirmed: boolean = false,
+    redirectAfterSignUp: string | null = null,
   ) => {
     const normalizedEmail = email.trim().toLowerCase();
-    const redirectUrl = `${import.meta.env.VITE_APP_URL || window.location.origin}/`;
+    const safeRedirect = safeRedirectPath(redirectAfterSignUp) ?? '/';
+    const appUrl = (import.meta.env.VITE_APP_URL || window.location.origin).replace(/\/$/, '');
+    const redirectUrl = `${appUrl}${safeRedirect}`;
     
     const { data, error } = await supabase.auth.signUp({
       email: normalizedEmail,

@@ -19,6 +19,7 @@ import {
 const PENDING_AFFILIATE_REF_KEY = 'onemil_affiliate_ref';
 import { analytics } from '@/lib/analytics';
 import { ENABLED_OAUTH_PROVIDERS, type OAuthProvider } from '@/config/socialAuth';
+import { getSafeRedirectPath } from '@/lib/loginRedirect';
 
 const GoogleIcon = () => (
   <svg aria-hidden="true" viewBox="0 0 24 24" className="h-6 w-6 shrink-0">
@@ -52,6 +53,7 @@ const Register: React.FC = () => {
   const [loading, setLoading] = useState(false);
   const { signUp, signInWithOAuth } = useAuth();
   const navigate = useNavigate();
+  const redirectTarget = getSafeRedirectPath(searchParams.get('redirect'));
 
   // Persist referral code from URL so it can be applied after signup (or after OAuth return)
   useEffect(() => {
@@ -111,7 +113,13 @@ const Register: React.FC = () => {
     markAdultConfirmationPending();
 
     try {
-      const { error } = await signUp(email, password, marketingAccepted, ageConfirmed);
+      const { error } = await signUp(
+        email,
+        password,
+        marketingAccepted,
+        ageConfirmed,
+        redirectTarget,
+      );
       
       if (error) {
         toast({
@@ -157,7 +165,7 @@ const Register: React.FC = () => {
 
         }
         analytics.registrationCompleted();
-        navigate('/profile');
+        navigate(redirectTarget || '/profile');
       }
     } catch (error) {
       toast({

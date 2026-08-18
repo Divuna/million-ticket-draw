@@ -2,6 +2,20 @@
 
 > **Autoritativní aktuální stav. Aktualizováno 16. 8. 2026.**
 
+## 0. Automatické uplatnění MioCoinů z e-mailu + Historie MioCoinů — STAGING OVĚŘENO, **PRODUKCE NENASAZENA** (18. 8. 2026)
+
+Větev `codex/miocoin-profile-wallet-history`, odvozená z aktuálního `origin/main`, obsahuje související úpravu zákaznického profilu. **Není mergnutá ani publikovaná.** Jediná migrace `20260818120000_customer_miocoin_history.sql` byla aplikována výhradně do stagingu `dxmowysntemfqfnanxua`; produkce `xkzhjldrojjlrkezorey`, její data, peněženky, MioCoin zůstatky a existující odměny zůstaly nedotčené.
+
+- E-mailový odkaz s existujícím parametrem `?miocoin_code=…` nyní na `/profile` automaticky zavolá výhradně kanonické `redeem_miocoin_code`. URL se po dokončeném pokusu vyčistí, takže refresh nevyvolá další klientský pokus; databázový `FOR UPDATE` + přechod kódu na `activated` zůstávají autoritou proti dvojímu připsání. Ruční formulář pro vložení kódu zůstává zachovaný.
+- Neověřený zákazník se vrátí přes existující bezpečný `redirect` po přihlášení na stejnou URL profilu; stejný redirect se nyní předá také z přihlášení do registrace. E-mailová registrace jej předá autentizační vrstvě jako bezpečné `emailRedirectTo` pro případ povinného potvrzení e-mailu a po okamžité registraci naviguje na stejný cíl. OAuth už ho předával.
+- „Historie převodů“ v peněžence je nahrazena „Historií MioCoinů“. Staging migrace `20260818120000_customer_miocoin_history.sql` přidala read-only RPC `get_my_miocoin_history(integer)` bez parametru uživatele. Čte skutečný ledger `wallet_transactions`, doplňuje partnerský název/web/objednávku pouze z `partner_coin_activations` + `partner_reward_codes` + `partners` a přidává existující `bonus_transfer_history`. Každý zdroj filtruje `auth.uid()`; staging test druhého zákazníka vrátil prázdnou historii, ne data prvního zákazníka.
+- Historie rozlišuje existující příchozí a odchozí typy (partnerské připsání, dobíjení, bonus, převod bonusu, soutěž, benefit, voucher, refundace a ruční úprava) pomocí zeleného `+` / červeného `−`; zobrazení používá sdílený formát MioCoinů s jedním desetinným místem.
+- Staging browser E2E prošel pro přihlášený e-mailový odkaz, nepřihlášený odkaz → login → automatické uplatnění, ruční vložení, vyčištění URL, refresh bez druhého RPC, partnerský kontext historie, desetinných `31,3`, dobíjení a výdaj. Během ověření byla nalezena a opravena ztráta `this` vazby při přetypování `supabase.rpc`; oba RPC nyní používají `supabase.rpc.bind(supabase)`. Regresní spec `136-miocoin-profile-wallet-history.spec.ts`: **9 passed**. `npm run build`: exit 0. `npx tsc -p tsconfig.app.json --noEmit` končí na **17 předexistujících chybách** v 11 nedotčených souborech; žádná chyba není v nových souborech nebo v nově změněných řádcích.
+- Skutečný UI průchod nové e-mailové registrace a potvrzovacího e-mailu se ve stagingu nepodařilo dokončit, protože Supabase Auth vrátil `email rate limit exceeded`. Kód bezpečné `emailRedirectTo` předává a regresní kontrakt jej kontroluje; před PR je potřeba pouze tento jeden scénář zopakovat po uvolnění staging mail rate limitu.
+- Všechny odstranitelné staging artefakty vytvořené pro test (3 auth účty, 2 public users, partner, 9 kódů, 9 aktivací a wallet) byly smazány. 11 záznamů `wallet_transactions` zůstalo neodstranitelných, protože staging trigger striktně zakazuje jakýkoli delete; nebyl obcházen ani změněn. Odkazy na účty, peněženku, partnera, kódy a aktivace již neexistují.
+
+---
+
 ## 0a. MioCoin — pravidlo 1 desetinného místa — STAGING OVĚŘENO, **PRODUKCE NENASAZENA** (18. 8. 2026)
 
 Partner vereonika sro má konverzi `100 Kč = 3,7 MC`. Košík 660 Kč vychází na `24,42 MC`, ale
