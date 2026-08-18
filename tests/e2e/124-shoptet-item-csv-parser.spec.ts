@@ -25,6 +25,7 @@ import {
  *   124k) the discounted default price wins over the plain default price
  *   124n) "Nevyřízená" never maps to completed (negated state must not issue)
  *   124o) the negation guard is narrow — nevyzvednuto still cancels
+ *   124p) "Nezaplaceno" / "unpaid" never map to paid (they cancel)
  */
 
 // Real Shoptet Czech column names, as offered by the custom order export.
@@ -345,6 +346,34 @@ test.describe('124 — Shoptet item-level CSV parser', () => {
       expect(shouldIssue(mapStatus('Nevyřízená'), threshold)).toBe(false);
     }
     expect(shouldIssue(mapStatus('Vyřízená'), 'paid')).toBe(true);
+  });
+
+  test('124p) "Nezaplaceno" / "unpaid" are NOT "Zaplaceno" / "paid"', () => {
+    // Same defect class as 124n, on the paid pair. `zaplac` matched inside
+    // ne-ZAPLAC-eno and `paid` inside un-PAID, and because the paid branch ran
+    // before the cancelled branch, the `nezaplac` and `unpaid` entries already
+    // listed under cancelled were dead code. An explicitly UNPAID order therefore
+    // mapped to `paid` and issued the reward at the 'paid' threshold.
+    expect(mapStatus('Nezaplaceno')).toBe('cancelled');
+    expect(mapStatus('nezaplaceno')).toBe('cancelled');
+    expect(mapStatus('Nezaplaceno / čeká na platbu')).toBe('cancelled');
+    expect(mapStatus('unpaid')).toBe('cancelled');
+
+    // The positive counterparts must be untouched — these are the pairs that
+    // have to differ.
+    expect(mapStatus('Zaplaceno')).toBe('paid');
+    expect(mapStatus('Zaplacená')).toBe('paid');
+    expect(mapStatus('paid')).toBe('paid');
+    expect(mapStatus('Nezaplaceno')).not.toBe(mapStatus('Zaplaceno'));
+    expect(mapStatus('unpaid')).not.toBe(mapStatus('paid'));
+
+    // A negated-payment order must never issue at any threshold, and must never
+    // be silently left pending either — it belongs in cancelled.
+    for (const threshold of ['paid', 'shipped', 'completed']) {
+      expect(shouldIssue(mapStatus('Nezaplaceno'), threshold)).toBe(false);
+      expect(shouldIssue(mapStatus('unpaid'), threshold)).toBe(false);
+    }
+    expect(shouldIssue(mapStatus('Zaplaceno'), 'paid')).toBe(true);
   });
 
   test('124o) the guard is narrow — dead-order negations still cancel', () => {

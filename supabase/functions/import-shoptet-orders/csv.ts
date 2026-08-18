@@ -167,23 +167,32 @@ export function parseNumericCell(raw: string): number {
 export function mapStatus(raw: string): ShoptetStatus {
   const s = norm(raw);
 
-  // Czech negates a state with the prefix "ne", and every pattern below is a
-  // SUBSTRING match — so "Nevyřízená" (= NOT processed) matches `vyriz` inside
-  // ne-VYRIZ-ena and a brand-new, unhandled order reads as `completed`. That is
-  // not cosmetic: `completed` issues the reward at every trigger threshold, so
-  // the customer is paid before the shop has touched the order. Observed live on
-  // production, where three orders sitting at "Nevyřízená" were issued anyway.
+  // ── negated states, resolved before anything else ──────────────────────────
   //
-  // Deliberately narrow, and deliberately first:
-  //   * only the stems that mean "not yet in a positive state" are listed here;
-  //     the negations that mean the order is DEAD (nevyzvednuto = not collected,
-  //     nezaplaceno = not paid) are intentionally absent so they keep falling
-  //     through to the cancelled branch below.
-  //   * \b anchors it to a real word start, so it can never fire mid-word
-  //     ("stornovana" contains "n","e" but not at a boundary).
-  // Failing to `pending` is the safe direction: the order is simply re-offered on
-  // the next import once its status really changes.
+  // Czech negates with the prefix "ne", English with "un" — but every pattern
+  // below is a SUBSTRING match, so the negation is completely invisible to it:
+  //
+  //   "Nevyřízená"  (NOT processed) matched `vyriz`  inside ne-VYRIZ-ena  → completed
+  //   "Nezaplaceno" (NOT paid)      matched `zaplac` inside ne-ZAPLAC-eno → paid
+  //   "unpaid"      (NOT paid)      matched `paid`   inside un-PAID       → paid
+  //
+  // All three then issued the reward. This is not theoretical: BOHEMIA's export
+  // is UTF-8, so three orders standing at "Nevyřízená" were issued on production,
+  // one of them already redeemed. The `nezaplac` and `unpaid` entries in the
+  // cancelled branch below were dead code for the same reason — the paid branch
+  // ran first and swallowed them.
+  //
+  // Each negation is routed to the bucket its meaning demands:
+  //   not yet in a positive state → pending   (simply re-offered on the next import)
+  //   explicitly not paid         → cancelled (the order will not be fulfilled)
+  //
+  // `\b` anchors both to a real word start, so neither can fire mid-word
+  // ("stornovana" contains "n","e" but not at a boundary).
+  //
+  // "nevyzvednuto" (not collected) is deliberately absent: it matches none of the
+  // positive patterns, so it already reaches the cancelled branch on its own.
   if (/\bne(vyriz|dokon|dorucen|odeslan)/.test(s))                               return "pending";
+  if (/\bnezaplac/.test(s) || /\bunpaid/.test(s))                                return "cancelled";
 
   if (/(completed|dokon|vyriz|dorucen|delivered)/.test(s))                       return "completed";
   if (/(shipped|odeslan|dispatched)/.test(s))                                    return "shipped";
