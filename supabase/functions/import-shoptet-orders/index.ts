@@ -7,6 +7,9 @@ import { parseShoptetCsv, shouldIssue, toRpcStatus, type ImportRow } from "./csv
 // successful live run, so the cron can poll every minute without re-downloading
 // the partner's whole order history. See delta.ts for the timezone reasoning.
 import { computeDeltaFrom, formatShoptetUpdateTime, withUpdateTimeFrom } from "./delta.ts";
+// Shoptet serves some exports as windows-1250. resp.text() would decode those as
+// UTF-8 and mangle every Czech status into mojibake. See encoding.ts.
+import { decodeCsvBody } from "./encoding.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -189,7 +192,10 @@ serve(async (req) => {
       return json({ status: "error", error: "fetch_failed", http_status: resp.status, run_id: runId }, 502);
     }
 
-    const text = await resp.text();
+    // Decode by the charset the server declared, NOT blindly as UTF-8. A
+    // windows-1250 export otherwise arrives as mojibake, every status maps to
+    // `pending`, and the reward is silently never issued.
+    const text = decodeCsvBody(await resp.arrayBuffer(), resp.headers.get("content-type"));
     const parsed = parseShoptetCsv(text);
 
     if (parsed.missingHeaders.length === 1 && parsed.missingHeaders[0] === "empty_csv") {
