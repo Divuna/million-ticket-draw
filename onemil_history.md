@@ -1,3 +1,59 @@
+# 18. 08. 2026 — Desetinné partnerské MioCoiny NASAZENY DO PRODUKCE
+
+Navazuje na staging zápis níže, který byl v době vzniku pravdivý. Změna je nyní živá
+na produkci `xkzhjldrojjlrkezorey`.
+
+**Co platí od teď**
+
+- Partnerské MioCoin odměny podporují **maximálně 1 desetinné místo**.
+- `compute_partner_reward` je **jediný zdroj výpočtu** partnerské odměny.
+- Automatický výpočet se zaokrouhluje **právě jednou, až na konci celé objednávky**,
+  na 1 desetinné místo.
+- **Minimální vydatelná partnerská odměna je 0,5 MC.** Pod ní se odměna nevydá
+  a widget ji zákazníkovi nenabídne.
+
+**Nasazeno na produkci**
+
+- Migrace `20260818100000` (typy sloupců + CHECKy), `20260818100200` (issuance),
+  `20260818100100` (engine), `20260818100300` (odstranění legacy cesty).
+- Migrace 2 a 3 byly nasazeny v **opačném pořadí, než uvádí PR** — nejdřív issuance,
+  pak engine. Původní pořadí by produkci rozbilo: stará issuance měla
+  `v_coins integer` a `(v_reward->>'coins')::integer`, a přetypování textu `'24.4'`
+  na integer v PostgreSQL **vyhazuje výjimku**, nezaokrouhluje. Nasazení enginu jako
+  prvního by shodilo vydávání odměny u každé desetinné částky.
+- Edge Function `partner-reward-preview` nasazena (v3 → v4). **Preview odpovídá
+  skutečně vydané odměně** — ověřeno na sedmi hodnotách proti `compute_partner_reward`.
+
+**Odstraněné legacy funkce**
+
+`activate_partner_coins_from_order` a `api_activate_partner_coins` byly odstraněny,
+protože představovaly **druhou paralelní cestu výpočtu odměn** — bypass si počítal
+odměnu sám (`ROUND((amount / reward_base_czk) * reward_mc, 1)`) a zapisoval rovnou
+do `partner_coin_activations`.
+
+Před odstraněním bylo ověřeno, že **nemají žádné živé volající** (0 SQL volajících,
+0 triggerů, 0 views, 0 RLS policies, 0 column defaults, 0 cron jobů, 0 volání v repu)
+a že **žádná ze stávajících produkčních aktivací přes ně nevznikla** — všechny 4
+aktivace nesou `code`, který legacy cesta nikdy nenastavuje.
+
+Rollback obou funkcí je dohledatelný v Git historii migrace `20260818100300`.
+**Nemají se obnovovat**, dokud nebude nalezen konkrétní legitimní volající; správná
+cesta je `create_partner_order_reward`.
+
+**Stav po nasazení**
+
+- Produkční minutový Shoptet cron běží dál **bez `rows_failed`**.
+- **Existující historická data nebyla přepočítána ani změněna** — žádná migrace
+  neprovádí UPDATE ani backfill. Počty kódů, aktivací, faktur i zůstatky peněženek
+  zůstaly beze změny.
+- Legitimní cesta `create_partner_order_reward → redeem → activation` ověřena celá
+  s desetinnou hodnotou.
+
+**Zbývá:** Lovable Publish frontendu. Do té doby partnerský dashboard a admin
+formátují MioCoiny po staru a nemají klientskou validaci, takže neplatná ručně zadaná
+hodnota skončí obecnou chybovou hláškou místo konkrétní. Zákaznická část je v pořádku,
+widget čte z nasazené Edge Function.
+
 # 18. 08. 2026 — MioCoin konečně unese desetinu (staging, PRODUKCE NENASAZENA)
 
 Partner vereonika sro nastavil `100 Kč = 3,7 MC`. Košík 660 Kč tedy vychází na 24,42 MC, ale
