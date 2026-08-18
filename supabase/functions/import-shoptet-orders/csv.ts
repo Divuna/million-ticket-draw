@@ -166,6 +166,25 @@ export function parseNumericCell(raw: string): number {
 // would otherwise match the paid pattern first.
 export function mapStatus(raw: string): ShoptetStatus {
   const s = norm(raw);
+
+  // Czech negates a state with the prefix "ne", and every pattern below is a
+  // SUBSTRING match — so "Nevyřízená" (= NOT processed) matches `vyriz` inside
+  // ne-VYRIZ-ena and a brand-new, unhandled order reads as `completed`. That is
+  // not cosmetic: `completed` issues the reward at every trigger threshold, so
+  // the customer is paid before the shop has touched the order. Observed live on
+  // production, where three orders sitting at "Nevyřízená" were issued anyway.
+  //
+  // Deliberately narrow, and deliberately first:
+  //   * only the stems that mean "not yet in a positive state" are listed here;
+  //     the negations that mean the order is DEAD (nevyzvednuto = not collected,
+  //     nezaplaceno = not paid) are intentionally absent so they keep falling
+  //     through to the cancelled branch below.
+  //   * \b anchors it to a real word start, so it can never fire mid-word
+  //     ("stornovana" contains "n","e" but not at a boundary).
+  // Failing to `pending` is the safe direction: the order is simply re-offered on
+  // the next import once its status really changes.
+  if (/\bne(vyriz|dokon|dorucen|odeslan)/.test(s))                               return "pending";
+
   if (/(completed|dokon|vyriz|dorucen|delivered)/.test(s))                       return "completed";
   if (/(shipped|odeslan|dispatched)/.test(s))                                    return "shipped";
   if (/(zaplac|paid|pripravena|processing|vyrizuje)/.test(s))                    return "paid";

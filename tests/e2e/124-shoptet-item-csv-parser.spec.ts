@@ -23,6 +23,8 @@ import {
  *   124i) Shoptet's own DEFAULT column names (orderItemCode, …) parse identically
  *   124j) default names do not let an item column hijack the order code
  *   124k) the discounted default price wins over the plain default price
+ *   124n) "Nevyřízená" never maps to completed (negated state must not issue)
+ *   124o) the negation guard is narrow — nevyzvednuto still cancels
  */
 
 // Real Shoptet Czech column names, as offered by the custom order export.
@@ -321,5 +323,46 @@ test.describe('124 — Shoptet item-level CSV parser', () => {
     expect(shouldIssue('paid', 'paid')).toBe(true);
     expect(shouldIssue('pending', 'paid')).toBe(false);
     expect(shouldIssue('cancelled', 'paid')).toBe(false);
+  });
+
+  test('124n) "Nevyřízená" is NOT "Vyřízená" — a negated state never issues', () => {
+    // Regression lock for a live production bug. Every pattern in mapStatus is a
+    // SUBSTRING match, so "Nevyřízená" (= NOT processed) matched `vyriz` inside
+    // ne-VYRIZ-ena and mapped to `completed`. Because `completed` issues at every
+    // trigger threshold, brand-new untouched orders were rewarded immediately —
+    // three such orders were issued on production before this was caught.
+    expect(mapStatus('Nevyřízená')).toBe('pending');
+    expect(mapStatus('Nevyřízené')).toBe('pending');
+    expect(mapStatus('nevyřízená')).toBe('pending');
+
+    // The positive state must be untouched — this is the pair that has to differ.
+    expect(mapStatus('Vyřízená')).toBe('completed');
+    expect(mapStatus('Vyřízeno')).toBe('completed');
+    expect(mapStatus('Nevyřízená')).not.toBe(mapStatus('Vyřízená'));
+
+    // And the negated state must not reward at any threshold.
+    for (const threshold of ['paid', 'shipped', 'completed']) {
+      expect(shouldIssue(mapStatus('Nevyřízená'), threshold)).toBe(false);
+    }
+    expect(shouldIssue(mapStatus('Vyřízená'), 'paid')).toBe(true);
+  });
+
+  test('124o) the guard is narrow — dead-order negations still cancel', () => {
+    // "nevyzvednuto" / "nezaplaceno" are negations too, but they mean the order is
+    // DEAD, not merely unhandled. They must keep falling through to `cancelled`,
+    // so the guard deliberately does not list their stems.
+    expect(mapStatus('Nevyzvednuto')).toBe('cancelled');
+    expect(mapStatus('Nevyzvednutá zásilka')).toBe('cancelled');
+
+    // Other "not yet positive" negations map to pending for the same reason as
+    // Nevyřízená — they would otherwise match dokon / dorucen / odeslan.
+    expect(mapStatus('Nedokončeno')).toBe('pending');
+    expect(mapStatus('Nedoručeno')).toBe('pending');
+    expect(mapStatus('Neodesláno')).toBe('pending');
+
+    // The guard is word-anchored, so it can never fire mid-word.
+    expect(mapStatus('Stornována')).toBe('cancelled');
+    expect(mapStatus('Zrušena')).toBe('cancelled');
+    expect(mapStatus('Vráceno')).toBe('cancelled');
   });
 });
