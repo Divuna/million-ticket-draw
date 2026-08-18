@@ -21,11 +21,33 @@ export interface GuideShot {
   note?: string;
 }
 
+export interface GuideFieldMapping {
+  /** Customer group selected in the Shoptet export-field dialog. */
+  group: string;
+  /** Field that must be checked in that customer group. */
+  field: string;
+  /** Exact value entered in the Exportovat jako column. */
+  exportAs: string;
+}
+
+export interface GuideSubstep {
+  /** Supports decimal numbering such as 2.1 without renumbering primary steps. */
+  number: string;
+  title: string;
+  body: string[];
+  shots: GuideShot[];
+  fields: GuideFieldMapping[];
+  important: string;
+  next?: string;
+}
+
 export interface GuideStep {
   number: number;
   title: string;
   /** Body paragraphs. `**bold**` marks the parts a partner has to click or type. */
   body: string[];
+  /** Optional guidance placed after the first screenshot and before remaining shots. */
+  substepAfterFirstShot?: GuideSubstep;
   /** The "what now" line that closes the step and points at the next one. */
   next?: string;
   shots: GuideShot[];
@@ -68,6 +90,39 @@ export const SHOPTET_GUIDE_STEPS: GuideStep[] = [
       'Nastavte formát **CSV**, název **OneMil**, přístup pro partnera **onemil** a volbu **Jen nové nebo změněné**.',
       'Nastavení uložte.',
     ],
+    substepAfterFirstShot: {
+      number: '2.1',
+      title: 'Přidejte potřebná pole do exportu',
+      body: [
+        'Klikněte na **PŘIDAT**. Otevře se okno **Přidat pole do šablony exportu objednávek**.',
+        'V poli **Zákaznická skupina** postupně vyberte skupiny uvedené v tabulce. V každé skupině zaškrtněte všechna potřebná pole a nastavte odpovídající název ve sloupci **Exportovat jako**.',
+      ],
+      shots: [
+        {
+          src: `${SHOPTET_GUIDE_IMAGE_BASE}/03a-shoptet-pridat-pole-exportu-objednavek.png`,
+          alt: 'Shoptet — dialog Přidat pole do šablony exportu objednávek',
+          note: 'Po kliknutí na PŘIDAT postupně zvolte jednotlivé zákaznické skupiny a jejich pole.',
+        },
+      ],
+      fields: [
+        { group: 'Objednávka', field: 'kód', exportAs: 'code' },
+        { group: '', field: 'status', exportAs: 'statusName' },
+        { group: 'Celková cena objednávky', field: 'celková cena s daní', exportAs: 'totalPriceWithVat' },
+        { group: '', field: 'zaplaceno', exportAs: 'paid' },
+        { group: 'Základní informace o zákazníkovi', field: 'e-mail', exportAs: 'email' },
+        { group: 'Položky objednávky', field: 'položka objednávky - typ', exportAs: 'orderItemType' },
+        { group: '', field: 'položka objednávky - název', exportAs: 'orderItemName' },
+        { group: '', field: 'položka objednávky - množství', exportAs: 'orderItemAmount' },
+        { group: '', field: 'položka objednávky - kód', exportAs: 'orderItemCode' },
+        {
+          group: '',
+          field: 'položka objednávky - cena s daní za jednotku po slevě',
+          exportAs: 'orderItemUnitDiscountPriceWithVat',
+        },
+      ],
+      important: 'Důležité: názvy ve sloupci „Exportovat jako“ napište přesně podle tabulky.',
+      next: 'Po přidání polí pokračujte v nastavení exportu podle další části návodu.',
+    },
     next:
       'Export je připravený. Teď z něj potřebujeme získat odkaz, přes který bude OneMil objednávky načítat.',
     shots: [
