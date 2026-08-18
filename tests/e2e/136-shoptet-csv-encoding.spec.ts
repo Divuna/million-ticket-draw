@@ -6,7 +6,7 @@ import {
   decodeCsvBody,
   DEFAULT_CHARSET,
 } from '../../supabase/functions/import-shoptet-orders/encoding';
-import { parseShoptetCsv, mapStatus } from '../../supabase/functions/import-shoptet-orders/csv';
+import { parseShoptetCsv } from '../../supabase/functions/import-shoptet-orders/csv';
 
 /**
  * Spec 136 — Shoptet CSV charset decoding.
@@ -18,13 +18,13 @@ import { parseShoptetCsv, mapStatus } from '../../supabase/functions/import-shop
  * UTF-8 and ignores the charset the server declared. Shoptet serves a custom
  * order export as `application/csv; charset=windows-1250`, where "ř" is the
  * single byte 0xF8 — not a valid UTF-8 lead byte. Every Czech status therefore
- * arrived as mojibake, matched none of the patterns in mapStatus, and fell to
+ * arrived as mojibake, matched none of the lifecycle patterns, and fell to
  * `pending`, so the reward was silently never issued.
  *
  * Covers:
  *   136a) charset is read out of Content-Type, in all the shapes servers send it
  *   136b) a windows-1250 body decodes to the real Czech text
- *   136c) windows-1250 statuses reach the CORRECT mapStatus bucket end-to-end
+ *   136c) windows-1250 statuses reach the CORRECT lifecycle bucket end-to-end
  *   136d) UTF-8 exports are byte-for-byte unaffected
  *   136e) a missing charset keeps the previous UTF-8 behaviour
  *   136f) an unknown charset label falls back instead of taking the import down
@@ -93,39 +93,42 @@ test.describe('136 — Shoptet CSV charset decoding', () => {
   });
 
   test('136c) windows-1250 statuses reach the correct bucket end-to-end', () => {
-    const cases: Array<[string, string]> = [
-      ['Nevyřízená', 'pending'],
-      ['Vyřízená', 'completed'],
-      ['Zaplaceno', 'paid'],
-      ['Nezaplaceno', 'cancelled'],
-      ['unpaid', 'cancelled'],
-      ['Odesláno', 'shipped'],
-      ['Stornována', 'cancelled'],
+    // This export carries no `paid` column, so payment comes from statusName.
+    const cases: Array<[string, string, string]> = [
+      ['Nevyřízená', 'pending', 'unknown'],
+      ['Vyřízená', 'completed', 'unknown'],
+      ['Zaplaceno', 'pending', 'paid'],
+      ['Nezaplaceno', 'cancelled', 'unpaid'],
+      ['unpaid', 'cancelled', 'unpaid'],
+      ['Odesláno', 'shipped', 'unknown'],
+      ['Stornována', 'cancelled', 'unknown'],
     ];
 
-    for (const [status, expected] of cases) {
+    for (const [status, lifecycle, payment] of cases) {
       const decoded = decodeCsvBody(toWindows1250(csvWithStatus(status)), W1250_CT);
       const parsed = parseShoptetCsv(decoded);
 
       expect(parsed.orders, `${status}: one order expected`).toHaveLength(1);
       expect(parsed.orders[0].orderId).toBe('2026000003');
       expect(parsed.orders[0].total).toBe(660);
-      expect(parsed.orders[0].shoptetStatus, `${status} must map to ${expected}`).toBe(expected);
+      expect(parsed.orders[0].lifecycle, `${status} lifecycle`).toBe(lifecycle);
+      expect(parsed.orders[0].payment, `${status} payment`).toBe(payment);
     }
   });
 
   test('136d) UTF-8 exports are unaffected', () => {
-    for (const [status, expected] of [
-      ['Nevyřízená', 'pending'],
-      ['Vyřízená', 'completed'],
-      ['Zaplaceno', 'paid'],
-      ['Nezaplaceno', 'cancelled'],
-      ['unpaid', 'cancelled'],
+    for (const [status, lifecycle, payment] of [
+      ['Nevyřízená', 'pending', 'unknown'],
+      ['Vyřízená', 'completed', 'unknown'],
+      ['Zaplaceno', 'pending', 'paid'],
+      ['Nezaplaceno', 'cancelled', 'unpaid'],
+      ['unpaid', 'cancelled', 'unpaid'],
     ] as const) {
       const decoded = decodeCsvBody(toUtf8(csvWithStatus(status)), UTF8_CT);
       // Decoding a UTF-8 body as UTF-8 must be the identity function.
       expect(decoded).toBe(csvWithStatus(status));
-      expect(parseShoptetCsv(decoded).orders[0].shoptetStatus).toBe(expected);
+      expect(parseShoptetCsv(decoded).orders[0].lifecycle).toBe(lifecycle);
+      expect(parseShoptetCsv(decoded).orders[0].payment).toBe(payment);
     }
   });
 
@@ -162,7 +165,7 @@ test.describe('136 — Shoptet CSV charset decoding', () => {
     expect(parsed.orders[0].items).toHaveLength(2);
     expect(parsed.orders[0].items.map((i) => i.code)).toEqual(['64', '0011']);
     expect(parsed.orders[0].items[0].unit_price_czk).toBe(310);
-    expect(parsed.orders[0].shoptetStatus).toBe('completed');
+    expect(parsed.orders[0].lifecycle).toBe('completed');
   });
 
   test('136h) the importer decodes by charset and no longer calls resp.text()', () => {

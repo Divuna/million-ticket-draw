@@ -250,9 +250,10 @@ serve(async (req) => {
           run_id: runId,
           external_order_id: orderId,
           action: "would_create",
-          result: row.shoptetStatus,
+          // Both axes, so a dry run shows why an order did or did not qualify.
+          result: `${row.lifecycle}/${row.payment}`,
         });
-        if (shouldIssue(row.shoptetStatus, triggerThreshold) || row.shoptetStatus === "cancelled") {
+        if (shouldIssue(row.lifecycle, row.payment, triggerThreshold) || row.lifecycle === "cancelled") {
           rowsWouldStatusUpdate++;
         }
       }
@@ -295,16 +296,19 @@ serve(async (req) => {
             logBatch.push({ run_id: runId, external_order_id: row.orderId, action: "create", result: "ok" });
           }
 
-          // Apply reward_trigger_status threshold logic.
-          const willIssue  = shouldIssue(row.shoptetStatus, triggerThreshold);
-          const willCancel = row.shoptetStatus === "cancelled";
+          // Apply reward_trigger_status threshold logic against BOTH axes.
+          // Re-sending the same transition is harmless: the RPC only moves a code
+          // from pending → issued, so paid → shipped → completed still yields
+          // exactly one issued reward.
+          const willIssue  = shouldIssue(row.lifecycle, row.payment, triggerThreshold);
+          const willCancel = row.lifecycle === "cancelled";
 
           if (!willIssue && !willCancel) continue; // below threshold → leave as pending
 
           const { data: statusResult, error: statusErr } = await admin.rpc("update_partner_order_reward_status", {
             p_partner_id: partnerId,
             p_external_order_id: row.orderId,
-            p_order_status: toRpcStatus(row.shoptetStatus),
+            p_order_status: toRpcStatus(row.lifecycle, row.payment),
           });
 
           if (statusErr || !isSuccessResult(statusResult)) {
@@ -315,7 +319,7 @@ serve(async (req) => {
 
           rowsStatusUpdated++;
           if (statusResult.email_enqueued === true) rowsEmailEnqueued++;
-          logBatch.push({ run_id: runId, external_order_id: row.orderId, action: "status_update", result: toRpcStatus(row.shoptetStatus) });
+          logBatch.push({ run_id: runId, external_order_id: row.orderId, action: "status_update", result: toRpcStatus(row.lifecycle, row.payment) });
         }
       }
     }

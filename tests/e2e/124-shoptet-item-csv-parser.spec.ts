@@ -3,7 +3,8 @@ import {
   parseShoptetCsv,
   isNonProductItemType,
   shouldIssue,
-  mapStatus,
+  mapLifecycle,
+  paymentFromStatusName,
 } from '../../supabase/functions/import-shoptet-orders/csv';
 
 /**
@@ -55,8 +56,9 @@ test.describe('124 — Shoptet item-level CSV parser', () => {
     expect(parsed.orders).toHaveLength(2);
     expect(parsed.orders[0].orderId).toBe('2026000001');
     expect(parsed.orders[0].total).toBe(500);
-    expect(parsed.orders[0].shoptetStatus).toBe('paid');
-    expect(parsed.orders[1].shoptetStatus).toBe('completed');
+    expect(parsed.orders[0].lifecycle).toBe('pending');
+    expect(parsed.orders[0].payment).toBe('paid');
+    expect(parsed.orders[1].lifecycle).toBe('completed');
     // Legacy orders carry no items → create_partner_order_reward gets p_items=null
     // and the whole-shop calculation stays byte-for-byte identical.
     expect(parsed.orders[0].items).toEqual([]);
@@ -80,7 +82,8 @@ test.describe('124 — Shoptet item-level CSV parser', () => {
     expect(order.orderId).toBe('2026000010');
     expect(order.total).toBe(1247);
     expect(order.customerEmail).toBe('a@onemil.cz');
-    expect(order.shoptetStatus).toBe('paid');
+    expect(order.lifecycle).toBe('pending');
+    expect(order.payment).toBe('paid');
     expect(order.items).toHaveLength(3);
     expect(order.items[0]).toEqual({
       code: 'ABC123',
@@ -102,7 +105,7 @@ test.describe('124 — Shoptet item-level CSV parser', () => {
     expect(parsed.orders).toHaveLength(2);
     expect(parsed.orders[0].items).toHaveLength(1);
     expect(parsed.orders[1].items).toHaveLength(1);
-    expect(parsed.orders[1].shoptetStatus).toBe('shipped');
+    expect(parsed.orders[1].lifecycle).toBe('shipped');
   });
 
   test('124c) shipping, payment and coupon lines are excluded from items', () => {
@@ -249,7 +252,8 @@ test.describe('124 — Shoptet item-level CSV parser', () => {
     expect(order.orderId).toBe('2026000123');
     expect(order.total).toBe(930);
     expect(order.customerEmail).toBe('zakaznik@onemil.cz');
-    expect(order.shoptetStatus).toBe('paid');
+    expect(order.lifecycle).toBe('pending');
+    expect(order.payment).toBe('paid');
 
     // Shipping is filtered by the same isNonProductItemType rule as the Czech export.
     expect(order.items).toEqual([
@@ -311,19 +315,22 @@ test.describe('124 — Shoptet item-level CSV parser', () => {
   });
 
   test('124h) status taxonomy and trigger thresholds are unchanged', () => {
-    expect(mapStatus('Vyřízená')).toBe('completed');
-    expect(mapStatus('Odesláno')).toBe('shipped');
-    expect(mapStatus('Zaplaceno')).toBe('paid');
-    expect(mapStatus('Storno')).toBe('cancelled');
-    expect(mapStatus('Nová')).toBe('pending');
+    expect(mapLifecycle('Vyřízená')).toBe('completed');
+    expect(mapLifecycle('Odesláno')).toBe('shipped');
+    expect(mapLifecycle('Storno')).toBe('cancelled');
+    expect(mapLifecycle('Nová')).toBe('pending');
+    // "Zaplaceno" is a PAYMENT word, not a lifecycle stage: the shop has not
+    // shipped or fulfilled anything, so the order stays pending on that axis.
+    expect(mapLifecycle('Zaplaceno')).toBe('pending');
+    expect(paymentFromStatusName('Zaplaceno')).toBe('paid');
 
-    expect(shouldIssue('completed', 'completed')).toBe(true);
-    expect(shouldIssue('shipped', 'completed')).toBe(false);
-    expect(shouldIssue('shipped', 'shipped')).toBe(true);
-    expect(shouldIssue('paid', 'shipped')).toBe(false);
-    expect(shouldIssue('paid', 'paid')).toBe(true);
-    expect(shouldIssue('pending', 'paid')).toBe(false);
-    expect(shouldIssue('cancelled', 'paid')).toBe(false);
+    expect(shouldIssue('completed', 'unknown', 'completed')).toBe(true);
+    expect(shouldIssue('shipped', 'unknown', 'completed')).toBe(false);
+    expect(shouldIssue('shipped', 'unknown', 'shipped')).toBe(true);
+    expect(shouldIssue('pending', 'paid', 'shipped')).toBe(false);
+    expect(shouldIssue('pending', 'paid', 'paid')).toBe(true);
+    expect(shouldIssue('pending', 'unknown', 'paid')).toBe(false);
+    expect(shouldIssue('cancelled', 'paid', 'paid')).toBe(false);
   });
 
   test('124n) "Nevyřízená" is NOT "Vyřízená" — a negated state never issues', () => {
@@ -332,20 +339,21 @@ test.describe('124 — Shoptet item-level CSV parser', () => {
     // ne-VYRIZ-ena and mapped to `completed`. Because `completed` issues at every
     // trigger threshold, brand-new untouched orders were rewarded immediately —
     // three such orders were issued on production before this was caught.
-    expect(mapStatus('Nevyřízená')).toBe('pending');
-    expect(mapStatus('Nevyřízené')).toBe('pending');
-    expect(mapStatus('nevyřízená')).toBe('pending');
+    expect(mapLifecycle('Nevyřízená')).toBe('pending');
+    expect(mapLifecycle('Nevyřízené')).toBe('pending');
+    expect(mapLifecycle('nevyřízená')).toBe('pending');
 
     // The positive state must be untouched — this is the pair that has to differ.
-    expect(mapStatus('Vyřízená')).toBe('completed');
-    expect(mapStatus('Vyřízeno')).toBe('completed');
-    expect(mapStatus('Nevyřízená')).not.toBe(mapStatus('Vyřízená'));
+    expect(mapLifecycle('Vyřízená')).toBe('completed');
+    expect(mapLifecycle('Vyřízeno')).toBe('completed');
+    expect(mapLifecycle('Nevyřízená')).not.toBe(mapLifecycle('Vyřízená'));
 
-    // And the negated state must not reward at any threshold.
+    // And the negated state must not reward at any threshold — with no payment
+    // signal, which is the legacy-export case.
     for (const threshold of ['paid', 'shipped', 'completed']) {
-      expect(shouldIssue(mapStatus('Nevyřízená'), threshold)).toBe(false);
+      expect(shouldIssue(mapLifecycle('Nevyřízená'), 'unknown', threshold)).toBe(false);
     }
-    expect(shouldIssue(mapStatus('Vyřízená'), 'paid')).toBe(true);
+    expect(shouldIssue(mapLifecycle('Vyřízená'), 'unknown', 'paid')).toBe(true);
   });
 
   test('124p) "Nezaplaceno" / "unpaid" are NOT "Zaplaceno" / "paid"', () => {
@@ -354,44 +362,46 @@ test.describe('124 — Shoptet item-level CSV parser', () => {
     // before the cancelled branch, the `nezaplac` and `unpaid` entries already
     // listed under cancelled were dead code. An explicitly UNPAID order therefore
     // mapped to `paid` and issued the reward at the 'paid' threshold.
-    expect(mapStatus('Nezaplaceno')).toBe('cancelled');
-    expect(mapStatus('nezaplaceno')).toBe('cancelled');
-    expect(mapStatus('Nezaplaceno / čeká na platbu')).toBe('cancelled');
-    expect(mapStatus('unpaid')).toBe('cancelled');
+    expect(mapLifecycle('Nezaplaceno')).toBe('cancelled');
+    expect(mapLifecycle('nezaplaceno')).toBe('cancelled');
+    expect(mapLifecycle('Nezaplaceno / čeká na platbu')).toBe('cancelled');
+    expect(mapLifecycle('unpaid')).toBe('cancelled');
+    expect(paymentFromStatusName('Nezaplaceno')).toBe('unpaid');
+    expect(paymentFromStatusName('unpaid')).toBe('unpaid');
 
     // The positive counterparts must be untouched — these are the pairs that
     // have to differ.
-    expect(mapStatus('Zaplaceno')).toBe('paid');
-    expect(mapStatus('Zaplacená')).toBe('paid');
-    expect(mapStatus('paid')).toBe('paid');
-    expect(mapStatus('Nezaplaceno')).not.toBe(mapStatus('Zaplaceno'));
-    expect(mapStatus('unpaid')).not.toBe(mapStatus('paid'));
+    expect(paymentFromStatusName('Zaplaceno')).toBe('paid');
+    expect(paymentFromStatusName('Zaplacená')).toBe('paid');
+    expect(paymentFromStatusName('paid')).toBe('paid');
+    expect(mapLifecycle('Nezaplaceno')).not.toBe(mapLifecycle('Zaplaceno'));
+    expect(paymentFromStatusName('unpaid')).not.toBe(paymentFromStatusName('paid'));
 
     // A negated-payment order must never issue at any threshold, and must never
     // be silently left pending either — it belongs in cancelled.
     for (const threshold of ['paid', 'shipped', 'completed']) {
-      expect(shouldIssue(mapStatus('Nezaplaceno'), threshold)).toBe(false);
-      expect(shouldIssue(mapStatus('unpaid'), threshold)).toBe(false);
+      expect(shouldIssue(mapLifecycle('Nezaplaceno'), paymentFromStatusName('Nezaplaceno'), threshold)).toBe(false);
+      expect(shouldIssue(mapLifecycle('unpaid'), paymentFromStatusName('unpaid'), threshold)).toBe(false);
     }
-    expect(shouldIssue(mapStatus('Zaplaceno'), 'paid')).toBe(true);
+    expect(shouldIssue(mapLifecycle('Zaplaceno'), paymentFromStatusName('Zaplaceno'), 'paid')).toBe(true);
   });
 
   test('124o) the guard is narrow — dead-order negations still cancel', () => {
     // "nevyzvednuto" / "nezaplaceno" are negations too, but they mean the order is
     // DEAD, not merely unhandled. They must keep falling through to `cancelled`,
     // so the guard deliberately does not list their stems.
-    expect(mapStatus('Nevyzvednuto')).toBe('cancelled');
-    expect(mapStatus('Nevyzvednutá zásilka')).toBe('cancelled');
+    expect(mapLifecycle('Nevyzvednuto')).toBe('cancelled');
+    expect(mapLifecycle('Nevyzvednutá zásilka')).toBe('cancelled');
 
     // Other "not yet positive" negations map to pending for the same reason as
     // Nevyřízená — they would otherwise match dokon / dorucen / odeslan.
-    expect(mapStatus('Nedokončeno')).toBe('pending');
-    expect(mapStatus('Nedoručeno')).toBe('pending');
-    expect(mapStatus('Neodesláno')).toBe('pending');
+    expect(mapLifecycle('Nedokončeno')).toBe('pending');
+    expect(mapLifecycle('Nedoručeno')).toBe('pending');
+    expect(mapLifecycle('Neodesláno')).toBe('pending');
 
     // The guard is word-anchored, so it can never fire mid-word.
-    expect(mapStatus('Stornována')).toBe('cancelled');
-    expect(mapStatus('Zrušena')).toBe('cancelled');
-    expect(mapStatus('Vráceno')).toBe('cancelled');
+    expect(mapLifecycle('Stornována')).toBe('cancelled');
+    expect(mapLifecycle('Zrušena')).toBe('cancelled');
+    expect(mapLifecycle('Vráceno')).toBe('cancelled');
   });
 });

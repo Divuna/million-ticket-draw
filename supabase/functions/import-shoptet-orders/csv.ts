@@ -13,13 +13,25 @@
 // Item-level rows are grouped back into one order carrying items[], which flows to
 // create_partner_order_reward → compute_partner_reward.
 
-// Five-bucket Shoptet order status taxonomy.
-// completed: fully fulfilled  → issue for all trigger thresholds.
-// shipped:   dispatched       → issue for 'paid' and 'shipped' thresholds.
-// paid:      payment received → issue only for 'paid' threshold.
-// cancelled: stopped/returned → always cancel the reward code.
-// pending:   below threshold  → leave reward code as pending.
-export type ShoptetStatus = "paid" | "shipped" | "completed" | "cancelled" | "pending";
+// A Shoptet order carries TWO independent facts, and they must not be collapsed
+// into one value. The old single `ShoptetStatus` had "paid" sitting next to the
+// lifecycle values, which made the real production case unrepresentable: order
+// 2026000003 is "Nevyřízená" (not processed yet) AND paid=1 at the same time.
+//
+// Lifecycle — where the order is in the shop's own workflow, from `statusName`.
+//   pending:   accepted, nothing done yet
+//   shipped:   dispatched
+//   completed: fully fulfilled
+//   cancelled: stopped / returned / not collected — never rewards
+export type OrderLifecycle = "pending" | "shipped" | "completed" | "cancelled";
+
+// Payment — whether the customer's money actually arrived, from the `paid` column.
+//   paid:    confirmed paid
+//   unpaid:  confirmed not paid
+//   unknown: the export carries no payment column at all, so we cannot tell.
+//            Legacy exports fall back to inferring this from statusName, which is
+//            exactly what the importer did before the payment axis existed.
+export type PaymentState = "paid" | "unpaid" | "unknown";
 
 // One order line item, as sent to create_partner_order_reward → compute_partner_reward.
 // `code` is the only matching key; `name` is display-only and feeds the partner's
@@ -35,7 +47,11 @@ export type ImportRow = {
   orderId: string;
   total: number;
   customerEmail: string;
-  shoptetStatus: ShoptetStatus;
+  // The two axes are carried separately and resolved exactly once, here. No
+  // caller may re-derive either of them — that is what keeps the importer and
+  // the issuance RPC from ever disagreeing about the same order.
+  lifecycle: OrderLifecycle;
+  payment: PaymentState;
   items: ImportItem[];
 };
 
@@ -92,6 +108,10 @@ export const HEADER_CANDIDATES = {
   status: ["status", "stav"],
 };
 
+// The payment flag. Matched EXACTLY (see findColExact) — never by substring, or
+// `amountPaid` would win over `paid` in Shoptet's full export.
+export const PAYMENT_HEADER_CANDIDATES = ["paid", "zaplaceno", "uhrazeno"];
+
 // Item-level columns from the Shoptet "Exportovat jednotlivé položky objednávky"
 // export. Candidates are deliberately specific ("polozka" / "order item") so they
 // can never be confused with the order-header columns above.
@@ -144,6 +164,20 @@ export function findCol(headers: string[], candidates: string[], exclude?: Set<n
   return -1;
 }
 
+// EXACT header match. Required for the payment column and deliberately not the
+// substring match above: Shoptet's full export ships `priceToPay`, `amountPaid`
+// AND `paid` side by side, and a substring search for "paid" hits `amountPaid`
+// first. amountPaid is empty even on a genuinely paid order (verified on
+// production), so that mismatch would read every order as unpaid.
+export function findColExact(headers: string[], candidates: string[], exclude?: Set<number>): number {
+  const normalized = headers.map((h) => norm(h));
+  for (const c of candidates) {
+    const idx = normalized.findIndex((h, i) => !exclude?.has(i) && h === c);
+    if (idx >= 0) return idx;
+  }
+  return -1;
+}
+
 // Non-product lines Shoptet mixes into the item export (shipping, payment fee,
 // discount coupons, gift wrapping). They must never be matched against a product
 // rule, and must not earn MioCoins at the global rate in the exceptions mode.
@@ -161,10 +195,12 @@ export function parseNumericCell(raw: string): number {
   return Number.isFinite(n) ? n : 0;
 }
 
-// Maps raw Shoptet status string to the 5-bucket taxonomy.
-// completed must be checked BEFORE shipped and paid — Czech "vyřízená" (vyriz)
-// would otherwise match the paid pattern first.
-export function mapStatus(raw: string): ShoptetStatus {
+// Maps `statusName` to the order LIFECYCLE only. Payment lives on its own axis —
+// see mapPaymentFlag / paymentFromStatusName.
+//
+// completed must be checked BEFORE shipped — Czech "vyřízená" (vyriz) would
+// otherwise be missed.
+export function mapLifecycle(raw: string): OrderLifecycle {
   const s = norm(raw);
 
   // ── negated states, resolved before anything else ──────────────────────────
@@ -196,26 +232,81 @@ export function mapStatus(raw: string): ShoptetStatus {
 
   if (/(completed|dokon|vyriz|dorucen|delivered)/.test(s))                       return "completed";
   if (/(shipped|odeslan|dispatched)/.test(s))                                    return "shipped";
-  if (/(zaplac|paid|pripravena|processing|vyrizuje)/.test(s))                    return "paid";
-  if (/(storn|zrusen|cancel|vracen|returned|nevyzved|unpaid|nezaplac)/.test(s))  return "cancelled";
+  if (/(storn|zrusen|cancel|vracen|returned|nevyzved)/.test(s))                  return "cancelled";
+  // "Zaplaceno" / "Připravena" / "processing" are PAYMENT or preparation words,
+  // not lifecycle stages — the shop has not shipped or fulfilled anything yet.
+  // They leave the order at `pending`; payment is carried on the other axis, so
+  // a paid-but-unprocessed order is finally representable.
   return "pending";
 }
 
-// Returns true if the reward code should be issued NOW given the partner's threshold.
-export function shouldIssue(status: ShoptetStatus, triggerThreshold: string): boolean {
-  if (status === "completed") return true;                              // all thresholds
-  if (status === "shipped")   return triggerThreshold !== "completed";  // 'paid' + 'shipped'
-  if (status === "paid")      return triggerThreshold === "paid";       // 'paid' only
-  return false;                                                         // pending, cancelled
+// Reads the `paid` column. Deliberately conservative: only an explicit truthy
+// token counts as paid, and anything unrecognised is treated as NOT paid, so a
+// value we do not understand withholds a reward rather than granting one.
+//
+// Verified on production: Shoptet writes "1" when paid and an EMPTY string when
+// not. "0" / "false" were never observed there, but are handled anyway rather
+// than trusting an 8-order sample.
+export function mapPaymentFlag(raw: string): PaymentState {
+  const s = norm(raw).trim();
+  if (s === "") return "unpaid";
+  if (/^(1|true|yes|ano)$/.test(s)) return "paid";
+  return "unpaid";
 }
 
-// Maps ShoptetStatus → value accepted by update_partner_order_reward_status.
-// RPC positive set: 'paid', 'delivered', 'completed'. 'shipped' is not accepted → 'delivered'.
-export function toRpcStatus(s: ShoptetStatus): string {
-  if (s === "completed") return "completed";
-  if (s === "shipped")   return "delivered";
-  if (s === "paid")      return "paid";
-  return "cancelled";
+// Fallback for exports that carry NO payment column. Keeps the pre-payment-axis
+// behaviour exactly: a shop that signals payment only through `statusName`
+// ("Zaplaceno") must keep issuing at the 'paid' trigger, and one that says
+// "Nezaplaceno" must keep cancelling. Returns `unknown` when the status says
+// nothing about money at all.
+export function paymentFromStatusName(raw: string): PaymentState {
+  const s = norm(raw);
+  if (/\bnezaplac/.test(s) || /\bunpaid/.test(s)) return "unpaid";
+  if (/(zaplac|paid|pripravena|processing)/.test(s)) return "paid";
+  return "unknown";
+}
+
+/**
+ * The single decision point: may this order's reward be issued NOW?
+ *
+ * The partner picks exactly one trigger and it is honoured literally:
+ *   'paid'      → the money arrived (or the order already moved further)
+ *   'shipped'   → dispatched or fulfilled; payment alone is not enough
+ *   'completed' → fulfilled only
+ *
+ * A cancelled order never issues, whatever the payment says — checked first, so
+ * a stornovaná order carrying paid=1 can never slip through.
+ */
+export function shouldIssue(
+  lifecycle: OrderLifecycle,
+  payment: PaymentState,
+  triggerThreshold: string,
+): boolean {
+  if (lifecycle === "cancelled") return false;
+
+  if (triggerThreshold === "completed") return lifecycle === "completed";
+  if (triggerThreshold === "shipped")   return lifecycle === "shipped" || lifecycle === "completed";
+
+  // 'paid' (the default). Confirmed payment issues immediately even while the
+  // shop still shows the order as unprocessed — that is precisely what the
+  // partner asked for by choosing this trigger. A later lifecycle stage also
+  // qualifies, so a cash-on-delivery order marked "Vyřízená" with no payment
+  // flag is not withheld.
+  return payment === "paid" || lifecycle === "shipped" || lifecycle === "completed";
+}
+
+// Maps the two axes onto the value update_partner_order_reward_status accepts.
+// Positive set: 'paid', 'delivered', 'completed' ('shipped' is not accepted).
+export function toRpcStatus(lifecycle: OrderLifecycle, payment: PaymentState): string {
+  if (lifecycle === "cancelled") return "cancelled";
+  if (lifecycle === "completed") return "completed";
+  if (lifecycle === "shipped")   return "delivered";
+  if (payment === "paid")        return "paid";
+  // Unreachable by construction: the importer only calls this after shouldIssue()
+  // or the cancelled check has already passed. Returning a status the RPC rejects
+  // makes any future mistake fail loudly (rows_failed) instead of silently
+  // issuing or cancelling the wrong way.
+  return "unknown";
 }
 
 /**
@@ -256,6 +347,10 @@ export function parseShoptetCsv(text: string): ParsedCsv {
   const colTotal = findCol(headers, HEADER_CANDIDATES.total, itemColumnIdx);
   const colEmail = findCol(headers, HEADER_CANDIDATES.email, itemColumnIdx);
   const colStatus = findCol(headers, HEADER_CANDIDATES.status, itemColumnIdx);
+  // EXACT match — a substring search for "paid" would pick `amountPaid`, which is
+  // empty even on a genuinely paid order. -1 means the export has no payment
+  // column and the legacy statusName fallback is used instead.
+  const colPaid = findColExact(headers, PAYMENT_HEADER_CANDIDATES, itemColumnIdx);
 
   const missingHeaders: string[] = [];
   if (colOrder < 0) missingHeaders.push("order_code");
@@ -287,14 +382,20 @@ export function parseShoptetCsv(text: string): ParsedCsv {
     if (!existingOrder) {
       const total = parseNumericCell(cols[colTotal] ?? "");
       const customerEmail = (cols[colEmail] ?? "").trim();
-      const shoptetStatus: ShoptetStatus = colStatus >= 0 ? mapStatus(cols[colStatus] ?? "") : "pending";
+      const statusRaw = colStatus >= 0 ? (cols[colStatus] ?? "") : "";
+      const lifecycle: OrderLifecycle = colStatus >= 0 ? mapLifecycle(statusRaw) : "pending";
+      // The explicit column always wins; statusName is only consulted when the
+      // export has no payment column at all.
+      const payment: PaymentState = colPaid >= 0
+        ? mapPaymentFlag(cols[colPaid] ?? "")
+        : paymentFromStatusName(statusRaw);
 
       if (!orderId || !Number.isFinite(total) || total <= 0 || !customerEmail.includes("@")) {
         invalidRows.push({ orderId: orderId || null });
         continue;
       }
 
-      orderMap.set(orderId, { orderId, total, customerEmail, shoptetStatus, items: [] });
+      orderMap.set(orderId, { orderId, total, customerEmail, lifecycle, payment, items: [] });
       orderSequence.push(orderId);
     }
 
