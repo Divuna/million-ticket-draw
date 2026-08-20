@@ -63,6 +63,7 @@ function toHomepage(url: string): string | null {
 interface OpenAiJson {
   output?: Array<{ content?: Array<{ text?: string; annotations?: Array<{ url?: string; url_citation?: { url?: string } }> }> }>;
   output_text?: string;
+  usage?: { input_tokens?: number; output_tokens?: number; total_tokens?: number };
 }
 
 function extractUrls(json: OpenAiJson): string[] {
@@ -99,6 +100,7 @@ interface SourceSearchResult {
   urls: string[];
   httpStatus: number | null;
   errorType: SearchErrorType;
+  usage: { input_tokens?: number; output_tokens?: number; total_tokens?: number };
 }
 
 /** Odliší abort (timeout) od ostatních síťových chyb. Nikdy nevyhodí výjimku. */
@@ -126,22 +128,22 @@ async function searchOpenAi(query: string, openaiKey: string): Promise<SourceSea
     });
     if (!res.ok) {
       logSearch("openai_http_error", { status: res.status });
-      return { urls: [], httpStatus: res.status, errorType: "http_error" };
+      return { urls: [], httpStatus: res.status, errorType: "http_error", usage: {} };
     }
     let json: OpenAiJson;
     try {
       json = (await res.json()) as OpenAiJson;
     } catch {
       logSearch("openai_parse_error", { status: res.status });
-      return { urls: [], httpStatus: res.status, errorType: "parse_error" };
+      return { urls: [], httpStatus: res.status, errorType: "parse_error", usage: {} };
     }
     const urls = extractUrls(json);
     logSearch("openai", { query, raw: urls.length });
-    return { urls, httpStatus: res.status, errorType: "none" };
+    return { urls, httpStatus: res.status, errorType: "none", usage: json.usage ?? {} };
   } catch (err) {
     // Odpověď vůbec nevznikla → status null, rozlišíme timeout vs. síť.
     logSearch("openai_failed", { error: err instanceof Error ? err.message : "unknown" });
-    return { urls: [], httpStatus: null, errorType: classifyFetchError(err) };
+    return { urls: [], httpStatus: null, errorType: classifyFetchError(err), usage: {} };
   } finally {
     clearTimeout(timer);
   }
@@ -175,6 +177,12 @@ export interface CandidateSearchDiagnostics {
   /** HTTP status skutečné odpovědi; null = odpověď vůbec nevznikla. */
   openai_http_status: number | null;
   openai_error_type: SearchErrorType;
+  /** Přesně počet přímých OpenAI requestů vykonaných v tomto roundu. */
+  openai_api_calls: number;
+  /** Usage jen pokud ji provider skutečně vrátil; nikdy se neodhaduje. */
+  input_tokens: number;
+  output_tokens: number;
+  total_tokens: number;
 }
 
 export interface CandidateSearchResult {
@@ -224,6 +232,10 @@ export async function generateCandidateUrlsWithDiagnostics(input: {
     fallback_reason: "none",
     openai_http_status: null,
     openai_error_type: "not_called",
+    openai_api_calls: 0,
+    input_tokens: 0,
+    output_tokens: 0,
+    total_tokens: 0,
   };
 
   // Dávka má víc dotazů. Vyhrává PRVNÍ chyba (aby problém nezmizel pod pozdějším
@@ -250,8 +262,20 @@ export async function generateCandidateUrlsWithDiagnostics(input: {
   for (const query of queries) {
     const openaiResult = input.openaiKey
       ? await searchOpenAi(query, input.openaiKey)
-      : { urls: [], httpStatus: null, errorType: "not_called" as const };
-    if (input.openaiKey) recordOpenAi(openaiResult);
+      : { urls: [], httpStatus: null, errorType: "not_called" as const, usage: {} };
+    if (input.openaiKey) {
+      recordOpenAi(openaiResult);
+      diagnostics.openai_api_calls += 1;
+      diagnostics.input_tokens += Number.isFinite(openaiResult.usage.input_tokens) ? Math.max(0, Math.floor(openaiResult.usage.input_tokens ?? 0)) : 0;
+      diagnostics.output_tokens += Number.isFinite(openaiResult.usage.output_tokens) ? Math.max(0, Math.floor(openaiResult.usage.output_tokens ?? 0)) : 0;
+      diagnostics.total_tokens += Number.isFinite(openaiResult.usage.total_tokens) ? Math.max(0, Math.floor(openaiResult.usage.total_tokens ?? 0)) : 0;
+      // Provider/auth/quota/transport selhání je hard stop už uvnitř roundu.
+      // Druhý query ani žádný další round se nesmí vykonat.
+      if (openaiResult.errorType !== "none") {
+        diagnostics.fallback_reason = "openai_empty";
+        break;
+      }
+    }
     const openaiRaw = openaiResult.urls;
     const openaiUsable = normalizeCandidates(openaiRaw);
     diagnostics.openai_raw_count += openaiRaw.length;
@@ -315,6 +339,10 @@ export function buildDiagnosticsEntry(input: {
     fallback_reason: input.diagnostics.fallback_reason,
     openai_http_status: input.diagnostics.openai_http_status,
     openai_error_type: input.diagnostics.openai_error_type,
+    openai_api_calls: input.diagnostics.openai_api_calls,
+    input_tokens: input.diagnostics.input_tokens,
+    output_tokens: input.diagnostics.output_tokens,
+    total_tokens: input.diagnostics.total_tokens,
     added_to_pool: input.addedToPool,
   };
 }

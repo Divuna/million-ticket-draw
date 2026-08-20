@@ -18,6 +18,19 @@ import {
   type VerifiedSourceEmailResult,
 } from "../_shared/companyEmailCrawler.ts";
 import { classificationMatchesJobScope } from "./categoryPolicy.ts";
+import {
+  addUsage,
+  canStartClassification,
+  canStartSearchRound,
+  DISCOVERY_COST_CAPS,
+  effectiveMaxCandidates,
+  emptyDiscoveryCostTelemetry,
+  providerErrorCode,
+  readDiscoveryCostTelemetry,
+  stopAfterCandidate,
+  stopAfterSearchRound,
+  type DiscoveryCostStopReason,
+} from "./discoveryCostGuard.ts";
 
 // ============================================================================
 // sales-lead-discover — WORKER Discovery Jobu (dávkové zpracování).
@@ -36,7 +49,8 @@ import { classificationMatchesJobScope } from "./categoryPolicy.ts";
 const AI_MODEL = Deno.env.get("SALES_LEADS_AI_MODEL") ?? "gpt-4o-mini";
 const BATCH_MAX = 12;
 const TIME_BUDGET_MS = 90_000;
-const MAX_EMPTY_ROUNDS = 3;
+void DISCOVERY_COST_CAPS;
+
 
 function jsonResponse(body: Record<string, unknown>, status = 200): Response {
   return new Response(JSON.stringify(body), { status, headers: { "Content-Type": "application/json" } });
@@ -59,7 +73,14 @@ function normName(v: string): string {
   return v.normalize("NFD").replace(/[̀-ͯ]/g, "").toLowerCase().replace(/[^a-z0-9]+/g, " ").trim();
 }
 
-interface Classification { slug: string | null; relevant: boolean; summary: string; failed?: boolean }
+interface Classification {
+  slug: string | null;
+  relevant: boolean;
+  summary: string;
+  failed?: boolean;
+  provider_error?: string;
+  usage?: { input_tokens?: number; output_tokens?: number; total_tokens?: number };
+}
 
 type VerifiedDiscoveryContact = Extract<VerifiedSourceEmailResult, { verified: true }>;
 
@@ -97,16 +118,25 @@ async function classify(
         messages: [{ role: "system", content: sys }, { role: "user", content: user }],
       }),
     });
-    if (!res.ok) return { slug: null, relevant: false, summary: "", failed: true };
+    if (!res.ok) return { slug: null, relevant: false, summary: "", failed: true, provider_error: `http_${res.status}` };
     const j = await res.json();
-    const parsed = JSON.parse(j?.choices?.[0]?.message?.content ?? "{}");
+    let parsed: Record<string, unknown>;
+    try {
+      parsed = JSON.parse(j?.choices?.[0]?.message?.content ?? "{}") as Record<string, unknown>;
+    } catch {
+      return { slug: null, relevant: false, summary: "", failed: true, provider_error: "parse_error", usage: j?.usage };
+    }
     return {
       slug: typeof parsed.slug === "string" ? parsed.slug : null,
       relevant: parsed.relevant === true,
       summary: typeof parsed.summary === "string" ? parsed.summary.slice(0, 200) : "",
+      usage: j?.usage,
     };
-  } catch {
-    return { slug: null, relevant: false, summary: "", failed: true };
+  } catch (error) {
+    const providerError = error instanceof Error && (error.name === "AbortError" || /timeout|timed out|abort/i.test(error.message))
+      ? "timeout"
+      : "network_error";
+    return { slug: null, relevant: false, summary: "", failed: true, provider_error: providerError };
   } finally {
     clearTimeout(timer);
   }
@@ -150,7 +180,17 @@ serve(async (req: Request) => {
   let searchDiagnostics: CandidateSearchDiagnosticsEntry[] =
     Array.isArray(job.search_diagnostics) ? (job.search_diagnostics as CandidateSearchDiagnosticsEntry[]) : [];
   const requested = job.requested_count as number;
-  const maxCandidates = job.max_candidates as number;
+  // Původní hodnoty starých jobů nesmí bypassnout aktuální serverový cost cap.
+  const maxCandidates = effectiveMaxCandidates(job.max_candidates);
+  const costTelemetry = readDiscoveryCostTelemetry({
+    search_api_calls: job.search_api_calls,
+    classification_api_calls: job.classification_api_calls,
+    provider_errors: job.provider_errors,
+    last_provider_error: job.last_provider_error,
+    input_tokens: job.input_tokens,
+    output_tokens: job.output_tokens,
+    total_tokens: job.total_tokens,
+  });
   const counters = {
     candidates_checked: job.candidates_checked as number,
     created_count: job.created_count as number,
@@ -181,32 +221,51 @@ serve(async (req: Request) => {
 
   const deadline = Date.now() + TIME_BUDGET_MS;
   let processed = 0;
-  let emptyRounds = 0;
+  let forcedStop: DiscoveryCostStopReason | null = null;
 
   while (
     Date.now() < deadline && processed < BATCH_MAX &&
     counters.created_count < requested && counters.candidates_checked < maxCandidates
   ) {
-    // Doplň frontu kandidátů, když dojde.
+    const zeroCreatedStop = stopAfterCandidate({
+      candidatesChecked: counters.candidates_checked,
+      createdCount: counters.created_count,
+    });
+    if (zeroCreatedStop) { forcedStop = zeroCreatedStop; break; }
+
+    // Doplň frontu kandidátů, když dojde. Každý provider nebo prázdný round je
+    // terminalní: žádný retry, žádný další query v roundu, žádná klasifikace.
     if (cursor >= pool.length) {
       if (searchExhausted) break;
+      const searchCapStop = canStartSearchRound({ searchRounds, telemetry: costTelemetry });
+      if (searchCapStop) { forcedStop = searchCapStop; break; }
       const { urls: fresh, diagnostics } = await generateCandidateUrlsWithDiagnostics({
         leadGroup,
         round: searchRounds,
         openaiKey,
       });
+      costTelemetry.search_api_calls += diagnostics.openai_api_calls;
+      addUsage(costTelemetry, diagnostics);
+      const providerError = providerErrorCode({
+        httpStatus: diagnostics.openai_http_status,
+        errorType: diagnostics.openai_error_type,
+      });
+      if (providerError) {
+        costTelemetry.provider_errors += 1;
+        costTelemetry.last_provider_error = providerError;
+      }
       const added = fresh.filter((u) => !pool.includes(u));
       searchDiagnostics = appendDiagnosticsEntry(
         searchDiagnostics,
         buildDiagnosticsEntry({ round: searchRounds, diagnostics, addedToPool: added.length }),
       );
       searchRounds++;
-      if (added.length === 0) {
-        emptyRounds++;
-        if (emptyRounds >= MAX_EMPTY_ROUNDS) { searchExhausted = true; break; }
-        continue;
+      const searchStop = stopAfterSearchRound({ providerError, usableCandidates: added.length });
+      if (searchStop) {
+        searchExhausted = true;
+        forcedStop = searchStop;
+        break;
       }
-      emptyRounds = 0;
       bump("candidates_from_search", added.length);
       pool = [...pool, ...added];
     }
@@ -265,8 +324,19 @@ serve(async (req: Request) => {
     const { data: dupRows } = await dupQuery;
     if (dupRows && dupRows.length > 0) { counters.duplicates++; bump("duplicates"); continue; }
 
-    // AI klasifikace oboru (jen klasifikace/relevance/shrnutí).
+    // AI klasifikace oboru (jen klasifikace/relevance/shrnutí). I tato přímá
+    // provider call je počítaná a provider selhání job okamžitě ukončí.
+    const classificationCapStop = canStartClassification(costTelemetry);
+    if (classificationCapStop) { forcedStop = classificationCapStop; break; }
+    costTelemetry.classification_api_calls += 1;
     const cls = await classify(name, site.snippet, groups, openaiKey);
+    addUsage(costTelemetry, cls.usage);
+    if (cls.provider_error) {
+      costTelemetry.provider_errors += 1;
+      costTelemetry.last_provider_error = cls.provider_error as typeof costTelemetry.last_provider_error;
+      forcedStop = "provider_error";
+      break;
+    }
     if (cls.failed) { bump("classifier_failed"); continue; }
     if (!cls.relevant) { bump("classified_irrelevant"); continue; }
     // Automaticky zalozeny job smi ulozit jen firmu, kterou klasifikator zaradil
@@ -406,19 +476,28 @@ serve(async (req: Request) => {
   // ── Rozhodni finish stav ───────────────────────────────────────────────────
   let status = "running";
   let finishReason: string | null = null;
-  if (counters.created_count >= requested) { status = "done"; finishReason = "target_reached"; }
+  let safeError: string | null = null;
+  if (forcedStop) {
+    status = "done";
+    finishReason = forcedStop;
+    safeError = forcedStop === "provider_error"
+      ? `provider_error_${costTelemetry.last_provider_error ?? "unknown"}`
+      : forcedStop;
+  } else if (counters.created_count >= requested) { status = "done"; finishReason = "target_reached"; }
   else if (counters.candidates_checked >= maxCandidates) { status = "done"; finishReason = "max_candidates_reached"; }
   else if (searchExhausted && cursor >= pool.length) { status = "done"; finishReason = "candidates_exhausted"; }
 
   await supabaseAdmin.from("sales_lead_discovery_jobs").update({
     ...counters,
+    ...costTelemetry,
     candidate_pool: pool, cursor, search_rounds: searchRounds, search_exhausted: searchExhausted,
     funnel,
     search_diagnostics: searchDiagnostics,
     status, finish_reason: finishReason,
+    ...(safeError ? { error: safeError } : {}),
     finished_at: status === "done" ? new Date().toISOString() : null,
     updated_at: new Date().toISOString(),
   }).eq("id", jobId);
 
-  return jsonResponse({ success: true, job_id: jobId, status, finish_reason: finishReason, ...counters, processed });
+  return jsonResponse({ success: true, job_id: jobId, status, finish_reason: finishReason, ...counters, ...costTelemetry, processed });
 });
