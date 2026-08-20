@@ -9,7 +9,9 @@ const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3
 type Action =
   | "approve_backend_verified_proposals"
   | "create_e_shopy_discovery_job"
-  | "get_e_shopy_discovery_job_results";
+  | "get_e_shopy_discovery_job_results"
+  | "get_e_shopy_morning_discovery_state"
+  | "create_next_e_shopy_morning_discovery_job";
 
 type RequestBody = {
   schema_version?: number;
@@ -17,6 +19,7 @@ type RequestBody = {
   lead_ids?: unknown;
   discovery_job_ids?: unknown;
   requested_count?: unknown;
+  target_count?: unknown;
 };
 
 function jsonResponse(body: Record<string, unknown>, status = 200): Response {
@@ -133,6 +136,18 @@ function parseDiscoveryJobIds(value: unknown): string[] {
   return value;
 }
 
+function parseTargetCount(value: unknown): number {
+  if (!Number.isInteger(value)) {
+    throw new Error("target_count_required");
+  }
+
+  if ((value as number) < 1 || (value as number) > 90) {
+    throw new Error("target_count_out_of_range");
+  }
+
+  return value as number;
+}
+
 function parseRequestedCount(value: unknown): number {
   if (!Number.isInteger(value)) {
     throw new Error("requested_count_required");
@@ -204,6 +219,54 @@ async function handle(body: RequestBody): Promise<Response> {
         error: "discovery_results_rpc_failed",
         details: error.message,
       }, 500);
+    }
+
+    return jsonResponse(data as Record<string, unknown>);
+  }
+
+  if (body.action === "get_e_shopy_morning_discovery_state") {
+    let targetCount: number;
+
+    try {
+      targetCount = parseTargetCount(body.target_count);
+    } catch (error) {
+      return jsonResponse({ success: false, error: (error as Error).message }, 400);
+    }
+
+    const { data, error } = await supabase.rpc(
+      "sales_lead_magin_get_e_shopy_morning_discovery_state",
+      {
+        p_target_count: targetCount,
+        p_actor_user_id: actorUserId,
+      },
+    );
+
+    if (error) {
+      return jsonResponse({ success: false, error: "morning_discovery_state_rpc_failed" }, 500);
+    }
+
+    return jsonResponse(data as Record<string, unknown>);
+  }
+
+  if (body.action === "create_next_e_shopy_morning_discovery_job") {
+    let targetCount: number;
+
+    try {
+      targetCount = parseTargetCount(body.target_count);
+    } catch (error) {
+      return jsonResponse({ success: false, error: (error as Error).message }, 400);
+    }
+
+    const { data, error } = await supabase.rpc(
+      "sales_lead_magin_create_next_e_shopy_morning_discovery_job",
+      {
+        p_target_count: targetCount,
+        p_actor_user_id: actorUserId,
+      },
+    );
+
+    if (error) {
+      return jsonResponse({ success: false, error: "morning_discovery_create_rpc_failed" }, 500);
     }
 
     return jsonResponse(data as Record<string, unknown>);
