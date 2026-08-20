@@ -158,7 +158,7 @@ test('7) bez klíče se nevolá nic a vrátí se 0 kandidátů', async () => {
   expect(diagnostics.final_candidate_count).toBe(0);
 });
 
-test('diagnostika obsahuje jen bezpečné počty a stav, žádný klíč ani token', async () => {
+test('diagnostika obsahuje jen bezpečné počty a stav, žádný klíč ani secret token', async () => {
   onOpenAi = () => openAiResponse(['https://alza.cz']);
 
   const { diagnostics } = await generateCandidateUrlsWithDiagnostics({
@@ -170,10 +170,14 @@ test('diagnostika obsahuje jen bezpečné počty a stav, žádný klíč ani tok
   expect(Object.keys(diagnostics).sort()).toEqual([
     'fallback_reason',
     'final_candidate_count',
+    'input_tokens',
+    'openai_api_calls',
     'openai_error_type',
     'openai_http_status',
     'openai_raw_count',
     'openai_usable_count',
+    'output_tokens',
+    'total_tokens',
   ]);
   expect(JSON.stringify(diagnostics)).not.toContain('super-secret-key');
 });
