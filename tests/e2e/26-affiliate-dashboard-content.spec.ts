@@ -6,7 +6,7 @@
  * ║    • hero "Vydělávejte s OneMil" heading visible                           ║
  * ║    • "Aktivní Affiliate partner" badge visible                             ║
  * ║    • mode switcher rendered (Influencer | Obchodník | Profil)              ║
- * ║    • influencer mode: affiliate link contains /?ref=                       ║
+ * ║    • influencer mode: customer link is the short alias /i/<refCode>        ║
  * ║    • sales mode: company link is the short alias /a/<refCode>              ║
  * ║    • both links use the same ref_code                                      ║
  * ║    • influencer mode: QR code rendered locally (no external API)           ║
@@ -32,9 +32,9 @@ const AFFILIATE_PASSWORD = process.env.E2E_AFFILIATE_PASSWORD ?? '';
 const SUPABASE_URL       = process.env.VITE_SUPABASE_URL      ?? '';
 const PUBLIC_APP_URL     = 'https://onemil.cz';
 
-const getParam = (value: string, param: 'ref' | 'via') => new URL(value).searchParams.get(param);
-// Short company link has no query string — the ref_code is the last path segment: /a/<code>.
-const getShortLinkCode = (value: string) => new URL(value).pathname.replace(/^\/a\//, '');
+// Short links have no query string — the ref_code is the last path segment: /a/<code> or /i/<code>.
+const getShortLinkCode = (value: string, prefix: 'a' | 'i') =>
+  new URL(value).pathname.replace(new RegExp(`^/${prefix}/`), '');
 
 test.describe('Affiliate Dashboard — Content Smoke (spec 26)', () => {
   test.skip(
@@ -133,7 +133,7 @@ test.describe('Affiliate Dashboard — Content Smoke (spec 26)', () => {
     expect(val, 'Company link must not use Lovable preview or localhost').not.toMatch(/lovable|preview--|localhost|127\.0\.0\.1/i);
   });
 
-  test('influencer mode shows customer link with /?ref=', async ({ page }) => {
+  test('influencer mode shows customer link as the short alias /i/<refCode>', async ({ page }) => {
     // Make sure we're in influencer mode
     const infBtn = page.getByTestId('mode-btn-influencer');
     await expect(infBtn).toBeVisible({ timeout: 10_000 });
@@ -142,25 +142,27 @@ test.describe('Affiliate Dashboard — Content Smoke (spec 26)', () => {
     const linkInput = page.getByTestId('affiliate-customer-link');
     await expect(linkInput).toBeVisible({ timeout: 8_000 });
     const val = await linkInput.inputValue();
-    expect(val, 'Customer link must use production origin').toMatch(/^https:\/\/onemil\.cz\/\?ref=/);
+    expect(val, 'Customer link must use production origin').toMatch(/^https:\/\/onemil\.cz\/i\/[^/?]+$/);
     expect(val, 'Customer link must not use Lovable preview or localhost').not.toMatch(/lovable|preview--|localhost|127\.0\.0\.1/i);
   });
 
   test('customer and company sections use the same ref_code', async ({ page }) => {
     await page.getByTestId('mode-btn-influencer').click();
-    const customerLink = await page.getByTestId('affiliate-customer-link').inputValue();
-    const customerCode = getParam(customerLink, 'ref');
+    const customerLinkInput = page.getByTestId('affiliate-customer-link');
+    await expect(customerLinkInput).toBeVisible({ timeout: 8_000 });
+    const customerLink = await customerLinkInput.inputValue();
+    const customerCode = getShortLinkCode(customerLink, 'i');
 
     await page.getByTestId('mode-btn-sales_rep').click();
     const companyInput = page.getByTestId('affiliate-company-link');
     await expect(companyInput).toBeVisible({ timeout: 8_000 });
     const companyLink = await companyInput.inputValue();
-    const companyCode = getShortLinkCode(companyLink);
+    const companyCode = getShortLinkCode(companyLink, 'a');
 
     expect(customerCode, 'Customer ref code must exist').toBeTruthy();
     expect(companyCode, 'Company ref code must exist').toBeTruthy();
     expect(companyCode).toBe(customerCode);
-    expect(customerLink).toBe(`${PUBLIC_APP_URL}/?ref=${customerCode}`);
+    expect(customerLink).toBe(`${PUBLIC_APP_URL}/i/${customerCode}`);
     expect(companyLink).toBe(`${PUBLIC_APP_URL}/a/${companyCode}`);
   });
 
@@ -169,10 +171,21 @@ test.describe('Affiliate Dashboard — Content Smoke (spec 26)', () => {
     const companyInput = page.getByTestId('affiliate-company-link');
     await expect(companyInput).toBeVisible({ timeout: 8_000 });
     const companyLink = await companyInput.inputValue();
-    const companyCode = getShortLinkCode(companyLink);
+    const companyCode = getShortLinkCode(companyLink, 'a');
 
     await page.goto(`/a/${companyCode}`);
     await expect(page).toHaveURL(new RegExp(`/partner/register\\?via=${companyCode}$`), { timeout: 10_000 });
+  });
+
+  test('customer short link /i/<refCode> redirects to the existing /?ref= flow', async ({ page }) => {
+    await page.getByTestId('mode-btn-influencer').click();
+    const customerInput = page.getByTestId('affiliate-customer-link');
+    await expect(customerInput).toBeVisible({ timeout: 8_000 });
+    const customerLink = await customerInput.inputValue();
+    const customerCode = getShortLinkCode(customerLink, 'i');
+
+    await page.goto(`/i/${customerCode}`);
+    await expect(page).toHaveURL(new RegExp(`/\\?ref=${customerCode}$`), { timeout: 10_000 });
   });
 
   test('QR code is rendered by local qrcode.react (SVG element, no external request)', async ({ page }) => {

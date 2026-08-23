@@ -349,7 +349,9 @@ const AffiliateDashboard = () => {
     if (b) return b;
   }
 
-  const customerLink = buildPublicUrl(`/?ref=${encodeURIComponent(a.ref_code)}`);
+  // Short public alias for the customer link (/i/:refCode -> /?ref=:refCode).
+  // Pure redirect, same underlying ref-code attribution flow — see InfluencerShortLink.tsx.
+  const customerLink = buildPublicUrl(`/i/${encodeURIComponent(a.ref_code)}`);
   // Short public alias for the company link (/a/:refCode -> /partner/register?via=:refCode).
   // Pure redirect, same underlying via-code attribution flow — see AffiliateShortLink.tsx.
   const companyLink  = buildPublicUrl(`/a/${encodeURIComponent(a.ref_code)}`);
