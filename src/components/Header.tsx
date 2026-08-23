@@ -1,6 +1,6 @@
 import React, { useCallback, useEffect, useState } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
-import { buildLoginRedirectUrl } from '@/lib/loginRedirect';
+import { buildLoginRedirectUrl, buildRegisterUrl } from '@/lib/loginRedirect';
 import { Button } from '@/components/ui/button';
 import {
   DropdownMenu,
@@ -277,7 +277,7 @@ export const Header: React.FC = () => {
               <Link to={buildLoginRedirectUrl(location.pathname + location.search)}>
                 <Button variant="ghost" className="public-customer-header-link">Přihlásit</Button>
               </Link>
-              <Link to="/register">
+              <Link to={buildRegisterUrl(location.search)}>
                 <Button variant="default" className="public-customer-header-primary">Registrovat</Button>
               </Link>
             </>
