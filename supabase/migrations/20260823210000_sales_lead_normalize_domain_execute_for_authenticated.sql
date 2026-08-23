@@ -1,0 +1,64 @@
+-- F3: a partner cannot save its billing e-mail.
+--
+-- Cause, both halves of it in one file -- 20260809153000_sales_lead_work_intake.sql:
+--   line  80  CREATE INDEX idx_partners_work_intake_domain
+--               ON public.partners (public.sales_lead_normalize_domain(website_url));
+--   line 337  REVOKE ALL ON FUNCTION public.sales_lead_normalize_domain(text)
+--               FROM PUBLIC, anon, authenticated;
+--
+-- The REVOKE was correct hardening for a sales-lead helper, but putting the same
+-- function into an index expression on public.partners quietly turned EXECUTE
+-- into a WRITE requirement for that table: Postgres evaluates every index
+-- expression when it maintains the indexes for a row version, and it does so as
+-- the invoking role.
+--
+-- It only bites on a non-HOT update. A partner saving reward settings changes no
+-- indexed column, so the row updates HOT, no index is touched and nothing fails.
+-- But public.partners also carries idx_partners_work_intake_email on
+-- lower(btrim(contact_email)) (line 82 of the same migration), so changing
+-- contact_email IS an indexed-column change -> non-HOT -> every index is
+-- maintained -> the domain expression runs -> 42501.
+--
+-- Net effect in production today: PartnerBillingForm saves company_name, ICO,
+-- DIC and the billing address fine, but the moment the partner also changes
+-- contact_email the whole statement dies with
+--     42501 permission denied for function sales_lead_normalize_domain
+-- and the partner sees "Nepodařilo se uložit fakturační údaje".
+--
+-- Verified against the F2 audit: with the ORIGINAL blanket UPDATE grant still in
+-- place the same statement failed identically, so this is not a side effect of
+-- the F2 column lock -- it is a pre-existing defect that F2 merely surfaced.
+--
+-- Fix: restore the invariant that Postgres requires anyway --
+--   any role that may write a table must be able to execute that table's index
+--   expressions.
+-- `authenticated` may write its own public.partners row, so it needs EXECUTE.
+--
+-- Why a GRANT and not an index/function change:
+--   * The function is SECURITY INVOKER, IMMUTABLE, owner postgres, pinned with
+--     search_path = "", and its body is pure string work (lower/btrim/
+--     regexp_replace) on the argument. It reads no table and writes nothing, so
+--     EXECUTE hands the caller no data and no new capability -- only the right
+--     to normalise a string it already supplied.
+--   * Inlining the regex into the index instead would duplicate the logic. The
+--     index is only usable by a lookup whose expression matches it exactly, so
+--     the copy and the function would have to be kept in lockstep forever; the
+--     day one changes, lookups silently stop using the index. That is a worse
+--     long-term shape than a grant.
+--   * Dropping the index would remove the work-intake domain lookup it exists for.
+--
+-- Scope check: a sweep of every expression index in `public` found exactly ONE
+-- such conflict -- this one. No other table is affected.
+--
+-- `anon` deliberately gets nothing: it has no UPDATE privilege and no INSERT
+-- policy on public.partners, so it never maintains that index. The 20260809153000
+-- REVOKE therefore stays fully in force for anon and PUBLIC.
+--
+-- Not changed: the index, the function body, its volatility/owner/search_path,
+-- every other sales_lead_* function's grants, RLS policies, and all data.
+
+BEGIN;
+
+GRANT EXECUTE ON FUNCTION public.sales_lead_normalize_domain(text) TO authenticated;
+
+COMMIT;
