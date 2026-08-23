@@ -98,6 +98,7 @@ import AdminAffiliatePayouts from "@/pages/AdminAffiliatePayouts";
 import AdminAffiliatePayoutDetail from "@/pages/AdminAffiliatePayoutDetail";
 import PartnerSetPassword from "@/pages/PartnerSetPassword";
 import ResetPassword from "@/pages/ResetPassword";
+import AffiliateShortLink from "@/pages/AffiliateShortLink";
 
 import { BottomNavigation } from "@/components/BottomNavigation";
 import { AdminLayout } from "@/components/admin/AdminLayout";
@@ -689,6 +690,8 @@ function AppContent() {
           </Route>
           <Route path="/partner/login" element={<PartnerLogin />} />
             <Route path="/partner/register" element={<PartnerRegister />} />
+            {/* Short public alias for the Affiliate "Obchodník" company link — redirects only, no new attribution logic. */}
+            <Route path="/a/:refCode" element={<AffiliateShortLink />} />
             <Route path="/partner/invite" element={<CompanyLeadConfirm />} />
             <Route path="/partner/set-password" element={<PartnerSetPassword />} />
             {/* Legacy /influencer/* routes — /dashboard redirects to Affiliate v2 UI; public pages unchanged */}
