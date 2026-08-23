@@ -4,7 +4,18 @@ import { supabase } from '@/integrations/supabase/client';
 import { format, startOfWeek, endOfWeek, subWeeks, addWeeks } from 'date-fns';
 import { cs } from 'date-fns/locale';
 import { toast } from 'sonner';
-import { ChevronLeft, ChevronRight, Download, FileText, Loader2, Mail } from 'lucide-react';
+import { Check, ChevronLeft, ChevronRight, Download, FileText, Loader2, Mail } from 'lucide-react';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from '@/components/ui/alert-dialog';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -80,6 +91,7 @@ const AdminInvoices: React.FC = () => {
   const [generatingPdf, setGeneratingPdf] = useState(false);
   const [pdfExportId, setPdfExportId] = useState<string | null>(null);
   const [downloadingPdf, setDownloadingPdf] = useState(false);
+  const [markingPaid, setMarkingPaid] = useState(false);
 
   const currentWeekStart = startOfWeek(addWeeks(new Date(), weekOffset), { weekStartsOn: 1 });
   const currentWeekEnd = endOfWeek(addWeeks(new Date(), weekOffset), { weekStartsOn: 1 });
@@ -278,6 +290,55 @@ const AdminInvoices: React.FC = () => {
       toast.error('Fakturu se nepodařilo znovu odeslat.');
     } finally {
       setResendingEmail(false);
+    }
+  };
+
+  /**
+   * Eviduje skutečně přijatou úhradu partnerské faktury (issued -> paid).
+   * Pouze záznam o platbě — neposílá žádné peníze a nevytváří provizi;
+   * provizi z uhrazené faktury odvodí až měsíční výpočet
+   * calculate_affiliate_commissions_for_month.
+   * Server je jediný zdroj pravdy: stav i paid_at nastavuje RPC, ne klient.
+   */
+  const markInvoicePaid = async () => {
+    if (!selectedInvoice) return;
+
+    setMarkingPaid(true);
+    try {
+      const { data, error } = await (supabase as any).rpc('admin_mark_partner_invoice_paid', {
+        p_invoice_id: selectedInvoice.id,
+      });
+
+      if (error) throw error;
+
+      const status = (data as { status?: string } | null)?.status;
+
+      if (status === 'marked_paid') {
+        toast.success('Faktura byla označena jako zaplacená.');
+      } else if (status === 'already_paid') {
+        // Idempotentní opakování (např. dvojklik) není chyba.
+        toast.info('Faktura už je označená jako zaplacená.');
+      } else if (status === 'forbidden') {
+        toast.error('Na tuto akci nemáte oprávnění.');
+        return;
+      } else if (status === 'invalid_transition') {
+        toast.error('Jako zaplacenou lze označit pouze vystavenou fakturu.');
+        return;
+      } else if (status === 'not_found') {
+        toast.error('Faktura nebyla nalezena.');
+        return;
+      } else {
+        toast.error('Fakturu se nepodařilo označit jako zaplacenou.');
+        return;
+      }
+
+      setSelectedInvoice((prev) => (prev ? { ...prev, status: 'paid' } : prev));
+      fetchInvoices();
+    } catch (err) {
+      console.error('Error marking invoice paid:', err);
+      toast.error('Fakturu se nepodařilo označit jako zaplacenou.');
+    } finally {
+      setMarkingPaid(false);
     }
   };
 
@@ -612,6 +673,41 @@ const AdminInvoices: React.FC = () => {
                     )}
                     Znovu odeslat
                   </Button>
+                )}
+
+                {/* Evidence skutečně přijaté úhrady — pouze pro vystavenou fakturu.
+                    Sama neposílá peníze; teprve z uhrazené faktury vzniká
+                    obchodnická provize při měsíčním výpočtu. */}
+                {selectedInvoice.status === 'issued' && (
+                  <AlertDialog>
+                    <AlertDialogTrigger asChild>
+                      <Button variant="default" size="sm" disabled={markingPaid}>
+                        {markingPaid ? (
+                          <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                        ) : (
+                          <Check className="h-4 w-4 mr-2" />
+                        )}
+                        Označit jako zaplaceno
+                      </Button>
+                    </AlertDialogTrigger>
+                    <AlertDialogContent>
+                      <AlertDialogHeader>
+                        <AlertDialogTitle>Označit fakturu jako zaplacenou?</AlertDialogTitle>
+                        <AlertDialogDescription>
+                          Potvrzujete, že úhrada faktury od partnera{' '}
+                          <strong>{getPartnerDisplayName(selectedInvoice)}</strong> skutečně dorazila.
+                          Tato akce pouze eviduje přijatou platbu — neodesílá žádné peníze.
+                          Z uhrazené faktury následně vznikne provize obchodníka.
+                        </AlertDialogDescription>
+                      </AlertDialogHeader>
+                      <AlertDialogFooter>
+                        <AlertDialogCancel>Zrušit</AlertDialogCancel>
+                        <AlertDialogAction onClick={markInvoicePaid}>
+                          Označit jako zaplaceno
+                        </AlertDialogAction>
+                      </AlertDialogFooter>
+                    </AlertDialogContent>
+                  </AlertDialog>
                 )}
 
               </>

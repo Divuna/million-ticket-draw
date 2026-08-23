@@ -140,8 +140,15 @@ test.describe('45 - admin partner invoice resend button', () => {
     const resendButton = page.getByRole('button', { name: 'Znovu odeslat' });
     await expect(resendButton).toBeVisible();
     await expect(page.getByRole('button', { name: 'Odeslat fakturu emailem' })).toHaveCount(0);
-    await expect(page.getByRole('button', { name: 'Označit jako zaplaceno' })).toHaveCount(0);
     await expect(page.getByRole('button', { name: 'Odeslat', exact: true })).toHaveCount(0);
+
+    // „Označit jako zaplaceno" je u vystavené faktury nově DOSTUPNÉ. Dřívější
+    // status-only tlačítko bylo odstraněno, protože měnilo stav bez jakékoli
+    // kontroly; současné je guardované RPC `admin_mark_partner_invoice_paid`
+    // (is_admin + přechod pouze issued→paid + serverový paid_at) a potvrzovacím
+    // dialogem. Samotné kliknutí sem stav nemění — otevře se jen dialog, takže
+    // níže ověřený invariant „resend nic nemutuje" zůstává v platnosti.
+    await expect(page.getByRole('button', { name: 'Označit jako zaplaceno' })).toBeVisible();
 
     await resendButton.click();
     await expect(page.getByText('Faktura byla znovu odeslána.')).toBeVisible();
