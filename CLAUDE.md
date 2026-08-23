@@ -47,6 +47,57 @@ výslovné schválení Pavla.
 
 ---
 
+# PROVIZNÍ SYSTÉM — TRVALÉ INVARIANTY (produkce, 23. 08. 2026)
+
+**Produkčně nasazeno.** Migrace `20260823145341_admin_mark_partner_invoice_paid` a
+`20260823145409_affiliate_commissions_real_payment_state_and_late_invoices` jsou na produkci
+`xkzhjldrojjlrkezorey`. `main` = `c4df929b`. **Lovable Publish zatím neproběhl**, takže tlačítko
+„Označit jako zaplaceno" ještě není v živém UI.
+
+**Závazné invarianty (neměnit bez výslovného schválení Pavla):**
+
+- **Úspěšná zákaznická platba má stav `completed`, nikdy `paid`.** `stripe-webhook` zapisuje
+  `payments.status='completed'`; zákaznická větev `calculate_affiliate_commissions_for_month`
+  proto filtruje `completed`. **Nevracet filtr na `'paid'`** — v `payments` taková hodnota
+  neexistuje a Influencer provize by opět tiše přestala vznikat. Refundace se nezapočítávají,
+  protože `refunded` je samostatný stav; vyloučení metod `('bonus','partner','api')` zůstává.
+- **B2B provize se řídí `partner_invoices.paid_at`, ne `period_start`.** Okno je kumulativní
+  (`date_trunc('month', pi.paid_at) <= v_month`), aby pokrylo opožděnou úhradu i vynechaný běh
+  cronu 25 (ten běží jen jednou, 2. dne, za předchozí měsíc). **Nevracet vazbu na `period_start`
+  ani rovnost `= v_month`** — faktura uhrazená po jediném hodnotícím okně by navždy zůstala bez
+  provize. `period_month` provize = měsíc skutečné úhrady.
+- **Idempotence stojí na existujících unikátních indexech, ne na druhém enginu.**
+  `uq_affiliate_commissions_invoice` (UNIQUE `source_invoice_id`) + `ON CONFLICT DO NOTHING` pro
+  B2B, `uq_affiliate_commissions_month_customer` pro zákaznickou větev. **Nevytvářet druhý
+  provizní engine.**
+- **Přepočet maže výhradně `status='calculated'` daného `period_month`.** `approved`,
+  `ready_to_pay`, `in_payment_batch` a `paid` provize se nikdy nepřepisují ani nemažou.
+- **`partner_invoices` má jedinou legitimní cestu k `paid`:**
+  `admin_mark_partner_invoice_paid(uuid)` — guard `is_admin()` (admin i superadmin),
+  `FOR UPDATE`, povolen **pouze** přechod `issued → paid`, `paid_at` nastavuje **server**
+  (`now()`), nikdy klient. Idempotentní: opakované volání vrací `already_paid` a `paid_at`
+  nepřepisuje (jinak by se posunulo provizní období). **Bez `anon` EXECUTE.**
+  Funkce pouze eviduje přijatou platbu — **neposílá peníze a nevytváří provizi.**
+- **Klient nikdy nezapisuje stav faktury přímo.** `/admin/invoices` volá výhradně tuto RPC;
+  nevracet `.update()` nad `partner_invoices` do frontendu.
+- **Faktury s `paid_at IS NULL` do B2B větve nevstupují** — u nich nelze určit okamžik vzniku
+  nároku. Týká se to jen historických ručních zásahů; nová RPC `paid_at` vždy vyplní.
+- **Sazby a DPH se touto opravou neměnily** a měnit se nesmí: `commission_rate_customer`,
+  `commission_rate_company`, dělení `/ 100.0` a `CASE WHEN is_vat_payer THEN 21 ELSE 0`.
+  DPH provize se řídí plátcovstvím **obchodníka**, ne DPH faktury.
+
+Hlídá spec `tests/e2e/142-affiliate-commission-blockers-contract.spec.ts`.
+
+**Pozn. ke spec 45:** dřívější tvrzení „`Označit jako zaplaceno` se v admin UI nezobrazuje" už
+neplatí. Odstraněné tlačítko bylo status-only bez jakékoli kontroly; současné je guardované RPC
+s potvrzovacím dialogem. Invariant „resend nic nemutuje" zůstává v platnosti.
+
+**OPEN ISSUE (neopraveno):** staging má na `calculate_affiliate_commissions_for_month`
+`anon EXECUTE = true`, produkce správně `false`. Pre-existující drift stagingu — `CREATE OR REPLACE`
+granty nemění. Oprava = `REVOKE ALL ON FUNCTION ... FROM anon` pouze na stagingu.
+
+---
+
 # MIOCOIN — PRAVIDLO 1 DESETINNÉHO MÍSTA (produkce, 18. 08. 2026)
 
 **Produkčně nasazeno a ověřeno.** Produkční partnerský reward engine již nevrací `floor()` na celé číslo.

@@ -1,5 +1,32 @@
 # OneMil – aktuální stav projektu
 
+> **Autoritativní aktuální stav. Poslední aktualizace 23. 8. 2026 podle `origin/main` (`c4df929b`), GitHubu a read-only produkční kontroly Supabase.**
+
+## 0a. Provizní systém — stav k 23. 8. 2026 (nasazeno do produkce)
+
+Tato sekce je novější než přehled níže a přebíjí ho v oblasti provizí.
+
+| Oblast | Aktuální stav |
+|---|---|
+| Influencer provize ze zákaznických plateb | **Opraveno a nasazeno.** Zákaznická větev `calculate_affiliate_commissions_for_month` počítá z `payments.status='completed'` (skutečný stav, který zapisuje `stripe-webhook`). Dřívější filtr `'paid'` neexistoval v datech, takže provize nemohla nikdy vzniknout. Refundace zůstávají vyloučené. |
+| Partnerská faktura `issued → paid` | **Doplněno a nasazeno.** Nová RPC `admin_mark_partner_invoice_paid(uuid)` — guard `is_admin()`, `FOR UPDATE`, pouze `issued → paid`, serverový `paid_at=now()`, idempotentní, bez `anon` EXECUTE. Pouze eviduje přijatou platbu; neposílá peníze a nevytváří provizi. |
+| Obchodnická provize a opožděná úhrada | **Opraveno a nasazeno.** B2B větev se řídí `pi.paid_at` s kumulativním oknem `<= v_month`, takže pokryje i fakturu uhrazenou po běhu cronu i vynechaný běh. Idempotenci drží `uq_affiliate_commissions_invoice` + `ON CONFLICT DO NOTHING`. |
+| Tlačítko „Označit jako zaplaceno" v `/admin/invoices` | **V `main`, ale ZATÍM NENÍ V ŽIVÉM UI** — Lovable Publish neproběhl. Do publishe je nová RPC nasazená, ale nikdo ji nevolá. |
+| Produkční data | **Nezměněna.** Checksumy `affiliate_commissions`, `partner_invoices` i provizních sazeb sedí před i po nasazení. Dry-run potvrdil 0 retroaktivních provizí. |
+| Sazby, DPH, first-touch, výplatní řetězec | **Beze změny.** Změna se dotkla pouze dvou funkcí; atribuční RPC a celá výplatní vrstva nedotčeny. |
+
+**Aplikované produkční migrace (23. 8. 2026, schválení Pavla):**
+`20260823145341_admin_mark_partner_invoice_paid`, `20260823145409_affiliate_commissions_real_payment_state_and_late_invoices`.
+Žádná Edge Function se nenasazovala.
+
+**Zbývá k dokončení:** Lovable Publish (zpřístupní tlačítko „Označit jako zaplaceno"). Teprve poté je řetězec
+`faktura → uhrazena → obchodnická provize` průchozí i pro reálný provoz.
+
+**OPEN ISSUE (vědomě neopraveno):** staging má na `calculate_affiliate_commissions_for_month`
+`anon EXECUTE = true`, produkce správně `false`. Pre-existující drift stagingu (`CREATE OR REPLACE`
+granty nemění). Oprava = `REVOKE ALL ON FUNCTION ... FROM anon` pouze na stagingu.
+
+
 > **Autoritativní aktuální stav. Synchronizováno 18. 8. 2026 podle `origin/main`, GitHubu a read-only produkční kontroly Supabase.**
 
 ## 0. Aktuální ověřený provozní stav (18. 8. 2026)
