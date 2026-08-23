@@ -350,7 +350,9 @@ const AffiliateDashboard = () => {
   }
 
   const customerLink = buildPublicUrl(`/?ref=${encodeURIComponent(a.ref_code)}`);
-  const companyLink  = buildPublicUrl(`/partner/register?via=${encodeURIComponent(a.ref_code)}`);
+  // Short public alias for the company link (/a/:refCode -> /partner/register?via=:refCode).
+  // Pure redirect, same underlying via-code attribution flow — see AffiliateShortLink.tsx.
+  const companyLink  = buildPublicUrl(`/a/${encodeURIComponent(a.ref_code)}`);
 
   const ago30 = subDays(new Date(), 30);
   const custToday     = customerRefs.filter(r => isToday(new Date(r.created_at))).length;
