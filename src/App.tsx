@@ -108,6 +108,7 @@ import { RequireSuperadminOrRedirect } from "@/components/admin/RequireSuperadmi
 import { RequireSuperadmin } from "@/components/admin/RequireSuperadmin";
 import { useUserRole } from "@/hooks/useUserRole";
 import { useApplyPendingReferral } from "@/hooks/useApplyPendingReferral";
+import { useApplyPendingAffiliateRef } from "@/hooks/useApplyPendingAffiliateRef";
 import { useApplyPendingAdultConfirmation } from "@/hooks/useApplyPendingAdultConfirmation";
 import { useRetentionTriggers } from "@/hooks/useRetentionTriggers";
 import { useHeartbeat } from "@/hooks/useHeartbeat";
@@ -400,6 +401,10 @@ function AppContent() {
   const partnerData = usePartnerData(isPartnerAccount && !isInfluencerAccount ? user?.id : undefined);
   useOneSignal();
   useApplyPendingReferral(user?.id);
+  // Affiliate v2: dokončí pending zákaznickou atribuci (viz Register.tsx) po
+  // přihlášení — pokrývá okamžitou i odloženou session (potvrzení e-mailu,
+  // návrat z Google/Facebook OAuth).
+  useApplyPendingAffiliateRef(user?.id);
   // Uloží potvrzení 18+ po přihlášení (zejména po návratu z OAuth).
   useApplyPendingAdultConfirmation(user?.id);
   useRetentionTriggers(user?.id);

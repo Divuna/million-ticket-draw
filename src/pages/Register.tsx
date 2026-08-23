@@ -10,13 +10,11 @@ import { toast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 import logo from '@/assets/logo-onemil.png';
 import { PENDING_REFERRAL_STORAGE_KEY } from '@/hooks/useApplyPendingReferral';
+import { PENDING_AFFILIATE_REF_STORAGE_KEY } from '@/hooks/useApplyPendingAffiliateRef';
 import {
   markAdultConfirmationPending,
   ADULT_CONFIRMATION_TEXT,
 } from '@/hooks/useApplyPendingAdultConfirmation';
-
-// Affiliate v2: pending affiliate ref code captured from ?ref= (separate from legacy referral).
-const PENDING_AFFILIATE_REF_KEY = 'onemil_affiliate_ref';
 import { analytics } from '@/lib/analytics';
 import { ENABLED_OAUTH_PROVIDERS, type OAuthProvider } from '@/config/socialAuth';
 import { getSafeRedirectPath } from '@/lib/loginRedirect';
@@ -62,8 +60,10 @@ const Register: React.FC = () => {
       try {
         sessionStorage.setItem(PENDING_REFERRAL_STORAGE_KEY, ref);
         // Affiliate v2: same ?ref= value may also be an affiliate ref_code.
-        // Stored separately; legacy player-referral flow is untouched.
-        sessionStorage.setItem(PENDING_AFFILIATE_REF_KEY, ref);
+        // Stored separately; legacy player-referral flow is untouched. Applied
+        // globally by useApplyPendingAffiliateRef once a session exists — this
+        // covers immediate signup, e-mail confirmation, and OAuth return alike.
+        sessionStorage.setItem(PENDING_AFFILIATE_REF_STORAGE_KEY, ref);
       } catch {
         // ignore storage errors
       }
@@ -150,19 +150,11 @@ const Register: React.FC = () => {
             // non-blocking; user can add code later in Profile
           }
 
-          // Affiliate v2: attribute customer to an affiliate (first-touch). Fully
-          // non-fatal — invalid_code / already_attributed / not_eligible / errors
-          // must never break registration. Separate from the legacy referral above.
-          try {
-            const pendingAff = sessionStorage.getItem(PENDING_AFFILIATE_REF_KEY);
-            if (pendingAff) {
-              await (supabase as any).rpc('record_affiliate_customer_ref', { p_ref_code: pendingAff });
-              sessionStorage.removeItem(PENDING_AFFILIATE_REF_KEY);
-            }
-          } catch {
-            // non-blocking; affiliate attribution must never break registration
-          }
-
+          // Affiliate v2 attribution (record_affiliate_customer_ref) is handled
+          // globally by useApplyPendingAffiliateRef, wired in App.tsx alongside
+          // useApplyPendingReferral — it fires whenever a session becomes
+          // available, which covers this immediate-session case too. No direct
+          // call here avoids a second, duplicate mechanism doing the same thing.
         }
         analytics.registrationCompleted();
         navigate(redirectTarget || '/profile');
