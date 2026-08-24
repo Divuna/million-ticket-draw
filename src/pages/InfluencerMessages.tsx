@@ -158,10 +158,15 @@ export default function InfluencerMessages() {
   return (
     <AffiliatePortalLayout onLogout={handleLogout}>
       <div className="max-w-3xl mx-auto px-4 py-6 sm:px-6 lg:px-8 space-y-6">
-        <Card className="border-[hsl(var(--border))]">
+        <Card className="rounded-2xl border-[hsl(var(--border))] shadow-sm overflow-hidden">
           <CardHeader className="pb-3">
-            <CardTitle className="flex items-center gap-2 text-base text-[hsl(var(--text-silver))]">
-              <MessageCircle className="w-4.5 h-4.5 text-[hsl(var(--neon-gold))]" />
+            <CardTitle className="flex items-center gap-3 text-base text-[hsl(var(--foreground))]">
+              <span
+                className="w-9 h-9 rounded-xl flex items-center justify-center flex-shrink-0"
+                style={{ background: 'hsl(243 75% 59% / 0.12)', border: '1px solid hsl(243 75% 59% / 0.22)' }}
+              >
+                <MessageCircle className="w-4.5 h-4.5 text-[hsl(var(--primary))]" />
+              </span>
               Zprávy pro podporu
             </CardTitle>
             <CardDescription>Komunikace s týmem OneMil</CardDescription>

@@ -14,8 +14,9 @@ interface AffiliatePortalLayoutProps {
 
 /**
  * Shared shell for /affiliate/dashboard and /influencer/messages. Sidebar +
- * topbar are pure navigation/display — same onSwitchMode / onLogout the pages
- * already implement, nothing new is read or written here.
+ * topbar are pure navigation/display — same onSwitchMode / onLogout / the
+ * dashboard's own currentMonthCzk figure it already computes; nothing new is
+ * read or written here.
  *
  * The theme class is also toggled on document.body (not just the wrapper div)
  * because Radix Dialog/Popover/Select portal directly under <body> — without
@@ -41,16 +42,13 @@ export const AffiliatePortalLayout: React.FC<AffiliatePortalLayoutProps> = ({
       <AffiliateSidebar
         activeMode={activeMode}
         onSwitchMode={onSwitchMode}
+        currentMonthCzk={currentMonthCzk}
         onLogout={onLogout}
         mobileOpen={mobileMenuOpen}
         onCloseMobile={() => setMobileMenuOpen(false)}
       />
       <div className="flex-1 min-w-0 lg:pl-64">
-        <AffiliateTopbar
-          activeMode={activeMode}
-          currentMonthCzk={currentMonthCzk}
-          onOpenMobileMenu={() => setMobileMenuOpen(true)}
-        />
+        <AffiliateTopbar activeMode={activeMode} onOpenMobileMenu={() => setMobileMenuOpen(true)} />
         <div>{children}</div>
       </div>
     </div>

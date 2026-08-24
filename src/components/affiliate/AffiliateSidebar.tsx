@@ -1,7 +1,7 @@
 import React from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
-import { Megaphone, Briefcase, User, MessageCircle, LogOut, X, Star } from 'lucide-react';
+import { Megaphone, Briefcase, User, MessageCircle, LogOut, X, Star, TrendingUp } from 'lucide-react';
 
 /**
  * Affiliate/Influencer portal sidebar — navigation only.
@@ -15,6 +15,11 @@ import { Megaphone, Briefcase, User, MessageCircle, LogOut, X, Star } from 'luci
  * localStorage read picks it up — no new persistence mechanism.
  *
  * "Zprávy" points at the existing /influencer/messages route, unchanged.
+ *
+ * The bottom "Tento měsíc" panel renders the SAME currentMonthCzk figure the
+ * dashboard already computes from affiliate_commissions (previously shown in
+ * the topbar) — no new data source, just moved/re-styled to match the
+ * reference layout's use of the lower sidebar for real account info.
  */
 
 const STORAGE_KEY = 'affiliate_active_mode';
@@ -38,17 +43,23 @@ interface AffiliateSidebarProps {
   activeMode?: ActiveMode;
   /** Present only on /affiliate/dashboard — switches mode in place, no navigation/reload. */
   onSwitchMode?: (mode: ActiveMode) => void;
+  /** Same figure the dashboard already computes; not shown on Profil/Zprávy. */
+  currentMonthCzk?: number;
   onLogout: () => void;
   mobileOpen: boolean;
   onCloseMobile: () => void;
 }
 
+const czk = (n: number) =>
+  `${(n ?? 0).toLocaleString('cs-CZ', { minimumFractionDigits: 0, maximumFractionDigits: 2 })} Kč`;
+
 const SidebarContent: React.FC<{
   activeMode?: ActiveMode;
   onSwitchMode?: (mode: ActiveMode) => void;
+  currentMonthCzk?: number;
   onLogout: () => void;
   onNavigate?: () => void;
-}> = ({ activeMode, onSwitchMode, onLogout, onNavigate }) => {
+}> = ({ activeMode, onSwitchMode, currentMonthCzk, onLogout, onNavigate }) => {
   const location = useLocation();
   const navigate = useNavigate();
   const onMessagesPage = location.pathname === '/influencer/messages';
@@ -68,19 +79,24 @@ const SidebarContent: React.FC<{
     onNavigate?.();
   };
 
+  const showMonthCard = typeof currentMonthCzk === 'number' && !onMessagesPage && activeMode !== 'profile';
+
   return (
     <div className="flex h-full flex-col bg-[hsl(var(--sidebar-background))]">
       <div className="flex items-center gap-2.5 px-5 py-5 border-b border-[hsl(var(--sidebar-border))]">
-        <div className="w-9 h-9 rounded-xl bg-[hsl(var(--primary))] flex items-center justify-center flex-shrink-0">
+        <div
+          className="w-9 h-9 rounded-xl flex items-center justify-center flex-shrink-0 shadow-sm"
+          style={{ background: 'linear-gradient(135deg, hsl(243 75% 59%), hsl(262 80% 62%))' }}
+        >
           <Star className="w-5 h-5 text-white" />
         </div>
         <div className="min-w-0">
-          <p className="text-sm font-semibold text-[hsl(var(--sidebar-foreground))] truncate">OneMil</p>
+          <p className="text-sm font-bold text-[hsl(var(--sidebar-foreground))] truncate">OneMil</p>
           <p className="text-[11px] text-[hsl(var(--text-muted-gray))] truncate">Affiliate portál</p>
         </div>
       </div>
 
-      <nav className="flex-1 overflow-y-auto px-3 py-4 space-y-1" data-testid="mode-switcher">
+      <nav className="flex-1 overflow-y-auto px-3 py-4 space-y-1.5" data-testid="mode-switcher">
         {NAV_ITEMS.map((item) => {
           const Icon = item.icon;
           const active = item.key === 'messages' ? onMessagesPage : !onMessagesPage && activeMode === item.key;
@@ -95,21 +111,54 @@ const SidebarContent: React.FC<{
               onClick={() => (item.key === 'messages' ? handleMessagesClick() : handleModeClick(item.key))}
               data-testid={testId}
               aria-pressed={active}
-              className={`w-full flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-colors text-left ${
+              className={`w-full flex items-center gap-3 rounded-xl px-3.5 py-2.5 text-sm font-medium transition-all text-left ${
                 active
-                  ? 'bg-[hsl(var(--sidebar-accent))] text-[hsl(var(--sidebar-accent-foreground))]'
-                  : 'text-[hsl(var(--sidebar-foreground))]/80 hover:bg-[hsl(var(--sidebar-accent))]/60 hover:text-[hsl(var(--sidebar-foreground))]'
+                  ? 'text-[hsl(var(--sidebar-accent-foreground))] shadow-sm'
+                  : 'text-[hsl(var(--sidebar-foreground))]/75 hover:bg-[hsl(var(--sidebar-accent))]/50 hover:text-[hsl(var(--sidebar-foreground))]'
               }`}
+              style={
+                active
+                  ? { background: 'linear-gradient(135deg, hsl(243 65% 95%), hsl(258 70% 95%))' }
+                  : undefined
+              }
             >
-              <Icon className={`w-4.5 h-4.5 flex-shrink-0 ${active ? 'text-[hsl(var(--sidebar-primary))]' : 'opacity-70'}`} />
+              <span
+                className={`flex items-center justify-center w-8 h-8 rounded-lg flex-shrink-0 transition-colors ${
+                  active ? '' : 'bg-[hsl(var(--muted)/0.6)]'
+                }`}
+                style={active ? { background: 'linear-gradient(135deg, hsl(243 75% 59%), hsl(262 80% 62%))' } : undefined}
+              >
+                <Icon className={`w-4 h-4 ${active ? 'text-white' : 'text-[hsl(var(--text-muted-gray))]'}`} />
+              </span>
               <span className="truncate">{item.label}</span>
+              {active && <span className="ml-auto w-1.5 h-1.5 rounded-full bg-[hsl(var(--primary))]" />}
             </button>
           );
         })}
       </nav>
 
+      {showMonthCard && (
+        <div className="px-3 pb-3">
+          <div
+            className="relative overflow-hidden rounded-2xl p-4 text-white shadow-sm"
+            style={{ background: 'linear-gradient(140deg, hsl(243 75% 59%), hsl(258 80% 55%) 55%, hsl(262 80% 62%))' }}
+          >
+            <div
+              className="absolute -top-6 -right-6 w-24 h-24 rounded-full opacity-20"
+              style={{ background: 'radial-gradient(circle, white, transparent 70%)' }}
+              aria-hidden="true"
+            />
+            <div className="relative flex items-center gap-1.5 text-[11px] font-medium uppercase tracking-wider text-white/75">
+              <TrendingUp className="w-3.5 h-3.5" />
+              Tento měsíc
+            </div>
+            <p className="relative text-2xl font-extrabold tabular-nums mt-1">{czk(currentMonthCzk!)}</p>
+          </div>
+        </div>
+      )}
+
       <div className="border-t border-[hsl(var(--sidebar-border))] p-3">
-        <Button variant="outline" size="sm" className="w-full justify-start gap-2" onClick={onLogout}>
+        <Button variant="outline" size="sm" className="w-full justify-start gap-2 rounded-xl" onClick={onLogout}>
           <LogOut className="w-4 h-4" />
           Odhlásit se
         </Button>
@@ -121,6 +170,7 @@ const SidebarContent: React.FC<{
 export const AffiliateSidebar: React.FC<AffiliateSidebarProps> = ({
   activeMode,
   onSwitchMode,
+  currentMonthCzk,
   onLogout,
   mobileOpen,
   onCloseMobile,
@@ -130,7 +180,12 @@ export const AffiliateSidebar: React.FC<AffiliateSidebarProps> = ({
       {/* Desktop */}
       <aside className="hidden lg:block lg:w-64 lg:flex-shrink-0 lg:border-r lg:border-[hsl(var(--sidebar-border))]">
         <div className="lg:fixed lg:top-0 lg:left-0 lg:h-screen lg:w-64">
-          <SidebarContent activeMode={activeMode} onSwitchMode={onSwitchMode} onLogout={onLogout} />
+          <SidebarContent
+            activeMode={activeMode}
+            onSwitchMode={onSwitchMode}
+            currentMonthCzk={currentMonthCzk}
+            onLogout={onLogout}
+          />
         </div>
       </aside>
 
@@ -151,6 +206,7 @@ export const AffiliateSidebar: React.FC<AffiliateSidebarProps> = ({
               <SidebarContent
                 activeMode={activeMode}
                 onSwitchMode={onSwitchMode}
+                currentMonthCzk={currentMonthCzk}
                 onLogout={onLogout}
                 onNavigate={onCloseMobile}
               />

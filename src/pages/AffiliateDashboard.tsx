@@ -92,21 +92,43 @@ function commStatusBadge(status: string) {
   }
 }
 
-function StatCard({ icon: Icon, label, value, accent = false }: {
-  icon: React.ElementType; label: string; value: string | number; accent?: boolean;
+// Rotating accent hues for stat-card icon chips — purely cosmetic grouping,
+// no meaning tied to a specific color; keeps the grid from looking like one
+// flat gray/gold repeated block, per the reference layout.
+const STAT_HUES = ['var(--affiliate-purple)', 'var(--affiliate-blue)', 'var(--affiliate-green)', 'var(--affiliate-orange)'] as const;
+
+function StatCard({ icon: Icon, label, value, hue = 0, accent = false }: {
+  icon: React.ElementType; label: string; value: string | number; hue?: number; accent?: boolean;
 }) {
+  const color = accent ? 'var(--primary)' : STAT_HUES[hue % STAT_HUES.length];
   return (
-    <div className="luxury-card p-5 hover:border-[hsl(var(--neon-gold)/0.3)] transition-all">
+    <div className="luxury-card p-5 transition-all">
       <div className="flex items-start gap-3">
-        <div className={`p-2.5 rounded-lg ${accent ? 'bg-[hsl(var(--neon-gold)/0.12)] border border-[hsl(var(--neon-gold)/0.2)]' : 'bg-[hsl(var(--muted)/0.5)] border border-[hsl(var(--border)/0.4)]'}`}>
-          <Icon className={`w-5 h-5 ${accent ? 'text-[hsl(var(--neon-gold))]' : 'text-[hsl(var(--text-muted-gray))]'}`} />
+        <div
+          className="w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0"
+          style={{ background: `hsl(${color} / 0.12)`, border: `1px solid hsl(${color} / 0.22)` }}
+        >
+          <Icon className="w-5 h-5" style={{ color: `hsl(${color})` }} />
         </div>
         <div className="min-w-0">
           <p className="text-[11px] uppercase tracking-wider text-[hsl(var(--text-muted-gray))] mb-0.5">{label}</p>
-          <p className={`text-xl font-bold tabular-nums ${accent ? 'text-[hsl(var(--neon-gold))]' : 'text-[hsl(var(--text-silver))]'}`}>{value}</p>
+          <p className="text-xl font-extrabold tabular-nums text-[hsl(var(--foreground))]">{value}</p>
         </div>
       </div>
     </div>
+  );
+}
+
+/** Colored icon chip for section-card headers — same visual language as StatCard's icon box. */
+function SectionIcon({ icon: Icon, hue = 0 }: { icon: React.ElementType; hue?: number }) {
+  const color = STAT_HUES[hue % STAT_HUES.length];
+  return (
+    <span
+      className="w-9 h-9 rounded-xl flex items-center justify-center flex-shrink-0"
+      style={{ background: `hsl(${color} / 0.12)`, border: `1px solid hsl(${color} / 0.22)` }}
+    >
+      <Icon className="w-4.5 h-4.5" style={{ color: `hsl(${color})` }} />
+    </span>
   );
 }
 
@@ -139,12 +161,12 @@ function InfluencerRules() {
     <div className="luxury-card overflow-hidden">
       <div className="p-6 space-y-4">
         <div className="flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <ShieldCheck className="w-5 h-5 text-[hsl(var(--neon-gold))]" />
-            <h3 className="text-base font-semibold text-[hsl(var(--text-silver))]">Pravidla spolupráce — Influencer</h3>
+          <div className="flex items-center gap-3">
+            <SectionIcon icon={ShieldCheck} hue={2} />
+            <h3 className="text-base font-semibold text-[hsl(var(--foreground))]">Pravidla spolupráce — Influencer</h3>
           </div>
           <button onClick={() => setOpen(!open)}
-            className="text-sm text-[hsl(var(--neon-gold))] hover:underline">
+            className="text-sm font-medium text-[hsl(var(--primary))] hover:underline">
             {open ? 'Skrýt' : 'Zobrazit'}
           </button>
         </div>
@@ -367,14 +389,27 @@ const AffiliateDashboard = () => {
       <div className="px-4 py-6 sm:px-6 lg:px-8 max-w-5xl mx-auto space-y-8">
 
         {/* ══ HERO ══════════════════════════════════════════════════════════ */}
-        <div className="relative overflow-hidden rounded-2xl border border-[hsl(var(--border))] bg-[hsl(var(--card))] p-6 sm:p-8">
+        <div
+          className="relative overflow-hidden rounded-[1.75rem] p-6 sm:p-9 shadow-sm"
+          style={{ background: 'linear-gradient(120deg, hsl(243 75% 59%), hsl(258 78% 55%) 55%, hsl(262 80% 60%))' }}
+        >
+          <div
+            className="absolute -top-16 -right-10 w-64 h-64 rounded-full opacity-25 pointer-events-none"
+            style={{ background: 'radial-gradient(circle, white, transparent 70%)' }}
+            aria-hidden="true"
+          />
+          <div
+            className="absolute bottom-[-3rem] left-[18%] w-40 h-40 rounded-full opacity-20 pointer-events-none"
+            style={{ background: 'radial-gradient(circle, hsl(32 95% 60%), transparent 70%)' }}
+            aria-hidden="true"
+          />
           <div className="relative z-10 space-y-3">
-            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full border border-[hsl(var(--neon-gold)/0.4)] bg-[hsl(var(--neon-gold)/0.1)]">
-              <Star className="w-3.5 h-3.5 text-[hsl(var(--neon-gold))]" />
-              <span className="text-xs font-semibold tracking-wide uppercase text-[hsl(var(--neon-gold))]">Aktivní Affiliate partner</span>
+            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-white/15 backdrop-blur-sm border border-white/25">
+              <Star className="w-3.5 h-3.5 text-white" />
+              <span className="text-xs font-semibold tracking-wide uppercase text-white">Aktivní Affiliate partner</span>
             </div>
-            <h1 className="text-2xl sm:text-3xl font-bold !text-[hsl(var(--heading-gold))]">Vydělávejte s OneMil</h1>
-            <p className="text-sm text-[hsl(var(--text-muted-gray))] max-w-md">
+            <h1 className="text-2xl sm:text-3xl font-extrabold !text-white">Vydělávejte s OneMil</h1>
+            <p className="text-sm text-white/80 max-w-md">
               {activeMode === 'influencer'
                 ? 'Sdílejte svůj Affiliate odkaz, přivádějte zákazníky a sledujte provize.'
                 : activeMode === 'sales_rep'
@@ -406,20 +441,20 @@ const AffiliateDashboard = () => {
         {activeMode === 'influencer' ? (
           <div className="grid grid-cols-2 lg:grid-cols-3 gap-4">
             <StatCard icon={Banknote}   label="Celkem vyděláno"        value={czk(totalEarnedCzk)}   accent />
-            <StatCard icon={TrendingUp} label="Tento měsíc"            value={czk(currentMonthCzk)}  accent />
-            <StatCard icon={UserPlus}   label="Registrace dnes"        value={custToday}              />
-            <StatCard icon={Users}      label="Registrace tento měsíc" value={custThisMonth}          />
-            <StatCard icon={Users}      label="Registrace (30 dní)"    value={cust30d}                />
-            <StatCard icon={Users}      label="Celkem zákazníků"       value={customerRefs.length}    />
+            <StatCard icon={TrendingUp} label="Tento měsíc"            value={czk(currentMonthCzk)}  hue={0} />
+            <StatCard icon={UserPlus}   label="Registrace dnes"        value={custToday}              hue={1} />
+            <StatCard icon={Users}      label="Registrace tento měsíc" value={custThisMonth}          hue={2} />
+            <StatCard icon={Users}      label="Registrace (30 dní)"    value={cust30d}                hue={3} />
+            <StatCard icon={Users}      label="Celkem zákazníků"       value={customerRefs.length}    hue={1} />
           </div>
         ) : (
           <div className="grid grid-cols-2 lg:grid-cols-3 gap-4">
             <StatCard icon={Banknote}   label="Celkem vyděláno"    value={czk(totalEarnedCzk)}  accent />
-            <StatCard icon={TrendingUp} label="Tento měsíc"        value={czk(currentMonthCzk)} accent />
-            <StatCard icon={Building2}  label="Firmy dnes"         value={compToday}             />
-            <StatCard icon={Building2}  label="Firmy (30 dní)"     value={comp30d}               />
-            <StatCard icon={Building2}  label="Celkem firem"       value={companyRefs.length}    />
-            <StatCard icon={Wallet}     label="Schváleno k výplatě" value={czk(totals.approved)} />
+            <StatCard icon={TrendingUp} label="Tento měsíc"        value={czk(currentMonthCzk)} hue={0} />
+            <StatCard icon={Building2}  label="Firmy dnes"         value={compToday}             hue={1} />
+            <StatCard icon={Building2}  label="Firmy (30 dní)"     value={comp30d}               hue={2} />
+            <StatCard icon={Building2}  label="Celkem firem"       value={companyRefs.length}    hue={1} />
+            <StatCard icon={Wallet}     label="Schváleno k výplatě" value={czk(totals.approved)} hue={3} />
           </div>
         )}
 
@@ -427,9 +462,9 @@ const AffiliateDashboard = () => {
             One ref_code powers both sections: /?ref=KOD and /partner/register?via=KOD. */}
         <div className="luxury-card overflow-hidden">
           <div className="p-6 space-y-4">
-            <div className="flex items-center gap-2">
-              <Link2 className="w-5 h-5 text-[hsl(var(--neon-gold))]" />
-              <h3 className="text-base font-semibold text-[hsl(var(--text-silver))]">
+            <div className="flex items-center gap-3">
+              <SectionIcon icon={Link2} hue={0} />
+              <h3 className="text-base font-semibold text-[hsl(var(--foreground))]">
                 {activeMode === 'influencer'
                   ? 'Váš Affiliate odkaz pro zákazníky'
                   : 'Váš odkaz pro firmy a e-shopy'}
@@ -447,9 +482,9 @@ const AffiliateDashboard = () => {
                   data-testid="affiliate-qr-code"
                 />
               </div>
-              <div className="rounded-xl border border-[hsl(var(--border)/0.3)] bg-[hsl(var(--muted)/0.2)] p-4 space-y-2 flex-1">
-                <p className="text-sm font-medium text-[hsl(var(--text-silver))] flex items-center gap-2">
-                  <Sparkles className="w-4 h-4 text-[hsl(var(--neon-gold))]" />
+              <div className="rounded-xl border border-[hsl(var(--border)/0.3)] bg-[hsl(var(--muted)/0.25)] p-4 space-y-2 flex-1">
+                <p className="text-sm font-medium text-[hsl(var(--foreground))] flex items-center gap-2">
+                  <Sparkles className="w-4 h-4 text-[hsl(var(--affiliate-purple))]" />
                   {activeMode === 'influencer' ? 'Jak funguje Influencer odkaz?' : 'Jak funguje Obchodník odkaz?'}
                 </p>
                 <p className="text-sm text-[hsl(var(--text-muted-gray))] leading-relaxed">
@@ -466,10 +501,10 @@ const AffiliateDashboard = () => {
         {activeMode === 'influencer' && (
           <div className="luxury-card overflow-hidden">
             <div className="p-6 space-y-3">
-              <div className="flex items-center gap-2">
-                <Users className="w-5 h-5 text-[hsl(var(--neon-gold))]" />
-                <h3 className="text-base font-semibold text-[hsl(var(--text-silver))]">Přivedení zákazníci</h3>
-                <Badge className="bg-[hsl(var(--neon-gold)/0.15)] text-[hsl(var(--neon-gold))] border-[hsl(var(--neon-gold)/0.3)]">{customerRefs.length}</Badge>
+              <div className="flex items-center gap-3">
+                <SectionIcon icon={Users} hue={2} />
+                <h3 className="text-base font-semibold text-[hsl(var(--foreground))]">Přivedení zákazníci</h3>
+                <Badge className="bg-[hsl(var(--affiliate-green)/0.15)] text-[hsl(var(--affiliate-green))] border-[hsl(var(--affiliate-green)/0.3)]">{customerRefs.length}</Badge>
               </div>
               {customerRefs[0] && (
                 <p className="text-sm text-[hsl(var(--text-muted-gray))]">
@@ -492,10 +527,10 @@ const AffiliateDashboard = () => {
         {activeMode === 'sales_rep' && (
           <div className="luxury-card overflow-hidden">
             <div className="p-6 space-y-3">
-              <div className="flex items-center gap-2">
-                <Building2 className="w-5 h-5 text-[hsl(var(--neon-gold))]" />
-                <h3 className="text-base font-semibold text-[hsl(var(--text-silver))]">Moje firmy (schválené)</h3>
-                <Badge className="bg-[hsl(var(--neon-gold)/0.15)] text-[hsl(var(--neon-gold))] border-[hsl(var(--neon-gold)/0.3)]">{companyRefs.length}</Badge>
+              <div className="flex items-center gap-3">
+                <SectionIcon icon={Building2} hue={1} />
+                <h3 className="text-base font-semibold text-[hsl(var(--foreground))]">Moje firmy (schválené)</h3>
+                <Badge className="bg-[hsl(var(--affiliate-blue)/0.15)] text-[hsl(var(--affiliate-blue))] border-[hsl(var(--affiliate-blue)/0.3)]">{companyRefs.length}</Badge>
               </div>
               {companyRefs.length === 0 ? (
                 <p className="text-sm text-[hsl(var(--text-muted-gray))]">
@@ -506,9 +541,9 @@ const AffiliateDashboard = () => {
                   {companyRefs.map(cr => {
                     const p = partnerMap.get(cr.partner_id);
                     return (
-                      <li key={cr.id} className="flex items-center gap-2 text-sm rounded-lg border border-[hsl(var(--border)/0.3)] bg-[hsl(var(--muted)/0.15)] px-3 py-2">
+                      <li key={cr.id} className="flex items-center gap-2 text-sm rounded-xl border border-[hsl(var(--border)/0.3)] bg-[hsl(var(--muted)/0.2)] px-3.5 py-2.5">
                         <ChevronRight className="w-3.5 h-3.5 text-[hsl(var(--text-muted-gray))] shrink-0" />
-                        <span className="flex-1 text-[hsl(var(--text-silver))]">{p ? (p.company_name || p.name) : `Firma ${cr.partner_id.slice(0, 8)}…`}</span>
+                        <span className="flex-1 text-[hsl(var(--foreground))]">{p ? (p.company_name || p.name) : `Firma ${cr.partner_id.slice(0, 8)}…`}</span>
                         <span className="text-xs text-[hsl(var(--text-muted-gray))]">{format(new Date(cr.created_at), 'd. M. yyyy', { locale: cs })}</span>
                       </li>
                     );
@@ -522,26 +557,26 @@ const AffiliateDashboard = () => {
         {/* ══ PROVIZE ═══════════════════════════════════════════════════════ */}
         <div className="luxury-card overflow-hidden">
           <div className="p-6 space-y-4">
-            <div className="flex items-center gap-2">
-              <Wallet className="w-5 h-5 text-[hsl(var(--neon-gold))]" />
-              <h3 className="text-base font-semibold text-[hsl(var(--text-silver))]">Provize a výplaty</h3>
+            <div className="flex items-center gap-3">
+              <SectionIcon icon={Wallet} hue={3} />
+              <h3 className="text-base font-semibold text-[hsl(var(--foreground))]">Provize a výplaty</h3>
             </div>
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
               {totals.calculated > 0 && (
                 <div className="flex items-center justify-between rounded-xl border border-[hsl(var(--border)/0.3)] bg-[hsl(var(--muted)/0.2)] px-4 py-3">
                   <span className="text-sm text-[hsl(var(--text-muted-gray))]">Čeká na schválení</span>
-                  <span className="text-base font-bold tabular-nums text-[hsl(var(--text-silver))]">{czk(totals.calculated)}</span>
+                  <span className="text-base font-bold tabular-nums text-[hsl(var(--foreground))]">{czk(totals.calculated)}</span>
                 </div>
               )}
               {totals.approved > 0 && (
-                <div className="flex items-center justify-between rounded-xl border border-[hsl(var(--neon-gold)/0.2)] bg-[hsl(var(--neon-gold)/0.06)] px-4 py-3">
+                <div className="flex items-center justify-between rounded-xl border border-[hsl(var(--affiliate-orange)/0.25)] bg-[hsl(var(--affiliate-orange)/0.08)] px-4 py-3">
                   <span className="text-sm text-[hsl(var(--text-muted-gray))]">Schváleno — bude vyplaceno</span>
-                  <span className="text-base font-bold tabular-nums text-[hsl(var(--neon-gold))]">{czk(totals.approved)}</span>
+                  <span className="text-base font-bold tabular-nums text-[hsl(var(--affiliate-orange))]">{czk(totals.approved)}</span>
                 </div>
               )}
-              <div className="flex items-center justify-between rounded-xl border border-[hsl(var(--border)/0.3)] bg-[hsl(var(--muted)/0.2)] px-4 py-3">
+              <div className="flex items-center justify-between rounded-xl border border-[hsl(var(--affiliate-green)/0.25)] bg-[hsl(var(--affiliate-green)/0.08)] px-4 py-3">
                 <span className="text-sm text-[hsl(var(--text-muted-gray))]">Celkem vyplaceno</span>
-                <span className="text-base font-bold tabular-nums text-[hsl(var(--text-silver))]">{czk(totals.paid)}</span>
+                <span className="text-base font-bold tabular-nums text-[hsl(var(--affiliate-green))]">{czk(totals.paid)}</span>
               </div>
             </div>
 
@@ -591,12 +626,12 @@ const AffiliateDashboard = () => {
         {/* ══ KAMPANĚ ═══════════════════════════════════════════════════════ */}
         <div className="luxury-card overflow-hidden">
           <div className="p-6 space-y-4">
-            <div className="flex items-center gap-2">
-              <Megaphone className="w-5 h-5 text-[hsl(var(--neon-gold))]" />
-              <h3 className="text-base font-semibold text-[hsl(var(--text-silver))]">Affiliate kampaně</h3>
+            <div className="flex items-center gap-3">
+              <SectionIcon icon={Megaphone} hue={0} />
+              <h3 className="text-base font-semibold text-[hsl(var(--foreground))]">Affiliate kampaně</h3>
             </div>
             <div className="text-center py-8 space-y-2">
-              <Zap className="w-10 h-10 mx-auto text-[hsl(var(--neon-gold)/0.3)]" />
+              <Zap className="w-10 h-10 mx-auto text-[hsl(var(--affiliate-purple)/0.35)]" />
               <p className="text-sm text-[hsl(var(--text-muted-gray))]">Kampaně pro Affiliate v2 budou dostupné brzy.</p>
               <p className="text-xs text-[hsl(var(--text-muted-gray)/0.6)]">Speciální odměny za přivedené zákazníky a firmy v rámci kampaní OneMil.</p>
             </div>
@@ -609,9 +644,12 @@ const AffiliateDashboard = () => {
         )}
 
         {/* ══ FOOTER ════════════════════════════════════════════════════════ */}
-        <div className="flex flex-col sm:flex-row items-center justify-between gap-4 rounded-xl border border-[hsl(var(--border)/0.3)] bg-[hsl(var(--muted)/0.15)] px-5 py-4 text-sm text-[hsl(var(--text-muted-gray))]">
-          <span>Doporučovací kód: <span className="font-mono font-semibold text-[hsl(var(--text-silver))]">{a.ref_code}</span></span>
-          <span>Sazba zákazníci: <strong className="text-[hsl(var(--text-silver))]">{a.commission_rate_customer} %</strong> · Firmy: <strong className="text-[hsl(var(--text-silver))]">{a.commission_rate_company} %</strong> {a.is_vat_payer ? '· plátce DPH' : '· neplátce DPH'}</span>
+        <div
+          className="flex flex-col sm:flex-row items-center justify-between gap-4 rounded-2xl px-5 py-4 text-sm text-[hsl(var(--text-muted-gray))]"
+          style={{ background: 'linear-gradient(120deg, hsl(243 65% 96%), hsl(258 60% 96%))', border: '1px solid hsl(243 60% 90%)' }}
+        >
+          <span>Doporučovací kód: <span className="font-mono font-semibold text-[hsl(var(--foreground))]">{a.ref_code}</span></span>
+          <span>Sazba zákazníci: <strong className="text-[hsl(var(--foreground))]">{a.commission_rate_customer} %</strong> · Firmy: <strong className="text-[hsl(var(--foreground))]">{a.commission_rate_company} %</strong> {a.is_vat_payer ? '· plátce DPH' : '· neplátce DPH'}</span>
         </div>
 
       </div>
