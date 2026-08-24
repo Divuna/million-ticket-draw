@@ -160,8 +160,8 @@ const PartnerGuides: React.FC = () => {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-background">
-        <div className="container mx-auto max-w-4xl space-y-4 px-4 py-8">
+      <div>
+        <div className="max-w-4xl mx-auto space-y-4 px-4 py-6 sm:px-6 lg:px-8">
           <Skeleton className="h-10 w-2/3" />
           <Skeleton className="h-40 w-full" />
           <Skeleton className="h-40 w-full" />
@@ -171,8 +171,8 @@ const PartnerGuides: React.FC = () => {
   }
 
   return (
-    <div className="min-h-screen bg-background">
-      <div className="container mx-auto max-w-4xl px-4 py-8 space-y-6">
+    <div>
+      <div className="max-w-4xl mx-auto px-4 py-6 sm:px-6 lg:px-8 space-y-6">
         <div className="flex items-center gap-2 text-sm text-muted-foreground">
           <BookOpen className="h-4 w-4 text-[hsl(var(--neon-gold))]" />
           Návody

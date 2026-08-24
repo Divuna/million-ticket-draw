@@ -135,8 +135,8 @@ const PartnerInvoices: React.FC = () => {
   };
 
   return (
-    <div className="min-h-screen bg-background pb-8">
-      <div className="container mx-auto px-4 py-6">
+    <div className="px-4 py-6 sm:px-6 lg:px-8 pb-8">
+      <div className="max-w-5xl mx-auto">
         <div className="flex items-center justify-between mb-6">
           <h1 className="text-2xl font-bold text-[hsl(var(--text-silver))] flex items-center gap-2">
             <FileText className="h-6 w-6 text-[hsl(var(--neon-gold))]" />

@@ -150,8 +150,8 @@ export default function PartnerMessages() {
   };
 
   return (
-    <div className="min-h-screen bg-background">
-      <main className="container mx-auto px-4 py-8 space-y-8">
+    <div>
+      <main className="max-w-3xl mx-auto px-4 py-6 sm:px-6 lg:px-8 space-y-6">
         {/* Back navigation */}
         <div className="flex items-center gap-3">
           <Link to="/partner/dashboard">

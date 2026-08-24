@@ -102,6 +102,7 @@ import AffiliateShortLink from "@/pages/AffiliateShortLink";
 import InfluencerShortLink from "@/pages/InfluencerShortLink";
 
 import { BottomNavigation } from "@/components/BottomNavigation";
+import { PartnerPortalLayout } from "@/components/partner/PartnerPortalLayout";
 import { AdminLayout } from "@/components/admin/AdminLayout";
 import { RequirePermission } from "@/components/admin/RequirePermission";
 import { RequireSuperadminOrRedirect } from "@/components/admin/RequireSuperadminOrRedirect";
@@ -114,149 +115,6 @@ import { useRetentionTriggers } from "@/hooks/useRetentionTriggers";
 import { useHeartbeat } from "@/hooks/useHeartbeat";
 import { GlobalMusicPlayer } from "@/components/GlobalMusicPlayer";
 
-// Partner Header Component (inline to avoid new files)
-interface PartnerHeaderProps {
-  partnerName: string | null;
-  partnerLogoUrl: string | null;
-  partnerStatus: string | null;
-}
-
-function PartnerHeader({ partnerName, partnerLogoUrl, partnerStatus }: PartnerHeaderProps) {
-  const navigate = useNavigate();
-
-  const handleLogout = async () => {
-    await supabase.auth.signOut();
-    toast.success('Odhlášeno');
-    navigate('/partner/login');
-  };
-
-  const getStatusBadge = (isMobile: boolean = false) => {
-    const baseClasses = isMobile 
-      ? "text-[10px] px-1.5 py-0.5" 
-      : "text-xs";
-    
-    switch (partnerStatus) {
-      case 'approved':
-        return (
-          <Badge className={`${baseClasses} bg-green-500/10 text-green-600 border-green-500/20`}>
-            <CheckCircle className={isMobile ? "w-2.5 h-2.5 mr-0.5" : "w-3 h-3 mr-1"} />
-            Aktivní
-          </Badge>
-        );
-      case 'pending':
-        return (
-          <Badge variant="secondary" className={`${baseClasses} bg-amber-500/10 text-amber-600 border-amber-500/20`}>
-            <Clock className={isMobile ? "w-2.5 h-2.5 mr-0.5" : "w-3 h-3 mr-1"} />
-            {isMobile ? "Čeká" : "Čeká na schválení"}
-          </Badge>
-        );
-      case 'suspended':
-        return (
-          <Badge variant="destructive" className={`${baseClasses} bg-red-500/10 text-red-600 border-red-500/20`}>
-            <XCircle className={isMobile ? "w-2.5 h-2.5 mr-0.5" : "w-3 h-3 mr-1"} />
-            Pozastaveno
-          </Badge>
-        );
-      default:
-        return null;
-    }
-  };
-
-  return (
-    <header className="border-b border-border/50 bg-card/50 backdrop-blur sticky top-0 z-50">
-      <div className="container mx-auto px-4 py-3 flex items-center justify-between">
-        <Tooltip>
-          <TooltipTrigger asChild>
-            <Link to="/partner/dashboard" className="flex items-center gap-3 hover:opacity-80 transition-opacity">
-              {partnerLogoUrl ? (
-                <img 
-                  src={partnerLogoUrl} 
-                  alt={partnerName || 'Partner'} 
-                  className="w-9 h-9 rounded-lg object-cover border border-border/50"
-                  onError={(e) => {
-                    // Fallback to icon if image fails to load
-                    e.currentTarget.style.display = 'none';
-                    e.currentTarget.nextElementSibling?.classList.remove('hidden');
-                  }}
-                />
-              ) : null}
-              <div className={`w-9 h-9 bg-primary/10 rounded-lg flex items-center justify-center ${partnerLogoUrl ? 'hidden' : ''}`}>
-                <Building2 className="w-5 h-5 text-primary" />
-              </div>
-              <div>
-                {/* Desktop layout */}
-                <div className="hidden sm:flex items-center gap-2">
-                  <span className="font-semibold text-foreground text-sm">
-                    {partnerName || 'Partner'}
-                  </span>
-                  <Badge variant="outline" className="text-xs">
-                    Partnerský portál
-                  </Badge>
-                  {getStatusBadge(false)}
-                </div>
-                {/* Mobile layout */}
-                <div className="sm:hidden">
-                  <div className="flex items-center gap-1.5">
-                    <span className="font-semibold text-foreground text-sm">
-                      {partnerName || 'Partner'}
-                    </span>
-                    {getStatusBadge(true)}
-                  </div>
-                  <p className="text-xs text-muted-foreground">Partnerský portál</p>
-                </div>
-              </div>
-            </Link>
-          </TooltipTrigger>
-          <TooltipContent>
-            <p>Přejít na partnerský dashboard</p>
-          </TooltipContent>
-        </Tooltip>
-        <div className="flex items-center gap-2">
-          <Link to="/partner/navody">
-            <Button variant="ghost" size="sm" className="hidden sm:flex">
-              <BookOpen className="w-4 h-4 mr-2" />
-              Návody
-            </Button>
-            <Button variant="ghost" size="icon" className="sm:hidden" aria-label="Návody">
-              <BookOpen className="w-4 h-4" />
-            </Button>
-          </Link>
-          <Link to="/partner/messages">
-            <Button variant="ghost" size="sm" className="hidden sm:flex">
-              <MessageCircle className="w-4 h-4 mr-2" />
-              Zprávy
-            </Button>
-            <Button variant="ghost" size="icon" className="sm:hidden">
-              <MessageCircle className="w-4 h-4" />
-            </Button>
-          </Link>
-          <Link to="/partner/invoices">
-            <Button variant="ghost" size="sm" className="hidden sm:flex">
-              <FileText className="w-4 h-4 mr-2" />
-              Faktury
-            </Button>
-            <Button variant="ghost" size="icon" className="sm:hidden">
-              <FileText className="w-4 h-4" />
-            </Button>
-          </Link>
-          <Link to="/partner/dashboard#api-keys">
-            <Button variant="ghost" size="sm" className="hidden sm:flex">
-              <Key className="w-4 h-4 mr-2" />
-              API klíče
-            </Button>
-            <Button variant="ghost" size="icon" className="sm:hidden">
-              <Key className="w-4 h-4" />
-            </Button>
-          </Link>
-          <Button variant="outline" size="sm" onClick={handleLogout}>
-            <LogOut className="w-4 h-4 sm:mr-2" />
-            <span className="hidden sm:inline">Odhlásit se</span>
-          </Button>
-        </div>
-      </div>
-    </header>
-  );
-}
 
 // Hook to get partner data for header
 interface PartnerHeaderData {
@@ -580,13 +438,9 @@ function AppContent() {
     }
   }
 
-  // Render partner header for partner accounts on partner routes (not influencers)
-  const renderPartnerHeader = () => {
-    if (isPartnerAccount && !isInfluencerAccount && isPartnerRoute && location.pathname !== '/partner/login' && location.pathname !== '/partner/register') {
-      return <PartnerHeader partnerName={partnerData.name} partnerLogoUrl={partnerData.logoUrl} partnerStatus={partnerData.status} />;
-    }
-    return null;
-  };
+  // Partner portal shell (sidebar + topbar) for partner accounts on partner routes,
+  // excluding auth pages. Same condition the old renderPartnerHeader() used.
+  const shouldShowPartnerShell = isPartnerAccount && !isInfluencerAccount && isPartnerRoute && location.pathname !== '/partner/login' && location.pathname !== '/partner/register';
 
   // Layout wrapper based on account type
   const renderNavigation = () => {
@@ -617,116 +471,127 @@ function AppContent() {
     .filter(Boolean)
     .join(' ');
 
+  const routesOutlet = (
+          <Routes>
+            <Route path="/" element={<Homepage />} />
+            <Route path="/login" element={<Login />} />
+            <Route path="/reset-password" element={<ResetPassword />} />
+            <Route path="/register" element={<Register />} />
+            <Route path="/profile" element={<Profile />} />
+            <Route path="/games" element={<Games />} />
+            <Route path="/favorite-games" element={<FavoriteGames />} />
+            <Route path="/contest/:id" element={<ContestDetail />} />
+            <Route path="/my-contests" element={<MyContests />} />
+            <Route path="/my-contest/:id" element={<MyContestDetail />} />
+            <Route path="/bonus/:id" element={<BonusDetail />} />
+            <Route path="/vouchers" element={<Vouchers />} />
+            {/* Veřejný přehled možností partnerství — registrace zůstává na /partner/register. */}
+            <Route path="/partnerstvi" element={<PartnerPartnership />} />
+            {/* Dobíjení MioCoinů — v nativní aplikaci se stránka sama přesměruje na /profile. */}
+            <Route path="/top-up" element={<TopUp />} />
+            <Route path="/messages" element={<Messages />} />
+            <Route path="/messages/:id" element={<MessageDetail />} />
+            <Route path="/payment/success" element={<PaymentSuccess />} />
+            <Route path="/payment-success" element={<PaymentSuccess />} />
+            <Route path="/payment/cancel" element={<PaymentCancel />} />
+            <Route path="/payment-cancel" element={<PaymentCancel />} />
+            <Route path="/winners" element={<Winners />} />
+            <Route path="/wins" element={<Wins />} />
+            <Route path="/share/ticket/:ticketId" element={<ShareTicket />} />
+            {/* Datum narození se už při registraci nevyžaduje — stará onboarding
+                routa přesměruje na domovskou stránku, nikoho neblokuje. */}
+            <Route path="/onboarding/date-of-birth" element={<Navigate to="/" replace />} />
+            <Route element={<AdminLayout />}>
+              <Route path="/admin" element={<RequireSuperadminOrRedirect><AdminDashboard /></RequireSuperadminOrRedirect>} />
+              <Route path="/admin/users" element={<RequirePermission permission="users.view.basic"><AdminUsers /></RequirePermission>} />
+              <Route path="/admin/admins" element={<RequireSuperadmin><AdminAdmins /></RequireSuperadmin>} />
+              <Route path="/admin/banners" element={<RequirePermission permission="banners.manage"><AdminBanners /></RequirePermission>} />
+              <Route path="/admin/vouchers" element={<RequirePermission permission="vouchers.manage"><AdminVouchers /></RequirePermission>} />
+              <Route path="/admin/payments" element={<RequireSuperadmin><AdminPayments /></RequireSuperadmin>} />
+              <Route path="/admin/statistics" element={<RequireSuperadminOrRedirect><AdminStatistics /></RequireSuperadminOrRedirect>} />
+              <Route path="/admin/notifications" element={<RequirePermission permission="notifications.manage"><AdminNotifications /></RequirePermission>} />
+              <Route path="/admin/winners" element={<RequireSuperadmin><AdminWinners /></RequireSuperadmin>} />
+              <Route path="/admin/prize-delivery" element={<RequireSuperadmin><AdminPrizeDeliveryPage /></RequireSuperadmin>} />
+              <Route path="/admin/tests" element={<RequireSuperadmin><AdminTests /></RequireSuperadmin>} />
+              <Route path="/admin/partners" element={<RequireSuperadmin><AdminPartners /></RequireSuperadmin>} />
+              <Route path="/admin/partner-offers" element={<RequirePermission permission="partner_offers.finance.manage"><AdminPartnerOffers /></RequirePermission>} />
+              <Route path="/admin/sales-leads" element={<RequirePermission permission="sales_leads.manage"><AdminSalesLeads /></RequirePermission>} />
+              <Route path="/admin/messages" element={<RequirePermission permission="support.messages"><AdminMessages /></RequirePermission>} />
+              <Route path="/admin/messages/:userId" element={<RequirePermission permission="support.messages"><AdminMessageThread /></RequirePermission>} />
+              <Route path="/admin/audit-logs" element={<RequireSuperadmin><AdminAuditLogs /></RequireSuperadmin>} />
+              <Route path="/admin/event-queue" element={<RequireSuperadmin><AdminEventQueue /></RequireSuperadmin>} />
+              <Route path="/admin/audit-repair" element={<RequireSuperadmin><AdminAuditRepair /></RequireSuperadmin>} />
+              <Route path="/admin/onemil-audit" element={<RequireSuperadmin><OneMilAudit /></RequireSuperadmin>} />
+              <Route path="/admin/contest/:contestId" element={<RequireSuperadmin><ContestDetailAdmin /></RequireSuperadmin>} />
+              <Route path="/admin/content" element={<RequirePermission permission="content.manage"><AdminContentPages /></RequirePermission>} />
+              <Route path="/admin/legal-acceptances" element={<RequireSuperadmin><AdminLegalAcceptances /></RequireSuperadmin>} />
+              <Route path="/admin/onboarding-incomplete" element={<RequireSuperadmin><AdminOnboardingIncomplete /></RequireSuperadmin>} />
+              <Route path="/admin/partners-portal" element={<RequireSuperadmin><AdminPartnersPortal /></RequireSuperadmin>} />
+              <Route path="/admin/invoices" element={<RequireSuperadmin><AdminInvoices /></RequireSuperadmin>} />
+              <Route path="/admin/referrals" element={<RequireSuperadmin><AdminReferrals /></RequireSuperadmin>} />
+              <Route path="/admin/referral-dashboard" element={<RequireSuperadmin><AdminReferralDashboard /></RequireSuperadmin>} />
+              <Route path="/admin/influencers" element={<RequireSuperadmin><AdminInfluencers /></RequireSuperadmin>} />
+              <Route path="/admin/affiliate-accounts" element={<RequireSuperadmin><AdminAffiliateAccounts /></RequireSuperadmin>} />
+              <Route path="/admin/influencer-commissions" element={<RequireSuperadmin><AdminInfluencerCommissions /></RequireSuperadmin>} />
+              <Route path="/admin/influencer-campaigns" element={<RequireSuperadmin><AdminInfluencerCampaigns /></RequireSuperadmin>} />
+              <Route path="/admin/company-leads" element={<RequireSuperadmin><AdminCompanyLeads /></RequireSuperadmin>} />
+              <Route path="/admin/affiliate-commissions" element={<RequireSuperadmin><AdminAffiliateCommissions /></RequireSuperadmin>} />
+              <Route path="/admin/affiliate-payouts" element={<RequireSuperadmin><AdminAffiliatePayouts /></RequireSuperadmin>} />
+              <Route path="/admin/affiliate-payouts/:batchId" element={<RequireSuperadmin><AdminAffiliatePayoutDetail /></RequireSuperadmin>} />
+              <Route path="/admin/*" element={<AdminNotFound />} />
+            </Route>
+            <Route path="/partner/login" element={<PartnerLogin />} />
+              <Route path="/partner/register" element={<PartnerRegister />} />
+              {/* Short public alias for the Affiliate "Obchodník" company link — redirects only, no new attribution logic. */}
+              <Route path="/a/:refCode" element={<AffiliateShortLink />} />
+              {/* Short public alias for the Affiliate "Influencer" customer link — redirects only, no new attribution logic. */}
+              <Route path="/i/:refCode" element={<InfluencerShortLink />} />
+              <Route path="/partner/invite" element={<CompanyLeadConfirm />} />
+              <Route path="/partner/set-password" element={<PartnerSetPassword />} />
+              {/* Legacy /influencer/* routes — /dashboard redirects to Affiliate v2 UI; public pages unchanged */}
+              <Route path="/influencer" element={<InfluencerLanding />} />
+              <Route path="/influencer/how-to-earn" element={<InfluencerHowToEarn />} />
+              <Route path="/influencer/register" element={<InfluencerRegister />} />
+              <Route path="/influencer/dashboard" element={<Navigate to="/affiliate/dashboard" replace />} />
+              <Route path="/influencer/messages" element={<InfluencerMessages />} />
+              <Route path="/affiliate/login" element={<AffiliateLogin />} />
+              <Route path="/affiliate/register" element={<AffiliateRegister />} />
+              <Route path="/affiliate/dashboard" element={<AffiliateDashboard />} />
+            <Route path="/partner/dashboard" element={<PartnerDashboard />} />
+            <Route path="/partner/navody" element={<PartnerGuides />} />
+            <Route path="/partner/invoices" element={<PartnerInvoices />} />
+            <Route path="/partner/messages" element={<PartnerMessages />} />
+            <Route path="/unsubscribe/marketing" element={<UnsubscribeMarketing />} />
+            <Route path="/delete-account" element={<DeleteAccount />} />
+            <Route path="/privacy" element={<Navigate to="/gdpr" replace />} />
+            <Route path="/terms" element={<Navigate to="/vop" replace />} />
+            <Route path="/kontakt" element={<Kontakt />} />
+            <Route path="/vop" element={<SlugContentPage slug="vop" />} />
+            <Route path="/gdpr" element={<SlugContentPage slug="gdpr" />} />
+            <Route path="/pravidla-souteze" element={<SlugContentPage slug="pravidla-souteze" />} />
+            <Route path="/legal/ochrana-osobnich-udaju" element={<Navigate to="/gdpr" replace />} />
+            <Route path="/:section/:slug" element={<ContentPage />} />
+            <Route path="*" element={<NotFound />} />
+          </Routes>
+  );
+
   return (
     <DateOfBirthGuard>
       <GlobalMusicPlayer />
       <GlobalWinnersRealtimeFeed />
       {/* Main app layout wrapper - applies different UI based on accountType */}
       <div className={layoutClassName}>
-        {/* Partner header - only visible for partner accounts on partner routes */}
-        {renderPartnerHeader()}
-        
-        <Routes>
-          <Route path="/" element={<Homepage />} />
-          <Route path="/login" element={<Login />} />
-          <Route path="/reset-password" element={<ResetPassword />} />
-          <Route path="/register" element={<Register />} />
-          <Route path="/profile" element={<Profile />} />
-          <Route path="/games" element={<Games />} />
-          <Route path="/favorite-games" element={<FavoriteGames />} />
-          <Route path="/contest/:id" element={<ContestDetail />} />
-          <Route path="/my-contests" element={<MyContests />} />
-          <Route path="/my-contest/:id" element={<MyContestDetail />} />
-          <Route path="/bonus/:id" element={<BonusDetail />} />
-          <Route path="/vouchers" element={<Vouchers />} />
-          {/* Veřejný přehled možností partnerství — registrace zůstává na /partner/register. */}
-          <Route path="/partnerstvi" element={<PartnerPartnership />} />
-          {/* Dobíjení MioCoinů — v nativní aplikaci se stránka sama přesměruje na /profile. */}
-          <Route path="/top-up" element={<TopUp />} />
-          <Route path="/messages" element={<Messages />} />
-          <Route path="/messages/:id" element={<MessageDetail />} />
-          <Route path="/payment/success" element={<PaymentSuccess />} />
-          <Route path="/payment-success" element={<PaymentSuccess />} />
-          <Route path="/payment/cancel" element={<PaymentCancel />} />
-          <Route path="/payment-cancel" element={<PaymentCancel />} />
-          <Route path="/winners" element={<Winners />} />
-          <Route path="/wins" element={<Wins />} />
-          <Route path="/share/ticket/:ticketId" element={<ShareTicket />} />
-          {/* Datum narození se už při registraci nevyžaduje — stará onboarding
-              routa přesměruje na domovskou stránku, nikoho neblokuje. */}
-          <Route path="/onboarding/date-of-birth" element={<Navigate to="/" replace />} />
-          <Route element={<AdminLayout />}>
-            <Route path="/admin" element={<RequireSuperadminOrRedirect><AdminDashboard /></RequireSuperadminOrRedirect>} />
-            <Route path="/admin/users" element={<RequirePermission permission="users.view.basic"><AdminUsers /></RequirePermission>} />
-            <Route path="/admin/admins" element={<RequireSuperadmin><AdminAdmins /></RequireSuperadmin>} />
-            <Route path="/admin/banners" element={<RequirePermission permission="banners.manage"><AdminBanners /></RequirePermission>} />
-            <Route path="/admin/vouchers" element={<RequirePermission permission="vouchers.manage"><AdminVouchers /></RequirePermission>} />
-            <Route path="/admin/payments" element={<RequireSuperadmin><AdminPayments /></RequireSuperadmin>} />
-            <Route path="/admin/statistics" element={<RequireSuperadminOrRedirect><AdminStatistics /></RequireSuperadminOrRedirect>} />
-            <Route path="/admin/notifications" element={<RequirePermission permission="notifications.manage"><AdminNotifications /></RequirePermission>} />
-            <Route path="/admin/winners" element={<RequireSuperadmin><AdminWinners /></RequireSuperadmin>} />
-            <Route path="/admin/prize-delivery" element={<RequireSuperadmin><AdminPrizeDeliveryPage /></RequireSuperadmin>} />
-            <Route path="/admin/tests" element={<RequireSuperadmin><AdminTests /></RequireSuperadmin>} />
-            <Route path="/admin/partners" element={<RequireSuperadmin><AdminPartners /></RequireSuperadmin>} />
-            <Route path="/admin/partner-offers" element={<RequirePermission permission="partner_offers.finance.manage"><AdminPartnerOffers /></RequirePermission>} />
-            <Route path="/admin/sales-leads" element={<RequirePermission permission="sales_leads.manage"><AdminSalesLeads /></RequirePermission>} />
-            <Route path="/admin/messages" element={<RequirePermission permission="support.messages"><AdminMessages /></RequirePermission>} />
-            <Route path="/admin/messages/:userId" element={<RequirePermission permission="support.messages"><AdminMessageThread /></RequirePermission>} />
-            <Route path="/admin/audit-logs" element={<RequireSuperadmin><AdminAuditLogs /></RequireSuperadmin>} />
-            <Route path="/admin/event-queue" element={<RequireSuperadmin><AdminEventQueue /></RequireSuperadmin>} />
-            <Route path="/admin/audit-repair" element={<RequireSuperadmin><AdminAuditRepair /></RequireSuperadmin>} />
-            <Route path="/admin/onemil-audit" element={<RequireSuperadmin><OneMilAudit /></RequireSuperadmin>} />
-            <Route path="/admin/contest/:contestId" element={<RequireSuperadmin><ContestDetailAdmin /></RequireSuperadmin>} />
-            <Route path="/admin/content" element={<RequirePermission permission="content.manage"><AdminContentPages /></RequirePermission>} />
-            <Route path="/admin/legal-acceptances" element={<RequireSuperadmin><AdminLegalAcceptances /></RequireSuperadmin>} />
-            <Route path="/admin/onboarding-incomplete" element={<RequireSuperadmin><AdminOnboardingIncomplete /></RequireSuperadmin>} />
-            <Route path="/admin/partners-portal" element={<RequireSuperadmin><AdminPartnersPortal /></RequireSuperadmin>} />
-            <Route path="/admin/invoices" element={<RequireSuperadmin><AdminInvoices /></RequireSuperadmin>} />
-            <Route path="/admin/referrals" element={<RequireSuperadmin><AdminReferrals /></RequireSuperadmin>} />
-            <Route path="/admin/referral-dashboard" element={<RequireSuperadmin><AdminReferralDashboard /></RequireSuperadmin>} />
-            <Route path="/admin/influencers" element={<RequireSuperadmin><AdminInfluencers /></RequireSuperadmin>} />
-            <Route path="/admin/affiliate-accounts" element={<RequireSuperadmin><AdminAffiliateAccounts /></RequireSuperadmin>} />
-            <Route path="/admin/influencer-commissions" element={<RequireSuperadmin><AdminInfluencerCommissions /></RequireSuperadmin>} />
-            <Route path="/admin/influencer-campaigns" element={<RequireSuperadmin><AdminInfluencerCampaigns /></RequireSuperadmin>} />
-            <Route path="/admin/company-leads" element={<RequireSuperadmin><AdminCompanyLeads /></RequireSuperadmin>} />
-            <Route path="/admin/affiliate-commissions" element={<RequireSuperadmin><AdminAffiliateCommissions /></RequireSuperadmin>} />
-            <Route path="/admin/affiliate-payouts" element={<RequireSuperadmin><AdminAffiliatePayouts /></RequireSuperadmin>} />
-            <Route path="/admin/affiliate-payouts/:batchId" element={<RequireSuperadmin><AdminAffiliatePayoutDetail /></RequireSuperadmin>} />
-            <Route path="/admin/*" element={<AdminNotFound />} />
-          </Route>
-          <Route path="/partner/login" element={<PartnerLogin />} />
-            <Route path="/partner/register" element={<PartnerRegister />} />
-            {/* Short public alias for the Affiliate "Obchodník" company link — redirects only, no new attribution logic. */}
-            <Route path="/a/:refCode" element={<AffiliateShortLink />} />
-            {/* Short public alias for the Affiliate "Influencer" customer link — redirects only, no new attribution logic. */}
-            <Route path="/i/:refCode" element={<InfluencerShortLink />} />
-            <Route path="/partner/invite" element={<CompanyLeadConfirm />} />
-            <Route path="/partner/set-password" element={<PartnerSetPassword />} />
-            {/* Legacy /influencer/* routes — /dashboard redirects to Affiliate v2 UI; public pages unchanged */}
-            <Route path="/influencer" element={<InfluencerLanding />} />
-            <Route path="/influencer/how-to-earn" element={<InfluencerHowToEarn />} />
-            <Route path="/influencer/register" element={<InfluencerRegister />} />
-            <Route path="/influencer/dashboard" element={<Navigate to="/affiliate/dashboard" replace />} />
-            <Route path="/influencer/messages" element={<InfluencerMessages />} />
-            <Route path="/affiliate/login" element={<AffiliateLogin />} />
-            <Route path="/affiliate/register" element={<AffiliateRegister />} />
-            <Route path="/affiliate/dashboard" element={<AffiliateDashboard />} />
-          <Route path="/partner/dashboard" element={<PartnerDashboard />} />
-          <Route path="/partner/navody" element={<PartnerGuides />} />
-          <Route path="/partner/invoices" element={<PartnerInvoices />} />
-          <Route path="/partner/messages" element={<PartnerMessages />} />
-          <Route path="/unsubscribe/marketing" element={<UnsubscribeMarketing />} />
-          <Route path="/delete-account" element={<DeleteAccount />} />
-          <Route path="/privacy" element={<Navigate to="/gdpr" replace />} />
-          <Route path="/terms" element={<Navigate to="/vop" replace />} />
-          <Route path="/kontakt" element={<Kontakt />} />
-          <Route path="/vop" element={<SlugContentPage slug="vop" />} />
-          <Route path="/gdpr" element={<SlugContentPage slug="gdpr" />} />
-          <Route path="/pravidla-souteze" element={<SlugContentPage slug="pravidla-souteze" />} />
-          <Route path="/legal/ochrana-osobnich-udaju" element={<Navigate to="/gdpr" replace />} />
-          <Route path="/:section/:slug" element={<ContentPage />} />
-          <Route path="*" element={<NotFound />} />
-        </Routes>
+        {shouldShowPartnerShell ? (
+          <PartnerPortalLayout
+            partnerName={partnerData.name}
+            partnerLogoUrl={partnerData.logoUrl}
+            partnerStatus={partnerData.status}
+          >
+            {routesOutlet}
+          </PartnerPortalLayout>
+        ) : (
+          routesOutlet
+        )}
         
         {/* Conditional navigation based on account type */}
         {renderNavigation()}

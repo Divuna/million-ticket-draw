@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import ReactMarkdown from 'react-markdown';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
@@ -219,6 +219,7 @@ interface PartnerOffer {
 
 const PartnerDashboard = () => {
   const navigate = useNavigate();
+  const location = useLocation();
   const { isAdmin } = useUserRole();
   const [loading, setLoading] = useState(true);
   const [partner, setPartner] = useState<Partner | null>(null);
@@ -822,6 +823,20 @@ const PartnerDashboard = () => {
   useEffect(() => {
     loadPartnerData();
   }, []);
+
+  // Sidebar navigation ("Přehled" / "Napojení e-shopu" / "MioCoiny" / "Nastavení")
+  // links to #prehled / #shoptet / #miocoiny / #nastaveni on this same page. React
+  // Router's client-side navigation does not perform the browser's native
+  // hash-scroll, so this just does the scroll-into-view itself once the section
+  // it targets exists in the DOM. Pure navigation — no data read or written.
+  useEffect(() => {
+    if (loading || !location.hash) return;
+    const id = location.hash.slice(1);
+    const el = document.getElementById(id);
+    if (el) {
+      el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
+  }, [location.hash, loading]);
 
   const loadPartnerData = async () => {
     try {
@@ -1554,7 +1569,7 @@ const PartnerDashboard = () => {
           </div>
         )}
         {/* Welcome & Account Status Section */}
-        <Card className="border-[hsl(var(--neon-gold)/0.2)] bg-gradient-to-br from-[hsl(222_40%_10%)] via-[hsl(222_38%_9%)] to-[hsl(43_20%_10%)]">
+        <Card id="prehled" className="border-[hsl(var(--neon-gold)/0.2)] bg-gradient-to-br from-[hsl(var(--card))] via-[hsl(var(--card))] to-[hsl(var(--muted))] scroll-mt-24">
           <CardHeader className="pb-4">
             <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
               <div>
@@ -1798,8 +1813,383 @@ const PartnerDashboard = () => {
           </div>
         </div>
 
+        {/* Shoptet self-service connection — approved partners only. URL never displayed. */}
+        {isAccountApproved && (
+          <Card id="shoptet" className="border-[hsl(var(--neon-gold)/0.15)] hover:border-[hsl(var(--neon-gold)/0.25)] transition-colors scroll-mt-24">
+            <CardHeader className="pb-3">
+              <CardTitle className="flex items-center gap-2 text-[hsl(var(--text-silver))]">
+                <Rocket className="w-5 h-5 text-[hsl(var(--neon-gold))]" />
+                Napojení e-shopu / Shoptet
+              </CardTitle>
+              <CardDescription>
+                Propojte svůj e-shop s OneMil — vyberte způsob, který vám nejvíc vyhovuje.
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-5">
+              {/* 3 connection paths explainer */}
+              <div className="grid gap-3 sm:grid-cols-3">
+                <div className="rounded-lg border border-[hsl(var(--neon-gold)/0.25)] bg-[hsl(var(--neon-gold)/0.06)] p-3">
+                  <div className="flex items-center gap-2 mb-1">
+                    <Rocket className="w-4 h-4 text-[hsl(var(--neon-gold))]" />
+                    <span className="text-sm font-medium">Shoptet automat</span>
+                    <Badge variant="secondary" className="text-[10px] px-1.5 py-0">Doporučeno</Badge>
+                  </div>
+                  <p className="text-xs text-muted-foreground leading-relaxed">
+                    Shoptet e-shop? Zadejte URL exportu objednávek níže — my pravidelně stáhneme data a automaticky vytvoříme MioCoin kódy.
+                  </p>
+                </div>
+                <div className="rounded-lg border border-border/50 bg-muted/20 p-3">
+                  <div className="flex items-center gap-2 mb-1">
+                    <Key className="w-4 h-4 text-muted-foreground" />
+                    <span className="text-sm font-medium">OneMil Partner API</span>
+                  </div>
+                  <p className="text-xs text-muted-foreground leading-relaxed">
+                    Větší e-shop s vývojáři? Posílejte objednávky přímo přes API — bez prodlevy a exportního souboru. Napište nám na <span className="font-medium">eshop@onemil.cz</span>.
+                  </p>
+                </div>
+                <div className="rounded-lg border border-border/50 bg-muted/20 p-3">
+                  <div className="flex items-center gap-2 mb-1">
+                    <Settings className="w-4 h-4 text-muted-foreground" />
+                    <span className="text-sm font-medium">Individuální doručení</span>
+                  </div>
+                  <p className="text-xs text-muted-foreground leading-relaxed">
+                    Vlastní způsob doručení kódů zákazníkům? Možné po domluvě s OneMil.
+                  </p>
+                </div>
+              </div>
+
+              {/* Current request status */}
+              {shoptetReq && (
+                <div className="rounded-lg bg-muted/30 border border-border/50 p-3 space-y-1">
+                  <div className="flex items-center gap-2 text-sm">
+                    <span className="text-muted-foreground">Stav napojení:</span>
+                    {shoptetReq.status === 'draft' && (
+                      <Badge variant="outline" className="gap-1"><FileText className="w-3 h-3" /> Koncept</Badge>
+                    )}
+                    {shoptetReq.status === 'submitted' && (
+                      <Badge variant="secondary" className="gap-1"><Clock className="w-3 h-3" /> Odesláno ke schválení</Badge>
+                    )}
+                    {(shoptetReq.status === 'approved' || shoptetReq.status === 'active') && (
+                      <Badge className="gap-1 bg-emerald-600 hover:bg-emerald-600 text-white"><CheckCircle className="w-3 h-3" /> Aktivní</Badge>
+                    )}
+                    {shoptetReq.status === 'rejected' && (
+                      <Badge variant="destructive" className="gap-1"><XCircle className="w-3 h-3" /> Zamítnuto</Badge>
+                    )}
+                  </div>
+                  {shoptetReq.status === 'rejected' && shoptetReq.rejection_reason && (
+                    <p className="text-xs text-destructive">Důvod: {shoptetReq.rejection_reason}</p>
+                  )}
+                  {shoptetReq.url_received && shoptetReq.status !== 'rejected' && (
+                    <p className="text-xs text-muted-foreground flex items-center gap-1">
+                      <CheckCircle className="w-3 h-3" /> URL exportu jsme bezpečně přijali.
+                    </p>
+                  )}
+                </div>
+              )}
+
+              {/* Shoptet automat form */}
+              {(() => {
+                const locked = !!shoptetReq && (shoptetReq.status === 'submitted' || shoptetReq.status === 'approved' || shoptetReq.status === 'active');
+                return (
+                  <div className="space-y-4">
+                    <h4 className="text-sm font-medium flex items-center gap-2">
+                      <Rocket className="w-4 h-4 text-[hsl(var(--neon-gold))]" />
+                      Shoptet automat — nastavení
+                    </h4>
+                    <div className="grid gap-3 sm:grid-cols-2">
+                      <div className="space-y-1">
+                        <Label htmlFor="shoptet-shop-name" className="text-xs">Název e-shopu</Label>
+                        <Input
+                          id="shoptet-shop-name"
+                          value={shoptetShopName}
+                          onChange={(e) => setShoptetShopName(e.target.value)}
+                          placeholder="Můj e-shop"
+                          maxLength={200}
+                          disabled={locked}
+                          className="h-9"
+                        />
+                      </div>
+                      <div className="space-y-1">
+                        <Label htmlFor="shoptet-trigger" className="text-xs">Kdy vydat odměnu</Label>
+                        <Select
+                          value={shoptetTrigger}
+                          onValueChange={(v) => setShoptetTrigger(v as 'paid' | 'shipped' | 'completed')}
+                          disabled={locked}
+                        >
+                          <SelectTrigger id="shoptet-trigger" className="h-9">
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="paid">Po zaplacení objednávky</SelectItem>
+                            <SelectItem value="shipped">Po odeslání objednávky</SelectItem>
+                            <SelectItem value="completed">Po dokončení objednávky</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
+                    </div>
+
+                    {/* Konverze MioCoinů — jen read-only informace. Zdroj pravdy je
+                        sekce „Nastavení konverze MioCoinů" výše. */}
+                    <div
+                      data-testid="shoptet-conversion-readonly"
+                      className="flex items-start gap-2 rounded-lg bg-muted/30 border border-border/50 p-3"
+                    >
+                      <Info className="w-4 h-4 text-muted-foreground flex-shrink-0 mt-0.5" />
+                      <div className="text-xs text-muted-foreground leading-relaxed">
+                        <p>
+                          Použije se vaše nastavení konverze:{' '}
+                          <span className="font-medium text-foreground">
+                            {Number(partner?.reward_base_czk ?? 0)} Kč = {Number(partner?.reward_mc ?? 0)} MioCoinů
+                          </span>
+                        </p>
+                        <p className="mt-1">
+                          Konverzi měníte výše v sekci „Nastavení konverze MioCoinů" — pro Shoptet ji nezadáváte znovu.
+                        </p>
+                      </div>
+                    </div>
+
+                    <div className="space-y-1">
+                      <Label htmlFor="shoptet-note" className="text-xs">Poznámka (volitelné)</Label>
+                      <Textarea
+                        id="shoptet-note"
+                        value={shoptetNote}
+                        onChange={(e) => setShoptetNote(e.target.value)}
+                        placeholder="Cokoliv, co bychom měli vědět k napojení."
+                        maxLength={500}
+                        disabled={locked}
+                        className="min-h-[60px] text-sm"
+                      />
+                    </div>
+
+                    <div className="space-y-1">
+                      <Label htmlFor="shoptet-url" className="text-xs flex items-center gap-1">
+                        <Key className="w-3 h-3" /> URL Shoptet exportu objednávek
+                      </Label>
+                      <Input
+                        id="shoptet-url"
+                        type="password"
+                        autoComplete="off"
+                        value={shoptetUrl}
+                        onChange={(e) => setShoptetUrl(e.target.value)}
+                        placeholder="https://…"
+                        disabled={locked}
+                        className="h-9"
+                      />
+                      <p className="text-[11px] text-muted-foreground leading-relaxed">
+                        URL ukládáme bezpečně a nikdy ji nezobrazujeme zpět. Koncept můžete uložit i bez URL; pro odeslání ke schválení je URL nutná.
+                      </p>
+                    </div>
+
+                    {!locked && (
+                      <div className="flex flex-wrap justify-end gap-2">
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          className="gap-2"
+                          onClick={handleShoptetSaveDraft}
+                          disabled={shoptetSavingDraft || shoptetSubmitting}
+                        >
+                          {shoptetSavingDraft ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
+                          Uložit koncept
+                        </Button>
+                        <Button
+                          size="sm"
+                          className="gap-2"
+                          onClick={handleShoptetSubmit}
+                          disabled={shoptetSubmitting || shoptetSavingDraft}
+                        >
+                          {shoptetSubmitting ? <Loader2 className="w-4 h-4 animate-spin" /> : <Send className="w-4 h-4" />}
+                          Odeslat ke schválení
+                        </Button>
+                      </div>
+                    )}
+
+                    {locked && shoptetReq?.status === 'submitted' && (
+                      <p className="text-xs text-muted-foreground flex items-center gap-1">
+                        <Clock className="w-3 h-3" /> Žádost čeká na schválení OneMil. Po schválení se napojení aktivuje automaticky.
+                      </p>
+                    )}
+                  </div>
+                );
+              })()}
+
+              {/* Export URL change — only for a connection that is already live.
+                  The live connection keeps running the whole time; a change is a
+                  separate request and takes effect only once OneMil approves it. */}
+              {isShoptetConnectionLive && (
+                <div data-testid="shoptet-url-change" className="space-y-3 border-t border-border/50 pt-4">
+                  <div>
+                    <h4 className="text-sm font-medium flex items-center gap-2">
+                      <Key className="w-4 h-4 text-[hsl(var(--neon-gold))]" />
+                      Exportní odkaz
+                    </h4>
+                    <p className="text-xs text-muted-foreground mt-1 leading-relaxed">
+                      Vygenerovali jste v Shoptetu nový permanentní odkaz exportu? Pošlete nám ho —
+                      napojení běží dál a přepneme ho až po kontrole.
+                    </p>
+                  </div>
+
+                  {shoptetChangePending ? (
+                    <div
+                      data-testid="shoptet-url-change-pending"
+                      className="rounded-lg border border-amber-500/30 bg-amber-500/5 p-3 space-y-1"
+                    >
+                      <p className="text-sm flex items-center gap-2">
+                        <Clock className="w-4 h-4 text-amber-500 flex-shrink-0" />
+                        <span className="font-medium">Změna odkazu čeká na schválení</span>
+                      </p>
+                      <p className="text-xs text-muted-foreground leading-relaxed">
+                        Do schválení se objednávky dál načítají z původního odkazu — napojení
+                        zůstává aktivní.
+                      </p>
+                    </div>
+                  ) : (
+                    <>
+                      {shoptetChangeReq?.status === 'rejected' && (
+                        <div className="rounded-lg border border-destructive/30 bg-destructive/5 p-3 space-y-1">
+                          <p className="text-sm font-medium text-destructive flex items-center gap-2">
+                            <XCircle className="w-4 h-4 flex-shrink-0" />
+                            Poslední změna odkazu byla zamítnuta
+                          </p>
+                          {shoptetChangeReq.rejection_reason && (
+                            <p className="text-xs text-muted-foreground">
+                              Důvod: {shoptetChangeReq.rejection_reason}
+                            </p>
+                          )}
+                          <p className="text-xs text-muted-foreground">
+                            Původní odkaz zůstal aktivní. Můžete poslat nový.
+                          </p>
+                        </div>
+                      )}
+
+                      {!shoptetChangeOpen ? (
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="sm"
+                          className="gap-2"
+                          onClick={() => setShoptetChangeOpen(true)}
+                        >
+                          <RefreshCw className="w-4 h-4" />
+                          Změnit exportní odkaz
+                        </Button>
+                      ) : (
+                        <div className="space-y-2">
+                          <div className="space-y-1">
+                            <Label htmlFor="shoptet-change-url" className="text-xs flex items-center gap-1">
+                              <Key className="w-3 h-3" /> Nový URL Shoptet exportu objednávek
+                            </Label>
+                            <Input
+                              id="shoptet-change-url"
+                              type="password"
+                              autoComplete="off"
+                              value={shoptetChangeUrl}
+                              onChange={(e) => setShoptetChangeUrl(e.target.value)}
+                              placeholder="https://…"
+                              disabled={shoptetChangeSubmitting}
+                              className="h-9"
+                            />
+                            <p className="text-[11px] text-muted-foreground leading-relaxed">
+                              Odkaz ukládáme bezpečně a nikdy ho nezobrazujeme zpět. Původní odkaz
+                              funguje dál, dokud OneMil změnu neschválí.
+                            </p>
+                          </div>
+                          <div className="flex flex-wrap justify-end gap-2">
+                            <Button
+                              type="button"
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => {
+                                setShoptetChangeOpen(false);
+                                setShoptetChangeUrl('');
+                              }}
+                              disabled={shoptetChangeSubmitting}
+                            >
+                              Zrušit
+                            </Button>
+                            <Button
+                              type="button"
+                              size="sm"
+                              className="gap-2"
+                              onClick={handleShoptetChangeSubmit}
+                              disabled={shoptetChangeSubmitting}
+                            >
+                              {shoptetChangeSubmitting ? (
+                                <Loader2 className="w-4 h-4 animate-spin" />
+                              ) : (
+                                <Send className="w-4 h-4" />
+                              )}
+                              Odeslat ke schválení
+                            </Button>
+                          </div>
+                        </div>
+                      )}
+                    </>
+                  )}
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        )}
+
+        {/* Zobrazení MioCoinů v e-shopu — storefront snippet.
+            Shown ONLY once the Shoptet connection is approved/active, so a partner is
+            never handed a storefront tag for a connection OneMil has not reviewed. */}
+        {isAccountApproved && isShoptetConnectionLive && shoptetWidgetSnippet && (
+          <Card
+            data-testid="shoptet-widget-snippet-section"
+            className="border-[hsl(var(--neon-gold)/0.15)] hover:border-[hsl(var(--neon-gold)/0.25)] transition-colors"
+          >
+            <CardHeader className="pb-3">
+              <CardTitle className="flex items-center gap-2 text-[hsl(var(--text-silver))]">
+                <Gift className="w-5 h-5 text-[hsl(var(--neon-gold))]" />
+                Zobrazení MioCoinů v e-shopu
+              </CardTitle>
+              <CardDescription>
+                Aby zákazníci viděli, kolik MioCoinů za nákup získají, vložte do e-shopu tento kód.
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <p className="text-sm text-muted-foreground leading-relaxed">
+                V Shoptetu otevři <span className="font-medium text-foreground">Vzhled a obsah</span>{' '}
+                → <span className="font-medium text-foreground">Editor HTML kódu</span> a do části pro
+                kód na všech stránkách vlož:
+              </p>
+
+              <div className="space-y-2">
+                <pre
+                  data-testid="shoptet-widget-snippet-code"
+                  className="overflow-x-auto rounded-lg border border-border/50 bg-muted/40 p-3 text-xs leading-relaxed"
+                >
+                  <code className="whitespace-pre">{shoptetWidgetSnippet}</code>
+                </pre>
+                <div className="flex justify-end">
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant="outline"
+                    className="gap-2"
+                    onClick={() => copyShoptetSnippetToClipboard(shoptetWidgetSnippet)}
+                  >
+                    <Copy className="w-4 h-4" />
+                    Kopírovat kód
+                  </Button>
+                </div>
+              </div>
+
+              <div className="flex items-start gap-2 rounded-lg bg-muted/30 border border-border/50 p-3">
+                <Info className="w-4 h-4 text-muted-foreground flex-shrink-0 mt-0.5" />
+                <p className="text-xs text-muted-foreground leading-relaxed">
+                  Po vložení kódu a uložení se informace o MioCoinech zobrazí automaticky podle
+                  vašeho aktuálního nastavení v OneMil.
+                </p>
+              </div>
+            </CardContent>
+          </Card>
+        )}
+
         {/* Logo Management Section */}
-        <Card className="border-[hsl(var(--neon-gold)/0.15)] hover:border-[hsl(var(--neon-gold)/0.25)] transition-colors">
+        <Card id="nastaveni" className="border-[hsl(var(--neon-gold)/0.15)] hover:border-[hsl(var(--neon-gold)/0.25)] transition-colors scroll-mt-24">
           <CardHeader>
             <CardTitle className="flex items-center gap-2 text-[hsl(var(--text-silver))]">
               <Image className="w-5 h-5 text-[hsl(var(--neon-gold))]" />
@@ -1912,7 +2302,7 @@ const PartnerDashboard = () => {
 
         {/* Partner Reward Settings */}
         {isAccountApproved && (
-          <Card className="border-[hsl(var(--neon-gold)/0.15)] hover:border-[hsl(var(--neon-gold)/0.25)] transition-colors">
+          <Card id="miocoiny" className="border-[hsl(var(--neon-gold)/0.15)] hover:border-[hsl(var(--neon-gold)/0.25)] transition-colors scroll-mt-24">
             <CardHeader className="pb-3">
               <CardTitle className="flex items-center gap-2 text-[hsl(var(--text-silver))]">
                 <Settings className="w-5 h-5 text-[hsl(var(--neon-gold))]" />
@@ -2336,382 +2726,6 @@ const PartnerDashboard = () => {
             </CardContent>
           </Card>
         )}
-
-        {/* Shoptet self-service connection — approved partners only. URL never displayed. */}
-        {isAccountApproved && (
-          <Card className="border-[hsl(var(--neon-gold)/0.15)] hover:border-[hsl(var(--neon-gold)/0.25)] transition-colors">
-            <CardHeader className="pb-3">
-              <CardTitle className="flex items-center gap-2 text-[hsl(var(--text-silver))]">
-                <Rocket className="w-5 h-5 text-[hsl(var(--neon-gold))]" />
-                Napojení e-shopu / Shoptet
-              </CardTitle>
-              <CardDescription>
-                Propojte svůj e-shop s OneMil — vyberte způsob, který vám nejvíc vyhovuje.
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-5">
-              {/* 3 connection paths explainer */}
-              <div className="grid gap-3 sm:grid-cols-3">
-                <div className="rounded-lg border border-[hsl(var(--neon-gold)/0.25)] bg-[hsl(var(--neon-gold)/0.06)] p-3">
-                  <div className="flex items-center gap-2 mb-1">
-                    <Rocket className="w-4 h-4 text-[hsl(var(--neon-gold))]" />
-                    <span className="text-sm font-medium">Shoptet automat</span>
-                    <Badge variant="secondary" className="text-[10px] px-1.5 py-0">Doporučeno</Badge>
-                  </div>
-                  <p className="text-xs text-muted-foreground leading-relaxed">
-                    Shoptet e-shop? Zadejte URL exportu objednávek níže — my pravidelně stáhneme data a automaticky vytvoříme MioCoin kódy.
-                  </p>
-                </div>
-                <div className="rounded-lg border border-border/50 bg-muted/20 p-3">
-                  <div className="flex items-center gap-2 mb-1">
-                    <Key className="w-4 h-4 text-muted-foreground" />
-                    <span className="text-sm font-medium">OneMil Partner API</span>
-                  </div>
-                  <p className="text-xs text-muted-foreground leading-relaxed">
-                    Větší e-shop s vývojáři? Posílejte objednávky přímo přes API — bez prodlevy a exportního souboru. Napište nám na <span className="font-medium">eshop@onemil.cz</span>.
-                  </p>
-                </div>
-                <div className="rounded-lg border border-border/50 bg-muted/20 p-3">
-                  <div className="flex items-center gap-2 mb-1">
-                    <Settings className="w-4 h-4 text-muted-foreground" />
-                    <span className="text-sm font-medium">Individuální doručení</span>
-                  </div>
-                  <p className="text-xs text-muted-foreground leading-relaxed">
-                    Vlastní způsob doručení kódů zákazníkům? Možné po domluvě s OneMil.
-                  </p>
-                </div>
-              </div>
-
-              {/* Current request status */}
-              {shoptetReq && (
-                <div className="rounded-lg bg-muted/30 border border-border/50 p-3 space-y-1">
-                  <div className="flex items-center gap-2 text-sm">
-                    <span className="text-muted-foreground">Stav napojení:</span>
-                    {shoptetReq.status === 'draft' && (
-                      <Badge variant="outline" className="gap-1"><FileText className="w-3 h-3" /> Koncept</Badge>
-                    )}
-                    {shoptetReq.status === 'submitted' && (
-                      <Badge variant="secondary" className="gap-1"><Clock className="w-3 h-3" /> Odesláno ke schválení</Badge>
-                    )}
-                    {(shoptetReq.status === 'approved' || shoptetReq.status === 'active') && (
-                      <Badge className="gap-1 bg-emerald-600 hover:bg-emerald-600 text-white"><CheckCircle className="w-3 h-3" /> Aktivní</Badge>
-                    )}
-                    {shoptetReq.status === 'rejected' && (
-                      <Badge variant="destructive" className="gap-1"><XCircle className="w-3 h-3" /> Zamítnuto</Badge>
-                    )}
-                  </div>
-                  {shoptetReq.status === 'rejected' && shoptetReq.rejection_reason && (
-                    <p className="text-xs text-destructive">Důvod: {shoptetReq.rejection_reason}</p>
-                  )}
-                  {shoptetReq.url_received && shoptetReq.status !== 'rejected' && (
-                    <p className="text-xs text-muted-foreground flex items-center gap-1">
-                      <CheckCircle className="w-3 h-3" /> URL exportu jsme bezpečně přijali.
-                    </p>
-                  )}
-                </div>
-              )}
-
-              {/* Shoptet automat form */}
-              {(() => {
-                const locked = !!shoptetReq && (shoptetReq.status === 'submitted' || shoptetReq.status === 'approved' || shoptetReq.status === 'active');
-                return (
-                  <div className="space-y-4">
-                    <h4 className="text-sm font-medium flex items-center gap-2">
-                      <Rocket className="w-4 h-4 text-[hsl(var(--neon-gold))]" />
-                      Shoptet automat — nastavení
-                    </h4>
-                    <div className="grid gap-3 sm:grid-cols-2">
-                      <div className="space-y-1">
-                        <Label htmlFor="shoptet-shop-name" className="text-xs">Název e-shopu</Label>
-                        <Input
-                          id="shoptet-shop-name"
-                          value={shoptetShopName}
-                          onChange={(e) => setShoptetShopName(e.target.value)}
-                          placeholder="Můj e-shop"
-                          maxLength={200}
-                          disabled={locked}
-                          className="h-9"
-                        />
-                      </div>
-                      <div className="space-y-1">
-                        <Label htmlFor="shoptet-trigger" className="text-xs">Kdy vydat odměnu</Label>
-                        <Select
-                          value={shoptetTrigger}
-                          onValueChange={(v) => setShoptetTrigger(v as 'paid' | 'shipped' | 'completed')}
-                          disabled={locked}
-                        >
-                          <SelectTrigger id="shoptet-trigger" className="h-9">
-                            <SelectValue />
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="paid">Po zaplacení objednávky</SelectItem>
-                            <SelectItem value="shipped">Po odeslání objednávky</SelectItem>
-                            <SelectItem value="completed">Po dokončení objednávky</SelectItem>
-                          </SelectContent>
-                        </Select>
-                      </div>
-                    </div>
-
-                    {/* Konverze MioCoinů — jen read-only informace. Zdroj pravdy je
-                        sekce „Nastavení konverze MioCoinů" výše. */}
-                    <div
-                      data-testid="shoptet-conversion-readonly"
-                      className="flex items-start gap-2 rounded-lg bg-muted/30 border border-border/50 p-3"
-                    >
-                      <Info className="w-4 h-4 text-muted-foreground flex-shrink-0 mt-0.5" />
-                      <div className="text-xs text-muted-foreground leading-relaxed">
-                        <p>
-                          Použije se vaše nastavení konverze:{' '}
-                          <span className="font-medium text-foreground">
-                            {Number(partner?.reward_base_czk ?? 0)} Kč = {Number(partner?.reward_mc ?? 0)} MioCoinů
-                          </span>
-                        </p>
-                        <p className="mt-1">
-                          Konverzi měníte výše v sekci „Nastavení konverze MioCoinů" — pro Shoptet ji nezadáváte znovu.
-                        </p>
-                      </div>
-                    </div>
-
-                    <div className="space-y-1">
-                      <Label htmlFor="shoptet-note" className="text-xs">Poznámka (volitelné)</Label>
-                      <Textarea
-                        id="shoptet-note"
-                        value={shoptetNote}
-                        onChange={(e) => setShoptetNote(e.target.value)}
-                        placeholder="Cokoliv, co bychom měli vědět k napojení."
-                        maxLength={500}
-                        disabled={locked}
-                        className="min-h-[60px] text-sm"
-                      />
-                    </div>
-
-                    <div className="space-y-1">
-                      <Label htmlFor="shoptet-url" className="text-xs flex items-center gap-1">
-                        <Key className="w-3 h-3" /> URL Shoptet exportu objednávek
-                      </Label>
-                      <Input
-                        id="shoptet-url"
-                        type="password"
-                        autoComplete="off"
-                        value={shoptetUrl}
-                        onChange={(e) => setShoptetUrl(e.target.value)}
-                        placeholder="https://…"
-                        disabled={locked}
-                        className="h-9"
-                      />
-                      <p className="text-[11px] text-muted-foreground leading-relaxed">
-                        URL ukládáme bezpečně a nikdy ji nezobrazujeme zpět. Koncept můžete uložit i bez URL; pro odeslání ke schválení je URL nutná.
-                      </p>
-                    </div>
-
-                    {!locked && (
-                      <div className="flex flex-wrap justify-end gap-2">
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          className="gap-2"
-                          onClick={handleShoptetSaveDraft}
-                          disabled={shoptetSavingDraft || shoptetSubmitting}
-                        >
-                          {shoptetSavingDraft ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
-                          Uložit koncept
-                        </Button>
-                        <Button
-                          size="sm"
-                          className="gap-2"
-                          onClick={handleShoptetSubmit}
-                          disabled={shoptetSubmitting || shoptetSavingDraft}
-                        >
-                          {shoptetSubmitting ? <Loader2 className="w-4 h-4 animate-spin" /> : <Send className="w-4 h-4" />}
-                          Odeslat ke schválení
-                        </Button>
-                      </div>
-                    )}
-
-                    {locked && shoptetReq?.status === 'submitted' && (
-                      <p className="text-xs text-muted-foreground flex items-center gap-1">
-                        <Clock className="w-3 h-3" /> Žádost čeká na schválení OneMil. Po schválení se napojení aktivuje automaticky.
-                      </p>
-                    )}
-                  </div>
-                );
-              })()}
-
-              {/* Export URL change — only for a connection that is already live.
-                  The live connection keeps running the whole time; a change is a
-                  separate request and takes effect only once OneMil approves it. */}
-              {isShoptetConnectionLive && (
-                <div data-testid="shoptet-url-change" className="space-y-3 border-t border-border/50 pt-4">
-                  <div>
-                    <h4 className="text-sm font-medium flex items-center gap-2">
-                      <Key className="w-4 h-4 text-[hsl(var(--neon-gold))]" />
-                      Exportní odkaz
-                    </h4>
-                    <p className="text-xs text-muted-foreground mt-1 leading-relaxed">
-                      Vygenerovali jste v Shoptetu nový permanentní odkaz exportu? Pošlete nám ho —
-                      napojení běží dál a přepneme ho až po kontrole.
-                    </p>
-                  </div>
-
-                  {shoptetChangePending ? (
-                    <div
-                      data-testid="shoptet-url-change-pending"
-                      className="rounded-lg border border-amber-500/30 bg-amber-500/5 p-3 space-y-1"
-                    >
-                      <p className="text-sm flex items-center gap-2">
-                        <Clock className="w-4 h-4 text-amber-500 flex-shrink-0" />
-                        <span className="font-medium">Změna odkazu čeká na schválení</span>
-                      </p>
-                      <p className="text-xs text-muted-foreground leading-relaxed">
-                        Do schválení se objednávky dál načítají z původního odkazu — napojení
-                        zůstává aktivní.
-                      </p>
-                    </div>
-                  ) : (
-                    <>
-                      {shoptetChangeReq?.status === 'rejected' && (
-                        <div className="rounded-lg border border-destructive/30 bg-destructive/5 p-3 space-y-1">
-                          <p className="text-sm font-medium text-destructive flex items-center gap-2">
-                            <XCircle className="w-4 h-4 flex-shrink-0" />
-                            Poslední změna odkazu byla zamítnuta
-                          </p>
-                          {shoptetChangeReq.rejection_reason && (
-                            <p className="text-xs text-muted-foreground">
-                              Důvod: {shoptetChangeReq.rejection_reason}
-                            </p>
-                          )}
-                          <p className="text-xs text-muted-foreground">
-                            Původní odkaz zůstal aktivní. Můžete poslat nový.
-                          </p>
-                        </div>
-                      )}
-
-                      {!shoptetChangeOpen ? (
-                        <Button
-                          type="button"
-                          variant="outline"
-                          size="sm"
-                          className="gap-2"
-                          onClick={() => setShoptetChangeOpen(true)}
-                        >
-                          <RefreshCw className="w-4 h-4" />
-                          Změnit exportní odkaz
-                        </Button>
-                      ) : (
-                        <div className="space-y-2">
-                          <div className="space-y-1">
-                            <Label htmlFor="shoptet-change-url" className="text-xs flex items-center gap-1">
-                              <Key className="w-3 h-3" /> Nový URL Shoptet exportu objednávek
-                            </Label>
-                            <Input
-                              id="shoptet-change-url"
-                              type="password"
-                              autoComplete="off"
-                              value={shoptetChangeUrl}
-                              onChange={(e) => setShoptetChangeUrl(e.target.value)}
-                              placeholder="https://…"
-                              disabled={shoptetChangeSubmitting}
-                              className="h-9"
-                            />
-                            <p className="text-[11px] text-muted-foreground leading-relaxed">
-                              Odkaz ukládáme bezpečně a nikdy ho nezobrazujeme zpět. Původní odkaz
-                              funguje dál, dokud OneMil změnu neschválí.
-                            </p>
-                          </div>
-                          <div className="flex flex-wrap justify-end gap-2">
-                            <Button
-                              type="button"
-                              variant="ghost"
-                              size="sm"
-                              onClick={() => {
-                                setShoptetChangeOpen(false);
-                                setShoptetChangeUrl('');
-                              }}
-                              disabled={shoptetChangeSubmitting}
-                            >
-                              Zrušit
-                            </Button>
-                            <Button
-                              type="button"
-                              size="sm"
-                              className="gap-2"
-                              onClick={handleShoptetChangeSubmit}
-                              disabled={shoptetChangeSubmitting}
-                            >
-                              {shoptetChangeSubmitting ? (
-                                <Loader2 className="w-4 h-4 animate-spin" />
-                              ) : (
-                                <Send className="w-4 h-4" />
-                              )}
-                              Odeslat ke schválení
-                            </Button>
-                          </div>
-                        </div>
-                      )}
-                    </>
-                  )}
-                </div>
-              )}
-            </CardContent>
-          </Card>
-        )}
-
-        {/* Zobrazení MioCoinů v e-shopu — storefront snippet.
-            Shown ONLY once the Shoptet connection is approved/active, so a partner is
-            never handed a storefront tag for a connection OneMil has not reviewed. */}
-        {isAccountApproved && isShoptetConnectionLive && shoptetWidgetSnippet && (
-          <Card
-            data-testid="shoptet-widget-snippet-section"
-            className="border-[hsl(var(--neon-gold)/0.15)] hover:border-[hsl(var(--neon-gold)/0.25)] transition-colors"
-          >
-            <CardHeader className="pb-3">
-              <CardTitle className="flex items-center gap-2 text-[hsl(var(--text-silver))]">
-                <Gift className="w-5 h-5 text-[hsl(var(--neon-gold))]" />
-                Zobrazení MioCoinů v e-shopu
-              </CardTitle>
-              <CardDescription>
-                Aby zákazníci viděli, kolik MioCoinů za nákup získají, vložte do e-shopu tento kód.
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <p className="text-sm text-muted-foreground leading-relaxed">
-                V Shoptetu otevři <span className="font-medium text-foreground">Vzhled a obsah</span>{' '}
-                → <span className="font-medium text-foreground">Editor HTML kódu</span> a do části pro
-                kód na všech stránkách vlož:
-              </p>
-
-              <div className="space-y-2">
-                <pre
-                  data-testid="shoptet-widget-snippet-code"
-                  className="overflow-x-auto rounded-lg border border-border/50 bg-muted/40 p-3 text-xs leading-relaxed"
-                >
-                  <code className="whitespace-pre">{shoptetWidgetSnippet}</code>
-                </pre>
-                <div className="flex justify-end">
-                  <Button
-                    type="button"
-                    size="sm"
-                    variant="outline"
-                    className="gap-2"
-                    onClick={() => copyShoptetSnippetToClipboard(shoptetWidgetSnippet)}
-                  >
-                    <Copy className="w-4 h-4" />
-                    Kopírovat kód
-                  </Button>
-                </div>
-              </div>
-
-              <div className="flex items-start gap-2 rounded-lg bg-muted/30 border border-border/50 p-3">
-                <Info className="w-4 h-4 text-muted-foreground flex-shrink-0 mt-0.5" />
-                <p className="text-xs text-muted-foreground leading-relaxed">
-                  Po vložení kódu a uložení se informace o MioCoinech zobrazí automaticky podle
-                  vašeho aktuálního nastavení v OneMil.
-                </p>
-              </div>
-            </CardContent>
-          </Card>
-        )}
-
         {/* MioCoin Invoicing Explainer — read-only info, no billing logic */}
         {isAccountApproved && (
           <Card className="border-[hsl(var(--neon-gold)/0.15)] hover:border-[hsl(var(--neon-gold)/0.25)] transition-colors">
