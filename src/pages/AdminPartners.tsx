@@ -732,6 +732,11 @@ const AdminPartners = () => {
             <TabsTrigger value="pending" className="flex items-center gap-2">
               <UserPlus className="w-4 h-4" />
               Čekající registrace
+              {pendingRegistrations.length > 0 && (
+                <Badge variant="destructive" className="ml-1 px-1.5 py-0 text-[10px]">
+                  {pendingRegistrations.length}
+                </Badge>
+              )}
             </TabsTrigger>
             <TabsTrigger value="shoptet" className="flex items-center gap-2">
               <Rocket className="w-4 h-4" />
@@ -749,6 +754,11 @@ const AdminPartners = () => {
             <TabsTrigger value="logos" className="flex items-center gap-2">
               <Image className="w-4 h-4" />
               Schválení log
+              {pendingLogoPartners.length > 0 && (
+                <Badge variant="destructive" className="ml-1 px-1.5 py-0 text-[10px]">
+                  {pendingLogoPartners.length}
+                </Badge>
+              )}
             </TabsTrigger>
             <TabsTrigger value="api-docs" className="flex items-center gap-2">
               <BookOpen className="w-4 h-4" />

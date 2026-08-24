@@ -5,6 +5,7 @@ import { Gift, BookOpen, Image as ImageIcon, Bell, MessageSquare, Users, Tag, Br
 import { useUnreadMessagesCount } from "@/hooks/useUnreadMessagesCount";
 import { useUnseenWinsCount } from "@/hooks/useUnseenWinsCount";
 import { usePendingOffersCount } from "@/hooks/usePendingOffersCount";
+import { useAdminUsersPendingCounts } from "@/hooks/useAdminUsersPendingCounts";
 import { useBobEnabled } from "@/hooks/useBobEnabled";
 import { useUserRole } from "@/hooks/useUserRole";
 import { useAdminPermissions, SUBADMIN_ENTRY_ROUTES } from "@/hooks/useAdminPermissions";
@@ -38,6 +39,7 @@ export const AdminPrimaryNav: React.FC = () => {
   const { unreadCount } = useUnreadMessagesCount();
   const { unseenCount: unseenWinsCount } = useUnseenWinsCount();
   const { pendingCount: pendingOffersCount } = usePendingOffersCount();
+  const { usersSectionTotal: pendingUsersSectionCount } = useAdminUsersPendingCounts();
   const { bobEnabled } = useBobEnabled();
   const { isSuperAdmin } = useUserRole();
   const { can, loading: permLoading } = useAdminPermissions();
@@ -70,11 +72,15 @@ export const AdminPrimaryNav: React.FC = () => {
           const showMessagesBadge = entry.id === "messages" && unreadCount > 0;
           const bobOffOnMessages = entry.id === "messages" && !bobEnabled;
           const showWinsBadge = entry.id === "wins" && unseenWinsCount > 0;
-          const showOffersBadge = entry.id === "users" && pendingOffersCount > 0;
+          // "Uživatelé" = součet všech čekajících položek v sekci (partnerské
+          // registrace/Shoptet/log + žádosti firem + nepřečtené odpovědi leadů +
+          // nabídky partnerů ke schválení), ne jen nabídky.
+          const usersTotalPendingCount = pendingOffersCount + pendingUsersSectionCount;
+          const showOffersBadge = entry.id === "users" && usersTotalPendingCount > 0;
           const badgeCount =
             entry.id === "messages" ? unreadCount :
             entry.id === "wins" ? unseenWinsCount :
-            entry.id === "users" ? pendingOffersCount : 0;
+            entry.id === "users" ? usersTotalPendingCount : 0;
           return (
             <NavLink
               key={entry.id}
