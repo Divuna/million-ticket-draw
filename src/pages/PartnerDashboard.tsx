@@ -246,6 +246,12 @@ const PartnerDashboard = () => {
   const [rewardMode, setRewardMode] = useState<RewardMode>('whole_shop');
   const [productBadgeEnabled, setProductBadgeEnabled] = useState(true);
   const [savingRewardMode, setSavingRewardMode] = useState(false);
+  // Reward mode/badge is edited as a deliberate, confirmed action: a bare click on a
+  // mode card must never write to the DB. Draft values only apply on "Uložit změny";
+  // "Zrušit" discards them without ever calling handleSaveRewardMode.
+  const [editingRewardMode, setEditingRewardMode] = useState(false);
+  const [draftRewardMode, setDraftRewardMode] = useState<RewardMode>('whole_shop');
+  const [draftProductBadgeEnabled, setDraftProductBadgeEnabled] = useState(true);
   const [productRules, setProductRules] = useState<ProductRewardRule[]>([]);
   const [seenProducts, setSeenProducts] = useState<SeenProduct[]>([]);
   const [newRuleKey, setNewRuleKey] = useState('');
@@ -1292,6 +1298,25 @@ const PartnerDashboard = () => {
     }
   };
 
+  // Enter edit: seed the draft from the currently saved values. Nothing is written yet.
+  const handleStartEditRewardMode = () => {
+    setDraftRewardMode(rewardMode);
+    setDraftProductBadgeEnabled(productBadgeEnabled);
+    setEditingRewardMode(true);
+  };
+
+  // Cancel: drop the draft, leave rewardMode/productBadgeEnabled — and the DB — untouched.
+  const handleCancelEditRewardMode = () => {
+    setEditingRewardMode(false);
+  };
+
+  // Confirm: this is the only place a mode/badge change reaches the DB, and it does so
+  // through the exact same handleSaveRewardMode used before — no new write path.
+  const handleConfirmRewardModeSave = async () => {
+    await handleSaveRewardMode(draftRewardMode, draftProductBadgeEnabled);
+    setEditingRewardMode(false);
+  };
+
   const handleAddProductRule = async () => {
     if (!partner) return;
 
@@ -1987,28 +2012,107 @@ const PartnerDashboard = () => {
                   </p>
                 </div>
 
-                <div className="grid gap-2 sm:grid-cols-3">
-                  {(Object.keys(REWARD_MODE_LABELS) as RewardMode[]).map((mode) => (
-                    <button
-                      key={mode}
-                      type="button"
-                      data-testid={`reward-mode-${mode}`}
-                      aria-pressed={rewardMode === mode}
-                      disabled={savingRewardMode}
-                      onClick={() => handleSaveRewardMode(mode, productBadgeEnabled)}
-                      className={`text-left rounded-lg border p-3 transition-colors disabled:opacity-60 ${
-                        rewardMode === mode
-                          ? 'border-[hsl(var(--neon-gold)/0.5)] bg-[hsl(var(--neon-gold)/0.08)]'
-                          : 'border-border/50 bg-muted/20 hover:border-border'
-                      }`}
-                    >
-                      <span className="text-sm font-medium block mb-1">{REWARD_MODE_LABELS[mode]}</span>
+                {!editingRewardMode ? (
+                  <div className="flex items-center justify-between gap-3 rounded-lg border border-[hsl(var(--neon-gold)/0.5)] bg-[hsl(var(--neon-gold)/0.08)] p-3">
+                    <div className="min-w-0">
+                      <span className="text-sm font-medium block mb-1">{REWARD_MODE_LABELS[rewardMode]}</span>
                       <span className="text-[11px] text-muted-foreground leading-relaxed block">
-                        {REWARD_MODE_HINTS[mode]}
+                        {REWARD_MODE_HINTS[rewardMode]}
                       </span>
-                    </button>
-                  ))}
-                </div>
+                      <span className="text-[11px] text-muted-foreground block mt-1">
+                        Odměna u produktu v e-shopu: {productBadgeEnabled ? 'Zapnuto' : 'Vypnuto'}
+                      </span>
+                    </div>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      className="gap-2 shrink-0"
+                      onClick={handleStartEditRewardMode}
+                    >
+                      <Settings className="w-4 h-4" />
+                      Upravit odměňování
+                    </Button>
+                  </div>
+                ) : (
+                  <div className="space-y-3">
+                    <div className="grid gap-2 sm:grid-cols-3">
+                      {(Object.keys(REWARD_MODE_LABELS) as RewardMode[]).map((mode) => (
+                        <button
+                          key={mode}
+                          type="button"
+                          data-testid={`reward-mode-${mode}`}
+                          aria-pressed={draftRewardMode === mode}
+                          disabled={savingRewardMode}
+                          onClick={() => setDraftRewardMode(mode)}
+                          className={`text-left rounded-lg border p-3 transition-colors disabled:opacity-60 ${
+                            draftRewardMode === mode
+                              ? 'border-[hsl(var(--neon-gold)/0.5)] bg-[hsl(var(--neon-gold)/0.08)]'
+                              : 'border-border/50 bg-muted/20 hover:border-border'
+                          }`}
+                        >
+                          <span className="text-sm font-medium block mb-1">{REWARD_MODE_LABELS[mode]}</span>
+                          <span className="text-[11px] text-muted-foreground leading-relaxed block">
+                            {REWARD_MODE_HINTS[mode]}
+                          </span>
+                        </button>
+                      ))}
+                    </div>
+
+                    {draftRewardMode !== 'whole_shop' && (
+                      <div className="flex items-start gap-2 rounded-lg bg-muted/30 border border-border/50 p-3">
+                        <Info className="w-4 h-4 text-muted-foreground flex-shrink-0 mt-0.5" />
+                        <p className="text-xs text-muted-foreground leading-relaxed">
+                          Po uložení bude potřeba níže nastavit produkty s vlastní odměnou —
+                          bez toho zákazník za tento režim žádnou odměnu nedostane.
+                        </p>
+                      </div>
+                    )}
+
+                    <div className="flex items-center justify-between gap-3 rounded-lg border border-border/50 bg-muted/20 p-3">
+                      <div className="min-w-0">
+                        <p className="text-sm font-medium">Zobrazit odměnu u produktu v e-shopu</p>
+                        <p className="text-[11px] text-muted-foreground leading-relaxed">
+                          Informace v košíku, kolik MioCoinů zákazník za nákup získá, se zobrazuje vždy.
+                        </p>
+                      </div>
+                      <Switch
+                        checked={draftProductBadgeEnabled}
+                        disabled={savingRewardMode}
+                        onCheckedChange={setDraftProductBadgeEnabled}
+                        aria-label="Zobrazit odměnu u produktu"
+                      />
+                    </div>
+
+                    <div className="flex items-center gap-2">
+                      <Button
+                        type="button"
+                        size="sm"
+                        className="gap-2"
+                        onClick={handleConfirmRewardModeSave}
+                        disabled={savingRewardMode}
+                      >
+                        {savingRewardMode ? (
+                          <Loader2 className="w-4 h-4 animate-spin" />
+                        ) : (
+                          <Save className="w-4 h-4" />
+                        )}
+                        Uložit změny
+                      </Button>
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="sm"
+                        className="gap-2"
+                        onClick={handleCancelEditRewardMode}
+                        disabled={savingRewardMode}
+                      >
+                        <RotateCcw className="w-4 h-4" />
+                        Zrušit
+                      </Button>
+                    </div>
+                  </div>
+                )}
 
                 {rewardMode !== 'whole_shop' && (
                   <div className="space-y-3">
@@ -2160,21 +2264,6 @@ const PartnerDashboard = () => {
                   </div>
                 )}
 
-                {/* Badge toggle. The cart summary is intentionally NOT toggleable. */}
-                <div className="flex items-start justify-between gap-3 rounded-lg border border-border/50 bg-muted/20 p-3">
-                  <div className="min-w-0">
-                    <p className="text-sm font-medium">Zobrazit odměnu u produktu v e-shopu</p>
-                    <p className="text-[11px] text-muted-foreground leading-relaxed">
-                      Informace v košíku, kolik MioCoinů zákazník za nákup získá, se zobrazuje vždy.
-                    </p>
-                  </div>
-                  <Switch
-                    checked={productBadgeEnabled}
-                    disabled={savingRewardMode}
-                    onCheckedChange={(checked) => handleSaveRewardMode(rewardMode, checked)}
-                    aria-label="Zobrazit odměnu u produktu"
-                  />
-                </div>
               </div>
 
               {/* Marketingová investice (simulace) - Compact KPI section */}
