@@ -19,7 +19,7 @@
  *  supabase/migrations/20260603_affiliate_profile_update.sql (APLIKOVAT RUČNĚ)
  */
 import React, { useEffect, useState, useCallback } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
 import { QRCodeSVG } from 'qrcode.react';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
@@ -29,6 +29,7 @@ import { NavigateToLogin } from '@/components/NavigateToLogin';
 import AffiliateProfileSection from '@/components/AffiliateProfileSection';
 import InfluencerTermsSection from '@/components/InfluencerTermsSection';
 import { CompanyLeadSection } from '@/components/CompanyLeadSection';
+import { AffiliatePortalLayout } from '@/components/affiliate/AffiliatePortalLayout';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import {
@@ -126,43 +127,6 @@ function CopyInput({ value, testId }: { value: string; testId?: string }) {
         {copied ? <Check className="w-4 h-4" /> : <Copy className="w-4 h-4" />}
         {copied ? 'Zkopírováno' : 'Kopírovat'}
       </Button>
-    </div>
-  );
-}
-
-/* ── Mode Switcher ───────────────────────────────────────────────────────────── */
-
-function ModeSwitcher({ active, onSwitch }: {
-  active: ActiveMode; onSwitch: (m: ActiveMode) => void;
-}) {
-  const items: { id: ActiveMode; label: string; Icon: React.ElementType }[] = [
-    { id: 'influencer', label: 'Influencer', Icon: Megaphone },
-    { id: 'sales_rep',  label: 'Obchodník',  Icon: Briefcase },
-    { id: 'profile',    label: 'Profil',     Icon: User },
-  ];
-
-  return (
-    <div className="space-y-2">
-      <div className="flex gap-1 rounded-xl border border-[hsl(var(--border)/0.5)] p-1 bg-black/30 w-fit" data-testid="mode-switcher">
-        {items.map(({ id, label, Icon }) => {
-          const isActive = active === id;
-          return (
-            <button
-              key={id}
-              onClick={() => onSwitch(id)}
-              data-testid={`mode-btn-${id}`}
-              aria-pressed={isActive}
-              className={`flex items-center gap-2 rounded-lg px-4 py-2 text-sm font-semibold transition-all
-                ${isActive
-                  ? 'bg-[hsl(var(--neon-gold))] text-[hsl(220_45%_8%)] shadow-sm'
-                  : 'text-[hsl(var(--text-muted-gray))] hover:text-[hsl(var(--text-silver))] hover:bg-white/5'}`}
-            >
-              <Icon className="w-4 h-4" />
-              {label}
-            </button>
-          );
-        })}
-      </div>
     </div>
   );
 }
@@ -394,53 +358,29 @@ const AffiliateDashboard = () => {
   };
 
   return (
-    <div className="min-h-screen">
-      <div className="container mx-auto px-4 py-8 max-w-5xl space-y-8">
+    <AffiliatePortalLayout
+      activeMode={activeMode}
+      onSwitchMode={handleModeSwitch}
+      currentMonthCzk={currentMonthCzk}
+      onLogout={handleLogout}
+    >
+      <div className="px-4 py-6 sm:px-6 lg:px-8 max-w-5xl mx-auto space-y-8">
 
         {/* ══ HERO ══════════════════════════════════════════════════════════ */}
-        <div className="relative overflow-hidden rounded-2xl border border-[hsl(var(--neon-gold)/0.25)] p-6 sm:p-8"
-          style={{ background: 'linear-gradient(135deg, hsl(222 47% 8%) 0%, hsl(222 40% 12%) 50%, hsl(43 30% 12%) 100%)' }}>
-          <div className="absolute top-0 right-0 w-64 h-64 rounded-full opacity-20 blur-3xl pointer-events-none"
-            style={{ background: 'radial-gradient(circle, hsl(43 90% 55%), transparent 70%)' }} />
-          <div className="relative z-10 space-y-4">
-            <div className="flex items-center justify-between flex-wrap gap-3">
-              <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full border border-[hsl(var(--neon-gold)/0.4)] bg-[hsl(var(--neon-gold)/0.1)]">
-                <Star className="w-3.5 h-3.5 text-[hsl(var(--neon-gold))]" />
-                <span className="text-xs font-semibold tracking-wide uppercase text-[hsl(var(--neon-gold))]">Aktivní Affiliate partner</span>
-              </div>
-              <div className="flex items-center gap-2">
-                <Link to="/influencer/messages">
-                  <Button variant="outline" size="sm" className="gap-2 border-[hsl(var(--border)/0.5)] text-[hsl(var(--text-muted-gray))] hover:text-[hsl(var(--text-silver))]">
-                    <MessageCircle className="w-4 h-4" /><span className="hidden sm:inline">Zprávy</span>
-                  </Button>
-                </Link>
-                <Button variant="outline" size="sm" onClick={handleLogout}
-                  className="gap-2 border-[hsl(var(--border)/0.5)] text-[hsl(var(--text-muted-gray))] hover:text-[hsl(var(--text-silver))]">
-                  <LogOut className="w-4 h-4" /><span className="hidden sm:inline">Odhlásit se</span>
-                </Button>
-              </div>
+        <div className="relative overflow-hidden rounded-2xl border border-[hsl(var(--border))] bg-[hsl(var(--card))] p-6 sm:p-8">
+          <div className="relative z-10 space-y-3">
+            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full border border-[hsl(var(--neon-gold)/0.4)] bg-[hsl(var(--neon-gold)/0.1)]">
+              <Star className="w-3.5 h-3.5 text-[hsl(var(--neon-gold))]" />
+              <span className="text-xs font-semibold tracking-wide uppercase text-[hsl(var(--neon-gold))]">Aktivní Affiliate partner</span>
             </div>
-            <div className="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-4">
-              <div className="space-y-3">
-                <h1 className="text-2xl sm:text-3xl font-bold text-heading-gold !text-[hsl(var(--heading-gold))]">Vydělávejte s OneMil</h1>
-                <p className="text-sm text-[hsl(var(--text-muted-gray))] max-w-md">
-                  {activeMode === 'influencer'
-                    ? 'Sdílejte svůj Affiliate odkaz, přivádějte zákazníky a sledujte provize.'
-                    : activeMode === 'sales_rep'
-                      ? 'Doporučujte OneMil firmám, přivádějte partnery a získávejte provize z jejich fakturace.'
-                      : 'Spravujte profil, fakturační údaje, výplatní údaje a podmínky spolupráce.'}
-                </p>
-                <ModeSwitcher active={activeMode} onSwitch={handleModeSwitch} />
-              </div>
-              {activeMode !== 'profile' && (
-                <div className="shrink-0 rounded-xl border border-[hsl(var(--neon-gold)/0.3)] bg-[hsl(var(--neon-gold)/0.08)] px-6 py-4 text-center sm:text-right">
-                  <p className="text-[10px] uppercase tracking-widest text-[hsl(var(--neon-gold)/0.7)] mb-1">Tento měsíc</p>
-                  <p className="text-3xl font-extrabold tabular-nums text-[hsl(var(--neon-gold))]">
-                    {currentMonthCzk.toLocaleString('cs-CZ')} <span className="text-lg">Kč</span>
-                  </p>
-                </div>
-              )}
-            </div>
+            <h1 className="text-2xl sm:text-3xl font-bold !text-[hsl(var(--heading-gold))]">Vydělávejte s OneMil</h1>
+            <p className="text-sm text-[hsl(var(--text-muted-gray))] max-w-md">
+              {activeMode === 'influencer'
+                ? 'Sdílejte svůj Affiliate odkaz, přivádějte zákazníky a sledujte provize.'
+                : activeMode === 'sales_rep'
+                  ? 'Doporučujte OneMil firmám, přivádějte partnery a získávejte provize z jejich fakturace.'
+                  : 'Spravujte profil, fakturační údaje, výplatní údaje a podmínky spolupráce.'}
+            </p>
           </div>
         </div>
 
@@ -675,7 +615,7 @@ const AffiliateDashboard = () => {
         </div>
 
       </div>
-    </div>
+    </AffiliatePortalLayout>
   );
 };
 

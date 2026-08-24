@@ -7,11 +7,12 @@ import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
 import { capChatMessagesState, CHAT_MESSAGES_STATE_CAP } from "@/lib/chatMessagesStateCap";
 import { toast } from "@/hooks/use-toast";
-import { MessageCircle, Send, ArrowLeft } from "lucide-react";
+import { MessageCircle, Send } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Link, useNavigate } from "react-router-dom";
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
+import { useNavigate } from "react-router-dom";
 import { AI_ASSISTANT_BOB_LABEL } from "@/constants/messagesUi";
-import { BottomNavigation } from "@/components/BottomNavigation";
+import { AffiliatePortalLayout } from "@/components/affiliate/AffiliatePortalLayout";
 
 function parseMessageContent(content: string): { text: string; cta?: { label: string; action: string } } {
   try {
@@ -146,164 +147,115 @@ export default function InfluencerMessages() {
     }
   };
 
-  return (
-    <div className="min-h-screen bg-gradient-to-b from-[hsl(220,20%,4%)] via-[hsl(220,25%,6%)] to-[hsl(220,20%,4%)]">
-      <div className="flex flex-col h-[100vh] max-w-3xl mx-auto">
-        {/* Header */}
-        <div className="p-6 pb-4">
-          <div className="flex items-center gap-3 mb-4">
-            <Link to="/influencer/dashboard">
-              <Button variant="ghost" size="icon" className="text-[hsl(var(--text-muted-gray))] hover:text-[hsl(var(--text-silver))]">
-                <ArrowLeft className="w-5 h-5" />
-              </Button>
-            </Link>
-            <div
-              className="relative overflow-hidden rounded-2xl p-5 flex-1"
-              style={{
-                background: 'linear-gradient(135deg, hsl(220, 25%, 8%) 0%, hsl(220, 30%, 12%) 50%, hsl(220, 25%, 8%) 100%)',
-                border: '1px solid hsl(45, 70%, 40%, 0.2)',
-                boxShadow: '0 8px 32px hsl(0, 0%, 0%, 0.4), inset 0 1px 0 hsl(45, 70%, 50%, 0.1)',
-              }}
-            >
-              <div className="flex items-center gap-3">
-                <div
-                  className="w-10 h-10 rounded-xl flex items-center justify-center"
-                  style={{
-                    background: 'linear-gradient(135deg, hsl(45, 80%, 45%) 0%, hsl(35, 90%, 35%) 100%)',
-                    boxShadow: '0 4px 20px hsl(45, 80%, 40%, 0.3)',
-                  }}
-                >
-                  <MessageCircle className="w-5 h-5 text-black" />
-                </div>
-                <div>
-                  <h1
-                    className="text-xl font-bold"
-                    style={{
-                      background: 'linear-gradient(135deg, hsl(45, 93%, 65%) 0%, hsl(35, 90%, 55%) 50%, hsl(45, 93%, 65%) 100%)',
-                      WebkitBackgroundClip: 'text',
-                      WebkitTextFillColor: 'transparent',
-                      backgroundClip: 'text',
-                    }}
-                  >
-                    Zprávy pro podporu
-                  </h1>
-                  <p className="text-xs text-gray-400">Komunikace s týmem OneMil</p>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
+  // Same signOut() + navigate('/') the Affiliate dashboard already uses — the
+  // sidebar now makes "Odhlásit se" reachable from this page too, without a
+  // detour back through the dashboard first.
+  const handleLogout = async () => {
+    await supabase.auth.signOut();
+    navigate('/');
+  };
 
-        {/* Messages */}
-        <div ref={scrollRef} className="flex-1 overflow-y-auto px-6 pb-4 space-y-3">
-          {loading && messages.length === 0 ? (
-            <p className="text-gray-500 mt-10 text-center">Načítání zpráv…</p>
-          ) : messages.length === 0 ? (
-            <div className="flex flex-col items-center justify-center h-full text-center py-12">
-              <div
-                className="w-16 h-16 rounded-2xl flex items-center justify-center mb-4"
-                style={{
-                  background: 'linear-gradient(135deg, hsl(220, 25%, 12%) 0%, hsl(220, 30%, 16%) 100%)',
-                  border: '1px solid hsl(45, 70%, 40%, 0.15)',
-                }}
-              >
-                <MessageCircle className="w-8 h-8 text-[hsl(45,70%,50%)]/40" />
-              </div>
-              <p className="text-gray-400 text-base font-medium">Zatím žádné zprávy</p>
-              <p className="text-gray-500 text-sm mt-1">Napište nám vaši první zprávu</p>
-            </div>
-          ) : (
-            messages.map((msg) => {
+  return (
+    <AffiliatePortalLayout onLogout={handleLogout}>
+      <div className="max-w-3xl mx-auto px-4 py-6 sm:px-6 lg:px-8 space-y-6">
+        <Card className="border-[hsl(var(--border))]">
+          <CardHeader className="pb-3">
+            <CardTitle className="flex items-center gap-2 text-base text-[hsl(var(--text-silver))]">
+              <MessageCircle className="w-4.5 h-4.5 text-[hsl(var(--neon-gold))]" />
+              Zprávy pro podporu
+            </CardTitle>
+            <CardDescription>Komunikace s týmem OneMil</CardDescription>
+          </CardHeader>
+          <CardContent className="p-0">
+            {/* Messages area */}
+            <div
+              ref={scrollRef}
+              className="h-[calc(100vh-380px)] min-h-[300px] overflow-y-auto px-6 py-5 space-y-3 border-t border-border/40"
+            >
+              {loading && messages.length === 0 ? (
+                <p className="mt-10 text-center text-sm text-muted-foreground">Načítání zpráv…</p>
+              ) : messages.length === 0 ? (
+                <div className="flex flex-col items-center justify-center h-full text-center py-12">
+                  <div className="w-14 h-14 rounded-xl flex items-center justify-center mb-4 bg-muted/50">
+                    <MessageCircle className="w-7 h-7 text-muted-foreground" />
+                  </div>
+                  <p className="text-sm font-medium text-foreground">Zatím žádné zprávy</p>
+                  <p className="text-xs mt-1 text-muted-foreground">Napište nám vaši první zprávu</p>
+                </div>
+              ) : (
+                messages.map((msg) => {
                   const isUser = msg.sender === "user";
                   const isAi = msg.sender === "ai";
                   return (
                     <div key={msg.id} className={`flex ${isUser ? "justify-end" : "justify-start"}`}>
                       <div
-                        className="max-w-[75%] rounded-2xl p-4 transition-all duration-300"
-                        style={
-                          isUser
-                            ? {
-                                background: 'linear-gradient(135deg, #1FAF6D 0%, #169B5C 100%)',
-                                border: '1px solid rgba(34, 197, 94, 0.6)',
-                                boxShadow: '0 6px 25px rgba(34, 197, 94, 0.35)',
-                              }
-                            : isAi
-                              ? {
-                                  background: 'linear-gradient(135deg, #5B3DF5 0%, #7A5CFF 100%)',
-                                  border: '1px solid rgba(122, 92, 255, 0.8)',
-                                  boxShadow: '0 6px 30px rgba(122, 92, 255, 0.6)',
-                                }
-                              : {
-                                  background: 'linear-gradient(135deg, hsl(220, 25%, 12%) 0%, hsl(220, 30%, 15%) 100%)',
-                                  border: '1px solid hsl(220, 20%, 25%, 0.5)',
-                                  boxShadow: '0 4px 16px hsl(0, 0%, 0%, 0.3)',
-                                }
-                        }
+                        className={`max-w-[75%] rounded-xl px-4 py-3 ${
+                          isAi
+                            ? "text-white"
+                            : isUser
+                              ? "text-white"
+                              : "bg-muted text-foreground border border-border/40"
+                        }`}
+                        style={isAi ? {
+                          background: 'linear-gradient(135deg, #5B3DF5 0%, #7A5CFF 100%)',
+                          border: '1px solid rgba(122, 92, 255, 0.8)',
+                          boxShadow: '0 6px 30px rgba(122, 92, 255, 0.6)',
+                        } : isUser ? {
+                          background: 'linear-gradient(135deg, #1FAF6D 0%, #169B5C 100%)',
+                          border: '1px solid rgba(34, 197, 94, 0.6)',
+                          boxShadow: '0 6px 25px rgba(34, 197, 94, 0.35)',
+                        } : undefined}
                       >
-                    {isAi && (
-                      <p className="text-xs font-medium text-white/70 mb-1">{AI_ASSISTANT_BOB_LABEL}</p>
-                    )}
-                    {isUser && (
-                      <p className="text-xs font-medium text-white/70 mb-1">{userName}</p>
-                    )}
-                    {(() => { const parsed = parseMessageContent(msg.content); return (<><p className={`text-[15px] leading-relaxed text-white ${isUser ? "font-medium" : ""}`}>{parsed.text}</p>{parsed.cta && (<button onClick={(e) => { e.stopPropagation(); if (parsed.cta!.action.startsWith("http")) { window.open(parsed.cta!.action, "_blank", "noopener"); } else { navigate(parsed.cta!.action); } }} className="mt-2 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all hover:scale-[1.03]" style={{ background: 'linear-gradient(135deg, hsl(45,80%,45%) 0%, hsl(35,90%,38%) 100%)', color: 'hsl(220,20%,8%)', boxShadow: '0 4px 12px hsl(45,80%,40%,0.3)', border: '1px solid hsl(45,70%,50%,0.4)' }}>{parsed.cta!.label}</button>)}</>); })()}
-                    <p className="text-xs mt-2 text-white/50">
-                      {new Date(msg.created_at).toLocaleString("cs-CZ", {
-                        day: "numeric",
-                        month: "short",
-                        hour: "2-digit",
-                        minute: "2-digit",
-                      })}
-                    </p>
-                  </div>
-                </div>
-              );
-            })
-          )}
-        </div>
-
-        {/* Input — extra bottom padding so the fixed BottomNavigation never covers it */}
-        <div className="px-6 pt-4 pb-[calc(5rem+env(safe-area-inset-bottom,0px))]">
-          <div
-            className="relative overflow-hidden rounded-2xl p-4"
-            style={{
-              background: 'linear-gradient(135deg, hsl(220, 25%, 8%) 0%, hsl(220, 30%, 12%) 50%, hsl(220, 25%, 8%) 100%)',
-              border: '1px solid hsl(45, 70%, 40%, 0.2)',
-              boxShadow: '0 -8px 32px hsl(0, 0%, 0%, 0.3), inset 0 1px 0 hsl(45, 70%, 50%, 0.1)',
-            }}
-          >
-            <div className="relative flex items-center gap-3">
-              <input
-                value={newMessage}
-                onChange={(e) => setNewMessage(e.target.value)}
-                onKeyDown={handleKeyDown}
-                placeholder="Napište zprávu..."
-                disabled={isSending}
-                className="flex-1 bg-[hsl(220,25%,10%)] text-gray-100 p-4 rounded-xl border border-[hsl(220,20%,20%)] focus:border-[hsl(45,70%,50%)]/50 focus:ring-2 focus:ring-[hsl(45,70%,50%)]/20 transition-all duration-300 placeholder:text-gray-500 text-[15px] disabled:opacity-50"
-              />
-              <button
-                onClick={handleSend}
-                disabled={!newMessage.trim() || isSending}
-                className="p-4 rounded-xl transition-all duration-300 disabled:opacity-40 disabled:cursor-not-allowed hover:scale-105 active:scale-95"
-                style={{
-                  background: newMessage.trim()
-                    ? 'linear-gradient(135deg, hsl(45, 80%, 45%) 0%, hsl(35, 90%, 35%) 100%)'
-                    : 'linear-gradient(135deg, hsl(220, 25%, 15%) 0%, hsl(220, 30%, 20%) 100%)',
-                  boxShadow: newMessage.trim() ? '0 4px 20px hsl(45, 80%, 40%, 0.4)' : 'none',
-                  border: newMessage.trim()
-                    ? '1px solid hsl(45, 70%, 50%, 0.3)'
-                    : '1px solid hsl(220, 20%, 25%)',
-                }}
-              >
-                <Send className={`w-5 h-5 ${newMessage.trim() ? "text-black" : "text-gray-500"}`} />
-              </button>
+                        {isAi && (
+                          <p className="text-[11px] font-medium text-white/70 mb-1">{AI_ASSISTANT_BOB_LABEL}</p>
+                        )}
+                        {isUser && (
+                          <p className="text-[11px] font-medium text-white/70 mb-1">{userName}</p>
+                        )}
+                        {(() => { const parsed = parseMessageContent(msg.content); return (<><p className="text-[14px] leading-relaxed">{parsed.text}</p>{parsed.cta && (<button onClick={(e) => { e.stopPropagation(); if (parsed.cta!.action.startsWith("http")) { window.open(parsed.cta!.action, "_blank", "noopener"); } else { navigate(parsed.cta!.action); } }} className="mt-2 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all hover:scale-[1.03]" style={{ background: 'linear-gradient(135deg, hsl(45,80%,45%) 0%, hsl(35,90%,38%) 100%)', color: 'hsl(220,20%,8%)', boxShadow: '0 4px 12px hsl(45,80%,40%,0.3)', border: '1px solid hsl(45,70%,50%,0.4)' }}>{parsed.cta!.label}</button>)}</>); })()}
+                        <p
+                          className={`text-[11px] mt-1.5 text-right ${
+                            isUser || isAi ? "text-white/50" : "text-muted-foreground"
+                          }`}
+                        >
+                          {new Date(msg.created_at).toLocaleString("cs-CZ", {
+                            day: "numeric",
+                            month: "short",
+                            hour: "2-digit",
+                            minute: "2-digit",
+                          })}
+                        </p>
+                      </div>
+                    </div>
+                  );
+                })
+              )}
             </div>
-          </div>
-        </div>
-      </div>
 
-      {/* Shared bottom navigation (fixed) — visible on desktop and mobile */}
-      <BottomNavigation />
-    </div>
+            {/* Input */}
+            <div className="px-6 py-4 border-t border-border/40">
+              <div className="flex items-center gap-3">
+                <input
+                  value={newMessage}
+                  onChange={(e) => setNewMessage(e.target.value)}
+                  onKeyDown={handleKeyDown}
+                  placeholder="Napište zprávu..."
+                  disabled={isSending}
+                  className="flex-1 text-sm rounded-lg px-4 py-3 outline-none transition-colors disabled:opacity-50 bg-muted text-foreground border border-border/40 focus:border-primary/50"
+                />
+                <Button
+                  onClick={handleSend}
+                  disabled={!newMessage.trim() || isSending}
+                  size="icon"
+                  className="h-[46px] w-[46px] rounded-lg"
+                >
+                  <Send className="w-4 h-4" />
+                </Button>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+    </AffiliatePortalLayout>
   );
 }
