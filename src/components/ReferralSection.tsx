@@ -20,6 +20,7 @@
 import React, { useState, useEffect } from 'react';
 import { format } from 'date-fns';
 import { cs } from 'date-fns/locale';
+import { QRCodeSVG } from 'qrcode.react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { toast } from '@/hooks/use-toast';
@@ -70,8 +71,11 @@ const ReferralSection: React.FC<{ isLoaded: boolean }> = ({ isLoaded }) => {
   const [submitting, setSubmitting] = useState(false);
   const [alreadyHasReferrer, setAlreadyHasReferrer] = useState(false);
 
+  // Short public alias for the long-form /register?ref=CODE link — same
+  // ?ref= attribution flow, only the URL shown/copied/shared/encoded to the
+  // customer is shorter. See src/pages/CustomerReferralShortLink.tsx.
   const referralLink = referralCode
-    ? buildPublicUrl(`/register?ref=${encodeURIComponent(referralCode)}`)
+    ? buildPublicUrl(`/r/${encodeURIComponent(referralCode)}`)
     : '';
 
   useEffect(() => {
@@ -380,7 +384,7 @@ const ReferralSection: React.FC<{ isLoaded: boolean }> = ({ isLoaded }) => {
             </div>
           </div>
 
-          {/* Link */}
+          {/* Link + QR */}
           <div className="p-5 rounded-2xl bg-gradient-to-br from-primary/8 via-transparent to-primary/5 border border-primary/15 hover:border-primary/30 transition-all duration-500 hover:shadow-lg hover:shadow-primary/5">
             <p className="text-xs font-semibold text-muted-foreground/60 uppercase tracking-wider mb-2">Doporučovací odkaz</p>
             <div className="flex items-center gap-3">
@@ -395,6 +399,16 @@ const ReferralSection: React.FC<{ isLoaded: boolean }> = ({ isLoaded }) => {
                 {linkCopied ? <Check className="h-4 w-4 text-green-500" /> : <LinkIcon className="h-4 w-4" />}
               </Button>
             </div>
+            {referralLink && (
+              <div className="flex items-center gap-4 pt-4 mt-4 border-t border-primary/10">
+                <div className="rounded-xl border border-primary/15 bg-white p-3 shadow-sm shrink-0">
+                  <QRCodeSVG value={referralLink} size={112} data-testid="referral-qr-code" />
+                </div>
+                <p className="text-xs text-muted-foreground/70 leading-relaxed">
+                  Naskenováním QR kódu se přátelé dostanou přímo na registraci s vaším doporučovacím kódem.
+                </p>
+              </div>
+            )}
           </div>
         </div>
 
