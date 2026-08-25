@@ -1,3 +1,69 @@
+# 25. 08. 2026 — Únik budoucích výherních pozic (F1) opraven a nasazen, včetně následné výkonové regrese
+
+Tento zápis je novější než zápisy níže, které byly v době svého vzniku pravdivé. Vychází z kompletního
+auditu zákaznické části, staging reprodukce, produkčního nasazení se schválením Pavla a měřených
+`EXPLAIN ANALYZE` dat.
+
+- **Nález F1 (kritický), doložený reprodukcí.** `public.bonus_prizes` nesla dvě SELECT policy s
+  `USING (true)` („Public can view bonus prizes" pro roli `public`, „Authenticated users can read bonus
+  prizes" pro `authenticated`). Protože `contests.next_ticket_number` je veřejné a tikety se vydávají
+  sekvenčně, mohl kterýkoli **přihlášený zákazník** přečíst každou dosud nezískanou výherní pozici a
+  soutěž deterministicky farmovat: uvidí volnou pozici #5, další tiket je #3, koupí přesně dva a cenu
+  vezme. Produkce měla takto odhalených **165 289 pozic** ve 2 aktivních soutěžích. Ověřeno na stagingu
+  běžnou zákaznickou session před opravou.
+- **Prostý `REVOKE SELECT` by problém nevyřešil.** Admin se přihlašuje přes **tutéž** roli
+  `authenticated` jako zákazník, takže odebrání grantu by oslepilo i admin UI. Rozlišení proto muselo
+  vzniknout uvnitř RLS.
+- **Oprava F1** (migrace `20260825141826_bonus_prizes_hide_future_winning_positions`): obě plošné policy
+  zrušeny; `bonus_prizes_select_admin` (přes kanonické `user_roles`, aby fungoval i produkční drift účet
+  s `user_roles.role='admin'` a `users.role='user'`); `bonus_prizes_select_resolved`
+  (`status IS DISTINCT FROM 'pending'` — vyřešená pozice je pro útočníka bezcenná, ten tiket je pryč);
+  `REVOKE SELECT ... FROM anon`; nové position-free RPC `get_contest_bonus_catalogue(uuid)`, aby veřejná
+  stránka dál ukazovala *co* lze vyhrát, ale ne *kde*. `MyContestDetail` nově načítá jen ceny z vlastních
+  `winners` řádků. Nasazeno na produkci `xkzhjldrojjlrkezorey` se schválením Pavla; produkční smoke po
+  Lovable Publish prošel.
+- **Následná výkonová regrese — příčina byla jinde, než by se čekalo.** Postgres slévá všechny RLS policy
+  do jednoho **per-row** filtru. Dokud existovala `USING (true)`, byl filtr triviálně pravdivý a drahé
+  členy se nikdy nevyhodnotily. Po jejím odstranění se `is_admin()` volalo **na každý řádek**, a protože
+  `is_admin()` **není** SECURITY DEFINER, každé volání znovu četlo `user_roles` pod jeho vlastní RLS,
+  jejíž policy volá `is_superadmin()` a `has_admin_permission()`. Na fixtuře se 126 327 řádky (přesná
+  kopie produkční BMW soutěže) to dělalo `Execution Time: 26630.189 ms` — statement timeout pro admina
+  i pro poslední neomezené zákaznické čtení. **F1 se ale nevracelo zpět**; opravoval se jen náklad.
+- **Oprava výkonu** (migrace `20260825150755_bonus_prizes_rls_perf_initplan`), tři minimální části:
+  (1) nová `public.is_admin_for_rls()` — SECURITY DEFINER se `search_path=''`, takže lookup do
+  `user_roles` je jeden levný index probe místo vnořené RLS; sémanticky totožná s `is_admin()`, takže
+  drift účty dál fungují; bez `anon` EXECUTE. (2) Policy přepsána na `USING ((SELECT is_admin_for_rls()))`
+  — **skalární poddotaz je to, co náklad reálně odstraní**, protože planner ho povýší na **InitPlan**
+  vyhodnocený jednou za statement. (3) `ContestDetail` přestal volat `get_contest_miocoin_bonus`
+  (invoker funkce, dědila celý per-row náklad — sekundy pro přihlášeného, tvrdá `42501` pro anonyma, což
+  byla ta console chyba po F1 publishi) a bere `miocoin_total` z katalogového RPC, které už načítá.
+  Funkce nebyla smazána, jen převedena na SECURITY DEFINER; ověřeno, že měla **jediného volajícího**
+  (`ContestDetail`) a **nula** DB závislostí. Signatura musela zůstat `RETURNS integer` — `CREATE OR
+  REPLACE` neumí změnit návratový typ a produkční funkce vrací `integer`; první návrh s `numeric` by na
+  produkci spadl a byl opraven ještě před nasazením.
+- **Vědomě nedotčeno:** pre-existující ALL policy „Allow admin full access to bonus prizes". Přispívá
+  posledním per-row členem, ale její výraz se liší mezi prostředími (staging `is_superadmin()`, produkce
+  `EXISTS` nad `users.role`) a přepis by změnil, **kdo má admin zápis** — na produkci by nově dal zápis
+  driftovanému adminovi. Odstraněním posledního neomezeného zákaznického skenu je to bezpředmětné a
+  produkční plán navíc ukazuje, že i tento člen se hoistne do InitPlan 2 se stavem `never executed`.
+- **Naměřeno na produkci po nasazení** (126 327 řádků): admin agregát **39,2 ms** (`InitPlan 1` →
+  `Result`, `InitPlan 2` → `never executed`), plné čtení všech řádků s pozicemi **1,87 s**,
+  `get_contest_miocoin_bonus` pro anonyma **125000** bez chyby, pro zákazníka **467 ms** warm.
+- **Bezpečnost ověřena na produkci** (read-only, v transakci s ROLLBACK): běžný zákazník vidí v BMW
+  soutěži **13** vyřešených řádků a **0** pending — globálně 0 pending; superadmin i driftovaný admin
+  vidí všech **126 327** řádků včetně pozic. Katalog vrací 365+359+345+258 = **1 327** věcných kusů a
+  **125 000** MioCoinů, což přesně dává 126 327 — bez jediné pozice.
+- **Testy.** `tsc -p tsconfig.app.json --noEmit` 17 chyb = nezměněná pre-existující baseline; `npm run
+  build` OK. Staging P0 smoke: relevantní specy **04 (nákup tiketu), 05 (výhra), 09 (peněženka)** prošly.
+  Selhaly 4 specy, žádný z nich změnou dotčený: **29, 31, 32** selhávaly už 9. 8. 2026 na pre-F1 SHA
+  (pre-existující), **03** je mezera v seedu P0 workflow — P0 seeduje voucher pod jiným názvem
+  („P0 Spec03 Voucher") a bez ceny, zatímco spec hledá „E2E Spec03 Voucher" za 5 MioCoinů. Doloženo
+  proti-testem: spec 03 ve full staging workflow prošel **na baseline `7c23009e` i na `8770817f`**.
+- **Produkční data nebyla změněna.** Obě migrace mění jen policy a definice funkcí — žádný UPDATE,
+  DELETE ani backfill. Žádná Edge Function se nenasazovala.
+- **Otevřeno:** `buy_ticket_atomic` dál vrací `next_bonus_position` a `distance_to_next_bonus`
+  (produktové rozhodnutí, ne technická překážka) a nálezy **F2–F7** ze zákaznického auditu.
+
 # 23. 08. 2026 — Provizní systém: tři blokátory opraveny a nasazeny do produkce
 
 Tento zápis je novější než zápisy níže, které byly v době svého vzniku pravdivé. Vychází z read-only auditu produkce i stagingu, staging DB E2E a produkčního nasazení se schválením Pavla.

@@ -47,6 +47,51 @@ výslovné schválení Pavla.
 
 ---
 
+# BUDOUCÍ VÝHERNÍ POZICE — TRVALÉ INVARIANTY (produkce, 25. 08. 2026)
+
+**Produkčně nasazeno.** Migrace `20260825141826_bonus_prizes_hide_future_winning_positions` (F1) a
+`20260825150755_bonus_prizes_rls_perf_initplan` (výkon) jsou na produkci `xkzhjldrojjlrkezorey`.
+`main` = `8770817f`. **Lovable Publish k datu zápisu neproběhl.**
+
+**Řešená chyba (F1, kritická):** `public.bonus_prizes` měla dvě SELECT policy s `USING (true)`, takže
+kterýkoli přihlášený zákazník viděl všechny dosud nezískané výherní pozice živé soutěže. Protože
+`contests.next_ticket_number` je veřejné a tikety se vydávají sekvenčně, byla soutěž **deterministicky
+farmovatelná**. Produkce měla takto odhalených **165 289 pozic** ve 2 aktivních soutěžích.
+
+**Závazné invarianty (neměnit bez výslovného schválení Pavla):**
+
+- **Zákazník nikdy nesmí přečíst řádek `bonus_prizes` se `status='pending'`.** Drží to policy
+  `bonus_prizes_select_resolved` (`status IS DISTINCT FROM 'pending'`). **Nevracet `USING (true)`**
+  ani jinou plošnou čtecí policy — byla to přesně příčina F1.
+- **Rozlišení admin/zákazník musí být uvnitř RLS, ne v GRANTech.** Admin se přihlašuje přes **tutéž**
+  roli `authenticated` jako zákazník, takže `REVOKE SELECT` by oslepil i admin UI.
+- **Admin větev musí zůstat ve tvaru `USING ((SELECT public.is_admin_for_rls()))`.** Skalární poddotaz
+  je to, co planner povýší na **InitPlan** vyhodnocený jednou za statement. Holé volání
+  `USING (public.is_admin_for_rls())` se vyhodnocuje **na každý řádek** — u soutěže se 126 327 řádky
+  to dělalo **26,6 s** místo 39 ms, tedy statement timeout. **Poddotaz neodstraňovat.**
+- **`public.is_admin_for_rls()` musí zůstat `SECURITY DEFINER` se `search_path=''`.** Jako invoker
+  funkce by lookup do `user_roles` běžel pod jeho vlastní RLS, jejíž policy volá `is_superadmin()`
+  a `has_admin_permission()` — přesně ten vnořený výpočet, který regresi způsobil. Bez `anon` EXECUTE.
+- **Kontrola admina jde přes kanonické `user_roles`, ne přes `public.users.role`.** Produkce má drift
+  (účet s `user_roles.role='admin'` a `users.role='user'`); přes `users.role` by o přístup přišel.
+- **Pre-existující ALL policy „Allow admin full access to bonus prizes" se vědomě nepřepisuje.** Její
+  výraz se liší mezi prostředími (staging `is_superadmin()`, produkce `EXISTS` nad `users.role`) a
+  přepis by změnil, **kdo má admin zápis** — na produkci by nově dal zápis driftovanému adminovi.
+- **Veřejná stránka soutěže nesmí číst `bonus_prizes` napřímo.** Používá `get_contest_bonus_catalogue(uuid)`
+  — vrací jen *co* lze vyhrát (seskupené kusy + agregáty MioCoinů), **nikdy pozici**. Uvnitř má
+  `LEFT JOIN` z jednořádkové `agg` CTE, aby soutěž bez věcných výher stále vracela agregáty.
+- **`get_contest_miocoin_bonus` musí zůstat `RETURNS integer`** — `CREATE OR REPLACE` neumí změnit
+  návratový typ a produkční funkce vrací `integer`. Aplikace ji už nevolá (`ContestDetail` bere
+  `miocoin_total` z katalogového RPC), je ale `SECURITY DEFINER` kvůli případnému budoucímu volajícímu.
+- **`MyContestDetail` načítá jen ceny z vlastních `winners` řádků** (`.in('id', prizeIds)`), nikdy celou
+  soutěž.
+- **Nedotčeno a neměnit:** `buy_ticket_atomic`, `assign_contest_ticket_atomic` (SECURITY DEFINER, čte
+  `bonus_prizes` jako vlastník — vyhodnocení výher je beze změny), zápisové policy, wallets, ledger.
+- **Otevřené produktové rozhodnutí (vědomě neřešeno):** `next_bonus_position` a
+  `distance_to_next_bonus` z `buy_ticket_atomic` stále nesou informaci o vzdálenosti k další výhře.
+
+---
+
 # PROVIZNÍ SYSTÉM — TRVALÉ INVARIANTY (produkce, 23. 08. 2026)
 
 **Produkčně nasazeno.** Migrace `20260823145341_admin_mark_partner_invoice_paid` a

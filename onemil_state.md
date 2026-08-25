@@ -2,6 +2,32 @@
 
 > **Autoritativní aktuální stav. Poslední aktualizace 23. 8. 2026 podle `origin/main` (`c4df929b`), GitHubu a read-only produkční kontroly Supabase.**
 
+## 0. Budoucí výherní pozice — stav k 25. 8. 2026 (nasazeno do produkce)
+
+Tato sekce je nejnovější a přebíjí vše níže v oblasti čtení `bonus_prizes`.
+
+| Oblast | Aktuální stav |
+|---|---|
+| Únik budoucích výherních pozic (audit F1, kritický) | **Opraveno a nasazeno.** `public.bonus_prizes` už nemá plošné `USING (true)` SELECT policy. Zákazník vidí jen vyřešené ceny (`bonus_prizes_select_resolved`), admin/superadmin vše (`bonus_prizes_select_admin`). Před opravou bylo na produkci odhaleno **165 289** nezískaných pozic ve 2 aktivních soutěžích a soutěž byla deterministicky farmovatelná. |
+| Veřejný výpis cen na stránce soutěže | **Přepnuto na `get_contest_bonus_catalogue(uuid)`** — vrací jen *co* lze vyhrát (seskupené kusy + agregáty MioCoinů), nikdy pozici. |
+| Výkonová regrese způsobená F1 | **Opraveno a nasazeno.** Nová `is_admin_for_rls()` (SECURITY DEFINER) + policy ve tvaru `USING ((SELECT ...))` → planner vyhodnotí admin větev jako **InitPlan** jednou za statement místo na každý řádek. Agregát nad soutěží se 126 327 řádky: **26 630 ms → 39 ms**. |
+| `ContestDetail` a `get_contest_miocoin_bonus` | Stránka RPC už **nevolá**; `miocoin_total` bere z katalogového RPC načteného ve stejném průchodu. Funkce zůstává (jediný volající v repu byl `ContestDetail`, nula DB závislostí) a je nově `SECURITY DEFINER`, takže případný budoucí volající nespadne na timeout ani na `42501`. |
+| Vyhodnocení výher, peněženka, ledger | **Beze změny.** `buy_ticket_atomic` i `assign_contest_ticket_atomic` čtou `bonus_prizes` jako SECURITY DEFINER vlastník; zápisové policy, wallets ani ledger se nedotkly. |
+| Produkční data | **Nezměněna.** Obě migrace mění pouze policy a definice funkcí; žádný UPDATE/DELETE, žádný backfill. |
+
+**Aplikované produkční migrace (25. 8. 2026, schválení Pavla):**
+`20260825141826_bonus_prizes_hide_future_winning_positions`, `20260825150755_bonus_prizes_rls_perf_initplan`.
+`main` = `8770817f`. Žádná Edge Function se nenasazovala.
+
+**⏳ Lovable Publish k datu zápisu NEPROBĚHL.** Frontend je připravený a publish je bezpečný v libovolném
+pořadí: starý živý build dál volá `get_contest_miocoin_bonus`, která po migraci funguje (definer).
+
+**OPEN ISSUE (vědomě neopraveno):** `buy_ticket_atomic` dál vrací `next_bonus_position` a
+`distance_to_next_bonus`, tedy vzdálenost k další výhře. Je to produktové rozhodnutí, ne technická
+překážka. Rovněž otevřené zůstávají nálezy **F2–F7** ze zákaznického auditu.
+
+---
+
 ## 0a. Provizní systém — stav k 23. 8. 2026 (nasazeno do produkce)
 
 Tato sekce je novější než přehled níže a přebíjí ho v oblasti provizí.
