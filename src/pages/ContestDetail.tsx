@@ -65,6 +65,20 @@ type BonusPrize = {
   ticket_position?: number | null;
 };
 
+/**
+ * Row of get_contest_bonus_catalogue(): the customer-safe view of a contest's
+ * bonus prizes — WHAT can be won and how many of each, never WHERE
+ * (ticket_position is deliberately absent). See migration 20260825120000.
+ */
+type BonusCatalogueRow = {
+  description: string | null;
+  detailed_description: string | null;
+  image_url: string | null;
+  quantity: number;
+  miocoin_positions: number;
+  miocoin_total: number;
+};
+
 type Winner = {
   id: string;
   prize: string;
@@ -139,7 +153,10 @@ export default function ContestDetail() {
   const [contest, setContest] = useState<Contest | null>(null);
   const [loading, setLoading] = useState(true);
 
-  const [bonusPrizes, setBonusPrizes] = useState<BonusPrize[]>([]);
+  const [bonusCatalogue, setBonusCatalogue] = useState<BonusCatalogueRow[]>([]);
+  // Group keys ("description||detailed_description") the current user has won —
+  // resolved from their own winner rows, used only to highlight their win.
+  const [myWonPrizeKeys, setMyWonPrizeKeys] = useState<Set<string>>(new Set());
   /** Sum of `bonus_prizes.amount` for coin rows (amount > 0); physical rows use null/0 amount */
   const [miocoinBonusPoolTotal, setMiocoinBonusPoolTotal] = useState(0);
   /** Count of MioCoin bonus prize positions (bonus_prizes rows with amount > 0) */
@@ -574,43 +591,25 @@ export default function ContestDetail() {
         const storedMiocoinTotal = Number((contestData as any).total_miocoin_bonus ?? 0);
         setMiocoinBonusPoolTotal(rpcMiocoinTotal > 0 ? rpcMiocoinTotal : storedMiocoinTotal);
 
-        // Count of MioCoin bonus positions (amount > 0). head:true count is exact,
-        // not capped by the 1000-row PostgREST limit. Partner Offers are NOT in
-        // bonus_prizes, so this never includes them.
-        const { count: coinCount, error: coinCountError } = await supabase
-          .from("bonus_prizes")
-          .select("id", { count: "exact", head: true })
-          .eq("contest_id", id)
-          .gt("amount", 0);
-        if (coinCountError) {
-          console.error('[ContestDetail] miocoin positions count error:', coinCountError);
+        // === Bonusové výhry — POUZE přes position-free katalog ===
+        // bonus_prizes se z klienta nečte přímo: řádky nesou ticket_position,
+        // tedy budoucí výherní pozice. Protože se tikety vydávají sekvenčně,
+        // znalost pozic dělá ze soutěže deterministicky vytěžitelnou hru
+        // (viz migrace 20260825120000). RPC vrací jen KATALOG (co lze vyhrát
+        // a v jakém počtu) + agregáty, nikdy pozice.
+        const { data: catalogue, error: catalogueError } = await supabase
+          .rpc("get_contest_bonus_catalogue", { p_contest_id: id });
+        if (catalogueError) {
+          console.error('[ContestDetail] bonus catalogue RPC error:', catalogueError);
         }
-        setMiocoinBonusPositions(coinCount ?? 0);
+        const catalogueRows = (catalogue ?? []) as BonusCatalogueRow[];
 
-        // === Fyzické bonusové ceny — stránkované načtení VŠECH řádků, BEZ stropu ===
-        // Může jich být klidně 10 000 nebo 50 000; načítáme po stránkách dokud chodí data.
-        const PHYS_PAGE = 1000;
-        let physFrom = 0;
-        const physical: BonusPrize[] = [];
-        // Hard safety cap proti nekonečné smyčce (1M řádků = 1000 stránek).
-        for (let guard = 0; guard < 1000; guard++) {
-          const { data: pageData, error: pageError } = await supabase
-            .from("bonus_prizes")
-            .select("id, contest_id, description, detailed_description, amount, image_url, ticket_position")
-            .eq("contest_id", id)
-            .or("amount.is.null,amount.eq.0")
-            .order("ticket_position", { ascending: true })
-            .range(physFrom, physFrom + PHYS_PAGE - 1);
-          if (pageError) {
-            console.error('[ContestDetail] physical bonus fetch error:', pageError);
-            break;
-          }
-          if (!pageData || pageData.length === 0) break;
-          physical.push(...(pageData as BonusPrize[]));
-          if (pageData.length < PHYS_PAGE) break;
-          physFrom += PHYS_PAGE;
-        }
-        setBonusPrizes(physical);
+        // Agregáty přijdou na každém řádku (i na tom s description = null,
+        // který vznikne u soutěže bez věcných cen).
+        const coinPositions = Number(catalogueRows[0]?.miocoin_positions ?? 0);
+        setMiocoinBonusPositions(coinPositions);
+
+        setBonusCatalogue(catalogueRows.filter((r) => r.description !== null));
 
         const { data: auth } = await supabase.auth.getUser();
         const uid = auth?.user?.id ?? null;
@@ -632,6 +631,32 @@ export default function ContestDetail() {
             prize: "",
             bonus_prize_id: w.prize_id ?? null,
           }));
+
+          // Resolve WHICH catalogue entries this user won. Reading these rows is
+          // allowed by RLS because a won prize is no longer 'pending' — it leaks
+          // nothing about future positions.
+          const wonPrizeIds = nextMyWins
+            .map((w) => w.bonus_prize_id)
+            .filter((x): x is string => !!x);
+
+          if (wonPrizeIds.length > 0) {
+            const { data: wonPrizes, error: wonPrizesError } = await supabase
+              .from("bonus_prizes")
+              .select("description, detailed_description")
+              .in("id", wonPrizeIds);
+            if (wonPrizesError) {
+              console.error('[ContestDetail] won prizes fetch error:', wonPrizesError);
+            }
+            setMyWonPrizeKeys(
+              new Set(
+                (wonPrizes ?? []).map(
+                  (p) => `${p.description ?? ''}||${p.detailed_description ?? ''}`,
+                ),
+              ),
+            );
+          } else {
+            setMyWonPrizeKeys(new Set());
+          }
         }
 
         console.log('[DEBUG ContestDetail] setMyWins:', nextMyWins.length, 'items');
@@ -712,33 +737,42 @@ export default function ContestDetail() {
   // making their image_url values differ even though they represent the same product.
   // The first row in each group is used as the representative card/image/modal data.
   // MioCoin bonuses (amount > 0) each get their own group key so they remain individual.
-  const groupedBonusPrizes = useMemo(() => {
-    const groups = new Map<string, { prize: BonusPrize; ids: string[]; imageUrl: string | null }>();
-    for (const b of bonusPrizes) {
-      const isMioCoin = (b.amount ?? 0) > 0;
-      // MioCoin entries are unique per ticket position — use id as group key
-      const key = isMioCoin
-        ? b.id
-        : `${b.description ?? ''}||${b.detailed_description ?? ''}`;
+  /** Total number of physical bonus prizes (sum of per-prize quantities). */
+  const physicalBonusCount = useMemo(
+    () => bonusCatalogue.reduce((sum, r) => sum + Number(r.quantity ?? 0), 0),
+    [bonusCatalogue],
+  );
 
-      if (groups.has(key)) {
-        groups.get(key)!.ids.push(b.id);
-      } else {
-        let imgUrl: string | null = null;
-        if (b.image) {
-          imgUrl = b.image.startsWith('http')
-            ? b.image
-            : supabase.storage.from('contest-images').getPublicUrl(b.image).data.publicUrl;
-        } else if (b.image_url) {
-          imgUrl = b.image_url.startsWith('http')
-            ? b.image_url
-            : supabase.storage.from('contest-images').getPublicUrl(b.image_url).data.publicUrl;
-        }
-        groups.set(key, { prize: b, ids: [b.id], imageUrl: imgUrl });
+  /**
+   * The catalogue arrives already grouped from the DB (one row per distinct
+   * physical prize + quantity), so this only resolves the image URL and marks
+   * whether the current user won that prize. No ticket positions involved.
+   */
+  const groupedBonusPrizes = useMemo(() => {
+    return bonusCatalogue.map((row) => {
+      const key = `${row.description ?? ''}||${row.detailed_description ?? ''}`;
+      let imgUrl: string | null = null;
+      if (row.image_url) {
+        imgUrl = row.image_url.startsWith('http')
+          ? row.image_url
+          : supabase.storage.from('contest-images').getPublicUrl(row.image_url).data.publicUrl;
       }
-    }
-    return Array.from(groups.values());
-  }, [bonusPrizes]);
+      return {
+        key,
+        prize: {
+          id: key,
+          contest_id: id ?? '',
+          description: row.description,
+          detailed_description: row.detailed_description,
+          amount: null,
+          image_url: row.image_url,
+        } as BonusPrize,
+        count: Number(row.quantity ?? 0),
+        imageUrl: imgUrl,
+        isMyWin: myWonPrizeKeys.has(key),
+      };
+    });
+  }, [bonusCatalogue, myWonPrizeKeys, id]);
 
   if (loading) {
     return (
@@ -1052,7 +1086,7 @@ export default function ContestDetail() {
             <p className="text-sm md:text-base text-gray-200 leading-relaxed">
               V této soutěži je celkem{" "}
               <span className="text-[#FFB547] font-bold text-2xl md:text-3xl">
-                {(miocoinBonusPositions + bonusPrizes.length).toLocaleString("cs-CZ")}
+                {(miocoinBonusPositions + physicalBonusCount).toLocaleString("cs-CZ")}
               </span>{" "}
               dalších výher.
             </p>
@@ -1150,13 +1184,10 @@ export default function ContestDetail() {
           <p className="text-gray-500 text-sm py-4 text-center">Zatím nebyly přidány žádné věcné bonusové výhry.</p>
         ) : (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
-            {groupedBonusPrizes.map(({ prize: b, ids, imageUrl: bonusImageUrl }) => {
-              const count = ids.length;
-              const isMyWin = myWins.some((w) => ids.includes(w.bonus_prize_id ?? ''));
-
+            {groupedBonusPrizes.map(({ key, prize: b, count, imageUrl: bonusImageUrl, isMyWin }) => {
               return (
                 <button
-                  key={b.id}
+                  key={key}
                   type="button"
                   onClick={() => {
                     console.log('[DEBUG ContestDetail] setSelectedBonusPrize:', b.id);

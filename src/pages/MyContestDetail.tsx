@@ -87,15 +87,39 @@ const MyContestDetail: React.FC = () => {
     }
   };
 
+  /**
+   * Loads ONLY the bonus prizes this user actually won in this contest.
+   *
+   * Previously this pulled every bonus_prizes row of the contest (including
+   * ticket_position of still-pending prizes) even though the data is used for
+   * nothing but naming the user's own wins below. Reading future winning
+   * positions is what made the contest farmable — see migration
+   * 20260825120000. Won rows are no longer 'pending', so RLS allows this.
+   */
   const fetchBonusPrizes = async () => {
     try {
-      if (!id) return;
-      
+      if (!id || !user) return;
+
+      const { data: myWins, error: winsError } = await supabase
+        .from('winners')
+        .select('prize_id')
+        .eq('user_id', user.id)
+        .eq('contest_id', id);
+      if (winsError) throw winsError;
+
+      const prizeIds = (myWins ?? [])
+        .map((w) => w.prize_id)
+        .filter((x): x is string => !!x);
+
+      if (prizeIds.length === 0) {
+        setBonusPrizes([]);
+        return;
+      }
+
       const { data, error } = await supabase
         .from('bonus_prizes')
         .select('id, description, ticket_position, status, amount')
-        .eq('contest_id', id)
-        .order('ticket_position', { ascending: true });
+        .in('id', prizeIds);
 
       if (error) throw error;
       setBonusPrizes(data || []);
