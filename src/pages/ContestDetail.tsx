@@ -578,19 +578,6 @@ export default function ContestDetail() {
         setContest(contestData as Contest);
         setProgressTicketsTotal(contestData.ticket_count ?? 1_000_000);
 
-        // === Bonusové MioCoiny (součet) — přes RPC, obchází 1000-row cap PostgRESTu ===
-        const { data: poolSum, error: poolError } = await supabase
-          .rpc("get_contest_miocoin_bonus", { p_contest_id: id });
-        if (poolError) {
-          console.error('[ContestDetail] miocoin pool RPC error:', poolError);
-        }
-        // Fall back to the contest's stored total (contests.total_miocoin_bonus,
-        // kept in sync after bulk MioCoin save) when the RPC returns 0/null/errors,
-        // so the box never shows 0 MioCoins when bonuses are actually configured.
-        const rpcMiocoinTotal = Number(poolSum ?? 0);
-        const storedMiocoinTotal = Number((contestData as any).total_miocoin_bonus ?? 0);
-        setMiocoinBonusPoolTotal(rpcMiocoinTotal > 0 ? rpcMiocoinTotal : storedMiocoinTotal);
-
         // === Bonusové výhry — POUZE přes position-free katalog ===
         // bonus_prizes se z klienta nečte přímo: řádky nesou ticket_position,
         // tedy budoucí výherní pozice. Protože se tikety vydávají sekvenčně,
@@ -608,6 +595,18 @@ export default function ContestDetail() {
         // který vznikne u soutěže bez věcných cen).
         const coinPositions = Number(catalogueRows[0]?.miocoin_positions ?? 0);
         setMiocoinBonusPositions(coinPositions);
+
+        // Součet MioCoinů bere rovnou z katalogu. Dřív se na to volalo zvlášť
+        // get_contest_miocoin_bonus, jenže ta funkce NENÍ security definer, takže
+        // po zavedení RLS na bonus_prizes (migrace 20260825120000) skenovala
+        // 126 tisíc řádků pod per-row policy a trvala sekundy (u anonyma rovnou
+        // padala na 42501). Katalogové RPC je SECURITY DEFINER a stejnou hodnotu
+        // vrací okamžitě v už provedeném dotazu.
+        // Fallback na contests.total_miocoin_bonus zůstává, aby box nikdy
+        // neukázal 0, když bonusy nastavené jsou.
+        const rpcMiocoinTotal = Number(catalogueRows[0]?.miocoin_total ?? 0);
+        const storedMiocoinTotal = Number((contestData as any).total_miocoin_bonus ?? 0);
+        setMiocoinBonusPoolTotal(rpcMiocoinTotal > 0 ? rpcMiocoinTotal : storedMiocoinTotal);
 
         setBonusCatalogue(catalogueRows.filter((r) => r.description !== null));
 
