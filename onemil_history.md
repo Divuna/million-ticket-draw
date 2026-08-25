@@ -59,6 +59,14 @@ auditu zákaznické části, staging reprodukce, produkčního nasazení se schv
   (pre-existující), **03** je mezera v seedu P0 workflow — P0 seeduje voucher pod jiným názvem
   („P0 Spec03 Voucher") a bez ceny, zatímco spec hledá „E2E Spec03 Voucher" za 5 MioCoinů. Doloženo
   proti-testem: spec 03 ve full staging workflow prošel **na baseline `7c23009e` i na `8770817f`**.
+- **Full staging E2E na `main`** (run `32865599644`, SHA `8770817f`): **634 passed / 9 failed**, běh pak
+  narazil na **30minutový `timeout-minutes` limit** workflow a byl useknut (není to selhání testu — job
+  se nestihl dojet, report se neuploadoval). Všech 9 selhání jsou **statické kontraktní specy** (běh
+  3–15 ms) ze sales-leads / discovery / admin-partners-nav / partner-guides: `111`, `118`, `123`, `133`,
+  `64`, `65`. Doloženo, že jde o **pre-existující** stav: jsou **podmnožinou** 15 selhávajících spec
+  souborů z předchozího full běhu na `main` (`b5d59be1`, run `32836971452`) — tedy před F1 i před touto
+  opravou. **Žádné nové selhání.** Všechny specy dotčené oblasti prošly: `03` nákup tiketu i voucheru,
+  `04` nákup tiketu, `05` výhra, `06` Partner Offers, `09` a `10` peněženka, `103` privacy výherců.
 - **Produkční data nebyla změněna.** Obě migrace mění jen policy a definice funkcí — žádný UPDATE,
   DELETE ani backfill. Žádná Edge Function se nenasazovala.
 - **Otevřeno:** `buy_ticket_atomic` dál vrací `next_bonus_position` a `distance_to_next_bonus`
