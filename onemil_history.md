@@ -1,3 +1,56 @@
+# 26. 08. 2026 — F4: `get_due_offer_reminder_rows` vydávala zákaznické e-maily anonymům
+
+Tento zápis je novější než zápisy níže, které byly v době svého vzniku pravdivé. Vychází z reprodukce
+na stagingu, produkčního nasazení se schválením Pavla a read-only kontroly produkční cron cesty.
+
+- **Nález F4 (kritický), doložený reprodukcí.** `public.get_due_offer_reminder_rows()` je
+  `SECURITY DEFINER`, byla `anon`-volatelná a vrací **zákaznické e-maily**: joinuje `auth.users`
+  a vybírá `au.email AS user_email` pro každý čekající Partner Offer reminder, spolu s `user_id`,
+  nabídkou a partnerem. Jako `SECURITY DEFINER` obchází RLS úplně, takže **jediné, co stálo před
+  daty, byl EXECUTE grant — a ten byl otevřený**. Na stagingu jako role `anon` (v transakci
+  s ROLLBACK) vrátila **582 řádků / 6 unikátních zákaznických e-mailů**. Staging i produkce měly
+  byte-identickou definici (md5 `31d14980…`), nešlo o drift.
+- **Jediný skutečný volající je Edge Function `send-offer-reminders`**, která běží pod
+  `service_role`. Ověřený řetězec: `pg_cron job 24 (0 8 * * *)` → `run_send_offer_reminders_cron()`
+  (`SECURITY DEFINER`, `anon=false`, `authenticated=false` už předtím) → EF (`verify_jwt=false`,
+  guard `x-internal-token`) → `createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY)` →
+  `.rpc("get_due_offer_reminder_rows")`. Jiný volající nikde neexistuje — žádné `.rpc()` v `src/`,
+  žádná jiná EF, žádná DB funkce, žádný view. Žádná frontendová ani admin obrazovka ji nepotřebuje,
+  proto bylo odebráno i `authenticated`, nejen `anon`.
+- **Oprava** (migrace `20260826111549_offer_reminder_rows_internal_only`): **pouze granty.**
+  `REVOKE` pro `PUBLIC`, `anon` i `authenticated`, `GRANT EXECUTE` jen pro `service_role`. Tělo
+  funkce se nesáhlo vůbec — `prosrc` zůstalo byte-identické (md5 `c7f5dab5…`, 1124 znaků), takže
+  způsobilost, výběr uživatelů, okna 24 h / 7 dní i obsah e-mailu jsou prokazatelně nezměněné.
+  Vzorem je `run_send_offer_reminders_cron()` ve stejném flow, zamčená rovněž jen granty.
+- **Oprava dřívějšího tvrzení.** Při produkčním postchecku se ukázalo, že reminder cesta **není
+  nečinná**: běh 26. 08. 2026 v 08:00 UTC vrátil
+  `{"success":true,"emails_queued":8,"offers_touched":44}`. To, že RPC vracela v době auditu
+  0 řádků, znamenalo jen to, že je ranní běh právě spotřeboval a nastavil `last_reminder_at`.
+  Riziko tedy nebylo vzdálené a teoretické — reminders dozrávají denně a **anonymní volající by je
+  kdykoli mezi dozráním a během v 08:00 dostal i se zákaznickými e-maily**. Odhad pro příští běh:
+  ~3 řádky / 2 uživatelé.
+- **Produkční postcheck (6 kontrol) prošel**, vše v transakci s ROLLBACK: `anon`, běžný zákazník,
+  admin, superadmin i produkční drift admin `bc116802-…` dostali `42501 permission denied`;
+  `service_role` funguje a vrací správný 10sloupcový tvar (`upo_id, user_id, offer_id, obtained_at,
+  last_reminder_at, offer_title, offer_short_text, valid_to, partner_display_name, user_email`).
+  Cílové ACL je přesně `postgres=X/postgres | service_role=X/postgres` — bez `PUBLIC`, `anon`
+  i `authenticated` záznamu.
+- **Cron cesta ověřena read-only, bez vyvolání e-mailu.** Cron job 24 aktivní (`0 8 * * *`),
+  `run_send_offer_reminders_cron()` beze změny (`secdef`, `anon=false`, `authenticated=false`),
+  Vault klíče `internal_function_token` a `edge_functions_url` existují (hodnoty se nevypisovaly),
+  posledních 5 běhů `succeeded` a dnešní HTTP odpověď EF byla `200`.
+- **Poctivé omezení stagingu:** EF `send-offer-reminders` ani její cron **na stagingu neexistují** —
+  reminder flow je jen produkční. Staging ověření proto proběhlo replayem DB kroků EF pod
+  `service_role` v transakci s ROLLBACK: 582 due řádků → 6 e-mailů do fronty (1 na uživatele) →
+  582 updatů `last_reminder_at`. Nic neuniklo: `email_queue` šla 1733 → 1739 a zpět na 1733,
+  0 reziduí, 0 posunutých `last_reminder_at`. **Žádný e-mail během testů neodešel.**
+- **Testy:** `tsc -p tsconfig.app.json --noEmit` 17 chyb = nezměněná baseline, `npm run build` OK,
+  spec 06 Partner Offers ✅ (run `32963668917`), spec 07 ✅ skipped (run `32963498427`),
+  spec 08 ✅ skipped (run `32963275674`) — vše na `main` = `9509f9b3`.
+- **Zaznamenáno, vědomě neopraveno:** `notify_referral_reward_multi()` je `anon`-grantovaná a čte
+  `auth.users`, ale `RETURNS trigger` a je navázaná na reálný trigger — PostgREST ji jako RPC volat
+  neumí, grant je inertní. Otevřené zůstávají i nálezy **F5–F7**.
+
 # 26. 08. 2026 — F3: `get_admin_actions_summary` vydávala admin e-maily a admin akce anonymům
 
 Tento zápis je novější než zápisy níže, které byly v době svého vzniku pravdivé. Vychází z reprodukce

@@ -2,6 +2,33 @@
 
 > **Autoritativní aktuální stav. Poslední aktualizace 23. 8. 2026 podle `origin/main` (`c4df929b`), GitHubu a read-only produkční kontroly Supabase.**
 
+## 0. Partner Offer reminders (F4) — stav k 26. 8. 2026 (nasazeno do produkce)
+
+Tato sekce je nejnovější a přebíjí vše níže v oblasti reminder RPC.
+
+| Oblast | Aktuální stav |
+|---|---|
+| Anon-volatelná `get_due_offer_reminder_rows()` (audit F4, kritický) | **Opraveno a nasazeno.** Funkce je `SECURITY DEFINER`, byla `anon`-volatelná a vrací zákaznické e-maily (`JOIN auth.users` → `au.email AS user_email`). Jako `SECURITY DEFINER` obchází RLS, takže jediné, co stálo před daty, byl EXECUTE grant. Na stagingu jako `anon` vrátila **582 řádků / 6 unikátních zákaznických e-mailů**. |
+| Nový stav grantů | `anon`, `PUBLIC` i `authenticated` odebráno; zůstává **jen `service_role`**. ACL je přesně `postgres=X/postgres \| service_role=X/postgres`. Admin ani superadmin přímý EXECUTE nemají — nepotřebují ho. |
+| Tělo funkce | **Byte-identické** (md5 `c7f5dab5…`, 1124 znaků). Způsobilost, výběr uživatelů, okna 24 h / 7 dní i obsah e-mailu jsou nezměněné. |
+| Interní cesta | Nedotčená: `cron 24 (0 8 * * *)` → `run_send_offer_reminders_cron()` → EF `send-offer-reminders` (`x-internal-token`) → klient se `SUPABASE_SERVICE_ROLE_KEY` → RPC. `service_role` ověřeně funguje a vrací správný 10sloupcový tvar. |
+| Reálný provoz reminderů | **Živý, ne nečinný.** Běh 26. 8. 2026 v 08:00 UTC: `{"success":true,"emails_queued":8,"offers_touched":44}`. Že RPC vrací teď 0 řádků, znamená jen to, že je ranní běh spotřeboval. Při příštím běhu vyjde ~3 řádky / 2 uživatelé. |
+| Produkční data | **Nezměněna.** Migrace mění pouze granty; žádný e-mail neodeslán, `email_queue` ani `user_partner_offers` nedotčeny. |
+
+**Aplikovaná produkční migrace (26. 8. 2026, schválení Pavla):**
+`20260826111549_offer_reminder_rows_internal_only`. `main` = `9509f9b3`.
+**Lovable Publish není potřeba — frontend se nemění.** Žádná Edge Function se nenasazovala.
+
+**Poznámka k testování (důležitá pro budoucí práci):** reminder flow existuje **pouze na produkci** —
+na stagingu není nasazená EF `send-offer-reminders` ani žádný offer cron job. Staging ověření se proto
+dělá replayem DB kroků EF pod `service_role` v transakci s ROLLBACK, nikdy skutečným voláním EF.
+
+**OPEN ISSUE (vědomě neopraveno):** `notify_referral_reward_multi()` je `anon`-grantovaná a čte
+`auth.users`, ale `RETURNS trigger` — PostgREST ji jako RPC volat neumí, grant je inertní.
+**Otevřené zůstávají nálezy F5–F7** ze zákaznického auditu.
+
+---
+
 ## 0. Admin audit RPC (F3) — stav k 26. 8. 2026 (nasazeno do produkce)
 
 Tato sekce je nejnovější a přebíjí vše níže v oblasti admin audit RPC.

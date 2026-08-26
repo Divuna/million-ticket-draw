@@ -47,6 +47,51 @@ výslovné schválení Pavla.
 
 ---
 
+# PARTNER OFFER REMINDERS — TRVALÉ INVARIANTY (produkce, 26. 08. 2026)
+
+**Produkčně nasazeno.** Migrace `20260826111549_offer_reminder_rows_internal_only` (F4) je na produkci
+`xkzhjldrojjlrkezorey`. `main` = `9509f9b3`. **Lovable Publish není potřeba — frontend se nemění.**
+
+**Řešená chyba (F4, kritická):** `public.get_due_offer_reminder_rows()` je `SECURITY DEFINER`,
+byla `anon`-volatelná a vrací **zákaznické e-maily** — joinuje `auth.users` a vybírá
+`au.email AS user_email` pro každý čekající Partner Offer reminder. Jako `SECURITY DEFINER` obchází
+RLS úplně, takže **jediné, co stálo před daty, byl EXECUTE grant**. Na stagingu jako `anon` vrátila
+**582 řádků / 6 unikátních zákaznických e-mailů**.
+
+**Závazné invarianty (neměnit bez výslovného schválení Pavla):**
+
+- **`get_due_offer_reminder_rows()` smí mít EXECUTE výhradně `service_role`.** `anon`, `PUBLIC`
+  i `authenticated` musí zůstat odebrané. Cílové ACL je přesně
+  `postgres=X/postgres | service_role=X/postgres`. **Nevracet grant pro `authenticated`** — žádná
+  frontendová ani admin obrazovka tuto RPC nepoužívá; ani admin/superadmin ji nepotřebují.
+- **`service_role` je role, pod kterou reálně běží jediný volající.** Ověřený řetězec:
+  `pg_cron job 24 (0 8 * * *)` → `run_send_offer_reminders_cron()` → EF `send-offer-reminders`
+  (`verify_jwt=false`, guard `x-internal-token`) → klient se `SUPABASE_SERVICE_ROLE_KEY` →
+  `.rpc("get_due_offer_reminder_rows")`. Jiný volající neexistuje — žádné `.rpc()` v `src/`, žádná
+  jiná EF, žádná DB funkce, žádný view.
+- **Oprava je čistě grantová; tělo funkce se nesmí měnit kvůli bezpečnosti.** `prosrc` zůstalo
+  byte-identické (md5 `c7f5dab5…`, 1124 znaků), takže způsobilost, výběr uživatelů, časová okna
+  (24 h / 7 dní) i obsah e-mailu jsou nezměněné. Vzorem je `run_send_offer_reminders_cron()` ve
+  stejném flow, která je rovněž zamčená jen granty, bez in-body guardu.
+- **Reminder cesta je živá, ne nečinná.** Běh 26. 08. 2026 v 08:00 UTC vrátil
+  `{"success":true,"emails_queued":8,"offers_touched":44}`. Že RPC vrací 0 řádků, znamená jen to, že
+  ranní běh je právě spotřeboval a nastavil `last_reminder_at`. **Neinterpretovat 0 řádků jako
+  „nic se neděje"** — reminders dozrávají denně a před opravou by je anonymní volající kdykoli mezi
+  dozráním a během v 08:00 dostal i s e-maily.
+- **Reminder flow existuje POUZE na produkci.** Na stagingu není nasazená EF `send-offer-reminders`
+  ani žádný offer cron job. Staging ověření se proto dělá replayem DB kroků EF pod `service_role`
+  v transakci s ROLLBACK, nikdy skutečným voláním EF (to by zařadilo reálné e-maily do `email_queue`,
+  které do 10 minut odešle cron `process_email_queue_every_10_min`).
+- **Testovat nikdy neodesíláním.** `email_queue` se plní se `status='pending'` a odesílá ji zmíněný
+  cron; jakýkoli test proto musí běžet v transakci s ROLLBACK nebo proti stubu.
+- **Nedotčeno a neměnit:** `run_send_offer_reminders_cron()`, cron job 24, EF `send-offer-reminders`,
+  `email_queue`, `user_partner_offers`, `partner_offers`, přiřazování nabídek k tiketům.
+- **Zaznamenáno, vědomě neopraveno (mimo F4):** `notify_referral_reward_multi()` je `anon`-grantovaná
+  a čte `auth.users`, ale `RETURNS trigger` a je navázaná na reálný trigger — PostgREST ji jako RPC
+  volat neumí, takže je ten grant inertní.
+
+---
+
 # ADMIN AUDIT RPC — TRVALÉ INVARIANTY (produkce, 26. 08. 2026)
 
 **Produkčně nasazeno.** Migrace `20260826090136_admin_actions_summary_admin_guard` (F3) je na produkci
