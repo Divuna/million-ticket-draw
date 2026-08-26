@@ -2,6 +2,33 @@
 
 > **Autoritativní aktuální stav. Poslední aktualizace 23. 8. 2026 podle `origin/main` (`c4df929b`), GitHubu a read-only produkční kontroly Supabase.**
 
+## 0. Referral kódy (F2) — stav k 26. 8. 2026 (nasazeno do produkce)
+
+Tato sekce je nejnovější a přebíjí vše níže v oblasti `ensure_referral_code`.
+
+| Oblast | Aktuální stav |
+|---|---|
+| Neguardovaná `ensure_referral_code` (audit F2, kritický) | **Opraveno a nasazeno.** Funkce byla `SECURITY DEFINER` bez ověření volajícího a s `EXECUTE` pro `anon`. Nepřihlášený volající získal referral kód libovolného uživatele podle `user_id` a **vytvořil řádek pro zcela smyšlené UUID**. Obojí reprodukováno na stagingu jako role `anon`. |
+| Nový stav funkce | `ensure_referral_code(uuid)` je **guardovaný wrapper** — `auth.uid()` povinné, `p_user_id` mu musí být rovno, jinak `42501`. `anon` EXECUTE odebráno. Signatura **beze změny**, takže frontend se nemění. |
+| Zápisová logika | Přesunuta beze změny do `ensure_referral_code_for(uuid)` — **nevolatelná pro `anon` ani `authenticated`**, jen `service_role` a `SECURITY DEFINER` volající (běží pod vlastníkem). |
+| `set_my_referrer_by_code` | **Přesměrována na `ensure_referral_code_for`.** Volá ji s `v_referrer` (doporučitel, nikdy `auth.uid()`), takže s guardovaným wrapperem by vyhodila výjimku, kterou závěrečné `EXCEPTION WHEN OTHERS` **tiše spolkne** → `'error'` a rozbitá atribuce. Doloženo kontra-experimentem. Tělo je jinak byte-identické (délka +4 znaky = `_for`). |
+| Referral odměny a atribuce | **Beze změny.** `create_referral_reward_from_payment`, `is_self_referral`, `referral_attempts`, RLS i granty `referral_codes` nedotčeny. |
+| `/r/:refCode`, `/register?ref=` | **Beze změny** — čistě klientské přesměrování, nevolá žádnou RPC. |
+| Produkční data | **Nezměněna.** Před i po: 70 kódů / 2 referrals / 17 rewards, checksum `df195110db420af37dd3d125ab3ee5e2`, 0 orphanů, 0 duplicit. |
+
+**Aplikovaná produkční migrace (26. 8. 2026, schválení Pavla):**
+`20260826081556_ensure_referral_code_owner_guard`. `main` = `704c1627`.
+**Lovable Publish není potřeba — frontend se nemění.** Žádná Edge Function se nenasazovala.
+
+**OPEN ISSUE (vědomě neopraveno):** `referral_codes.user_id` nemá FK na `auth.users(id)`. S guardem
+je FK obrana do hloubky, ne hlavní opatření. Produkce je čistá (0 orphanů) a FK by přijala; **staging
+má 643 orphanů z 645** (E2E throwaway účty mazané bez kaskády) a vyžadoval by cleanup.
+**OPEN ISSUE (vědomě neopraveno):** `referral_codes` má pro `authenticated` tabulkové granty
+`INSERT/UPDATE/DELETE/TRUNCATE`; dnes neškodné (RLS nemá write policy), ale zbytečně široké.
+**Otevřené zůstávají nálezy F3–F7** ze zákaznického auditu.
+
+---
+
 ## 0. Budoucí výherní pozice — stav k 25. 8. 2026 (nasazeno do produkce)
 
 Tato sekce je nejnovější a přebíjí vše níže v oblasti čtení `bonus_prizes`.

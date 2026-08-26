@@ -47,6 +47,55 @@ výslovné schválení Pavla.
 
 ---
 
+# REFERRAL KÓDY — TRVALÉ INVARIANTY (produkce, 26. 08. 2026)
+
+**Produkčně nasazeno.** Migrace `20260826081556_ensure_referral_code_owner_guard` (F2) je na produkci
+`xkzhjldrojjlrkezorey`. `main` = `704c1627`. **Lovable Publish není potřeba — frontend se nemění.**
+
+**Řešená chyba (F2, kritická):** `public.ensure_referral_code(uuid)` byla `SECURITY DEFINER` bez
+jakéhokoli ověření volajícího a s `EXECUTE` pro `anon`. Nepřihlášený volající tak (a) dostal referral
+kód libovolného uživatele podle jeho `user_id` a (b) **vytvořil `referral_codes` řádek pro zcela
+smyšlené UUID**. Tabulka děravá nebyla — RLS je zapnuté, SELECT policy jsou own-row + admin a `anon`
+nemá na tabulku grant; všechno to `SECURITY DEFINER` funkce obcházela.
+
+**Závazné invarianty (neměnit bez výslovného schválení Pavla):**
+
+- **`ensure_referral_code(uuid)` musí zůstat guardovaný wrapper.** `auth.uid()` je povinné a
+  `p_user_id` se mu musí rovnat, jinak `42501`. **Nevracet `EXECUTE` pro `anon`** ani `PUBLIC`.
+- **Vlastní zápisová logika žije v `public.ensure_referral_code_for(uuid)`** a ta **nesmí být
+  volatelná pro `anon` ani `authenticated`** — jinak jde guard triviálně obejít. Zůstává jen
+  `service_role`; `SECURITY DEFINER` volající se k ní dostanou, protože běží pod vlastníkem.
+- **`set_my_referrer_by_code` musí volat `ensure_referral_code_for`, nikdy guardovaný wrapper.**
+  Dělá `PERFORM ... (v_referrer)`, kde `v_referrer` je **doporučitel, tedy nikdy `auth.uid()`**
+  (self-referral je o pár řádků výš zamítnut). S wrapperem by guard vyhodil výjimku, kterou závěrečné
+  `EXCEPTION WHEN OTHERS` **tiše spolkne** → funkce vrátí `'error'` a atribuce doporučení přestane
+  fungovat, poznat jen podle `referral_attempts.result='error'`. Ověřeno kontra-experimentem na stagingu.
+- **Signatura `ensure_referral_code(p_user_id uuid)` se nemění na bezparametrovou.** Živý produkční
+  bundle volá 1-argumentovou verzi; zrušení parametru by rozbilo `/profile` do dalšího Publish.
+  `ReferralSection.tsx` posílá výhradně `user.id`, takže je guard pro aplikaci neviditelný.
+- **⚠️ Na tyto funkce NEPŘIDÁVAT `SET search_path`.** Vypadá to jako hardening zdarma a je to past:
+  prázdný `search_path` se propaguje do `generate_referral_code()`, která volá `gen_random_bytes()`
+  ze schématu **`extensions`** → `function gen_random_bytes(integer) does not exist`. Ověřeno na
+  stagingu. Rozbilo by to **jen cestu nového uživatele** (existující se vrací s cache kódem dřív, než
+  se ke generátoru dostane), takže by to smoke test na existujícím účtu neodhalil. Zpřísnění by muselo
+  proběhnout na všech třech funkcích najednou.
+- **`referral_codes` má PK na `user_id`** — duplicity na uživatele jsou tím vyloučené; `code` je `UNIQUE`.
+- **`/r/:refCode` a `/register?ref=` jsou čistě klientské přesměrování** (`CustomerReferralShortLink.tsx`),
+  nevolají žádnou RPC a touto opravou nejsou dotčené.
+- **Nedotčeno a neměnit:** `generate_referral_code`, odměny za doporučení
+  (`create_referral_reward_from_payment`), `is_self_referral`, `referral_attempts`, RLS a granty
+  `referral_codes`, wallets, ledger.
+- **OPEN ISSUE (vědomě neopraveno):** `referral_codes.user_id` **nemá FK** na `auth.users(id)`.
+  S guardem může být `p_user_id` jedině `auth.uid()`, takže je FK obrana do hloubky, ne hlavní
+  opatření. Produkce je čistá (70 řádků, 0 orphanů) a FK by přijala; **staging má 643 orphanů z 645**
+  (E2E throwaway účty mazané bez kaskády, ~10/den) a vyžadoval by cleanup. `referrals`,
+  `referral_rewards` ani `referral_attempts` FK nemají vůbec.
+- **OPEN ISSUE (vědomě neopraveno):** `referral_codes` má pro roli `authenticated` tabulkové granty
+  `INSERT/UPDATE/DELETE/TRUNCATE`. Dnes **není zneužitelné** — RLS nemá žádnou write policy, takže
+  zápisy padají — ale je to zbytečně široký grant.
+
+---
+
 # BUDOUCÍ VÝHERNÍ POZICE — TRVALÉ INVARIANTY (produkce, 25. 08. 2026)
 
 **Produkčně nasazeno.** Migrace `20260825141826_bonus_prizes_hide_future_winning_positions` (F1) a

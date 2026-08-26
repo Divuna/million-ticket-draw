@@ -1,3 +1,59 @@
+# 26. 08. 2026 — F2: `ensure_referral_code` šla volat anonymně a pro cizí i smyšlené UUID
+
+Tento zápis je novější než zápisy níže, které byly v době svého vzniku pravdivé. Vychází z reprodukce
+na stagingu, kontra-experimentu a produkčního nasazení se schválením Pavla.
+
+- **Nález F2 (kritický), doložený reprodukcí.** `public.ensure_referral_code(p_user_id uuid)` byla
+  `SECURITY DEFINER` bez jakéhokoli ověření volajícího a s `EXECUTE` pro `anon`. Na stagingu jako role
+  `anon` (v transakci s ROLLBACK): volání s reálným `user_id` vrátilo cizí kód **`bgd2imqwyg`**, přesnou
+  shodu s řádkem v `referral_codes` — tedy **orákulum `user_id` → `referral_code` bez přihlášení**;
+  volání s vymyšleným `ffff0002-…-0000000000f2` **vytvořilo řádek** pro to UUID. Protože
+  `referral_codes.code` je `UNIQUE` a tabulka nemá FK, mohl nepřihlášený volající sázet řádky a zabírat
+  kódy.
+- **Tabulka děravá nebyla.** RLS je zapnuté, SELECT policy jsou own-row + admin a `anon` nemá na
+  `referral_codes` žádný grant. Všechno tohle `SECURITY DEFINER` funkce obcházela — proto nestačilo
+  sáhnout na RLS.
+- **Oprava** (migrace `20260826081556_ensure_referral_code_owner_guard`), tři části: (1) původní tělo
+  se beze změny přesunulo do `ensure_referral_code_for(uuid)` s `EXECUTE` odebraným `PUBLIC`, `anon`
+  **i `authenticated`** (zůstal jen `service_role`; `SECURITY DEFINER` volající se k ní dostanou, protože
+  běží pod vlastníkem); (2) `ensure_referral_code(uuid)` se stala guardovaným wrapperem — `auth.uid()`
+  povinné, `p_user_id` mu musí být rovno, jinak `42501`; (3) `set_my_referrer_by_code` přesměrována na
+  interní funkci.
+- **Část (3) byla past, na kterou by naivní oprava najela.** `set_my_referrer_by_code` dělá
+  `PERFORM public.ensure_referral_code(v_referrer)`, kde `v_referrer` je **doporučitel, tedy nikdy
+  `auth.uid()`** (self-referral je o pár řádků výš zamítnut). S guardem by to vyhodilo výjimku, kterou
+  závěrečné `EXCEPTION WHEN OTHERS` **tiše spolkne** — nevyplavala by žádná chyba, atribuce doporučení
+  by prostě přestala fungovat a poznat by to šlo jen podle `referral_attempts.result='error'`. Doloženo
+  kontra-experimentem na stagingu: s guardem, ale voláním ponechaným na wrapperu, vrátí atribuce
+  `'error'`. Přesměrování se dělá string-replacem toho jediného volání v **živé definici** funkce, takže
+  tělo zůstává jinak byte-identické (produkce 3447 → 3451 znaků, přesně `_for`) a zachová se formátovací
+  drift mezi prostředími; `DO` blok odmítne běžet, pokud volání není přítomno právě jednou.
+- **Signatura RPC se neměnila.** Zrušení parametru by rozbilo `/profile` každému zákazníkovi až do
+  dalšího Lovable Publish, protože živý bundle volá 1-argumentovou verzi. `ReferralSection.tsx` posílá
+  výhradně `user.id`, takže je guard pro aplikaci neviditelný — **Publish nebyl potřeba**.
+- **`SET search_path` se vědomě NEPŘIDÁVAL.** Vypadá to jako hardening zdarma a je to past: prázdný
+  `search_path` se propaguje do `generate_referral_code()`, která volá `gen_random_bytes()` ze schématu
+  `extensions` → `function gen_random_bytes(integer) does not exist`. Ověřeno empiricky na stagingu.
+  Rozbilo by to **jen cestu nového uživatele** (existující se vrací s cache kódem dřív, než se ke
+  generátoru dostane), takže by to smoke test na existujícím účtu neodhalil.
+- **FK se nepřidával.** S guardem může být `p_user_id` jedině `auth.uid()`, takže je FK obrana do
+  hloubky. Produkce je čistá (70 řádků, 0 orphanů) a FK by přijala; **staging má 643 orphanů z 645**
+  (E2E throwaway účty mazané bez kaskády, ~10/den) a vyžadoval by cleanup. `referrals`,
+  `referral_rewards` ani `referral_attempts` FK nemají vůbec.
+- **Staging testy (16 kontrol) prošly:** anon i pro smyšlené UUID `42501` a žádný řádek nevznikl;
+  zákazník A vidí jen vlastní kód; cizí `user_id` i `NULL` → `forbidden`; obejití přes interní `_for`
+  → `permission denied`; nový uživatel dostane vygenerovaný kód (`qz81ebjhg5`, délka 10); opakované
+  volání vrací stejný kód; 0 duplicit; `set_my_referrer_by_code` → `accepted` + `referrals` řádek + 0
+  tichých chyb; opakovaná atribuce `already_has_referrer`; self-referral i neplatný kód odmítnuty.
+  Spec 55 (4/4) a spec 146 (4/4) zelené.
+- **Produkční postcheck (13 kontrol) prošel** ve stejném rozsahu, vše v transakcích s ROLLBACK.
+  **Produkční data nezměněna:** před i po 70 kódů / 2 referrals / 17 rewards, checksum
+  `df195110db420af37dd3d125ab3ee5e2`, 0 orphanů, 0 duplicit, 0 reziduí po testech.
+- **Testy po mergi:** `tsc -p tsconfig.app.json --noEmit` 17 chyb = nezměněná baseline,
+  `npm run build` OK, spec 55 4/4 (`32947166412`) a spec 146 4/4 (`32947344428`) na `main` = `704c1627`.
+- **Otevřeno:** chybějící FK na `referral_codes.user_id`, široké tabulkové granty `authenticated`
+  (dnes neškodné, RLS nemá write policy) a nálezy **F3–F7** ze zákaznického auditu.
+
 # 25. 08. 2026 — Únik budoucích výherních pozic (F1) opraven a nasazen, včetně následné výkonové regrese
 
 Tento zápis je novější než zápisy níže, které byly v době svého vzniku pravdivé. Vychází z kompletního
