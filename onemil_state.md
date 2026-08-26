@@ -2,6 +2,34 @@
 
 > **Autoritativní aktuální stav. Poslední aktualizace 23. 8. 2026 podle `origin/main` (`c4df929b`), GitHubu a read-only produkční kontroly Supabase.**
 
+## 0. Anon-volatelné zapisovací a interní RPC (F5) — stav k 26. 8. 2026 (nasazeno do produkce)
+
+Tato sekce je nejnovější a přebíjí vše níže v oblasti grantů RPC.
+
+| Oblast | Aktuální stav |
+|---|---|
+| Skupina A — 9 funkcí / 10 signatur (audit F5, kritické) | **Opraveno a nasazeno.** `SECURITY DEFINER` funkce obcházející RLS, které zapisovaly interní stav a měly `anon EXECUTE` bez guardu. Reprodukováno na stagingu jako `anon`: přepsání anti-fraud signálů cizího uživatele, posun `last_played_at`, přepsání `billing_mode`/`price_per_activation` partnera, confused deputy v `approve_affiliate_company_lead_txn`, spuštění cronu `process_referral_inactivity`, zápis telemetrie s libovolným `partner_id`, čtení role kohokoli přes `get_user_role`. |
+| Nové granty skupiny A | `anon`, `PUBLIC` i `authenticated` odebráno; zůstává **jen `service_role`**. ACL přesně `postgres=X/postgres \| service_role=X/postgres`. Těla **byte-identická** (md5 ověřeno) — žádná změna business logiky. |
+| Skupina B — 12 interních/testovacích RPC | **Uzavřeno.** `run_deep_sofinity_test_suite` a `validate_sofinity_events` mají nově guard `assert_admin_validation_rpc_allowed()` a `anon` odebráno (obě `+56` znaků = jen guard). Ostatních 10 je **service_role only**. `test_sofinity_performance` zapisuje do `event_logs` i `users`, `edge_cases` do `event_logs`, a `run_deep_sofinity_test_suite` volá obě — anon přes ni mohl hnát produkční zápisy. |
+| Zbytková plocha | **0** anon-volatelných nezaguardovaných `SECURITY DEFINER` zapisovačů (před opravou 10). |
+| Citlivé tabulky | Ověřeno: **každá** funkce zapisující do `wallets`/`payments`/`winners`/`contests`/`user_roles`/`tickets` dosažitelná pro `anon`/`authenticated` má guard. Jediná výjimka `generate_winner` je INVOKER a měřením nezapsala nic. |
+| Referral flow | **Beze změny.** `set_my_referrer_by_code` vrací `accepted`, interní volání `upsert_user_security_signals` zapisuje (běží pod vlastníkem). |
+| Produkční data | **Nezměněna.** Migrace mění pouze granty a u dvou funkcí vkládají guard; `event_logs` 691 → 691, žádný zápis. |
+
+**Aplikované produkční migrace (26. 8. 2026, schválení Pavla):**
+`20260826143959_lock_down_writable_rpcs_group_a`, `20260826144054_lock_down_internal_test_rpcs_group_b`.
+`main` = `ae49bd5a`. **Lovable Publish není potřeba — frontend se nemění.**
+
+**OPEN ISSUE — staging security drift (samostatný bezpečnostní úkol, vědomě neopraveno):** staging má
+~34 anon-volatelných `SECURITY DEFINER` zapisovačů, které produkce nemá — mj. `try_credit_wallet_mc`,
+`deduct_wallet_for_refund`, `transfer_bonus_to_main`, `claim_miocoin_bonus`, `prepare_stripe_refund`,
+`generate_partner_api_key`, `fn_close_contest`. Produkce je má zahardenované, takže to **není produkční
+riziko**, ale staging je slabší cíl a bezpečnostní testy tam mohou dávat falešně optimistický obraz.
+
+**Otevřené zůstávají nálezy F6 a F7** ze zákaznického auditu.
+
+---
+
 ## 0. Partner Offer reminders (F4) — stav k 26. 8. 2026 (nasazeno do produkce)
 
 Tato sekce je nejnovější a přebíjí vše níže v oblasti reminder RPC.

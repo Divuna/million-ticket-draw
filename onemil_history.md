@@ -1,3 +1,63 @@
+# 26. 08. 2026 — F5: anon mohl zapisovat interní stav přes 10 nezaguardovaných RPC
+
+Tento zápis je novější než zápisy níže, které byly v době svého vzniku pravdivé. Vychází z vlastního
+scanu (ne jen ze seznamu v auditu), reprodukce na stagingu a produkčního nasazení se schválením Pavla.
+
+- **Rozsah byl větší, než audit uváděl.** Vlastní scan našel na produkci **10 signatur**
+  `SECURITY DEFINER` funkcí, které obcházejí RLS, zapisují interní stav a měly `EXECUTE` pro `anon`
+  bez guardu. Audit jmenoval část z nich; scan přidal `approve_affiliate_company_lead_txn`,
+  `process_referral_inactivity`, `log_partner_api_key_usage` (2×) a `log_partner_api_request`.
+- **Doložené dopady (staging, role `anon`, transakce s ROLLBACK):** přepsání anti-fraud signálů
+  cizího uživatele (`device_id`/`ip_hash`/`fingerprint_hash`, které živí `is_self_referral()`);
+  posun `last_played_at` cizího uživatele; přepsání `billing_mode` a `price_per_activation` partnera;
+  spuštění denního cronu `process_referral_inactivity` s hromadným `UPDATE public.referrals`; zápis
+  telemetrie s libovolným `partner_id`; přečtení role kohokoli přes `get_user_role` (vrátilo `admin`).
+- **Confused deputy v `approve_affiliate_company_lead_txn`.** Funkce guard *má*, ale ověřuje
+  `p_admin_user_id`, tedy **parametr dodaný volajícím**, ne `auth.uid()`. Jako `anon` s podstrčeným
+  admin UUID guardem prošla až k vyhledání leadu (`lead_not_found`). Na leadu ve stavu
+  `pending_admin_approval` by to založilo partnerský účet a affiliate atribuci. `get_user_role` byla
+  přímým enablerem — dodala použitelné admin UUID.
+- **Skupina B — testovací RPC nebyly kosmetika.** `test_sofinity_performance` zapisuje do
+  `event_logs` **a `users`**, `test_sofinity_edge_cases` do `event_logs`, a
+  `run_deep_sofinity_test_suite` volá obě. Jako `anon` na stagingu volání doběhlo až k zápisu
+  a spadlo teprve na `users_id_fkey`, tedy z datového důvodu, ne na oprávnění.
+- **Oprava — dvě migrace.** Skupina A (`20260826143959`): čistě grantová, 9 funkcí na
+  `service_role` only, cílové ACL `postgres=X/postgres | service_role=X/postgres`, těla
+  **byte-identická** (md5 ověřeno proti baseline). Skupina B (`20260826144054`):
+  `run_deep_sofinity_test_suite` a `validate_sofinity_events` dostaly guard
+  `assert_admin_validation_rpc_allowed()` (vložený do jejich živé definice, obě `+56` znaků)
+  a ztratily `anon`; zbylých 10 test RPC je `service_role` only.
+- **Chyba, kterou jsem udělal a opravil.** Guard ve skupině B odkazoval na
+  `assert_admin_validation_rpc_allowed()`, která **na stagingu neexistovala** (je jen na produkci),
+  takže obě funkce padaly na `42883` **i pro admina**. Zachyceno při staging testech; migrace nyní
+  helper vytváří idempotentně. Vedlejší efekt: opravuje i pre-existující staging drift —
+  `run_complete_admin_test_suite()` a `test_admin_crud_operations()` tam byly rozbité už předtím.
+  Na produkci je to no-op (identická definice, `prosrc` 484 znaků beze změny).
+- **Druhá chyba, kterou jsem opravil.** Zápisy jsem zpočátku ověřoval ještě pod rolí `anon`, takže
+  je schovala RLS a testy vracely falešně negativní „nezapsáno". Po přeměření jako vlastník se tři
+  zranitelnosti naopak **potvrdily**.
+- **Vědomě nezměněno, doloženo měřením.** `generate_winner`,
+  `calculate_influencer_commissions_current_month`, `enqueue_partner_invoice_email`,
+  `handle_influencer_signup`, `insert_ai_message`, `activate_partner_reward`, `process_push_retries`,
+  `send_push_via_onesignal`, `get_pending_event_forward_log` jsou `SECURITY INVOKER`, takže je
+  zastaví RLS volajícího. Anon i běžný zákazník je zavolali bez výjimky a **nezapsali nic**
+  (`winners` 347 → 347, `influencer_commissions` 0 → 0).
+- **Produkční postcheck prošel celý.** Skupina A: všech 9 signatur `anon=false`,
+  `authenticated=false`, `service_role=true`, ACL přesně `postgres | service_role`, těla
+  byte-identická; anon i běžný zákazník dostali `42501` u všech 8 testovaných cest a nic se nezapsalo.
+  Skupina B: anon `42501`; běžný zákazník `Admin access required`; admin, superadmin i produkční
+  **drift admin** `bc116802-…` procházejí; `service_role` funguje; `event_logs` 691 → 691.
+  Regrese referral flow: `set_my_referrer_by_code` vrátilo `accepted`, vznikl `referrals` řádek
+  a interní `upsert_user_security_signals` zapsalo. Zbytková plocha **10 → 0**.
+- **Testy:** `tsc -p tsconfig.app.json --noEmit` 17 chyb = nezměněná baseline, `npm run build` OK,
+  spec 55 referral ✅ 4/4 (`32982191589`), spec 04 ticket ✅ 3/3 (`32982398499`), spec 09 wallet ✅ 1/1
+  (`32982616113`), spec 53 admin ✅ 2/2 (`32982801782`) — vše na `main` = `ae49bd5a`.
+- **OPEN ISSUE — staging security drift (samostatný úkol):** staging má ~34 anon-volatelných
+  `SECURITY DEFINER` zapisovačů, které produkce nemá (`try_credit_wallet_mc`,
+  `deduct_wallet_for_refund`, `transfer_bonus_to_main`, `claim_miocoin_bonus`, `prepare_stripe_refund`,
+  `generate_partner_api_key`, `fn_close_contest` a další). Není to produkční riziko, ale staging je
+  slabší cíl a bezpečnostní testy tam mohou klamat. Otevřené zůstávají i nálezy **F6 a F7**.
+
 # 26. 08. 2026 — F4: `get_due_offer_reminder_rows` vydávala zákaznické e-maily anonymům
 
 Tento zápis je novější než zápisy níže, které byly v době svého vzniku pravdivé. Vychází z reprodukce

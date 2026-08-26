@@ -47,6 +47,64 @@ výslovné schválení Pavla.
 
 ---
 
+# ANON-VOLATELNÉ ZAPISOVACÍ A INTERNÍ RPC — TRVALÉ INVARIANTY (produkce, 26. 08. 2026)
+
+**Produkčně nasazeno.** Migrace `20260826143959_lock_down_writable_rpcs_group_a` a
+`20260826144054_lock_down_internal_test_rpcs_group_b` (F5) jsou na produkci `xkzhjldrojjlrkezorey`.
+`main` = `ae49bd5a`. **Lovable Publish není potřeba — frontend se nemění.**
+
+**Řešená chyba (F5, kritická):** na produkci bylo **10 signatur** `SECURITY DEFINER` funkcí, které
+obcházejí RLS, zapisují interní stav a měly `EXECUTE` pro `anon` bez jakéhokoli guardu. Vše
+reprodukováno na stagingu jako `anon`.
+
+**Závazné invarianty (neměnit bez výslovného schválení Pavla):**
+
+- **Těchto 9 funkcí smí mít EXECUTE výhradně `service_role`** — cílové ACL je přesně
+  `postgres=X/postgres | service_role=X/postgres`. **Nevracet `anon` ani `authenticated`:**
+  `upsert_user_security_signals`, `mark_user_played`, `upsert_partner_offer_billing_config`,
+  `approve_affiliate_company_lead_txn`, `process_referral_inactivity`,
+  `log_partner_api_key_usage` (obě signatury), `log_partner_api_request`, `get_user_role`.
+- **`approve_affiliate_company_lead_txn` má uvnitř confused-deputy guard a NENÍ to skutečná
+  ochrana.** Ověřuje `p_admin_user_id`, tedy **parametr dodaný volajícím**, ne `auth.uid()`. Jako
+  `anon` s podstrčeným admin UUID guardem projde. Jediné, co ji chrání, je grant → **nikdy jí
+  nevracet `anon`/`authenticated`**. Pokud by ji měl volat někdo jiný než EF
+  `approve-affiliate-company-lead` (service_role), musí se guard nejdřív přepsat na `auth.uid()`.
+- **`get_user_role(uuid)` nesmí být veřejná** — jako `anon` vracela roli libovolného uživatele
+  (`admin`) a byla tím přímým enablerem confused deputy výše.
+- **Oprava skupiny A je čistě grantová.** Těla všech 9 funkcí zůstala byte-identická (md5 ověřeno),
+  takže se nezměnila žádná business logika.
+- **`upsert_user_security_signals` volá `set_my_referrer_by_code`** (SECURITY DEFINER → běží pod
+  vlastníkem), proto jí odebrání grantů nevadí. **Neopravovat to „vrácením" grantu** — ověřeno, že
+  atribuce dál vrací `accepted` a signály se zapíší.
+- **Interní/testovací RPC:** `run_deep_sofinity_test_suite` a `validate_sofinity_events` smí volat
+  `authenticated`, ale **musí mít guard `PERFORM public.assert_admin_validation_rpc_allowed()`**;
+  `anon` nikdy. Ostatní (`test_sofinity_performance`/`edge_cases`/`integration`,
+  `test_deep_data_integrity`, `test_admin_security_rls`, `test_audit_logging`, `test_partner_api_key`,
+  `test_rl`, `create_test_result`, `validate_crud_test_data`) jsou **service_role only**.
+  `test_sofinity_performance` zapisuje do `event_logs` **a `users`**, `test_sofinity_edge_cases` do
+  `event_logs`, a `run_deep_sofinity_test_suite` volá obě — proto to není kosmetika.
+- **`public.assert_admin_validation_rpc_allowed()` musí existovat v OBOU prostředích.** Na produkci
+  byla, na stagingu chyběla, přestože ji tamní `run_complete_admin_test_suite()` a
+  `test_admin_crud_operations()` volají — ty tam byly rozbité. Migrace ji proto vytváří idempotentně.
+  Kdo přidává guard odkazující na helper, musí ověřit jeho existenci v obou prostředích.
+- **`SECURITY INVOKER` funkce se vědomě neomezovaly.** `generate_winner`,
+  `calculate_influencer_commissions_current_month`, `enqueue_partner_invoice_email`,
+  `handle_influencer_signup`, `insert_ai_message`, `activate_partner_reward`, `process_push_retries`,
+  `send_push_via_onesignal`, `get_pending_event_forward_log` běží pod volajícím, takže je zastaví RLS.
+  **Změřeno, ne odhadnuto:** anon i běžný zákazník je zavolali bez výjimky a **nezapsali nic**
+  (`winners` 347 → 347, `influencer_commissions` 0 → 0). Granty jsou širší, než je nutné, ale
+  zneužitelné to není; zúžení by ohrozilo cron/EF cesty.
+- **Ověřený invariant:** každá funkce zapisující do `wallets`, `payments`, `winners`, `contests`,
+  `user_roles` nebo `tickets` a dosažitelná pro `anon`/`authenticated` **má guard**. Jediná výjimka
+  `generate_winner` je INVOKER a nezapisuje. Tohle musí platit i po jakékoli budoucí změně.
+- **OPEN ISSUE — staging security drift (samostatný úkol, vědomě neopraveno):** staging má ~34
+  anon-volatelných `SECURITY DEFINER` zapisovačů, které produkce nemá — mj. `try_credit_wallet_mc`,
+  `deduct_wallet_for_refund`, `transfer_bonus_to_main`, `claim_miocoin_bonus`, `prepare_stripe_refund`,
+  `generate_partner_api_key`, `fn_close_contest`. **Není to produkční riziko**, ale staging je slabší
+  cíl a bezpečnostní testy tam mohou dávat falešně optimistický obraz.
+
+---
+
 # PARTNER OFFER REMINDERS — TRVALÉ INVARIANTY (produkce, 26. 08. 2026)
 
 **Produkčně nasazeno.** Migrace `20260826111549_offer_reminder_rows_internal_only` (F4) je na produkci
