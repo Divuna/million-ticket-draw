@@ -2,6 +2,66 @@
 
 > **Autoritativní aktuální stav. Poslední aktualizace 23. 8. 2026 podle `origin/main` (`c4df929b`), GitHubu a read-only produkční kontroly Supabase.**
 
+## 0. Rekonciliace peněženek a zaseknutý fakturační e-mail (F7) — stav k 26. 8. 2026 (uzavřeno bez změny)
+
+**F7 byl prověřen READ-ONLY a UZAVŘEN jako nález, který NENÍ aktuální funkční chybou.**
+**Neproběhla žádná změna kódu, SQL, DB, dat ani UI** — nic se nemazalo, nepřepočítávalo
+a neodesílalo, v produkci ani na stagingu.
+
+### Peněženky vs. ledger
+
+| Oblast | Aktuální stav |
+|---|---|
+| Rozsah nálezu | Audit uváděl **2** nesouhlasící peněženky. Rekonciliace všech 781 produkčních peněženek našla **111**. Rozdíly jsou ale systematické a beze zbytku vysvětlené. |
+| Klíčový kontext | **`wallet_transactions` začíná 16. 3. 2026**, zatímco peněženky a platby existují od 14. 9. 2025. **25 peněženek je starších než ledger** — jejich počáteční zůstatek v něm z principu být nemůže. |
+| Kdo je dotčen | 102 syntetických CI účtů `@onemiltest.dev` · 4 interní vývojové `@opravo.cz` · 2 interní OneMil (`e2e@`, `pepca@`) · 2 účty vlastníka · 1 známý testovací zákazník. **Reálný externí zákazník: 0.** |
+| Tvar rozdílů | **101 peněženek má rozdíl přesně +10,00**, všechny založené 16. 3. 2026 (jednorázový seed při zavedení ledgeru), všechny na `onemiltest.dev`. Zbytek: +50, +165, +785,50, +1 255, +1 287, +1 300, +1 497, +9 162,92, +12 259, +100 552. Všechny rozdíly jsou kladné. |
+| Největší rozdíl | **+100 552** na `e2e@onemil.cz` — vysvětlen testovací Stripe platbou **100 000** z 5. 5. 2026 (`cs_test_a1xZ`), která nezaložila ledger řádek. |
+| Platby bez ledger řádku | 7 dokončených plateb po zavedení ledgeru nemá ledger řádek — **všechny `cs_test_*` a všechny na interních účtech**. |
+| Účetní dopad | **Nulový.** Produkce má **0 živých Stripe plateb** (`cs_live_` = 0 ze 138); metody jsou `stripe_test`, `test`, `test_crud`. Reálné peníze systémem nikdy neprošly. |
+| Dopad na nákupy a výhry | Zůstatek je autoritativní pro utrácení, takže nafouknutý zůstatek umožní víc nákupů — ale **jen testovacím účtům**, což je jejich účel. Výherce určuje pozice tiketu, ne zůstatek. |
+
+**⚠️ Past pro budoucí práci:** rekonciliace ve tvaru „zůstatek = součet ledgeru" **není platný
+test** pro účty starší než 16. 3. 2026. Plošný přepočet zůstatků podle ledgeru by srazil zůstatky
+testovacích účtů (rozbil CI) a u starších účtů smazal legitimní počáteční zůstatky.
+
+### Jediný pending fakturační e-mail
+
+| Údaj | Hodnota |
+|---|---|
+| ID | `51467a9d-9074-4451-b384-6f6dadc66890` |
+| Vznik | **12. 7. 2026 02:00** — přesně slot cronu 17 `weekly_partner_invoices` |
+| Příjemce | `eshop@onemil.cz` — **interní** OneMil adresa (kontakt partnera BOHEMIA) |
+| Předmět | „OneMil – faktura OMA-20260003 připravena" |
+| Částka | 3,63 Kč vč. DPH, období 29. 6. – 5. 7. 2026 |
+| Příloha | **žádná** (`attachment_url` i `attachment_storage_path` = NULL, `attachment_required=false`) |
+
+- **Není zaseknutý — je zadržený záměrně.** `process-email-queue/index.ts` má ve výběru
+  podmínku `.or("subject.not.ilike.%faktura%,attachment_url.not.is.null,attachment_storage_path.not.is.null")`,
+  která **nedovolí odeslat fakturační e-mail bez přílohy**. Tento řádek má v předmětu „faktura“
+  a obě přílohové kolonky prázdné → je z odesílání trvale vyloučen. **Je to funkční pojistka, ne chyba.**
+- **Proč chybí příloha:** e-mail byl zařazen 12. 7. v 02:00, ale **PDF export vznikl až 17. 7. v 19:18**,
+  o pět dní později; řádek fronty už nikdo zpětně nedoplnil (`partner_invoice_post_create` zařadí
+  e-mail a PDF řeší best-effort).
+- **Partner fakturu dostal jinou cestou.** Cron zakládá faktury jako `draft`; jediná cesta
+  `draft → issued` je **úspěšné odeslání přes `send-partner-invoice-email`**.
+  `OMA-20260003` je `issued` → EF ji odeslala. Odeslané fakturační e-maily mají navíc jiný předmět
+  („OneMil – faktura připravena“), což potvrzuje dva různé odesílatele. **Zadržený řádek je
+  redundantní duplikát již doručeného oznámení.**
+- **Fronta je zdravá:** cron 16 aktivní (`*/10 * * * *`), poslední běhy `succeeded`, po 12. 7.
+  odesláno **112** e-mailů, poslední 26. 8. 2026 08:10. **Pending mimo faktury: 0.**
+- **Nemá se ručně odesílat ani mazat.** Odeslání = duplicitní oznámení partnerovi;
+  smazání = ztráta auditní stopy.
+
+**OPEN ISSUE — pre-launch krok (vědomě neprovedeno):** po resetu testovacích dat a **před
+přepnutím Stripe do live režimu** znovu ověřit rekonciliaci wallet/ledger. Do té doby nemá
+plošný přepočet smysl; po resetu musí platit, že nové zůstatky odpovídají ledgeru.
+
+**OPEN ISSUE — drobné zlepšení, vědomě neprovedeno:** `partner_invoice_post_create` by měl e-mail
+zařadit **až po** vzniku PDF, nebo přílohu doplnit zpětně. Dnes to nic nerozbíjí (fakturu odešle EF).
+
+---
+
 ## 0. Cena voucheru pro zákazníka (F6) — stav k 26. 8. 2026 (uzavřeno bez změny)
 
 **F6 byl prověřen a UZAVŘEN jako nález, který NENÍ aktuální funkční chybou.** Rozhodnutí Pavla:
@@ -29,7 +89,7 @@ zůstává, ale je **deprecated a nikdo ho nesmí začít používat**.
 `voucher_distribution_orders`, `voucher_issuances` a `superadmin_set_voucher_distribution_price`
 řeší, co platí **partner OneMilu** za distribuci voucheru — jiná osa, tímto nedotčená.
 
-**Otevřený zůstává nález F7** ze zákaznického auditu.
+**Nález F7 je rovněž uzavřen** — viz sekce výše.
 
 ---
 

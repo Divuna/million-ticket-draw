@@ -47,6 +47,48 @@ výslovné schválení Pavla.
 
 ---
 
+# PENĚŽENKY, LEDGER A FAKTURAČNÍ FRONTA — TRVALÉ INVARIANTY (rozhodnuto 26. 08. 2026)
+
+**Nález F7 byl prověřen READ-ONLY a uzavřen jako nález, který NENÍ aktuální funkční chybou.**
+Neproběhla žádná změna kódu, SQL, DB, dat ani UI; nic se nemazalo, nepřepočítávalo a neodesílalo.
+
+**Závazné invarianty (neměnit bez výslovného schválení Pavla):**
+
+- **`wallet_transactions` začíná 16. 03. 2026**, zatímco peněženky a platby existují od
+  14. 09. 2025. **Rekonciliace ve tvaru „zůstatek = součet ledgeru" proto NENÍ platný test**
+  pro účty starší než toto datum — 25 peněženek je starších než samotný ledger a jejich počáteční
+  zůstatek v něm z principu být nemůže. **Neinterpretovat rozdíl u starého účtu jako poškozená data.**
+- **Nesouladů je 111, ne 2** (audit uváděl dvě). **Všechny patří testovacím a interním účtům:**
+  102 syntetických CI účtů `@onemiltest.dev` (z toho **101 s rozdílem přesně +10,00**, jednorázový
+  seed z 16. 03. 2026), 4 interní `@opravo.cz`, 2 interní OneMil (`e2e@`, `pepca@`), 2 účty
+  vlastníka, 1 známý testovací zákazník. **Reálný externí zákazník: nula.**
+- **Produkce nemá žádnou live Stripe platbu** (`cs_live_` = 0 ze 138 relací; metody `stripe_test`,
+  `test`, `test_crud`). Reálné peníze systémem zatím neprošly, takže MioCoin zůstatky nenesou
+  žádný peněžní závazek a nesoulad nemá účetní dopad.
+- **NEDĚLAT plošný přepočet zůstatků podle ledgeru.** Srazil by zůstatky testovacích účtů a rozbil
+  CI; u účtů starších než ledger by smazal legitimní počáteční zůstatky. Zůstatek zůstává
+  autoritativní pro utrácení; výherce určuje pozice tiketu, ne zůstatek.
+- **Pojistka v `process-email-queue`, která blokuje fakturační e-mail bez přílohy, SE NESMÍ
+  ODSTRANIT.** Jde o podmínku
+  `.or("subject.not.ilike.%faktura%,attachment_url.not.is.null,attachment_storage_path.not.is.null")`
+  v `supabase/functions/process-email-queue/index.ts`. Je to jediné, co brání odeslání faktury bez PDF.
+- **Jediný pending fakturační e-mail (`51467a9d-…`, 12. 07. 2026 02:00) není důkazem rozbité
+  fronty.** Je interní (`eshop@onemil.cz`), na 3,63 Kč, **záměrně zadržený** výše uvedenou pojistkou,
+  protože PDF export vznikl až 17. 07. — pět dní po zařazení řádku. **Nemá se ručně odesílat
+  (byl by to duplikát) ani mazat (ztráta auditní stopy).** Partner oznámení dostal jinou cestou:
+  cron zakládá faktury jako `draft`, `OMA-20260003` je `issued`, a odeslané fakturační e-maily mají
+  jiný předmět („OneMil – faktura připravena") než ten zadržený.
+- **Fronta je zdravá a to je ověřený fakt:** cron 16 aktivní (`*/10 * * * *`), poslední běhy
+  `succeeded`, po 12. 07. odesláno 112 e-mailů, pending mimo faktury 0.
+- **OPEN ISSUE — pre-launch krok (vědomě neprovedeno):** po resetu testovacích dat a **před
+  přepnutím Stripe do live režimu** znovu ověřit rekonciliaci wallet/ledger. Do té doby nemá
+  přepočet smysl; po resetu musí platit, že nové zůstatky odpovídají ledgeru.
+- **OPEN ISSUE — drobné zlepšení (vědomě neprovedeno):** `partner_invoice_post_create` by měl
+  e-mail zařadit až po vzniku PDF, nebo přílohu doplnit zpětně. Dnes to nic nerozbíjí, protože
+  fakturu odesílá `send-partner-invoice-email`.
+
+---
+
 # CENA VOUCHERU PRO ZÁKAZNÍKA — TRVALÝ INVARIANT (rozhodnuto 26. 08. 2026)
 
 **Rozhodnutí Pavla po prověření nálezu F6: varianta 2.** Žádná změna kódu, DB ani dat —
