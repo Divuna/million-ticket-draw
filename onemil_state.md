@@ -2,6 +2,32 @@
 
 > **Autoritativní aktuální stav. Poslední aktualizace 23. 8. 2026 podle `origin/main` (`c4df929b`), GitHubu a read-only produkční kontroly Supabase.**
 
+## 0. Admin audit RPC (F3) — stav k 26. 8. 2026 (nasazeno do produkce)
+
+Tato sekce je nejnovější a přebíjí vše níže v oblasti admin audit RPC.
+
+| Oblast | Aktuální stav |
+|---|---|
+| Neguardovaná `get_admin_actions_summary` (audit F3, kritický) | **Opraveno a nasazeno.** Funkce byla `SECURITY DEFINER` bez admin guardu a s `EXECUTE` pro `anon`; joinuje `admin_actions` na `users` a přes `STRING_AGG` sype `u.email` do výstupu. Anonymní volající tak získal reálné admin identity i to, co dělaly a kdy. Reprodukováno na stagingu jako role `anon`. |
+| Nový stav | Guard `IF NOT public.is_admin() THEN RAISE 'forbidden' (42501)`, `anon` i `PUBLIC` EXECUTE odebráno, `authenticated` ponecháno. Tělo beze změny (`+100` znaků = jen guard). |
+| `get_admin_summary_dashboard` | **Uzavřena stejná díra** (schváleno Pavlem nad rámec F3). Anon-volatelná, bez guardu, čte `payments`/`notifications` joined na `users.email` a `admin_actions`. **Dnes neúnikala jen proto, že padá na pre-existujícím bugu `42803`.** Guard přidán, `anon` odebráno. **Bug `42803` vědomě NEOPRAVEN** — to je změna chování, ne bezpečnostní oprava. |
+| Volající v aplikaci | `get_admin_actions_summary` má **nula volajících** (žádné `.rpc()`, EF, DB funkce ani view); `/admin/audit-logs` čte `event_logs`/`users` napřímo. `get_admin_summary_dashboard` má jediného volajícího `src/tests/AdminValidationWorkflows.tsx` (admin-only), který na `42803` selhává už dřív. |
+| Drift admin | **Funguje.** Guard `is_admin()` jde přes kanonické `user_roles`, takže produkční drift účet `bc116802-…` (`user_roles.role='admin'`, `users.role='user'`) data dál dostane — ověřeno přímo na produkci. |
+| Produkční data | **Nezměněna.** Migrace mění jen definice funkcí a granty; `admin_actions` 37 694 řádků, admin role 3, žádný nový audit řádek. |
+
+**Aplikovaná produkční migrace (26. 8. 2026, schválení Pavla):**
+`20260826090136_admin_actions_summary_admin_guard`. `main` = `b6039fcf`.
+**Lovable Publish není potřeba — frontend se nemění.** Žádná Edge Function se nenasazovala.
+
+**OPEN ISSUE (vědomě neopraveno):** `test_admin_security_rls()` a `test_audit_logging()` jsou
+anon-volatelné a čtou `admin_actions`, ale vydají jen počty (žádné e-maily, žádné detaily akcí).
+**OPEN ISSUE (vědomě neopraveno):** `get_due_offer_reminder_rows()` je anon-volatelná a sahá na
+e-maily; patří do cron cesty `send-offer-reminders`, ne do admin auditu. Je to poslední zbývající
+anon-volatelná nezaguardovaná funkce sahající na e-maily.
+**Otevřené zůstávají nálezy F4–F7** ze zákaznického auditu.
+
+---
+
 ## 0. Referral kódy (F2) — stav k 26. 8. 2026 (nasazeno do produkce)
 
 Tato sekce je nejnovější a přebíjí vše níže v oblasti `ensure_referral_code`.

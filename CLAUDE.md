@@ -47,6 +47,49 @@ výslovné schválení Pavla.
 
 ---
 
+# ADMIN AUDIT RPC — TRVALÉ INVARIANTY (produkce, 26. 08. 2026)
+
+**Produkčně nasazeno.** Migrace `20260826090136_admin_actions_summary_admin_guard` (F3) je na produkci
+`xkzhjldrojjlrkezorey`. `main` = `b6039fcf`. **Lovable Publish není potřeba — frontend se nemění.**
+
+**Řešená chyba (F3, kritická):** `public.get_admin_actions_summary(...)` byla `SECURITY DEFINER` bez
+admin guardu a s `EXECUTE` pro `anon`. Uvnitř joinuje `admin_actions` na `users` a přes `STRING_AGG`
+sype `u.email` do výstupu — **nepřihlášený volající tak získal reálné admin identity i to, co dělaly
+a kdy**. Staging i produkce měly byte-identickou definici (md5 `2de4e8ea…`), nešlo o drift.
+
+**Závazné invarianty (neměnit bez výslovného schválení Pavla):**
+
+- **`get_admin_actions_summary` i `get_admin_summary_dashboard` musí mít guard
+  `IF NOT public.is_admin() THEN RAISE EXCEPTION 'forbidden' USING ERRCODE = '42501'`.**
+  **Nevracet `EXECUTE` pro `anon`** ani `PUBLIC`.
+- **Guardem je `public.is_admin()`, ne `is_superadmin()` ani `has_admin_permission()`.** `is_admin()`
+  je kanonický guard obecných admin RPC v tomto projektu (8 funkcí, mj. přímý sourozenec
+  `get_admin_activation_summary`) a řeší admin i superadmin přes kanonické `user_roles`. Proto funguje
+  i produkčnímu **drift účtu** `bc116802-…` (`user_roles.role='admin'`, `users.role='user'`) — ověřeno
+  přímo na produkci. `is_superadmin()` by běžné adminy vyřadil, `has_admin_permission()` je vzor modulu
+  sales-leads a potřebuje klíč.
+- **`service_role` volání guard odmítne** (nemá `auth.uid()`). Je to záměr: obě funkce nemají v aplikaci
+  žádného volajícího, který by ho potřeboval. Existující grant je ponechán, ne odebrán.
+- **`get_admin_actions_summary` nemá v aplikaci žádného volajícího** — žádné `.rpc()` v `src/`, žádná
+  Edge Function, žádná DB funkce, žádný view. Admin audit UI (`/admin/audit-logs`) čte `event_logs`
+  a `users` napřímo. Kdyby se funkce začala volat, musí to být z admin kontextu.
+- **`get_admin_summary_dashboard` má pre-existující bug `42803` (`aggregate function calls cannot be
+  nested`) a ten se touto opravou VĚDOMĚ NEOPRAVOVAL.** Tělo čte `payments` joined na `users.email`,
+  `notifications` joined na `users.email` a `admin_actions`; dnes neuniká **jen** proto, že každé volání
+  na tom bugu spadne. Guard je tam právě proto, aby se díra neotevřela ve chvíli, kdy někdo ten SQL
+  spraví. **Samotný revoke `anon` by nestačil** — přihlášený ne-admin by prošel dál. Kdo bude bug
+  opravovat, nesmí přitom guard odstranit.
+- **Guard je u obou funkcí vložen do jejich živé definice**, takže těla zůstala byte-identická až na
+  guard (obě `+100` znaků). `SECURITY DEFINER` i `SET search_path = public` beze změny.
+- **Žádná změna dat ani audit logiky.** Migrace mění jen definice funkcí a granty; nezapisuje žádný
+  `admin_actions` řádek.
+- **Zaznamenáno, vědomě neopraveno (mimo F3):** `test_admin_security_rls()` a `test_audit_logging()`
+  jsou anon-volatelné a čtou `admin_actions`, ale vydají **jen počty**, žádné e-maily ani detaily akcí;
+  `get_due_offer_reminder_rows()` je anon-volatelná a sahá na e-maily, patří ale do cron cesty
+  `send-offer-reminders`, ne do admin auditu.
+
+---
+
 # REFERRAL KÓDY — TRVALÉ INVARIANTY (produkce, 26. 08. 2026)
 
 **Produkčně nasazeno.** Migrace `20260826081556_ensure_referral_code_owner_guard` (F2) je na produkci

@@ -1,3 +1,57 @@
+# 26. 08. 2026 — F3: `get_admin_actions_summary` vydávala admin e-maily a admin akce anonymům
+
+Tento zápis je novější než zápisy níže, které byly v době svého vzniku pravdivé. Vychází z reprodukce
+na stagingu a produkčního nasazení se schválením Pavla.
+
+- **Nález F3 (kritický), doložený reprodukcí.** `public.get_admin_actions_summary(...)` byla
+  `SECURITY DEFINER` bez admin guardu a s `EXECUTE` pro `anon`. Uvnitř joinuje `admin_actions` na
+  `users` a přes `STRING_AGG` sype `u.email` přímo do výstupu. Na stagingu jako role `anon`
+  (v transakci s ROLLBACK) vrátila `total_actions=5`, `unique_admins=1` a
+  `recent_actions = "superadmin-e2e@onemil.cz: contest_create on contests at 2026-08-26 |
+  superadmin-e2e@onemil.cz: miocoin_bulk_create on bonus_prizes at 2026-08-26 | …"` — tedy **reálné
+  admin identity plus co dělaly a kdy**. Staging i produkce měly byte-identickou definici
+  (md5 `2de4e8ea…`), nešlo o drift.
+- **Funkce nemá v aplikaci žádného volajícího.** Žádné `.rpc()` v `src/`, žádná Edge Function, žádná
+  jiná DB funkce, žádný view; admin audit UI `/admin/audit-logs` čte `event_logs` a `users` napřímo.
+  Riziko rozbití admin UI bylo tedy nulové.
+- **Oprava** (migrace `20260826090136_admin_actions_summary_admin_guard`): tělo zachováno doslova,
+  přidán guard `IF NOT public.is_admin() THEN RAISE EXCEPTION 'forbidden' USING ERRCODE = '42501'`,
+  odebráno `EXECUTE` pro `anon` i `PUBLIC`, `authenticated` ponecháno. Tvar zrcadlí nejbližšího
+  sourozence `get_admin_activation_summary()` (`SECURITY DEFINER`, `search_path=public`, guard uvnitř,
+  bez `anon`).
+- **Volba guardu byla vědomá.** `is_admin()` je kanonický guard obecných admin RPC v tomto projektu
+  (8 funkcí) a řeší admin i superadmin přes kanonické `user_roles`. Produkce má reálný **drift účet**
+  `bc116802-…` s `user_roles.role='admin'` a `users.role='user'`; ten guardem projde — ověřeno přímo
+  na produkci. `is_superadmin()` by běžné adminy vyřadil, `has_admin_permission()` je vzor modulu
+  sales-leads a potřebuje permission klíč.
+- **Při kontrole požadavku „žádný únik přes jinou související RPC" se našla druhá identická díra.**
+  `get_admin_summary_dashboard()` — rovněž `SECURITY DEFINER`, anon-volatelná, bez guardu, a její tělo
+  čte `payments` joined na `users.email`, `notifications` joined na `users.email` a `admin_actions`.
+  **Dnes neúnikala jen proto, že je rozbitá:** každé volání, i anonymní, padá na pre-existujícím
+  `42803 aggregate function calls cannot be nested`. Ten bug byl jediné, co dělilo anonyma od dat.
+  Pavel schválil uzavření i této funkce, aby se díra neotevřela ve chvíli, kdy někdo SQL spraví.
+  **Samotný revoke `anon` by nestačil** — přihlášený ne-admin by prošel dál, proto stejný guard.
+  **Bug `42803` se vědomě NEOPRAVOVAL** — je to změna chování, ne bezpečnostní oprava. Ověřeno na
+  stagingu i na produkci, že admin nově guardem projde a padne na tomtéž původním `42803`, tedy
+  **chování pro adminy je nezměněné**. Jediný volající je `src/tests/AdminValidationWorkflows.tsx`
+  (admin-only test stránka), která na tom bugu selhávala už předtím.
+- **Guard je u obou funkcí vložen do jejich živé definice**, takže těla zůstala byte-identická až na
+  guard: obě narostly o **přesně 100 znaků** (1073→1173 a 2516→2616). `SECURITY DEFINER`
+  i `SET search_path = public` beze změny.
+- **Staging testy (12 kontrol) prošly:** anon → `permission denied` u obou funkcí; běžný zákazník →
+  `forbidden` u obou; admin, superadmin i simulovaný drift admin → data; admin na
+  `get_admin_summary_dashboard` → původní `42803`; obě funkce zmizely z anon-volatelného seznamu;
+  spec 46 (1/1) a spec 53 (2/2) zelené.
+- **Produkční postcheck (8 kontrol) prošel** ve stejném rozsahu, vše v transakci s ROLLBACK, včetně
+  **reálného produkčního drift admina** `bc116802-…`. Produkční data nezměněna: `admin_actions`
+  37 694 řádků, admin role 3, `anon_still_reachable = 0`, žádný nový audit řádek.
+- **Testy po mergi:** `tsc -p tsconfig.app.json --noEmit` 17 chyb = nezměněná baseline,
+  `npm run build` OK, spec 46 1/1 (`32951162338`) a spec 53 2/2 (`32951347122`) na `main` = `b6039fcf`.
+- **Zaznamenáno, vědomě neopraveno:** `test_admin_security_rls()` a `test_audit_logging()` jsou
+  anon-volatelné a čtou `admin_actions`, ale vydají jen počty (žádné e-maily, žádné detaily akcí);
+  `get_due_offer_reminder_rows()` je anon-volatelná a sahá na e-maily, patří ale do cron cesty
+  `send-offer-reminders`, ne do admin auditu. Otevřené zůstávají i nálezy **F4–F7**.
+
 # 26. 08. 2026 — F2: `ensure_referral_code` šla volat anonymně a pro cizí i smyšlené UUID
 
 Tento zápis je novější než zápisy níže, které byly v době svého vzniku pravdivé. Vychází z reprodukce
