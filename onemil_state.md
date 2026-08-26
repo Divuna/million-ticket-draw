@@ -2,6 +2,37 @@
 
 > **Autoritativní aktuální stav. Poslední aktualizace 23. 8. 2026 podle `origin/main` (`c4df929b`), GitHubu a read-only produkční kontroly Supabase.**
 
+## 0. Cena voucheru pro zákazníka (F6) — stav k 26. 8. 2026 (uzavřeno bez změny)
+
+**F6 byl prověřen a UZAVŘEN jako nález, který NENÍ aktuální funkční chybou.** Rozhodnutí Pavla:
+varianta 2. **Neproběhla žádná změna kódu, DB, dat ani UI** — jde čistě o dokumentační uzávěr.
+
+| Oblast | Aktuální stav |
+|---|---|
+| Zákaznická cena voucheru | **Pevně 5 MioCoinů.** `buy_voucher_atomic` strhává `v_price := 5` z `balance_coins`. |
+| Konzistence napříč vrstvami | **Bez rozporu pro zákazníka** — RPC účtuje 5, tlačítko i toast říkají 5, admin zobrazuje read-only badge „Cena v detailu: 5 MioCoinů". |
+| Produkční realita | 33 voucherů, **26 reálných nákupů, všechny přesně za 5** (19. 4. – 8. 7. 2026). |
+| `vouchers.redeem_price_vouchers` | **DEPRECATED — historický pozůstatek, není zdrojem ceny.** Přidán 15. 3. 2026 pro funkci `redeem_voucher` s cenou v `wallets.balance_vouchers`; **obojí dnes neexistuje**. Na produkci má **všech 33 voucherů default `1`** — nikdo hodnotu nikdy nenastavil. |
+| `get_available_vouchers(uuid)` | **Mrtvá RPC** — jediný zbylý čtenář sloupce, nula volajících v `src/`. Katalog používá `get_public_available_vouchers()`, která cenu nevrací. |
+| Formulace nálezu F6 | Audit tvrdil, že RPC „ignoruje" `redeem_price_vouchers`, což implikuje regresi. **Historie ukazuje opak:** konstanta 5 je v `buy_voucher_atomic` od první definice (8. 3. 2026), tedy **týden PŘED** vznikem sloupce. Nikdy nebyly propojené. |
+
+**⚠️ Past pro budoucí práci:** napojení sloupce do `buy_voucher_atomic` bez datové migrace by
+**tiše srazilo cenu celého katalogu z 5 na 1 MioCoin** (všechny produkční vouchery mají default 1),
+zatímco UI by dál hlásilo „Koupit za 5 MioCoinů". Případný fallback musí být `coalesce(..., 5)`.
+
+**OPEN ISSUE — samostatný budoucí cleanup (vědomě neprovedeno):** fyzické odstranění sloupce
+`vouchers.redeem_price_vouchers` a mrtvé RPC `get_available_vouchers(uuid)`. Sloupec je
+`numeric NOT NULL DEFAULT 1`, drop je nevratný → vlastní schválený krok. Do té doby sloupec
+zůstává, ale je **deprecated a nikdo ho nesmí začít používat**.
+
+**Nezaměňovat s B2B cenami:** `voucher_versions`, `voucher_distribution_price_rules`,
+`voucher_distribution_orders`, `voucher_issuances` a `superadmin_set_voucher_distribution_price`
+řeší, co platí **partner OneMilu** za distribuci voucheru — jiná osa, tímto nedotčená.
+
+**Otevřený zůstává nález F7** ze zákaznického auditu.
+
+---
+
 ## 0. Anon-volatelné zapisovací a interní RPC (F5) — stav k 26. 8. 2026 (nasazeno do produkce)
 
 Tato sekce je nejnovější a přebíjí vše níže v oblasti grantů RPC.

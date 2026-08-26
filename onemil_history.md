@@ -1,3 +1,46 @@
+# 26. 08. 2026 — F6 prověřen a uzavřen: cena voucheru je pevných 5 MioCoinů, nejde o chybu
+
+Tento zápis je novější než zápisy níže, které byly v době svého vzniku pravdivé. Vychází
+z read-only prověrky kódu, migrační historie, admin UI a dat na obou prostředích.
+**Neproběhla žádná změna kódu, DB, dat ani UI** — F6 se uzavírá dokumentačně.
+
+- **Nález F6 zněl:** `buy_voucher_atomic` používá pevnou cenu 5 MioCoinů a „ignoruje"
+  `vouchers.redeem_price_vouchers`. Formulace implikuje regresi.
+- **Prověrka ukázala, že o regresi nejde — ty dvě věci nebyly nikdy propojené.**
+  `buy_voucher_atomic` vznikla **08. 03. 2026** rovnou s `v_price numeric := 5` a tuto konstantu
+  si nesla přes **devět** dalších přepisů až do 18. 07. 2026. `redeem_price_vouchers` byl přidán
+  **až 15. 03. 2026**, tedy **týden POTÉ**, a to pro **jinou funkci `redeem_voucher`**, s cenou
+  vedenou v `wallets.balance_vouchers`.
+- **Obojí je dnes pryč.** Na produkci `redeem_voucher` **neexistuje** a `wallets.balance_vouchers`
+  **také ne** (dvoupeněženkový model byl zrušen). Sloupec tak osiřel: jeho funkce i jeho měna
+  zmizely, zbyl jen sloupec s defaultem 1.
+- **Pro zákazníka dnes žádná nekonzistence není.** RPC účtuje 5, tlačítko i toast říkají 5,
+  produkční ledger potvrzuje **26 nákupů, všechny přesně za 5** (19. 4. – 8. 7. 2026).
+- **Admin panel je nejsilnější důkaz záměru.** Formulář `redeem_price_vouchers` vůbec nezapisuje
+  (create ani update) a naopak zobrazuje read-only Badge „Cena v detailu: 5 MioCoinů" a
+  „Detailové CTA: Koupit za 5 MioCoinů". Nikdo nestaví read-only badge kolem hodnoty, kterou
+  považuje za konfigurovatelnou.
+- **Dokumentace fixní cenu 5 nikde neuvádí** — `ONEMIL_BUSINESS_CONTEXT.md` i `POPIS_ONEMIL.md`
+  říkají jen „zákazník si voucher koupí nebo odemkne za MioCoiny". Zmínka o „prices must be
+  historically preserved" se týká **B2B** systému `voucher_versions` /
+  `voucher_distribution_price_rules`, tedy toho, co platí partner OneMilu — jiná osa.
+- **Protisignál, který jsem nezamlčel:** na stagingu je 5 voucherů z 31. 05. 2026 s cenami
+  50/80/90/120/150 („Wellness Day", „Gourmet Box"…). Někdo tehdy per-voucher ceny zjevně
+  zamýšlel. Admin formulář ten sloupec ale nikdy nezapisoval (musely být vloženy ručně SQL),
+  kód je nikdy nectil a **mají 0 nákupů** — šlo o design/demo set, ne funkční záměr.
+- **Rozhodnutí Pavla: varianta 2.** Zákaznická cena voucheru je pevných 5 MioCoinů;
+  `redeem_price_vouchers` je historický pozůstatek a není zdrojem ceny.
+- **⚠️ Nejdůležitější poznatek pro budoucnost:** kdyby někdo „opravil" jen
+  `buy_voucher_atomic`, aby sloupec četla, **cena celého produkčního katalogu by tiše spadla
+  z 5 na 1 MioCoin** — všech 33 produkčních voucherů má default `1` — zatímco UI by dál hlásilo
+  „Koupit za 5 MioCoinů". Oprava RPC bez datové migrace by byla **horší než současný stav**.
+  Případný fallback musí být `coalesce(..., 5)`, nikdy `coalesce(..., 1)`.
+- **Vědomě neprovedeno:** `buy_voucher_atomic`, zákaznické UI ani produkční data se neměnily;
+  sloupec `redeem_price_vouchers` ani mrtvá RPC `get_available_vouchers(uuid)` se nemazaly.
+  Jejich fyzické odstranění zůstává jako **samostatný budoucí cleanup** — sloupec je
+  `numeric NOT NULL DEFAULT 1` a drop je nevratný.
+- **Otevřený zůstává nález F7.**
+
 # 26. 08. 2026 — F5: anon mohl zapisovat interní stav přes 10 nezaguardovaných RPC
 
 Tento zápis je novější než zápisy níže, které byly v době svého vzniku pravdivé. Vychází z vlastního

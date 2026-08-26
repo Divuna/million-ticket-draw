@@ -47,6 +47,55 @@ výslovné schválení Pavla.
 
 ---
 
+# CENA VOUCHERU PRO ZÁKAZNÍKA — TRVALÝ INVARIANT (rozhodnuto 26. 08. 2026)
+
+**Rozhodnutí Pavla po prověření nálezu F6: varianta 2.** Žádná změna kódu, DB ani dat —
+tohle je zápis existujícího a potvrzeného chování, ne oprava.
+
+**Zákaznický nákup voucheru stojí pevně 5 MioCoinů.** Cena je konstanta, ne per-voucher údaj.
+
+**Závazné invarianty (neměnit bez výslovného schválení Pavla):**
+
+- **`buy_voucher_atomic` strhává `v_price numeric := 5` z `wallets.balance_coins`.** Konstanta
+  je záměr, ne technický zbytek — funkce ji má od své **první** definice (08. 03. 2026) a nesla
+  si ji přes **devět** dalších přepisů až do 18. 07. 2026.
+- **`vouchers.redeem_price_vouchers` NENÍ zdrojem zákaznické ceny a nikdy jím nebyl.**
+  **Nepřipojovat ho do `buy_voucher_atomic`.** Je to historický pozůstatek zrušeného modelu:
+  přidán 15. 03. 2026 — **týden PO** vzniku `buy_voucher_atomic` — pro **jinou** funkci
+  `redeem_voucher`, s cenou vedenou v `wallets.balance_vouchers`. **Obojí je dnes pryč:**
+  `redeem_voucher` na produkci neexistuje a `wallets.balance_vouchers` také ne (viz pravidlo
+  „nevracet `balance_vouchers`"). Sloupec je tím osiřelý — jeho funkce i jeho měna zmizely.
+- **⚠️ Napojení sloupce do RPC bez datové migrace by tiše srazilo ceník o 80 %.** Na produkci
+  má **všech 33 voucherů `redeem_price_vouchers = 1`** (default sloupce, nikdo ho nikdy
+  nenastavil). Kdo by „opravil" jen `buy_voucher_atomic`, srazil by cenu z 5 na 1 MioCoin
+  u celého katalogu, zatímco UI by dál hlásilo „Koupit za 5 MioCoinů". **Případný fallback
+  musí být `coalesce(..., 5)`, nikdy `coalesce(..., 1)`.**
+- **Pětka je dnes na čtyřech místech a musí zůstat konzistentní:** `buy_voucher_atomic`
+  (`v_price := 5`), tlačítko `'Koupit za 5 MioCoinů'` (`VoucherShowcase.tsx`), toast
+  „Voucher úspěšně zakoupen za 5 MioCoinů!" (`Vouchers.tsx`) a read-only Badge
+  „Cena v detailu: 5 MioCoinů" v `AdminVouchers.tsx`. Kdo mění jedno, musí změnit všechna.
+- **Admin voucher formulář `redeem_price_vouchers` vědomě nezapisuje** (create ani update)
+  a naopak deklaruje fixní cenu jako fakt. **Nepřidávat do něj pole ceny**, dokud nebude
+  schválena varianta 1 jako nová funkce.
+- **`get_available_vouchers(uuid)` je mrtvá RPC** — jediný zbylý čtenář sloupce, **nula
+  volajících** v `src/`. Zákaznický katalog používá `get_public_available_vouchers()`, která
+  cenu vůbec nevrací.
+- **Nezaměňovat s B2B cenami.** `voucher_versions`, `voucher_distribution_price_rules`,
+  `voucher_distribution_orders`, `voucher_issuances` a
+  `superadmin_set_voucher_distribution_price` řeší, co za distribuci voucheru platí **partner
+  OneMilu** (`unit_price_ex_vat`, DPH, superadmin). To je jiná osa než MioCoiny zákazníka
+  a tímto invariantem není dotčená.
+- **OPEN ISSUE — samostatný budoucí cleanup (vědomě neprovedeno):** fyzické odstranění
+  `vouchers.redeem_price_vouchers` a `get_available_vouchers(uuid)`. Sloupec je
+  `numeric NOT NULL DEFAULT 1` a drop je nevratný, takže si zaslouží vlastní schválený krok.
+  Do té doby sloupec **zůstává, ale je deprecated a nikdo ho nesmí začít používat.**
+- **Varianta 1 (cena per voucher) není oprava chyby, ale nová funkce.** Kdyby ji Pavel
+  schválil, minimální rozsah je: fallback `coalesce(..., 5)` v RPC **+ datová migrace
+  produkčních cen** + vracení ceny z `get_public_available_vouchers()` + odstranění natvrdo
+  psané pětky ze čtyř míst v UI + pole ceny v adminu + validace.
+
+---
+
 # ANON-VOLATELNÉ ZAPISOVACÍ A INTERNÍ RPC — TRVALÉ INVARIANTY (produkce, 26. 08. 2026)
 
 **Produkčně nasazeno.** Migrace `20260826143959_lock_down_writable_rpcs_group_a` a
