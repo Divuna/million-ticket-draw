@@ -1,3 +1,31 @@
+-- ═══════════════════════════════════════════════════════════════════════════════
+--  ⛔  STAGING ONLY — NIKDY NESPOUŠTĚT NA PRODUKCI  ⛔
+-- ═══════════════════════════════════════════════════════════════════════════════
+--
+--  Tento soubor byl VĚDOMĚ přesunut z `supabase/migrations/` do
+--  `docs/staging-sync/`, aby ho žádný budoucí `supabase db push` nemohl omylem
+--  aplikovat na produkci `xkzhjldrojjlrkezorey`. Není to migrace. Je to záznam
+--  jednorázového provozního zásahu na stagingu.
+--
+--  ▸ PROSTŘEDÍ:   pouze staging `dxmowysntemfqfnanxua`
+--  ▸ PRODUKCE:    nedotčena a dotýkat se jí nesmí
+--  ▸ STAV:        JIŽ APLIKOVÁNO na staging 26. 08. 2026 — staging je dorovnaný,
+--                 spouštět znovu není potřeba
+--  ▸ VĚTEV:       fix/staging-security-drift-sync (NEMERGOVAT do `main`)
+--
+--  ▸ COMMIT:      742903a2 (26. 08. 2026)
+--  ▸ PŮVODNÍ NÁZEV: supabase/migrations/20260826170000_staging_security_drift_sync.sql
+--
+--  PROČ VZNIKL
+--  Produkce dostala sérii hardening migrací, které staging nikdy nedostal, takže
+--  staging byl výrazně slabší a bezpečnostní testy tam dávaly falešně optimistický
+--  obraz. Strojový diff všech SECURITY DEFINER funkcí našel na stagingu 152
+--  klientsky volatelných proti 125 na produkci a 47 skutečných bezpečnostních
+--  rozdílů. Tento soubor srovnal GRANTY (skupiny A1/A2/D) a doplnil guard u tří
+--  test/CRUD RPC (skupina B). Těla funkcí nepřepisuje produkčními — staging běží
+--  prokazatelně starší logiku a přepis by byl funkční změna, ne bezpečnostní oprava.
+-- ═══════════════════════════════════════════════════════════════════════════════
+
 -- STAGING ONLY — sync SECURITY DEFINER EXECUTE grants with production.
 --
 -- ⚠️ This migration is intended for staging (dxmowysntemfqfnanxua). It is a no-op

@@ -1,3 +1,33 @@
+-- ═══════════════════════════════════════════════════════════════════════════════
+--  ⛔  STAGING ONLY — NIKDY NESPOUŠTĚT NA PRODUKCI  ⛔
+-- ═══════════════════════════════════════════════════════════════════════════════
+--
+--  Tento soubor byl VĚDOMĚ přesunut z `supabase/migrations/` do
+--  `docs/staging-sync/`, aby ho žádný budoucí `supabase db push` nemohl omylem
+--  aplikovat na produkci `xkzhjldrojjlrkezorey`. Není to migrace. Je to záznam
+--  jednorázového provozního zásahu na stagingu.
+--
+--  ▸ PROSTŘEDÍ:   pouze staging `dxmowysntemfqfnanxua`
+--  ▸ PRODUKCE:    nedotčena a dotýkat se jí nesmí
+--  ▸ STAV:        JIŽ APLIKOVÁNO na staging 26. 08. 2026 — staging je dorovnaný,
+--                 spouštět znovu není potřeba
+--  ▸ VĚTEV:       fix/staging-security-drift-sync (NEMERGOVAT do `main`)
+--
+--  ▸ COMMIT:      7afe129e (26. 08. 2026)
+--  ▸ PŮVODNÍ NÁZEV: supabase/migrations/20260826190000_staging_activate_partner_reward_sql_match_production.sql
+--
+--  PROČ VZNIKL
+--  Poslední případ, kdy byl staging méně bezpečný než produkce — a NEŠLO o drift
+--  grantů (ty jsou v obou prostředích shodné, produkce tu `anon` i `authenticated`
+--  povoluje také). Lišilo se tělo: produkce má bezpečný stub, který nic nezapisuje,
+--  zatímco staging běžel starou živou verzi, jež aktivovala reward kódy bez jakékoli
+--  autorizace. Produkce nemá guard k přenesení — místo guardu logiku odstranila a
+--  aktivaci převzala kanonická cesta `redeem_miocoin_code` + trigger
+--  `trg_log_partner_coin_activation_reward`. Staging je proto srovnán na produkční
+--  definici doslova (md5 a1347dbb7defa440d0e439663902a0a9); žádný nový guard ani
+--  nová business logika se nevymýšlí.
+-- ═══════════════════════════════════════════════════════════════════════════════
+
 -- STAGING ONLY — last item of the staging security drift.
 --
 -- ⚠️ Intended for staging (dxmowysntemfqfnanxua). It is a no-op on production

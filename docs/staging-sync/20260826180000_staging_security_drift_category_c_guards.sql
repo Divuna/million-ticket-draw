@@ -1,3 +1,32 @@
+-- ═══════════════════════════════════════════════════════════════════════════════
+--  ⛔  STAGING ONLY — NIKDY NESPOUŠTĚT NA PRODUKCI  ⛔
+-- ═══════════════════════════════════════════════════════════════════════════════
+--
+--  Tento soubor byl VĚDOMĚ přesunut z `supabase/migrations/` do
+--  `docs/staging-sync/`, aby ho žádný budoucí `supabase db push` nemohl omylem
+--  aplikovat na produkci `xkzhjldrojjlrkezorey`. Není to migrace. Je to záznam
+--  jednorázového provozního zásahu na stagingu.
+--
+--  ▸ PROSTŘEDÍ:   pouze staging `dxmowysntemfqfnanxua`
+--  ▸ PRODUKCE:    nedotčena a dotýkat se jí nesmí
+--  ▸ STAV:        JIŽ APLIKOVÁNO na staging 26. 08. 2026 — staging je dorovnaný,
+--                 spouštět znovu není potřeba
+--  ▸ VĚTEV:       fix/staging-security-drift-sync (NEMERGOVAT do `main`)
+--
+--  ▸ COMMIT:      a28ac051 (26. 08. 2026)
+--  ▸ PŮVODNÍ NÁZEV: supabase/migrations/20260826180000_staging_security_drift_category_c_guards.sql
+--
+--  PROČ VZNIKL
+--  Kategorie C předchozího kroku: pět funkcí, jejichž staging těla jsou STARŠÍ než
+--  produkční, a chybí jim proto autorizační guard, který produkce má
+--  (pause_contest, resume_contest, get_admin_activation_summary,
+--  ensure_wallet_exists, claim_miocoin_bonus(uuid,uuid)). Předchozí soubor už jim
+--  odebral `anon`; tento zavírá zbývající mezeru pro `authenticated`. Produkční
+--  definice byly porovnány řádek po řádku — lišil se pouze guard, business příkazy
+--  jsou stejné — takže se přenáší VÝHRADNĚ guard do vlastní živé definice každé
+--  funkce. Produkční tělo se nikde nekopíruje.
+-- ═══════════════════════════════════════════════════════════════════════════════
+
 -- STAGING ONLY — category C of the staging security drift: five functions whose
 -- staging bodies are OLDER than production's and therefore lack the authorization
 -- guard production has. The previous migration
