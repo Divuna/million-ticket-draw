@@ -1,3 +1,75 @@
+# 27. 08. 2026 — Apex `onemil.cz` odpojen od Lovable; pravděpodobně kvůli plánu Pro
+
+Tento zápis je novější než zápisy níže, které byly v době svého vzniku pravdivé.
+**Popisuje NEVYŘEŠENÝ stav.** Nezměnil se žádný kód, SQL, DB ani data — šlo výhradně o doménu,
+DNS a hosting.
+
+## Jak to začalo
+
+Externí bezpečnostní test hlásil u `onemil.cz` sedm nálezů (chybí CSP, ochrana proti iframe, SRI,
+CORP, `security.txt`, AAAA, CAA). Read-only audit ukázal, že **jeden byl nepravdivý**
+(`security.txt` existuje a vrací 200), dva **nejsou reálné problémy** (SRI u „evergreen" skriptů
+nelze; CORP `same-origin` by rozbilo Shoptet widget u partnerů), AAAA není bezpečnostní nález —
+a **jediný skutečně důležitý byl clickjacking**, protože `frame-ancestors` ani `X-Frame-Options`
+nešlo doručit: z repa se na Lovable hostingu žádná HTTP hlavička nastavit nedá.
+
+## Co se stalo
+
+Řešením mělo být pravidlo v Cloudflare. V Cloudflare bylo vytvořeno **Transform Rule „OneMil
+Security Headers"** (CSP `frame-ancestors 'none'`, `X-Frame-Options: DENY`, `Permissions-Policy`).
+Pravidlo je **Active a nastavené správně** — ale **neprojevilo se**.
+
+Při hledání příčiny byl apex přepnut na **Proxied**. Lovable ho tím přestal poznávat, vyhodnotil
+doménu jako neověřenou a **odpojil ji od projektu**. Apex začal vracet **421 „Project not found"**.
+Přepnutí zpět na DNS only problém **neopravilo** — Lovable si doménu musí znovu ověřit.
+
+Následovaly čtyři pokusy o `Recover`. Všechny skončily na Entri hláškou **„Sorry! This link has
+expired"**, včetně anonymního okna a s vypnutým Google Translate.
+
+Po `Disconnect` a pokusu o nové připojení Lovable ukázal:
+**„Upgrade to Pro — You need to be on a pro plan to connect a domain. €25 due today."**
+
+## Nejpravděpodobnější příčina (hypotéza, NEOVĚŘENO)
+
+**Vlastní domény jsou u Lovable funkce plánu Pro.** Pokud předplatné vypršelo nebo bylo sníženo,
+vysvětluje to všechno: `www` je Live (Pro tedy dřív aktivní byl), apex „driftoval" do Offline,
+a `Recover` jako Pro-gated akce nemohl projít.
+
+**Není to potvrzeno** — stav fakturace v Lovable nebyl ověřen. Zaznamenáno jako nejsilnější
+hypotéza, ne jako fakt.
+
+## Co je ověřeno jako v pořádku (a nemá se znovu prošetřovat)
+
+- **DNS je správné.** `A onemil.cz → 185.158.133.1` (DNS only) i
+  `TXT _lovable → lovable_verify=9128160c…930d4` přesně odpovídají tomu, co Lovable v UI požaduje.
+  **Potvrdil to i Lovable sám** („žádná chyba v DNS tam teď není", stav = „drifted").
+- **Pošta je nedotčená** — MX Active24, právě jeden SPF na apexu, DKIM `resend._domainkey`,
+  DMARC, `send.onemil.cz` (SES).
+- **DNSSEC funguje**, DS v `.cz` sedí s dodanou hodnotou.
+- **`www.onemil.cz` běží** (200, Live).
+- Uklizen byl jeden starý ověřovací TXT `lovable_verify=2ebda9a0-…`; `_lovable.www.onemil.cz`
+  (`f77a1ad4…`) zůstal nedotčen, protože drží živou `www`.
+
+## Zjištění, které stojí za zapamatování
+
+**Transform Rule nefunguje ani na `www`, přestože `www` má v Cloudflare oranžový mrak.** Důkaz:
+certifikát doručený přes `188.114.96.9` má **identické sériové číslo**
+(`11F61A3B02ECF9B10E41EA07F754EB96`) jako certifikát z Lovable originu `185.158.133.1`. Proxied
+zóna by předkládala vlastní edge certifikát. Ty IP tedy patří **Cloudflare Lovable
+(Cloudflare for SaaS)**, ne zákaznické zóně — a bezpečnostní hlavičky přes ni proto nelze doručit.
+
+Poučení: **„Active" v Cloudflare dashboardu není důkaz, že pravidlo působí.** Vždy měřit `curl -D -`.
+
+## Otevřené kroky
+
+1. Ověřit stav plánu v Lovable (Settings → Plans / Billing).
+2. Rozhodnout o Pro (€25/měsíc) — **rozhodnutí Pavla**; bez něj apex připojit nelze.
+3. Zvážit riziko, že Lovable časem odpojí i `www`.
+4. Zvážit přenos hostingu na Vercel/Netlify — vlastní domény zdarma a hlavičky přímo z repa.
+5. Clickjacking zůstává neopravený; CAA stále chybí.
+
+---
+
 # 26. 08. 2026 — F7 prověřen READ-ONLY a uzavřen: peněženky ani fronta e-mailů nejsou rozbité
 
 Tento zápis je novější než zápisy níže, které byly v době svého vzniku pravdivé. Vychází výhradně

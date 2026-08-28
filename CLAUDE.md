@@ -47,6 +47,66 @@ výslovné schválení Pavla.
 
 ---
 
+# VLASTNÍ DOMÉNA A BEZPEČNOSTNÍ HLAVIČKY — TRVALÉ INVARIANTY (27. 08. 2026)
+
+**⚠️ AKTIVNÍ PROBLÉM v době zápisu: apex `onemil.cz` je odpojený od Lovable a nedostupný;
+`www.onemil.cz` běží.** Detail v `onemil_state.md`.
+
+**Závazné invarianty (neměnit bez výslovného schválení Pavla):**
+
+- **NEHLEDAT chybu v DNS ani v repu.** DNS je ověřeně správné a Lovable to sám potvrdil
+  („žádná chyba v DNS tam teď není", stav domény = **„drifted"**). Kanonické hodnoty:
+  `A onemil.cz → 185.158.133.1` (**DNS only**) a
+  `TXT _lovable.onemil.cz → lovable_verify=9128160c44be9dff7100644767a2f5341230664eb3b512a6d719e5e316e930d4`.
+- **`TXT _lovable.www.onemil.cz` (`lovable_verify=f77a1ad4…03f9`) NIKDY nemazat** — drží živou
+  `www.onemil.cz`. Při úklidu se maže **jen** starý `lovable_verify=2ebda9a0-…` na `_lovable.onemil.cz`
+  (už provedeno). Rozlišení: **aktuální ověření jsou dlouhý hex, stará jsou UUID s pomlčkami.**
+- **⚠️ Apex NIKDY nepřepínat na Proxied (oranžový mrak).** Lovable ověřuje doménu přes `A` záznam;
+  s proxy uvidí cizí IP, vyhodnotí doménu jako neověřenou a **odpojí ji od projektu**. Přesně tohle
+  27. 08. 2026 shodilo apex a přepnutí zpět na šedý mrak to samo **neopraví** — doména se musí
+  v Lovable znovu připojit. Oficiální podporovaná cesta pro proxy je jiná: v Lovable zvolit
+  **„Domain uses Cloudflare or a similar proxy"** a použít **`CNAME`** místo `A`.
+- **Vlastní domény jsou u Lovable funkce plánu Pro.** Po odpojení hlásí „Connect domain":
+  *„You need to be on a pro plan to connect a domain. €25 due today."* **Bez Pro nelze apex
+  znovu připojit.** Je to nejsilnější vysvětlení i toho, proč `Recover` přes Entri selhal 4× za
+  sebou („link has expired", i v anonymním okně) — **hypotéza, dokud nebude ověřen stav fakturace.**
+- **Platba za Pro je rozhodnutí Pavla.** Žádný agent ji nesmí provést ani doporučovat jako hotovou věc.
+- **Cloudflare Transform Rule „OneMil Security Headers" je Active, ale NEFUNGUJE** — ani na apexu,
+  ani na `www` (přestože `www` má oranžový mrak). **Ověřený důkaz:** certifikát doručený přes
+  `188.114.96.9` má **identické sériové číslo** (`11F61A3B02ECF9B10E41EA07F754EB96`) jako certifikát
+  z Lovable originu `185.158.133.1` — proxied zóna by předkládala vlastní edge cert. Ty IP patří
+  **Cloudflare Lovable (Cloudflare for SaaS)**, ne zákaznické zóně. **Nepovažovat pravidlo za
+  funkční jen proto, že je v dashboardu „Active".** Vždy měřit `curl -D -`.
+- **Z repa NELZE na produkci nastavit žádnou HTTP hlavičku.** Ověřeno: `vercel.json` se nepoužívá
+  (a nemá sekci `headers`), `_headers`/`_redirects` propadají do SPA fallbacku, `.lovable/` obsahuje
+  jen `plan.md`. Jediné, co repo řídí, je `<meta http-equiv="Content-Security-Policy">` v `index.html`
+  — a ta **neumí `frame-ancestors` ani `X-Frame-Options`**.
+- **Clickjacking je reálný a NEOPRAVENÝ.** `onemil.cz` i `www.onemil.cz` lze vložit do cizího iframu.
+  Ověřeno, že to nic nerozbije: jediný `<iframe>` v repu je `YouTubeEmbed.tsx` (vkládá YouTube **do
+  nás**), Shoptet widget žádný iframe nemá, OAuth i Stripe jsou top-level redirecty.
+- **`Permissions-Policy: camera=(), microphone=(), geolocation=()` je bezpečná** — ověřeno v kódu:
+  `getUserMedia` ani `navigator.geolocation` se nikde nevyskytují; `AudioContext` ve
+  `WinDetailModal.tsx` jen **přehrává** tóny a `microphone=()` ho neblokuje.
+- **`Cross-Origin-Resource-Policy: same-origin` NIKDY nenasazovat.** Rozbilo by Shoptet widget
+  u všech partnerů — `shoptet-widget.js` i `miocoin-icon.png` se načítají **cross-origin
+  z partnerských e-shopů**. Jediná bezpečná hodnota je `cross-origin`, což nic nepřináší.
+- **SRI je u OneMilu falešně pozitivní nález.** Jediné externí skripty jsou `gtag.js`,
+  `connect.facebook.net/en_US/fbevents.js` a OneSignal SDK — všechny „evergreen", hash by je rozbil
+  při každé aktualizaci vendora. **Nezavádět SRI.**
+- **`/.well-known/security.txt` EXISTUJE** (`public/.well-known/security.txt`, vrací 200, splňuje
+  povinná pole RFC 9116). Nález „chybí security.txt" byl **nepravdivý** — nevytvářet znovu.
+- **CAA stále chybí.** Až se bude přidávat, musí být **široké** (`pki.goog` — dnes vydává Google
+  Trust Services/WE1, dále `letsencrypt.org`, `digicert.com`, `ssl.com`, `comodoca.com`), protože
+  CAA **se dědí na subdomény** a úzký záznam by zablokoval obnovu SSL i pro `send.onemil.cz`.
+- **AAAA pro apex není bezpečnostní nález** a není proveditelný — Lovable pro apex IPv6 nepublikuje.
+- **Pošta se touto epizodou nezměnila a měnit se nesmí:** MX `mx10`/`mx20.active24.cz`, **právě
+  jeden** SPF na apexu, DKIM `resend._domainkey`, DMARC, `send.onemil.cz` (SES).
+- **OPEN ISSUE — alternativa k zvážení:** přenést hosting na Vercel/Netlify. Vlastní domény jsou tam
+  zdarma a **bezpečnostní hlavičky se nastaví přímo z repa** — vyřešilo by to Pro-gate i clickjacking
+  najednou. Git sync už existuje a Lovable export výslovně povoluje.
+
+---
+
 # PENĚŽENKY, LEDGER A FAKTURAČNÍ FRONTA — TRVALÉ INVARIANTY (rozhodnuto 26. 08. 2026)
 
 **Nález F7 byl prověřen READ-ONLY a uzavřen jako nález, který NENÍ aktuální funkční chybou.**
