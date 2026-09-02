@@ -89,7 +89,7 @@ Deno.serve(async (req) => {
             include_player_ids: [devices.player_id],
             headings: { cs: title, en: title },
             contents: { cs: message, en: message },
-            web_url: 'https://onemil.lovable.app/profile'
+            web_url: 'https://onemil.cz/profile'
           })
         });
 
