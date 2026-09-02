@@ -2,7 +2,66 @@
 
 > **Autoritativní aktuální stav. Poslední aktualizace 23. 8. 2026 podle `origin/main` (`c4df929b`), GitHubu a read-only produkční kontroly Supabase.**
 
-## 0. Doména `onemil.cz` odpojena od Lovable — VÝPADEK APEXU (27. 8. 2026, NEVYŘEŠENO)
+## 0. Produkční hosting migrován na Vercel — apex i `www` běží, bezpečnostní hlavičky jsou živé (02. 09. 2026, VYŘEŠENO)
+
+**Toto nahrazuje sekci níže („Doména `onemil.cz` odpojena od Lovable — VÝPADEK APEXU").** Cesta
+z bodu 4 tehdejšího OPEN ISSUE („přenést hosting na Vercel/Netlify") byla realizována a je teď
+produkční řešení. Sekce níže zůstává beze změny jako historický záznam epizody, která k tomuto
+kroku vedla — jen je označená jako překonaná tam, kde už neplatí.
+
+**Ověřený současný stav (potvrzeno Pavlem):**
+
+- **Produkční frontend OneMil běží na Vercelu**, ne na Lovable.
+- **`onemil.cz` i `www.onemil.cz` vedou na Vercel** — DNS cutover proběhl, apex i `www` jsou
+  dostupné.
+- **Deploy produkčního frontendu jde z GitHub `main` přes Vercel** (Vercel projekt sleduje `main`
+  a nasazuje automaticky po merge).
+- **Lovable se může dál používat jako editor kódu** (git sync do GitHubu), ale **už není produkční
+  hosting** — „Lovable Publish" už neurčuje, co běží na `onemil.cz`.
+- `vercel.json` v repu teď **skutečně řídí produkční HTTP hlavičky** (na rozdíl od dřívějšího stavu
+  pod Lovable, kdy to šlo jen přes `<meta>` tag v `index.html`):
+  - `Content-Security-Policy: frame-ancestors 'none'`
+  - `X-Frame-Options: DENY`
+  - `Permissions-Policy: camera=(), microphone=(), geolocation=()`
+  - `X-Content-Type-Options: nosniff`
+  - `Referrer-Policy: strict-origin-when-cross-origin`
+  - Zachován social-preview rewrite (`/share/ticket/:id` → Supabase Edge Function
+    `og-ticket-share`) a SPA fallback rewrite pro přímé otevření/refresh libovolné React routy.
+  - **Clickjacking nález z epizody níže je tímto vyřešený** — `frame-ancestors`/`X-Frame-Options`
+    se teď doručují jako skutečná HTTP hlavička, ne přes nefunkční Cloudflare Transform Rule.
+- **Mergnuto do `main`:** PR #367 (SPA fallback + hlavičky ve `vercel.json`, odstranění
+  nepoužívaného `api/og-ticket.ts`), #368 (oprava chybného `functions` bloku, který první deploy
+  na Vercelu shazoval), #369 (doplnění `X-Content-Type-Options` + `Referrer-Policy`), #370 (oprava
+  dvou Edge Functions, viz níže).
+- **Edge Functions `send-marketing-consent-notification` a `send-test-notification` jsou nasazené
+  do produkčního Supabase** (`xkzhjldrojjlrkezorey`) s kódem z `main` po PR #370 — `web_url` v obou
+  teď vede na `https://onemil.cz` (resp. `https://onemil.cz/profile`), ne na
+  `https://onemil.lovable.app`.
+- **Žádný aktivní uživatelský odkaz už neposílá na `onemil.lovable.app`** — ověřeno read-only
+  auditem celého `origin/main` (výskyt `onemil.lovable.app` je po PR #370 nulový; zbylé
+  `.lovable.app`/`lovableproject.com` zmínky jsou buď bezpečnostní guardy, které mají zůstat
+  (`src/lib/publicAppUrl.ts`, guardy v `partner-activate`/`create-affiliate-company-lead`), nebo
+  čistě historická dokumentace).
+
+**Nedotčeno / mimo rozsah tohoto zápisu:** `LOVABLE_API_KEY` a volání `ai.gateway.lovable.dev`
+v `supabase/functions/generate-contest-description/index.ts` zůstává živá závislost na Lovable's
+AI Gateway (generování popisu soutěže) — nesouvisí s hostingem a nebylo touto migrací dotčeno.
+
+**Otevřené (vědomě neřešeno v rámci tohoto kroku):** `README.md` a komentář v `index.html`
+u `<meta http-equiv="Content-Security-Policy">` pořád popisují starý stav („produkční web běží na
+Lovable", „vercel.json se na produkci nepoužívá") — jde jen o zastaralý text/komentář v kódu, ne
+o funkční problém, ale stojí za aktualizaci v samostatném kroku. `bun.lock`/`bun.lockb`/`deno.lock`
+a `playwright-fixture.ts` zůstávají neuklizené (viz předchozí read-only audit Lovable závislostí) —
+bezpečné k odstranění, ale mimo rozsah tohoto dokumentačního zápisu.
+
+---
+
+## 0a. Doména `onemil.cz` odpojena od Lovable — VÝPADEK APEXU (27. 8. 2026, PŮVODNÍ ZÁZNAM — ⚠️ PŘEKONÁNO, viz sekce 0 výše)
+
+**⚠️ PŘEKONÁNO (02. 09. 2026):** apex i `www` jsou teď dostupné přes Vercel, viz sekci 0 výše.
+Tato sekce zůstává jako historický záznam epizody. Konkrétně už neplatí: „bezpečnostní hlavičky
+NEFUNGUJÍ" (nyní fungují, doručuje je Vercel), „clickjacking zůstává neopravený" (nyní opraveno),
+a bod OPEN ISSUE č. 4 (Vercel/Netlify alternativa) — ten byl realizován.
 
 **⚠️ AKTIVNÍ PROBLÉM. Apex `onemil.cz` je nedostupný. `www.onemil.cz` funguje.**
 
@@ -64,6 +123,8 @@ z Lovable originu `185.158.133.1`. Proxied zóna by předkládala vlastní edge 
 Ty IP tedy patří **Cloudflare Lovable (Cloudflare for SaaS)**, ne vaší zóně.
 
 **Důsledek: dokud tohle platí, nelze přes Cloudflare nasadit ŽÁDNOU bezpečnostní hlavičku.**
+⚠️ **PŘEKONÁNO (02. 09. 2026):** po migraci hostingu na Vercel se hlavičky nastavují přímo
+z `vercel.json`, ne přes Cloudflare — viz sekci 0 výše.
 
 ### Co bylo v této epizodě ověřeno jako NEPRAVDA nebo nepodstatné
 
@@ -85,7 +146,10 @@ Ty IP tedy patří **Cloudflare Lovable (Cloudflare for SaaS)**, ne vaší zón�
 4. **Alternativa k zvážení:** přenést hosting na Vercel/Netlify, kde jsou vlastní domény zdarma
    a **bezpečnostní hlavičky se nastaví přímo z repa** (`vercel.json` → `headers`, resp. `_headers`).
    Řešilo by to obojí naráz. Git sync do GitHubu už existuje a Lovable export výslovně povoluje.
+   ⚠️ **PROVEDENO (02. 09. 2026)** — viz sekci 0 výše.
 5. **Clickjacking zůstává neopravený** — apex i `www` lze vložit do cizího iframu.
+   ⚠️ **PŘEKONÁNO (02. 09. 2026):** `X-Frame-Options: DENY` a `frame-ancestors 'none'` se teď
+   doručují jako skutečná HTTP hlavička z Vercelu — viz sekci 0 výše.
 6. **CAA záznam stále chybí** (dnes vydává Google Trust Services / WE1). Přidat lze kdykoli
    v Cloudflare DNS, **musí být široké** (`pki.goog`, `letsencrypt.org`, `digicert.com`,
    `ssl.com`, `comodoca.com`), jinak zablokuje obnovu SSL i na poštovních subdoménách.

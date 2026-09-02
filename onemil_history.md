@@ -1,3 +1,52 @@
+# 02. 09. 2026 — Produkční hosting migrován na Vercel; PR #367–#370 mergnuty; opraveny poslední odkazy na `onemil.lovable.app`
+
+Tento zápis nahrazuje zápis níže z 27. 08. 2026 jako aktuální stav řešení výpadku apexu a
+chybějících bezpečnostních hlaviček. Zápis níže zůstává beze změny jako historický popis epizody,
+která k tomuto kroku vedla.
+
+## Co se stalo
+
+Cesta navržená v OPEN ISSUE bodu 4 zápisu níže („přenést hosting na Vercel/Netlify, kde jsou
+vlastní domény zdarma a hlavičky jdou nastavit přímo z repa") byla realizována:
+
+- Do `vercel.json` byl doplněn SPA fallback rewrite (aby fungovalo přímé otevření/refresh
+  libovolné React routy) a pět HTTP response hlaviček pro všechny stránky: `Content-Security-Policy:
+  frame-ancestors 'none'`, `X-Frame-Options: DENY`, `Permissions-Policy: camera=(), microphone=(),
+  geolocation=()`, `X-Content-Type-Options: nosniff`, `Referrer-Policy:
+  strict-origin-when-cross-origin`. Social-preview rewrite pro `/share/ticket/:id` zůstal beze
+  změny.
+- Nepoužívaný legacy soubor `api/og-ticket.ts` (nikdy nespuštěný pod Lovable, funkčně duplicitní
+  s existujícím rewritem i s přímými voláními `og-ticket-share` z `ShareTicket.tsx`/
+  `TicketResultModal.tsx`) byl odstraněn, včetně navazujícího `"functions"` bloku ve `vercel.json`,
+  který po jeho smazání způsoboval chybu prvního Vercel deploye („Function Runtimes must have
+  a valid version").
+- **PR #367, #368, #369 mergnuty do `main`** (příprava `vercel.json` a odstranění legacy kódu).
+- Read-only audit repozitáře po přípravě Vercelu odhalil dvě Edge Functions
+  (`send-marketing-consent-notification`, `send-test-notification`) s natvrdo zapsaným `web_url`
+  na `https://onemil.lovable.app` (Lovable preview doména), který posílal push notifikace mimo
+  produkci. Opraveno na `https://onemil.cz` (resp. `/profile`) — **PR #370 mergnuto do `main`**.
+- **Potvrzeno Pavlem:** produkční frontend OneMil teď běží na Vercelu, `onemil.cz` i
+  `www.onemil.cz` na něj vedou (DNS cutover proběhl), deploy jde z GitHub `main` přes Vercel a obě
+  opravené Edge Functions jsou nasazené do produkčního Supabase (`xkzhjldrojjlrkezorey`).
+- Lovable zůstává použitelný jako editor kódu (git sync do GitHubu), ale už neslouží jako
+  produkční hosting.
+- Následný read-only audit celého `origin/main` potvrdil: výskyt `onemil.lovable.app` je po PR
+  #370 nulový a žádný aktivní uživatelský odkaz už na Lovable doménu nemíří. Zbylé zmínky
+  `lovable`/`lovable.app`/`lovableproject.com` v repu jsou buď bezpečnostní guardy, které mají
+  zůstat (`src/lib/publicAppUrl.ts` a obdobné guardy v `partner-activate`/
+  `create-affiliate-company-lead`), živá závislost na Lovable's AI Gateway v
+  `generate-contest-description` (nesouvisí s hostingem), nebo čistá dokumentace/historie.
+
+## Co zůstává otevřené
+
+`README.md` a komentář u CSP `<meta>` tagu v `index.html` pořád popisují starý stav („produkční
+web běží na Lovable"), teď už zastaralý — jde o text/komentář, ne o funkční problém, oprava je
+samostatný krok. Stejně tak zůstávají neuklizené `bun.lock`/`bun.lockb`/`deno.lock` a osiřelý
+`playwright-fixture.ts` (identifikované jako bezpečně odstranitelné v předchozím read-only auditu
+Lovable závislostí, ale mimo rozsah tohoto kroku).
+
+---
+
 # 27. 08. 2026 — Apex `onemil.cz` odpojen od Lovable; pravděpodobně kvůli plánu Pro
 
 Tento zápis je novější než zápisy níže, které byly v době svého vzniku pravdivé.
@@ -67,6 +116,8 @@ Poučení: **„Active" v Cloudflare dashboardu není důkaz, že pravidlo půso
 3. Zvážit riziko, že Lovable časem odpojí i `www`.
 4. Zvážit přenos hostingu na Vercel/Netlify — vlastní domény zdarma a hlavičky přímo z repa.
 5. Clickjacking zůstává neopravený; CAA stále chybí.
+
+**Update 02. 09. 2026:** vyřešeno migrací produkčního hostingu na Vercel — viz zápis výše.
 
 ---
 
