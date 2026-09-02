@@ -1,9 +1,11 @@
 # OneMil — Master funkční + bezpečnostní audit: VÝSLEDKY
 
-**Datum auditu:** 2. 9. 2026
+**Datum auditu:** 2. 9. 2026 (statická část); doplněno 2. 9. 2026 o produkční ověření
 **Auditovaný commit:** `origin/main` @ `313b08dfa531db23f61c4f0269a46a4238852b1c`
-**Rozsah:** READ-ONLY statická analýza kódu, migrací a testů v tomto checkoutu. Žádná změna kódu,
-databáze, migrací, Edge Functions ani produkční konfigurace nebyla provedena.
+**Rozsah:** READ-ONLY statická analýza kódu, migrací a testů v tomto checkoutu, doplněná o READ-ONLY
+produkční ověření z PR #377 (`docs/ONEMIL_PRODUCTION_AUDIT_CHATGPT_2026-09-02.md`), provedené přímo
+proti živé produkční Supabase databázi (`xkzhjldrojjlrkezorey`) a provozním logům. Žádná změna kódu,
+databáze, migrací, Edge Functions ani produkční konfigurace nebyla v žádné z obou fází provedena.
 **Zdroj specifikace:** `docs/OneMil_MASTER_FUNKCNI_BEZPECNOSTNI_AUDIT_CHECKLIST_2026-09-02.docx`,
 bloky A01–A16.
 
@@ -11,20 +13,34 @@ bloky A01–A16.
 
 - Každý blok má souhrnný stavový tag: **[OK]** / **[ČÁSTEČNĚ]** / **[NEOVĚŘENO]** / **[CHYBA]** /
   **[ODLOŽENO]**, a u jednotlivých položek vlastní tag, pokud se od bloku liší.
-- **NEOVĚŘENO** znamená: nelze potvrdit ani vyvrátit ze statického kódu — vyžaduje přímý přístup
-  k produkční/staging databázi, Supabase Dashboardu, Vercelu nebo živému běhu aplikace, který tato
-  relace neměla k dispozici (žádné Supabase/Vercel credentials; odchozí HTTPS jde přes sandboxovaný
-  proxy, který by případný `curl` na produkci stejně znevěrohodnil).
+- **NEOVĚŘENO** znamená: nelze potvrdit ani vyvrátit ze statického kódu ani z dosavadního produkčního
+  auditu — vyžaduje další přímý přístup k produkční/staging databázi, Supabase Dashboardu, Vercelu
+  nebo živému běhu aplikace, který tato relace sama o sobě neměla k dispozici (žádné vlastní
+  Supabase/Vercel credentials; odchozí HTTPS jde přes sandboxovaný proxy, který by případný `curl`
+  na produkci stejně znevěrohodnil).
 - Starší tvrzení v `CLAUDE.md`/`onemil_state.md`/`onemil_history.md` byla brána jako **kontext, ne
   jako důkaz** — u každého bodu, kde audit checklistu tvrdí „[OK]" nebo „opraveno", bylo provedeno
   nezávislé ověření proti aktuálnímu kódu; kde se checklist a kód rozešly, je to výslovně uvedeno.
-- Zásadní strukturální zjištění platné napříč téměř všemi bloky: **RLS politiky a schéma několika
-  klíčových tabulek (`payments`, `tickets`, `winners`, `wallets`, `public.users`, `content_pages`,
-  `profiles` u zakládajících sloupců) nejsou vůbec zachyceny v `supabase/migrations/`** — původní
-  schéma bylo v tomto projektu opakovaně aplikováno přímo přes SQL Editor mimo verzovanou historii.
-  To znamená, že „soubor migrace existuje" **není** důkaz, že daný stav skutečně běží na produkci,
-  a naopak absence migrace neznamená, že daná ochrana v produkci chybí — jen že ji nelze touto cestou
-  ověřit. Tento fakt se v textu níže neopakuje u každé položky zvlášť, ale platí univerzálně.
+- **Precedence pravidlo:** tento report byl po prvním zveřejnění (PR #378) opraven na základě READ-ONLY
+  produkčního auditu ChatGPT (PR #377), který skutečně dotazoval živou produkční databázi a provozní
+  logy. **Kde se statický kódový nález a produkční důkaz rozcházejí, má přednost produkční důkaz** —
+  takové opravy jsou v textu níže označeny „**produkčně ověřeno (#377)**". Statický audit zůstává
+  primárním zdrojem pro vše, co PR #377 nepokrývá (typicky logika RPC/frontendu, testovací pokrytí,
+  git historie).
+- Zásadní strukturální zjištění platné napříč téměř všemi bloky: **historie migrací v
+  `supabase/migrations/` nezachycuje úplně původní RLS/schéma několika klíčových tabulek**
+  (`payments`, `tickets`, `winners`, `wallets`, `public.users`, `content_pages`, `profiles` u
+  zakládajících sloupců) — původní schéma bylo v tomto projektu opakovaně aplikováno přímo přes SQL
+  Editor mimo verzovanou historii. **Toto je tvrzení o dohledatelnosti (provenance) v gitu, ne o
+  aktuálním produkčním stavu.** Produkční READ-ONLY audit (PR #377) nezávisle potvrdil, že RLS je na
+  produkci skutečně **zapnuté** (`ENABLE ROW LEVEL SECURITY`) na `messages`, `wallets`, `vouchers`,
+  `payments`, `contests`, `tickets`, `winners`, `profiles`, `partners`, `bonus_prizes` a `audit_logs` —
+  viz Souhrn 4. To, že „soubor migrace neexistuje", tedy **neznamená, že RLS v produkci chybí**; u
+  těchto konkrétních tabulek je dnes potvrzeno, že existuje. **Zůstává otevřené a samostatně
+  neauditované, zda jsou jednotlivé politiky u každé tabulky správně napsané** (správný scope,
+  správné role, žádné mezery) — PR #377 potvrdil jen `RLS enabled` + počet politik, ne jejich obsah.
+  U tabulek, které PR #377 explicitně nepokryl (`public.users`, `content_pages`, `admin_actions`),
+  zůstává živý stav RLS beze změny **NEOVĚŘENO**.
 
 ---
 
@@ -48,10 +64,15 @@ mechanismus — viz věk 18+)
   `profiles`/`wallets` — jen session v `localStorage` a render nav.
 - **Riziko:** Design „nikdy neselže" je vědomá volba, ale bez testu ověřujícího vznik `profiles`/`wallets`
   by budoucí regrese (přejmenování sloupce, změna FK) prošla nepovšimnuta — přesně jako už jednou prošla.
-- **Co ověřit v produkci:** dotaz na `auth.users` bez odpovídajícího `profiles`/`wallets` řádku (orphan
-  check, viz i A11).
+- **Produkčně ověřeno (#377):** k datu auditu má produkce 781 `auth.users`, 781 `profiles`, 781
+  `wallets` — **0 uživatelů bez wallet, 0 uživatelů bez profile**. Toto je silný živý důkaz, že trigger
+  `handle_new_auth_user()` dnes v praxi funguje spolehlivě pro celou existující uživatelskou základnu.
+  **Nemění to ale nic na tom, že design je „log-and-continue"** — tento aktuální nulový počet orphanů
+  je stav k okamžiku měření, ne záruka do budoucna; jediná budoucí selhávající registrace (např. po
+  schématové změně) by se stále projevila jen zápisem do logu, ne viditelným selháním ani alertem.
 - **Co opravit (popis):** E2E test ověřující reálný vznik `profiles`+`wallets` po registraci; kontrola
-  `error` u `user_legal_acceptances` insertu.
+  `error` u `user_legal_acceptances` insertu; případně alerting na `RAISE LOG` větev, aby budoucí
+  regrese nezůstala skrytá do dalšího ručního auditu.
 
 ### Přihlášení funguje, admin-first invariant — [ČÁSTEČNĚ→OK v jádru]
 - **Zjištěno — POTVRZENO PŘESNĚ podle CLAUDE.md invariantu:** `src/pages/Login.tsx:66-90` — krok 1 je
@@ -157,10 +178,13 @@ reconciliace)
 - **Co opravit (popis):** přesměrovat výchozí URL skriptu na staging; zapojit spec 88 do plánovaného
   staging běhu.
 
-### Osiřelé peněženky — [ČÁSTEČNĚ]
+### Osiřelé peněženky — [OK] (produkčně potvrzeno)
 - **Zjištěno:** reálná FK (`wallets_user_id_fkey`) je doložena přímo citací produkční chybové hlášky
   v migraci (`20260315310000_fix_handle_new_auth_user.sql:2-4`), ne jen předpokladem — solidní důkaz i
   bez `CREATE TABLE` v migracích. `ON DELETE` chování neznámé.
+- **Produkčně ověřeno (#377):** **0 záporných wallet zůstatků, 0 duplicitních wallets na jednoho
+  uživatele** (781 `auth.users` = 781 `wallets`). Živý stav dnes odpovídá očekávané invariantě beze
+  zbytku.
 
 ### Extra nález — 16 nezvrácených referral odměn
 - `20260803120000_fix_referral_reversal_ambiguous_call.sql` dokumentuje, že `reverse_referral_reward_on_payment_status_change()`
@@ -173,8 +197,9 @@ reconciliace)
 
 ## A03 — Stripe platba + webhook + refund + souběh
 
-**Stav bloku: [ČÁSTEČNĚ]** (kód je velmi dobře ošetřený; hlavní mezera je evidenční — `payments` nemá
-žádnou RLS politiku nikde v migracích)
+**Stav bloku: [ČÁSTEČNĚ]** (kód je velmi dobře ošetřený; migrace neobsahují žádnou RLS politiku pro
+`payments`, ale produkční audit #377 potvrdil, že RLS je na této tabulce v produkci skutečně zapnuté —
+zbývá ověřit správnost jednotlivých policies)
 
 ### Úspěšná platba připíše jen jednou — [OK]
 - Server derivuje MioCoin částku ze **skutečné** Stripe částky (`session.amount_total`), ne z klientem
@@ -186,6 +211,10 @@ reconciliace)
   DB partial UNIQUE indexem** (`idx_payments_stripe_session_id_unique`) — souběžné duplicitní INSERTy
   jeden prohrají s `23505`, žádné dvojité připsání nevznikne (jen zbytečný 500 + Stripe retry).
   **Žádný test v repu neexistuje**, který by tento souběh skutečně vyzkoušel paralelně.
+- **Produkčně ověřeno (#377):** ze 138 `payments` řádků (130 `completed`, 8 `refunded`, 81 s vyplněným
+  Stripe session ID) je **0 duplicitních Stripe session ID** — živá data dnes tuto invariantu splňují
+  beze zbytku. Nejde o důkaz souběhové bezpečnosti pod reálnou zátěží (k tomu chybí cílený paralelní
+  test, viz níže), jen o potvrzení, že se dosud žádná duplicita fakticky nevyskytla.
 - **Riziko:** nízko-střední — finanční výsledek je bezpečný, ale chybí explicitní ošetření `23505` a
   chybí test.
 
@@ -203,9 +232,14 @@ reconciliace)
   Rozsáhle pokryto staging testem `tests/e2e/88-stripe-refund-flow-db.spec.ts` (88a–88u) — ale ten je
   v CI trvale vypnutý (viz A02).
 
-### Extra nález — `payments` RLS neviditelná
+### Extra nález — `payments` RLS: migration provenance chybí, ale živý stav je potvrzen
 - V celé historii migrací nebyla nalezena **žádná** `CREATE POLICY`/RLS-enable pro `payments`, ani
-  `CREATE TABLE`. Nelze potvrdit, zda produkce vůbec RLS na této tabulce má.
+  `CREATE TABLE` — RLS pro tuto tabulku vznikla mimo verzovanou historii a nelze ji z gitu dohledat.
+- **Produkčně ověřeno (#377):** RLS je na `public.payments` v produkci **zapnutá**. To řeší otázku
+  „existuje vůbec" — **neřeší** to, zda jsou konkrétní politiky (own-row scope pro zákazníka,
+  admin-all pro admina, bez `USING(true)`) skutečně správně napsané; obsah politik nebyl produkčním
+  auditem čten, jen jejich přítomnost/zapnutí. Správnost jednotlivých policies zůstává samostatný,
+  neprovedený úkol.
 
 ---
 
@@ -217,10 +251,16 @@ reconciliace)
 - Cena `5` MioCoinů potvrzena přímo v aktuální definici `buy_voucher_atomic`
   (`20260718163000_security_rpc_hardening.sql:66,236-244`), shoda všech 4 UI míst. `redeem_price_vouchers`
   potvrzeně nepoužitý.
-- **Otevřená otázka:** aktuální `buy_voucher_atomic` tvrdě závisí na `voucher_codes`/`voucher_code_batches`
-  z migrace, jejíž **vlastní hlavička výslovně tvrdí „staging-only, no production apply in this phase"**
-  — žádná pozdější migrace apply na produkci nepotvrzuje. NEOVĚŘENO, zda tato verze skutečně běží
-  v produkci.
+- **Otevřená otázka, nyní částečně zodpovězená produkčním auditem (#377):** aktuální `buy_voucher_atomic`
+  tvrdě závisí na `voucher_codes`/`voucher_code_batches` z migrace, jejíž **vlastní hlavička výslovně
+  tvrdí „staging-only, no production apply in this phase"** — žádná pozdější migrace apply na produkci
+  formálně nepotvrzuje. **Produkční audit #377 ale popisuje živou produkční funkci** s přesně těmito
+  rysy: vlastnická kontrola (`p_user_id = auth.uid()`), zamykání zůstatku, cena kanonicky 5 MC, kontrola
+  `max_quantity`, blokace již zakoupeného voucheru, **výběr voucher kódu přes `FOR UPDATE SKIP LOCKED`**
+  a **označení vydaného kódu jako `issued`** — to je přesně chování verze závislé na `voucher_codes`, ne
+  starší verze bez inventáře kódů. To silně naznačuje, že tato verze v produkci skutečně běží, přestože
+  formální apply-migrace na produkci nebyla dohledána v gitu. Zůstává drobná zbytková nejistota (audit
+  #377 nečetl přímo `pg_proc.prosrc`), ale otázka je z valné většiny zodpovězena.
 
 ### Dvojí použití / cizí uživatel — [OK] strukturálně
 - `auth.uid()` vlastnictví, `FOR UPDATE SKIP LOCKED` na `voucher_codes`, žádný race ve fyzickém přiřazení
@@ -246,6 +286,10 @@ reconciliace)
 ### Tikety se otevírají postupně a atomicky — [OK]
 - `buy_ticket_atomic` (`20260717190000_...sql:43-181`) — `FOR UPDATE` na `contests`+`wallets`,
   identita vždy `auth.uid()`, `UNIQUE(contest_id, number)` jako druhá pojistka. Solidní.
+- **Produkčně ověřeno (#377):** ze 4 142 živých `tickets` je **0 duplicitních čísel tiketů v rámci
+  stejné soutěže** a **0 orphan tickets bez contestu** — živá data dnes odpovídají očekávané
+  invariantě. Stále chybí cílený souběžný (paralelní) E2E test nákupu posledního tiketu, který by
+  ověřil chování pod reálnou zátěží, ne jen aktuální stav dat.
 
 ### Hlavní výhra na pevné pozici, jen jednou — **[CHYBA]**
 - **Zjištěno:** organický sellout je skutečně deterministický (pozice = `ticket_count`). **Ale existuje
@@ -297,6 +341,11 @@ reconciliace)
 - Silné DB záruky (`UNIQUE(contest_id) WHERE type='main'`, `UNIQUE(prize_id) WHERE type='bonus'`, FK
   `ON DELETE SET NULL`, existuje i historická opravná migrace orphan winners). Chybí `UNIQUE(ticket_id)`
   — viz A05 nález o kolizi hlavní/bonus pozice.
+- **Produkčně ověřeno (#377):** ze 139 živých `winners` je **0 orphan winners bez ticketu** a **0
+  winner/ticket/contest mismatch** — živá data dnes tuto invariantu splňují. Nepokrývá to konkrétně
+  A05 hypotetický scénář (bonusová pozice na posledním tiketu → duplicitní `winners` řádek pro jeden
+  `ticket_id`), protože ten dosud v produkci zjevně nenastal — chybějící `UNIQUE(ticket_id)` zůstává
+  strukturální mezerou i přes čistá aktuální data.
 
 ### Uživatel vidí jasný stav výhry — **[CHYBA]**
 - **Zjištěno:** existují **dva nezávislé, nesynchronizované admin systémy** zapisující do dvou různých
@@ -307,6 +356,12 @@ reconciliace)
   změnu na zákaznické stránce `/wins`** — ta zůstane napořád „čeká", i když cena byla reálně doručena.
   Hlavní výhry (`prize_id IS NULL`) navíc nemají `bonus_prizes` řádek vůbec, takže je `/admin/prize-delivery`
   ani nezobrazí — jediná cesta k jejich uzavření je `/admin/winners`.
+- **Produkčně ověřeno (#377), přímo podporuje tento nález:** ze 139 živých `winners` je **`delivered=false`
+  u všech 139** (0 % označeno jako doručeno), 137 má status „čeká na potvrzení", 1 „pending", 1
+  „připraveno k odeslání". Tento produkční stav sám o sobě nemusí být chyba (soutěže mohly být nedávné
+  a ceny se teprve doručují), ale je to živý doklad, že buď se cesta `/admin/prize-delivery` v praxi
+  vůbec nepoužívá k uzavření `winners.delivered`, nebo se skutečně nic dosud fyzicky nedoručilo — v obou
+  případech to zvyšuje naléhavost ověřit workflow ručně (viz Souhrn 5).
 - **Riziko:** VYSOKÉ — přímý dopad na důvěru zákazníka a zátěž podpory.
 - **Co opravit (popis):** buď `update_bonus_prize_delivery_status` musí zapsat i do `winners` (join přes
   `winners.prize_id`), nebo sjednotit na jednu admin obrazovku jako jediný zdroj pravdy.
@@ -353,6 +408,10 @@ reconciliace)
   a naopak už vyřešená konverzace může zůstat s rozsvícenou tečkou, dokud admin výslovně neukončí chat.
 - **Co opravit (popis):** sjednotit tečku s globálním kritériem, nebo opravit zavádějící komentář a
   chování podle skutečného záměru.
+- **Produkčně ověřeno (#377):** z 2 486 živých `messages` je dnes **226 nepřečtených** — reálný, nemalý
+  objem, který potvrzuje, že read/unread stav se v produkci skutečně používá a že výše popsaný nesoulad
+  mezi globálním badge a tečkou u karty má reálný dopad na desítky/stovky konverzací, ne jen na
+  hypotetický okrajový scénář.
 
 ### Bob CTA whitelist — [OK]
 - Skutečná, běhová (ne jen promptová) kontrola: `BOB_CTA_BY_ACTION` whitelist + `if (!(action in ...))
@@ -392,12 +451,29 @@ reconciliace)
 - **KRITICKÝ evidenční nález:** `process_push_retries` — funkce zmíněná checklistem jako mechanismus
   retry — **nemá své tělo nikde v repu**. Existuje jen jako typový stub a jedna zmínka v komentáři
   jiné migrace. Nelze z kódu zjistit, zda vůbec kdy běží, natož jak.
+- **Produkčně ověřeno (#377), podporuje tento nález:** `push_log` má 9 `sent`, ale **15 `pending`** (staré
+  až do 23. 7. 2026) a **11 `error`/`failed`** (nejstarší z března–května 2026) — živý, hromadící se
+  důkaz, že cokoli má retry/frontu čekajících položek řešit, to dnes v praxi neuklízí. Poslední úspěšné
+  odeslání bylo 24. 8. 2026, tedy pipeline občas funguje, ale historické pending/error řádky se
+  neztrácejí ani se je nepodařilo doručit dodatečně — přesně odpovídá závěru, že `process_push_retries`
+  je buď neaktivní, nebo nefunkční.
 
 ### Email queue — [ČÁSTEČNĚ]
 - Bezpečnostní pojistka proti odeslání faktury bez přílohy potvrzena přítomná ve zdroji. Auth matice
   (401/200/200/403) skutečně otestována E2E testem na stagingu. Samotný cron job **nebyl založen žádnou
   sledovanou migrací** — jen dodatečně „re-pointnut" pozdějšími migracemi, které samy tvrdí „no-op,
   pokud job už neexistuje".
+- **Produkčně ověřeno (#377) + potvrzeno mimo tento report:** `INTERNAL_FUNCTION_TOKEN` byl 2. 9. 2026
+  úspěšně rotován (Supabase Edge secret, DB Vault i GitHub Actions produkční secret současně) a
+  funkčnost nové hodnoty byla potvrzena živým provozem — `process-email-queue` v produkčních lozích
+  2. 9. 2026 opakovaně vrací HTTP 200 (stejně jako `process-sales-lead-email-batch`). **Toto se
+  netýká** `SUPABASE_SERVICE_ROLE_KEY`, který zůstává samostatný, nevyřešený problém — viz A12/Souhrn 1.
+  Stará hodnota `INTERNAL_FUNCTION_TOKEN` zůstává čitelná v git historii, ale po rotaci už není platným
+  tokenem, takže její přítomnost v historii už tuto konkrétní cestu neohrožuje.
+- **Produkčně ověřeno (#377):** `email_queue` má 235 `sent`, 4 `failed`, 4 `ignored`, 1 `pending`.
+  Poslední úspěšné odeslání 31. 8. 2026; jediný `pending` řádek je starý ze 12. 7. 2026 a `failed`
+  záznamy jsou z února 2026 — HTTP 200 od workeru samo o sobě nedokazuje fyzické doručení do schránky,
+  jen že worker běží a Vault autorizace funguje.
 
 ### Selhání e-mailu zůstává viditelné a opakovatelné — **[CHYBA]**
 - **Zjištěno:** `email_queue` nemá žádný `retry_count`/`error_message` sloupec — skutečný text chyby se
@@ -511,7 +587,27 @@ reconciliace)
 
 ## A11 — Datová integrita + orphan + duplicity + finanční součty
 
-**Stav bloku: [ČÁSTEČNĚ]**
+**Stav bloku: [ČÁSTEČNĚ]** — statická analýza zůstává [ČÁSTEČNĚ] (chybějící FK deklarace, žádná
+committed reconciliace), ale klíčové orphan/duplicate kontroly byly **produkčně potvrzeny jako čisté**
+(PR #377, read-only dotaz proti živé DB).
+
+### Produkčně ověřeno (#377) — základní datová integrita, k datu auditu
+- **0** auth uživatelů bez wallet
+- **0** auth uživatelů bez profile
+- **0** záporných wallet zůstatků
+- **0** duplicitních wallet na jednoho uživatele
+- **0** duplicitních čísel tiketů v rámci stejné soutěže
+- **0** orphan tickets bez contestu
+- **0** orphan winners bez ticketu
+- **0** winner/ticket/contest mismatch
+- **0** duplicitních Stripe session ID
+
+Toto je silný, přímý živý důkaz — ne odhad ani citace starší zprávy — že hlavní datová integrita je
+k tomuto okamžiku v pořádku. **Nenahrazuje to ale** (a) test pod souběžnou zátěží (produkční čísla jsou
+statický snímek, ne důkaz odolnosti proti race conditions), (b) finanční reconciliaci ledgeru vs.
+zůstatku (viz A02 — dosud neexistuje ani produkčně nebyla spuštěna), ani (c) DB-úrovňové FK, které
+v migracích chybí (viz níže) — čistá data dnes neznamenají, že struktura je proti budoucí chybě
+chráněná.
 
 - Silné pozitivní nálezy: `UNIQUE(contest_id) WHERE type='main'`, `UNIQUE(prize_id) WHERE type='bonus'`
   na `winners` — skutečně brání duplicitám na DB úrovni, ne jen aplikační logikou. `wallets_user_id_fkey`
@@ -523,25 +619,48 @@ reconciliace)
   nemůže být DB-úrovňově ověřena proti tomu, na co odkazuje.
 - `user_vouchers.user_id` nemá žádnou FK deklaraci (na rozdíl od `voucher_id`, který ji má).
 - Existuje `tests/wallet-integrity-queries.sql` — ruční, nikdy do CI nezapojený skript s explicitními
-  orphan/duplicate kontrolami pro tickets/winners/bonus_prizes/payments, ale **žádný doklad, že byl kdy
-  spuštěn a výsledek uložen** (checklist to sám takto přesně popisuje — potvrzeno).
-- **Co ověřit v produkci:** spustit sekce 1–7 `tests/wallet-integrity-queries.sql` proti produkci a
-  výsledek zaznamenat.
+  orphan/duplicate kontrolami pro tickets/winners/bonus_prizes/payments. Tento konkrétní skript sám
+  nemá doklad, že byl kdy spuštěn, **ale ekvivalentní orphan/duplicate kontroly byly nezávisle
+  spuštěny a zdokumentovány produkčním auditem #377** (viz výše) — hlavní záměr checklistové položky
+  je tedy naplněn, i když ne přes tento konkrétní soubor.
+- **Co ověřit v produkci:** zbývá doplnit finanční reconciliaci (`SUM(wallet_transactions)` vs.
+  `balance_coins`, viz A02 — #377 ji nepokrývá), FK integritu na `wallet_transactions`/`user_vouchers`
+  a přesné znění jednotlivých RLS policies (existence RLS je už produkčně potvrzena, jejich obsah ne).
 
 ---
 
 ## A12 — Bezpečnost celé DB/API/Edge/Frontend/GitHub
 
-**Stav bloku: [CHYBA]**
+**Stav bloku: [CHYBA]** — výhradně kvůli nadále nevyřešenému `SUPABASE_SERVICE_ROLE_KEY` (viz níže).
+`VITE_INTERNAL_FUNCTION_TOKEN`, dříve uváděný ve stejné kategorii, byl 2. 9. 2026 potvrzeně rotován a
+tento konkrétní dílčí nález je uzavřen — nezaměňovat ho se stavem `SERVICE_ROLE_KEY`.
 
-### `.env` únik v git historii — **[CHYBA], potvrzeno stále aktivní**
-- Nezávisle re-ověřeno: `SUPABASE_SERVICE_ROLE_KEY` a `VITE_INTERNAL_FUNCTION_TOKEN` čitelné v commitu
-  `63fcdd5` (17.08.2026), stále living ancestor `origin/main` (`git merge-base --is-ancestor` = true).
-  PR #375 (mergnutý) pouze zastavil budoucí sledování (`git rm --cached`), **nerotoval hodnoty, nepřepsal
-  historii** — potvrzeno vlastním textem commit message.
-- **Riziko:** KRITICKÉ, pokud klíč nebyl rotován — plný service-role (RLS-bypass) přístup k produkční DB
-  pro kohokoli s přístupem k veřejné historii repa.
-- **Co ověřit v produkci:** zda byly obě hodnoty od 17.08.2026 skutečně rotovány v Supabase.
+### `.env` únik v git historii — dvě samostatné hodnoty, dva různé stavy
+- Nezávisle re-ověřeno: `SUPABASE_SERVICE_ROLE_KEY` a `VITE_INTERNAL_FUNCTION_TOKEN` byly obě čitelné
+  v commitu `63fcdd5` (17.08.2026), který zůstává living ancestor `origin/main`
+  (`git merge-base --is-ancestor` = true). PR #375 (mergnutý) sám o sobě pouze zastavil budoucí
+  sledování (`git rm --cached`), **nerotoval hodnoty, nepřepsal historii** — potvrzeno vlastním textem
+  commit message. Obě hodnoty tedy nadále zůstávají **čitelné** ve staré, nezměněné podobě v historii
+  veřejného repa. Jejich aktuální **platnost** se ale liší — jde o dva nezávislé secrety s odlišným
+  stavem, které se nesmí spojovat do jednoho tvrzení:
+
+  - **`VITE_INTERNAL_FUNCTION_TOKEN` — [OK], vyřešeno.** Podle přímého potvrzení mimo tento repo byl
+    tento token **2. 9. 2026 úspěšně rotován** současně na třech místech: Supabase Edge secretu, DB
+    Vaultu a GitHub Actions produkčním secretu. Funkčnost nové hodnoty byla ověřena živým provozem —
+    `process-email-queue` v produkčních lozích 2. 9. 2026 opakovaně vrací HTTP 200 (viz A08). **Stará
+    hodnota v git historii je od té chvíle neplatná** — samotný fakt, že je stále čitelná v commitu
+    `63fcdd5`, už nepředstavuje funkční přístupovou cestu k produkci. Zůstává jako obecné bezpečnostní/
+    hygienické riziko (kompromitovaná hodnota historicky existovala ve veřejném repu), ale ne jako
+    aktivní exploit.
+  - **`SUPABASE_SERVICE_ROLE_KEY` — [CHYBA], NADÁLE KRITICKÉ, NEVYŘEŠENO.** Na rozdíl od
+    `INTERNAL_FUNCTION_TOKEN` **nebyla potvrzena žádná rotace** tohoto klíče. Pokud rotace neproběhla,
+    jde o plný service-role (RLS-bypass) přístup k produkční databázi pro kohokoli s přístupem
+    k veřejné historii repa — nejzávažnější jednotlivý nález celého auditu. Tento klíč musí být veden
+    zcela odděleně od vyřešené položky `INTERNAL_FUNCTION_TOKEN` a zůstává v Souhrnu 1 (Kritické chyby)
+    i po této opravě.
+- **Co ověřit v produkci:** zda byl `SUPABASE_SERVICE_ROLE_KEY` od 17.08.2026 rotován — toto je jediná
+  zbývající otevřená otázka u tohoto nálezu; u `VITE_INTERNAL_FUNCTION_TOKEN` je rotace k 2.9.2026 už
+  potvrzená.
 
 ### `vercel.json` bezpečnostní hlavičky — [ČÁSTEČNĚ]
 - 5 hlaviček potvrzeno přesně (CSP frame-ancestors, XFO, Permissions-Policy, nosniff, referrer-policy).
@@ -552,24 +671,48 @@ reconciliace)
   `vercel.json` se nepoužívá — přímo v rozporu s aktuálním CLAUDE.md stavem (dokumentační drift, sám
   CLAUDE.md to už jako otevřený bod eviduje).
 
-### `content_pages` (a `profiles`, `partners`) RLS mezera — nezávisle POTVRZENO, ne vyvráceno
+### `content_pages` (a `profiles`, `partners`) RLS mezera — migration provenance neúplná, živý stav je smíšený
 - Přesně dvě migrace existují pro `content_pages`, obě obsahují jen `GRANT SELECT ... TO anon, authenticated`
   — **žádná** `ENABLE ROW LEVEL SECURITY` ani `CREATE POLICY` nikde. Stejný vzor (holý GRANT bez RLS)
   platí i pro `profiles` a `partners` ve stejných dvou migracích. Frontendové filtry (`is_active`,
-  `deleted_at`) jsou funkční, ale pokud je RLS skutečně vypnutá, přímé volání PostgREST API tyto filtry
-  obejde úplně.
-- **Co ověřit v produkci:** `pg_policies`/`pg_tables.rowsecurity` pro `content_pages` přímo na produkci.
+  `deleted_at`) jsou funkční, ale pokud by RLS byla u dané tabulky skutečně vypnutá, přímé volání
+  PostgREST API by tyto filtry obešlo úplně.
+- **Produkčně ověřeno (#377) — částečně řeší, částečně ne:** produkční audit potvrzuje RLS **zapnuté**
+  na `profiles` i `partners` — u těchto dvou tabulek je tedy obava z „migration provenance chybí →
+  RLS možná úplně chybí" **vyvrácena**: RLS existuje, jen ho nelze dohledat v gitu. **`content_pages`
+  ale produkční audit #377 explicitně nezmiňuje** (jeho seznam RLS-enabled tabulek je: `profiles`,
+  `wallets`, `vouchers`, `payments`, `contests`, `tickets`, `winners`, `messages`, `bonus_prizes`,
+  `partners`, `audit_logs` — `content_pages` v něm chybí) — u této jedné tabulky proto zůstává živý stav
+  RLS **NEOVĚŘENO** stejně jako předtím. U žádné ze tří tabulek navíc produkční audit nečetl obsah
+  politik, jen jejich existenci/zapnutí — zda politiky na `profiles`/`partners` skutečně korektně
+  odpovídají `is_active`/`deleted_at`/vlastnickému scope, zůstává samostatný neprovedený úkol.
+- **Co ověřit v produkci:** `pg_policies`/`pg_tables.rowsecurity` konkrétně pro `content_pages` (jediná
+  ze tří tabulek, kde RLS existence zůstává neověřená); u `profiles`/`partners` doplnit kontrolu obsahu
+  politik, ne jen jejich přítomnosti.
 
-### RLS matice pro citlivé tabulky — [NEOVĚŘENO], strukturálně neúplné
+### RLS matice pro citlivé tabulky — [ČÁSTEČNĚ] (existence produkčně potvrzena, obsah policies zůstává neověřen)
 - Spot-check 11 tabulek: `messages`, `affiliate_commissions`, `bonus_prizes`, `partners`,
   `partner_invoices` mají solidní own-row+admin politiky v migracích. `payments`, `wallets` (own-row
   SELECT), `tickets` (admin politika), `winners` (admin politika), `admin_actions` (starší politiky)
   mají admin ochranu doloženou **jen v nesledovaném dokumentačním snapshotu**
   (`docs/rollback/phase1_baseline.sql`), jehož vlastní hlavička říká, že historie migrací „NENÍ
   spolehlivý zdroj" produkčního stavu.
+- **Produkčně ověřeno (#377):** RLS je v produkci potvrzeně **zapnutá** na `messages`, `wallets`,
+  `vouchers`, `payments`, `contests`, `tickets`, `winners`, `profiles`, `partners`, `bonus_prizes` a
+  `audit_logs`. To řeší otázku existence pro **9 z 11** tabulek z tohoto spot-checku —
+  `payments`/`wallets`/`tickets`/`winners` už tedy nejsou „jen zdokumentovaný snapshot", ale živě
+  potvrzený stav. **`admin_actions` produkční audit #377 nepokrývá** (jde o jinou tabulku než
+  `audit_logs`, kterou audit skutečně četl) — u `admin_actions` zůstává RLS existence NEOVĚŘENO stejně
+  jako předtím. **Důležité upřesnění, které audit #377 sám zdůrazňuje:** ověřeno bylo jen `RLS enabled`
+  + počet politik u každé tabulky, **ne konkrétní znění jednotlivých policies** — zda jsou skutečně
+  správně scoped (vlastní řádek vs. admin, žádné `USING(true)`) je samostatný, dosud neprovedený úkol.
+  Totéž platí pro `audit_logs`, kde audit #377 navíc all upřesnil: RLS je zapnutá, ale
+  `policy_count = 0` — tedy tabulka je fakticky nečitelná pro běžného klienta (pokud je to záměr pro
+  server/admin-only cestu, je to v pořádku; potvrzuje to jen že se nejedná o `USING(true)` díru).
 - **Extra nález:** několik původních admin politik (`wallets`, `tickets`, `admin_actions`) je stále
   vázáno na legacy `public.users.role`, ne kanonickou `user_roles` — u zdokumentovaného drift účtu
-  hrozí nekonzistentní (pod-privilegovaný) admin přístup napříč různými tabulkami.
+  hrozí nekonzistentní (pod-privilegovaný) admin přístup napříč různými tabulkami. Toto zůstává v
+  platnosti i po produkčním potvrzení existence RLS — jde o otázku obsahu politiky, ne její přítomnosti.
 
 ### Secret exposure mimo `.env`, console/log leakage — [OK]/[ČÁSTEČNĚ]
 - Žádné další natvrdo zapsané klíče nalezeny. `ai-chat`/debug logy obsahují jen vlastní data volajícího,
@@ -631,17 +774,33 @@ reconciliace)
 
 ## A16 — Sofinity (odloženo)
 
-**Stav bloku: [NEOVĚŘENO]** na konkrétní tvrzení checklistu — přímý rozpor s vlastní dokumentací projektu
+**Stav bloku: [ODLOŽENO] pro `process-event-queue`, [NEOVĚŘENO/nová otevřená otázka] pro
+`forward_messages_to_sofinity`** — produkční audit #377 nález ze statické fáze vyřešil jedním směrem a
+zároveň otevřel nový, dosud neznámý problém. **V produkci existují dva různé Sofinity-related crony a
+musí se od sebe důsledně odlišovat — nejsou totéž.**
 
 - Kód/Edge Functions pro Sofinity jsou potvrzeně zachovány, ale nepoužívány — v pořádku.
-- **Checklist tvrdí [OK]** „cron `process-event-queue` byl 2. 9. 2026 dočasně vypnut". **Žádná migrace
-  ani zmínka v `CLAUDE.md` toto nepotvrzuje.** Naopak, nejnovější dohledatelný záznam v `onemil_state.md`
-  (18. 07. 2026) výslovně říká, že cron 23 **je stále aktivní, běží každou minutu a vrací HTTP 401**, a
-  že vypnutí bylo vědomě odloženo. Buď se vypnutí odehrálo živě v Supabase téhož dne jako datum tohoto
-  checklistu a nebylo ještě zpětně zapsáno do dokumentace (proces-lag), nebo je checklistové tvrzení
-  nepřesné — z repa nelze rozhodnout.
-- **Co ověřit v produkci:** `SELECT * FROM cron.job WHERE jobname='process-event-queue'` — jednoznačně
-  to vyřeší.
+- **Cron `process-event-queue` (jobid 23) — [OK], produkčně vyřešeno.** Statická fáze tohoto auditu
+  cituje `onemil_state.md` (18. 07. 2026), podle kterého byl tento cron tehdy stále aktivní a chybující
+  (HTTP 401 každou minutu), s vypnutím vědomě odloženým. **Produkční audit #377 to nezávisle prověřil
+  přímo proti `cron.job` a potvrzuje: `active=false`.** Cron byl **2. 9. 2026 záměrně vypnut**, samotná
+  Sofinity integrace (kód, Edge Functions, `event_queue` tabulka) zůstává zachovaná pro budoucí
+  případné znovuzapnutí. Zjevný rozpor mezi checklistem a 18.07 záznamem byl tedy jen dokumentační
+  zpoždění (proces-lag), ne chyba checklistu — checklistové tvrzení „vypnuto 2.9.2026" se potvrdilo
+  jako přesné.
+- **Cron `forward_messages_to_sofinity` — NOVÝ, dosud neprošetřený nález, oddělený od výše uvedeného.**
+  Produkční audit #377 zjistil, že tento **samostatný** cron **`active=true` a běží každou minutu**,
+  s 1 440 úspěšnými spuštěními na úrovni DB cronu za posledních 24 hodin. Toto je jiný job než
+  `process-event-queue` (jobid 23) — vypnutí jednoho se **nijak netýká** druhého, a checklist ani
+  žádný nález ve statické fázi tohoto auditu tento druhý cron vůbec nezmiňoval. Vzhledem
+  k rozhodnutí „Sofinity nyní nepoužíváme" je potřeba samostatně vyjasnit, co přesně
+  `forward_messages_to_sofinity` dělá (posílá skutečně zprávy ven do Sofinity, nebo jde o interní
+  no-op?) a zda má být vypnut společně s `process-event-queue`, nebo má jiný, stále platný účel.
+  **Není vhodné nic vypínat bez samostatného schválení** — jde o otevřenou otázku k prošetření, ne
+  o okamžitou opravu.
+- **Co ověřit v produkci:** účel a skutečný efekt `forward_messages_to_sofinity` (co přesně posílá,
+  kam, a zda to odpovídá aktuálnímu rozhodnutí o nepoužívání Sofinity) — jediná zbývající otevřená
+  otázka v tomto bloku; stav `process-event-queue` je už vyřešen.
 
 ---
 
@@ -649,10 +808,13 @@ reconciliace)
 
 Řazeno bez pořadí důležitosti uvnitř kategorie — vše vyžaduje akci před ostrým masovým provozem.
 
-1. **`.env` s reálným `SUPABASE_SERVICE_ROLE_KEY` a `VITE_INTERNAL_FUNCTION_TOKEN` zůstává čitelný
-   v git historii (commit `63fcdd5`), nikdy nerotováno.** (A12) — pokud nebyl klíč mezitím rotován
-   mimo tento audit, jde o plný service-role přístup k produkční DB pro kohokoli s přístupem k historii
-   veřejného repa.
+1. **`SUPABASE_SERVICE_ROLE_KEY` zůstává čitelný v git historii (commit `63fcdd5`) a nebyla potvrzena
+   žádná jeho rotace.** (A12) — plný service-role (RLS-bypass) přístup k produkční DB pro kohokoli
+   s přístupem k historii veřejného repa. **Toto je jediná zbývající kritická položka z původního
+   `.env` nálezu.** `VITE_INTERNAL_FUNCTION_TOKEN`, dříve uváděný ve stejné položce, byl **2. 9. 2026
+   úspěšně rotován** (Supabase Edge secret + DB Vault + GitHub Actions produkční secret současně,
+   funkčnost potvrzena živě přes `process-email-queue` HTTP 200) — jeho stará hodnota je v historii
+   nadále čitelná, ale už není platným tokenem, a proto se do tohoto kritického seznamu nepočítá.
 2. **`pause_contest`/`resume_contest` RPC nemají žádnou interní kontrolu role a jsou grantované
    `authenticated`.** (A05) — jakýkoli přihlášený zákazník může přímým RPC voláním pozastavit živou
    soutěž nebo znovu aktivovat uzavřenou, mimo jakoukoli UI ochranu. Přímo popírá checklistovou
@@ -677,8 +839,12 @@ reconciliace)
    „čeká". (A06)
 2. Neexistuje žádný skutečný „čekající výhry" admin badge — zobrazený badge měří něco jiného
    (vlastní nepřečtené výhry admina). (A06)
-3. `content_pages`, `profiles`, `partners` mají v migracích jen holý `GRANT SELECT`, žádnou nalezenou
-   RLS politiku — přímé volání API by mohlo obejít frontendové filtry. (A12)
+3. **(Zúženo produkčním auditem #377.)** `content_pages`, `profiles`, `partners` mají v migracích jen
+   holý `GRANT SELECT`, žádnou dohledatelnou RLS politiku. Produkční audit potvrdil, že RLS je na
+   `profiles` i `partners` v produkci skutečně zapnutá — u těchto dvou už nejde o riziko chybějící RLS,
+   jen o neověřenou správnost obsahu politik. **`content_pages` audit #377 nepokryl** a zůstává jediná
+   tabulka z této trojice, kde živý stav RLS (existence i obsah) zůstává zcela NEOVĚŘENO — přímé volání
+   API by u ní teoreticky mohlo obejít frontendové filtry (`is_active`/`deleted_at`). (A12)
 4. Chybí jakákoli finanční reconciliace (`SUM(wallet_transactions)` vs. `balance_coins`) kdekoli
    v systému. (A02/A11)
 5. Multi-e-shop idempotence pro partnerské odměnové kódy je potvrzeně stále otevřená v aktuálním kódu.
@@ -707,46 +873,73 @@ reconciliace)
     ukazuje, že migrace nejsou spolehlivým zdrojem historie RLS. (A07)
 17. Nekonzistentní unread indikátor v admin zprávách (globální badge vs. tečka u karty měří dvě různé
     věci navzdory komentáři tvrdícímu opak). (A07)
-18. Checklistové tvrzení o vypnutí Sofinity cronu 2.9.2026 je v přímém rozporu s nejnovějším záznamem
-    ve vlastní dokumentaci projektu (18.07.2026: cron stále aktivní a chybující). (A16)
+18. **(Aktualizováno produkčním auditem #377 — položka již NENÍ rozpor, ale vznikla nová otázka.)**
+    Checklistové tvrzení o vypnutí cronu `process-event-queue` 2.9.2026 bylo produkčně **potvrzeno jako
+    přesné** (`active=false`). Zůstává ale nevysvětlené, proč **jiný**, samostatný cron
+    `forward_messages_to_sofinity` běží v produkci každou minutu (`active=true`, 1 440 úspěšných běhů
+    za posledních 24 h) navzdory rozhodnutí Sofinity nyní nepoužívat — nejasnost přesunuta z „byl cron
+    vypnut?" na „co dělá tento druhý, stále běžící cron a má se také vypnout?". (A16)
 
 ## Souhrn 3 — NEOVĚŘENÉ TOKY (vyžadují přímý přístup k produkci/stagingu)
 
-- Zda byly `SUPABASE_SERVICE_ROLE_KEY`/`VITE_INTERNAL_FUNCTION_TOKEN` z uniklého `.env` skutečně
-  rotovány.
-- Živé granty na `pause_contest`/`resume_contest`.
-- Živý stav RLS (`ENABLE ROW LEVEL SECURITY`, konkrétní politiky) pro `payments`, `tickets`, `winners`,
-  `wallets`, `public.users`, `content_pages`, `profiles`, `partners`, `admin_actions` — základní
-  schéma těchto tabulek není v migracích vůbec zachyceno.
-- Zda aktuální `buy_voucher_atomic` (závislý na `voucher_codes`) skutečně běží na produkci, nebo zda
-  produkce ještě používá starší verzi bez inventáře kódů.
-- Živé tělo a plán volání `process_push_retries`.
-- Živý stav pg_cron jobů 16 (`process_email_queue_every_10_min`), 17 (`weekly_partner_invoices`), 20
-  (`influencer_commissions_monthly`), 23 (`process-event-queue`), 25 (`affiliate_company_commissions_monthly`)
-  — žádný z nich nebyl založen sledovanou migrací, jen dodatečně upravován.
+*Tento seznam byl aktualizován po produkčním auditu #377 — položky, které #377 přímo zodpověděl, byly
+odstraněny nebo přesunuty do Souhrnu 4; zbývají jen skutečně dosud otevřené otázky.*
+
+- **Zda byl `SUPABASE_SERVICE_ROLE_KEY` skutečně rotován od 17.08.2026.** (`VITE_INTERNAL_FUNCTION_TOKEN`
+  už z tohoto seznamu odpadá — jeho rotace 2.9.2026 je potvrzená, viz A08/A12.)
+- Živé granty na `pause_contest`/`resume_contest` — #377 tuto konkrétní otázku nepokryl, zůstává
+  nejvyšší prioritou k ověření.
+- Živý stav RLS pro `public.users`, `content_pages` a `admin_actions` — jediné tři tabulky, kde #377
+  RLS existenci nepotvrdil ani nevyvrátil (u `payments`, `tickets`, `winners`, `wallets`, `profiles`,
+  `partners`, `messages`, `vouchers`, `contests`, `bonus_prizes` je RLS existence už produkčně
+  potvrzena — viz Souhrn 4). `public.users` je zvlášť naléhavé kvůli riziku self-escalace role
+  popsanému v A09.
+- **Nově zúženo:** správnost/obsah jednotlivých RLS policies (ne jen jejich existence) u všech tabulek,
+  kde #377 potvrdil `RLS enabled` — audit #377 sám zdůrazňuje, že ověřil jen zapnutí a počet politik,
+  ne jejich konkrétní znění.
+- Zda aktuální `buy_voucher_atomic` (závislý na `voucher_codes`) skutečně běží na produkci — **částečně
+  zodpovězeno #377**: produkční popis funkce (vlastnická kontrola, zamykání zůstatku, `FOR UPDATE SKIP
+  LOCKED` výběr kódu, označení kódu jako `issued`) odpovídá právě té verzi závislé na `voucher_codes`,
+  takže je pravděpodobné, že tato verze v produkci skutečně běží — viz aktualizace v A04. Přesto
+  nebylo čteno přímo `pg_proc.prosrc`, takže zůstává formálně NEOVĚŘENO na 100 %.
+- Živé tělo a plán volání `process_push_retries` — #377 nepokryl, zůstává neprůhledné.
+- **Účel a skutečný efekt cronu `forward_messages_to_sofinity`** (nový nález z #377) — běží každou
+  minutu navzdory rozhodnutí Sofinity nepoužívat; není jasné, co přesně dělá a zda má být vypnut spolu
+  s `process-event-queue`. (`process-event-queue`, jobid 23, už NENÍ na tomto seznamu — jeho vypnutí
+  2.9.2026 je produkčně potvrzeno, viz A16/Souhrn 4.)
 - Zda `wallets.bonus_balance_coins` zůstává nenulový u již uplatněných bonusových výher (přímý test
-  double-credit nálezu).
-- Zda `content_pages`/`payments` skutečně mají RLS zapnutou.
-- Celkový počet `wallet_transactions` nesouhlasících s `balance_coins` napříč všemi uživateli.
-- Zda 16 nezvrácených referral odměn (dokumentováno migrací) stále existuje.
+  double-credit nálezu z A02) — #377 tento konkrétní scénář netestoval.
+- Celkový počet `wallet_transactions` nesouhlasících s `balance_coins` napříč všemi uživateli
+  (finanční reconciliace) — #377 nepokryl, zůstává úplně otevřené.
+- Zda 16 nezvrácených referral odměn (dokumentováno migrací) stále existuje — #377 nepokryl.
 - Zda skript `scripts/concurrency-test-race-condition.mjs` byl kdy skutečně spuštěn (a ne proti
-  produkci, kam dnes míří jako výchozí).
-- Zda `tests/wallet-integrity-queries.sql` byl kdy skutečně spuštěn proti produkci a s jakým výsledkem.
-- Zda pg_cron `process-event-queue` (Sofinity) byl skutečně vypnut 2.9.2026.
-- Zda je live `admin_manage_contest`/RLS `public.users` bezpečná proti self-escalaci role.
-- Frekvence a objem `email_queue`/`push_log` selhání v reálném provozu.
+  produkci, kam dnes míří jako výchozí) — zůstává neznámé; aktuální nulový počet duplicit (#377)
+  dokazuje čistotu dat k okamžiku měření, ne odolnost pod souběžnou zátěží.
+- Zda je live `admin_manage_contest`/RLS `public.users` bezpečná proti self-escalaci role — #377
+  nepokryl, zůstává kritická otevřená otázka (viz A09).
+- **Kořenová příčina** proč `push_log` má 15 historických `pending` a 11 `error`/`failed` řádků, které
+  se zjevně nikdy neuklidí (základní počty teď známe díky #377, viz A08/Souhrn 4 — ale *proč* se
+  nečistí, zůstává neobjasněné, protože `process_push_retries` nemá tělo nikde v repu).
 
 ## Souhrn 4 — POTVRZENĚ FUNKČNÍ TOKY
 
+*Položky označené „**produkčně**" byly ověřeny přímo proti živé databázi/logům v PR #377, ne jen ze
+statického kódu.*
+
 - `buy_ticket_atomic` — sekvenční číslování, atomický debet, identita vždy z JWT, `UNIQUE(contest_id, number)`
-  jako druhá pojistka.
+  jako druhá pojistka. **Produkčně:** 0 duplicitních čísel tiketů, 0 orphan tickets (4 142 živých
+  tiketů).
 - Stripe checkout → webhook → wallet credit — server nezávisle přepočítává částku ze skutečné Stripe
-  platby, nikdy z klientského vstupu; idempotence kryta reálným DB unikátním indexem.
+  platby, nikdy z klientského vstupu; idempotence kryta reálným DB unikátním indexem. **Produkčně:**
+  0 duplicitních Stripe session ID ze 138 `payments` (81 s vyplněným session ID).
 - Stripe refund flow — nejsilněji ošetřená část celého systému (pořadí operací, plný zůstatek, zamykání,
   terminal-state ochrana, referral reversal).
 - `buy_voucher_atomic`/`redeem_miocoin_code` — vlastnictví, zamykání, email-mismatch ochrana.
+  **Produkčně potvrzeno #377**, že živá funkce má přesně tyto rysy (vlastnická kontrola, zamykání,
+  cena 5 MC, `FOR UPDATE SKIP LOCKED` na kódu, blokace duplicitního nákupu) — silný náznak, že
+  `voucher_codes`-závislá verze skutečně běží v produkci (viz A04).
 - `bonus_prizes` RLS skrývající budoucí výherní pozice před zákazníky (F1 oprava) — aktuální a dobře
-  navržená.
+  navržená. **Produkčně:** RLS na `bonus_prizes` potvrzena zapnutá.
 - Admin-first kontrola v `Login.tsx` — přesně podle deklarovaného invariantu.
 - Bob CTA whitelist — skutečná běhová kontrola, ne jen promptová instrukce.
 - Bob cross-user ochrana pro standardní JWT cestu — kryta reálným E2E testem.
@@ -754,35 +947,77 @@ reconciliace)
 - Provizní dedup (`uq_affiliate_commissions_invoice`/`_month_customer`) — skutečně brání dvojímu
   počítání.
 - Winner e-mail queue — dedup klíč, HTML escaping, izolace chyb od hlavní transakce.
-- `process-email-queue` auth matice — reálně otestována E2E na stagingu.
+- `process-email-queue` auth matice — reálně otestována E2E na stagingu. **Produkčně:** funkce v provozních
+  lozích 2.9.2026 opakovaně vrací HTTP 200 (mj. jako přímý důkaz úspěšné rotace `INTERNAL_FUNCTION_TOKEN`
+  — viz níže).
 - `push_log` claim/dedup logika — jediná část A08, kde existuje skutečný souběžný unit test.
 - Admin pending-offers badge (`pendingOffersCount`) — Realtime-based, korektně se odškrtává.
 - `content_pages` frontendové filtry (`is_active`+`deleted_at`) — opraveno v tomto sezení (PR #372–374),
   potvrzeno funkční na úrovni kódu.
 - `/a/:refCode` šťastná cesta atribuce — plně E2E otestována proti skutečnému UI.
+- **`VITE_INTERNAL_FUNCTION_TOKEN` rotace (produkčně, 2.9.2026)** — úspěšně rotován ve třech místech
+  současně (Supabase Edge secret, DB Vault, GitHub Actions produkční secret), funkčnost potvrzena
+  živým provozem přes opakované HTTP 200 z `process-email-queue`. **Toto se netýká
+  `SUPABASE_SERVICE_ROLE_KEY`, který zůstává nevyřešeným kritickým nálezem — viz Souhrn 1.**
+- **Cron `process-event-queue` (jobid 23, Sofinity) — produkčně potvrzen `active=false`**, vypnut
+  záměrně 2.9.2026; samotná Sofinity integrace zůstává v kódu zachovaná. (Odlišit od
+  `forward_messages_to_sofinity`, který produkčně stále běží — viz Souhrn 3/A16.)
+- **RLS existence (ne obsah policies) — produkčně potvrzena zapnutá** na `messages`, `wallets`,
+  `vouchers`, `payments`, `contests`, `tickets`, `winners`, `profiles`, `partners`, `bonus_prizes` a
+  `audit_logs`. `public.users`, `content_pages` a `admin_actions` zůstávají mimo tento potvrzený
+  seznam — u nich je RLS existence dál NEOVĚŘENO (viz Souhrn 3).
+- **Základní datová integrita (viz A11 pro plný seznam)** — 781 auth uživatelů = 781 profiles = 781
+  wallets, 0 záporných/duplicitních wallets, 0 duplicitních čísel tiketů, 0 orphan tickets/winners,
+  0 winner/ticket/contest mismatch, 0 duplicitních Stripe session ID. Živý snímek k datu auditu, ne
+  záruka odolnosti proti budoucím race conditions.
 
 ## Souhrn 5 — CO MUSÍ OVĚŘIT SUPABASE/PRODUKČNÍ AUDIT MIMO GITHUB
 
-1. Rotace `SUPABASE_SERVICE_ROLE_KEY` a `VITE_INTERNAL_FUNCTION_TOKEN`.
+*Aktualizováno po PR #377 — položky, které již byly produkčně zodpovězeny, jsou označené a přesunuté
+dolů; pořadí odráží zbývající prioritu.*
+
+1. **Rotace `SUPABASE_SERVICE_ROLE_KEY`.** (`VITE_INTERNAL_FUNCTION_TOKEN` už byl 2.9.2026 potvrzeně
+   rotován — z tohoto bodu odpadá, viz Souhrn 4.)
 2. `SELECT has_function_privilege(...)` pro `pause_contest`/`resume_contest` — a pokud je grant
-   potvrzen, okamžitá oprava má přednost před čímkoli jiným v tomto seznamu.
-3. `pg_policies`/`pg_class.relrowsecurity` pro všech 9 tabulek uvedených v Souhrnu 3.
-4. Živý dotaz na double-credit MioCoin scénář (`wallet_transactions` s `bonus_claim`+`bonus_transfer`
-   pro stejného uživatele/období; nenulový `bonus_balance_coins` u již uplatněných výher).
-5. Živý stav a plán volání `process_push_retries` (`pg_proc.prosrc`, případný cron).
-6. Živý stav pg_cron jobů 16/17/20/23/25 (`active`, poslední běh, poslední chyba).
-7. Kontrola `email_queue WHERE status='failed'` — kolik řádků, jak staré, jaký dopad.
-8. Spuštění `tests/wallet-integrity-queries.sql` (sekce 1–7) proti produkci a uložení výsledku.
-9. Dotaz na 16 (nebo aktuální počet) nezvrácených referral odměn.
-10. Kontrola, zda je aktuální (`voucher_codes`-závislá) verze `buy_voucher_atomic` skutečně nasazená.
-11. Manuální reprodukce nesouladu unread indikátoru v `/admin/messages` (globální badge vs. tečka).
+   potvrzen, okamžitá oprava má přednost před čímkoli jiným v tomto seznamu. #377 tuto otázku
+   nepokryl.
+3. `pg_policies`/`pg_class.relrowsecurity` konkrétně pro **`public.users`, `content_pages`,
+   `admin_actions`** — jediné tři tabulky, kde #377 RLS existenci nepotvrdil (u zbylých tabulek
+   z původního seznamu je RLS existence už produkčně potvrzena, viz Souhrn 4). Zvlášť naléhavé je
+   `public.users` kvůli riziku self-escalace role (A09).
+4. **Nově doplněno:** obsah/správnost jednotlivých RLS policies u tabulek, kde #377 potvrdil jen
+   `RLS enabled` + počet politik, ne jejich znění — dosud žádná tabulka nemá policy-level audit.
+5. Živý dotaz na double-credit MioCoin scénář (`wallet_transactions` s `bonus_claim`+`bonus_transfer`
+   pro stejného uživatele/období; nenulový `bonus_balance_coins` u již uplatněných výher). #377
+   nepokryl.
+6. Živý stav a plán volání `process_push_retries` (`pg_proc.prosrc`, případný cron) — #377 nepokryl;
+   základní `push_log` čísla (15 pending, 11 error/failed) už #377 dodal, ale ne příčinu.
+7. **Nově doplněno z #377:** účel a skutečný efekt cronu `forward_messages_to_sofinity` (běží každou
+   minutu navzdory rozhodnutí Sofinity nepoužívat) — vyjasnit před jakýmkoli dalším rozhodnutím
+   o Sofinity.
+8. Kontrola `email_queue WHERE status='failed'` — základní počet (4 staré řádky z února 2026) a jeden
+   dlouhodobě visící `pending` řádek (od 12.7.2026) už #377 zjistil; zbývá vysvětlit příčinu a zda
+   HTTP 200 od workeru odpovídá i fyzickému doručení.
+9. Finanční reconciliace (`SUM(wallet_transactions)` vs. `balance_coins`) — #377 nepokryl, zůstává
+   plně otevřené a je to jediná explicitně checklistem vyžadovaná položka před ostrým masovým
+   provozem, která dosud nemá žádný živý důkaz.
+10. Dotaz na 16 (nebo aktuální počet) nezvrácených referral odměn — #377 nepokryl.
+11. Manuální reprodukce nesouladu unread indikátoru v `/admin/messages` (globální badge vs. tečka) —
+    #377 potvrdil, že 226 z 2 486 zpráv je nepřečtených, takže dopad je reálný a nezanedbatelný.
 12. Manuální test doručení fyzické bonusové výhry přes `/admin/prize-delivery` a ověření, zda se
-    zobrazí na `/wins`.
+    zobrazí na `/wins` — naléhavost zvýšena tím, že #377 potvrdil `delivered=false` u všech 139 živých
+    `winners`.
+13. **Nově doplněno z #377 (mimo rozsah šesti bodů zadaných k opravě, ale přímo relevantní):** přesná
+    příčina HTTP 500 u Edge Function `import-shoptet-orders`, která v produkčních lozích střídá 200 a
+    500 při minutovém cronu — statický audit tento problém vůbec nezachytil, protože nejde vidět ze
+    zdrojového kódu.
 
 ## Souhrn 6 — DOPORUČENÉ POŘADÍ OPRAV
 
-1. **Okamžitě, mimo běžný release cyklus:** rotace `.env` uniklých secretů (pokud ještě neproběhla) —
-   nejvyšší blast radius ze všech nálezů.
+1. **Okamžitě, mimo běžný release cyklus:** rotace `SUPABASE_SERVICE_ROLE_KEY` — nejvyšší blast radius
+   ze všech nálezů a jediný ze dvou `.env` secretů, který zůstává nevyřešený.
+   (`VITE_INTERNAL_FUNCTION_TOKEN` už byl 2.9.2026 úspěšně rotován a funkčně potvrzen — tento konkrétní
+   dílčí úkol je hotový, viz Souhrn 4.)
 2. **Okamžitě:** doplnit role guard do `pause_contest`/`resume_contest` (nebo je alespoň zúžit na
    `service_role`) — jde o triviální opravu s obrovským rizikem bez ní.
 3. **Před dalším Lovable/Vercel publishem:** oprava double-credit MioCoin bonusu
@@ -800,10 +1035,24 @@ reconciliace)
    partnerské reward enginy.
 9. **Střednědobě:** doplnit `error_message`/retry admin UI pro `email_queue`; doplnit deep-link a
    multi-device fan-out pro push; zprůhlednit `process_push_retries`.
-10. **Průběžně, nízké riziko:** dokumentační úklid (zastaralý Lovable komentář v `index.html`,
-    README.md, Sofinity cron stav v `onemil_state.md`).
+10. **Krátkodobě:** vyjasnit účel `forward_messages_to_sofinity` cronu (běží každou minutu navzdory
+    rozhodnutí Sofinity nepoužívat) a rozhodnout, zda se má vypnout spolu s `process-event-queue`
+    (ten už je produkčně potvrzen vypnutý).
+11. **Průběžně, nízké riziko:** dokumentační úklid (zastaralý Lovable komentář v `index.html`,
+    README.md, aktualizace Sofinity cron stavu v `onemil_state.md` na zápis „process-event-queue
+    vypnut 2.9.2026, forward_messages_to_sofinity běží dál — viz otevřený bod výše").
 
 ---
 
 *Konec auditního reportu. Žádná změna kódu, databáze, migrací ani produkční konfigurace nebyla v rámci
 tohoto auditu provedena — jde výhradně o READ-ONLY zjištění.*
+
+*Tento report byl po prvním zveřejnění opraven na základě READ-ONLY produkčního auditu ChatGPT
+(PR #377, `docs/ONEMIL_PRODUCTION_AUDIT_CHATGPT_2026-09-02.md`), který dotazoval přímo živou produkční
+Supabase databázi a provozní logy. Opravy se týkaly: rozlišení stavu `VITE_INTERNAL_FUNCTION_TOKEN`
+(vyřešeno, rotováno 2.9.2026) od `SUPABASE_SERVICE_ROLE_KEY` (zůstává nevyřešeno); rozlišení dvou
+samostatných Sofinity cronů (`process-event-queue` potvrzeně vypnut, `forward_messages_to_sofinity`
+stále běží); doplnění produkčně potvrzené existence RLS na deseti hlavních tabulkách; a doplnění
+produkčně ověřených čísel datové integrity (0 orphan uživatelů/wallets, 0 duplicitních čísel tiketů,
+0 winner/ticket mismatch, 0 duplicitních Stripe session ID). Žádná z těchto oprav nezahrnovala změnu
+kódu, databáze ani migrace — jde stále výhradně o úpravu tohoto dokumentu.*
