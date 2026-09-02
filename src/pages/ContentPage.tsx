@@ -68,6 +68,7 @@ const ContentPage: React.FC = () => {
           .eq('section', section)
           .eq('slug', slug)
           .eq('is_active', true)
+          .is('deleted_at', null)
           .maybeSingle();
 
         if (error) throw error;
