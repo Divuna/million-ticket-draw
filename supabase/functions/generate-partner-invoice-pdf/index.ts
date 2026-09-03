@@ -3,6 +3,7 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { PDFDocument, rgb } from "npm:pdf-lib@1.17.1";
 import fontkit from "npm:@pdf-lib/fontkit@1.1.1";
 import QRCode from "https://esm.sh/qrcode@1.5.4";
+import { getSupabaseSecretKey } from "../_shared/supabaseSecretKey.ts";
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -105,7 +106,7 @@ async function authorizeRequest(req: Request): Promise<{ status: number; error: 
   const token = authHeader.replace(/^Bearer\s+/i, '').trim();
   if (!token) return { status: 401, error: 'missing_authorization' };
 
-  const serviceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '';
+  const serviceKey = getSupabaseSecretKey();
   if (serviceKey && token === serviceKey) return null;
 
   const admin = createClient(Deno.env.get('SUPABASE_URL') ?? '', serviceKey);
@@ -147,7 +148,7 @@ serve(async (req) => {
     }
 
     const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
-    const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
+    const supabaseServiceKey = getSupabaseSecretKey();
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
     console.log(`Generating PDF for invoice: ${invoice_id}`);

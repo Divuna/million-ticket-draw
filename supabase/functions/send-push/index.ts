@@ -7,6 +7,7 @@ import {
   type PushLogRow,
   type PushLogStore,
 } from "./core.ts";
+import { getSupabaseSecretKey } from "../_shared/supabaseSecretKey.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -31,7 +32,7 @@ Deno.serve(async (req) => {
   }
 
   const supabaseUrl = Deno.env.get("SUPABASE_URL") ?? "";
-  const serviceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "";
+  const serviceRoleKey = getSupabaseSecretKey();
   const oneSignalApiKey = Deno.env.get("ONESIGNAL_REST_API_KEY") ?? "";
   const internalToken = Deno.env.get("INTERNAL_FUNCTION_TOKEN") ?? "";
 

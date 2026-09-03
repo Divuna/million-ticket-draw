@@ -6,6 +6,7 @@ import {
   renderOneMilDetailRows,
   renderOneMilEmail,
 } from "../_shared/oneMilEmailTemplate.ts";
+import { getSupabaseSecretKey } from "../_shared/supabaseSecretKey.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -35,7 +36,7 @@ async function authorizeRequest(
   const token = authHeader.replace(/^Bearer\s+/i, "").trim();
   if (!token) return { status: 401, error: "missing_authorization" };
 
-  const serviceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "";
+  const serviceKey = getSupabaseSecretKey();
   if (!options.adminJwtOnly && serviceKey && token === serviceKey) return null;
 
   const admin = createClient(Deno.env.get("SUPABASE_URL") ?? "", serviceKey);
@@ -128,7 +129,7 @@ serve(async (req: Request) => {
   if (authFailure) return json({ error: authFailure.error }, authFailure.status);
 
   const supabaseUrl = Deno.env.get("SUPABASE_URL") ?? "";
-  const serviceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "";
+  const serviceKey = getSupabaseSecretKey();
   const internalToken = Deno.env.get("INTERNAL_FUNCTION_TOKEN") ?? "";
   const supabase = createClient(supabaseUrl, serviceKey);
   const isStaging = supabaseUrl.includes(STAGING_REF);

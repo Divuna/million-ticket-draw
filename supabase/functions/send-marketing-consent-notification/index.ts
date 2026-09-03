@@ -4,6 +4,7 @@ import {
   renderOneMilDetailRows,
   renderOneMilEmail,
 } from '../_shared/oneMilEmailTemplate.ts';
+import { getSupabaseSecretKey } from "../_shared/supabaseSecretKey.ts";
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -33,7 +34,7 @@ Deno.serve(async (req) => {
 
     const supabaseClient = createClient(
       Deno.env.get('SUPABASE_URL') ?? '',
-      Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
+      getSupabaseSecretKey()
     );
 
     const { action } = await req.json();

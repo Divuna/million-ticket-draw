@@ -8,6 +8,7 @@ import {
   normalizeMessageId,
 } from "../_shared/salesLeadInboundRouting.ts";
 import { extractOutboundCaptureId } from "../_shared/salesLeadEmailThreading.ts";
+import { getSupabaseSecretKey } from "../_shared/supabaseSecretKey.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -129,7 +130,7 @@ serve(async (req: Request) => {
 
   const admin = createClient(
     Deno.env.get("SUPABASE_URL") ?? "",
-    Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "",
+    getSupabaseSecretKey(),
     { auth: { persistSession: false } },
   );
 

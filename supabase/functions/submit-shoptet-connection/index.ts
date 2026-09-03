@@ -1,4 +1,5 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.57.4";
+import { getSupabaseSecretKey } from "../_shared/supabaseSecretKey.ts";
 
 // Partner submits their Shoptet CSV export URL for admin review.
 //
@@ -13,7 +14,7 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2.57.4";
 //       store URL in Vault → transition draft → submitted → respond (no URL).
 
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
-const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
+const supabaseServiceRoleKey = getSupabaseSecretKey();
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -59,7 +60,7 @@ Deno.serve(async (req) => {
   }
   const token = authHeader.slice(7);
 
-  const admin = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, {
+  const admin = createClient(SUPABASE_URL, supabaseServiceRoleKey, {
     auth: { persistSession: false },
   });
 

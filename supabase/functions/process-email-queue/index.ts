@@ -2,6 +2,7 @@ import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.57.4";
 import { Resend } from "npm:resend@2.0.0";
 import { applyOneMilBrandToLegacyAutomaticEmail } from "../_shared/oneMilEmailTemplate.ts";
+import { getSupabaseSecretKey } from "../_shared/supabaseSecretKey.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -77,7 +78,7 @@ async function isInternalTokenAuthorized(req: Request): Promise<boolean> {
   //    scheduled call working even if the Edge secret has drifted from Vault.
   try {
     const supabaseUrl = Deno.env.get("SUPABASE_URL") ?? "";
-    const serviceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "";
+    const serviceKey = getSupabaseSecretKey();
     if (!supabaseUrl || !serviceKey) return false;
     const client = createClient(supabaseUrl, serviceKey);
     const { data, error } = await client.rpc("verify_internal_function_token", {
@@ -101,7 +102,7 @@ async function authorizeRequest(req: Request): Promise<AuthFailure | null> {
   }
 
   const supabaseUrl = Deno.env.get("SUPABASE_URL") ?? "";
-  const serviceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "";
+  const serviceKey = getSupabaseSecretKey();
   if (serviceKey && bearerToken === serviceKey) {
     return null;
   }
@@ -233,7 +234,7 @@ const handler = async (req: Request): Promise<Response> => {
 
     const supabaseClient = createClient(
       Deno.env.get("SUPABASE_URL") ?? "",
-      Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "",
+      getSupabaseSecretKey(),
     );
 
     console.log("Processing email queue...");

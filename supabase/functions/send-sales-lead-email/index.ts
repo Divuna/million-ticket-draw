@@ -18,6 +18,7 @@ import {
   SALES_LEAD_INITIAL_EMAIL_FROM,
   SALES_LEAD_INITIAL_EMAIL_REPLY_TO,
 } from "../_shared/salesLeadInitialEmailSender.ts";
+import { getSupabaseSecretKey } from "../_shared/supabaseSecretKey.ts";
 
 // ============================================================================
 // send-sales-lead-email — odeslání aktuálního obsahu editoru ČLOVĚKEM
@@ -82,7 +83,7 @@ serve(async (req: Request) => {
   if (req.method !== "POST") return jsonResponse({ success: false, error: "method_not_allowed" }, 405);
 
   const supabaseUrl = Deno.env.get("SUPABASE_URL") ?? "";
-  const serviceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "";
+  const serviceRoleKey = getSupabaseSecretKey();
   const supabaseAdmin = createClient(supabaseUrl, serviceRoleKey, {
     auth: { persistSession: false },
   });

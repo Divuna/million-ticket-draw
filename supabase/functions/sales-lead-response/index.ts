@@ -1,5 +1,6 @@
 import "jsr:@supabase/functions-js/edge-runtime.d.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.57.4";
+import { getSupabaseSecretKey } from "../_shared/supabaseSecretKey.ts";
 
 const PUBLIC_PAGE_URL = "https://onemil.cz/partner-response.html";
 const ALLOWED_ORIGINS = new Set([
@@ -73,7 +74,7 @@ async function sha256Hex(value: string): Promise<string> {
 
 function getClient() {
   const url = Deno.env.get("SUPABASE_URL");
-  const key = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
+  const key = getSupabaseSecretKey();
   if (!url || !key) return null;
   return createClient(url, key, {
     auth: { persistSession: false, autoRefreshToken: false },

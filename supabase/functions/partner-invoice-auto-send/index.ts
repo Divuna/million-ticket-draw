@@ -1,5 +1,6 @@
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.57.4";
+import { getSupabaseSecretKey } from "../_shared/supabaseSecretKey.ts";
 
 /**
  * partner-invoice-auto-send — the weekly partner-invoice automation entrypoint.
@@ -36,7 +37,7 @@ async function authorize(req: Request): Promise<{ status: number; error: string 
   const provided = req.headers.get("x-internal-token");
   if (internalToken && provided && provided === internalToken) return null;
 
-  const serviceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "";
+  const serviceKey = getSupabaseSecretKey();
   const token = (req.headers.get("authorization") ?? "").replace(/^Bearer\s+/i, "").trim();
   if (!token) return { status: 401, error: "missing_authorization" };
   if (serviceKey && token === serviceKey) return null;
@@ -67,7 +68,7 @@ serve(async (req: Request) => {
   }
 
   const supabaseUrl = Deno.env.get("SUPABASE_URL") ?? "";
-  const serviceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "";
+  const serviceKey = getSupabaseSecretKey();
   const internalToken = Deno.env.get("INTERNAL_FUNCTION_TOKEN") ?? "";
   const supabase = createClient(supabaseUrl, serviceKey);
 

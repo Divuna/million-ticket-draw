@@ -1,6 +1,7 @@
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { createClient, type SupabaseClient } from "https://esm.sh/@supabase/supabase-js@2.57.4";
 import { verifyWorkIntakeCandidate, type WorkIntakeCandidate } from "../_shared/salesLeadWorkIntakeVerifier.ts";
+import { getSupabaseSecretKey } from "../_shared/supabaseSecretKey.ts";
 
 declare const EdgeRuntime: { waitUntil(promise: Promise<unknown>): void } | undefined;
 const MAX_ITEMS = 150;
@@ -100,7 +101,7 @@ export async function handleWorkIntake(request: Request): Promise<Response> {
   if (!await authorized(request)) return json({ error: "unauthorized" }, 401);
   const url = new URL(request.url);
   const supabaseUrl = Deno.env.get("SUPABASE_URL");
-  const serviceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
+  const serviceKey = getSupabaseSecretKey();
   if (!supabaseUrl || !serviceKey) return json({ error: "server_configuration" }, 500);
   const client = createClient(supabaseUrl, serviceKey, { auth: { persistSession: false } });
 

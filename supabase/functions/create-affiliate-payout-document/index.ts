@@ -7,6 +7,7 @@ import {
   renderOneMilDetailRows,
   renderOneMilEmail,
 } from "../_shared/oneMilEmailTemplate.ts";
+import { getSupabaseSecretKey } from "../_shared/supabaseSecretKey.ts";
 
 const PAYOUT_DOC_BUCKET = "affiliate-payout-docs";
 
@@ -274,7 +275,7 @@ serve(async (req: Request) => {
     }
 
     const supabaseUrl = Deno.env.get("SUPABASE_URL") ?? "";
-    const serviceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "";
+    const serviceRoleKey = getSupabaseSecretKey();
     supabaseAdmin = createClient(supabaseUrl, serviceRoleKey, {
       auth: { persistSession: false },
     });

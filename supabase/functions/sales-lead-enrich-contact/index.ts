@@ -2,6 +2,7 @@ import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.57.4";
 import { verifyCompanyWebsite } from "../_shared/companyWebsiteVerifier.ts";
 import { verifyEmailOnOfficialSourcePage } from "../_shared/companyEmailCrawler.ts";
+import { getSupabaseSecretKey } from "../_shared/supabaseSecretKey.ts";
 
 // ============================================================================
 // sales-lead-enrich-contact — bezpečné dohledání VEŘEJNÉHO kontaktu (Fáze 5B)
@@ -52,7 +53,7 @@ serve(async (req: Request) => {
   if (req.method !== "POST") return jsonResponse({ success: false, error: "method_not_allowed" }, 405);
 
   const supabaseUrl = Deno.env.get("SUPABASE_URL") ?? "";
-  const serviceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "";
+  const serviceRoleKey = getSupabaseSecretKey();
   const supabaseAdmin = createClient(supabaseUrl, serviceRoleKey, {
     auth: { persistSession: false },
   });
