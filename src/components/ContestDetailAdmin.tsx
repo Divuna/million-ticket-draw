@@ -304,11 +304,21 @@ const ContestDetailAdmin: React.FC = () => {
     if (!contestId) return;
 
     try {
+      // Každý parametr se posílá explicitně. Vynechaný parametr by u PostgREST
+      // nabral DEFAULT funkce, ne NULL — dřív tím uložení poznámky přepsalo
+      // soutěži velikost, cenu i status.
       const { error } = await supabase.rpc('admin_manage_contest', {
         p_operation: 'update',
         p_contest_id: contestId,
         p_description: notes,
-      });
+        p_title: null,
+        p_main_prize: null,
+        p_main_image: null,
+        p_status: null,
+        p_ticket_count: null,
+        p_ticket_price: null,
+        p_fast_game: null,
+      } as any);
 
       if (error) throw error;
 
@@ -341,11 +351,19 @@ const ContestDetailAdmin: React.FC = () => {
     setUpdatingStatus(true);
 
     try {
+      // Explicitní NULL u všech ostatních parametrů — viz poznámka v saveNotes.
       const { error } = await supabase.rpc("admin_manage_contest", {
         p_operation: "update",
         p_contest_id: contestId,
         p_status: newStatus,
-      });
+        p_title: null,
+        p_description: null,
+        p_main_prize: null,
+        p_main_image: null,
+        p_ticket_count: null,
+        p_ticket_price: null,
+        p_fast_game: null,
+      } as any);
 
       if (error) throw error;
 

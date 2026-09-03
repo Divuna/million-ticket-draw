@@ -328,6 +328,44 @@ const ContestModal: React.FC<ContestModalProps> = ({ open, onClose, onSaved, edi
     setActiveTab("basic");
   }, [editingContest, open]);
 
+  // Velikost soutěže určuje pozici hlavní výhry (buy_ticket_atomic uděluje
+  // hlavní výhru na tiketu číslo ticket_count). Jakmile je vydaný první tiket,
+  // nesmí se měnit. Toto je pouze UX zámek — závazné je pravidlo v databázi
+  // (RPC guard + trigger trg_contests_guard_ticket_count), protože
+  // `tickets_sold` se subadminovi nenačítá a přímý UPDATE jde i mimo UI.
+  const [ticketCountLocked, setTicketCountLocked] = useState(false);
+
+  useEffect(() => {
+    if (!open || !editingContest) {
+      setTicketCountLocked(false);
+      return;
+    }
+
+    let cancelled = false;
+
+    (async () => {
+      // Optimistický základ z už načtených statistik (dostupné superadminovi).
+      let locked = (editingContest.tickets_sold ?? 0) > 0;
+
+      const { count, error } = await supabase
+        .from("tickets")
+        .select("id", { count: "exact", head: true })
+        .eq("contest_id", editingContest.contest_id);
+
+      if (!error && typeof count === "number") {
+        locked = locked || count > 0;
+      }
+
+      if (!cancelled) {
+        setTicketCountLocked(locked);
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [editingContest, open]);
+
   useEffect(() => {
     if (
       totalMioCoinsInput === 0 &&
@@ -2344,7 +2382,20 @@ const ContestModal: React.FC<ContestModalProps> = ({ open, onClose, onSaved, edi
               <div className="flex gap-4">
                 <div className="flex-1">
                   <Label>Počet tiketů</Label>
-                  <Input type="number" min={1} value={form.ticket_count} onChange={handleChange("ticket_count")} onFocus={handleNumericFocus} />
+                  <Input
+                    type="number"
+                    min={1}
+                    value={form.ticket_count}
+                    onChange={handleChange("ticket_count")}
+                    onFocus={handleNumericFocus}
+                    disabled={ticketCountLocked}
+                  />
+                  {ticketCountLocked && (
+                    <p className="text-xs text-destructive mt-1">
+                      Počet tiketů už nelze změnit — soutěž má vydané tikety a toto číslo
+                      určuje pozici hlavní výhry.
+                    </p>
+                  )}
                 </div>
                 <div className="flex-1">
                   <Label>Cena tiketu (MioCoins)</Label>
@@ -3365,11 +3416,21 @@ export const AdminContestManagement: React.FC = () => {
     setUpdatingStatus(contestId);
 
     try {
+      // Explicitní NULL u všech ostatních parametrů: vynechaný parametr by
+      // u PostgREST nabral DEFAULT funkce, ne NULL, a změna statusu by tím
+      // soutěži přepsala i velikost a cenu.
       const { error } = await supabase.rpc("admin_manage_contest", {
         p_operation: "update",
         p_contest_id: contestId,
         p_status: newStatus,
-      });
+        p_title: null,
+        p_description: null,
+        p_main_prize: null,
+        p_main_image: null,
+        p_ticket_count: null,
+        p_ticket_price: null,
+        p_fast_game: null,
+      } as any);
 
       if (error) {
         throw error;
