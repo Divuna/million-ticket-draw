@@ -180,14 +180,21 @@ test.describe.serial('157 — generate-partner-invoice-pdf trial discount (real 
 
     // A throwaway auth user id is needed only as the FK target on
     // partner_coin_activations.user_id (reporting metadata, not an
-    // authorization boundary for this EF). Reuse the service-role
-    // connection's own lookup of the superadmin test account's id — it
-    // already exists and logging in as it is exercised anyway in 157b/157c,
-    // so no new account is created for this either.
-    const { data: saUser, error: saLookupErr } = await (admin as any).auth.admin.listUsers();
-    if (saLookupErr) throw new Error(`listUsers: ${saLookupErr.message}`);
-    const activationUserId = saUser.users.find((u: any) => u.email === SUPERADMIN_EMAIL)?.id;
-    if (!activationUserId) throw new Error('E2E_SUPERADMIN_EMAIL account not found on staging');
+    // authorization boundary for this EF). Resolve it via a standard
+    // signInWithPassword() for the superadmin test account — it already
+    // exists and logging in as it is exercised anyway in 157b/157c, so no
+    // new account is created for this either. This intentionally avoids
+    // auth.admin.listUsers(), whose staging Admin REST endpoint has been
+    // returning "Database error finding users" independent of this test.
+    const saAnon = makeAnon();
+    const { data: saSignIn, error: saLookupErr } = await saAnon.auth.signInWithPassword({
+      email: SUPERADMIN_EMAIL,
+      password: SUPERADMIN_PASSWORD,
+    });
+    if (saLookupErr || !saSignIn.user) {
+      throw new Error(`superadmin sign-in for id lookup failed: ${saLookupErr?.message ?? "no user"}`);
+    }
+    const activationUserId = saSignIn.user.id;
 
     // Two reward codes + activations inside the trial window:
     //   - 5 MC on 2026-01-15 -> free=2 (cap), billable=3 (partial discount)
