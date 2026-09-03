@@ -10,6 +10,7 @@ import { computeDeltaFrom, formatShoptetUpdateTime, withUpdateTimeFrom } from ".
 // Shoptet serves some exports as windows-1250. resp.text() would decode those as
 // UTF-8 and mangle every Czech status into mojibake. See encoding.ts.
 import { decodeCsvBody } from "./encoding.ts";
+import { getSupabaseSecretKey } from "../_shared/supabaseSecretKey.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -61,7 +62,7 @@ async function authorize(req: Request, admin: ReturnType<typeof createClient>) {
 
   const token = (req.headers.get("authorization") ?? "").replace(/^Bearer\s+/i, "").trim();
   if (!token) return { status: 401, error: "missing_authorization" };
-  const serviceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "";
+  const serviceKey = getSupabaseSecretKey();
   if (serviceKey && token === serviceKey) return null;
 
   const { data: userData, error } = await admin.auth.getUser(token);
@@ -89,7 +90,7 @@ serve(async (req) => {
 
   const admin = createClient(
     Deno.env.get("SUPABASE_URL") ?? "",
-    Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "",
+    getSupabaseSecretKey(),
   );
 
   const authFailure = await authorize(req, admin);

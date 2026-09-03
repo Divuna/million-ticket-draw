@@ -1,5 +1,6 @@
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.57.4";
+import { getSupabaseSecretKey } from "../_shared/supabaseSecretKey.ts";
 
 // ============================================================================
 // sales-lead-research — AI rešerše firmy pro modul Obchod / Leady (Fáze 3B)
@@ -50,7 +51,7 @@ serve(async (req: Request) => {
   if (req.method !== "POST") return jsonResponse({ success: false, error: "method_not_allowed" }, 405);
 
   const supabaseUrl = Deno.env.get("SUPABASE_URL") ?? "";
-  const serviceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "";
+  const serviceRoleKey = getSupabaseSecretKey();
   const supabaseAdmin = createClient(supabaseUrl, serviceRoleKey, {
     auth: { persistSession: false },
   });

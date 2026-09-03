@@ -3,6 +3,7 @@ import {
   escapeEmailHtml,
   renderOneMilEmail,
 } from "../_shared/oneMilEmailTemplate.ts";
+import { getSupabaseSecretKey } from "../_shared/supabaseSecretKey.ts";
 
 // Admin approves or rejects a submitted Shoptet connection request.
 //
@@ -21,7 +22,7 @@ import {
 // Reject  response: { success, request_id, status: 'rejected' }
 
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
-const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
+const supabaseServiceRoleKey = getSupabaseSecretKey();
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -54,7 +55,7 @@ Deno.serve(async (req) => {
   }
   const token = authHeader.slice(7);
 
-  const admin = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, {
+  const admin = createClient(SUPABASE_URL, supabaseServiceRoleKey, {
     auth: { persistSession: false },
   });
 

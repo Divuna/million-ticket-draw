@@ -4,6 +4,7 @@ import { Resend } from "npm:resend@6.17.2";
 import { renderSalesLeadEmailHtml, renderSalesLeadEmailText } from "../_shared/salesLeadEmailRendering.ts";
 import { parseSalesLeadEmailAttachments } from "../_shared/salesLeadEmailAttachments.ts";
 import { buildReplyHeaders, createOutboundCapture, referencesFromMetadata } from "../_shared/salesLeadEmailThreading.ts";
+import { getSupabaseSecretKey } from "../_shared/supabaseSecretKey.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -22,7 +23,7 @@ serve(async (req) => {
 
   const admin = createClient(
     Deno.env.get("SUPABASE_URL") ?? "",
-    Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "",
+    getSupabaseSecretKey(),
     { auth: { persistSession: false } },
   );
 

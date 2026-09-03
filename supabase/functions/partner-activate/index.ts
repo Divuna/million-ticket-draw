@@ -1,4 +1,5 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { getSupabaseSecretKey } from "../_shared/supabaseSecretKey.ts";
 
 // Optional order line item. The partner never sends a MioCoin amount — OneMil
 // computes it from the partner's own reward rules.
@@ -141,7 +142,7 @@ Deno.serve(async (req) => {
 
     const supabaseAdmin = createClient(
       Deno.env.get("SUPABASE_URL") ?? "",
-      Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "",
+      getSupabaseSecretKey(),
     );
 
     const { data: partnerId, error: resolveError } = await supabaseAdmin.rpc(

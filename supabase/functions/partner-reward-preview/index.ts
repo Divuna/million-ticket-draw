@@ -1,4 +1,5 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { getSupabaseSecretKey } from "../_shared/supabaseSecretKey.ts";
 
 /**
  * Public MioCoin reward preview for the OneMil Shoptet widget.
@@ -83,7 +84,7 @@ Deno.serve(async (req) => {
 
   const admin = createClient(
     Deno.env.get("SUPABASE_URL") ?? "",
-    Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "",
+    getSupabaseSecretKey(),
   );
 
   // Only the partner's public display configuration is read here.

@@ -31,6 +31,7 @@ import {
   stopAfterSearchRound,
   type DiscoveryCostStopReason,
 } from "./discoveryCostGuard.ts";
+import { getSupabaseSecretKey } from "../_shared/supabaseSecretKey.ts";
 
 // ============================================================================
 // sales-lead-discover — WORKER Discovery Jobu (dávkové zpracování).
@@ -149,7 +150,7 @@ serve(async (req: Request) => {
   const expected = Deno.env.get("SALES_LEADS_WORKER_TOKEN") ?? Deno.env.get("INTERNAL_FUNCTION_TOKEN") ?? "";
   if (!expected || token !== expected) return jsonResponse({ success: false, error: "unauthorized" }, 401);
 
-  const supabaseAdmin = createClient(Deno.env.get("SUPABASE_URL") ?? "", Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "", { auth: { persistSession: false } });
+  const supabaseAdmin = createClient(Deno.env.get("SUPABASE_URL") ?? "", getSupabaseSecretKey(), { auth: { persistSession: false } });
   const openaiKey = Deno.env.get("OPENAI_API_KEY");
   if (!openaiKey) return jsonResponse({ success: false, error: "ai_not_configured" }, 503);
 

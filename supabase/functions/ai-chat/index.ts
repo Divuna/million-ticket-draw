@@ -1,5 +1,6 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts"
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2"
+import { getSupabaseSecretKey } from "../_shared/supabaseSecretKey.ts";
 
 console.log("AI-CHAT VERSION: TIMING_V1")
 console.log("AI CHAT: support NOT triggered automatically")
@@ -1708,7 +1709,7 @@ serve(async (req) => {
   }
 
   const supabaseUrl = Deno.env.get("SUPABASE_URL") ?? ""
-  const serviceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? ""
+  const serviceRoleKey = getSupabaseSecretKey()
   const internalToken = Deno.env.get("INTERNAL_FUNCTION_TOKEN") ?? ""
   const openaiKey = Deno.env.get("OPENAI_API_KEY") ?? ""
 

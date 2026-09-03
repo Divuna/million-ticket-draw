@@ -9,6 +9,7 @@ import {
   SALES_LEAD_INITIAL_EMAIL_FROM,
   SALES_LEAD_INITIAL_EMAIL_REPLY_TO,
 } from "../_shared/salesLeadInitialEmailSender.ts";
+import { getSupabaseSecretKey } from "../_shared/supabaseSecretKey.ts";
 
 // ============================================================================
 // process-sales-lead-email-batch — interní worker připravených dávek (PR 4)
@@ -49,7 +50,7 @@ serve(async (req) => {
   }
 
   const supabaseUrl = Deno.env.get("SUPABASE_URL");
-  const serviceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
+  const serviceRoleKey = getSupabaseSecretKey();
   if (!supabaseUrl || !serviceRoleKey) {
     return jsonResponse({ success: false, error: "worker_not_configured" }, 500);
   }

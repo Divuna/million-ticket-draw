@@ -1,6 +1,7 @@
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.57.4";
 import { renderOneMilEmail } from "../_shared/oneMilEmailTemplate.ts";
+import { getSupabaseSecretKey } from "../_shared/supabaseSecretKey.ts";
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 
@@ -107,7 +108,7 @@ serve(async (req: Request) => {
   }
 
   const supabaseUrl = Deno.env.get("SUPABASE_URL") ?? "";
-  const serviceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "";
+  const serviceRoleKey = getSupabaseSecretKey();
 
   const supabaseAdmin = createClient(supabaseUrl, serviceRoleKey, {
     auth: { persistSession: false },

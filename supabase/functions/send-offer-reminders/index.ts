@@ -34,6 +34,7 @@ import {
   ONE_MIL_EMAIL_COLORS,
   renderOneMilEmail,
 } from "../_shared/oneMilEmailTemplate.ts";
+import { getSupabaseSecretKey } from "../_shared/supabaseSecretKey.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -99,7 +100,7 @@ serve(async (req) => {
 
   const supabase = createClient(
     Deno.env.get("SUPABASE_URL")!,
-    Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!
+    getSupabaseSecretKey()
   );
 
   // ── Internal auth guard ──

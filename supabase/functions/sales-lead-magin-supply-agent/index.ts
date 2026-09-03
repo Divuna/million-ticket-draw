@@ -1,5 +1,6 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.4";
 import { serve } from "https://deno.land/std@0.224.0/http/server.ts";
+import { getSupabaseSecretKey } from "../_shared/supabaseSecretKey.ts";
 
 const SECRET_MIN_LENGTH = 32;
 const MAX_LEAD_IDS = 100;
@@ -68,7 +69,7 @@ function authorize(req: Request): Response | null {
 
 function getClient() {
   const supabaseUrl = Deno.env.get("SUPABASE_URL") ?? "";
-  const serviceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "";
+  const serviceRoleKey = getSupabaseSecretKey();
 
   if (!supabaseUrl || !serviceRoleKey) {
     throw new Error("supabase_service_not_configured");
