@@ -10,7 +10,7 @@ export type Database = {
   // Allows to automatically instantiate createClient with right options
   // instead of createClient<Database, { PostgrestVersion: 'XX' }>(URL, KEY)
   __InternalSupabase: {
-    PostgrestVersion: "14.17"
+    PostgrestVersion: "14.5"
   }
   public: {
     Tables: {
@@ -2420,6 +2420,61 @@ export type Database = {
           },
         ]
       }
+      partner_customer_refs: {
+        Row: {
+          bonus_coins: number | null
+          bonus_granted_at: string | null
+          connection_id: string | null
+          created_at: string
+          id: string
+          partner_id: string
+          source: string
+          user_id: string
+        }
+        Insert: {
+          bonus_coins?: number | null
+          bonus_granted_at?: string | null
+          connection_id?: string | null
+          created_at?: string
+          id?: string
+          partner_id: string
+          source?: string
+          user_id: string
+        }
+        Update: {
+          bonus_coins?: number | null
+          bonus_granted_at?: string | null
+          connection_id?: string | null
+          created_at?: string
+          id?: string
+          partner_id?: string
+          source?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "partner_customer_refs_connection_id_fkey"
+            columns: ["connection_id"]
+            isOneToOne: false
+            referencedRelation: "shoptet_connection_requests"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "partner_customer_refs_partner_id_fkey"
+            columns: ["partner_id"]
+            isOneToOne: false
+            referencedRelation: "partners"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "partner_customer_refs_partner_id_fkey"
+            columns: ["partner_id"]
+            isOneToOne: false
+            referencedRelation: "public_partners"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       partner_invoice_exports: {
         Row: {
           created_at: string | null
@@ -2613,6 +2668,8 @@ export type Database = {
           activated_at: string
           activation_id: string
           coins: number
+          coins_billable: number | null
+          coins_free: number
           external_order_id: string | null
           id: number
           invoice_id: string
@@ -2621,6 +2678,8 @@ export type Database = {
           activated_at: string
           activation_id: string
           coins: number
+          coins_billable?: number | null
+          coins_free?: number
           external_order_id?: string | null
           id?: number
           invoice_id: string
@@ -2629,6 +2688,8 @@ export type Database = {
           activated_at?: string
           activation_id?: string
           coins?: number
+          coins_billable?: number | null
+          coins_free?: number
           external_order_id?: string | null
           id?: number
           invoice_id?: string
@@ -2656,10 +2717,14 @@ export type Database = {
           amount_gross: number | null
           amount_inc_vat: number
           amount_net: number | null
+          amount_net_before_discount: number | null
           auto_email_sent_at: string | null
           coins_activated: number
+          coins_free_total: number
           coins_total: number | null
           created_at: string
+          discount_net: number
+          discount_reason: string | null
           due_date: string | null
           id: string
           invoice_number: string | null
@@ -2683,10 +2748,14 @@ export type Database = {
           amount_gross?: number | null
           amount_inc_vat?: number
           amount_net?: number | null
+          amount_net_before_discount?: number | null
           auto_email_sent_at?: string | null
           coins_activated?: number
+          coins_free_total?: number
           coins_total?: number | null
           created_at?: string
+          discount_net?: number
+          discount_reason?: string | null
           due_date?: string | null
           id?: string
           invoice_number?: string | null
@@ -2710,10 +2779,14 @@ export type Database = {
           amount_gross?: number | null
           amount_inc_vat?: number
           amount_net?: number | null
+          amount_net_before_discount?: number | null
           auto_email_sent_at?: string | null
           coins_activated?: number
+          coins_free_total?: number
           coins_total?: number | null
           created_at?: string
+          discount_net?: number
+          discount_reason?: string | null
           due_date?: string | null
           id?: string
           invoice_number?: string | null
@@ -3234,6 +3307,58 @@ export type Database = {
           },
         ]
       }
+      partner_pending_attributions: {
+        Row: {
+          connection_id: string | null
+          consumed_at: string | null
+          consumed_by_user_id: string | null
+          created_at: string
+          expires_at: string
+          id: string
+          partner_id: string
+        }
+        Insert: {
+          connection_id?: string | null
+          consumed_at?: string | null
+          consumed_by_user_id?: string | null
+          created_at?: string
+          expires_at?: string
+          id?: string
+          partner_id: string
+        }
+        Update: {
+          connection_id?: string | null
+          consumed_at?: string | null
+          consumed_by_user_id?: string | null
+          created_at?: string
+          expires_at?: string
+          id?: string
+          partner_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "partner_pending_attributions_connection_id_fkey"
+            columns: ["connection_id"]
+            isOneToOne: false
+            referencedRelation: "shoptet_connection_requests"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "partner_pending_attributions_partner_id_fkey"
+            columns: ["partner_id"]
+            isOneToOne: false
+            referencedRelation: "partners"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "partner_pending_attributions_partner_id_fkey"
+            columns: ["partner_id"]
+            isOneToOne: false
+            referencedRelation: "public_partners"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       partner_product_reward_rules: {
         Row: {
           active: boolean
@@ -3302,6 +3427,7 @@ export type Database = {
           expired_at: string | null
           external_order_id: string | null
           issued_at: string
+          issued_to_customer_at: string | null
           issued_to_email: string | null
           metadata: Json
           partner_id: string
@@ -3317,6 +3443,7 @@ export type Database = {
           expired_at?: string | null
           external_order_id?: string | null
           issued_at?: string
+          issued_to_customer_at?: string | null
           issued_to_email?: string | null
           metadata?: Json
           partner_id: string
@@ -3332,6 +3459,7 @@ export type Database = {
           expired_at?: string | null
           external_order_id?: string | null
           issued_at?: string
+          issued_to_customer_at?: string | null
           issued_to_email?: string | null
           metadata?: Json
           partner_id?: string
@@ -3421,6 +3549,7 @@ export type Database = {
           payout_updated_at: string | null
           price_per_coin: number
           product_badge_enabled: boolean
+          public_ref_code: string | null
           referred_by_affiliate_id: string | null
           rejected_at: string | null
           reward_base_czk: number
@@ -3433,6 +3562,8 @@ export type Database = {
           status: Database["public"]["Enums"]["partner_status"]
           suspended_at: string | null
           terms_accepted_at: string | null
+          trial_ends_at: string | null
+          trial_started_at: string | null
           updated_at: string
           vat_rate: number
           website_url: string
@@ -3464,6 +3595,7 @@ export type Database = {
           payout_updated_at?: string | null
           price_per_coin?: number
           product_badge_enabled?: boolean
+          public_ref_code?: string | null
           referred_by_affiliate_id?: string | null
           rejected_at?: string | null
           reward_base_czk?: number
@@ -3476,6 +3608,8 @@ export type Database = {
           status?: Database["public"]["Enums"]["partner_status"]
           suspended_at?: string | null
           terms_accepted_at?: string | null
+          trial_ends_at?: string | null
+          trial_started_at?: string | null
           updated_at?: string
           vat_rate?: number
           website_url: string
@@ -3507,6 +3641,7 @@ export type Database = {
           payout_updated_at?: string | null
           price_per_coin?: number
           product_badge_enabled?: boolean
+          public_ref_code?: string | null
           referred_by_affiliate_id?: string | null
           rejected_at?: string | null
           reward_base_czk?: number
@@ -3519,6 +3654,8 @@ export type Database = {
           status?: Database["public"]["Enums"]["partner_status"]
           suspended_at?: string | null
           terms_accepted_at?: string | null
+          trial_ends_at?: string | null
+          trial_started_at?: string | null
           updated_at?: string
           vat_rate?: number
           website_url?: string
@@ -7680,7 +7817,7 @@ export type Database = {
           p_fast_game?: boolean
           p_main_image?: string
           p_main_prize?: string
-          p_operation: string
+          p_operation?: string
           p_status?: string
           p_ticket_count?: number
           p_ticket_price?: number
@@ -7734,6 +7871,10 @@ export type Database = {
       admin_update_referral_reward: {
         Args: { p_new_status: string; p_reward_id: string }
         Returns: undefined
+      }
+      admin_update_winner_status: {
+        Args: { p_message?: string; p_new_status: string; p_winner_id: string }
+        Returns: Json
       }
       approve_affiliate_company_lead_txn: {
         Args: {
@@ -7893,6 +8034,7 @@ export type Database = {
       ensure_referral_code: { Args: { p_user_id: string }; Returns: string }
       ensure_referral_code_for: { Args: { p_user_id: string }; Returns: string }
       ensure_wallet_exists: { Args: { p_user_id: string }; Returns: undefined }
+      expire_partner_reward_codes: { Args: never; Returns: number }
       finalize_affiliate_bank_export: {
         Args: {
           p_batch_id: string
@@ -8386,6 +8528,8 @@ export type Database = {
         Args: { p_invoice_id: string }
         Returns: undefined
       }
+      partner_reward_validity_days: { Args: never; Returns: number }
+      partner_trial_free_mc: { Args: never; Returns: number }
       pause_contest: { Args: { contest_id: string }; Returns: undefined }
       prepare_affiliate_bank_export: {
         Args: { p_batch_id: string }
@@ -8435,6 +8579,11 @@ export type Database = {
       }
       record_affiliate_customer_ref: {
         Args: { p_ref_code: string }
+        Returns: Json
+      }
+      record_partner_customer_ref: { Args: { p_nonce: string }; Returns: Json }
+      record_pending_partner_attribution_intent: {
+        Args: { p_connection_id?: string; p_ref_code: string }
         Returns: Json
       }
       record_stripe_refund_status: {
@@ -9243,12 +9392,12 @@ export type Tables<
   DefaultSchemaTableNameOrOptions extends
     | keyof (DefaultSchema["Tables"] & DefaultSchema["Views"])
     | { schema: keyof DatabaseWithoutInternals },
-  TableName extends DefaultSchemaTableNameOrOptions extends {
+  TableName extends (DefaultSchemaTableNameOrOptions extends {
     schema: keyof DatabaseWithoutInternals
   }
     ? keyof (DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"] &
         DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Views"])
-    : never = never,
+    : never) = never,
 > = DefaultSchemaTableNameOrOptions extends {
   schema: keyof DatabaseWithoutInternals
 }
@@ -9272,11 +9421,11 @@ export type TablesInsert<
   DefaultSchemaTableNameOrOptions extends
     | keyof DefaultSchema["Tables"]
     | { schema: keyof DatabaseWithoutInternals },
-  TableName extends DefaultSchemaTableNameOrOptions extends {
+  TableName extends (DefaultSchemaTableNameOrOptions extends {
     schema: keyof DatabaseWithoutInternals
   }
     ? keyof DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"]
-    : never = never,
+    : never) = never,
 > = DefaultSchemaTableNameOrOptions extends {
   schema: keyof DatabaseWithoutInternals
 }
@@ -9297,11 +9446,11 @@ export type TablesUpdate<
   DefaultSchemaTableNameOrOptions extends
     | keyof DefaultSchema["Tables"]
     | { schema: keyof DatabaseWithoutInternals },
-  TableName extends DefaultSchemaTableNameOrOptions extends {
+  TableName extends (DefaultSchemaTableNameOrOptions extends {
     schema: keyof DatabaseWithoutInternals
   }
     ? keyof DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"]
-    : never = never,
+    : never) = never,
 > = DefaultSchemaTableNameOrOptions extends {
   schema: keyof DatabaseWithoutInternals
 }
@@ -9322,11 +9471,11 @@ export type Enums<
   DefaultSchemaEnumNameOrOptions extends
     | keyof DefaultSchema["Enums"]
     | { schema: keyof DatabaseWithoutInternals },
-  EnumName extends DefaultSchemaEnumNameOrOptions extends {
+  EnumName extends (DefaultSchemaEnumNameOrOptions extends {
     schema: keyof DatabaseWithoutInternals
   }
     ? keyof DatabaseWithoutInternals[DefaultSchemaEnumNameOrOptions["schema"]]["Enums"]
-    : never = never,
+    : never) = never,
 > = DefaultSchemaEnumNameOrOptions extends {
   schema: keyof DatabaseWithoutInternals
 }
@@ -9339,11 +9488,11 @@ export type CompositeTypes<
   PublicCompositeTypeNameOrOptions extends
     | keyof DefaultSchema["CompositeTypes"]
     | { schema: keyof DatabaseWithoutInternals },
-  CompositeTypeName extends PublicCompositeTypeNameOrOptions extends {
+  CompositeTypeName extends (PublicCompositeTypeNameOrOptions extends {
     schema: keyof DatabaseWithoutInternals
   }
     ? keyof DatabaseWithoutInternals[PublicCompositeTypeNameOrOptions["schema"]]["CompositeTypes"]
-    : never = never,
+    : never) = never,
 > = PublicCompositeTypeNameOrOptions extends {
   schema: keyof DatabaseWithoutInternals
 }

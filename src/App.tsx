@@ -30,6 +30,7 @@ import MyContestDetail from "@/pages/MyContestDetail";
 import BonusDetail from "@/pages/BonusDetail";
 import Vouchers from "@/pages/Vouchers";
 import PartnerPartnership from "@/pages/PartnerPartnership";
+import PartnerEshopLanding from "@/pages/PartnerEshopLanding";
 import TopUp from "@/pages/TopUp";
 import Messages from "@/pages/Messages";
 import MessageDetail from "@/pages/MessageDetail";
@@ -109,6 +110,7 @@ import { RequireSuperadmin } from "@/components/admin/RequireSuperadmin";
 import { useUserRole } from "@/hooks/useUserRole";
 import { useApplyPendingReferral } from "@/hooks/useApplyPendingReferral";
 import { useApplyPendingAffiliateRef } from "@/hooks/useApplyPendingAffiliateRef";
+import { useApplyPendingPartnerRef } from "@/hooks/useApplyPendingPartnerRef";
 import { useApplyPendingAdultConfirmation } from "@/hooks/useApplyPendingAdultConfirmation";
 import { useRetentionTriggers } from "@/hooks/useRetentionTriggers";
 import { useHeartbeat } from "@/hooks/useHeartbeat";
@@ -262,6 +264,10 @@ function AppContent() {
   // přihlášení — pokrývá okamžitou i odloženou session (potvrzení e-mailu,
   // návrat z Google/Facebook OAuth).
   useApplyPendingAffiliateRef(user?.id);
+  // Partner e-shop attribution: dokončí pending zákaznickou atribuci partnerovi
+  // (viz Register.tsx ?p= / ?c=) po přihlášení — pokrývá okamžitou i odloženou
+  // session (potvrzení e-mailu, návrat z OAuth).
+  useApplyPendingPartnerRef(user?.id);
   // Uloží potvrzení 18+ po přihlášení (zejména po návratu z OAuth).
   useApplyPendingAdultConfirmation(user?.id);
   useRetentionTriggers(user?.id);
@@ -486,6 +492,8 @@ function AppContent() {
             <Route path="/vouchers" element={<Vouchers />} />
             {/* Veřejný přehled možností partnerství — registrace zůstává na /partner/register. */}
             <Route path="/partnerstvi" element={<PartnerPartnership />} />
+            {/* Veřejná B2B landing pro e-shopy — nezávislá na /partnerstvi. */}
+            <Route path="/pro-eshopy" element={<PartnerEshopLanding />} />
             {/* Dobíjení MioCoinů — v nativní aplikaci se stránka sama přesměruje na /profile. */}
             <Route path="/top-up" element={<TopUp />} />
             <Route path="/messages" element={<Messages />} />
