@@ -58,6 +58,7 @@ jobs:
         run: npx playwright install chromium --with-deps
 
       - name: Seed win contest
+        if: github.event.inputs.only_spec != 'tests/e2e/157-partner-invoice-pdf-trial-discount-http.spec.ts'
         id: seed-win-contest
         run: |
           RESPONSE=$(curl -s -X POST \
@@ -90,6 +91,7 @@ jobs:
           SERVICE_ROLE_KEY: ${{ secrets.STAGING_SUPABASE_SERVICE_ROLE_KEY }}
 
       - name: Reset test user wallet
+        if: github.event.inputs.only_spec != 'tests/e2e/157-partner-invoice-pdf-trial-discount-http.spec.ts'
         run: |
           curl -s -X PATCH \
             "${SUPABASE_URL}/rest/v1/wallets?user_id=eq.7822a82e-f1d3-45ee-827b-679640ce6b65" \
@@ -103,6 +105,7 @@ jobs:
           SERVICE_ROLE_KEY: ${{ secrets.STAGING_SUPABASE_SERVICE_ROLE_KEY }}
 
       - name: Reset test user vouchers
+        if: github.event.inputs.only_spec != 'tests/e2e/157-partner-invoice-pdf-trial-discount-http.spec.ts'
         # Delete all user_vouchers rows for the E2E test user so that seeded
         # vouchers appear as "available" again on /vouchers (the UI filters out
         # vouchers already in the user's collection via useUserVouchers).
@@ -130,6 +133,7 @@ jobs:
           SERVICE_ROLE_KEY: ${{ secrets.STAGING_SUPABASE_SERVICE_ROLE_KEY }}
 
       - name: Seed E2E Spec03 voucher
+        if: github.event.inputs.only_spec != 'tests/e2e/157-partner-invoice-pdf-trial-discount-http.spec.ts'
         # Seed a fresh voucher for spec 03 with default created_at (now) so it
         # appears FIRST in the Dostupné list (sorted created_at DESC). Spec 03
         # uses .first() and always picks this newest entry — never spec 10's card.
@@ -181,6 +185,7 @@ jobs:
           SERVICE_ROLE_KEY: ${{ secrets.STAGING_SUPABASE_SERVICE_ROLE_KEY }}
 
       - name: Seed E2E Spec10 voucher
+        if: github.event.inputs.only_spec != 'tests/e2e/157-partner-invoice-pdf-trial-discount-http.spec.ts'
         # Seed a dedicated voucher for spec 10 with a past created_at so it
         # appears LAST in the Dostupné list. Spec 03 uses .first() and always
         # picks the newest entry (E2E Spec03 Voucher seeded above). Spec 10
@@ -235,6 +240,7 @@ jobs:
           SERVICE_ROLE_KEY: ${{ secrets.STAGING_SUPABASE_SERVICE_ROLE_KEY }}
 
       - name: Seed E2E Spec11 purchased voucher
+        if: github.event.inputs.only_spec != 'tests/e2e/157-partner-invoice-pdf-trial-discount-http.spec.ts'
         # Seed a dedicated already-purchased voucher for spec 11. This runs
         # after the user_vouchers reset and does not affect spec 10 because
         # spec 10 targets "E2E Spec10 Voucher" by name in the Dostupné tab.
@@ -321,6 +327,7 @@ jobs:
           SERVICE_ROLE_KEY: ${{ secrets.STAGING_SUPABASE_SERVICE_ROLE_KEY }}
 
       - name: Seed E2E Spec18 economy test contest
+        if: github.event.inputs.only_spec != 'tests/e2e/157-partner-invoice-pdf-trial-discount-http.spec.ts'
         # Seed a fresh draft contest for spec 18 (admin economy persist).
         # Uses status=draft so it appears in the "Archiv test" admin tab.
         # "Archiv test" has far fewer rows than "Aktivní soutěže", making the
@@ -365,6 +372,7 @@ jobs:
           SERVICE_ROLE_KEY: ${{ secrets.STAGING_SUPABASE_SERVICE_ROLE_KEY }}
 
       - name: Seed E2E Spec20 chunked MioCoin save test contest
+        if: github.event.inputs.only_spec != 'tests/e2e/157-partner-invoice-pdf-trial-discount-http.spec.ts'
         # Seed a fresh draft contest for spec 20 (admin MioCoin chunked save).
         # ticket_count = 1000 (≥ 601 required so 600 MioCoin positions fit;
         # SPEC18 contest cannot be reused because its ticket_count = 100).
@@ -407,6 +415,7 @@ jobs:
           SERVICE_ROLE_KEY: ${{ secrets.STAGING_SUPABASE_SERVICE_ROLE_KEY }}
 
       - name: Ensure staging admin E2E user has admin role
+        if: github.event.inputs.only_spec != 'tests/e2e/157-partner-invoice-pdf-trial-discount-http.spec.ts'
         # ── Why this step exists ──────────────────────────────────────────────
         # Specs 15, 16, 18, 19 log in as the admin E2E account.
         # admin_manage_bonus_prize (called by spec 19) checks:
@@ -537,6 +546,7 @@ jobs:
           ADMIN_PASSWORD: ${{ secrets.STAGING_E2E_ADMIN_PASSWORD }}
 
       - name: Ensure staging SUPERADMIN E2E user has superadmin role
+        if: github.event.inputs.only_spec != 'tests/e2e/157-partner-invoice-pdf-trial-discount-http.spec.ts'
         # ── Why this step exists ──────────────────────────────────────────────
         # Phase 3/3b hardening (RequireSuperadmin / RequireSuperadminOrRedirect /
         # RequirePermission) correctly blocks non-superadmin admins from most
