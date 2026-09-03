@@ -30,6 +30,7 @@ import MyContestDetail from "@/pages/MyContestDetail";
 import BonusDetail from "@/pages/BonusDetail";
 import Vouchers from "@/pages/Vouchers";
 import PartnerPartnership from "@/pages/PartnerPartnership";
+import PartnerEshopLanding from "@/pages/PartnerEshopLanding";
 import TopUp from "@/pages/TopUp";
 import Messages from "@/pages/Messages";
 import MessageDetail from "@/pages/MessageDetail";
