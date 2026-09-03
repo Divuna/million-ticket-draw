@@ -14,7 +14,6 @@ import {
   Wrench,
   MessageSquare,
   BookOpen,
-  UserX,
   Receipt,
   Link2,
   Megaphone,
@@ -120,7 +119,6 @@ const DASH_NAV = {
 
 const USERS_NAV = {
   users: { path: "/admin/users", label: "Uživatelé", icon: Users },
-  onboarding: { path: "/admin/onboarding-incomplete", label: "Onboarding", icon: UserX },
   partners: { path: "/admin/partners", label: "Partneři", icon: Handshake },
   partnersPortal: { path: "/admin/partners-portal", label: "Partneři portál", icon: Handshake },
   partnerOffers: { path: "/admin/partner-offers", label: "Nabídky ke schválení", icon: Tag },
@@ -242,7 +240,6 @@ export const ADMIN_NAV_SECTIONS: readonly AdminNavSectionDefinition[] = [
     mainNav: { label: "Uživatelé", icon: Users, to: "/admin/users" },
     subNavEntries: [
       { kind: "link", item: USERS_NAV.users },
-      { kind: "link", item: USERS_NAV.onboarding },
       { kind: "link", item: USERS_NAV.partners },
       { kind: "link", item: USERS_NAV.influencers },
       { kind: "link", item: USERS_NAV.companyLeads },
@@ -362,7 +359,6 @@ export function getAdminSectionFromPath(pathname: string, search: string = ""): 
   if (
     path.startsWith("/admin/users") ||
     path.startsWith("/admin/admins") ||
-    path.startsWith("/admin/onboarding-incomplete") ||
     path.startsWith("/admin/partners-portal") ||
     path.startsWith("/admin/partner-offers") ||
     path.startsWith("/admin/partners/") ||

@@ -32,25 +32,11 @@ interface BonusPrize {
   created_at: string;
   guardian_required?: boolean;
   winner_email?: string;
-  winner_age?: number | null; // null = unknown, number = computed age
   winner_address?: string;
   contest?: {
     title: string;
   }[] | { title: string };
 }
-
-// Helper to compute age from date of birth
-const computeAge = (dateOfBirth: string | null): number | null => {
-  if (!dateOfBirth) return null;
-  const today = new Date();
-  const birth = new Date(dateOfBirth);
-  let age = today.getFullYear() - birth.getFullYear();
-  const monthDiff = today.getMonth() - birth.getMonth();
-  if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birth.getDate())) {
-    age--;
-  }
-  return age;
-};
 
 interface DeliverySummary {
   contest_title: string;
@@ -158,38 +144,15 @@ export const AdminPrizeDelivery: React.FC = () => {
         }
       });
 
-      // Find guardian-required prizes with winners to fetch their ages
-      const guardianPrizesWithWinners = (prizesData || []).filter(
-        prize => prize.guardian_required && ticketUserIdMap.has(prize.ticket_position)
-      );
-      
-      // Fetch profiles for these users
-      const userIdsToFetch = [...new Set(guardianPrizesWithWinners.map(p => ticketUserIdMap.get(p.ticket_position)!))];
-      const userAgeMap = new Map<string, number | null>();
-      
-      if (userIdsToFetch.length > 0) {
-        const { data: profilesData, error: profilesError } = await supabase
-          .from('profiles')
-          .select('id, date_of_birth')
-          .in('id', userIdsToFetch);
-        
-        if (!profilesError && profilesData) {
-          profilesData.forEach(profile => {
-            userAgeMap.set(profile.id, computeAge(profile.date_of_birth));
-          });
-        }
-      }
-
-      // Enrich prizes with winner emails, ages and addresses
-      const enrichedPrizes = (prizesData || []).map(prize => {
-        const userId = ticketUserIdMap.get(prize.ticket_position);
-        return {
-          ...prize,
-          winner_email: ticketEmailMap.get(prize.ticket_position) || '',
-          winner_age: userId && prize.guardian_required ? (userAgeMap.get(userId) ?? null) : null,
-          winner_address: ticketAddressMap.get(prize.ticket_position) || ''
-        };
-      });
+      // Věk výherce se nepočítá. OneMil ověřuje 18+ pouze povinným
+      // checkboxem při registraci; datum narození se nesbírá a nesmí být
+      // podmínkou vydání výhry. Nutnost zákonného zástupce určuje výhradně
+      // atribut ceny `guardian_required`.
+      const enrichedPrizes = (prizesData || []).map(prize => ({
+        ...prize,
+        winner_email: ticketEmailMap.get(prize.ticket_position) || '',
+        winner_address: ticketAddressMap.get(prize.ticket_position) || ''
+      }));
 
       setBonusPrizes(enrichedPrizes);
     } catch (error) {
@@ -528,32 +491,18 @@ export const AdminPrizeDelivery: React.FC = () => {
 
       let winnerEmail: string | undefined;
       let winnerAddress: string | undefined;
-      let winnerAge: number | null = null;
 
       if (ticketData) {
         const user = Array.isArray(ticketData.user) ? ticketData.user[0] : ticketData.user;
         winnerEmail = user?.email;
         winnerAddress = user?.address;
 
-        // Fetch age if guardian required
-        if (prizeData.guardian_required && ticketData.user_id) {
-          const { data: profileData } = await supabase
-            .from('profiles')
-            .select('date_of_birth')
-            .eq('id', ticketData.user_id)
-            .single();
-          
-          if (profileData?.date_of_birth) {
-            winnerAge = computeAge(profileData.date_of_birth);
-          }
-        }
       }
 
       const enrichedPrize: BonusPrize = {
         ...prizeData,
         winner_email: winnerEmail,
         winner_address: winnerAddress,
-        winner_age: winnerAge,
       };
 
       // Open modal with this prize (using local state, no navigation)
@@ -801,7 +750,8 @@ export const AdminPrizeDelivery: React.FC = () => {
                   <TooltipProvider>
                     {filteredPrizes.map((prize) => {
                       const isPhysical = !prize.amount || prize.amount === 0;
-                      const isUnder18Guardian = prize.guardian_required && prize.winner_age !== null && prize.winner_age < 18;
+                      // Zvýraznění se řídí jen atributem ceny, ne věkem výherce.
+                      const isUnder18Guardian = prize.guardian_required === true;
                       return (
                         <TableRow 
                           key={prize.id}
@@ -830,7 +780,7 @@ export const AdminPrizeDelivery: React.FC = () => {
                                     </span>
                                   </TooltipTrigger>
                                   <TooltipContent>
-                                    <p>Uživatel mladší 18 let – nutný kontakt zákonného zástupce</p>
+                                    <p>Výhra vyžaduje převzetí se zákonným zástupcem</p>
                                   </TooltipContent>
                                 </Tooltip>
                               )}
@@ -948,13 +898,6 @@ export const AdminPrizeDelivery: React.FC = () => {
                       </span>
                     </div>
                     
-                    {currentPrize!.winner_age !== null && (
-                      <div className="flex items-center gap-2">
-                        <User className="w-4 h-4 text-muted-foreground" />
-                        <span className="text-sm">Věk: {currentPrize!.winner_age} let</span>
-                      </div>
-                    )}
-
                     {/* Guardian Required Indicator */}
                     {isPrizePhysical(currentPrize!) && (
                       <div className="pt-2">
@@ -970,11 +913,11 @@ export const AdminPrizeDelivery: React.FC = () => {
                           </Badge>
                         )}
                         
-                        {currentPrize!.guardian_required && currentPrize!.winner_age !== null && currentPrize!.winner_age < 18 && (
+                        {currentPrize!.guardian_required && (
                           <div className="mt-2 p-2 rounded bg-yellow-500/10 border border-yellow-500/30">
                             <div className="flex items-center gap-2 text-yellow-400 text-sm">
                               <AlertTriangle className="w-4 h-4" />
-                              <span>Uživatel mladší 18 let – nutný kontakt zákonného zástupce</span>
+                              <span>Výhru je nutné převzít se zákonným zástupcem</span>
                             </div>
                           </div>
                         )}

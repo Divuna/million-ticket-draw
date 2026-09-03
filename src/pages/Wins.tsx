@@ -79,7 +79,6 @@ const Wins: React.FC = () => {
   const [filter, setFilter] = useState<FilterStatus>('all');
   const [typeFilter, setTypeFilter] = useState<FilterType>('all');
   const [sortOrder, setSortOrder] = useState<SortOrder>('newest');
-  const [userAge, setUserAge] = useState<number | null>(null);
 
   // ── Offers state ───────────────────────────────────────────────────────────
   const [offers, setOffers] = useState<UserOffer[]>([]);
@@ -168,41 +167,10 @@ const Wins: React.FC = () => {
 
       fetchWins();
       fetchOffers();
-      fetchUserAge();
     };
 
     initPage();
   }, [user]);
-
-  const fetchUserAge = async () => {
-    if (!user) return;
-    try {
-      const { data, error } = await supabase
-        .from('profiles')
-        .select('date_of_birth')
-        .eq('id', user.id)
-        .maybeSingle();
-
-      if (error) {
-        console.error('Error fetching user age:', error);
-        return;
-      }
-
-      const dob = data?.date_of_birth;
-      if (dob) {
-        const birthDate = new Date(dob);
-        const today = new Date();
-        let age = today.getFullYear() - birthDate.getFullYear();
-        const monthDiff = today.getMonth() - birthDate.getMonth();
-        if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birthDate.getDate())) {
-          age--;
-        }
-        setUserAge(age);
-      }
-    } catch (error) {
-      console.error('Error fetching user age:', error);
-    }
-  };
 
   // ── Realtime: win status updates ───────────────────────────────────────────
   useEffect(() => {
@@ -674,7 +642,6 @@ const Wins: React.FC = () => {
               open={!!selectedWin}
               onClose={() => setSelectedWin(null)}
               onNavigateToContest={(contestId) => navigate(`/contest/${contestId}`)}
-              userAge={userAge}
             />
           </>
         )}
