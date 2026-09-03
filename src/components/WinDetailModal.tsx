@@ -43,10 +43,9 @@ interface WinDetailModalProps {
   open: boolean;
   onClose: () => void;
   onNavigateToContest: (contestId: string) => void;
-  userAge?: number | null;
 }
 
-export const WinDetailModal: React.FC<WinDetailModalProps> = ({ win, open, onClose, onNavigateToContest, userAge }) => {
+export const WinDetailModal: React.FC<WinDetailModalProps> = ({ win, open, onClose, onNavigateToContest }) => {
   const [copied, setCopied] = useState(false);
   const [showConfetti, setShowConfetti] = useState(false);
 
@@ -135,11 +134,11 @@ export const WinDetailModal: React.FC<WinDetailModalProps> = ({ win, open, onClo
 
   if (!win) return null;
 
-  // Check if guardian is required and user is under 18
-  const needsGuardian = win.type === 'bonus' && 
-    win.bonus_prize?.guardian_required === true && 
-    userAge !== null && 
-    userAge < 18;
+  // Nutnost zákonného zástupce určuje výhradně atribut ceny. Věk se
+  // nepočítá — OneMil ověřuje 18+ jen checkboxem při registraci a datum
+  // narození nesmí být podmínkou převzetí výhry.
+  const needsGuardian = win.type === 'bonus' &&
+    win.bonus_prize?.guardian_required === true;
 
   const prizeName = win.type === 'main' 
     ? win.contest?.main_prize 

@@ -7,8 +7,7 @@ import { BrowserRouter, Routes, Route, Navigate, useLocation, useNavigate, Link 
 import { HelmetProvider } from "react-helmet-async";
 import { AuthProvider } from "@/components/AuthProvider";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
-import { DateOfBirthGuard } from "@/components/DateOfBirthGuard";
-import { DateOfBirthProvider } from "@/hooks/useDateOfBirthCheck";
+import { EmailConfirmationGuard } from "@/components/EmailConfirmationGuard";
 import { useOneSignal } from "@/hooks/useOneSignal";
 import { useAuth } from "@/hooks/useAuth";
 import { AdminRealtimeProvider } from "@/components/AdminRealtimeProvider";
@@ -56,7 +55,6 @@ import AdminMessages from "@/pages/AdminMessages";
 import AdminMessageThread from "@/pages/AdminMessageThread";
 import AdminContentPages from "@/pages/AdminContentPages";
 import AdminLegalAcceptances from "@/pages/AdminLegalAcceptances";
-import AdminOnboardingIncomplete from "@/pages/AdminOnboardingIncomplete";
 import ContentPage from "@/pages/ContentPage";
 import SlugContentPage from "@/pages/SlugContentPage";
 import OneMilAudit from "@/pages/OneMilAudit";
@@ -526,7 +524,6 @@ function AppContent() {
               <Route path="/admin/contest/:contestId" element={<RequireSuperadmin><ContestDetailAdmin /></RequireSuperadmin>} />
               <Route path="/admin/content" element={<RequirePermission permission="content.manage"><AdminContentPages /></RequirePermission>} />
               <Route path="/admin/legal-acceptances" element={<RequireSuperadmin><AdminLegalAcceptances /></RequireSuperadmin>} />
-              <Route path="/admin/onboarding-incomplete" element={<RequireSuperadmin><AdminOnboardingIncomplete /></RequireSuperadmin>} />
               <Route path="/admin/partners-portal" element={<RequireSuperadmin><AdminPartnersPortal /></RequireSuperadmin>} />
               <Route path="/admin/invoices" element={<RequireSuperadmin><AdminInvoices /></RequireSuperadmin>} />
               <Route path="/admin/referrals" element={<RequireSuperadmin><AdminReferrals /></RequireSuperadmin>} />
@@ -579,7 +576,7 @@ function AppContent() {
   );
 
   return (
-    <DateOfBirthGuard>
+    <EmailConfirmationGuard>
       <GlobalMusicPlayer />
       <GlobalWinnersRealtimeFeed />
       {/* Main app layout wrapper - applies different UI based on accountType */}
@@ -599,7 +596,7 @@ function AppContent() {
         {/* Conditional navigation based on account type */}
         {renderNavigation()}
       </div>
-    </DateOfBirthGuard>
+    </EmailConfirmationGuard>
   );
 }
 
@@ -609,18 +606,16 @@ function App() {
       <HelmetProvider>
         <QueryClientProvider client={queryClient}>
           <AuthProvider>
-            <DateOfBirthProvider>
-              <AdminRealtimeProvider>
-                <TooltipProvider>
-                  <BrowserRouter>
-                    <AppContent />
-                    <Toaster />
-                    <Sonner />
-                    <CookieConsentBanner />
-                  </BrowserRouter>
-                </TooltipProvider>
-              </AdminRealtimeProvider>
-            </DateOfBirthProvider>
+            <AdminRealtimeProvider>
+              <TooltipProvider>
+                <BrowserRouter>
+                  <AppContent />
+                  <Toaster />
+                  <Sonner />
+                  <CookieConsentBanner />
+                </BrowserRouter>
+              </TooltipProvider>
+            </AdminRealtimeProvider>
           </AuthProvider>
         </QueryClientProvider>
       </HelmetProvider>

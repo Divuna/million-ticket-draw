@@ -6,17 +6,20 @@ import { Button } from '@/components/ui/button';
 import { Mail } from 'lucide-react';
 
 /**
- * Pozn.: Datum narození se už při registraci nevyžaduje ani nekontroluje.
- * Tento guard nyní vynucuje pouze potvrzení e-mailu; přihlášený uživatel
- * není nikdy blokován kvůli chybějícímu datu narození. Název je ponechán
- * kvůli stabilitě importů v App.tsx.
+ * Vynucuje pouze potvrzení e-mailové adresy.
+ *
+ * OneMil ověřuje věk výhradně povinným checkboxem „Je mi 18 let“ při
+ * registraci. Datum narození se nesbírá a nesmí být podmínkou přístupu do
+ * aplikace — přihlášený uživatel proto není nikdy blokován kvůli chybějícímu
+ * `profiles.date_of_birth`. (Dříve `DateOfBirthGuard`; přejmenováno, protože
+ * název už neodpovídal chování.)
  */
 
-interface DateOfBirthGuardProps {
+interface EmailConfirmationGuardProps {
   children: React.ReactNode;
 }
 
-// Routes that don't require email confirmation or date of birth check
+// Routes that don't require email confirmation
 const EXEMPT_ROUTES = [
   '/login',
   '/reset-password',
@@ -79,7 +82,7 @@ const EmailNotConfirmed: React.FC<{ email: string | undefined }> = ({ email }) =
   );
 };
 
-export const DateOfBirthGuard: React.FC<DateOfBirthGuardProps> = ({ children }) => {
+export const EmailConfirmationGuard: React.FC<EmailConfirmationGuardProps> = ({ children }) => {
   const { user } = useAuth();
   const location = useLocation();
 
