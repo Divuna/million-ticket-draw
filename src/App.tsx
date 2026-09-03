@@ -109,6 +109,7 @@ import { RequireSuperadmin } from "@/components/admin/RequireSuperadmin";
 import { useUserRole } from "@/hooks/useUserRole";
 import { useApplyPendingReferral } from "@/hooks/useApplyPendingReferral";
 import { useApplyPendingAffiliateRef } from "@/hooks/useApplyPendingAffiliateRef";
+import { useApplyPendingPartnerRef } from "@/hooks/useApplyPendingPartnerRef";
 import { useApplyPendingAdultConfirmation } from "@/hooks/useApplyPendingAdultConfirmation";
 import { useRetentionTriggers } from "@/hooks/useRetentionTriggers";
 import { useHeartbeat } from "@/hooks/useHeartbeat";
@@ -262,6 +263,10 @@ function AppContent() {
   // přihlášení — pokrývá okamžitou i odloženou session (potvrzení e-mailu,
   // návrat z Google/Facebook OAuth).
   useApplyPendingAffiliateRef(user?.id);
+  // Partner e-shop attribution: dokončí pending zákaznickou atribuci partnerovi
+  // (viz Register.tsx ?p= / ?c=) po přihlášení — pokrývá okamžitou i odloženou
+  // session (potvrzení e-mailu, návrat z OAuth).
+  useApplyPendingPartnerRef(user?.id);
   // Uloží potvrzení 18+ po přihlášení (zejména po návratu z OAuth).
   useApplyPendingAdultConfirmation(user?.id);
   useRetentionTriggers(user?.id);
