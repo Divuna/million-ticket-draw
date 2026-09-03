@@ -491,6 +491,8 @@ function AppContent() {
             <Route path="/vouchers" element={<Vouchers />} />
             {/* Veřejný přehled možností partnerství — registrace zůstává na /partner/register. */}
             <Route path="/partnerstvi" element={<PartnerPartnership />} />
+            {/* Veřejná B2B landing pro e-shopy — nezávislá na /partnerstvi. */}
+            <Route path="/pro-eshopy" element={<PartnerEshopLanding />} />
             {/* Dobíjení MioCoinů — v nativní aplikaci se stránka sama přesměruje na /profile. */}
             <Route path="/top-up" element={<TopUp />} />
             <Route path="/messages" element={<Messages />} />
