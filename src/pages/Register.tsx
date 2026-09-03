@@ -11,6 +11,7 @@ import { supabase } from '@/integrations/supabase/client';
 import logo from '@/assets/logo-onemil.png';
 import { PENDING_REFERRAL_STORAGE_KEY } from '@/hooks/useApplyPendingReferral';
 import { PENDING_AFFILIATE_REF_STORAGE_KEY } from '@/hooks/useApplyPendingAffiliateRef';
+import { PENDING_PARTNER_ATTRIBUTION_STORAGE_KEY } from '@/hooks/useApplyPendingPartnerRef';
 import {
   markAdultConfirmationPending,
   ADULT_CONFIRMATION_TEXT,
