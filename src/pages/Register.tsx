@@ -71,6 +71,37 @@ const Register: React.FC = () => {
     }
   }, [searchParams]);
 
+  // Partner e-shop attribution: when /register is opened with ?p=CODE (and
+  // optionally ?c=CONNECTION_ID), register the pending intent BEFORE account
+  // creation and stash the returned nonce. The nonce is later exchanged by
+  // useApplyPendingPartnerRef once a session exists. A failure here must never
+  // block registration.
+  useEffect(() => {
+    const p = searchParams.get('p')?.trim();
+    if (!p) return;
+    const c = searchParams.get('c')?.trim() || null;
+
+    (async () => {
+      try {
+        const { data, error } = await (supabase as any).rpc(
+          'record_pending_partner_attribution_intent',
+          { p_ref_code: p, p_connection_id: c },
+        );
+        if (error) return;
+        const nonce = (data as any)?.nonce;
+        if ((data as any)?.status === 'ok' && nonce) {
+          try {
+            sessionStorage.setItem(PENDING_PARTNER_ATTRIBUTION_STORAGE_KEY, nonce);
+          } catch {
+            // ignore storage errors
+          }
+        }
+      } catch {
+        // non-blocking — registration proceeds regardless
+      }
+    })();
+  }, [searchParams]);
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setAgeError('');
