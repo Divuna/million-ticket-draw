@@ -688,64 +688,25 @@ const AdminWinners: React.FC = () => {
         throw new Error('Winner not found');
       }
 
-      const oldStatus = winner.status || 'pending';
+      // Single atomic RPC: status + history + user message + admin audit +
+      // bonus_prizes sync all commit together, or nothing does. The UI can
+      // therefore trust the result instead of reporting a partial write as success.
+      const { error: rpcError } = await supabase.rpc('admin_update_winner_status', {
+        p_winner_id: winnerId,
+        p_new_status: newStatus,
+        p_message: getStatusMessage(newStatus, winner.prize_description)
+      });
 
-      // First, update the status in the database
-      const { error: updateError } = await supabase
-        .from('winners')
-        .update({ status: newStatus })
-        .eq('id', winnerId);
-
-      if (updateError) {
-        console.error('Error updating winner status in database:', updateError);
+      if (rpcError) {
+        console.error('Error updating winner status:', rpcError);
         toast({
           title: "Chyba",
-          description: "Nepodařilo se aktualizovat stav výhry v databázi.",
+          description: rpcError.message || "Nepodařilo se aktualizovat stav výhry.",
           variant: "destructive"
         });
         return;
       }
 
-      // Log status change to history table
-      const { error: historyError } = await supabase
-        .from('winner_status_history')
-        .insert({
-          winner_id: winnerId,
-          old_status: oldStatus,
-          new_status: newStatus,
-          changed_by: user?.id || null
-        });
-
-      if (historyError) {
-        console.error('Error logging status history:', historyError);
-        // Continue anyway - main update succeeded
-      }
-
-      // Only after successful DB update, send message to user
-      const messageContent = getStatusMessage(newStatus, winner.prize_description);
-      
-      const { error: messageError } = await supabase
-        .from('messages')
-        .insert({
-          user_id: winner.user_id,
-          sender: 'admin',
-          content: messageContent,
-          read: false,
-          topic: 'prize_status',
-          event: 'prize_status_change',
-          payload: {
-            winner_id: winnerId,
-            prize_description: winner.prize_description,
-            new_status: newStatus,
-            contest_title: winner.contest_title
-          }
-        });
-
-      if (messageError) {
-        console.error('Error sending message:', messageError);
-        // Message failed but DB update succeeded - still update UI
-      }
-      
       // Update local state
       setWinners(prev => prev.map(w => 
         w.id === winnerId 
@@ -795,56 +756,30 @@ const AdminWinners: React.FC = () => {
       let successCount = 0;
       let errorCount = 0;
 
+      const succeededIds = new Set<string>();
+
       for (const winner of selectedPhysicalWinners) {
-        const oldStatus = winner.status || 'pending';
+        // Same atomic RPC as the single-row path — a failed history or message
+        // write now rolls the whole row back and is counted as a real failure.
+        const { error: rpcError } = await supabase.rpc('admin_update_winner_status', {
+          p_winner_id: winner.id,
+          p_new_status: newStatus,
+          p_message: getStatusMessage(newStatus, winner.prize_description)
+        });
 
-        // Update status in database
-        const { error: updateError } = await supabase
-          .from('winners')
-          .update({ status: newStatus })
-          .eq('id', winner.id);
-
-        if (updateError) {
-          console.error('Error updating winner:', winner.id, updateError);
+        if (rpcError) {
+          console.error('Error updating winner:', winner.id, rpcError);
           errorCount++;
           continue;
         }
 
-        // Log status change to history
-        await supabase
-          .from('winner_status_history')
-          .insert({
-            winner_id: winner.id,
-            old_status: oldStatus,
-            new_status: newStatus,
-            changed_by: user?.id || null
-          });
-
-        // Send message to user
-        const messageContent = getStatusMessage(newStatus, winner.prize_description);
-        await supabase
-          .from('messages')
-          .insert({
-            user_id: winner.user_id,
-            sender: 'admin',
-            content: messageContent,
-            read: false,
-            topic: 'prize_status',
-            event: 'prize_status_change',
-            payload: {
-              winner_id: winner.id,
-              prize_description: winner.prize_description,
-              new_status: newStatus,
-              contest_title: winner.contest_title
-            }
-          });
-
+        succeededIds.add(winner.id);
         successCount++;
       }
 
-      // Update local state for all successful updates
-      setWinners(prev => prev.map(w => 
-        selectedWinners.has(w.id) && !isAutoCreditBonus(w)
+      // Update local state only for rows that actually committed
+      setWinners(prev => prev.map(w =>
+        succeededIds.has(w.id)
           ? { ...w, status: newStatus, updated_at: new Date().toISOString() }
           : w
       ));
