@@ -140,26 +140,32 @@ const AffiliateRegister = () => {
 
   if (submitted) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gradient-to-b from-background via-background to-[hsl(222_40%_8%)] p-4">
-        <div className="w-full max-w-md">
-          <img src={logo} alt="OneMil logo" className="h-16 w-auto mx-auto mb-4 object-contain onemil-logo-animated" />
-          <Card className="w-full rounded-[20px] border border-border text-center">
+      <div className="relative min-h-screen flex items-center justify-center bg-[#F6F7F9] p-4 overflow-hidden">
+        <div className="absolute inset-0 pointer-events-none bg-[radial-gradient(900px_420px_at_50%_-10%,rgba(255,138,0,0.10),transparent_65%)]" />
+        <div className="relative w-full max-w-md">
+          <img src={logo} alt="OneMil logo" className="h-14 w-auto mx-auto mb-4 object-contain rounded-lg bg-[#0A0B0F] p-1.5" />
+          <Card className="w-full rounded-[20px] bg-white border border-[#E8EBEF] shadow-[0_1px_2px_rgba(16,23,34,0.04),0_28px_60px_-28px_rgba(16,23,34,0.22)] text-[#12161C] text-center">
             <CardHeader className="space-y-4">
               <div className="flex justify-center">
-                <div className="w-20 h-20 rounded-full bg-green-500/10 flex items-center justify-center border border-green-500/30">
-                  <CheckCircle className="w-10 h-10 text-green-500" />
+                <div className="w-20 h-20 rounded-full bg-[#EAF7EF] flex items-center justify-center border border-[#BEE6CC]">
+                  <CheckCircle className="w-10 h-10 text-[#2E9E56]" />
                 </div>
               </div>
-              <CardTitle className="text-2xl font-bold">Registrace odeslána</CardTitle>
-              <CardDescription className="text-base">
+              <CardTitle className="font-heading text-2xl font-bold text-[#12161C]">Registrace odeslána</CardTitle>
+              <CardDescription className="text-base text-[#5B6572]">
                 Váš affiliate účet byl vytvořen a čeká na schválení administrátorem.
                 {finalCode && (
-                  <> Váš doporučovací kód: <span className="font-mono font-semibold">{finalCode}</span>.</>
+                  <> Váš doporučovací kód: <span className="font-mono font-semibold text-[#12161C]">{finalCode}</span>.</>
                 )}
               </CardDescription>
             </CardHeader>
             <CardContent>
-              <Button className="w-full" onClick={() => navigate('/affiliate/login')}>Přejít na přihlášení</Button>
+              <Button
+                className="w-full rounded-xl bg-gradient-to-r from-[#FF8A00] to-[#FFA333] text-white shadow-[0_10px_24px_-10px_rgba(255,138,0,0.75)] hover:from-[#F07F00] hover:to-[#FF9A1F] transition-colors"
+                onClick={() => navigate('/affiliate/login')}
+              >
+                Přejít na přihlášení
+              </Button>
             </CardContent>
           </Card>
         </div>
@@ -168,115 +174,129 @@ const AffiliateRegister = () => {
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-b from-background via-background to-[hsl(222_40%_8%)] p-4">
-      <div className="w-full max-w-2xl">
-        <img src={logo} alt="OneMil logo" className="h-16 w-auto mx-auto mb-4 object-contain onemil-logo-animated" />
-        <Card className="w-full rounded-[20px] border border-border">
+    <div className="relative min-h-screen flex items-center justify-center bg-[#F6F7F9] p-4 py-10 overflow-hidden">
+      <div className="absolute inset-0 pointer-events-none bg-[radial-gradient(900px_420px_at_50%_-10%,rgba(255,138,0,0.10),transparent_65%)]" />
+      <div className="relative w-full max-w-2xl">
+        <img src={logo} alt="OneMil logo" className="h-14 w-auto mx-auto mb-4 object-contain rounded-lg bg-[#0A0B0F] p-1.5" />
+        <Card className="w-full rounded-[20px] bg-white border border-[#E8EBEF] shadow-[0_1px_2px_rgba(16,23,34,0.04),0_28px_60px_-28px_rgba(16,23,34,0.22)] text-[#12161C]">
           <CardHeader className="space-y-1 text-center">
             <div className="flex justify-center mb-2">
-              <div className="w-16 h-16 rounded-full bg-primary/10 flex items-center justify-center border border-primary/30">
-                <Megaphone className="w-8 h-8 text-primary" />
+              <div className="w-16 h-16 rounded-full bg-[#FFF1DF] flex items-center justify-center border border-[#FFD9A6]">
+                <Megaphone className="w-8 h-8 text-[#C96A00]" />
               </div>
             </div>
-            <CardTitle className="text-2xl font-bold">Affiliate program</CardTitle>
-            <CardDescription>Vydělávejte na doporučení OneMil zákazníkům i firmám</CardDescription>
+            <CardTitle className="font-heading text-2xl font-bold text-[#12161C]">Affiliate program</CardTitle>
+            <CardDescription className="text-[#5B6572]">Vydělávejte na doporučení OneMil zákazníkům i firmám</CardDescription>
           </CardHeader>
           <CardContent>
             <form onSubmit={handleSubmit} className="space-y-4">
               <div className="space-y-2">
-                <Label htmlFor="name">Jméno / název *</Label>
-                <Input id="name" name="name" value={form.name} onChange={onChange} required />
+                <Label htmlFor="name" className="text-[#12161C]">Jméno / název *</Label>
+                <Input id="name" name="name" value={form.name} onChange={onChange} required
+                       className="bg-white border-[#DDE2E8] text-[#12161C] placeholder:text-[#B0B8C2] focus-visible:ring-[#FF8A00] focus-visible:ring-offset-white" />
               </div>
               <div className="space-y-2">
-                <Label htmlFor="email">E-mail *</Label>
-                <Input id="email" name="email" type="email" value={form.email} onChange={onChange} required />
+                <Label htmlFor="email" className="text-[#12161C]">E-mail *</Label>
+                <Input id="email" name="email" type="email" value={form.email} onChange={onChange} required
+                       className="bg-white border-[#DDE2E8] text-[#12161C] placeholder:text-[#B0B8C2] focus-visible:ring-[#FF8A00] focus-visible:ring-offset-white" />
               </div>
               <div className="grid grid-cols-2 gap-3">
                 <div className="space-y-2">
-                  <Label htmlFor="password">Heslo *</Label>
-                  <Input id="password" name="password" type="password" value={form.password} onChange={onChange} required />
+                  <Label htmlFor="password" className="text-[#12161C]">Heslo *</Label>
+                  <Input id="password" name="password" type="password" value={form.password} onChange={onChange} required
+                         className="bg-white border-[#DDE2E8] text-[#12161C] placeholder:text-[#B0B8C2] focus-visible:ring-[#FF8A00] focus-visible:ring-offset-white" />
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="confirmPassword">Heslo znovu *</Label>
-                  <Input id="confirmPassword" name="confirmPassword" type="password" value={form.confirmPassword} onChange={onChange} required />
+                  <Label htmlFor="confirmPassword" className="text-[#12161C]">Heslo znovu *</Label>
+                  <Input id="confirmPassword" name="confirmPassword" type="password" value={form.confirmPassword} onChange={onChange} required
+                         className="bg-white border-[#DDE2E8] text-[#12161C] placeholder:text-[#B0B8C2] focus-visible:ring-[#FF8A00] focus-visible:ring-offset-white" />
                 </div>
               </div>
               <div className="space-y-2">
-                <Label htmlFor="phone">Telefon</Label>
-                <Input id="phone" name="phone" value={form.phone} onChange={onChange} />
+                <Label htmlFor="phone" className="text-[#12161C]">Telefon</Label>
+                <Input id="phone" name="phone" value={form.phone} onChange={onChange}
+                       className="bg-white border-[#DDE2E8] text-[#12161C] placeholder:text-[#B0B8C2] focus-visible:ring-[#FF8A00] focus-visible:ring-offset-white" />
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="websiteUrl">Hlavní kanál / web / profil</Label>
+                <Label htmlFor="websiteUrl" className="text-[#12161C]">Hlavní kanál / web / profil</Label>
                 <Input id="websiteUrl" name="websiteUrl" value={form.websiteUrl} onChange={onChange}
-                       placeholder="https://..." />
+                       placeholder="https://..."
+                       className="bg-white border-[#DDE2E8] text-[#12161C] placeholder:text-[#B0B8C2] focus-visible:ring-[#FF8A00] focus-visible:ring-offset-white" />
               </div>
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div className="space-y-2">
-                  <Label htmlFor="instagramUrl">Instagram</Label>
+                  <Label htmlFor="instagramUrl" className="text-[#12161C]">Instagram</Label>
                   <Input id="instagramUrl" name="instagramUrl" value={form.instagramUrl} onChange={onChange}
-                         placeholder="https://instagram.com/..." />
+                         placeholder="https://instagram.com/..."
+                         className="bg-white border-[#DDE2E8] text-[#12161C] placeholder:text-[#B0B8C2] focus-visible:ring-[#FF8A00] focus-visible:ring-offset-white" />
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="tiktokUrl">TikTok</Label>
+                  <Label htmlFor="tiktokUrl" className="text-[#12161C]">TikTok</Label>
                   <Input id="tiktokUrl" name="tiktokUrl" value={form.tiktokUrl} onChange={onChange}
-                         placeholder="https://tiktok.com/@..." />
+                         placeholder="https://tiktok.com/@..."
+                         className="bg-white border-[#DDE2E8] text-[#12161C] placeholder:text-[#B0B8C2] focus-visible:ring-[#FF8A00] focus-visible:ring-offset-white" />
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="youtubeUrl">YouTube</Label>
+                  <Label htmlFor="youtubeUrl" className="text-[#12161C]">YouTube</Label>
                   <Input id="youtubeUrl" name="youtubeUrl" value={form.youtubeUrl} onChange={onChange}
-                         placeholder="https://youtube.com/..." />
+                         placeholder="https://youtube.com/..."
+                         className="bg-white border-[#DDE2E8] text-[#12161C] placeholder:text-[#B0B8C2] focus-visible:ring-[#FF8A00] focus-visible:ring-offset-white" />
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="facebookUrl">Facebook</Label>
+                  <Label htmlFor="facebookUrl" className="text-[#12161C]">Facebook</Label>
                   <Input id="facebookUrl" name="facebookUrl" value={form.facebookUrl} onChange={onChange}
-                         placeholder="https://facebook.com/..." />
+                         placeholder="https://facebook.com/..."
+                         className="bg-white border-[#DDE2E8] text-[#12161C] placeholder:text-[#B0B8C2] focus-visible:ring-[#FF8A00] focus-visible:ring-offset-white" />
                 </div>
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="audienceSize">Velikost publika / dosah</Label>
+                <Label htmlFor="audienceSize" className="text-[#12161C]">Velikost publika / dosah</Label>
                 <Input id="audienceSize" name="audienceSize" value={form.audienceSize} onChange={onChange}
-                       placeholder="např. 25 000 sledujících, 100 000 měsíční dosah" />
+                       placeholder="např. 25 000 sledujících, 100 000 měsíční dosah"
+                       className="bg-white border-[#DDE2E8] text-[#12161C] placeholder:text-[#B0B8C2] focus-visible:ring-[#FF8A00] focus-visible:ring-offset-white" />
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="contentCategories">Kategorie obsahu</Label>
+                <Label htmlFor="contentCategories" className="text-[#12161C]">Kategorie obsahu</Label>
                 <Textarea id="contentCategories" name="contentCategories" value={form.contentCategories}
                           onChange={onTextAreaChange}
-                          placeholder="např. lifestyle, luxusní produkty, cestování, automotive, e-commerce..." />
+                          placeholder="např. lifestyle, luxusní produkty, cestování, automotive, e-commerce..."
+                          className="bg-white border-[#DDE2E8] text-[#12161C] placeholder:text-[#B0B8C2] focus-visible:ring-[#FF8A00] focus-visible:ring-offset-white" />
               </div>
 
               <div className="space-y-2">
-                <Label>Režim spolupráce *</Label>
+                <Label className="text-[#12161C]">Režim spolupráce *</Label>
                 <div className="flex items-center gap-2">
                   <Checkbox id="m_inf" checked={modeInfluencer} onCheckedChange={(v) => setModeInfluencer(!!v)} />
-                  <Label htmlFor="m_inf" className="font-normal">Influencer — přivádím zákazníky</Label>
+                  <Label htmlFor="m_inf" className="font-normal text-[#12161C]">Influencer — přivádím zákazníky</Label>
                 </div>
                 <div className="flex items-center gap-2">
                   <Checkbox id="m_sales" checked={modeSalesRep} onCheckedChange={(v) => setModeSalesRep(!!v)} />
-                  <Label htmlFor="m_sales" className="font-normal">Obchodník — přivádím firmy / e-shopy</Label>
+                  <Label htmlFor="m_sales" className="font-normal text-[#12161C]">Obchodník — přivádím firmy / e-shopy</Label>
                 </div>
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="refCode">Doporučovací kód (návrh)</Label>
+                <Label htmlFor="refCode" className="text-[#12161C]">Doporučovací kód (návrh)</Label>
                 <Input id="refCode" name="refCode" value={form.refCode} onChange={onChange}
-                       placeholder="např. JANNOVAK" className="font-mono" />
-                <p className="text-xs text-muted-foreground">
+                       placeholder="např. JANNOVAK"
+                       className="font-mono bg-white border-[#DDE2E8] text-[#12161C] placeholder:text-[#B0B8C2] focus-visible:ring-[#FF8A00] focus-visible:ring-offset-white" />
+                <p className="text-xs text-[#8E98A6]">
                   Kód použijete v odkazech. Pokud je obsazený, systém ho upraví.
                 </p>
               </div>
 
-              <Button type="submit" className="w-full" disabled={loading}>
+              <Button type="submit" className="w-full rounded-xl bg-gradient-to-r from-[#FF8A00] to-[#FFA333] text-white shadow-[0_10px_24px_-10px_rgba(255,138,0,0.75)] hover:from-[#F07F00] hover:to-[#FF9A1F] transition-colors" disabled={loading}>
                 {loading ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : null}
                 Zaregistrovat se
               </Button>
             </form>
 
             <div className="mt-4 text-center">
-              <Link to="/affiliate/login" className="text-sm text-primary hover:underline inline-flex items-center gap-1">
+              <Link to="/affiliate/login" className="text-sm text-[#C96A00] hover:underline inline-flex items-center gap-1">
                 <ArrowLeft className="w-3 h-3" /> Už mám účet — přihlásit se
               </Link>
             </div>
