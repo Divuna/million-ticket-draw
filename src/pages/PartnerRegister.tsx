@@ -126,24 +126,25 @@ const PartnerRegister = () => {
 
   if (submitted) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gradient-to-b from-background via-background to-[hsl(222_40%_8%)] p-4">
-        <div className="w-full max-w-md">
-        <img src={logo} alt="OneMil logo" className="h-16 w-auto mx-auto mb-4 object-contain onemil-logo-animated" />
-        <Card className="w-full voucher-card-glow rounded-[20px] bg-gradient-to-b from-[hsl(220_30%_12%)] via-[hsl(220_28%_9%)] to-[hsl(222_35%_7%)] border-[2px] border-[hsl(40_30%_35%/0.5)] shadow-[0_4px_24px_hsl(222_50%_3%/0.6)] text-center">
+      <div className="relative min-h-screen flex items-center justify-center bg-[#F6F7F9] p-4 overflow-hidden">
+        <div className="absolute inset-0 pointer-events-none bg-[radial-gradient(900px_420px_at_50%_-10%,rgba(255,138,0,0.10),transparent_65%)]" />
+        <div className="relative w-full max-w-md">
+        <img src={logo} alt="OneMil logo" className="h-14 w-auto mx-auto mb-4 object-contain rounded-lg bg-[#0A0B0F] p-1.5" />
+        <Card className="w-full rounded-[20px] bg-white border border-[#E8EBEF] shadow-[0_1px_2px_rgba(16,23,34,0.04),0_28px_60px_-28px_rgba(16,23,34,0.22)] text-[#12161C] text-center">
           <CardHeader className="space-y-4">
             <div className="flex justify-center">
-              <div className="w-20 h-20 rounded-full bg-[hsl(140_40%_15%/0.3)] flex items-center justify-center border border-[hsl(140_50%_40%/0.4)]">
-                <CheckCircle className="w-10 h-10 text-[hsl(140_50%_45%)]" />
+              <div className="w-20 h-20 rounded-full bg-[#EAF7EF] flex items-center justify-center border border-[#BEE6CC]">
+                <CheckCircle className="w-10 h-10 text-[#2E9E56]" />
               </div>
             </div>
-            <CardTitle className="text-heading-gold text-2xl font-bold">Registrace odeslána</CardTitle>
-            <CardDescription className="text-base">
+            <CardTitle className="font-heading text-2xl font-bold text-[#12161C]">Registrace odeslána</CardTitle>
+            <CardDescription className="text-base text-[#5B6572]">
               Registrace odeslána. Partnerský účet bude aktivován po schválení administrátorem.
             </CardDescription>
           </CardHeader>
           <CardContent>
             <Link to="/">
-              <Button variant="outline" className="w-full border-[hsl(40_30%_35%/0.4)] hover:border-[hsl(40_40%_45%/0.6)] hover:bg-[hsl(40_30%_20%/0.15)]">
+              <Button variant="outline" className="w-full rounded-xl border-[#DDE2E8] text-[#12161C] hover:border-[#C6CCD4] hover:bg-[#FAFBFC]">
                 <ArrowLeft className="mr-2 h-4 w-4" />
                 Zpět na hlavní stránku
               </Button>
@@ -156,24 +157,25 @@ const PartnerRegister = () => {
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-b from-background via-background to-[hsl(222_40%_8%)] p-4 py-10">
-      <div className="w-full max-w-lg">
-        <img src={logo} alt="OneMil logo" className="h-16 w-auto mx-auto mb-4 object-contain onemil-logo-animated" />
-        <Card className="w-full voucher-card-glow rounded-[20px] bg-gradient-to-b from-[hsl(220_30%_12%)] via-[hsl(220_28%_9%)] to-[hsl(222_35%_7%)] border-[2px] border-[hsl(40_30%_35%/0.5)] shadow-[0_4px_24px_hsl(222_50%_3%/0.6)]">
+    <div className="relative min-h-screen flex items-center justify-center bg-[#F6F7F9] p-4 py-10 overflow-hidden">
+      <div className="absolute inset-0 pointer-events-none bg-[radial-gradient(900px_420px_at_50%_-10%,rgba(255,138,0,0.10),transparent_65%)]" />
+      <div className="relative w-full max-w-lg">
+        <img src={logo} alt="OneMil logo" className="h-14 w-auto mx-auto mb-4 object-contain rounded-lg bg-[#0A0B0F] p-1.5" />
+        <Card className="w-full rounded-[20px] bg-white border border-[#E8EBEF] shadow-[0_1px_2px_rgba(16,23,34,0.04),0_28px_60px_-28px_rgba(16,23,34,0.22)] text-[#12161C]">
         <CardHeader className="space-y-1 text-center">
           <div className="flex justify-center mb-4">
-            <div className="w-16 h-16 rounded-full bg-[hsl(40_30%_15%/0.3)] flex items-center justify-center border border-[hsl(40_40%_45%/0.4)]">
-              <Building2 className="w-8 h-8 text-[hsl(40_60%_55%)]" />
+            <div className="w-16 h-16 rounded-full bg-[#FFF1DF] flex items-center justify-center border border-[#FFD9A6]">
+              <Building2 className="w-8 h-8 text-[#C96A00]" />
             </div>
           </div>
-          <CardTitle className="text-heading-gold text-2xl font-bold">Registrace e-shopu</CardTitle>
-          <CardDescription>Staňte se partnerem OneMil a nabízejte MioCoiny</CardDescription>
+          <CardTitle className="font-heading text-2xl font-bold text-[#12161C]">Registrace e-shopu</CardTitle>
+          <CardDescription className="text-[#5B6572]">Staňte se partnerem OneMil a nabízejte MioCoiny</CardDescription>
         </CardHeader>
         <CardContent>
           <form onSubmit={handleSubmit} className="space-y-4">
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div className="space-y-2 sm:col-span-2">
-                <Label htmlFor="companyName">Název společnosti *</Label>
+                <Label htmlFor="companyName" className="text-[#12161C]">Název společnosti *</Label>
                 <Input
                   id="companyName"
                   name="companyName"
@@ -181,11 +183,12 @@ const PartnerRegister = () => {
                   value={formData.companyName}
                   onChange={handleChange}
                   disabled={loading}
+                  className="bg-white border-[#DDE2E8] text-[#12161C] placeholder:text-[#B0B8C2] focus-visible:ring-[#FF8A00] focus-visible:ring-offset-white"
                 />
               </div>
 
               <div className="space-y-2 sm:col-span-2">
-                <Label htmlFor="websiteUrl">URL webu *</Label>
+                <Label htmlFor="websiteUrl" className="text-[#12161C]">URL webu *</Label>
                 <Input
                   id="websiteUrl"
                   name="websiteUrl"
@@ -193,11 +196,12 @@ const PartnerRegister = () => {
                   value={formData.websiteUrl}
                   onChange={handleChange}
                   disabled={loading}
+                  className="bg-white border-[#DDE2E8] text-[#12161C] placeholder:text-[#B0B8C2] focus-visible:ring-[#FF8A00] focus-visible:ring-offset-white"
                 />
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="ico">IČO</Label>
+                <Label htmlFor="ico" className="text-[#12161C]">IČO</Label>
                 <Input
                   id="ico"
                   name="ico"
@@ -205,11 +209,12 @@ const PartnerRegister = () => {
                   value={formData.ico}
                   onChange={handleChange}
                   disabled={loading}
+                  className="bg-white border-[#DDE2E8] text-[#12161C] placeholder:text-[#B0B8C2] focus-visible:ring-[#FF8A00] focus-visible:ring-offset-white"
                 />
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="dic">DIČ</Label>
+                <Label htmlFor="dic" className="text-[#12161C]">DIČ</Label>
                 <Input
                   id="dic"
                   name="dic"
@@ -217,11 +222,12 @@ const PartnerRegister = () => {
                   value={formData.dic}
                   onChange={handleChange}
                   disabled={loading}
+                  className="bg-white border-[#DDE2E8] text-[#12161C] placeholder:text-[#B0B8C2] focus-visible:ring-[#FF8A00] focus-visible:ring-offset-white"
                 />
               </div>
 
               <div className="space-y-2 sm:col-span-2">
-                <Label htmlFor="email">Kontaktní e-mail *</Label>
+                <Label htmlFor="email" className="text-[#12161C]">Kontaktní e-mail *</Label>
                 <Input
                   id="email"
                   name="email"
@@ -230,11 +236,12 @@ const PartnerRegister = () => {
                   value={formData.email}
                   onChange={handleChange}
                   disabled={loading}
+                  className="bg-white border-[#DDE2E8] text-[#12161C] placeholder:text-[#B0B8C2] focus-visible:ring-[#FF8A00] focus-visible:ring-offset-white"
                 />
               </div>
 
               <div className="space-y-2 sm:col-span-2">
-                <Label htmlFor="contactPhone">Kontaktní telefon</Label>
+                <Label htmlFor="contactPhone" className="text-[#12161C]">Kontaktní telefon</Label>
                 <Input
                   id="contactPhone"
                   name="contactPhone"
@@ -242,11 +249,12 @@ const PartnerRegister = () => {
                   value={formData.contactPhone}
                   onChange={handleChange}
                   disabled={loading}
+                  className="bg-white border-[#DDE2E8] text-[#12161C] placeholder:text-[#B0B8C2] focus-visible:ring-[#FF8A00] focus-visible:ring-offset-white"
                 />
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="password">Heslo *</Label>
+                <Label htmlFor="password" className="text-[#12161C]">Heslo *</Label>
                 <Input
                   id="password"
                   name="password"
@@ -255,11 +263,12 @@ const PartnerRegister = () => {
                   value={formData.password}
                   onChange={handleChange}
                   disabled={loading}
+                  className="bg-white border-[#DDE2E8] text-[#12161C] placeholder:text-[#B0B8C2] focus-visible:ring-[#FF8A00] focus-visible:ring-offset-white"
                 />
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="confirmPassword">Potvrdit heslo *</Label>
+                <Label htmlFor="confirmPassword" className="text-[#12161C]">Potvrdit heslo *</Label>
                 <Input
                   id="confirmPassword"
                   name="confirmPassword"
@@ -268,11 +277,12 @@ const PartnerRegister = () => {
                   value={formData.confirmPassword}
                   onChange={handleChange}
                   disabled={loading}
+                  className="bg-white border-[#DDE2E8] text-[#12161C] placeholder:text-[#B0B8C2] focus-visible:ring-[#FF8A00] focus-visible:ring-offset-white"
                 />
               </div>
             </div>
 
-            <Button type="submit" className="w-full rounded-xl bg-gradient-to-r from-[hsl(45_80%_45%)] via-[hsl(40_85%_50%)] to-[hsl(35_80%_45%)] text-secondary-foreground shadow-[0_2px_12px_hsl(45_80%_50%/0.25)] hover:shadow-[0_4px_16px_hsl(45_80%_50%/0.35)] hover:brightness-110 transition-all" disabled={loading}>
+            <Button type="submit" className="w-full rounded-xl bg-gradient-to-r from-[#FF8A00] to-[#FFA333] text-white shadow-[0_10px_24px_-10px_rgba(255,138,0,0.75)] hover:from-[#F07F00] hover:to-[#FF9A1F] transition-colors" disabled={loading}>
               {loading ? (
                 <>
                   <Loader2 className="mr-2 h-4 w-4 animate-spin" />
@@ -285,15 +295,15 @@ const PartnerRegister = () => {
           </form>
 
           <div className="mt-6 text-center space-y-2">
-            <p className="text-sm text-muted-foreground">
+            <p className="text-sm text-[#5B6572]">
               Již máte partnerský účet?{' '}
-              <Link to="/partner/login" className="text-primary hover:underline">
+              <Link to="/partner/login" className="text-[#C96A00] hover:underline">
                 Přihlásit se
               </Link>
             </p>
             <Link
               to="/"
-              className="inline-flex items-center text-sm text-muted-foreground hover:text-primary transition-colors"
+              className="inline-flex items-center text-sm text-[#5B6572] hover:text-[#12161C] transition-colors"
             >
               <ArrowLeft className="mr-1 h-4 w-4" />
               Zpět na hlavní stránku

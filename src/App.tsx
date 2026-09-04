@@ -264,9 +264,9 @@ function AppContent() {
   // přihlášení — pokrývá okamžitou i odloženou session (potvrzení e-mailu,
   // návrat z Google/Facebook OAuth).
   useApplyPendingAffiliateRef(user?.id);
-  // Partner e-shop attribution: dokončí pending zákaznickou atribuci partnerovi
-  // (viz Register.tsx ?p= / ?c=) po přihlášení — pokrývá okamžitou i odloženou
-  // session (potvrzení e-mailu, návrat z OAuth).
+  // Fáze 4: dokončí pending atribuci nového zákazníka k partnerovi (viz
+  // Register.tsx) po přihlášení — izolováno od affiliate/referral výše,
+  // vlastní tabulka a RPC, nikdy nezasahuje do partner trial/billing.
   useApplyPendingPartnerRef(user?.id);
   // Uloží potvrzení 18+ po přihlášení (zejména po návratu z OAuth).
   useApplyPendingAdultConfirmation(user?.id);
@@ -451,9 +451,20 @@ function AppContent() {
   const renderNavigation = () => {
     // Partners see no navigation - they're confined to partner portal
     if (isPartnerAccount) return null;
-    
+
     // Affiliate v2 accounts use their own dashboard chrome — no customer bottom nav.
     if (isAffiliateAccount) return null;
+
+    // B2B marketing/auth pages (partner + affiliate register/login) have their
+    // own dedicated forms and are targeted at e-shop/affiliate signups, not
+    // logged-in customers — the customer bottom nav has no place there.
+    const isB2BAuthOrLandingRoute =
+      location.pathname === '/pro-eshopy' ||
+      location.pathname === '/partner/register' ||
+      location.pathname === '/partner/login' ||
+      location.pathname === '/affiliate/register' ||
+      location.pathname === '/affiliate/login';
+    if (isB2BAuthOrLandingRoute) return null;
 
     // Bottom navigation for customers only; admins use AdminLayout chrome (primary + context sub-nav).
     return <BottomNavigation />;
@@ -492,7 +503,7 @@ function AppContent() {
             <Route path="/vouchers" element={<Vouchers />} />
             {/* Veřejný přehled možností partnerství — registrace zůstává na /partner/register. */}
             <Route path="/partnerstvi" element={<PartnerPartnership />} />
-            {/* Veřejná B2B landing pro e-shopy — nezávislá na /partnerstvi. */}
+            {/* Samostatná B2B landing page pro e-shopy z reklamního provozu; CTA vede na existující registraci. */}
             <Route path="/pro-eshopy" element={<PartnerEshopLanding />} />
             {/* Dobíjení MioCoinů — v nativní aplikaci se stránka sama přesměruje na /profile. */}
             <Route path="/top-up" element={<TopUp />} />
