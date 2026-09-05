@@ -48,10 +48,13 @@ function json(body: unknown, status = 200) {
  *
  * Auth: x-internal-token (automation) OR service-role bearer OR superadmin JWT.
  *
- * Reward issuance respects partners.reward_trigger_status:
- *   'paid'      → issue when Shoptet status is paid, shipped, or completed.
- *   'shipped'   → issue when Shoptet status is shipped or completed.
- *   'completed' → issue only when Shoptet status is completed.
+ * Reward eligibility respects partners.reward_trigger_status:
+ *   'paid'      → eligible when Shoptet status is paid, shipped, or completed.
+ *   'shipped'   → eligible when Shoptet status is shipped or completed.
+ *   'completed' → eligible only when Shoptet status is completed.
+ * A qualifying Shoptet order is scheduled through the server-side 15-minute
+ * grace window; this importer never issues MioCoins or queues customer email
+ * directly on the first paid transition.
  */
 async function authorize(req: Request, admin: ReturnType<typeof createClient>) {
   const internalToken = Deno.env.get("INTERNAL_FUNCTION_TOKEN");
@@ -331,19 +334,21 @@ serve(async (req) => {
             logBatch.push({ run_id: runId, external_order_id: row.orderId, action: "create", result: "ok" });
           }
 
-          // Apply reward_trigger_status threshold logic against BOTH axes.
-          // Re-sending the same transition is harmless: the RPC only moves a code
-          // from pending → issued, so paid → shipped → completed still yields
-          // exactly one issued reward.
+          // New qualifying rows start the grace period. Existing Shoptet rows are
+          // always re-synchronised when Shoptet reports a change, so a transition
+          // back below the configured trigger clears an active grace timer and a
+          // later paid transition must survive a fresh full 15 minutes.
           const willIssue  = shouldIssue(row.lifecycle, row.payment, triggerThreshold);
           const willCancel = row.lifecycle === "cancelled";
+          const shouldSyncStatus = outcome === "duplicate" || willIssue || willCancel;
 
-          if (!willIssue && !willCancel) continue; // below threshold → leave as pending
+          if (!shouldSyncStatus) continue;
 
-          const { data: statusResult, error: statusErr } = await admin.rpc("update_partner_order_reward_status", {
+          const rpcStatus = toRpcStatus(row.lifecycle, row.payment);
+          const { data: statusResult, error: statusErr } = await admin.rpc("schedule_shoptet_partner_reward_status", {
             p_partner_id: partnerId,
             p_external_order_id: row.orderId,
-            p_order_status: toRpcStatus(row.lifecycle, row.payment),
+            p_order_status: rpcStatus,
           });
 
           if (statusErr || !isSuccessResult(statusResult)) {
@@ -360,7 +365,7 @@ serve(async (req) => {
 
           rowsStatusUpdated++;
           if (statusResult.email_enqueued === true) rowsEmailEnqueued++;
-          logBatch.push({ run_id: runId, external_order_id: row.orderId, action: "status_update", result: toRpcStatus(row.lifecycle, row.payment) });
+          logBatch.push({ run_id: runId, external_order_id: row.orderId, action: "status_update", result: rpcStatus });
         }
       }
     }
