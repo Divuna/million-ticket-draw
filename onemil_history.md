@@ -1,3 +1,55 @@
+# 05. 09. 2026 — Kompletní synchronizační audit GitHub × produkce × dokumentace; dávka oprav 02.–05. 09. potvrzena živá
+
+Read-only audit porovnal `origin/main` (`f051e248`), produkční Supabase `xkzhjldrojjlrkezorey` a
+staging `dxmowysntemfqfnanxua`. Cíl: ověřit, že práce z posledních dní je uložená v `main`,
+skutečně nasazená a správně zdokumentovaná. Žádná produkční ani databázová změna v rámci auditu
+samotného — jen čtení a doplnění dokumentace.
+
+**GitHub:** PR #367–#388 jsou všechny mergnuté do `main` (ověřeno GitHub API i lokálním
+`git merge-base --is-ancestor` na head commit každého PR). Žádná důležitá změna nezůstala jen
+v pracovní větvi — stovky starších nemergnutých větví v repu jsou z dřívějších měsíců vývoje,
+mimo rozsah tohoto auditu.
+
+**Produkce (přímé čtení definic funkcí/triggerů/cronu, ne jen PR popis):**
+- `pause_contest`/`resume_contest` (PR #379) — admin guard + `closed` konečný — živé.
+- `claim_miocoin_bonus` (PR #380) — oprava double-credit (atomický přesun
+  `bonus_balance_coins → balance_coins`) — živé; stará 1-arg signatura zůstává jako neškodný
+  osiřelý pozůstatek bez EXECUTE pro `authenticated`.
+- `admin_update_winner_status` + `update_bonus_prize_delivery_status` (PR #381) — atomický zápis
+  stavu výhry a obousměrná synchronizace `winners`↔`bonus_prizes` — živé.
+- `admin_manage_contest` + trigger `contests_guard_ticket_count` (PR #382) — kanonický role guard,
+  bezpečné `NULL` defaulty, zámek `ticket_count` po prvním tiketu, `closed` konečný — živé.
+- `trigger_guardian_message_on_winner` + `create_guardian_notification_if_needed` (PR #383) — už
+  nečtou `date_of_birth` ani nepočítají věk, rozhodují jen podle `bonus_prizes.guardian_required`
+  — živé.
+- `_invoke_forward_messages_to_sofinity()` — natvrdo zapsaný token nahrazen čtením z Vaultu —
+  živé. Cron job 23 (`process-event-queue`) — sanitizovaný `command`, **zůstává `active=false`**
+  — živé.
+- `meta-read-broker`/`meta-storage-health`/`meta-oauth-callback` — legacy fallback na
+  `SUPABASE_SERVICE_ROLE_KEY` odstraněn po schválení Pavla, nasazeno (v13/v13/v15) a poprvé
+  přidáno do GitHubu (commit `050809f4`, PR #388).
+- **PENDING, potvrzeno neaplikováno:** `import-shoptet-orders` je v produkci na v58 a
+  **neobsahuje** opravu chybové zprávy z PR #387 (`shoptet_import_row_log.message` se dál zapisuje
+  jako `null` u `create_failed`/`status_update_failed`). Fix existuje jen v GitHubu, nenasazen —
+  vyžaduje samostatné schválení.
+- Staging (`dxmowysntemfqfnanxua`) namátkově ověřen na `admin_manage_contest` — hardening je
+  aplikovaný i tam, žádný zjištěný drift staging↔produkce u kontrolovaných položek.
+
+**Dokumentační mezera zjištěná a opravená:** `onemil_state.md`, `onemil_history.md` ani
+`CLAUDE.md` neobsahovaly žádnou zmínku o PR #372–#388 (SUPABASE_SECRET_KEYS migrace, soutěžní/
+peněženková zpevnění, zrušení závislosti na `date_of_birth`, odstranění `.env` z gitu, redesign
+`/pro-eshopy`), přestože jsou všechny dávno mergnuté a většina potvrzeně živá v produkci. Doplněno
+do všech tří souborů v tomto zápisu (`onemil_state.md` sekce „-1", nová sekce v `CLAUDE.md` hned
+za povinným úvodním pravidlem, tento historický záznam). `ONEMIL_BUSINESS_CONTEXT.md` nezměněn —
+žádný z nálezů není nová obchodní/produktová skutečnost.
+
+**Zbývá (vyžaduje Pavlovo schválení, neprovedeno):** nasazení PR #387 opravy do
+`import-shoptet-orders`; přidání `forward_messages_to_sofinity`/`from_sofinity_message`/
+`partner-invoice-cron` do GitHubu (aktivně používané, ale bez zdroje v repu); rozhodnutí o osudu
+~19 prokazatelně osiřelých produkčních Edge Functions bez zdroje v GitHubu.
+
+---
+
 # 02. 09. 2026 — Produkční hosting migrován na Vercel; PR #367–#370 mergnuty; opraveny poslední odkazy na `onemil.lovable.app`
 
 Tento zápis nahrazuje zápis níže z 27. 08. 2026 jako aktuální stav řešení výpadku apexu a

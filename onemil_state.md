@@ -1,6 +1,51 @@
 # OneMil – aktuální stav projektu
 
-> **Autoritativní aktuální stav. Poslední aktualizace 23. 8. 2026 podle `origin/main` (`c4df929b`), GitHubu a read-only produkční kontroly Supabase.**
+> **Autoritativní aktuální stav. Poslední aktualizace 05. 9. 2026 podle `origin/main` (`f051e248`), GitHubu a read-only synchronizačního auditu GitHub × produkční Supabase (`xkzhjldrojjlrkezorey`) × staging (`dxmowysntemfqfnanxua`).**
+
+## -1. Dávka bezpečnostních a funkčních oprav 02.–05. 09. 2026 — potvrzeno živé v produkci
+
+Kompletní synchronizační audit (05. 09. 2026) porovnal GitHub `main`, produkční Supabase a
+dokumentaci. Všechny body níže byly ověřeny přímým čtením produkčních definic funkcí/triggerů/
+cronu — ne jen podle PR popisu.
+
+**Legacy `SUPABASE_SERVICE_ROLE_KEY` → `SUPABASE_SECRET_KEYS` (PR #384, #387, #388):**
+- Sdílený helper `_shared/supabaseSecretKey.ts` čte `SUPABASE_SECRET_KEYS["default"]`, bez
+  fallbacku na starý secret. Kontraktní test `156-supabase-secret-key-migration-contract.spec.ts`
+  hlídá, že žádná Edge Function v repu legacy secret nečte.
+- Tři Meta broker funkce (`meta-read-broker`, `meta-storage-health`, `meta-oauth-callback`),
+  dřív nasazené jen v produkci s fallbackem na legacy klíč, mají fallback odstraněný (schváleno
+  Pavlem) a jejich aktuální zdroj je poprvé v GitHubu (v13/v13/v15, `verify_jwt=false`).
+- `_invoke_forward_messages_to_sofinity()` (dřív natvrdo zapsaný Bearer token) čte token z Vaultu.
+  Vypnutý cron job 23 (`process-event-queue`) má sanitizovaný `command` bez natvrdo zapsaného
+  tokenu a **zůstává `active=false`**.
+- **OPEN ISSUE:** `forward_messages_to_sofinity` (aktivně volaná cronem job 11 každou minutu),
+  `from_sofinity_message` a `partner-invoice-cron` jsou aktivně používané v produkci, ale nemají
+  zdroj v GitHubu. ~19 dalších produkčních funkcí bez zdroje v GitHubu jsou prokazatelně osiřelé
+  (žádný cron/trigger je nevolá). Detailní seznam a invarianty viz `CLAUDE.md`.
+
+**Soutěže, výhry, MioCoin peněženka — zpevnění (PR #379–#382, 02.–03. 09. 2026):** `pause_contest`/
+`resume_contest` mají admin guard + `closed` je konečný stav; `claim_miocoin_bonus` už bonus
+nepřipisuje dvakrát (atomický přesun `bonus_balance_coins → balance_coins`); nová RPC
+`admin_update_winner_status` dělá stav výhry + historii + zprávu + audit + sync `bonus_prizes`
+atomicky (nahrazuje tři nezávislé klientské zápisy v `/admin/winners`); `admin_manage_contest` má
+guard nad kanonickou `user_roles`, bezpečné `NULL` defaulty (vynechaný parametr = „neměnit“, ne
+„přepsat konstantou“) a `ticket_count` je po prvním vydaném tiketu neměnný i mimo RPC (DB trigger
+`contests_guard_ticket_count`). Všechny čtyři potvrzeny živé v produkci. Detailní invarianty a
+důvody v `CLAUDE.md`.
+
+**Ověření věku — jen checkbox 18+ (PR #383, 03. 09. 2026):** `profiles.date_of_birth` se nesbírá a
+nesmí být podmínkou ničeho. Dvě DB funkce (`trigger_guardian_message_on_winner`,
+`create_guardian_notification_if_needed`) dřív z chybějícího data narození odvozovaly věk
+(opačně špatně — jedna posílala zprávu úplně všem, druhá nikomu); teď rozhodují jen podle
+`bonus_prizes.guardian_required`. Potvrzeno živé v produkci.
+
+**PENDING (neaplikováno, čeká na schválení):** oprava `shoptet_import_row_log.message` (PR #387,
+`failureMessage()`) je jen v GitHubu — produkční `import-shoptet-orders` zůstává na v58 bez ní.
+
+**Ostatní mergnuté PR z tohoto období beze zvláštního dopadu na invarianty:** #372–#374 (CMS
+soft-delete opravy pro `ContentPage`/`SlugContentPage`/influencer terms), #375 (`.env` odstraněn
+z gitu, přidán do `.gitignore`), #385/#386 (redesign `/pro-eshopy` B2B stránky — čistě frontend/
+vizuální, žádná DB ani bezpečnostní změna).
 
 ## 0. Produkční hosting migrován na Vercel — apex i `www` běží, bezpečnostní hlavičky jsou živé (02. 09. 2026, VYŘEŠENO)
 
