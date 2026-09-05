@@ -42,6 +42,21 @@ nesmí být podmínkou ničeho. Dvě DB funkce (`trigger_guardian_message_on_win
 **PENDING (neaplikováno, čeká na schválení):** oprava `shoptet_import_row_log.message` (PR #387,
 `failureMessage()`) je jen v GitHubu — produkční `import-shoptet-orders` zůstává na v58 bez ní.
 
+**PENDING (neaplikováno, čeká na schválení) — `selected_products` bez vybraného produktu:**
+V režimu `reward_mode='selected_products'` vrací `create_partner_order_reward` chybu
+`reward_amount_too_low` i pro objednávku, která žádný vybraný produkt neobsahuje — obchodně jde
+přitom o normální objednávku bez nároku na MioCoiny. Shoptet live import ji proto počítá do
+`rows_failed` a každý běh končí jako `partial`. **Potvrzeno na produkci u BOHEMIA INFINITY
+(05. 09. 2026)** — po přepojení na item-level export se chyba
+`items_required_for_reward_mode` změnila na `reward_amount_too_low` a cron `shoptet_auto_import_1min`
+hlásí `partial` každou minutu. Oprava je připravená v GitHubu (migrace
+`20260906090000_partner_reward_no_eligible_products.sql` + `createOutcome.ts` + spec 139):
+engine nově vrací `eligible_items`, issuance RPC vrací
+`{success:true, skipped:true, reason:'no_eligible_products'}` bez vydání kódu a importer to
+počítá mimo `rows_failed`. **Migrace NENÍ aplikovaná a Edge Function NENÍ přenasazená** —
+obojí vyžaduje samostatné schválení Pavla. `reward_amount_too_low` zůstává beze změny pro případ,
+kdy vybraný produkt existuje, ale odměna vyjde pod minimem.
+
 ### Partner Trial / New Customer Bonus — backend nasazený, produktově NEAKTIVNÍ (03. 09. 2026, zdroj dorovnán 05. 09. 2026)
 
 **Backend je živý v produkci `xkzhjldrojjlrkezorey`** od 03. 09. 2026, ale do 05. 09. 2026 jeho
