@@ -47,6 +47,104 @@ výslovné schválení Pavla.
 
 ---
 
+# DÁVKA BEZPEČNOSTNÍCH A FUNKČNÍCH OPRAV — TRVALÉ INVARIANTY (produkce, 02.–05. 09. 2026)
+
+**Ověřeno read-only synchronizačním auditem 05. 09. 2026** (GitHub `main` × produkční Supabase
+`xkzhjldrojjlrkezorey` × staging `dxmowysntemfqfnanxua`). Všechny body níže jsou potvrzené jako
+živé v produkci přímým čtením definic funkcí/triggerů/cronu, ne jen podle PR popisu.
+
+## Legacy `SUPABASE_SERVICE_ROLE_KEY` — Edge Functions přešly na `SUPABASE_SECRET_KEYS`
+
+- **PR #384** (`main`) zavedl sdílený helper `supabase/functions/_shared/supabaseSecretKey.ts` —
+  jediný zdroj service-role klíče pro Edge Functions. Čte `SUPABASE_SECRET_KEYS` (JSON slovník,
+  klíč `"default"`) a **záměrně nemá fallback** na starý `SUPABASE_SERVICE_ROLE_KEY` — chybějící
+  nebo poškozený secret musí funkci bezpečně shodit chybou, nikdy tiše sklouznout na starý klíč.
+- **Kontraktní test `tests/e2e/156-supabase-secret-key-migration-contract.spec.ts`** hlídá, že
+  žádná Edge Function v `supabase/functions/` (kontroluje se celý adresář, ne jen dobový seznam)
+  legacy secret nečte, a že helper nikdy nevrací prázdnou hodnotu ani nic neloguje.
+- **Tři Meta broker funkce (`meta-read-broker`, `meta-storage-health`, `meta-oauth-callback`)**
+  byly nasazené mimo git a měly vlastní `adminKey()` s fallbackem na
+  `Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")`, pokud `SUPABASE_SECRET_KEYS` neměl klíč
+  `"backend_api"` ani `"default"`. **Po výslovném schválení Pavla (05. 09. 2026)** byl fallback
+  odstraněn (`adminKey()` teď při chybějícím klíči vrací `null`, což volající kód bezpečně
+  proměňuje na chybu/503) a aktuální produkční zdroj byl poprvé přidán do repa
+  (`supabase/functions/meta-read-broker/`, `meta-storage-health/`, `meta-oauth-callback/`,
+  commit `050809f4`, PR #388). Nasazené verze: v13/v13/v15, `verify_jwt=false` u všech tří
+  (beze změny). **Nevracet legacy fallback zpět** ani do těchto tří, ani do žádné nové funkce.
+- `_invoke_forward_messages_to_sofinity()` (SECURITY DEFINER DB funkce, potvrzeně bez triggeru,
+  bez volajícího) měla natvrdo zapsaný Bearer token. Opraveno na čtení z
+  `vault.decrypted_secrets WHERE name = 'INTERNAL_WEBHOOK_TOKEN'` — potvrzeno živé v produkci.
+- Vypnutý cron job 23 (`process-event-queue`, `active=false`) měl v `cron.job.command` natvrdo
+  zapsaný `x-internal-token`. Přepsáno na `select public.run_process_event_queue_worker_cron()`,
+  který token čte bezpečně z Vaultu — potvrzeno živé v produkci. **Job zůstává `active=false`;
+  tato oprava ho záměrně nezapíná a nikdo ho nesmí zapnout bez zvláštního schválení.**
+- **OPEN ISSUE (vědomě neopraveno, čeká na schválení):** ~19 produkčních Edge Functions
+  (`event_forward_log_listener*`, `forward_to_sofinity*`, `invoke_*`, `noop`, `send-pus`,
+  `send_pending_emails`, `sofinity-agent-dispatcher`, `sync-player-to-sofinity`,
+  `sync-to-sofinity`, `trigger-sync-caller`, `partner-activate-reward`, `partner-activate-coins`)
+  jsou nasazené v produkci, ale **nemají zdroj v GitHubu** a jsou prokazatelně osiřelé (žádný
+  cron/trigger/jiná funkce je nevolá). `forward_messages_to_sofinity` (aktivně volaná cronem
+  job 11 každou minutu, potvrzeně už na `SUPABASE_SECRET_KEYS`), `from_sofinity_message` a
+  `partner-invoice-cron` jsou naopak aktivně používané, ale **také nemají zdroj v GitHubu** —
+  kandidáti na stejný postup jako meta-* funkce (přidat do repa), vyžaduje schválení Pavla.
+
+## Soutěže, výhry a MioCoin peněženka — zpevnění (02.–03. 09. 2026)
+
+- **`pause_contest`/`resume_contest`** (PR #379): admin guard nad kanonickou `user_roles` (ne
+  legacy `users.role`) a **`closed` je konečný stav** — uzavřenou soutěž nelze pozastavit ani
+  znovu aktivovat. Potvrzeno živé v produkci.
+- **`claim_miocoin_bonus(p_bonus_id uuid, p_user_id uuid)`** (PR #380): dřív MioCoin bonus
+  připsala dvakrát — jednou triggerem výhry do `bonus_balance_coins`, podruhé touto RPC do
+  `balance_coins` bez odečtení z `bonus_balance_coins`. Oprava dělá atomický přesun částky
+  z `bonus_balance_coins` do `balance_coins` v jedné transakci se zámkem řádku peněženky.
+  Potvrzeno živé v produkci (2-arg signatura, `authenticated`+`service_role` EXECUTE).
+  **Existuje i stará 1-arg signatura `claim_miocoin_bonus(p_bonus_prize_id uuid)`** — je to
+  neškodný osiřelý pozůstatek (EXECUTE má jen `postgres`, aplikace ji nevolá) — nemazat bez
+  zvláštního důvodu, ale nepoužívat jako vzor.
+- **`admin_update_winner_status(uuid, text, text)`** (nová RPC, PR #381): jediná bezpečná cesta
+  pro `/admin/winners` — stav výhry + historie + zpráva uživateli + audit + synchronizace
+  `bonus_prizes` jako jedna transakce. `AdminWinners.tsx` už nesmí zapisovat do `winners` přímo.
+  **`update_bonus_prize_delivery_status`** nově zrcadlově dorovnává `winners`, když
+  `/admin/prize-delivery` označí věcnou výhru jako `delivered` — dřív to `/wins` nevidělo.
+  Obě potvrzené živé v produkci.
+- **`admin_manage_contest`** (PR #382): guard přepnut na kanonickou `user_roles`; defaulty
+  `p_status`/`p_ticket_count`/`p_ticket_price` změněny z nebezpečných konstant (`'draft'`,
+  `1000000`, `1`) na `NULL` — vynechaný parametr teď znamená „neměnit“, ne „přepsat“. **Velikost
+  soutěže (`ticket_count`) je po vydání prvního tiketu neměnná** — vynucuje to i DB trigger
+  `contests_guard_ticket_count` na `contests`, který platí pro každou cestu zápisu (RPC i přímý
+  `UPDATE` přes `contests_admin_update` politiku), protože `ticket_count` určuje pozici hlavní
+  výhry v `buy_ticket_atomic`. `closed` je konečný stav i v této RPC. Potvrzeno živé v produkci
+  (signatura, `DEFAULT NULL` u všech tří parametrů, closed-guard text i trigger existují).
+- **Frontend volající `admin_manage_contest` s `p_operation: "update"`** (`AdminContestManagement.tsx`,
+  `ContestDetailAdmin.tsx`) musí posílat **explicitní `null`** u všech nepoužitých parametrů —
+  vynechaný klíč u PostgREST znamená DEFAULT funkce, ne `null`.
+
+## Ověření věku — pouze checkbox 18+, žádná závislost na datu narození (03. 09. 2026)
+
+- **PR #383**: `profiles.date_of_birth` se od registrace nesbírá (`handle_new_auth_user` do něj
+  zapisuje `NULL`) a **nesmí být podmínkou** registrace, soutěžení, výhry ani administrativního
+  procesu. Věk se ověřuje výhradně povinným registračním checkboxem „Je mi 18 let“.
+  `useDateOfBirthCheck.ts` a `/admin/onboarding-incomplete` byly odstraněny.
+- Dvě DB funkce dřív odvozovaly věk z `date_of_birth` a chovaly se opačně špatně:
+  `trigger_guardian_message_on_winner()` (trigger `on_guardian_prize_winner` na `winners`)
+  bez data narození vždy vyhodnotila věk jako `0` (posílala zprávu úplně všem výhercům věcné
+  ceny), zatímco `create_guardian_notification_if_needed()` bez data narození vždy skončila
+  předčasně (notifikace nevznikla nikomu). Obě teď rozhodují **výhradně podle
+  `bonus_prizes.guardian_required`** (vlastnost ceny, ne uživatele) — potvrzeno živé v produkci,
+  žádná z nich už nečte `date_of_birth` ani nepočítá věk. Sloupec `profiles.date_of_birth` v DB
+  zůstává (historická data se nemažou), ale žádný kód na něm nesmí stavět rozhodnutí.
+
+## Shoptet import — chybová zpráva v `shoptet_import_row_log` (PENDING, neaplikováno)
+
+Oprava (PR #387) přidává `message: failureMessage(...)` do `create_failed`/`status_update_failed`
+řádků `shoptet_import_row_log`, aby šla dohledat skutečná příčina opakovaného `create_failed` u
+partnera s `reward_mode='selected_products'` bez item-level CSV dat. **Je jen v GitHubu**
+(`supabase/functions/import-shoptet-orders/rowLogMessage.ts`) — produkční `import-shoptet-orders`
+zůstává na v58 bez této opravy (řádek `create_failed` se dál zapisuje s `message: null`). Nasazení
+vyžaduje samostatné schválení Pavla.
+
+---
+
 # PRODUKČNÍ HOSTING = VERCEL — TRVALÉ INVARIANTY (produkce, 02. 09. 2026)
 
 **Toto nahrazuje sekci níže („VLASTNÍ DOMÉNA A BEZPEČNOSTNÍ HLAVIČKY — 27. 08. 2026") jako
