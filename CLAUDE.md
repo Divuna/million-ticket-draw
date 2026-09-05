@@ -145,6 +145,56 @@ vyžaduje samostatné schválení Pavla.
 
 ---
 
+# PARTNER TRIAL / NEW CUSTOMER BONUS — TRVALÉ INVARIANTY (produkce, 03. 09. 2026; zdroj dorovnán 05. 09. 2026)
+
+Backend je **nasazený a živý** v produkci `xkzhjldrojjlrkezorey`, ale funkce je **produktově
+neaktivní** — 0 partnerů má `public_ref_code`, 0 partnerů je v trialu, 0 atribucí, 0 faktur se
+slevou. Zdroj byl do GitHubu dorovnán 05. 09. 2026 read-only exportem, bez jakékoli změny produkce.
+
+**Produkční verze migrací (jediné platné, nevracet staré lokální timestampy `2026090312…`–`2026090317…`):**
+`20260903200832` (90denní expirace) · `20260903200843` (expirace od `issued_to_customer_at`) ·
+`20260903200856` (start trialu) · `20260903200935` (sleva ve fakturaci) ·
+`20260903200954` (bonus 15 MC) · `20260903201001` (cron).
+
+**Závazné invarianty (neměnit bez výslovného schválení Pavla):**
+
+- **Expirace odměny běží od `issued_to_customer_at`, ne od `issued_at`.** Živá verze triggeru je
+  `expiry_source='auto_v2'`; `auto_v1` z migrace `20260903200832` je jen historický mezikrok —
+  **nevracet ho.** `issued_at` je čas vzniku řádku (u Partner API čas objednávky, kdy je kód ještě
+  `pending`), takže by zákazníkovi ubírala lhůtu ještě před vydáním odměny.
+- **`partners.trial_started_at` / `trial_ends_at` nastavuje VÝHRADNĚ trigger
+  `trg_start_partner_trial`.** Partner ani běžný uživatel je nesmí měnit (`trg_protect_partner_trial`
+  → `42501`). Jednou nastartovaný trial nelze posunout ani adminem; admin smí jen doplnit chybějící
+  hodnotu. Zápis si trigger povoluje transakčně lokálním `set_config('onemil.trial_internal','on',true)`
+  — **jinou cestu nevytvářet.**
+- **O slevě rozhoduje ČAS AKTIVACE, ne čas vydání:** `activated_at >= trial_started_at AND
+  activated_at < trial_ends_at` (konec EXKLUZIVNĚ). Strop zdarma má jediný zdroj —
+  `public.partner_trial_free_mc()` nad settings `partner_trial_free_mc_per_reward` (default 2).
+  **Nikde jinde dvojku nehardcodovat.**
+- **Faktura při slevě zůstává normální fakturou v normální číselné řadě i při 0 Kč.**
+  `coins_total` se NEPŘEPISUJE na nižší hodnotu; invariant je
+  `amount_net_before_discount - discount_net = amount_net` a DPH se počítá až ze základu PO slevě.
+  `coins_billable` je `GENERATED ALWAYS AS (coins - coins_free) STORED` — nikdy nezapisovat ručně.
+  Všechny tři fakturační funkce (`create_partner_invoices_for_last_week`, `_for_period`,
+  `generate_partner_invoice`) musí zůstat konzistentní — kdo mění jednu, mění všechny tři.
+- **Bonus 15 MC rozhoduje POŘADÍM UDÁLOSTÍ, ne stářím účtu.** `auth.users.created_at` musí být
+  přísně pozdější než `created_at` nonce, jinak `account_predates_intent`. Klient nikdy nedrží
+  surový partnerský kód, jen jednorázový nonce z `record_pending_partner_attribution_intent`
+  (platnost 60 minut). `partner_pending_attributions` je service-role only.
+  **Nezavádět variantu, která by rozhodovala podle stáří účtu** — účet založený dřív by tak dostal
+  bonus za odkaz otevřený až potom.
+- **`generate-partner-invoice-pdf` v194 je živá verze se slevovým blokem** (`hasDiscount`,
+  `coins_free`, `coins_billable`, `amount_net_before_discount`, `trial_discount_rendered`).
+  Soubor v repu je jeho přesný zdroj — **při jakékoli editaci nesmí zmizet trial větev**, jinak by
+  redeploy vrátil PDF bez slevy.
+- **Frontendová atribuce má v `main` kanonickou konstantu `PENDING_PARTNER_ATTRIBUTION_STORAGE_KEY`.**
+  Starší lokální draft s `PENDING_PARTNER_REF_STORAGE_KEY` je překonaný — **nevracet ho.**
+- **OPEN ISSUE (vědomě neprovedeno, vyžaduje schválení Pavla):** vydání `public_ref_code` partnerům
+  a dokončení partnerského UI zahajovací akce. Dokud kódy neexistují, `/register?p=KOD` nefunguje
+  a celá Fáze 4 spí. **Nevydávat `public_ref_code` ani neaktivovat trial bez schválení.**
+
+---
+
 # B2B STRÁNKA `/pro-eshopy` — TRVALÉ INVARIANTY (produkce, 05. 09. 2026)
 
 Živé na `https://onemil.cz/pro-eshopy`, zdroj `src/pages/PartnerEshopLanding.tsx` (PR #385, #386).

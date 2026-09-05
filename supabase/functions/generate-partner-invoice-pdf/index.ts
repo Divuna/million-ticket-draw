@@ -435,37 +435,84 @@ serve(async (req) => {
     });
     y -= 25;
 
-    // ── Summary box ─────────────────────────────────────────────────
-    currentPage.drawRectangle({
-      x: leftMargin, y: y - 60, width: 495, height: 65,
-      color: rgb(0.95, 0.95, 0.97),
-    });
-    y -= 5;
-
     const amountNet = Number(invoice.amount_net ?? invoice.amount_ex_vat ?? 0);
     const vatAmount = Number(invoice.vat_amount ?? 0);
     const amountGross = Number(invoice.amount_gross ?? invoice.amount_inc_vat ?? 0);
 
-    // First column differs by type: activation count vs coin count
-    const firstLabel = isOfferInvoice ? 'Celkem aktivací:' : 'Celkem coinů:';
-    const firstValue = isOfferInvoice
-      ? String(lines.length)
-      : formatCoins(invoice.coins_total ?? invoice.coins_activated ?? 0);
+    const discountNet = Number(invoice.discount_net ?? 0);
+    const coinsFreeTotal = Number(invoice.coins_free_total ?? 0);
+    const amountBefore = Number(invoice.amount_net_before_discount ?? (amountNet + discountNet));
+    const hasDiscount = !isOfferInvoice && (discountNet > 0 || coinsFreeTotal > 0);
+    const discountReason = invoice.discount_reason
+      || 'Zahajovací akce OneMil – první 2 MioCoiny z každé aktivované odměny zdarma';
 
-    const summaryItems = [
-      { label: firstLabel,       value: firstValue },
-      { label: 'Cena bez DPH:', value: formatCurrency(amountNet) },
-      { label: 'DPH 21 %:',     value: formatCurrency(vatAmount) },
-      { label: 'Cena s DPH:',   value: formatCurrency(amountGross) },
-    ];
+    if (!hasDiscount) {
+      currentPage.drawRectangle({
+        x: leftMargin, y: y - 60, width: 495, height: 65,
+        color: rgb(0.95, 0.95, 0.97),
+      });
+      y -= 5;
 
-    let sx = leftMargin + 10;
-    for (const item of summaryItems) {
-      currentPage.drawText(item.label, { x: sx, y: y - 15, size: 9, font, color: rgb(0.4, 0.4, 0.4) });
-      currentPage.drawText(item.value, { x: sx, y: y - 30, size: 12, font: fontBold });
-      sx += 125;
+      const firstLabel = isOfferInvoice ? 'Celkem aktivací:' : 'Celkem coinů:';
+      const firstValue = isOfferInvoice
+        ? String(lines.length)
+        : formatCoins(invoice.coins_total ?? invoice.coins_activated ?? 0);
+
+      const summaryItems = [
+        { label: firstLabel,      value: firstValue },
+        { label: 'Cena bez DPH:', value: formatCurrency(amountNet) },
+        { label: 'DPH 21 %:',     value: formatCurrency(vatAmount) },
+        { label: 'Cena s DPH:',   value: formatCurrency(amountGross) },
+      ];
+
+      let sx = leftMargin + 10;
+      for (const item of summaryItems) {
+        currentPage.drawText(item.label, { x: sx, y: y - 15, size: 9, font, color: rgb(0.4, 0.4, 0.4) });
+        currentPage.drawText(item.value, { x: sx, y: y - 30, size: 12, font: fontBold });
+        sx += 125;
+      }
+      y -= 75;
+    } else {
+      currentPage.drawRectangle({
+        x: leftMargin, y: y - 108, width: 495, height: 113,
+        color: rgb(0.95, 0.95, 0.97),
+      });
+      y -= 5;
+
+      const rowA = [
+        { label: 'Aktivované MioCoiny:', value: formatCoins(invoice.coins_total ?? invoice.coins_activated ?? 0) },
+        { label: 'Standardní hodnota:',  value: formatCurrency(amountBefore) },
+        { label: 'Zdarma (akce):',       value: formatCoins(coinsFreeTotal) + ' MC' },
+        { label: 'Sleva:',               value: '-' + formatCurrency(discountNet) },
+      ];
+      let sx = leftMargin + 10;
+      for (const item of rowA) {
+        currentPage.drawText(item.label, { x: sx, y: y - 15, size: 9, font, color: rgb(0.4, 0.4, 0.4) });
+        currentPage.drawText(item.value, { x: sx, y: y - 30, size: 11, font: fontBold });
+        sx += 125;
+      }
+
+      const rowB = [
+        { label: 'Základ po slevě:', value: formatCurrency(amountNet) },
+        { label: 'DPH 21 %:',        value: formatCurrency(vatAmount) },
+        { label: 'Celkem k úhradě:', value: formatCurrency(amountGross) },
+      ];
+      sx = leftMargin + 10;
+      for (const item of rowB) {
+        currentPage.drawText(item.label, { x: sx, y: y - 55, size: 9, font, color: rgb(0.4, 0.4, 0.4) });
+        currentPage.drawText(item.value, { x: sx, y: y - 70, size: 12, font: fontBold });
+        sx += 125;
+      }
+
+      currentPage.drawText(discountReason, {
+        x: leftMargin + 10, y: y - 90, size: 8, font, color: rgb(0.35, 0.35, 0.35),
+      });
+      currentPage.drawText('Sleva na tuto část: 100 %', {
+        x: leftMargin + 10, y: y - 101, size: 8, font: fontBold, color: rgb(0.35, 0.35, 0.35),
+      });
+
+      y -= 123;
     }
-    y -= 75;
 
     // ── Payment info section ────────────────────────────────────────
     currentPage.drawText('Platební údaje:', { x: leftMargin, y, size: 10, font: fontBold });
@@ -505,12 +552,17 @@ serve(async (req) => {
           y -= 15;
         }
       } else {
-        // Coin lines: # | Datum aktivace | Ext. objednávka | Coiny  (unchanged)
         currentPage.drawRectangle({ x: leftMargin, y: y - 2, width: 495, height: 16, color: rgb(0.9, 0.9, 0.92) });
         currentPage.drawText('#',               { x: leftMargin + 5,   y: y + 2, size: 8, font: fontBold, color: rgb(0.3, 0.3, 0.3) });
         currentPage.drawText('Datum aktivace',  { x: leftMargin + 30,  y: y + 2, size: 8, font: fontBold, color: rgb(0.3, 0.3, 0.3) });
         currentPage.drawText('Ext. objednávka', { x: leftMargin + 180, y: y + 2, size: 8, font: fontBold, color: rgb(0.3, 0.3, 0.3) });
-        currentPage.drawText('Coiny',           { x: leftMargin + 400, y: y + 2, size: 8, font: fontBold, color: rgb(0.3, 0.3, 0.3) });
+        if (hasDiscount) {
+          currentPage.drawText('Coiny',       { x: leftMargin + 330, y: y + 2, size: 8, font: fontBold, color: rgb(0.3, 0.3, 0.3) });
+          currentPage.drawText('Zdarma',      { x: leftMargin + 380, y: y + 2, size: 8, font: fontBold, color: rgb(0.3, 0.3, 0.3) });
+          currentPage.drawText('Fakturováno', { x: leftMargin + 430, y: y + 2, size: 8, font: fontBold, color: rgb(0.3, 0.3, 0.3) });
+        } else {
+          currentPage.drawText('Coiny',       { x: leftMargin + 400, y: y + 2, size: 8, font: fontBold, color: rgb(0.3, 0.3, 0.3) });
+        }
         y -= 18;
 
         for (let i = 0; i < lines.length; i++) {
@@ -521,7 +573,13 @@ serve(async (req) => {
           currentPage.drawText(String(i + 1),               { x: leftMargin + 5,   y: y + 1, size: 8, font });
           currentPage.drawText(formatDate(line.activated_at), { x: leftMargin + 30,  y: y + 1, size: 8, font });
           currentPage.drawText(line.external_order_id || '-', { x: leftMargin + 180, y: y + 1, size: 8, font, color: rgb(0.4, 0.4, 0.4) });
-          currentPage.drawText(formatCoins(line.coins),           { x: leftMargin + 400, y: y + 1, size: 8, font: fontBold });
+          if (hasDiscount) {
+            currentPage.drawText(formatCoins(line.coins),          { x: leftMargin + 330, y: y + 1, size: 8, font });
+            currentPage.drawText(formatCoins(line.coins_free),     { x: leftMargin + 380, y: y + 1, size: 8, font, color: rgb(0.2, 0.5, 0.2) });
+            currentPage.drawText(formatCoins(line.coins_billable), { x: leftMargin + 430, y: y + 1, size: 8, font: fontBold });
+          } else {
+            currentPage.drawText(formatCoins(line.coins),          { x: leftMargin + 400, y: y + 1, size: 8, font: fontBold });
+          }
           y -= 15;
         }
       }
@@ -709,6 +767,7 @@ serve(async (req) => {
         activation_overview_source: isOfferInvoice ? 'partner_offer_activations' : 'partner_invoice_lines',
         activation_overview_total_coins: activationOverviewTotalCoins,
         activation_overview_rows: activations.length,
+        trial_discount_rendered: hasDiscount,
       }),
       { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
