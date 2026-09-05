@@ -295,18 +295,43 @@ export function shouldIssue(
   return payment === "paid" || lifecycle === "shipped" || lifecycle === "completed";
 }
 
-// Maps the two axes onto the value update_partner_order_reward_status accepts.
-// Positive set: 'paid', 'delivered', 'completed' ('shipped' is not accepted).
+/**
+ * Maps the two axes onto a status `schedule_shoptet_partner_reward_status`
+ * accepts. Positive set: 'paid', 'delivered', 'completed' ('shipped' is not a
+ * status the RPC knows). Everything below the trigger maps to 'unpaid'.
+ *
+ * The mapping MUST be total over OrderLifecycle × PaymentState. Until the
+ * 15-minute grace window landed, this function was only ever called after
+ * shouldIssue() or the cancelled check had already passed, so the remaining
+ * case was genuinely unreachable and returned the placeholder 'unknown'.
+ *
+ * That stopped being true the moment the importer started re-synchronising
+ * EVERY existing Shoptet order, which is exactly what makes a revert to unpaid
+ * cancel a running grace timer. A paid order flipped back to unpaid now lands
+ * here, and 'unknown' is a status the RPC rightly rejects
+ * (`unsupported_order_status`) — so the revert was never recorded, the grace
+ * timer kept running and the reward stayed queued for issuance. Confirmed in
+ * production on 05. 09. 2026 (orders 2026000001/2/7/8/9, every one-minute run
+ * `partial`).
+ *
+ * 'unpaid' is the truthful mapping: the only combination that reaches it is
+ * lifecycle 'pending' with payment not confirmed. The RPC already treats
+ * 'unpaid' as below-trigger — it clears `shoptet_paid_grace_started_at` and
+ * records `order_status = 'unpaid'`, so a later paid transition starts a fresh
+ * full window instead of resuming the old one.
+ *
+ * Do NOT reintroduce a placeholder here, and do NOT widen the RPC's accepted
+ * set to absorb one: rejecting a meaningless status is the correct guard, and
+ * writing 'unknown' into `metadata.order_status` would corrupt the
+ * previous-status comparison the fresh-window rule depends on.
+ */
 export function toRpcStatus(lifecycle: OrderLifecycle, payment: PaymentState): string {
   if (lifecycle === "cancelled") return "cancelled";
   if (lifecycle === "completed") return "completed";
   if (lifecycle === "shipped")   return "delivered";
   if (payment === "paid")        return "paid";
-  // Unreachable by construction: the importer only calls this after shouldIssue()
-  // or the cancelled check has already passed. Returning a status the RPC rejects
-  // makes any future mistake fail loudly (rows_failed) instead of silently
-  // issuing or cancelling the wrong way.
-  return "unknown";
+  // lifecycle 'pending' + payment 'unpaid'/'unknown' — below every trigger.
+  return "unpaid";
 }
 
 /**
