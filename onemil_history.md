@@ -1,3 +1,43 @@
+# 05. 09. 2026 — Partner Trial / New Customer Bonus: zdroj dorovnán do GitHubu podle produkce
+
+Read-only audit zjistil **drift produkce × GitHub**: backend Partner Trial / New Customer Bonus
+byl od 03. 09. 2026 živý v produkci `xkzhjldrojjlrkezorey`, ale jeho zdroj v `main` chyběl —
+6 migrací, Edge Function `generate-partner-invoice-pdf` v194, spec 157 a dokumentace. Pavel
+schválil **pouze doplnění aktuálního produkčního zdroje do GitHubu, bez změny, nasazení nebo
+aktivace produkce**.
+
+**Doplněno podle produkce (nic se nenasazovalo):**
+- 6 migrací pod **přesnými produkčními verzemi** `20260903200832`, `20260903200843`,
+  `20260903200856`, `20260903200935`, `20260903200954`, `20260903201001`. Staré lokální
+  timestampy `2026090312…`–`2026090317…` se **nepoužily** — v produkční historii neexistují.
+- Zdrojem pravdy byl doslovný read-only export
+  `supabase_migrations.schema_migrations.statements`, ne lokální draft. Lokální soubory
+  posloužily jen jako podklad pro komentáře.
+- `20260903201001_partner_reward_expiry_cron.sql` **neměl zdroj nikde** — rekonstruován
+  z uloženého produkčního statementu a ověřen proti živému `cron.job` (jobid 33,
+  `30 3 * * *`, `active=true`, `SELECT public.expire_partner_reward_codes();`).
+- `supabase/functions/generate-partner-invoice-pdf/index.ts` srovnán na živou **v194**.
+  Lokální 789řádkový soubor se od produkce lišil **jen 8 řádky komentářů**, které byly
+  odstraněny, aby repo odpovídalo nasazenému kódu.
+- `tests/e2e/157-partner-invoice-pdf-trial-discount-http.spec.ts` (staging-only) a
+  dokumentace `docs/partner-trial/` + 5 rollback skriptů. Rollback skripty odkazovaly na
+  neexistující lokální timestampy — přesměrovány na skutečné produkční verze.
+
+**Zjištěné a zaznamenané:** funkce je nasazená, ale **produktově neaktivní** — 0 partnerů má
+`public_ref_code`, 0 partnerů je v trialu, 0 pending atribucí, 0 zákaznických atribucí, 0 faktur
+se slevou. Odkaz `/register?p=KOD` dnes nikdo nemůže použít a partnerské UI trialu není hotové.
+
+**Vědomě nepřevzato do `main`:** staré lokální drafty `src/pages/Register.tsx` a
+`src/hooks/useApplyPendingPartnerRef.ts` (konstanta `PENDING_PARTNER_REF_STORAGE_KEY`).
+`main` má novější verzi s `PENDING_PARTNER_ATTRIBUTION_STORAGE_KEY` — ta zůstala nedotčená.
+Stejně tak `PartnerRegister/AffiliateRegister/PartnerLogin/AffiliateLogin.tsx`,
+`_shared/supabaseSecretKey.ts` a spec 156 už v `main` byly.
+
+**Produkce nezměněna:** žádná migrace znovu neaplikována, žádný deploy Edge Function, žádný
+`db push`, žádný zápis do produkčních dat, trial neaktivován, žádný `public_ref_code` nevydán.
+
+---
+
 # 05. 09. 2026 — B2B stránka `/pro-eshopy` přepracována a nasazena (PR #385, #386)
 
 Pracovní relace zaměřená výhradně na veřejnou B2B landing page pro české e-shopy. Žádná změna

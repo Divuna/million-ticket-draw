@@ -42,6 +42,40 @@ nesmí být podmínkou ničeho. Dvě DB funkce (`trigger_guardian_message_on_win
 **PENDING (neaplikováno, čeká na schválení):** oprava `shoptet_import_row_log.message` (PR #387,
 `failureMessage()`) je jen v GitHubu — produkční `import-shoptet-orders` zůstává na v58 bez ní.
 
+### Partner Trial / New Customer Bonus — backend nasazený, produktově NEAKTIVNÍ (03. 09. 2026, zdroj dorovnán 05. 09. 2026)
+
+**Backend je živý v produkci `xkzhjldrojjlrkezorey`** od 03. 09. 2026, ale do 05. 09. 2026 jeho
+zdroj chyběl v GitHubu. Read-only audit to odhalil a zdroj byl doplněn beze změny produkce.
+
+Živé a ověřené přímým čtením produkce (05. 09. 2026):
+
+| Produkční verze | Co je živé |
+|---|---|
+| `20260903200832` | settings `partner_reward_validity_days=90`, funkce `partner_reward_validity_days()`, `expire_partner_reward_codes()`, trigger `trg_set_partner_reward_expiry` (v1) |
+| `20260903200843` | sloupec `partner_reward_codes.issued_to_customer_at`, trigger přepsán na `auto_v2` — 90 dní běží od skutečného vydání zákazníkovi, ne od vzniku řádku |
+| `20260903200856` | `partners.trial_started_at/trial_ends_at`, `trg_start_partner_trial` (30 dní od prvního vydání odměny), ochranný `trg_protect_partner_trial` |
+| `20260903200935` | settings `partner_trial_free_mc_per_reward=2`, `partner_trial_free_mc()`, sloupce `coins_free`/`coins_billable`/`amount_net_before_discount`/`discount_net`/`discount_reason`, slevová logika ve všech třech fakturačních funkcích |
+| `20260903200954` | `partners.public_ref_code`, tabulky `partner_pending_attributions` + `partner_customer_refs`, RPC `record_pending_partner_attribution_intent` a `record_partner_customer_ref` (bonus 15 MC) |
+| `20260903201001` | cron `expire_partner_reward_codes_daily` (`30 3 * * *`, jobid 33, `active=true`) |
+
+Dále je živá **Edge Function `generate-partner-invoice-pdf` v194** — zobrazuje slevu v PDF
+a vrací `trial_discount_rendered`. Frontend (`src/pages/Register.tsx`,
+`src/hooks/useApplyPendingPartnerRef.ts` s `PENDING_PARTNER_ATTRIBUTION_STORAGE_KEY`) už byl
+v `main` dřív.
+
+**⚠️ Funkce NENÍ produktově aktivní.** Produkce má k 05. 09. 2026:
+`public_ref_code` = 0 partnerů · partneři v trialu = 0 · `partner_pending_attributions` = 0 ·
+`partner_customer_refs` = 0 · reward kódy s `expired_at`/`issued_to_customer_at` = 0 ·
+faktury se slevou = 0. Odkaz `/register?p=KOD` proto dnes **nikdo nemůže použít** a
+**partnerské UI trialu není dokončené** (`PartnerDashboard.tsx` o trialu neví).
+
+**OPEN ISSUE — dokončení funkce vyžaduje samostatné schválení Pavla:** vydání `public_ref_code`
+partnerům a partnerské UI zahajovací akce. Dokud kódy neexistují, celá Fáze 4 spí.
+
+**Dorovnání zdroje 05. 09. 2026 nic v produkci nezměnilo** — soubory vznikly doslovným
+read-only exportem `supabase_migrations.schema_migrations.statements` a živé v194. Žádná
+migrace nebyla znovu aplikována, žádná Edge Function nasazena.
+
 **Ostatní mergnuté PR z tohoto období beze zvláštního dopadu na invarianty:** #372–#374 (CMS
 soft-delete opravy pro `ContentPage`/`SlugContentPage`/influencer terms), #375 (`.env` odstraněn
 z gitu, přidán do `.gitignore`), #385/#386 (redesign `/pro-eshopy` B2B stránky — čistě frontend/
