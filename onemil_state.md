@@ -45,7 +45,28 @@ nesmí být podmínkou ničeho. Dvě DB funkce (`trigger_guardian_message_on_win
 **Ostatní mergnuté PR z tohoto období beze zvláštního dopadu na invarianty:** #372–#374 (CMS
 soft-delete opravy pro `ContentPage`/`SlugContentPage`/influencer terms), #375 (`.env` odstraněn
 z gitu, přidán do `.gitignore`), #385/#386 (redesign `/pro-eshopy` B2B stránky — čistě frontend/
-vizuální, žádná DB ani bezpečnostní změna).
+vizuální, žádná DB ani bezpečnostní změna; detail níže).
+
+### B2B stránka `/pro-eshopy` — schválená verze v4 je živá (PR #385, #386, 04.–05. 09. 2026)
+
+Doplnění k jednořádkové zmínce výše. Ověřeno přímo na živé stránce `https://www.onemil.cz/pro-eshopy`
+(bundle `index-CsKuQT3q.js`), ne jen podle popisu PR.
+
+- **Zdroj:** `src/pages/PartnerEshopLanding.tsx`, hero vizuál `src/assets/pro-eshopy-hero.jpg`
+  (1800×1338, 299 kB). PR #385 = předchozí iterace sekce „Prémiové ceny", PR #386 = nasazení
+  celé schválené verze v4 (merge `bec9fa84`).
+- **Obě CTA vedou na existující partnerskou registraci `/partner/register`.** Žádný nový
+  registrační tok, žádná nová tabulka ani RPC.
+- **Kontakty v závěrečném CTA jsou klikací:** `mailto:b2b@onemil.cz` a `tel:+420731215816`
+  (shodné s `COMPANY_CONTEXT.md` — není to nový obchodní údaj).
+- **Stránka nepoužívá žádný externí CDN.** Produkční CSP v `index.html` externí CDN pro styly
+  i skripty blokuje, takže původní statický prototyp (Tailwind CDN + FontAwesome) nelze nasadit
+  tak, jak je — proto React port s vlastním Tailwind buildem a `lucide-react`. Viz invariant
+  v `CLAUDE.md`.
+- **Mimo rozsah a nezměněno:** backend, business logika, DB, Edge Functions, ostatní stránky.
+- **Lokálně zůstávají nenasazené grafické prototypy** (`public/preview-assets/`,
+  `src/pages/PreviewProEshopyV2.tsx`, `PreviewProEshopyV3.tsx` a dočasné routy `/preview/…`
+  v `src/App.tsx`) — v žádné větvi ani v `main` nejsou a nasazovat se nemají.
 
 ## 0. Produkční hosting migrován na Vercel — apex i `www` běží, bezpečnostní hlavičky jsou živé (02. 09. 2026, VYŘEŠENO)
 

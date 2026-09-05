@@ -145,6 +145,36 @@ vyžaduje samostatné schválení Pavla.
 
 ---
 
+# B2B STRÁNKA `/pro-eshopy` — TRVALÉ INVARIANTY (produkce, 05. 09. 2026)
+
+Živé na `https://onemil.cz/pro-eshopy`, zdroj `src/pages/PartnerEshopLanding.tsx` (PR #385, #386).
+Čistě frontend — žádná DB, RPC, Edge Function ani business logika.
+
+- **CTA pro zapojení e-shopu vedou VÝHRADNĚ na existující `/partner/register`.** Nevytvářet pro
+  tuto stránku druhou registraci, vlastní formulář ani vlastní zápis do `partners` — schvalovací
+  tok partnera zůstává jediný a beze změny.
+- **Kontakty na stránce jsou klikací a musí odpovídat `COMPANY_CONTEXT.md`:**
+  `mailto:b2b@onemil.cz` a `tel:+420731215816`. `b2b@onemil.cz` je adresa pro obchodní
+  spolupráce, ne zákaznická podpora (ta je `podpora@onemil.cz`) — nezaměňovat.
+- **⚠️ Žádný externí CDN.** Produkční CSP (`<meta http-equiv="Content-Security-Policy">`
+  v `index.html`) povoluje `style-src` jen `'self'`/inline/`fonts.googleapis.com` a `script-src`
+  jen `'self'`/inline/GTM/GA/Meta/OneSignal. **`cdn.tailwindcss.com`, `cdnjs.cloudflare.com`
+  ani FontAwesome CDN se na produkci nenačtou** a stránka by se rozpadla bez viditelné chyby.
+  Statický HTML prototyp postavený na CDN se proto nikdy nenasazuje tak, jak je — musí se
+  portovat na vlastní Tailwind build projektu a `lucide-react` ikony (to je i pravidlo brand kitu).
+- **Tailwind config tohoto repa:** `font-heading` = Poppins, `font-body`/`sans` = Inter; vlastní
+  `spacing` přidává jen `section`/`section-lg`. Třídy jako `w-4.5`/`h-4.5` **neexistují** — psát
+  `w-[18px]`. Přidávat `vh` výšky do hero sekce je past pro full-page screenshoty i velké monitory;
+  používat pevné `min-h-[…px]`.
+- **Grafické prototypy zůstávají jen lokální.** `public/preview-assets/*`,
+  `src/pages/PreviewProEshopyV2.tsx`, `PreviewProEshopyV3.tsx` a routy `/preview/pro-eshopy-*`
+  v `src/App.tsx` nejsou v `main` a **nikdy se necommitují ani nenasazují** — mají v sobě
+  banner „není nasazeno", který by na produkci lhal.
+- Hero vizuál je `src/assets/pro-eshopy-hero.jpg` (JPEG, 299 kB). Zdrojové PNG z generátoru mají
+  ~6 MB a **nepatří do repa ani do buildu**.
+
+---
+
 # PRODUKČNÍ HOSTING = VERCEL — TRVALÉ INVARIANTY (produkce, 02. 09. 2026)
 
 **Toto nahrazuje sekci níže („VLASTNÍ DOMÉNA A BEZPEČNOSTNÍ HLAVIČKY — 27. 08. 2026") jako

@@ -1,3 +1,53 @@
+# 05. 09. 2026 — B2B stránka `/pro-eshopy` přepracována a nasazena (PR #385, #386)
+
+Pracovní relace zaměřená výhradně na veřejnou B2B landing page pro české e-shopy. Žádná změna
+backendu, business logiky, DB, migrací ani Edge Functions. Produkční Supabase
+`xkzhjldrojjlrkezorey` a staging `dxmowysntemfqfnanxua` nebyly v této relaci vůbec zapisovány.
+
+**Průběh:**
+- Nejprve iterace sekce „Prémiové ceny" na tehdejší produkční verzi stránky → **PR #385**
+  (merge `efc083f8`, 04. 09. 2026), nasazeno a ověřeno živě.
+- Poté série čistě **lokálních** grafických prototypů (v2, v3, v4) pod opakovaným zadáním
+  „nic nenasazuj, nic nepushuj". v3 vznikl z analýzy B2B pozice, v4 jako samostatný návrh
+  na základě Pavlem dodaného zadání (statický HTML + Tailwind CDN + FontAwesome).
+- Hero vizuál pro v4 vygenerován přes Kling s Pavlem výslovně schválenými konkrétními produkty
+  (Chevrolet Corvette C8, BMW M 1000 RR, hodinky, luxusní zavazadlo). První generace měla
+  zkomolený text na produktu; podle Pavlova pokynu se neměnil koncept, jen se zopakovala
+  identická kompozice s opravou jediného vadného prvku. Platí pravidlo, že stránka nesmí budit
+  dojem, že jde o oficiální partnery či sponzory OneMil.
+- Pavel schválil v4 → **PR #386** (merge `bec9fa84`, 05. 09. 2026), nasazeno jako produkční
+  `/pro-eshopy`.
+
+**Co bylo v PR #386 doplněno nad rámec schváleného prototypu (na zadání Pavla):** obě CTA
+napojena na **existující** partnerskou registraci `/partner/register` (žádná nová registrace),
+klikací kontakty `b2b@onemil.cz` a `+420 731 215 816`, a přesun hero vizuálu z preview assetů
+do `src/assets/pro-eshopy-hero.jpg` (z 5,9 MB PNG na 299 kB JPEG).
+
+**Nutné technické odchylky od statického prototypu (nemění design ani texty):** produkční CSP
+blokuje externí CDN, takže Tailwind CDN nahrazen vlastním buildem projektu a FontAwesome
+`lucide-react` ikonami; odstraněn preview banner a prototypová patička, které tvrdily
+„není nasazeno". Zaznamenáno jako trvalý invariant v `CLAUDE.md`.
+
+**Ověřeno po nasazení:** živý bundle `index-CsKuQT3q.js` odkazuje nový hero asset; desktop
+1440 px i mobil 375 px bez horizontálního přetečení; odkazy na stránce jsou přesně
+`/partner/register` ×2, `mailto:b2b@onemil.cz`, `tel:+420731215816`; klik na CTA reálně otevře
+registrační formulář; žádné chyby v konzoli. CI: Smoke E2E ×2 zelené, Vercel produkční deploy
+dokončen.
+
+**Zjištěná a opravená dokumentační mezera:** PR #385/#386 byly v `onemil_state.md` zachyceny jen
+jednou větou („čistě frontend/vizuální") a v `CLAUDE.md` nebyly vůbec. Chybělo především, že
+produkční CSP externí CDN blokuje — což je past pro každou budoucí práci na této stránce — a že
+CTA smí vést jen na existující partnerskou registraci. Doplněno do `onemil_state.md` a `CLAUDE.md`.
+`ONEMIL_BUSINESS_CONTEXT.md` **nezměněn** — kontaktní e-mail i telefon už jsou v
+`COMPANY_CONTEXT.md`, žádná nová obchodní ani produktová skutečnost v této relaci nevznikla.
+
+**Zůstává neuzavřené (nevyžaduje akci, jen evidence):** grafické prototypy v2/v3/v4 a jejich
+zdrojová PNG (~11 MB) leží necommitnuté v pracovním worktree `homepage-remove-ticket-number-22134e`
+spolu s cizí rozpracovanou prací na Partner Trial, která do tohoto deploye vědomě nebyla zahrnuta.
+Vzdálená větev `claude/pro-eshopy-v4-production` je po mergi ponechána.
+
+---
+
 # 05. 09. 2026 — Kompletní synchronizační audit GitHub × produkce × dokumentace; dávka oprav 02.–05. 09. potvrzena živá
 
 Read-only audit porovnal `origin/main` (`f051e248`), produkční Supabase `xkzhjldrojjlrkezorey` a
