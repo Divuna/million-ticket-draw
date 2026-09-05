@@ -10,6 +10,7 @@ import { computeDeltaFrom, formatShoptetUpdateTime, withUpdateTimeFrom } from ".
 // Shoptet serves some exports as windows-1250. resp.text() would decode those as
 // UTF-8 and mangle every Czech status into mojibake. See encoding.ts.
 import { decodeCsvBody } from "./encoding.ts";
+import { failureMessage } from "./rowLogMessage.ts";
 import { getSupabaseSecretKey } from "../_shared/supabaseSecretKey.ts";
 
 const corsHeaders = {
@@ -285,7 +286,13 @@ serve(async (req) => {
 
           if (createErr || !isSuccessResult(createResult)) {
             rowsFailed++;
-            logBatch.push({ run_id: runId, external_order_id: row.orderId, action: "error", result: "create_failed" });
+            logBatch.push({
+              run_id: runId,
+              external_order_id: row.orderId,
+              action: "error",
+              result: "create_failed",
+              message: failureMessage(createErr, createResult),
+            });
             continue;
           }
 
@@ -314,7 +321,13 @@ serve(async (req) => {
 
           if (statusErr || !isSuccessResult(statusResult)) {
             rowsFailed++;
-            logBatch.push({ run_id: runId, external_order_id: row.orderId, action: "error", result: "status_update_failed" });
+            logBatch.push({
+              run_id: runId,
+              external_order_id: row.orderId,
+              action: "error",
+              result: "status_update_failed",
+              message: failureMessage(statusErr, statusResult),
+            });
             continue;
           }
 
