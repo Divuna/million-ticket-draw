@@ -11,6 +11,11 @@ import { computeDeltaFrom, formatShoptetUpdateTime, withUpdateTimeFrom } from ".
 // UTF-8 and mangle every Czech status into mojibake. See encoding.ts.
 import { decodeCsvBody } from "./encoding.ts";
 import { failureMessage } from "./rowLogMessage.ts";
+// Classifies one create_partner_order_reward call. Keeps "order contains no
+// selected product" (a normal order without a MioCoin entitlement) apart from a
+// real failure, so such an order never inflates rows_failed nor flips the run to
+// `partial`. Shared with the Playwright specs — one implementation only.
+import { classifyCreateOutcome } from "./createOutcome.ts";
 import { getSupabaseSecretKey } from "../_shared/supabaseSecretKey.ts";
 
 const corsHeaders = {
@@ -220,6 +225,9 @@ serve(async (req) => {
     let rowsStatusUpdated = 0;
     let rowsEmailEnqueued = 0;
     let rowsFailed = 0;
+    // Orders the partner's selected-products rules do not cover. Reported in the
+    // response only — deliberately NOT part of rows_failed, so the run stays `ok`.
+    let rowsSkippedNoReward = 0;
 
     const { data: existing } = await admin
       .from("partner_reward_codes")
@@ -284,7 +292,9 @@ serve(async (req) => {
             p_items: row.items.length > 0 ? row.items : null,
           });
 
-          if (createErr || !isSuccessResult(createResult)) {
+          const outcome = classifyCreateOutcome(createErr, createResult);
+
+          if (outcome === "failed") {
             rowsFailed++;
             logBatch.push({
               run_id: runId,
@@ -296,7 +306,24 @@ serve(async (req) => {
             continue;
           }
 
-          if (createResult.duplicate === true) {
+          if (outcome === "skipped_no_reward") {
+            // selected_products partner, order contains none of the selected
+            // products. Normal order, no entitlement: no reward code exists, so
+            // there is nothing to move to `issued` and no customer e-mail is
+            // ever enqueued. Logged for the audit trail, counted OUTSIDE
+            // rows_failed so the run stays `ok`.
+            rowsSkippedNoReward++;
+            logBatch.push({
+              run_id: runId,
+              external_order_id: row.orderId,
+              action: "skip_no_reward",
+              result: "no_eligible_products",
+              message: null,
+            });
+            continue;
+          }
+
+          if (outcome === "duplicate") {
             rowsSkipDup++;
             logBatch.push({ run_id: runId, external_order_id: row.orderId, action: "skip_dup", result: "exists" });
           } else {
@@ -373,6 +400,8 @@ serve(async (req) => {
         status_updated: rowsStatusUpdated,
         email_enqueued: rowsEmailEnqueued,
         skipped_duplicates: rowsSkipDup,
+        // Orders without any selected product. Not a failure — see createOutcome.ts.
+        skipped_no_reward: rowsSkippedNoReward,
         failed: rowsFailed,
       }, summary.status === "ok" ? 200 : 500);
     }
