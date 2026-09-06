@@ -7,6 +7,8 @@ const initialSender = read('supabase/functions/send-sales-lead-email/index.ts');
 const replySender = read('supabase/functions/send-sales-lead-reply/index.ts');
 const followUpSender = read('supabase/functions/send-sales-lead-follow-up/index.ts');
 const inbound = read('supabase/functions/sales-lead-inbound/index.ts');
+// Identita prvního e-mailu žije ve sdílené konstantě (PR 2 sales-lead delivery).
+const initialSenderShared = read('supabase/functions/_shared/salesLeadInitialEmailSender.ts');
 
 /**
  * Returns the source of the object handed to Resend's `emails.send()`, whether the
@@ -42,7 +44,7 @@ test.describe('64 — sales leads public Reply-To contract', () => {
     ['follow-up', followUpSender],
   ] as const) {
     test(`${name} exposes only the trusted sales mailbox`, () => {
-      expect(source).toContain('OneMil obchodní tým <b2b@onemil.cz>');
+      expect(source).toMatch(/b2b@onemil.cz|SALES_LEAD_INITIAL_EMAIL_(FROM|REPLY_TO)/);
       expect(source).not.toMatch(/reply\+\$?\{?(?:leadId|lead\.id)/);
       expect(source).not.toContain('@ulduuzoul.resend.app');
     });

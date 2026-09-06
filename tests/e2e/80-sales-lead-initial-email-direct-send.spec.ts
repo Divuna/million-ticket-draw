@@ -35,7 +35,7 @@ test.describe('sales lead initial email direct-send contract', () => {
   });
 
   test('failed provider send preserves state and editor while success advances workflow', () => {
-    const providerFailure = sender.indexOf('if (response.error)');
+    const providerFailure = sender.indexOf('if (!deliveryResult.success)');
     const historyWrite = deliveryMigration.indexOf('INSERT INTO public.sales_lead_activities');
     const statusSync = deliveryMigration.indexOf('public.sales_lead_mark_emailed');
     expect(providerFailure).toBeGreaterThan(0);
