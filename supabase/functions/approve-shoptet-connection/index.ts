@@ -103,6 +103,38 @@ Deno.serve(async (req) => {
 
   const requestKind = (scr.request_kind as string | null) ?? "initial";
 
+  // ── 4b. DUPLICATE E-SHOP GUARD (TODO #349) ─────────────────────────────────
+  // One e-shop must never be actively connected under two partner accounts —
+  // two live imports of the same order would mean the reward is issued twice.
+  //
+  // Runs BEFORE promote_shoptet_pending_url in both approve branches, so a
+  // conflicting request leaves Vault, `partners` and the request row untouched.
+  // The RPC reads the pending URL inside Vault and returns only the conflicting
+  // partner's identity — never the URL, the hash or the hostname.
+  if (action === "approve") {
+    const { data: conflict, error: conflictErr } = await admin.rpc("shoptet_pending_url_conflict", {
+      p_request_id: request_id,
+      p_partner_id: scr.partner_id,
+    });
+    if (conflictErr) {
+      console.error("duplicate shop check:", conflictErr.message);
+      return err(500, "internal_error", "Internal error");
+    }
+    if (conflict && typeof conflict === "object" && (conflict as { conflict?: boolean }).conflict === true) {
+      const other = conflict as { partner_id?: string; partner_name?: string };
+      console.warn(
+        "shoptet connection refused: e-shop already active under partner",
+        other.partner_id,
+      );
+      return err(
+        409,
+        "eshop_already_connected",
+        `Tento e-shop už je aktivně připojený pod partnerem ${other.partner_name ?? "(neznámý)"}. ` +
+          "Nejdřív ukončete původní napojení.",
+      );
+    }
+  }
+
   // ── 5a-change. APPROVE a URL CHANGE ────────────────────────────────────────
   // Deliberately separate from the onboarding branch. Approving a change must swap
   // the Vault URL and NOTHING else: the partner is already live, so re-applying

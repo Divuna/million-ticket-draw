@@ -195,6 +195,42 @@ slevou. Zdroj byl do GitHubu dorovnán 05. 09. 2026 read-only exportem, bez jak�
 
 ---
 
+# SHOPTET NAPOJENÍ — JEDEN E-SHOP, JEDEN PARTNER (TODO #349, 06. 09. 2026, NENASAZENO)
+
+**Stav: v GitHubu, aplikováno a ověřeno jen na stagingu `dxmowysntemfqfnanxua`.
+Produkční migrace ani redeploy `approve-shoptet-connection` NEPROBĚHLY — obojí vyžaduje
+samostatné schválení Pavla.**
+
+**Závazné invarianty (neměnit bez výslovného schválení Pavla):**
+
+- **Jeden e-shop smí být aktivně připojený právě pod jedním partnerským účtem.** Dvojí živý import
+  téhož obchodu by načetl tutéž objednávku dvakrát a vydal odměnu dvakrát.
+- **Kontrola musí běžet PŘED `promote_shoptet_pending_url`**, v obou approve větvích
+  (`initial` i `url_change`). Při konfliktu se nesmí zapsat nic — ani Vault, ani `partners`,
+  ani řádek `shoptet_connection_requests`. Chybová odpověď je `409 eshop_already_connected`.
+  **Nepřesouvat kontrolu za promote** a **nevynechávat větev `url_change`** — jinak jde guard
+  triviálně obejít (připojit obchod A, pak URL přepsat na cizí obchod B).
+- **Doména se NEUKLÁDÁ do žádné aplikační tabulky.** Platí dál invariant, že Shoptet exportní URL
+  žije výhradně ve Vaultu. Porovnání dělá `public.shoptet_pending_url_conflict` uvnitř
+  SECURITY DEFINER kontextu a vrací **jen identitu kolidujícího partnera** — nikdy URL, hash ani
+  hostname. **Nepřidávat sloupec s doménou** jako „jednodušší" řešení.
+- **`shoptet_export_url_host` i `shoptet_pending_url_conflict` smí volat jen `service_role.`**
+  Nevracet jim `anon` ani `authenticated`.
+- **„Aktivně připojený" = `partners.shoptet_import_enabled = true` NEBO napojení ve stavu
+  `approved`/`active`.** Stejná definice, jakou používá partnerský dashboard pro živé napojení.
+  Kdo ji změní na jednom místě, musí ji změnit na obou.
+- **Vlastní partner se sám sobě nikdy nekoliduje** (`p.id <> p_partner_id`) — jinak by si partner
+  nemohl vyměnit vlastní exportní odkaz.
+- **Body 1 a 2 z #349 byly hotové už před tímto krokem a nesmí se přepisovat:** druhé ruční
+  schválení napojení superadminem a dashboardová sekce „Zobrazení MioCoinů v e-shopu"
+  (předvyplněný snippet + „Kopírovat kód" + návod, gate na `approved`/`active`). Hlídá spec 132.
+- **Tohle není multi-shop.** Více e-shopů pod jednou firmou je samostatné TODO #348; guard výše ho
+  nezavádí a nesmí se jako jeho základ používat.
+
+Hlídá spec `tests/e2e/160-shoptet-duplicate-shop-guard.spec.ts`.
+
+---
+
 # B2B STRÁNKA `/pro-eshopy` — TRVALÉ INVARIANTY (produkce, 05. 09. 2026)
 
 Živé na `https://onemil.cz/pro-eshopy`, zdroj `src/pages/PartnerEshopLanding.tsx` (PR #385, #386).

@@ -156,6 +156,24 @@ only displays the result of that engine — it never calculates a reward itself.
 the Partner Order API issue MioCoins through the same engine, so a preview and a real payout can
 never drift apart.
 
+### 6.2a One e-shop, one active partner connection
+
+A given e-shop may be **actively connected to OneMil under exactly one partner account**. Before an
+OneMil administrator can activate a Shoptet connection, the system verifies that no *other* partner
+is already actively importing from the same e-shop domain. If one is, the approval is refused and the
+administrator is told which partner holds the existing connection; that connection has to be ended
+first.
+
+The reason is financial, not cosmetic: two live imports of the same shop would read the same order
+twice and issue the MioCoin reward twice.
+
+"Actively connected" means the other partner has the Shoptet import switched on, or holds a
+connection in the *approved* / *active* state. A partner repointing their own already-live connection
+at a new export link is checked against the same rule.
+
+This covers **one partner account with one e-shop**. Several e-shops under one company is a separate,
+not-yet-implemented topic (TODO #348) and nothing here should be read as supporting it.
+
 ### 6.3 Required Shoptet order-export fields — confirmed partner setup
 
 For OneMil to import a partner order correctly, the partner creates a custom Shoptet **CSV order

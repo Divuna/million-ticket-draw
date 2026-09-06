@@ -42,6 +42,34 @@ nesmí být podmínkou ničeho. Dvě DB funkce (`trigger_guardian_message_on_win
 **PENDING (neaplikováno, čeká na schválení):** oprava `shoptet_import_row_log.message` (PR #387,
 `failureMessage()`) je jen v GitHubu — produkční `import-shoptet-orders` zůstává na v58 bez ní.
 
+### TODO #349 — Shoptet napojení pro jeden e-shop (06. 09. 2026)
+
+Read-only audit skutečného flow ukázal, že **body 1 a 2 zadání byly už hotové a v provozu**:
+
+- **Druhé ruční schválení** — partner odešle napojení přes EF `submit-shoptet-connection`,
+  superadmin ho schválí/zamítne přes `approve-shoptet-connection`. Schválení partnerského účtu
+  a schválení Shoptet napojení jsou dvě oddělené kontroly. Beze změny.
+- **Sekce „Zobrazení MioCoinů v e-shopu"** v `/partner/dashboard` — hotový snippet s předvyplněným
+  `data-onemil-partner`, tlačítko „Kopírovat kód", návod Vzhled a obsah → Editor HTML kódu,
+  zobrazená jen při napojení ve stavu `approved`/`active`. Partner nikde nedoplňuje své ID a odměna
+  ve widgetu není natvrdo. Hlídá spec 132. Beze změny.
+
+**Chyběl jen bod 3 — kontrola duplicity e-shopu.** Doplněno: nová SECURITY DEFINER RPC
+`shoptet_pending_url_conflict` (+ pomocná `shoptet_export_url_host`) a její volání v
+`approve-shoptet-connection` **před** `promote_shoptet_pending_url`, v obou approve větvích
+(`initial` i `url_change`). Konflikt → `409 eshop_already_connected` a nezapíše se nic — ani Vault,
+ani `partners`, ani řádek žádosti.
+
+Invariant „Shoptet URL žije jen ve Vaultu" zůstává: doména se **neukládá do žádného sloupce**,
+porovnává se uvnitř Vault kontextu a ven jde jen identita kolidujícího partnera.
+
+**⚠️ NENASAZENO NA PRODUKCI.** Migrace `20260906100000_shoptet_connection_duplicate_shop_guard.sql`
+ani redeploy `approve-shoptet-connection` na produkci neproběhly — obojí vyžaduje samostatné
+schválení Pavla. Na stagingu `dxmowysntemfqfnanxua` je migrace aplikovaná a ověřená.
+
+**Mimo rozsah #349 (nedotčeno):** multi-shop (#348), reward engine, ceny MioCoinů, peněženky,
+platby, soutěže, Partner Trial / New Customer Bonus, Sofinity.
+
 **PENDING (neaplikováno, čeká na schválení) — `selected_products` bez vybraného produktu:**
 V režimu `reward_mode='selected_products'` vrací `create_partner_order_reward` chybu
 `reward_amount_too_low` i pro objednávku, která žádný vybraný produkt neobsahuje — obchodně jde
