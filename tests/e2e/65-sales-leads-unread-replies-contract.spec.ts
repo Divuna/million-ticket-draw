@@ -12,6 +12,8 @@ const read = (path: string) => readFileSync(resolve(process.cwd(), path), 'utf8'
 const migration = read('supabase/migrations/20260711100000_sales_leads_activity_read_state.sql');
 const page = read('src/pages/AdminSalesLeads.tsx');
 const nav = read('src/components/admin/AdminContextSubNav.tsx');
+// Dotaz na nepřečtené odpovědi se přesunul do sdíleného hooku; nav ho vykresluje.
+const counts = read('src/hooks/useAdminUsersPendingCounts.ts');
 const detail = read('src/components/admin/sales-leads/SalesLeadDetailSheet.tsx');
 
 test.describe('65 — sales leads unread replies contract', () => {
@@ -53,11 +55,11 @@ test.describe('65 — sales leads unread replies contract', () => {
 
   test('nav badge counts unread replies on the sales-leads item', () => {
     expect(nav).toContain('unreadSalesRepliesCount');
-    expect(nav).toContain('"reply_received"');
-    expect(nav).toContain('.is("read_at", null)');
+    expect(counts).toContain('"reply_received"');
+    expect(counts).toContain('.is("read_at", null)');
     expect(nav).toContain('item.path === "/admin/sales-leads"');
     // Okamžitá aktualizace po přečtení v detailu.
-    expect(nav).toContain('sales-leads-unread-changed');
+    expect(counts).toContain('sales-leads-unread-changed');
   });
 
   test('detail highlights unread reply, marks read on open without changing status', () => {

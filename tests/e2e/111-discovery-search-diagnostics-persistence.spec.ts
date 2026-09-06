@@ -83,7 +83,9 @@ test.describe('Worker — zápis diagnostiky k jobu', () => {
   test('algoritmus hledání zůstal beze změny (kola, dedupe, prázdná kola)', () => {
     expect(worker).toContain('const added = fresh.filter((u) => !pool.includes(u));');
     expect(worker).toContain('searchRounds++');
-    expect(worker).toContain('emptyRounds >= MAX_EMPTY_ROUNDS');
+    // Zastavení po neúspěšném kole dnes řeší cost guard, ne lokální čítač.
+    expect(worker).toContain('stopAfterSearchRound({ providerError, usableCandidates: added.length })');
+    expect(worker).toContain('canStartSearchRound({ searchRounds, telemetry: costTelemetry })');
     expect(worker).toContain('pool = [...pool, ...added];');
   });
 });
@@ -116,11 +118,16 @@ test.describe('Helpery — tvar a historie záznamů', () => {
       'at',
       'fallback_reason',
       'final_candidate_count',
+      // Telemetrie nákladů z cost guardu — samá čísla, žádný secret ani text dotazu.
+      'input_tokens',
+      'openai_api_calls',
       'openai_error_type',
       'openai_http_status',
       'openai_raw_count',
       'openai_usable_count',
+      'output_tokens',
       'round',
+      'total_tokens',
     ]);
   });
 
