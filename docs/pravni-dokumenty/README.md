@@ -57,11 +57,15 @@ docs/pravni-dokumenty/  ──schválení──▶  content_pages (produkce)  �
 **STOP** a nahlásit rozdíl Pavlovi. Rozdíl může znamenat neschválenou změnu v CMS stejně jako
 zapomenutou publikaci z GitHubu — a to z textu poznat nejde.
 
-### Výjimka: GDPR
+### Dočasná výjimka: GDPR
 
-U GDPR **zatím neexistuje schválená autoritativní verze** — v produkci jsou dvě různé aktivní
-verze a konflikt není rozhodnutý. Do rozhodnutí Pavla po právní kontrole zde leží **obě** jako
-doklad skutečného stavu, ne jako zdroj.
+GDPR má **jediný sjednocený zdroj** —
+[`OCHRANA_OSOBNICH_UDAJU/ZASADY_OCHRANY_OSOBNICH_UDAJU.md`](OCHRANA_OSOBNICH_UDAJU/ZASADY_OCHRANY_OSOBNICH_UDAJU.md).
+Původní dvě soupeřící verze byly sloučeny a z repozitáře odstraněny.
+
+Dokument ale **zatím čeká na schválení Pavlem** a do té doby není autoritativní ani publikovaný.
+Produkční `content_pages` proto zatím drží starší znění. Po schválení se nový text publikuje
+do CMS a tahle výjimka zanikne.
 Detail: [`OCHRANA_OSOBNICH_UDAJU/STAV.md`](OCHRANA_OSOBNICH_UDAJU/STAV.md).
 
 ### Pravidla konkrétních soutěží
@@ -78,7 +82,7 @@ právě tohoto konkrétního PDF**. PDF jiné soutěže ani generická historick
 |---|---|
 | [`VSEOBECNE_OBCHODNI_PODMINKY/VSEOBECNE_OBCHODNI_PODMINKY.md`](VSEOBECNE_OBCHODNI_PODMINKY/VSEOBECNE_OBCHODNI_PODMINKY.md) | **VOP — zdrojové znění** |
 | [`ZASADY_COOKIES/ZASADY_COOKIES.md`](ZASADY_COOKIES/ZASADY_COOKIES.md) | **Cookies — zdrojové znění** |
-| [`OCHRANA_OSOBNICH_UDAJU/`](OCHRANA_OSOBNICH_UDAJU/) | GDPR — ⚠️ **dvě verze, konflikt nerozhodnutý** |
+| [`OCHRANA_OSOBNICH_UDAJU/ZASADY_OCHRANY_OSOBNICH_UDAJU.md`](OCHRANA_OSOBNICH_UDAJU/ZASADY_OCHRANY_OSOBNICH_UDAJU.md) | **GDPR — zdrojové znění** (⏳ čeká na schválení) |
 | [`OBECNA_PRAVIDLA_SOUTEZI/`](OBECNA_PRAVIDLA_SOUTEZI/) | obecná veřejná stránka `/pravidla-souteze` — **ne** pravidla konkrétní soutěže |
 | [`SABLONA_PRAVIDEL_SOUTEZE.md`](SABLONA_PRAVIDEL_SOUTEZE.md) | **jediná** šablona pravidel pro všechny budoucí soutěže |
 | [`souteze/`](souteze/) | archiv finálních pravidel konkrétních soutěží |
@@ -92,17 +96,22 @@ Právní text je vždy v samostatném souboru s velkými písmeny v názvu.
 ## Stav k 7. 9. 2026
 
 Právní texty jsou zde uložené **jako skutečné zdrojové soubory**, ne jako rozcestník do CMS.
-Převzaty jsou beze změny z produkce ke 7. 9. 2026 — nic se právně nevylepšovalo ani nepřepisovalo.
+
+VOP, cookies a obecná pravidla soutěží jsou převzaty **beze změny** z produkce ke 7. 9. 2026 —
+nic se u nich právně nevylepšovalo ani nepřepisovalo.
+
+GDPR je jediná výjimka: původní dvě soupeřící verze byly **sjednoceny do jednoho nového návrhu**,
+který čeká na schválení. Do schválení zůstává v produkci starší znění.
 
 | Dokument | Zdroj zde | Publikovaná kopie |
 |---|---|---|
 | VOP | `VSEOBECNE_OBCHODNI_PODMINKY/VSEOBECNE_OBCHODNI_PODMINKY.md` | `/vop` |
 | Cookies | `ZASADY_COOKIES/ZASADY_COOKIES.md` | `/legal/cookies` |
 | Obecná pravidla soutěží | `OBECNA_PRAVIDLA_SOUTEZI/OBECNA_PRAVIDLA_SOUTEZI.md` | `/pravidla-souteze` |
-| GDPR | ⚠️ **dvě verze, žádná autoritativní** | `/gdpr` |
+| GDPR | `OCHRANA_OSOBNICH_UDAJU/ZASADY_OCHRANY_OSOBNICH_UDAJU.md` ⏳ | `/gdpr` (zatím starší znění) |
 
-Otevřené je: **rozhodnutí o GDPR**, **placeholdery v obecných pravidlech soutěží** a **vlastní
-pravidla pro obě produkční soutěže** (obě jsou od 7. 9. 2026 `paused`).
+Otevřené je: **schválení a publikace nového GDPR**, **placeholdery v obecných pravidlech soutěží**
+a **vlastní pravidla pro obě produkční soutěže** (obě jsou od 7. 9. 2026 `paused`).
 
 **Nic z toho nenahrazuje právní kontrolu.** Formulace označené `VYŽADUJE PRÁVNÍ SCHVÁLENÍ`
 nesmí AI ani nikdo jiný prohlásit za hotové bez potvrzení právníkem.

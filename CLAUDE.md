@@ -224,14 +224,18 @@ Závazné pořadí zdrojů:
 - **⚠️ Když se GitHub a CMS liší, AI nesmí sama rozhodnout, který text přepsat.** **STOP** a nahlásit
   rozdíl. Může jít o neschválenou změnu v CMS stejně jako o zapomenutou publikaci z GitHubu —
   z textu to poznat nelze.
-- **Výjimka: GDPR.** Tam zatím žádná schválená autoritativní verze neexistuje (viz níže), takže
-  pravidlo „GitHub je zdroj" se na něj neuplatní, dokud Pavel nerozhodne.
 - **Pravidla konkrétní soutěže:** zdroj je finální Word/PDF v
   `docs/pravni-dokumenty/souteze/NAZEV_SOUTEZE/`; `rules_pdf_url` v produkci je publikovaná kopie
   právě tohoto PDF. **PDF jiné soutěže ani generická historická šablona se použít nesmí.**
-- **⛔ OTEVŘENÝ KONFLIKT:** GDPR má dvě různé aktivní verze — `legal/gdpr` (1 281 zn., novější)
-  a `legal/ochrana-osobnich-udaju` (3 030 zn., obsáhlejší, s verzí a IČO). **Nerozhodovat
-  automaticky.** Detail v `docs/pravni-dokumenty/OCHRANA_OSOBNICH_UDAJU/README.md`.
+- **GDPR má jediný sjednocený zdroj:**
+  `docs/pravni-dokumenty/OCHRANA_OSOBNICH_UDAJU/ZASADY_OCHRANY_OSOBNICH_UDAJU.md`.
+  Původní dvě soupeřící verze (`VERZE_GDPR.md`, `VERZE_OCHRANA_OSOBNICH_UDAJU.md`) byly sloučeny
+  a **odstraněny** — **nikdy z nich nečerpat**, ani z historie gitu.
+  **⏳ Dokument čeká na schválení Pavlem** a do té doby není autoritativní ani publikovaný;
+  produkční `content_pages` zatím drží starší znění. Jediná povolená cesta je:
+  tenhle soubor → schválení Pavlem → publikace stejného obsahu do `content_pages` → web.
+  Stav a body k právnímu schválení: `docs/pravni-dokumenty/OCHRANA_OSOBNICH_UDAJU/STAV.md`
+  a `README.md` téže složky.
 - **Nevytvářet nový business source of truth.** `docs/pravni-dokumenty/` obsahuje výhradně právní
   dokumenty a šablony.
 
