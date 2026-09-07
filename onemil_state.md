@@ -42,6 +42,46 @@ nesmí být podmínkou ničeho. Dvě DB funkce (`trigger_guardian_message_on_win
 **PENDING (neaplikováno, čeká na schválení):** oprava `shoptet_import_row_log.message` (PR #387,
 `failureMessage()`) je jen v GitHubu — produkční `import-shoptet-orders` zůstává na v58 bez ní.
 
+### #289 část C — Shoptet baseline: staré objednávky nikdy nevydají odměnu (07. 09. 2026)
+
+**Stav: v PR, aplikováno a ověřeno POUZE na stagingu `dxmowysntemfqfnanxua`. Produkce nedotčena.**
+Produkční migrace ani redeploy Edge Functions neproběhly a vyžadují samostatné schválení Pavla.
+
+**Schválené rozhodnutí Pavla:** baseline platí **jen pro nová napojení** vzniklá po nasazení.
+BOHEMIA INFINITY s.r.o. ani vereonika sro se zpětně nepřevádějí.
+
+Řešená mezera: importer neměl žádný cutoff podle okamžiku aktivace. Při prvním živém běhu
+zpracoval celý export včetně objednávek, které v něm ležely už předtím — a ty při přechodu na
+`paid` vydaly odměnu, kód i zákaznický e-mail.
+
+Doplněn **jeden krok** do existujícího toku `submit → (nově) verify → approve → import`:
+
+- **`verify-shoptet-connection`** (nová EF, partnerský JWT) — stáhne export z **pending** Vault
+  klíče, zkontroluje dostupnost, povinné hlavičky a použitelnost řádků. **Nic nevydává** a zapisuje
+  výhradně baseline + `verified_at`. Vrací jen počty a důvod neúspěchu.
+- **`shoptet_connection_baseline_orders`** (nová tabulka) — drží **jen `external_order_id`**. RLS
+  zapnuté, žádná policy, granty jen `service_role`. `activated_at` zůstává `NULL` až do schválení.
+  **Tabulka je zároveň vypínačem funkce**: partner bez aktivního řádku prochází importem jako dosud,
+  proto se pro stará napojení nedělá žádný backfill.
+- **`approve-shoptet-connection`** — u `request_kind='initial'` vyžaduje `verified_at`
+  (`409 verification_required`); `url_change` beze změny. Baseline se aktivuje **dřív**, než se
+  zapne import (cron běží každou minutu).
+- **`import-shoptet-orders`** — baseline objednávku vyřadí před dedupem i před `validRows`, v obou
+  režimech; čtení baseline je fail-closed (`baseline_unavailable`). Audit `skip_baseline` přežije
+  živý běh a nepočítá se do `rows_failed`.
+- **Partnerský dashboard** — tlačítko „Ověřit napojení" se srozumitelným výsledkem.
+
+Migrace navíc **odstraňuje zastaralý CHECK** na `shoptet_import_row_log.action`. Produkce ho nemá
+vůbec a leží tam řádky `skip_no_reward` z PR #392; na stagingu by takový insert tiše shodil celou
+dávku 500 řádků, protože importer návratovou hodnotu insertu nekontroluje.
+
+**Staging ověření (run 34093599770): 7 passed / 0 failed.** Ověřeno: ověření nic nevydá → baseline
+uložena a neaktivní → neověřenou žádost nelze aktivovat (409) → schválení aktivuje baseline →
+stará objednávka přejde na `paid` a pořád 0 kódů / 0 e-mailů / 0 fakturace → nová objednávka po
+aktivaci projde běžnou odměnovou logikou → stávající napojení beze změny. Testovací data uklizena.
+
+Hlídají specy `161-shoptet-baseline-protection.spec.ts` a `162-shoptet-baseline-contract.spec.ts`.
+
 ### TODO #349 — Shoptet napojení pro jeden e-shop (06. 09. 2026)
 
 Read-only audit skutečného flow ukázal, že **body 1 a 2 zadání byly už hotové a v provozu**:

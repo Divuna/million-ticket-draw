@@ -252,7 +252,9 @@ test.describe.serial('161 — Shoptet baseline: staré objednávky nikdy nevydaj
     for (const authId of [ctx.partnerAuthId, ctx.unverifiedAuthId]) {
       if (authId) await client.auth.admin.deleteUser(authId).catch(() => undefined);
     }
-    await client.from('email_queue').delete().like('email', `spec161-customer-${RUN_ID}@%`);
+    // `spec161-%`, ne jen zákaznický vzor: schválení navíc zařadí notifikaci
+    // partnerovi, která by jinak zůstala v frontě viset.
+    await client.from('email_queue').delete().like('email', `spec161-%${RUN_ID}%`);
     await client.storage.from(BUCKET).remove([CSV_PATH]).catch(() => undefined);
     await client.storage.deleteBucket(BUCKET).catch(() => undefined);
   });

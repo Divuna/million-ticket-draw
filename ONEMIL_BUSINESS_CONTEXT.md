@@ -174,6 +174,25 @@ at a new export link is checked against the same rule.
 This covers **one partner account with one e-shop**. Several e-shops under one company is a separate,
 not-yet-implemented topic (TODO #348) and nothing here should be read as supporting it.
 
+### 6.2b Orders that existed before activation never earn a reward
+
+Before a **new** Shoptet connection can be activated, the partner runs the check themselves in the
+partner portal (**Ověřit napojení**). The check is a dry run: it downloads the export and reports
+whether it is reachable, whether the required fields are present and whether the rows are usable — and
+it issues nothing at all. No MioCoins, no code, no customer e-mail, no invoice line.
+
+The same check records every order number already present in the export. Those orders are the shop's
+**history** and are permanently excluded: they can never produce a MioCoin reward, a code, a customer
+e-mail or an invoice line — not even if they later change to paid, shipped or completed.
+
+A reward can therefore only arise for an order that appears in the export for the **first time after
+the connection was activated**. An OneMil administrator can activate a connection only once the
+partner's check has succeeded; the existing second manual approval is unchanged.
+
+This applies to **connections activated from 7. 9. 2026 onwards**. Partners connected before that date
+(BOHEMIA INFINITY s.r.o., vereonika sro) keep their existing behaviour unchanged and are not converted
+retroactively — a decision confirmed by the owner.
+
 ### 6.3 Required Shoptet order-export fields — confirmed partner setup
 
 For OneMil to import a partner order correctly, the partner creates a custom Shoptet **CSV order

@@ -195,6 +195,50 @@ slevou. Zdroj byl do GitHubu dorovnán 05. 09. 2026 read-only exportem, bez jak�
 
 ---
 
+# SHOPTET BASELINE — STARÉ OBJEDNÁVKY NIKDY NEVYDAJÍ ODMĚNU (#289 část C, 07. 09. 2026, NENASAZENO NA PRODUKCI)
+
+**Stav: v PR, aplikováno a ověřeno jen na stagingu `dxmowysntemfqfnanxua`
+(migrace `20260907090000_shoptet_connection_baseline_orders` + EF `verify-shoptet-connection`,
+`approve-shoptet-connection`, `import-shoptet-orders`). Produkční migrace ani redeploy
+NEPROBĚHLY — vyžadují samostatné výslovné schválení Pavla.**
+
+**Schválené rozhodnutí Pavla: baseline platí POUZE pro NOVÁ napojení vzniklá po nasazení.
+BOHEMIA INFINITY s.r.o. ani vereonika sro se zpětně nepřevádějí.**
+
+**Závazné invarianty (neměnit bez schválení Pavla):**
+
+- **Tabulka `shoptet_connection_baseline_orders` je zároveň vypínačem funkce.** Partner bez jediného
+  řádku s vyplněným `activated_at` prochází importem přesně jako dosud. Proto **nikdy nedělat
+  backfill** pro stará napojení — tím by se změnilo jejich chování.
+- **Baseline drží výhradně `external_order_id`.** Žádný e-mail, jméno, částka ani cokoli dalšího ze
+  zákaznických dat. RLS zapnuté, **žádná policy**, granty jen `service_role`.
+- **`verify-shoptet-connection` nesmí nikdy nic vydat.** Nevolá `create_partner_order_reward` ani
+  `schedule_shoptet_partner_reward_status`, nesahá na `email_queue`, `partner_reward_codes` ani
+  fakturaci. Zapisuje jedině do `shoptet_connection_baseline_orders` a `shoptet_connection_requests`.
+  Vrací pouze počty a důvod neúspěchu — **nikdy URL, hash, secret ani zákaznická data.**
+- **`get_shoptet_pending_url(uuid)` smí volat jen `service_role.`** Nevracet grant `anon`/`authenticated`.
+- **Schválení `request_kind='initial'` vyžaduje `verified_at`** (jinak `409 verification_required`).
+  **`url_change` ověření vyžadovat nesmí** — běží nad už živým napojením, kde baseline neexistuje.
+- **⚠️ Baseline se musí aktivovat DŘÍV, než se zapne `shoptet_import_enabled`.** Cron
+  `shoptet_auto_import_1min` běží každou minutu, takže opačné pořadí otevře okno, ve kterém první běh
+  zpracuje i staré objednávky. Hlídá to spec 162.
+- **Importer vyřazuje baseline objednávku dřív, než se o ní začne rozhodovat** — před dedupem
+  i před zařazením do `validRows`, v obou režimech. Čtení baseline je **fail-closed**
+  (`baseline_unavailable`): bez jistoty, co do baseline patří, se nesmí vydat nic.
+- **`skip_baseline` se nikdy nepočítá do `rows_failed`** — jinak by běh spadl do `partial` a cron by
+  ho opakoval donekonečna. V živém běhu se ale z `logBatch` **nesmí vyfiltrovat**; je to auditní
+  důkaz, že se nic nevydalo.
+- **`shoptet_import_row_log.action` nemá mít CHECK constraint.** Produkce ho nemá a leží tam řádky
+  `skip_no_reward` z PR #392; migrace ho proto na stagingu dropuje. **Nezavádět ho zpět** — insert
+  neznámé akce by tiše shodil celou dávku 500 řádků (importer návratovou hodnotu nekontroluje).
+- Zachováno beze změny: druhé ruční schválení adminem, kontrola duplicity e-shopu (#396), URL jen ve
+  Vaultu.
+
+Hlídají specy `tests/e2e/161-shoptet-baseline-protection.spec.ts` (staging E2E) a
+`tests/e2e/162-shoptet-baseline-contract.spec.ts` (statický kontrakt bez sítě).
+
+---
+
 # SHOPTET NAPOJENÍ — JEDEN E-SHOP, JEDEN PARTNER (TODO #349, 06. 09. 2026, NENASAZENO)
 
 **Stav: v GitHubu, aplikováno a ověřeno jen na stagingu `dxmowysntemfqfnanxua`.
