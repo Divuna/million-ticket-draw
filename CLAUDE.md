@@ -217,6 +217,18 @@ Závazné pořadí zdrojů:
   v `test grafika/`.
 - **Nikdy si sám nevybírej mezi dvěma verzemi téhož právního dokumentu.** Když nelze bezpečně
   určit aktuální znění: **STOP** a nahlas konflikt Pavlovi.
+- **GitHub je zdroj, produkční CMS je publikovaná kopie.** `docs/pravni-dokumenty/` drží zdrojové
+  právní znění; `content_pages` je jen to, co se z něj publikovalo pro web a aplikaci. U schváleného
+  dokumentu se změna **nejdřív připraví v GitHubu** a teprve po schválení publikuje do CMS —
+  **nikdy naopak**.
+- **⚠️ Když se GitHub a CMS liší, AI nesmí sama rozhodnout, který text přepsat.** **STOP** a nahlásit
+  rozdíl. Může jít o neschválenou změnu v CMS stejně jako o zapomenutou publikaci z GitHubu —
+  z textu to poznat nelze.
+- **Výjimka: GDPR.** Tam zatím žádná schválená autoritativní verze neexistuje (viz níže), takže
+  pravidlo „GitHub je zdroj" se na něj neuplatní, dokud Pavel nerozhodne.
+- **Pravidla konkrétní soutěže:** zdroj je finální Word/PDF v
+  `docs/pravni-dokumenty/souteze/NAZEV_SOUTEZE/`; `rules_pdf_url` v produkci je publikovaná kopie
+  právě tohoto PDF. **PDF jiné soutěže ani generická historická šablona se použít nesmí.**
 - **⛔ OTEVŘENÝ KONFLIKT:** GDPR má dvě různé aktivní verze — `legal/gdpr` (1 281 zn., novější)
   a `legal/ochrana-osobnich-udaju` (3 030 zn., obsáhlejší, s verzí a IČO). **Nerozhodovat
   automaticky.** Detail v `docs/pravni-dokumenty/OCHRANA_OSOBNICH_UDAJU/README.md`.
