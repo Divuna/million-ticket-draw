@@ -166,26 +166,57 @@ test.describe('Affiliate Dashboard — Content Smoke (spec 26)', () => {
     expect(companyLink).toBe(`${PUBLIC_APP_URL}/a/${companyCode}`);
   });
 
-  test('company short link /a/<refCode> redirects to the existing /partner/register?via= flow', async ({ page }) => {
+  // Krátké odkazy jsou veřejný vstup pro TŘETÍ STRANU (firmu / zákazníka), ne pro
+  // samotného affiliate. Přihlášený affiliate se do nich nedostane — route guard
+  // v App.tsx ho drží v /affiliate/* (viz test níže). Přesměrování se proto ověřuje
+  // v odhlášeném kontextu, což je jediný reálný produkční scénář; v přihlášené
+  // session by šlo o závod dvou přesměrování.
+  test('company short link /a/<refCode> redirects to the existing /partner/register?via= flow', async ({ page, browser }) => {
     await page.getByTestId('mode-btn-sales_rep').click();
     const companyInput = page.getByTestId('affiliate-company-link');
     await expect(companyInput).toBeVisible({ timeout: 8_000 });
     const companyLink = await companyInput.inputValue();
     const companyCode = getShortLinkCode(companyLink, 'a');
 
-    await page.goto(`/a/${companyCode}`);
-    await expect(page).toHaveURL(new RegExp(`/partner/register\\?via=${companyCode}$`), { timeout: 10_000 });
+    const anon = await browser.newContext();
+    try {
+      const anonPage = await anon.newPage();
+      await anonPage.goto(`/a/${companyCode}`);
+      await expect(anonPage).toHaveURL(new RegExp(`/partner/register\\?via=${companyCode}$`), { timeout: 10_000 });
+    } finally {
+      await anon.close();
+    }
   });
 
-  test('customer short link /i/<refCode> redirects to the existing /?ref= flow', async ({ page }) => {
+  test('customer short link /i/<refCode> redirects to the existing /?ref= flow', async ({ page, browser }) => {
     await page.getByTestId('mode-btn-influencer').click();
     const customerInput = page.getByTestId('affiliate-customer-link');
     await expect(customerInput).toBeVisible({ timeout: 8_000 });
     const customerLink = await customerInput.inputValue();
     const customerCode = getShortLinkCode(customerLink, 'i');
 
-    await page.goto(`/i/${customerCode}`);
-    await expect(page).toHaveURL(new RegExp(`/\\?ref=${customerCode}$`), { timeout: 10_000 });
+    const anon = await browser.newContext();
+    try {
+      const anonPage = await anon.newPage();
+      await anonPage.goto(`/i/${customerCode}`);
+      await expect(anonPage).toHaveURL(new RegExp(`/\\?ref=${customerCode}$`), { timeout: 10_000 });
+    } finally {
+      await anon.close();
+    }
+  });
+
+  // Ochrana, kterou nesmíme ztratit: affiliate účet zůstává uzavřený ve své části
+  // aplikace i při pokusu otevřít vlastní veřejný odkaz.
+  test('logged-in affiliate stays confined to /affiliate/* even on its own short links', async ({ page }) => {
+    await page.getByTestId('mode-btn-influencer').click();
+    const customerInput = page.getByTestId('affiliate-customer-link');
+    await expect(customerInput).toBeVisible({ timeout: 8_000 });
+    const customerCode = getShortLinkCode(await customerInput.inputValue(), 'i');
+
+    for (const path of [`/i/${customerCode}`, `/a/${customerCode}`]) {
+      await page.goto(path);
+      await expect(page).toHaveURL(/\/affiliate\/dashboard/, { timeout: 10_000 });
+    }
   });
 
   test('QR code is rendered by local qrcode.react (SVG element, no external request)', async ({ page }) => {
