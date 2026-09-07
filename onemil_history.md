@@ -1,3 +1,83 @@
+# 07. 09. 2026 — Shoptet baseline: staré objednávky nikdy nevydají odměnu (#289 část C, PR #398, PRODUKCE)
+
+Audit issue #289 ukázal, že části A (`/top-up`, spodní navigace, Zprávy v profilu) a B (partnerský
+blok na Homepage) jsou hotové a živé už od 30. 07. 2026 — jen je nikdo nezavřel. Část C ale měla
+chybějící jádro: **importer neměl žádný cutoff podle okamžiku aktivace**. Při prvním živém běhu
+nového napojení zpracoval celý export včetně objednávek, které v něm ležely už předtím, a ty při
+přechodu na `paid` vydaly odměnu, kód i zákaznický e-mail.
+
+Pavel schválil doplnění s omezením: **baseline platí pouze pro nová napojení vzniklá po nasazení.**
+BOHEMIA INFINITY s.r.o. ani vereonika sro se zpětně nepřevádějí.
+
+## Zvolený návrh
+
+Žádný paralelní systém — jeden krok navíc do existujícího toku `submit → verify → approve → import`:
+
+- `shoptet_connection_baseline_orders` drží **výhradně číslo objednávky**; RLS zapnuté, žádná
+  policy, granty jen `service_role`. Tabulka je zároveň **vypínačem funkce**: partner bez aktivního
+  řádku prochází importem přesně jako dosud, takže stará napojení nepotřebují žádný příznak ani
+  backfill a schválené omezení vychází ze samotné struktury.
+- `verify-shoptet-connection` (nová EF) — partnerské „Ověřit napojení", předběžný dry-run.
+- `approve-shoptet-connection` — vyžaduje ověření a pořizuje závaznou baseline.
+- `import-shoptet-orders` — baseline objednávku vyřadí dřív, než se o ní začne rozhodovat.
+
+## Bezpečnostní mezera nalezená při revizi (před mergem)
+
+První verze zachytávala baseline už při **ověření**. Jenže admin schvaluje později — objednávka
+vzniklá mezi oběma kroky v baseline chyběla, přestože existovala před aktivací, a po zaplacení by
+dostala odměnu. Druhá mezera: po dřívějším úspěšném ověření zůstávalo `verified_at` viset i při
+pozdějším **neúspěšném** pokusu, protože chybové větve se vracely dřív, než se cokoli uklidilo —
+žádost pak šla schválit nad rozbitým exportem.
+
+Opraveno:
+
+- `_shared/shoptetExportSnapshot.ts` — jeden sdílený snímek exportu pro obě cesty, aby se nemohly
+  rozejít. Fail-closed i pro **jediný neplatný objednávkový řádek**.
+- Ověření **nejdřív zneplatní** předchozí razítko i předběžnou baseline; razítko dá až po
+  kompletním úspěchu.
+- Schválení pořizuje **vlastní čerstvý snímek v okamžiku aktivace**, a to **před**
+  `promote_shoptet_pending_url` — neúspěch nechá Vault i `partners` netknuté a jde ho zopakovat.
+  Nepoužitelný export = `409 export_not_usable`, import zůstává vypnutý.
+
+Pořadí zůstává: **snímek → promote → baseline → teprve pak zapnutí importu.** Cron běží každou
+minutu, takže opačné pořadí by otevřelo okno pro staré objednávky.
+
+## Vedlejší nález
+
+Migrace odstranila zastaralý CHECK na `shoptet_import_row_log.action`. Produkce ho neměla vůbec a
+už tam ležely řádky `skip_no_reward` z PR #392; na stagingu by takový insert **tiše shodil celou
+dávku 500 řádků** (importer návratovou hodnotu insertu nekontroluje) a audit by mlčky přišel o data.
+
+## Ověření
+
+- spec 161 (staging E2E, 11 testů): ověření nic nevydá → baseline neaktivní → rozbitý export
+  zneplatní ověření → neplatný řádek neprojde → neověřenou žádost nelze aktivovat → rozbitý export
+  zastaví i schválení → **schválení pořídí čerstvou baseline včetně objednávky vzniklé po ověření**
+  → staré objednávky přejdou na `paid` a pořád 0 kódů / 0 e-mailů / 0 fakturace → nová objednávka
+  po aktivaci projde běžně → stávající napojení beze změny.
+- spec 162 (statický kontrakt, 16 testů) — zamyká všechna pravidla bez sítě.
+- Plný staging Full E2E na finálním SHA `de8d1818`: **1245 passed, 0 failed, 75 skipped.**
+
+Cestou se dvakrát ladil **test, ne aplikace**: veřejné Storage URL jde přes CDN, takže se stale
+servíroval nejdřív smazaný a pak i přepsaný objekt. Vyřešeno unikátní cestou pro každou verzi
+exportu. Spec 160h navíc bylo potřeba zúžit — jeho řez po této změně zasahoval do nového snímku;
+invariant platil dál, špatná byla hranice řezu a žádná asserce se neodstranila.
+
+## Produkční nasazení
+
+Se schválením Pavla, v pořadí **migrace → Edge Functions → merge**:
+
+1. migrace `20260907090000_shoptet_connection_baseline_orders`,
+2. EF `verify-shoptet-connection` v1 (nová), `approve-shoptet-connection` v56,
+   `import-shoptet-orders` v63,
+3. merge PR #398, `main` = `b6f86e33`.
+
+Postcheck: tabulka + RLS bez policy, `anon`/`authenticated` bez SELECT i bez EXECUTE na
+`get_shoptet_pending_url`, 0 baseline řádků a 0 ověřených žádostí (žádný backfill), obě EF bez JWT
+→ 401, importy po nasazení dál `ok`, nastavení BOHEMIA i vereonika sro nezměněno.
+
+Tím je #289 kompletní. Zbývá poslední otevřené TODO #348 (multi-shop).
+
 # 05. 09. 2026 — Partner Trial / New Customer Bonus: zdroj dorovnán do GitHubu podle produkce
 
 Read-only audit zjistil **drift produkce × GitHub**: backend Partner Trial / New Customer Bonus

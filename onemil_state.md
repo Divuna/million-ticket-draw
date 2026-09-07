@@ -44,8 +44,20 @@ nesmí být podmínkou ničeho. Dvě DB funkce (`trigger_guardian_message_on_win
 
 ### #289 část C — Shoptet baseline: staré objednávky nikdy nevydají odměnu (07. 09. 2026)
 
-**Stav: v PR, aplikováno a ověřeno POUZE na stagingu `dxmowysntemfqfnanxua`. Produkce nedotčena.**
-Produkční migrace ani redeploy Edge Functions neproběhly a vyžadují samostatné schválení Pavla.
+**PRODUKČNĚ NASAZENO 07. 09. 2026 se schválením Pavla.** Migrace
+`20260907090000_shoptet_connection_baseline_orders` aplikována na produkci `xkzhjldrojjlrkezorey`;
+EF `verify-shoptet-connection` v1 (nová), `approve-shoptet-connection` v56 a `import-shoptet-orders`
+v63 jsou ACTIVE, všechny `verify_jwt=false` s vlastní autorizací. PR #398 mergnut,
+`main` = `b6f86e33`. Frontend jde na produkci přes Vercel z `main`.
+
+Pořadí nasazení bylo **migrace → Edge Functions → merge**: partnerský dashboard čte `verified_at`
+a importer bez baseline tabulky končí fail-closed `baseline_unavailable`, takže opačné pořadí by
+zastavilo importy stávajícím partnerům.
+
+**Produkční postcheck ✅:** tabulka existuje, RLS zapnuté, 0 policy, `anon`/`authenticated` bez
+SELECT i bez EXECUTE na `get_shoptet_pending_url`, 4 indexy, 0 baseline řádků a 0 ověřených
+žádostí (žádný backfill). Obě EF bez JWT → 401. Importy po nasazení nové verze běží dál `ok`
+(0 chybných), nastavení BOHEMIA i vereonika sro nezměněno.
 
 **Schválené rozhodnutí Pavla:** baseline platí **jen pro nová napojení** vzniklá po nasazení.
 BOHEMIA INFINITY s.r.o. ani vereonika sro se zpětně nepřevádějí.
