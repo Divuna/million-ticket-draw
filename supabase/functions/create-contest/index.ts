@@ -74,6 +74,21 @@ serve(async (req) => {
       throw new Error('Invalid status')
     }
 
+    // Soutěž nesmí být `active` bez nahraných pravidel (PDF). Tahle funkce
+    // `rules_pdf_url` vůbec nepřijímá ani neukládá, takže by každá aktivní
+    // soutěž vytvořená tudy byla veřejně dostupná bez závazných pravidel —
+    // tedy obchvat kolem kontroly v admin UI.
+    //
+    // Pravidla se nahrávají až po vzniku řádku (cesta v úložišti potřebuje
+    // contest id), takže tady `active` nelze bezpečně povolit vůbec: soutěž
+    // vznikne neaktivní a aktivuje se teprve po uložení pravidel.
+    // Totéž nezávisle vynucuje trigger `trg_contest_active_requires_rules_pdf`.
+    if (status === 'active') {
+      throw new Error(
+        'Contest cannot be created as active: rules PDF must be uploaded first. Create it as draft or pending and activate it once the rules are stored.'
+      )
+    }
+
     // Create new contest using user-scoped client for auth.uid() propagation
     const { data: contest, error: contestError } = await supabase
       .from('contests')

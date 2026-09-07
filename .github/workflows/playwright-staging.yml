@@ -59,6 +59,10 @@ jobs:
 
       - name: Seed win contest
         id: seed-win-contest
+        # `rules_pdf_url` je povinné: aktivní soutěž bez nahraných pravidel
+        # odmítne trigger `trg_contest_active_requires_rules_pdf`. Seed se tím
+        # chová stejně jako reálný admin — pravidla musí existovat dřív, než se
+        # soutěž aktivuje. Stejný placeholder už používají seedy spec 18 a 20.
         run: |
           RESPONSE=$(curl -s -X POST \
             "${SUPABASE_URL}/rest/v1/contests" \
@@ -75,6 +79,7 @@ jobs:
               "status": "active",
               "next_ticket_number": 100,
               "fast_game": false,
+              "rules_pdf_url": "https://example.com/e2e-test-rules.pdf",
               "created_at": "2020-01-01T00:00:00Z"
             }')
           echo "PostgREST response: $RESPONSE"
