@@ -181,9 +181,15 @@ partner portal (**Ověřit napojení**). The check is a dry run: it downloads th
 whether it is reachable, whether the required fields are present and whether the rows are usable — and
 it issues nothing at all. No MioCoins, no code, no customer e-mail, no invoice line.
 
-The same check records every order number already present in the export. Those orders are the shop's
-**history** and are permanently excluded: they can never produce a MioCoin reward, a code, a customer
-e-mail or an invoice line — not even if they later change to paid, shipped or completed.
+The shop's **history** is recorded at the moment the connection is **activated**, not at the moment
+the partner ran the check — an order placed between the two still existed before activation and
+belongs to the history just like the rest. Those orders are permanently excluded: they can never
+produce a MioCoin reward, a code, a customer e-mail or an invoice line — not even if they later change
+to paid, shipped or completed.
+
+If the export cannot be read at the moment of activation — unreachable, missing required fields, empty,
+or containing an unreadable order row — the activation is refused, the import stays switched off and
+nothing is issued. The partner fixes the export and the approval is simply repeated.
 
 A reward can therefore only arise for an order that appears in the export for the **first time after
 the connection was activated**. An OneMil administrator can activate a connection only once the

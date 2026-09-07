@@ -56,16 +56,20 @@ zpracoval celý export včetně objednávek, které v něm ležely už předtím
 
 Doplněn **jeden krok** do existujícího toku `submit → (nově) verify → approve → import`:
 
-- **`verify-shoptet-connection`** (nová EF, partnerský JWT) — stáhne export z **pending** Vault
-  klíče, zkontroluje dostupnost, povinné hlavičky a použitelnost řádků. **Nic nevydává** a zapisuje
-  výhradně baseline + `verified_at`. Vrací jen počty a důvod neúspěchu.
+- **`verify-shoptet-connection`** (nová EF, partnerský JWT) — **předběžný** dry-run. Stáhne export
+  z **pending** Vault klíče, zkontroluje dostupnost, povinné hlavičky a použitelnost řádků. **Nic
+  nevydává.** Každé spuštění nejdřív zneplatní předchozí `verified_at` i předběžnou baseline
+  a razítko dá až po kompletním úspěchu, takže po rozbití exportu nezůstane žádost schvalitelná.
 - **`shoptet_connection_baseline_orders`** (nová tabulka) — drží **jen `external_order_id`**. RLS
   zapnuté, žádná policy, granty jen `service_role`. `activated_at` zůstává `NULL` až do schválení.
   **Tabulka je zároveň vypínačem funkce**: partner bez aktivního řádku prochází importem jako dosud,
   proto se pro stará napojení nedělá žádný backfill.
 - **`approve-shoptet-connection`** — u `request_kind='initial'` vyžaduje `verified_at`
-  (`409 verification_required`); `url_change` beze změny. Baseline se aktivuje **dřív**, než se
-  zapne import (cron běží každou minutu).
+  (`409 verification_required`) a **pořizuje vlastní čerstvý snímek exportu v okamžiku aktivace**;
+  předběžná sada z ověření se zahodí. Tím se do baseline dostane i objednávka, která vznikla mezi
+  ověřením a schválením. Snímek běží **před** `promote_shoptet_pending_url`, takže neúspěch nechá
+  Vault i `partners` netknuté. Nepoužitelný export = `409 export_not_usable`, import zůstává vypnutý.
+  Pořadí: snímek → promote → baseline → zapnutí importu (cron běží každou minutu). `url_change` beze změny.
 - **`import-shoptet-orders`** — baseline objednávku vyřadí před dedupem i před `validRows`, v obou
   režimech; čtení baseline je fail-closed (`baseline_unavailable`). Audit `skip_baseline` přežije
   živý běh a nepočítá se do `rows_failed`.
@@ -75,9 +79,17 @@ Migrace navíc **odstraňuje zastaralý CHECK** na `shoptet_import_row_log.actio
 vůbec a leží tam řádky `skip_no_reward` z PR #392; na stagingu by takový insert tiše shodil celou
 dávku 500 řádků, protože importer návratovou hodnotu insertu nekontroluje.
 
-**Staging ověření (run 34093599770): 7 passed / 0 failed.** Ověřeno: ověření nic nevydá → baseline
-uložena a neaktivní → neověřenou žádost nelze aktivovat (409) → schválení aktivuje baseline →
-stará objednávka přejde na `paid` a pořád 0 kódů / 0 e-mailů / 0 fakturace → nová objednávka po
+**Nalezená a opravená mezera (07. 09. 2026, před mergem):** baseline se původně zachytávala už při
+partnerském ověření, jenže admin schvaluje později — objednávka vzniklá mezi oběma kroky by v
+baseline chyběla a po zaplacení dostala odměnu. Druhá mezera: po dřívějším úspěšném ověření
+zůstávalo `verified_at` viset i při pozdějším neúspěšném pokusu, takže žádost šla schválit nad
+rozbitým exportem. Obojí opraveno; hlídají to specy 161 a 162.
+
+**Staging ověření: 11 passed / 0 failed.** Ověřeno: ověření nic nevydá → baseline uložena a
+neaktivní → rozbitý export zneplatní předchozí ověření → export s neplatným řádkem neprojde →
+neověřenou žádost nelze aktivovat (409) → rozbitý export zastaví i samotné schválení (fail-closed,
+import vypnutý) → schválení pořídí čerstvou baseline **včetně objednávky vzniklé po ověření** →
+staré objednávky přejdou na `paid` a pořád 0 kódů / 0 e-mailů / 0 fakturace → nová objednávka po
 aktivaci projde běžnou odměnovou logikou → stávající napojení beze změny. Testovací data uklizena.
 
 Hlídají specy `161-shoptet-baseline-protection.spec.ts` a `162-shoptet-baseline-contract.spec.ts`.

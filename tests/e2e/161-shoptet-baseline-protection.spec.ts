@@ -79,6 +79,23 @@ function buildCsvWithInvalidRow(): string {
   ].join('\n');
 }
 
+/**
+ * Rozbitý export — chybí povinná pole (cena, e-mail).
+ *
+ * Používá se místo smazání souboru: veřejné Storage URL jde přes CDN, takže
+ * smazaný objekt se ještě chvíli servíruje z cache a test by byl nedeterministický.
+ * Nahrání nového obsahu cache spolehlivě přebije a testuje se přesně stejná
+ * větev — snímek exportu vyjde jako nepoužitelný.
+ */
+function buildBrokenCsv(): string {
+  return ['code;statusName', `${OLD_ORDERS[0]};pending`].join('\n');
+}
+
+/** Hlavičky sedí, ale export nemá jediný datový řádek. */
+function buildHeaderOnlyCsv(): string {
+  return 'code;statusName;totalPriceWithVat;paid;email';
+}
+
 const ctx: {
   partnerId?: string;
   partnerAuthId?: string;
@@ -96,6 +113,9 @@ async function uploadCsv(csv: string): Promise<void> {
     .upload(CSV_PATH, new Blob([csv], { type: 'text/csv' }), {
       upsert: true,
       contentType: 'text/csv',
+      // Veřejné Storage URL jde přes CDN — bez tohohle by další krok testu mohl
+      // dostat ještě starý obsah.
+      cacheControl: '0',
     });
   if (error) throw new Error(`csv upload: ${error.message}`);
 }
@@ -324,14 +344,15 @@ test.describe.serial('161 — Shoptet baseline: staré objednávky nikdy nevydaj
   test('161b2: vadný export po úspěšném ověření zruší schvalitelnost', async () => {
     // Scénář B ze zadání: partner ověří, pak se mu export rozbije. Staré
     // `verified_at` nesmí zůstat viset, jinak by admin schválil napojení nad
-    // exportem, který už nejde načíst.
-    await svc().storage.from(BUCKET).remove([CSV_PATH]);
+    // exportem, ze kterého už nejde bezpečně číst.
+    await uploadCsv(buildBrokenCsv());
 
     const token = await signIn(PARTNER_EMAIL, PASSWORD);
     const { json } = await callFunction('verify-shoptet-connection', token, {
       request_id: ctx.requestId,
     });
-    expect(json.verified).toBe(false);
+    expect(json.verified, JSON.stringify(json)).toBe(false);
+    expect(json.reason).toBe('missing_headers');
 
     const client = svc();
     const { data: req } = await client
@@ -404,9 +425,10 @@ test.describe.serial('161 — Shoptet baseline: staré objednávky nikdy nevydaj
   test('161c2: rozbitý export zastaví i samotné schválení (fail-closed)', async () => {
     test.skip(!SUPERADMIN_EMAIL || !SUPERADMIN_PASSWORD, 'chybí staging superadmin secrets');
 
-    // Ověření prošlo (161b4), ale mezi ověřením a schválením se export rozbil.
-    // Schválení si dělá vlastní čerstvý snímek, takže to musí zachytit.
-    await svc().storage.from(BUCKET).remove([CSV_PATH]);
+    // Ověření prošlo (161b4), ale mezi ověřením a schválením se export rozbil —
+    // tady vyprázdnil. Schválení si dělá vlastní čerstvý snímek, takže to musí
+    // zachytit, i když `verified_at` z předchozího kroku pořád platí.
+    await uploadCsv(buildHeaderOnlyCsv());
 
     const token = await signIn(SUPERADMIN_EMAIL, SUPERADMIN_PASSWORD);
     const { status, json } = await callFunction('approve-shoptet-connection', token, {

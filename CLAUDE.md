@@ -212,16 +212,33 @@ BOHEMIA INFINITY s.r.o. ani vereonika sro se zpětně nepřevádějí.**
   backfill** pro stará napojení — tím by se změnilo jejich chování.
 - **Baseline drží výhradně `external_order_id`.** Žádný e-mail, jméno, částka ani cokoli dalšího ze
   zákaznických dat. RLS zapnuté, **žádná policy**, granty jen `service_role`.
+- **⚠️ ZÁVAZNOU baseline pořizuje SCHVÁLENÍ, ne ověření.** Partnerské „Ověřit napojení" je jen
+  předběžný dry-run. Mezi ověřením a schválením může v e-shopu vzniknout další objednávka — ta
+  existovala před aktivací stejně jako ostatní, takže `approve-shoptet-connection` dělá **vlastní
+  čerstvý snímek exportu** a předběžnou sadu z ověření zahodí. **Nevracet zpět variantu, kde se
+  baseline jen „aktivuje" z ověření** — je to přesně ta díra, kvůli které by objednávka vzniklá mezi
+  oběma kroky dostala odměnu.
+- **Snímek při schválení běží PŘED `promote_shoptet_pending_url`.** Neúspěch tak nechá pending Vault
+  klíč, `partners` i řádek požadavku netknuté a schválení jde po opravě exportu zopakovat.
+- **Nepoužitelný export při schválení = fail-closed** (`409 export_not_usable`): import se nezapne
+  a nic se nevydá. Nepoužitelný znamená i **jediný neplatný objednávkový řádek** — pak nevíme, co
+  v exportu je, a baseline by mohla objednávku vynechat.
 - **`verify-shoptet-connection` nesmí nikdy nic vydat.** Nevolá `create_partner_order_reward` ani
   `schedule_shoptet_partner_reward_status`, nesahá na `email_queue`, `partner_reward_codes` ani
   fakturaci. Zapisuje jedině do `shoptet_connection_baseline_orders` a `shoptet_connection_requests`.
   Vrací pouze počty a důvod neúspěchu — **nikdy URL, hash, secret ani zákaznická data.**
+- **Každé ověření musí NEJDŘÍV zneplatnit to předchozí** (`verified_at`, `verified_order_count`
+  i předběžnou baseline) a razítko dát až po kompletním úspěchu. Kdyby se úklid dělal až v chybových
+  větvích, každý předčasný `return` by nechal viset staré razítko a admin by schválil napojení nad
+  exportem, který se mezitím rozbil.
+- **Obě cesty musí posuzovat export stejně** — sdílený `_shared/shoptetExportSnapshot.ts`. Kdyby se
+  rozešly, prošla by aktivace nad exportem, který ověření odmítlo.
 - **`get_shoptet_pending_url(uuid)` smí volat jen `service_role.`** Nevracet grant `anon`/`authenticated`.
 - **Schválení `request_kind='initial'` vyžaduje `verified_at`** (jinak `409 verification_required`).
   **`url_change` ověření vyžadovat nesmí** — běží nad už živým napojením, kde baseline neexistuje.
-- **⚠️ Baseline se musí aktivovat DŘÍV, než se zapne `shoptet_import_enabled`.** Cron
+- **⚠️ Baseline se musí zapsat DŘÍV, než se zapne `shoptet_import_enabled`.** Cron
   `shoptet_auto_import_1min` běží každou minutu, takže opačné pořadí otevře okno, ve kterém první běh
-  zpracuje i staré objednávky. Hlídá to spec 162.
+  zpracuje i staré objednávky. Pořadí je: snímek → promote → baseline → zapnutí importu. Hlídá spec 162.
 - **Importer vyřazuje baseline objednávku dřív, než se o ní začne rozhodovat** — před dedupem
   i před zařazením do `validRows`, v obou režimech. Čtení baseline je **fail-closed**
   (`baseline_unavailable`): bez jistoty, co do baseline patří, se nesmí vydat nic.
