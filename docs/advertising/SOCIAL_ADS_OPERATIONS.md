@@ -1,6 +1,6 @@
 # OneMil — Social Ads Operations
 
-Tento dokument je provozní zdroj pravdy pro přípravu a nasazování reklam OneMil na Facebooku a Instagramu. Doplňuje `GRAPHICS_SOURCE_OF_TRUTH.md`, `VISUAL_RULES.md`, `AD_FORMATS.md`, `AD_COPY_BANK_CZ.md` a `LEGAL_WORDING_DO_DONT.md`.
+Tento dokument je provozní zdroj pravdy pro přípravu a nasazování reklam OneMil na Facebooku a Instagramu. Doplňuje `GRAPHICS_SOURCE_OF_TRUTH.md`, `VISUAL_RULES.md`, `AD_FORMATS.md`, `AD_COPY_BANK_CZ.md` a `LEGAL_WORDING_DO_DONT.md`. Pokud vznikne rozpor ve vizuálním stylu, vždy platí `GRAPHICS_SOURCE_OF_TRUTH.md`.
 
 ## 1. Meta reklamní účet
 
@@ -14,18 +14,23 @@ Pokud Meta nabídne více reklamních účtů, pro OneMil nepřepínat automatic
 
 ## 2. Aktuální vizuální směr sociálních reklam
 
-Pro současnou B2C komunikaci soutěží uživatel výslovně schválil světlou variantu odpovídající aktuálnímu webu OneMil:
+**Světlý styl je trvalý veřejný brand default OneMil, nikoli jen kampaňová varianta.**
 
-- bílá / warm cream základna,
+Používat:
+- bílou / warm cream základnu,
+- velmi světlé šedé/krémové sekundární plochy,
 - tmavě navy až černý text,
-- výrazná Energy Orange,
+- výraznou Energy Orange,
 - jemné warm amber / zlaté světlo,
 - realistické prémiové produkty,
 - čistý luxusní vzhled,
 - minimum textu na hlavní kartě,
 - bez casino/hazard vizuálů.
 
-Toto je schválená světlá kampaňová varianta; obecný brand default zůstává podle `GRAPHICS_SOURCE_OF_TRUTH.md`.
+Nepoužívat pro nové veřejné reklamy:
+- celoplošný černý/navy background,
+- dark premium tech-luxury layout,
+- tmavý gaming/casino vzhled.
 
 ## 3. Formát potvrzené soutěže — schválený systém
 
@@ -116,7 +121,8 @@ Tato sada slouží jako základní strukturální vzor pro další potvrzené so
 Před každou reklamou zkontrolovat:
 
 - 1080 × 1080 pro FB/IG post/carousel,
-- správné logo a brand,
+- světlý OneMil brand podle `GRAPHICS_SOURCE_OF_TRUTH.md`,
+- správné originální logo a assety,
 - pravopis a českou diakritiku,
 - mobilní čitelnost,
 - správnou hlavní cenu,
