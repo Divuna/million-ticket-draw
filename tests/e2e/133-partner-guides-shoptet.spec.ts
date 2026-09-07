@@ -30,6 +30,8 @@ const read = (path: string) =>
 
 const page = read('src/pages/PartnerGuides.tsx');
 const app = read('src/App.tsx');
+const sidebar = read('src/components/partner/PartnerSidebar.tsx');
+const topbar = read('src/components/partner/PartnerTopbar.tsx');
 const pdfScript = read('scripts/build-partner-guide-pdf.mjs');
 const contentSrc = read('src/content/partnerGuides/shoptetGuide.ts');
 
@@ -170,12 +172,12 @@ test('133f no real export link, hash or partner id is committed with the guide',
 
 test('133g the portal has a Návody entry pointing at /partner/navody', () => {
   expect(app).toContain('<Route path="/partner/navody" element={<PartnerGuides />} />');
-  expect(app).toContain('<Link to="/partner/navody">');
-  expect(app).toContain('Návody');
-
-  // Partner header only — the customer and admin navigations are untouched.
-  const header = app.slice(app.indexOf('function PartnerHeader'), app.indexOf('interface PartnerHeaderData'));
-  expect(header).toContain('/partner/navody');
+  // Partnerská navigace se přesunula z PartnerHeader v App.tsx do vlastní
+  // komponenty PartnerSidebar (a PartnerTopbar drží titulek stránky).
+  // Kontrola je stejná: portál má položku Návody mířící na /partner/navody.
+  expect(sidebar).toContain("to: '/partner/navody'");
+  expect(sidebar).toContain("label: 'Návody'");
+  expect(topbar).toContain("p === '/partner/navody'");
 });
 
 test('133h the page renders the shared content, not its own copy of the text', () => {

@@ -90,6 +90,10 @@ test.describe('contest and MioCoin RPC grant contract', () => {
         || file.startsWith('supabase/migrations/')
         || file.startsWith('supabase/sql/')
         || file.startsWith('docs/')
+        // Projektová dokumentace (CLAUDE.md, onemil_state.md, …) tyto RPC
+        // ZÁMĚRNĚ jmenuje v invariantech. Dokument nikdy nic nevolá, takže
+        // kontrola dál platí pro aplikační kód.
+        || file.endsWith('.md')
         || file === 'src/integrations/supabase/types.ts'
       ) {
         return false;

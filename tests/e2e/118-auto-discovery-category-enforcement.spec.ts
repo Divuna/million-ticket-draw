@@ -6,8 +6,9 @@ const worker = fs
   .readFileSync('supabase/functions/sales-lead-discover/index.ts', 'utf8')
   .replace(/\r\n/g, '\n');
 const loop = worker.split('const url = pool[cursor];')[1] ?? '';
-const categoryGuard = loop.split('// Firma prosla overenim webu i ARES.')[0] ?? '';
-const afterCategoryGuard = loop.split('// Firma prosla overenim webu i ARES.')[1] ?? '';
+const PERSISTENCE_BOUNDARY = 'const verifiedContact = await findVerifiedDiscoveryContact(';
+const categoryGuard = loop.split(PERSISTENCE_BOUNDARY)[0] ?? '';
+const afterCategoryGuard = loop.split(PERSISTENCE_BOUNDARY)[1] ?? '';
 
 test.describe('automatic discovery category enforcement', () => {
   test('auto-created e-shopy job accepts an e-shopy classification', () => {
@@ -46,9 +47,8 @@ test.describe('automatic discovery category enforcement', () => {
       requestedGroup: 'reklamni-agentury',
       classifiedGroup: 'gastronomie',
     })).toBe(true);
-    expect(afterCategoryGuard).toContain(
-      'cls.slug && validSlugs.has(cls.slug) ? cls.slug : null',
-    );
+    // Výběr cílové skupiny patří do kategorizační části, ne až za hranici persistence.
+    expect(categoryGuard).toContain('cls.slug && validSlugs.has(cls.slug) ? cls.slug : null');
   });
 
   test('website, identity, directory, dedupe, ARES and email protections remain in place', () => {

@@ -51,7 +51,7 @@ test.describe('sales lead proposal and initial-email workflow', () => {
   });
 
   test('failed Resend response cannot change lead status', () => {
-    const sendFailure = sender.indexOf('if (response.error)');
+    const sendFailure = sender.indexOf('if (!deliveryResult.success)');
     const markEmailed = deliveryMigration.indexOf('public.sales_lead_mark_emailed');
     expect(sendFailure).toBeGreaterThan(0);
     expect(markEmailed).toBeGreaterThan(0);

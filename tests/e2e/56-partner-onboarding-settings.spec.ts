@@ -87,8 +87,12 @@ async function setupApprovedPartner(): Promise<void> {
       auth_user_id: u.user.id,
       status: 'approved',
       approved_at: new Date().toISOString(),
-      reward_base_czk: 0,
-      reward_mc: 0,
+      // „Nenastavená" konverze (0/0) už neexistuje — `partners_reward_mc_one_decimal`
+      // vyžaduje `reward_mc >= 0.5` a nejvýše 1 desetinné místo (invariant z 18. 08. 2026).
+      // Seed proto startuje na PLATNÉ, ale JINÉ hodnotě, než na kterou 56b ukládá —
+      // test tím ověřuje skutečnou změnu, ne shodu s výchozí hodnotou sloupce.
+      reward_base_czk: 200,
+      reward_mc: 0.5,
     })
     .select('id')
     .single();

@@ -165,8 +165,11 @@ test.describe('99 — internal worker for prepared sales-lead e-mail batches', (
     const ui = `${adminPage}\n${batchesSheet}\n${batchDialog}`;
     expect(ui).not.toContain('process-sales-lead-email-batch');
     expect(ui).not.toContain('sales_lead_email_batch_claim_next');
-    expect(ui).not.toContain('sales_lead_email_batch_activate');
-    expect(ui).not.toContain('sales_lead_email_automation_settings');
+    // Admin aktivace dávky je od migrace 20260808160000 schválená cesta,
+    // takže se v UI vyskytovat SMÍ. Worker sám v UI být nesmí — viz kontroly výše.
+    // Kill-switch se v UI jen ČTE (select), aby šel po reloadu zobrazit správný
+    // stav. Zápis do něj z UI zůstává zakázaný.
+    expect(ui).not.toMatch(/automation_settings[^;]{0,160}\.(update|upsert|insert)\(/);
     expect(ui).not.toMatch(/>\s*(Spustit|Obnovit|Zapnout automatiku|Odeslat dávku)\s*</i);
     expect(batchDialog).toContain(".rpc('sales_lead_email_batch_prepare_paused'");
   });

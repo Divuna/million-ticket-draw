@@ -6,6 +6,7 @@ const sender = read('supabase/functions/send-sales-lead-email/index.ts');
 const delivery = read('supabase/functions/_shared/salesLeadInitialEmailDelivery.ts');
 const migration = read('supabase/migrations/20260805140658_sales_lead_initial_email_delivery.sql');
 const messages = read('src/components/admin/sales-leads/salesLeadsShared.ts');
+const providerSender = read('supabase/functions/_shared/salesLeadInitialEmailSender.ts');
 
 test('manual sender keeps human auth and delegates initial delivery server-side', () => {
   expect(sender).toContain('sales_leads.manage');
@@ -14,7 +15,7 @@ test('manual sender keeps human auth and delegates initial delivery server-side'
 });
 
 test('stable provider idempotency key and fail-closed uncertain outcome are wired', () => {
-  expect(sender).toContain('{ idempotencyKey }');
+  expect(providerSender).toContain('{ idempotencyKey }');
   expect(delivery).toContain('sales-lead-initial:v1:');
   expect(delivery).toContain('email_delivery_outcome_uncertain');
   expect(delivery).toContain('sales_lead_initial_email_commit');
@@ -22,7 +23,7 @@ test('stable provider idempotency key and fail-closed uncertain outcome are wire
 });
 
 test('Resend idempotency conflicts are fail-closed and have explicit administrator guidance', () => {
-  expect(sender).toContain('classifyInitialEmailProviderError');
+  expect(providerSender).toContain('classifyInitialEmailProviderError');
   expect(delivery).toContain('normalized === "invalid_idempotent_request"');
   expect(delivery).toContain('normalized === "concurrent_idempotent_requests"');
   expect(delivery).toContain('email_delivery_idempotency_conflict');

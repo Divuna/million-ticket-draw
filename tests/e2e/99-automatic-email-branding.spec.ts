@@ -1,6 +1,6 @@
 import { expect, test } from "@playwright/test";
 import { createHash } from "node:crypto";
-import { readFileSync, readdirSync } from "node:fs";
+import { existsSync, readFileSync, readdirSync } from "node:fs";
 import path from "node:path";
 import {
   applyOneMilBrandToLegacyAutomaticEmail,
@@ -105,7 +105,10 @@ test.describe("OneMil automatic email visual system", () => {
       expect(source, file).not.toMatch(/renderOneMilEmail|createClient|fetch\(/);
     }
 
-    const adminPage = read("src/pages/AdminOnboardingIncomplete.tsx");
+    // Stránka byla úplně odstraněna (PR #383) — silnější záruka než absence
+    // odesílací cesty v jejím kódu.
+    expect(existsSync(path.resolve(process.cwd(), 'src/pages/AdminOnboardingIncomplete.tsx'))).toBe(false);
+    const adminPage = '';
     expect(adminPage).not.toContain(
       "supabase.functions.invoke('send-onboarding-reminder')",
     );

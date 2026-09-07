@@ -14,26 +14,29 @@ const read = (path: string) => readFileSync(resolve(process.cwd(), path), 'utf8'
 
 const nav = read('src/components/admin/AdminContextSubNav.tsx');
 const partnersPage = read('src/pages/AdminPartners.tsx');
+// Načítání počtů se přesunulo do sdíleného hooku (refaktor hierarchických badge,
+// 24. 08. 2026). Nav si výsledek už jen vykresluje, kontrola zdroje dat platí dál.
+const counts = read('src/hooks/useAdminUsersPendingCounts.ts');
 
 test.describe('123 — admin Partneři nav badge počítá čekající Shoptet žádosti', () => {
   test('nav has a pending Shoptet requests count from the same source as the Shoptet žádosti tab', () => {
     // Stejná tabulka a stejný filtr jako `shoptetRequests` v AdminPartners.tsx
     // (`.from("shoptet_connection_requests").eq("status", "submitted")`).
-    expect(nav).toContain('pendingShoptetRequestsCount');
-    expect(nav).toContain('"shoptet_connection_requests"');
-    expect(nav).toContain('.eq("status", "submitted")');
+    expect(counts).toContain('pendingShoptetRequestsCount');
+    expect(counts).toContain('"shoptet_connection_requests"');
+    expect(counts).toContain('.eq("status", "submitted")');
   });
 
   test('Partneři badge combines partner registrations and Shoptet requests, without a second unrelated logic', () => {
     expect(nav).toContain('pendingPartnersNavCount');
-    expect(nav).toContain('pendingPartnerRegistrationsCount + pendingShoptetRequestsCount');
+    expect(counts).toContain('pendingPartnerRegistrationsCount + pendingShoptetRequestsCount');
     expect(nav).toMatch(/item\.path === "\/admin\/partners"\s*&&\s*pendingPartnersNavCount > 0/);
   });
 
   test('badge updates immediately after approve/reject via a shared event, plus polling fallback', () => {
-    expect(nav).toContain('shoptet-requests-changed');
-    expect(nav).toMatch(/addEventListener\("shoptet-requests-changed"/);
-    expect(nav).toMatch(/setInterval\(loadPendingShoptetRequestsCount, 60_000\)/);
+    expect(counts).toContain('shoptet-requests-changed');
+    expect(counts).toMatch(/addEventListener\("shoptet-requests-changed"/);
+    expect(counts).toMatch(/setInterval\(loadPendingShoptetRequestsCount, 60_000\)/);
 
     // AdminPartners.tsx must fire the event after both admin actions succeed.
     expect(partnersPage).toMatch(

@@ -11,6 +11,7 @@ const migration = read('supabase/migrations/20260805160406_sales_lead_email_batc
 const dialog = read('src/components/admin/sales-leads/SalesLeadEmailBatchDialog.tsx');
 const batches = read('src/components/admin/sales-leads/SalesLeadEmailBatchesSheet.tsx');
 const admin = read('src/pages/AdminSalesLeads.tsx');
+const preparePausedMigration = read('supabase/migrations/20260809170000_sales_lead_prepare_paused_when_automation_on.sql');
 const executableSql = migration.replace(/--.*$/gm, '');
 
 test.describe('98 — admin preparation of paused sales-lead e-mail batches', () => {
@@ -83,7 +84,7 @@ test.describe('98 — admin preparation of paused sales-lead e-mail batches', ()
     expect(dialog).toContain('const idempotencyKeyRef = useRef(crypto.randomUUID())');
     expect(dialog).toContain('p_idempotency_key: idempotencyKeyRef.current');
     expect(dialog.match(/idempotencyKeyRef\.current = crypto\.randomUUID\(\)/g)).toHaveLength(1);
-    expect(dialog).toContain('Dávka byla připravena. Žádný e-mail nebyl odeslán.');
+    expect(dialog).toContain('Dávka byla připravena jako pozastavená. Žádný e-mail nebyl odeslán.');
     expect(admin).toContain('setSelectedIds(new Set())');
   });
 
@@ -108,13 +109,17 @@ test.describe('98 — admin preparation of paused sales-lead e-mail batches', ()
     expect(dialog).not.toContain(".rpc('sales_lead_email_batch_create'");
     expect(dialog).not.toContain('expectedStatus');
     expect(dialog).not.toMatch(/automation_enabled === true \? 'scheduled' : 'paused'/);
-    expect(dialog).toContain("const automationSafelyDisabled = preview?.automation_enabled === false;");
-    expect(dialog).toContain('const canPrepare = Boolean(preview?.success) && automationSafelyDisabled && eligibleCount > 0;');
+    // Pojistka se přesunula na server: prepare vrací paused i při zapnuté automatice.
+    expect(preparePausedMigration).toContain('sales_lead_email_batch_prepare_paused');
+    expect(dialog).toContain('const canPrepare = Boolean(preview?.success) && eligibleCount > 0;');
     expect(dialog).toContain('disabled={!canPrepare || previewLoading || creating}');
     expect(dialog).toContain('if (!canPrepare || creating) return;');
-    expect(dialog).toContain("if (result.batch_status !== 'paused' || result.automation_enabled !== false) {");
+    expect(dialog).toContain("if (result.batch_status !== 'paused') {");
     expect(dialog).toContain("salesLeadEmailBatchReasonMessage('unexpected_batch_state')");
-    expect(dialog).toContain("salesLeadEmailBatchReasonMessage('automation_must_be_disabled')");
+    // `automation_must_be_disabled` už dialog nejmenuje napevno — RPC ho vrací
+    // jako `error` a dialog každý odmítnutý důvod mapuje jednotně. Zpráva pro
+    // uživatele musí existovat dál (viz test níže nad SALES_LEAD_EMAIL_BATCH_REASON_MESSAGES).
+    expect(dialog).toContain('toast.error(salesLeadEmailBatchReasonMessage(result.error));');
     // A rejected outcome must never clear the selection or close the dialog.
     expect(dialog).toMatch(/toast\.error\(salesLeadEmailBatchReasonMessage\('unexpected_batch_state'\)\);\s+return;\s+}/);
     expect(dialog).toMatch(/toast\.success\([\s\S]{0,200}?\);\s+setConfirmationOpen\(false\);\s+await onCreated\(result\);\s+onOpenChange\(false\);/);

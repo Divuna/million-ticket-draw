@@ -89,13 +89,13 @@ test.describe('message, notification and internal queue security contract', () =
     const adminMessages = read('src/hooks/useAdminMessages.ts');
 
     expect(processQueue).toContain('INTERNAL_FUNCTION_TOKEN');
-    expect(processQueue).toContain('SUPABASE_SERVICE_ROLE_KEY');
+    expect(processQueue).toContain('getSupabaseSecretKey');
     expect(processQueue).toContain('.from("event_queue")');
     expect(guardian).toContain('INTERNAL_FUNCTION_TOKEN');
-    expect(guardian).toContain('SUPABASE_SERVICE_ROLE_KEY');
+    expect(guardian).toContain('getSupabaseSecretKey');
     expect(guardian).toContain("rpc('check_guardian_notifications_batch')");
     expect(pipeline).toContain('INTERNAL_FUNCTION_TOKEN');
-    expect(pipeline).toContain('SUPABASE_SERVICE_ROLE_KEY');
+    expect(pipeline).toContain('getSupabaseSecretKey');
     expect(pipeline).toContain('rpc("run_pipeline_alerts")');
     expect(userMessages).toContain('sender: "user"');
     expect(adminMessages).toContain('sender: "admin"');

@@ -56,7 +56,7 @@ test.describe('partner API key mutation RPC grant contract', () => {
     const legacyRotate = read('supabase/functions/rotate-partner-api-key/index.ts');
 
     for (const edgeFunction of [adminGenerate, partnerRotate, legacyRotate]) {
-      expect(edgeFunction).toContain('SUPABASE_SERVICE_ROLE_KEY');
+      expect(edgeFunction).toContain('getSupabaseSecretKey');
       expect(edgeFunction).toContain('generate_partner_api_key');
     }
 

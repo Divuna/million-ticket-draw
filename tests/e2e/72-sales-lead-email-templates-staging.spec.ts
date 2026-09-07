@@ -134,6 +134,16 @@ test.describe.serial('Sales lead email templates – real staging acceptance', (
       source: 'staging_e2e',
       created_by: superId,
     };
+    // IČO 98100001–3 jsou pevná a `uq_sales_leads_ico` je unikátní index. Když
+    // předchozí běh spadl mimo afterAll, jeho řádky na stagingu zůstanou a každý
+    // další běh pak padá na duplicitě napořád. Úklid je proto i na začátku — maže
+    // výhradně vlastní testovací řádky (staging marker v názvu + doména
+    // e2e-template.example), na ničem jiném nesahá.
+    await admin.from('sales_leads').delete()
+      .in('ico', ['98100001', '98100002', '98100003'])
+      .like('company_name', 'E2E STAGING-%')
+      .like('contact_email', '%@e2e-template.example');
+
     const { data: leads, error: leadError } = await admin.from('sales_leads').insert([
       { ...common, company_name: companies.initial, status: 'priprava', ico: '98100001', dic: 'CZ98100001', website: 'https://initial.e2e-template.example', website_domain: 'initial.e2e-template.example', contact_email: 'initial@e2e-template.example' },
       { ...common, company_name: companies.reply, status: 'odpovedel', ico: '98100002', dic: 'CZ98100002', website: 'https://reply.e2e-template.example', website_domain: 'reply.e2e-template.example', contact_email: 'reply@e2e-template.example' },

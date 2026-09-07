@@ -57,7 +57,7 @@ test.describe('financial reward and affiliate RPC access contract', () => {
     const orderRewardMigration = read('supabase/migrations/20260613200849_partner_order_api_crypto_schema_fix.sql');
 
     for (const edgeFunction of [partnerActivate, importShoptetOrders]) {
-      expect(edgeFunction).toContain('SUPABASE_SERVICE_ROLE_KEY');
+      expect(edgeFunction).toContain('getSupabaseSecretKey');
       expect(edgeFunction).toContain('create_partner_order_reward');
       expect(edgeFunction).not.toContain('generate_partner_reward_code');
     }
