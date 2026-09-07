@@ -1,64 +1,72 @@
-# GDPR — stav konfliktu
+# GDPR — stav
 
-## ⛔ Konflikt NENÍ rozhodnutý
+## Konflikt dvou verzí je sjednocen
 
-**Žádná ze dvou verzí uložených v této složce není autoritativní.**
+Do 7. 9. 2026 existovaly v produkci **dvě různé aktivní** verze GDPR a nešlo určit, která platí.
+Obě byly kvůli tomu dočasně uložené v této složce vedle sebe.
 
-Dokud Pavel po právní kontrole nerozhodne, platí:
+**Sjednoceno.** Vznikl jeden nový návrh, který přebírá silné stránky obou a doplňuje ověřené
+skutečnosti o skutečném fungování platformy:
 
-- **AI nesmí sama vybrat vítěznou verzi.**
-- **AI nesmí jednu verzi přepsat druhou** ani je slučovat.
-- **AI nesmí vytvořit `AKTUALNI_GDPR.md`** ani jiný soubor, který by konflikt tiše rozhodl.
-- Při jakémkoli požadavku, který předpokládá jediné platné znění GDPR: **STOP a nahlásit Pavlovi.**
+**Nový zdroj: [`ZASADY_OCHRANY_OSOBNICH_UDAJU.md`](ZASADY_OCHRANY_OSOBNICH_UDAJU.md)**
 
-GDPR je proto **výslovná výjimka** z pravidla „GitHub je zdroj, CMS je publikovaná kopie"
-(viz [`../README.md`](../README.md)) — tady zatím žádný schválený zdroj neexistuje.
+Soubory `VERZE_GDPR.md` a `VERZE_OCHRANA_OSOBNICH_UDAJU.md` byly odstraněny, aby v repozitáři
+nezůstaly tři GDPR dokumenty. Jejich znění zůstává dohledatelné v historii gitu (PR #402).
 
 ---
 
-## Obě verze vedle sebe
+## ⏳ Dokument čeká na schválení Pavlem
 
-| | [`VERZE_GDPR.md`](VERZE_GDPR.md) | [`VERZE_OCHRANA_OSOBNICH_UDAJU.md`](VERZE_OCHRANA_OSOBNICH_UDAJU.md) |
-|---|---|---|
-| CMS slug | `legal/gdpr` | `legal/ochrana-osobnich-udaju` |
-| `is_active` v DB | true | true |
-| Délka | 1 281 znaků | **3 030 znaků** |
-| Poslední úprava | **29. 4. 2026** | 28. 12. 2025 |
-| Vlastní verzování | ne | ano — „Verze: 1.0 \| Platné od: 28. 12. 2025" |
-| IČO správce | ne | **ano (17795851)** |
-| Odkaz na Nařízení EU 2016/679 | ne | **ano** |
-| Datová schránka | ne | **ano (c9mizui)** |
-| Odkaz na ÚOOÚ | ne | **ano (www.uoou.cz)** |
-| Doby uchování | obecně („po dobu trvání účtu") | **konkrétně** (10 let u faktur, 3 roky neaktivita) |
-| Jmenovitý výčet zpracovatelů | **ano** (Stripe, Resend, OneSignal, Google, Meta) | ne — jen kategorie („platební brány", „dopravci") |
-| Předávání mimo EU / SCC | **ano** | ne |
-| Veřejně dostupné | **ano — `/gdpr`** | ne (route redirectuje na `/gdpr`) |
+**Dokument zatím není publikovaný a není autoritativní.**
 
-## Proč to nejde rozhodnout automaticky
+| Krok | Stav |
+|---|---|
+| Sjednocení dvou verzí do jednoho návrhu | ✅ hotovo |
+| Doplnění ověřených zpracovatelů | ✅ hotovo |
+| Schválení Pavlem po právní kontrole | ⏳ **čeká** |
+| Publikace do produkčního `content_pages` | ⏳ čeká na schválení |
+| Deaktivace staré verze v CMS | ⏳ čeká na schválení |
 
-**Novější není lepší a starší není horší.** Každá verze má něco, co ta druhá nemá:
+**Produkční `content_pages` se v tomto kroku neměnilo.** Na webu je pořád zobrazena původní kratší
+verze (`legal/gdpr`); druhá (`legal/ochrana-osobnich-udaju`) zůstává v databázi jako neaktivní pro
+veřejnost, protože route na ni přesměrovává.
 
-- `legal/gdpr` je o čtyři měsíce novější a jako jediná **jmenuje konkrétní zpracovatele**
-  a zmiňuje předávání mimo EU na základě standardních smluvních doložek.
-- `legal/ochrana-osobnich-udaju` je starší, ale **výrazně důkladnější** — nese vlastní verzování,
-  IČO, odkaz na nařízení i na ÚOOÚ, konkrétní doby uchování a datovou schránku.
+Po schválení se **stejný obsah** publikuje do CMS a druhý záznam se deaktivuje.
 
-Nelze proto určit, jestli novější text vznikl jako **vědomé zjednodušení**, nebo jako **náhrada
-naslepo**, při které se ztratil obsah. To je právní a vlastnické rozhodnutí, ne technické.
+---
 
-## Co je potřeba rozhodnout
+## Co nový dokument přinesl oproti oběma původním verzím
 
-1. **Které znění je platné** — nebo jestli se má vytvořit sloučená verze z obou.
-2. **Co s tím druhým** — deaktivovat v CMS, nebo ponechat jako historii.
-3. **Doplnit chybějící zpracovatele** — v obou verzích chybí:
-   - **Supabase** — přitom drží *všechna* osobní data (účty, platby, tikety, výhry).
-     `VYŽADUJE PRÁVNÍ SCHVÁLENÍ`
-   - **Vercel** — od 2. 9. 2026 produkční hosting. `VYŽADUJE PRÁVNÍ SCHVÁLENÍ`
+| | Původní `legal/gdpr` | Původní `ochrana-osobnich-udaju` | Nový dokument |
+|---|---|---|---|
+| Jmenovitý výčet zpracovatelů | ano (5) | ne | **ano (10 + dopravci)** |
+| **Supabase** jako zpracovatel | ne | ne | **ano** |
+| **Vercel** jako hosting | ne | ne | **ano** |
+| **OpenAI** a asistent podpory | ne | ne | **ano** |
+| **Sofinity** | ne | ne | **ano** |
+| IČO, spisová značka, datová schránka | ne | částečně | **ano** |
+| Odkaz na nařízení a na ÚOOÚ | ne | ano | **ano** |
+| Rozlišení právních základů po účelech | povrchně | částečně | **ano** |
+| Doby uchování | obecně | konkrétní, ale neověřené | **jen ověřitelné** |
+| Automatizované rozhodování | ne | ne | **ano** |
+| Ustanovení o dětech | ne | ne | **ano** |
+| Lhůta pro vyřízení žádosti | ne | ne | **ano** |
 
-## Postup po rozhodnutí
+### Co bylo z původních verzí vědomě vypuštěno
 
-1. Pavel s právníkem určí platné znění.
-2. Schválený text se uloží do této složky jako zdroj (název určí Pavel).
-3. Teprve pak se publikuje do CMS.
-4. Neplatná verze se v CMS deaktivuje a v GitHubu označí jako historická.
-5. Do té doby zůstávají oba soubory v této složce **jen jako doklad, co v produkci reálně je**.
+- **„Při neaktivitě delší než 3 roky účet mažeme."** V produkci **neexistuje žádná automatika**,
+  která by účty po neaktivitě mazala — ověřeno v `cron.job`. Tvrdit to by znamenalo slíbit něco,
+  co se neděje.
+- **„Zákonem vyžadované dokumenty uchováváme 10 let."** Konkrétní lhůta nebyla doložena; nahrazena
+  odkazem na dobu stanovenou právními předpisy.
+- **„Standardní smluvní doložky."** Konkrétní mechanismus u jednotlivých poskytovatelů nebyl
+  doložen; text proto odkazuje obecně na kapitolu V nařízení a nabízí sdělení konkrétní záruky
+  na vyžádání.
+
+---
+
+## Vazba na ostatní dokumenty
+
+Postup po schválení je popsaný v [`../README.md`](../README.md): GitHub je zdroj, produkční
+`content_pages` je publikovaná kopie. Do schválení se GDPR chová jako výjimka z tohoto pravidla —
+po schválení výjimka zaniká.
