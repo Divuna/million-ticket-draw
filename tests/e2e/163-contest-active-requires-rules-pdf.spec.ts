@@ -220,6 +220,13 @@ test.describe.serial('163 — active soutěž vyžaduje PDF pravidel', () => {
     const src = fs.readFileSync('supabase/functions/create-contest/index.ts', 'utf8');
     expect(src).toMatch(/if \(status === 'active'\)/);
     expect(src).toContain('Contest cannot be created as active');
-    expect(src).not.toContain('rules_pdf_url');
+
+    // Funkce `rules_pdf_url` ani nepřijímá, ani neukládá — kontroluje se INSERT
+    // payload, ne celý soubor: vysvětlující komentář ten název legitimně obsahuje.
+    const insertBlock = src.slice(src.indexOf('.insert({'), src.indexOf('.select()'));
+    expect(insertBlock.length).toBeGreaterThan(0);
+    expect(insertBlock).not.toContain('rules_pdf_url');
+    const destructured = src.match(/const \{([^}]*)\} = await req\.json\(\)/)?.[1] ?? '';
+    expect(destructured).not.toContain('rules_pdf_url');
   });
 });
