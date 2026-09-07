@@ -1,3 +1,55 @@
+# 07. 09. 2026 — Soutěž nesmí být aktivní bez PDF pravidel (PR #400, PRODUKCE)
+
+Právní audit veřejného obsahu ukázal, že formulář v `AdminContestManagement.tsx` PDF pravidel
+vyžadoval, ale **databáze ani `create-contest` to nevynucovaly**. Admin flow navíc soutěž nejdřív
+vytvořil — klidně rovnou jako `active` — a PDF nahrál až potom, protože cesta v úložišti potřebuje
+contest id. Mezi tím byla soutěž veřejně aktivní bez závazných pravidel; když upload selhal, kód
+v create módu propadl dál a soutěž tak zůstala natrvalo.
+
+## Ochrana ve třech nezávislých vrstvách
+
+1. **Trigger `trg_contest_active_requires_rules_pdf`** (`BEFORE INSERT OR UPDATE`) — INSERT `active`
+   bez PDF, UPDATE cokoli → `active` bez PDF i odebrání PDF aktivní soutěži se odmítnou. Prázdný
+   i bílý řetězec se počítají jako chybějící PDF.
+2. **Admin UI** zakládá soutěž jako `pending`, i když admin zvolil Active, a na `active` ji přepne
+   teprve po úspěšném uložení `rules_pdf_url`. Když se pravidla neuloží, soutěž zůstane čekající
+   a admin dostane jasnou hlášku.
+3. **`create-contest`** odmítá `status='active'`. Funkce `rules_pdf_url` vůbec nepřijímá, takže
+   každá aktivní soutěž vytvořená tudy by byla bez pravidel — byl to obchvat kolem kontroly v UI.
+
+## Proč trigger, a ne CHECK constraint
+
+`CHECK` se vyhodnocuje při **každém** UPDATE dotčeného řádku a `NOT VALID` jen přeskočí úvodní sken.
+Staging měl 100 historických `active` soutěží bez PDF; s CHECK by u nich přestal procházet
+`next_ticket_number`, který inkrementuje `buy_ticket_atomic`, tedy **by se rozbil nákup tiketu**.
+Trigger proto hlídá **přechody** do vadného stavu, ne klidový stav.
+
+Produkce v okamžiku nasazení: 2 aktivní soutěže (obě s PDF), 3 `pending` (všechny s PDF),
+0 `paused`, žádný cron ani jiná automatika soutěže nezakládá ani neaktivuje. Invariant je tam tedy
+úplný od začátku a nic se nemigrovalo.
+
+## První reálný nález ochrany
+
+Trigger hned při prvním staging běhu odmítl **CI seed win contestu**, který zakládal `active`
+soutěž bez PDF. Nebyl to protiklad nového pravidla, ale jeho první nález: testovací fixture
+vytvářela data, která by v produkci byla nelegální. Opravena proto **fixture, ne pravidlo** — seed
+se teď chová jako reálný admin. Stejný placeholder už používaly seedy spec 18 a 20.
+
+## Ověření
+
+- Spec 163 (staging E2E, 8 testů): INSERT `active` bez PDF zamítnut · s PDF projde ·
+  `pending` → `active` bez PDF zamítnuto · po doplnění PDF projde · odebrání PDF (NULL i `"   "`)
+  zamítnuto · admin flow „Active + PDF" končí aktivní soutěží s pravidly · historicky vadný řádek
+  dál prodává tikety · `create-contest` neumí založit aktivní soutěž. Testovací soutěže neprodaly
+  jediný tiket.
+- Produkční postcheck (transakce s ROLLBACK): všech 5 scénářů OK, 0 zbytků, data beze změny
+  (45 soutěží, 4 142 tiketů, 139 výherců).
+
+## Nasazení
+
+Migrace `20260907140000_contest_active_requires_rules_pdf` na produkci `xkzhjldrojjlrkezorey`,
+`create-contest` v366 ACTIVE, PR #400 mergnut, `main` = `5567b9c2`.
+
 # 07. 09. 2026 — Shoptet baseline: staré objednávky nikdy nevydají odměnu (#289 část C, PR #398, PRODUKCE)
 
 Audit issue #289 ukázal, že části A (`/top-up`, spodní navigace, Zprávy v profilu) a B (partnerský

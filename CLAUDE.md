@@ -195,6 +195,39 @@ slevou. Zdroj byl do GitHubu dorovnán 05. 09. 2026 read-only exportem, bez jak�
 
 ---
 
+# SOUTĚŽ NESMÍ BÝT AKTIVNÍ BEZ PDF PRAVIDEL (PRODUKCE, 07. 09. 2026)
+
+**Produkčně nasazeno se schválením Pavla.** Migrace
+`20260907140000_contest_active_requires_rules_pdf` je na produkci `xkzhjldrojjlrkezorey`,
+`create-contest` v366 ACTIVE, PR #400 mergnut, `main` = `5567b9c2`.
+
+**Závazné invarianty (neměnit bez schválení Pavla):**
+
+- **`status = 'active'` ⇒ `rules_pdf_url` musí být neprázdné.** Prázdný i bílý řetězec se počítají
+  jako chybějící PDF.
+- **Vynucují to tři nezávislé vrstvy** — trigger `trg_contest_active_requires_rules_pdf`, admin UI
+  (zakládá `pending` a aktivuje až po uložení PDF) a `create-contest` (odmítá `status='active'`).
+  **Žádnou z nich neodstraňovat** — DB vrstva je jediná, která zachytí i přímý zápis.
+- **⚠️ NEPŘEVÁDĚT na CHECK constraint.** CHECK se vyhodnocuje při **každém** UPDATE dotčeného řádku
+  a `NOT VALID` jen přeskočí úvodní sken. Historicky `active` řádek bez PDF by pak nešlo
+  aktualizovat včetně `next_ticket_number`, který inkrementuje `buy_ticket_atomic` — rozbil by se
+  nákup tiketu. Trigger proto hlídá **přechody** do vadného stavu, ne klidový stav.
+- **Admin UI nesmí zakládat soutěž rovnou jako `active`.** PDF se nahrává až po vzniku řádku (cesta
+  v úložišti potřebuje contest id), takže by vzniklo okno, ve kterém je soutěž veřejně aktivní bez
+  závazných pravidel. Při neúspěšném uložení pravidel zůstává `pending`.
+- **`create-contest` `rules_pdf_url` nepřijímá ani neukládá** — proto tam `active` nelze bezpečně
+  povolit vůbec. Nevracet.
+- **Každý seed nebo fixture, která zakládá `active` soutěž, musí nastavit `rules_pdf_url`.** CI seed
+  win contestu to už dělá (`https://example.com/e2e-test-rules.pdf`).
+
+Produkce v okamžiku nasazení: 2 aktivní soutěže (obě s PDF), 3 `pending` (všechny s PDF), 0 `paused`,
+žádný cron ani jiná automatika soutěže nezakládá ani neaktivuje. Invariant je proto úplný a nic se
+nemigrovalo.
+
+Hlídá spec `tests/e2e/163-contest-active-requires-rules-pdf.spec.ts`.
+
+---
+
 # SHOPTET BASELINE — STARÉ OBJEDNÁVKY NIKDY NEVYDAJÍ ODMĚNU (#289 část C, PRODUKCE, 07. 09. 2026)
 
 **Produkčně nasazeno 07. 09. 2026 se schválením Pavla.** Migrace
