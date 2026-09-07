@@ -92,8 +92,10 @@ const relativeCzech = (iso: string | null): string => {
  * - Stránka je přístupná pouze pro isSuperAdmin; jinak redirect na /admin.
  * - superadmin řádky jsou pouze pro zobrazení — nelze je zde vytvořit ani odebrat.
  * - Povoleny jsou výhradně přechody user ⇄ admin (subadmin), nikdy nic se superadminem.
- * - Zápis jde přímým insert/update do user_roles (RLS to už omezuje jen na superadmina),
- *   stejný osvědčený vzor jako AdminUsers.tsx. Žádná DB/RLS změna.
+ * - Změna role jde výhradně přes chráněnou RPC `set_user_role(p_user_id, p_role)`
+ *   (stejná cesta jako AdminUsers.tsx) — žádný přímý insert/update do user_roles
+ *   z klienta. RPC sama ověřuje superadmina, blokuje partnerský účet a chrání
+ *   posledního superadmina. Žádná DB/RLS změna.
  */
 const AdminAdmins: React.FC = () => {
   const { user, loading: authLoading } = useAuth();
@@ -301,20 +303,15 @@ const AdminAdmins: React.FC = () => {
 
     try {
       setBusyId(target.id);
-      if (target.role === 'user') {
-        // Existing user_roles row → flip to admin.
-        const { error } = await supabase
-          .from('user_roles')
-          .update({ role: 'admin' as any })
-          .eq('user_id', target.id);
-        if (error) throw error;
-      } else {
-        // No row yet → insert admin.
-        const { error } = await supabase
-          .from('user_roles')
-          .insert({ user_id: target.id, role: 'admin' as any });
-        if (error) throw error;
-      }
+
+      // Chráněná serverová cesta: set_user_role ověřuje superadmina,
+      // blokuje partnerský účet a chrání posledního superadmina — žádný
+      // přímý zápis do user_roles z klienta.
+      const { error } = await supabase.rpc('set_user_role', {
+        p_user_id: target.id,
+        p_role: 'admin',
+      });
+      if (error) throw error;
 
       await supabase.rpc('log_admin_action', {
         action_name: 'subadmin_granted',
@@ -348,10 +345,14 @@ const AdminAdmins: React.FC = () => {
 
     try {
       setBusyId(target.id);
-      const { error } = await supabase
-        .from('user_roles')
-        .update({ role: 'user' as any })
-        .eq('user_id', target.id);
+
+      // Chráněná serverová cesta: set_user_role ověřuje superadmina,
+      // blokuje partnerský účet a chrání posledního superadmina — žádný
+      // přímý zápis do user_roles z klienta.
+      const { error } = await supabase.rpc('set_user_role', {
+        p_user_id: target.id,
+        p_role: 'user',
+      });
       if (error) throw error;
 
       await supabase.rpc('log_admin_action', {
