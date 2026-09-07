@@ -195,6 +195,59 @@ slevou. Zdroj byl do GitHubu dorovnán 05. 09. 2026 read-only exportem, bez jak�
 
 ---
 
+# PRÁVNÍ DOKUMENTY — HIERARCHIE ZDROJŮ PRAVDY (07. 09. 2026)
+
+**`docs/pravni-dokumenty/` je jediný autoritativní zdroj aktuálního právního znění OneMil.**
+
+Závazné pořadí zdrojů:
+
+1. `ONEMIL_BUSINESS_CONTEXT.md` — obchodní a produktový model
+2. `COMPANY_CONTEXT.md` — firemní identita a údaje provozovatele
+3. **`docs/pravni-dokumenty/`** — aktuální právní znění
+4. `docs/launch-readiness/` — **pouze** audity, checklisty, historická zjištění
+5. vše ostatní — historické, neautoritativní
+
+**Závazná pravidla (neměnit bez schválení Pavla):**
+
+- **`docs/launch-readiness/` se nikdy nesmí použít jako zdroj právního znění.** Popisuje, co se
+  našlo a co je potřeba schválit — ne co platí.
+- **Právní PDF mimo `docs/pravni-dokumenty/` se nesmí použít jako šablona ani jako platný text.**
+  Seznam je v `docs/pravni-dokumenty/HISTORICKE_SOUBORY.md`. Týká se to i kořenových
+  `OneMil_VOP.pdf`, `OneMil_GDPR_FINAL.pdf`, `OneMil_Pravidla_souteze.pdf` a kopie
+  v `test grafika/`.
+- **Nikdy si sám nevybírej mezi dvěma verzemi téhož právního dokumentu.** Když nelze bezpečně
+  určit aktuální znění: **STOP** a nahlas konflikt Pavlovi.
+- **⛔ OTEVŘENÝ KONFLIKT:** GDPR má dvě různé aktivní verze — `legal/gdpr` (1 281 zn., novější)
+  a `legal/ochrana-osobnich-udaju` (3 030 zn., obsáhlejší, s verzí a IČO). **Nerozhodovat
+  automaticky.** Detail v `docs/pravni-dokumenty/OCHRANA_OSOBNICH_UDAJU/README.md`.
+- **Nevytvářet nový business source of truth.** `docs/pravni-dokumenty/` obsahuje výhradně právní
+  dokumenty a šablony.
+
+## Postup při tvorbě pravidel nové soutěže
+
+Když Pavel řekne „Jdeme vytvořit soutěž o Corvette C8", AI postupuje takto:
+
+1. Načte aktuální GitHub `main`.
+2. Načte data konkrétní soutěže ze Supabase, pokud už soutěž existuje.
+3. Načte `ONEMIL_BUSINESS_CONTEXT.md`.
+4. Načte `COMPANY_CONTEXT.md`.
+5. Načte **výhradně** `docs/pravni-dokumenty/SABLONA_PRAVIDEL_SOUTEZE.md`.
+6. Automaticky doplní vše, co systém zná — `contests.title`, `id`, `ticket_count`, `ticket_price`,
+   `main_prize`, `bonus_prizes`.
+7. Pavla se zeptá **jen** na to, co ze systému zjistit nelze: území soutěže, specifikace a hodnota
+   hlavní výhry, způsob a lhůty předání, náklady na předání, postup při nevyzvednutí, zvláštní
+   podmínky.
+8. Po potvrzení připraví konkrétní pravidla.
+9. Připraví Word a PDF.
+10. Finální Word i PDF archivuje v `docs/pravni-dokumenty/souteze/NAZEV_SOUTEZE/`.
+11. PDF je určeno k nahrání ke konkrétní soutěži do `rules_pdf_url`.
+12. **Soutěž se nesmí aktivovat, dokud finální PDF není připravené a schválené.**
+13. **Nikdy nepoužije pravidla jiné soutěže jako pouhou kopii** bez kontroly každého konkrétního
+    údaje.
+14. Při konfliktu mezi právními zdroji: **STOP** a nahlásit Pavlovi.
+
+---
+
 # SOUTĚŽ NESMÍ BÝT AKTIVNÍ BEZ PDF PRAVIDEL (PRODUKCE, 07. 09. 2026)
 
 **Produkčně nasazeno se schválením Pavla.** Migrace
