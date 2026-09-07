@@ -1,16 +1,15 @@
-Use this as the official OneMil brand manual for all future design and UI work.
+Use docs/advertising/GRAPHICS_SOURCE_OF_TRUTH.md as the only authoritative source for all future OneMil public design, marketing graphics and UI styling. Older brand-kit manuals, tokens, PDFs and reference images are subordinate implementation references and must never override it.
 
-OneMil is a premium competition app for CZ/SK users. The brand must feel modern, trustworthy, luxurious and energetic. It must never look like casino, gambling, betting, lottery or cheap “get rich quick” design.
+OneMil is a premium competition app for CZ/SK users. The brand must feel modern, trustworthy, luxurious, clean and energetic. It must never look like casino, gambling, betting, lottery or cheap “get rich quick” design.
 
-Final visual direction: dark premium tech-luxury.
+Final public visual direction: LIGHT premium OneMil.
 Typography: Poppins for headings, Inter for body/UI text.
-Main accent: orange (#FF8A00).
-Base colors: black, dark navy, graphite.
-Premium accents: metallic silver, platinum and subtle champagne/gold.
+Primary public canvas: white #FFFFFF, warm cream #FAFAF9, cloud #F7F8FB.
+Text: dark ink #111827, secondary #4B5563.
+Main accent: Energy Orange #FF8A00. Approved UI orange #F97316 may be used where it matches existing web UI. Warm Amber #FFB547 is a subtle highlight.
+Do not use black, deep navy or graphite as a full-page/full-card default background for new public graphics.
 
-Primary logo: OneMil wordmark with trophy/number 1 behind or connected to text.
-Secondary logo: trophy/number 1 above OneMil wordmark.
-Icon-only: trophy/number 1 symbol.
+Use only the original approved OneMil and MioCoin logos/icons already stored in the project. Never invent, redraw, reinterpret or recolor a new logo or symbol. If the original logo cannot be placed accurately, leave the proposal without a logo and add the original asset later.
 
 Do not use casino, hazard, betting, jackpot, chips, roulette, cards or slot-machine aesthetics.
 Do not change business logic, routes, database, payments, wallet, contests, tickets, winners or Partner Offers unless explicitly requested.
