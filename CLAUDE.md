@@ -195,12 +195,14 @@ slevou. Zdroj byl do GitHubu dorovnán 05. 09. 2026 read-only exportem, bez jak�
 
 ---
 
-# SHOPTET BASELINE — STARÉ OBJEDNÁVKY NIKDY NEVYDAJÍ ODMĚNU (#289 část C, 07. 09. 2026, NENASAZENO NA PRODUKCI)
+# SHOPTET BASELINE — STARÉ OBJEDNÁVKY NIKDY NEVYDAJÍ ODMĚNU (#289 část C, PRODUKCE, 07. 09. 2026)
 
-**Stav: v PR, aplikováno a ověřeno jen na stagingu `dxmowysntemfqfnanxua`
-(migrace `20260907090000_shoptet_connection_baseline_orders` + EF `verify-shoptet-connection`,
-`approve-shoptet-connection`, `import-shoptet-orders`). Produkční migrace ani redeploy
-NEPROBĚHLY — vyžadují samostatné výslovné schválení Pavla.**
+**Produkčně nasazeno 07. 09. 2026 se schválením Pavla.** Migrace
+`20260907090000_shoptet_connection_baseline_orders` je na produkci `xkzhjldrojjlrkezorey`;
+EF `verify-shoptet-connection` v1, `approve-shoptet-connection` v56 a `import-shoptet-orders` v63
+jsou ACTIVE. `main` = `b6f86e33`; frontend jde na produkci přes Vercel z `main`.
+Nasazeno v pořadí migrace → Edge Functions → merge, protože partnerský dashboard čte
+`verified_at` a bez migrace by se sekce Shoptet rozbila.
 
 **Schválené rozhodnutí Pavla: baseline platí POUZE pro NOVÁ napojení vzniklá po nasazení.
 BOHEMIA INFINITY s.r.o. ani vereonika sro se zpětně nepřevádějí.**
