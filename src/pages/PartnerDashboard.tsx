@@ -12,6 +12,7 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { supabase } from '@/integrations/supabase/client';
 import { openPartnerInvoiceExport } from '@/lib/partnerInvoiceDownload';
 import { buildShoptetWidgetSnippet } from '@/lib/shoptetWidgetSnippet';
+import { aggregatePartnerRewardCodeStats } from '@/lib/partnerRewardCodeStats';
 import { toast } from 'sonner';
 import { Loader2, Building2, Coins, Key, FileText, TrendingUp, Calendar, Upload, Image, Clock, CheckCircle, XCircle, Mail, BookOpen, Rocket, ListChecks, ExternalLink, AlertCircle, Info, Gift, RefreshCw, Copy, Eye, EyeOff, Activity, Settings, Save, Plus, Send, RotateCcw, Tag, Receipt, Download } from 'lucide-react';
 import { Textarea } from '@/components/ui/textarea';
@@ -910,12 +911,17 @@ const PartnerDashboard = () => {
         .eq('partner_id', partnerData.id);
 
       if (codesData) {
-        const totalIssued = codesData.length;
-        const totalActivated = codesData.filter(c => c.status === 'activated').length;
-        const totalIssuedCoins = codesData.reduce((sum, c) => sum + Number(c.coins || 0), 0);
-        const totalActivatedCoins = codesData
-          .filter(c => c.status === 'activated')
-          .reduce((sum, c) => sum + Number(c.coins || 0), 0);
+        // "Vydané" (issued) smí počítat jen kódy, které se pro zákazníka
+        // skutečně staly nárokem — status `issued` nebo `activated`.
+        // `pending` (nárok ještě nevznikl) a `cancelled` (nárok nikdy
+        // nevznikl) se do vydaných nesmí počítat, jinak partner vidí
+        // nafouknuté číslo, které zahrnuje MioCoiny, které nikdo nedostal.
+        const {
+          issuedCount: totalIssued,
+          issuedCoins: totalIssuedCoins,
+          activatedCount: totalActivated,
+          activatedCoins: totalActivatedCoins,
+        } = aggregatePartnerRewardCodeStats(codesData);
 
         setStats({ totalIssued, totalActivated, totalIssuedCoins, totalActivatedCoins });
 
@@ -924,21 +930,21 @@ const PartnerDashboard = () => {
         for (let i = 0; i < 4; i++) {
           const weekStart = startOfWeek(subWeeks(new Date(), i), { weekStartsOn: 1 });
           const weekEnd = endOfWeek(subWeeks(new Date(), i), { weekStartsOn: 1 });
-          
+
           const weekCodes = codesData.filter(c => {
             const issuedDate = new Date(c.issued_at);
             return issuedDate >= weekStart && issuedDate <= weekEnd;
           });
 
+          const weekStats = aggregatePartnerRewardCodeStats(weekCodes);
+
           reports.push({
             week_start: format(weekStart, 'dd.MM.yyyy', { locale: cs }),
             week_end: format(weekEnd, 'dd.MM.yyyy', { locale: cs }),
-            issued_count: weekCodes.length,
-            issued_coins: weekCodes.reduce((sum, c) => sum + Number(c.coins || 0), 0),
-            activated_count: weekCodes.filter(c => c.status === 'activated').length,
-            activated_coins: weekCodes
-              .filter(c => c.status === 'activated')
-              .reduce((sum, c) => sum + Number(c.coins || 0), 0),
+            issued_count: weekStats.issuedCount,
+            issued_coins: weekStats.issuedCoins,
+            activated_count: weekStats.activatedCount,
+            activated_coins: weekStats.activatedCoins,
           });
         }
         setWeeklyReports(reports);
