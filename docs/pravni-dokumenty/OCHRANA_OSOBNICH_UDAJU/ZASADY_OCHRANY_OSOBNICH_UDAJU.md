@@ -67,8 +67,13 @@ a jaká máte práva. Postupujeme podle Nařízení Evropského parlamentu a Rad
 **Nezpracováváme** údaje o vaší platební kartě. Platbu provádíte přímo u platební brány Stripe;
 my se dozvíme pouze to, že platba proběhla, její výši a identifikátor transakce.
 
-**Nezpracováváme** zvláštní kategorie osobních údajů, tedy například údaje o zdravotním stavu,
-politických názorech nebo náboženském přesvědčení.
+**Zvláštní kategorie osobních údajů** — například údaje o zdravotním stavu, politických názorech
+nebo náboženském přesvědčení — od vás pro používání OneMil **nevyžadujeme ani je cíleně
+neshromažďujeme**. Nemáme na ně žádné pole a k ničemu je nepotřebujeme.
+
+Pokud takový údaj sami uvedete ve volném textu zprávy zákaznické podpoře nebo asistentovi
+zákaznické podpory, může se stát součástí této komunikace. Proto do zpráv neuvádějte citlivé údaje,
+které pro vyřízení vašeho dotazu nejsou potřeba.
 
 ---
 
