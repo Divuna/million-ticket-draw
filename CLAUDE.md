@@ -47,6 +47,70 @@ výslovné schválení Pavla.
 
 ---
 
+# PŘEDSTARTOVNÍ RESET SYSTÉMU — TRVALÉ PRAVIDLO (potvrzeno Pavlem 07. 09. 2026)
+
+Stejné pravidlo je i v `AGENTS.md` a `.cursorrules` — jsou to tři kopie téhož, ne tři různé režimy.
+
+**Veškerá současná provozní data OneMil jsou stále testovací.** Před ostrým spuštěním a příchodem
+prvních skutečných zákazníků musí proběhnout **jeden řízený kompletní předstartovní reset systému**.
+
+**Reset zatím NEPROBĚHL.** Do jeho provedení se s produkčními daty pracuje jako s testovacími —
+ale to **není důvod je mazat, měnit ani „uklízet" mimochodem**. Jediná povolená cesta k jejich
+odstranění je ten jeden schválený reset.
+
+## Co reset odstraní (provozní testovací data)
+
+- zákaznické a testovací účty — **kromě zachovaného superadmina**,
+- profily,
+- MioCoin peněženky a jejich pohyby,
+- soutěže,
+- tikety,
+- výhry a testovací ceny,
+- vouchery a jejich testovací použití,
+- zprávy a notifikace,
+- testovací platby,
+- testovací partnery a jejich provozní data,
+- testovací faktury,
+- referral / affiliate / influencer testovací data,
+- Shoptet testovací objednávky a importní provozní data,
+- e-mailovou frontu a další testovací provozní záznamy.
+
+## Co reset NESMÍ odstranit (samotný systém)
+
+- databázovou strukturu,
+- migrace,
+- Edge Functions,
+- RLS a bezpečnostní pravidla,
+- nutná systémová nastavení,
+- právní obsah a jeho zdroje (`docs/pravni-dokumenty/`, právní stránky v `content_pages`),
+- potřebné systémové šablony a konfiguraci,
+- **zachovaný superadmin účet.**
+
+## Závazný postup
+
+1. **Přesný seznam tabulek a pořadí mazání se musí těsně před resetem znovu vytvořit** podle
+   **aktuální produkční databáze** — read-only mapou dat. **Nepoužívat starší seznam z dokumentace
+   ani z dřívějšího chatu**: schéma se mezitím mění a zastaralé pořadí by narazilo na cizí klíče
+   nebo naopak nechalo osiřelá data.
+2. Reset je **destruktivní produkční operace** a smí být spuštěn **až po novém výslovném schválení
+   Pavla**. Dřívější souhlas s přípravou, s mapou dat ani s tímto pravidlem **není** souhlasem
+   se spuštěním.
+3. Před spuštěním musí existovat **ověřená záloha** (produkční PITR je vypnutý — platí postup
+   z `docs/rollback/`, tedy ruční `pg_dump` ověřený `pg_restore -l`).
+
+## Co z toho plyne pro AI pracovníky
+
+- **Žádný agent nesmí reset spustit sám, ani po částech, ani „jen pro jednu tabulku".**
+  Hromadné `DELETE` / `TRUNCATE` nad produkčními provozními daty je vždy dangerous action.
+- **Nepovažuj testovací povahu dat za povolení je smazat.** Testovací data drží auditní stopu
+  a rozpracované ověřování; jejich předčasné smazání je nevratná ztráta důkazů.
+- **Když narazíš na zjevně testovací záznam, který překáží**, zaznamenej ho jako `OPEN ISSUE`
+  s poznámkou „vyřeší předstartovní reset" — neřeš ho mazáním.
+- Otevřené položky, které na tento reset čekají, jsou už zaznamenané v `CLAUDE.md`
+  a `onemil_state.md` (mj. rekonciliace wallet/ledger a historické `cs_test_` platby).
+
+---
+
 # DÁVKA BEZPEČNOSTNÍCH A FUNKČNÍCH OPRAV — TRVALÉ INVARIANTY (produkce, 02.–05. 09. 2026)
 
 **Ověřeno read-only synchronizačním auditem 05. 09. 2026** (GitHub `main` × produkční Supabase
