@@ -1,17 +1,23 @@
 # OneMil — vizuální pravidla reklam
 
+> Závazný vizuální směr určuje `GRAPHICS_SOURCE_OF_TRUTH.md`. Tento soubor jej pouze rozvádí pro reklamy a nesmí ho přepisovat.
+
 ## Povolený styl
 
-- tmavé luxusní pozadí
-- kovová stříbrná / platinum
-- oranžový CTA akcent
+- světlé bílé / warm cream pozadí
+- tmavě navy až černý text
+- Energy Orange jako hlavní CTA a brand akcent
+- Warm Amber pouze jako jemný gradient nebo světelný detail
 - realistické produkty
-- prémiové nasvícení
+- prémiové, čisté nasvícení
 - moderní mobilní aplikace
 - čisté rozhraní
 - minimální text
 - dostatek volného prostoru
 - dobrá čitelnost na mobilu
+- měkké stíny a jemné okraje místo tmavých celoplošných panelů
+
+**Zakázáno jako výchozí styl:** celoplošné černé/navy pozadí, dark premium tech-luxury layout a casino/gaming atmosféra.
 
 ## Povolené motivy
 
@@ -53,8 +59,10 @@ Nepoužívat vizuály, které připomínají:
 - Jeden hlavní headline.
 - Jedno CTA.
 - Logo nesmí být utopené v pozadí.
+- Používat pouze originální OneMil/MioCoin logo a ikony z projektu.
 - CTA musí být výrazné, ale ne levné ani agresivní.
 - Produkt/cena má působit prémiově, ne bazarově.
+- Výchozí plocha je světlá; tmavá barva smí být jen text, stín, detail nebo přirozená část fotografie.
 
 ## Mobil-first pravidlo
 
