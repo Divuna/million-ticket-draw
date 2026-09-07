@@ -44,9 +44,13 @@ const PARTNER_EMAIL   = `spec161-partner-${RUN_ID}@onemil.cz`;
 const UNVERIFIED_EMAIL = `spec161-unverified-${RUN_ID}@onemil.cz`;
 const PASSWORD = `Spec161!${RUN_ID}x`;
 
-// Tři historické objednávky + jedna, která přibude až po aktivaci.
+// A/B/C jsou v exportu při ověření. D přibude AŽ MEZI ověřením a schválením —
+// existovala tedy před aktivací a musí skončit v baseline stejně jako ostatní.
+// E vznikne až po aktivaci a jako jediná smí dostat odměnu.
 const OLD_ORDERS = [`S161-OLD-A-${RUN_ID}`, `S161-OLD-B-${RUN_ID}`, `S161-OLD-C-${RUN_ID}`];
-const NEW_ORDER  = `S161-NEW-${RUN_ID}`;
+const LATE_ORDER = `S161-OLD-D-${RUN_ID}`;
+const PRE_ACTIVATION_ORDERS = [...OLD_ORDERS, LATE_ORDER];
+const NEW_ORDER  = `S161-NEW-E-${RUN_ID}`;
 
 // Stávající produkční napojení, kterých se změna nesmí dotknout.
 const LEGACY_PARTNER_NAMES = ['BOHEMIA INFINITY s.r.o.', 'vereonika sro'];
@@ -64,6 +68,15 @@ function buildCsv(rows: Array<{ order: string; paid: boolean }>): string {
     (r) => `${r.order};pending;250;${r.paid ? '1' : '0'};spec161-customer-${RUN_ID}@example.invalid`,
   );
   return [header, ...body].join('\n');
+}
+
+/** Hlavičky sedí, ale řádek nemá číslo objednávky → parser ho označí za neplatný. */
+function buildCsvWithInvalidRow(): string {
+  return [
+    'code;statusName;totalPriceWithVat;paid;email',
+    `${OLD_ORDERS[0]};pending;250;0;spec161-customer-${RUN_ID}@example.invalid`,
+    `;pending;250;0;spec161-customer-${RUN_ID}@example.invalid`,
+  ].join('\n');
 }
 
 const ctx: {
@@ -308,6 +321,66 @@ test.describe.serial('161 — Shoptet baseline: staré objednávky nikdy nevydaj
     expect(req?.verified_order_count).toBe(OLD_ORDERS.length);
   });
 
+  test('161b2: vadný export po úspěšném ověření zruší schvalitelnost', async () => {
+    // Scénář B ze zadání: partner ověří, pak se mu export rozbije. Staré
+    // `verified_at` nesmí zůstat viset, jinak by admin schválil napojení nad
+    // exportem, který už nejde načíst.
+    await svc().storage.from(BUCKET).remove([CSV_PATH]);
+
+    const token = await signIn(PARTNER_EMAIL, PASSWORD);
+    const { json } = await callFunction('verify-shoptet-connection', token, {
+      request_id: ctx.requestId,
+    });
+    expect(json.verified).toBe(false);
+
+    const client = svc();
+    const { data: req } = await client
+      .from('shoptet_connection_requests')
+      .select('verified_at, verified_order_count')
+      .eq('id', ctx.requestId!)
+      .single();
+    expect(req?.verified_at, 'neúspěšné ověření musí zneplatnit to předchozí').toBeNull();
+    expect(req?.verified_order_count).toBeNull();
+
+    const { data: baseline } = await client
+      .from('shoptet_connection_baseline_orders')
+      .select('id')
+      .eq('request_id', ctx.requestId!);
+    expect(baseline ?? [], 'předběžná baseline se musí zahodit').toHaveLength(0);
+  });
+
+  test('161b3: export s neplatným řádkem neprojde jako ověřený', async () => {
+    // Scénář C: hlavičky sedí, ale jeden řádek nemá číslo objednávky. Nevíme
+    // tedy, co v exportu je — baseline by mohla objednávku vynechat.
+    await uploadCsv(buildCsvWithInvalidRow());
+
+    const token = await signIn(PARTNER_EMAIL, PASSWORD);
+    const { json } = await callFunction('verify-shoptet-connection', token, {
+      request_id: ctx.requestId,
+    });
+    expect(json.verified).toBe(false);
+    expect(json.reason).toBe('invalid_rows');
+    expect(json.rows_invalid).toBeGreaterThan(0);
+
+    const { data: req } = await svc()
+      .from('shoptet_connection_requests')
+      .select('verified_at')
+      .eq('id', ctx.requestId!)
+      .single();
+    expect(req?.verified_at).toBeNull();
+  });
+
+  test('161b4: po opravě exportu ověření zase projde', async () => {
+    await uploadCsv(buildCsv(OLD_ORDERS.map((order) => ({ order, paid: false }))));
+
+    const token = await signIn(PARTNER_EMAIL, PASSWORD);
+    const { json } = await callFunction('verify-shoptet-connection', token, {
+      request_id: ctx.requestId,
+    });
+    expect(json.verified).toBe(true);
+    expect(json.baseline_orders).toBe(OLD_ORDERS.length);
+  });
+
   test('161c: neověřenou žádost nelze aktivovat', async () => {
     test.skip(!SUPERADMIN_EMAIL || !SUPERADMIN_PASSWORD, 'chybí staging superadmin secrets');
     const token = await signIn(SUPERADMIN_EMAIL, SUPERADMIN_PASSWORD);
@@ -328,10 +401,45 @@ test.describe.serial('161 — Shoptet baseline: staré objednávky nikdy nevydaj
     expect(p?.shoptet_import_enabled).toBe(false);
   });
 
-  test('161d: schválení aktivuje baseline a zapne import', async () => {
+  test('161c2: rozbitý export zastaví i samotné schválení (fail-closed)', async () => {
     test.skip(!SUPERADMIN_EMAIL || !SUPERADMIN_PASSWORD, 'chybí staging superadmin secrets');
-    const token = await signIn(SUPERADMIN_EMAIL, SUPERADMIN_PASSWORD);
 
+    // Ověření prošlo (161b4), ale mezi ověřením a schválením se export rozbil.
+    // Schválení si dělá vlastní čerstvý snímek, takže to musí zachytit.
+    await svc().storage.from(BUCKET).remove([CSV_PATH]);
+
+    const token = await signIn(SUPERADMIN_EMAIL, SUPERADMIN_PASSWORD);
+    const { status, json } = await callFunction('approve-shoptet-connection', token, {
+      request_id: ctx.requestId,
+      action: 'approve',
+    });
+    expect(status).toBe(409);
+    expect(json.error).toBe('export_not_usable');
+
+    const client = svc();
+    const { data: p } = await client
+      .from('partners')
+      .select('shoptet_import_enabled')
+      .eq('id', ctx.partnerId!)
+      .single();
+    expect(p?.shoptet_import_enabled, 'fail-closed: import zůstává vypnutý').toBe(false);
+
+    const { data: req } = await client
+      .from('shoptet_connection_requests')
+      .select('status')
+      .eq('id', ctx.requestId!)
+      .single();
+    expect(req?.status, 'požadavek zůstává submitted a jde zopakovat').toBe('submitted');
+  });
+
+  test('161d: schválení pořídí ČERSTVOU baseline včetně objednávky vzniklé po ověření', async () => {
+    test.skip(!SUPERADMIN_EMAIL || !SUPERADMIN_PASSWORD, 'chybí staging superadmin secrets');
+
+    // Scénář A ze zadání: mezi ověřením a schválením přibude objednávka D.
+    // Ověření o ní neví, ale existovala PŘED aktivací → musí být v baseline.
+    await uploadCsv(buildCsv(PRE_ACTIVATION_ORDERS.map((order) => ({ order, paid: false }))));
+
+    const token = await signIn(SUPERADMIN_EMAIL, SUPERADMIN_PASSWORD);
     const { status, json } = await callFunction('approve-shoptet-connection', token, {
       request_id: ctx.requestId,
       action: 'approve',
@@ -342,9 +450,14 @@ test.describe.serial('161 — Shoptet baseline: staré objednávky nikdy nevydaj
     const client = svc();
     const { data: rows } = await client
       .from('shoptet_connection_baseline_orders')
-      .select('activated_at')
+      .select('external_order_id, activated_at')
       .eq('partner_id', ctx.partnerId!);
-    expect(rows).toHaveLength(OLD_ORDERS.length);
+
+    // Čtyři, ne tři: D se přidala až po ověření.
+    expect(rows).toHaveLength(PRE_ACTIVATION_ORDERS.length);
+    expect((rows ?? []).map((r: any) => r.external_order_id).sort())
+      .toEqual([...PRE_ACTIVATION_ORDERS].sort());
+    expect((rows ?? []).map((r: any) => r.external_order_id)).toContain(LATE_ORDER);
     expect((rows ?? []).every((r: any) => r.activated_at !== null)).toBe(true);
 
     const { data: p } = await client
@@ -359,11 +472,12 @@ test.describe.serial('161 — Shoptet baseline: staré objednávky nikdy nevydaj
     test.skip(!SUPERADMIN_EMAIL || !SUPERADMIN_PASSWORD, 'chybí staging superadmin secrets');
 
     // Přesně scénář ze zadání: historická objednávka se později zaplatí.
-    await uploadCsv(buildCsv(OLD_ORDERS.map((order) => ({ order, paid: true }))));
+    // Včetně D, která vznikla mezi ověřením a schválením.
+    await uploadCsv(buildCsv(PRE_ACTIVATION_ORDERS.map((order) => ({ order, paid: true }))));
 
     const result = await runImport('live');
     expect(result.status, `import: ${JSON.stringify(result)}`).toBe('ok');
-    expect(result.skipped_baseline).toBe(OLD_ORDERS.length);
+    expect(result.skipped_baseline).toBe(PRE_ACTIVATION_ORDERS.length);
     expect(result.created).toBe(0);
     expect(result.status_updated).toBe(0);
     expect(result.email_enqueued).toBe(0);
@@ -380,21 +494,22 @@ test.describe.serial('161 — Shoptet baseline: staré objednávky nikdy nevydaj
 
     await uploadCsv(
       buildCsv([
-        ...OLD_ORDERS.map((order) => ({ order, paid: true })),
+        ...PRE_ACTIVATION_ORDERS.map((order) => ({ order, paid: true })),
         { order: NEW_ORDER, paid: true },
       ]),
     );
 
     const result = await runImport('live');
     expect(result.status, `import: ${JSON.stringify(result)}`).toBe('ok');
-    expect(result.skipped_baseline).toBe(OLD_ORDERS.length);
+    expect(result.skipped_baseline).toBe(PRE_ACTIVATION_ORDERS.length);
     expect(result.created).toBe(1);
 
     const issuance = await partnerIssuance(ctx.partnerId!);
     expect(issuance.codes).toHaveLength(1);
     expect(issuance.codes[0].external_order_id).toBe(NEW_ORDER);
-    // Žádná ze starých objednávek se mezi kódy nesmí objevit.
-    for (const old of OLD_ORDERS) {
+    // Žádná z objednávek z doby před aktivací se mezi kódy nesmí objevit —
+    // ani D, o které partnerské ověření nevědělo.
+    for (const old of PRE_ACTIVATION_ORDERS) {
       expect(issuance.codes.map((c: any) => c.external_order_id)).not.toContain(old);
     }
   });

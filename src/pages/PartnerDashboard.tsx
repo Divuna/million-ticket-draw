@@ -2071,8 +2071,8 @@ const PartnerDashboard = () => {
                       <div data-testid="shoptet-verify" className="space-y-2 rounded-lg border border-border/60 bg-muted/20 p-3">
                         <p className="text-xs text-muted-foreground leading-relaxed">
                           Před aktivací si napojení ověřte. Test proběhne nanečisto — <strong>nevydá žádné
-                          MioCoiny, kódy ani e-maily</strong>. Zároveň si poznamenáme objednávky, které už
-                          v exportu jsou, aby za ně nikdy nevznikla odměna.
+                          MioCoiny, kódy ani e-maily</strong>. Objednávky, které v e-shopu už máte, se
+                          zapíšou jako historie v okamžiku aktivace a odměna z nich nikdy nevznikne.
                         </p>
                         <Button
                           type="button"
@@ -2112,8 +2112,9 @@ const PartnerDashboard = () => {
                             )}
                             {shoptetVerifyResult.verified && (
                               <p className="text-muted-foreground">
-                                Stávajících {shoptetVerifyResult.baseline_orders} objednávek jsme si poznamenali jako
-                                historii — odměnu z nich nikdy nevydáme. Odměny začnou platit až pro objednávky,
+                                V exportu je teď {shoptetVerifyResult.baseline_orders} objednávek. Všechny, které
+                                v něm budou v okamžiku aktivace, se zapíšou jako historie a odměnu z nich nikdy
+                                nevydáme — i kdyby se později zaplatily. Odměny začnou platit až pro objednávky,
                                 které přibudou po aktivaci.
                               </p>
                             )}

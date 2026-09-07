@@ -24,6 +24,7 @@ const migration = read('supabase/migrations/20260907090000_shoptet_connection_ba
 const verifyFn  = read('supabase/functions/verify-shoptet-connection/index.ts');
 const approveFn = read('supabase/functions/approve-shoptet-connection/index.ts');
 const importFn  = read('supabase/functions/import-shoptet-orders/index.ts');
+const snapshotLib = read('supabase/functions/_shared/shoptetExportSnapshot.ts');
 const config    = read('supabase/config.toml');
 
 /** Kód bez komentářů — aby vysvětlující text nemohl splnit ani porušit assertion. */
@@ -104,6 +105,75 @@ test.describe('162 — Shoptet baseline kontrakt', () => {
     expect(approveFn).not.toMatch(/requestKind === "url_change"[\s\S]{0,200}verification_required/);
   });
 
+  test('závaznou baseline pořizuje až schválení, z čerstvého snímku exportu', () => {
+    // Mezi partnerským ověřením a schválením může přibýt další objednávka. Ta
+    // existovala před aktivací, takže baseline nesmí být jen kopie toho, co
+    // vidělo ověření.
+    expect(approveFn).toContain('snapshotShoptetExport(pendingUrl)');
+    expect(approveFn).toContain('approvalSnapshot.orderIds.map');
+    // Předběžná sada z ověření se zahodí a nahradí aktuální.
+    expect(approveFn).toMatch(
+      /\.from\("shoptet_connection_baseline_orders"\)\s*\n\s*\.delete\(\)\s*\n\s*\.eq\("request_id", request_id\)/,
+    );
+    // Snímek běží PŘED promote, aby neúspěch nesnědl pending Vault klíč.
+    const snapshotAt = approveFn.indexOf('snapshotShoptetExport(pendingUrl)');
+    const promoteAt = approveFn.indexOf('promote_shoptet_pending_url", {\n      p_request_id: request_id,\n      p_partner_id: scr.partner_id,\n    });\n    if (promoteErr) {\n      console.error("vault promote:');
+    expect(snapshotAt).toBeGreaterThan(-1);
+    expect(promoteAt).toBeGreaterThan(-1);
+    expect(snapshotAt).toBeLessThan(promoteAt);
+  });
+
+  test('nepoužitelný export zastaví schválení fail-closed', () => {
+    expect(approveFn).toContain('export_not_usable');
+    expect(approveFn).toMatch(/if \(!snapshot\.usable\)[\s\S]{0,400}return err\(\s*409/);
+    // Odmítnutí musí přijít dřív, než se zapne import.
+    const refuseAt = approveFn.indexOf('export_not_usable');
+    const enableAt = approveFn.indexOf('shoptet_import_enabled: true');
+    expect(refuseAt).toBeLessThan(enableAt);
+  });
+
+  test('snapshot je fail-closed i pro neplatné řádky a prázdný export', () => {
+    for (const reason of ['invalid_rows', 'no_usable_rows', 'export_empty', 'missing_headers', 'export_unreachable', 'export_http_error']) {
+      expect(snapshotLib, reason).toContain(`fail("${reason}"`);
+    }
+    // Jediný neplatný řádek stačí — nevíme pak, co v exportu je.
+    expect(snapshotLib).toMatch(/if \(rowsInvalid > 0\)[\s\S]{0,200}fail\("invalid_rows"/);
+    // Ven jde jen seznam čísel objednávek a počty — žádná zákaznická data.
+    const returnedType = snapshotLib.slice(
+      snapshotLib.indexOf('export type ExportSnapshot'),
+      snapshotLib.indexOf('const fail ='),
+    );
+    expect(returnedType).toContain('orderIds: string[]');
+    // Kontrolují se názvy POLÍ, ne výskyt slova kdekoli — `rowsTotal` je počet,
+    // ne částka, a komentář smí mluvit o objednávkách.
+    const fields = [...returnedType.matchAll(/^\s{2}(\w+)\s*[?:]/gm)].map((m) => m[1]);
+    expect(fields).toContain('orderIds');
+    for (const field of fields) {
+      expect(field, `pole ${field} nesmí nést zákaznická data`)
+        .not.toMatch(/^(email|customer\w*|\w*Email|\w*Name|amount|price|total)$/i);
+    }
+    // URL se nikdy neloguje (řetězcové literály se odstraní, aby text hlášky
+    // nebyl zaměněn za logování proměnné).
+    const withoutStrings = snapshotLib.replace(/"(?:[^"\\]|\\.)*"|'(?:[^'\\]|\\.)*'|`(?:[^`\\]|\\.)*`/g, '""');
+    expect(withoutStrings).not.toMatch(/console\.\w+\([^)]*\burl\b/);
+  });
+
+  test('nové ověření nejdřív zneplatní to předchozí', () => {
+    // Bez toho by po dřívějším úspěchu zůstalo viset `verified_at` a admin by
+    // schválil napojení nad exportem, který se mezitím rozbil.
+    const invalidateAt = verifyFn.indexOf('verified_at: null, verified_order_count: null');
+    const snapshotAt = verifyFn.indexOf('snapshotShoptetExport(url)');
+    const stampAt = verifyFn.indexOf('verified_at: new Date().toISOString()');
+    expect(invalidateAt).toBeGreaterThan(-1);
+    expect(invalidateAt).toBeLessThan(snapshotAt);
+    // Razítko se dává až po kompletním úspěchu.
+    expect(stampAt).toBeGreaterThan(snapshotAt);
+    // A předběžná baseline se maže hned na začátku, ne až v chybové větvi.
+    const wipeAt = verifyFn.indexOf('.delete()\n    .eq("request_id", requestId)');
+    expect(wipeAt).toBeGreaterThan(-1);
+    expect(wipeAt).toBeLessThan(snapshotAt);
+  });
+
   test('baseline se aktivuje dřív, než se zapne import', () => {
     const activateAt = approveFn.indexOf('.from("shoptet_connection_baseline_orders")');
     const enableAt = approveFn.indexOf('shoptet_import_enabled: true');
@@ -111,7 +181,10 @@ test.describe('162 — Shoptet baseline kontrakt', () => {
     expect(enableAt).toBeGreaterThan(-1);
     // Cron běží každou minutu — opačné pořadí by otevřelo okno pro staré objednávky.
     expect(activateAt).toBeLessThan(enableAt);
-    expect(approveFn).toContain('.is("activated_at", null)');
+    // Řádky se rovnou zapisují jako aktivní; `activated_at` je požadovaný
+    // přesný okamžik aktivace, ne dodatečné doplnění.
+    expect(approveFn).toContain('activated_at: activatedAt');
+    expect(approveFn).toContain('const activatedAt = new Date().toISOString();');
   });
 
   test('importer čte jen aktivní baseline a při chybě fail-closed', () => {

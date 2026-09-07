@@ -1,15 +1,19 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.57.4";
 import { getSupabaseSecretKey } from "../_shared/supabaseSecretKey.ts";
-import { decodeCsvBody } from "../import-shoptet-orders/encoding.ts";
-import { parseShoptetCsv } from "../import-shoptet-orders/csv.ts";
+import { snapshotShoptetExport } from "../_shared/shoptetExportSnapshot.ts";
 
 // Partner si sám ověří Shoptet napojení PŘED jeho aktivací — část C issue #289.
 //
 // Co funkce dělá:
-//   1. stáhne export z PENDING Vault klíče odeslaného požadavku,
-//   2. zkontroluje dostupnost, povinné hlavičky a použitelnost řádků,
-//   3. zapíše čísla nalezených objednávek jako baseline (zatím NEAKTIVNÍ),
-//   4. orazítkuje `verified_at` — teprve pak smí admin napojení schválit.
+//   1. ZNEPLATNÍ předchozí ověření (razítko i předběžnou baseline),
+//   2. stáhne export z PENDING Vault klíče odeslaného požadavku,
+//   3. zkontroluje dostupnost, povinné hlavičky a použitelnost řádků,
+//   4. uloží nalezená čísla objednávek jako PŘEDBĚŽNOU baseline (NEAKTIVNÍ),
+//   5. orazítkuje `verified_at` — teprve pak smí admin napojení schválit.
+//
+// ⚠️ Tohle je předběžný dry-run, ne pořízení závazné historie. Mezi ověřením a
+// schválením může v e-shopu přibýt další objednávka, takže ZÁVAZNOU baseline
+// pořizuje až `approve-shoptet-connection` vlastním čerstvým snímkem exportu.
 //
 // Co funkce NIKDY nedělá (jádro schváleného zadání):
 //   - nevydá MioCoiny, nevytvoří `partner_reward_codes` řádek,
@@ -44,13 +48,6 @@ function ok(body: Record<string, unknown>): Response {
     headers: { ...corsHeaders, "Content-Type": "application/json" },
   });
 }
-
-/** Povinné hlavičky přeložené do řeči partnera. Klíče drží `parseShoptetCsv`. */
-const HEADER_LABELS: Record<string, string> = {
-  order_code: "číslo objednávky",
-  total: "celková cena objednávky",
-  email: "e-mail zákazníka",
-};
 
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
@@ -120,7 +117,57 @@ Deno.serve(async (req) => {
     return err(404, "request_not_verifiable", "No submitted initial connection request found");
   }
 
-  // ── 5. Stažení exportu z Vaultu ────────────────────────────────────────────
+  // ── 5. Zneplatnění předchozího ověření ─────────────────────────────────────
+  // MUSÍ proběhnout dřív, než se cokoli zkusí. Kdyby se `verified_at` mazalo až
+  // v neúspěšných větvích, každý předčasný `return` (nedostupný export, chyba
+  // Vaultu) by nechal viset staré razítko z dřívějšího úspěšného pokusu a admin
+  // by napojení schválil nad exportem, který se mezitím rozbil.
+  const invalidate = await admin
+    .from("shoptet_connection_requests")
+    .update({ verified_at: null, verified_order_count: null })
+    .eq("id", requestId)
+    .eq("partner_id", partner.id)
+    .eq("status", "submitted");
+  if (invalidate.error) {
+    console.error("verify invalidate:", invalidate.error.message);
+    return err(500, "verify_error", "Ověření se nepodařilo spustit.");
+  }
+  const wipe = await admin
+    .from("shoptet_connection_baseline_orders")
+    .delete()
+    .eq("request_id", requestId);
+  if (wipe.error) {
+    console.error("baseline wipe:", wipe.error.message);
+    return err(500, "baseline_error", "Ověření se nepodařilo spustit.");
+  }
+
+  /** Neúspěch. `verified_at` je už zneplatněné, takže žádost není schvalitelná. */
+  const notVerified = (snapshot: {
+    reachable: boolean;
+    httpStatus: number | null;
+    headersOk: boolean;
+    missingHeaders: string[];
+    rowsTotal: number;
+    rowsValid: number;
+    rowsInvalid: number;
+    reason: string | null;
+  }) =>
+    ok({
+      success: true,
+      request_id: requestId,
+      verified: false,
+      export_reachable: snapshot.reachable,
+      http_status: snapshot.httpStatus,
+      headers_ok: snapshot.headersOk,
+      missing_headers: snapshot.missingHeaders,
+      rows_total: snapshot.rowsTotal,
+      rows_valid: snapshot.rowsValid,
+      rows_invalid: snapshot.rowsInvalid,
+      baseline_orders: 0,
+      reason: snapshot.reason,
+    });
+
+  // ── 6. Snímek exportu ──────────────────────────────────────────────────────
   const { data: url, error: urlErr } = await admin.rpc("get_shoptet_pending_url", {
     p_request_id: requestId,
   });
@@ -130,123 +177,27 @@ Deno.serve(async (req) => {
     return err(400, "export_url_unavailable", "Uložený exportní odkaz se nepodařilo načíst.");
   }
 
-  let resp: Response;
-  try {
-    resp = await fetch(url, { redirect: "follow" });
-  } catch (fetchErr) {
-    console.warn("export fetch failed:", (fetchErr as Error).name);
-    return ok({
-      success: true,
-      request_id: requestId,
-      verified: false,
-      export_reachable: false,
-      // Bez HTTP stavu — spojení vůbec nevzniklo.
-      http_status: null,
-      headers_ok: false,
-      missing_headers: [],
-      rows_total: 0,
-      rows_valid: 0,
-      rows_invalid: 0,
-      baseline_orders: 0,
-      reason: "export_unreachable",
+  const snapshot = await snapshotShoptetExport(url);
+  if (!snapshot.usable) {
+    return notVerified({
+      reachable: snapshot.reachable,
+      httpStatus: snapshot.httpStatus,
+      headersOk: snapshot.headersOk,
+      missingHeaders: snapshot.missingHeaders,
+      rowsTotal: snapshot.rowsTotal,
+      rowsValid: snapshot.rowsValid,
+      rowsInvalid: snapshot.rowsInvalid,
+      reason: snapshot.reason,
     });
   }
 
-  if (!resp.ok) {
-    return ok({
-      success: true,
-      request_id: requestId,
-      verified: false,
-      export_reachable: false,
-      http_status: resp.status,
-      headers_ok: false,
-      missing_headers: [],
-      rows_total: 0,
-      rows_valid: 0,
-      rows_invalid: 0,
-      baseline_orders: 0,
-      reason: "export_http_error",
-    });
-  }
-
-  // ── 6. Kontrola obsahu ─────────────────────────────────────────────────────
-  const text = decodeCsvBody(await resp.arrayBuffer(), resp.headers.get("content-type"));
-  const parsed = parseShoptetCsv(text);
-
-  const isEmpty = parsed.missingHeaders.length === 1 && parsed.missingHeaders[0] === "empty_csv";
-  if (isEmpty) {
-    return ok({
-      success: true,
-      request_id: requestId,
-      verified: false,
-      export_reachable: true,
-      http_status: resp.status,
-      headers_ok: false,
-      missing_headers: [],
-      rows_total: 0,
-      rows_valid: 0,
-      rows_invalid: 0,
-      baseline_orders: 0,
-      reason: "export_empty",
-    });
-  }
-
-  if (parsed.missingHeaders.length > 0) {
-    return ok({
-      success: true,
-      request_id: requestId,
-      verified: false,
-      export_reachable: true,
-      http_status: resp.status,
-      headers_ok: false,
-      // Jen názvy chybějících polí, nic z obsahu exportu.
-      missing_headers: parsed.missingHeaders.map((h) => HEADER_LABELS[h] ?? h),
-      rows_total: parsed.dataRowCount,
-      rows_valid: 0,
-      rows_invalid: parsed.dataRowCount,
-      baseline_orders: 0,
-      reason: "missing_headers",
-    });
-  }
-
-  const rowsValid = parsed.orders.length;
-  const rowsInvalid = parsed.invalidRows.length;
-
-  // Prázdný nebo celý nevalidní export se nesmí prohlásit za ověřený —
-  // aktivace nad ním by pustila do provozu napojení, které nic nedodává.
-  if (rowsValid === 0) {
-    return ok({
-      success: true,
-      request_id: requestId,
-      verified: false,
-      export_reachable: true,
-      http_status: resp.status,
-      headers_ok: true,
-      missing_headers: [],
-      rows_total: parsed.dataRowCount,
-      rows_valid: 0,
-      rows_invalid: rowsInvalid,
-      baseline_orders: 0,
-      reason: "no_usable_rows",
-    });
-  }
-
-  // ── 7. Baseline ────────────────────────────────────────────────────────────
-  // Opakované ověření musí baseline přepsat, ne k němu přisypat — jinak by v ní
-  // uvízly objednávky ze staršího, mezitím opraveného exportu.
-  const { error: wipeErr } = await admin
-    .from("shoptet_connection_baseline_orders")
-    .delete()
-    .eq("request_id", requestId);
-  if (wipeErr) {
-    console.error("baseline wipe:", wipeErr.message);
-    return err(500, "baseline_error", "Ověření se nepodařilo dokončit.");
-  }
-
-  // Ukládá se VÝHRADNĚ číslo objednávky. `activated_at` zůstává NULL — baseline
-  // začne platit teprve schválením napojení.
-  const uniqueOrderIds = [...new Set(parsed.orders.map((o) => o.orderId))];
-  const baselineRows = uniqueOrderIds.map((orderId) => ({
+  // ── 7. Předběžná baseline ──────────────────────────────────────────────────
+  // Je to jen náhled pro partnera. ZÁVAZNOU baseline pořizuje až schválení
+  // vlastním, čerstvým snímkem — mezi ověřením a schválením může v e-shopu
+  // přibýt další objednávka a ta by jinak zůstala mimo historii.
+  //
+  // `activated_at` zůstává NULL, takže tahle sada nikdy nic neblokuje.
+  const baselineRows = snapshot.orderIds.map((orderId) => ({
     request_id: requestId,
     partner_id: partner.id,
     external_order_id: orderId,
@@ -258,18 +209,17 @@ Deno.serve(async (req) => {
       .insert(baselineRows.slice(i, i + 500));
     if (insErr) {
       console.error("baseline insert:", insErr.message);
-      // Nedokončená baseline nesmí projít jako ověření — jinak by se aktivace
-      // otevřela nad neúplným seznamem historických objednávek.
       await admin.from("shoptet_connection_baseline_orders").delete().eq("request_id", requestId);
       return err(500, "baseline_error", "Ověření se nepodařilo dokončit.");
     }
   }
 
+  // Razítko až úplně nakonec — do téhle chvíle je žádost neschvalitelná.
   const { error: stampErr } = await admin
     .from("shoptet_connection_requests")
     .update({
       verified_at: new Date().toISOString(),
-      verified_order_count: uniqueOrderIds.length,
+      verified_order_count: snapshot.orderIds.length,
     })
     .eq("id", requestId)
     .eq("partner_id", partner.id)
@@ -285,13 +235,13 @@ Deno.serve(async (req) => {
     request_id: requestId,
     verified: true,
     export_reachable: true,
-    http_status: resp.status,
+    http_status: snapshot.httpStatus,
     headers_ok: true,
     missing_headers: [],
-    rows_total: parsed.dataRowCount,
-    rows_valid: rowsValid,
-    rows_invalid: rowsInvalid,
-    baseline_orders: uniqueOrderIds.length,
+    rows_total: snapshot.rowsTotal,
+    rows_valid: snapshot.rowsValid,
+    rows_invalid: 0,
+    baseline_orders: snapshot.orderIds.length,
     reason: null,
   });
 });

@@ -4,6 +4,7 @@ import {
   renderOneMilEmail,
 } from "../_shared/oneMilEmailTemplate.ts";
 import { getSupabaseSecretKey } from "../_shared/supabaseSecretKey.ts";
+import { snapshotShoptetExport } from "../_shared/shoptetExportSnapshot.ts";
 
 // Admin approves or rejects a submitted Shoptet connection request.
 //
@@ -150,6 +151,43 @@ Deno.serve(async (req) => {
     }
   }
 
+  // ── 4c. ČERSTVÝ SNÍMEK EXPORTU V OKAMŽIKU AKTIVACE (#289 část C) ───────────
+  // Partnerské ověření je jen předběžný dry-run — mezi ním a schválením může
+  // v e-shopu vzniknout další objednávka. Ta existovala PŘED aktivací stejně
+  // jako ty ostatní, takže baseline musí vzniknout až tady, z aktuálního stavu
+  // exportu.
+  //
+  // Běží PŘED `promote_shoptet_pending_url`: neúspěch tak nechá pending Vault
+  // klíč, `partners` i řádek požadavku netknuté a partner může po opravě
+  // exportu schválení zopakovat.
+  //
+  // Fail-closed: nedostupný export, chybějící povinná pole, prázdný export
+  // i jediný neplatný objednávkový řádek schválení zastaví. Import se nezapne
+  // a nic se nevydá — raději neaktivované napojení než napojení nad exportem,
+  // o kterém nevíme, co v něm je.
+  let approvalSnapshot: { orderIds: string[] } = { orderIds: [] };
+  if (action === "approve" && requestKind === "initial") {
+    const { data: pendingUrl, error: pendingErr } = await admin.rpc("get_shoptet_pending_url", {
+      p_request_id: request_id,
+    });
+    if (pendingErr || !pendingUrl || typeof pendingUrl !== "string") {
+      console.error("approval snapshot url unavailable:", pendingErr?.message ?? "empty");
+      return err(400, "export_url_unavailable", "Uložený exportní odkaz se nepodařilo načíst.");
+    }
+
+    const snapshot = await snapshotShoptetExport(pendingUrl);
+    if (!snapshot.usable) {
+      console.warn("approval refused, export not usable:", snapshot.reason);
+      return err(
+        409,
+        "export_not_usable",
+        `Export nelze v tuto chvíli bezpečně načíst (${snapshot.reason}). ` +
+          "Napojení nebylo aktivováno; požádejte partnera o nové ověření.",
+      );
+    }
+    approvalSnapshot = { orderIds: snapshot.orderIds };
+  }
+
   // ── 5a-change. APPROVE a URL CHANGE ────────────────────────────────────────
   // Deliberately separate from the onboarding branch. Approving a change must swap
   // the Vault URL and NOTHING else: the partner is already live, so re-applying
@@ -270,16 +308,39 @@ Deno.serve(async (req) => {
     // Baseline se aktivuje PŘED zapnutím importu. Cron běží každou minutu, takže
     // opačné pořadí by otevřelo okno, ve kterém by první běh zpracoval i staré
     // objednávky. `activated_at` je zároveň požadovaný „přesný okamžik aktivace“.
+    //
+    // Zapisuje se snímek pořízený PRÁVĚ TEĎ, ne ten z partnerského ověření:
+    // mezi ověřením a schválením mohla v e-shopu přibýt další objednávka a ta
+    // existovala před aktivací stejně jako ty ostatní. Předběžná sada z ověření
+    // se proto zahodí a nahradí aktuální.
     const activatedAt = new Date().toISOString();
-    const { error: baselineErr } = await admin
+
+    const { error: wipeErr } = await admin
       .from("shoptet_connection_baseline_orders")
-      .update({ activated_at: activatedAt })
-      .eq("request_id", request_id)
-      .is("activated_at", null);
-    if (baselineErr) {
-      console.error("baseline activate:", baselineErr.message);
-      // Import se ještě nezapnul, takže se nic nevydalo — bezpečné zastavení.
-      return err(500, "baseline_error", "Failed to activate the historical order baseline");
+      .delete()
+      .eq("request_id", request_id);
+    if (wipeErr) {
+      console.error("baseline wipe:", wipeErr.message);
+      return err(500, "baseline_error", "Failed to refresh the historical order baseline");
+    }
+
+    const baselineRows = approvalSnapshot.orderIds.map((orderId) => ({
+      request_id,
+      partner_id: scr.partner_id,
+      external_order_id: orderId,
+      activated_at: activatedAt,
+    }));
+    for (let i = 0; i < baselineRows.length; i += 500) {
+      const { error: insErr } = await admin
+        .from("shoptet_connection_baseline_orders")
+        .insert(baselineRows.slice(i, i + 500));
+      if (insErr) {
+        console.error("baseline insert:", insErr.message);
+        // Neúplná baseline je horší než žádná — import se nezapíná, takže se
+        // pořád nic nevydalo, a zbytek se uklidí.
+        await admin.from("shoptet_connection_baseline_orders").delete().eq("request_id", request_id);
+        return err(500, "baseline_error", "Failed to record the historical order baseline");
+      }
     }
 
     // Update partner — CRITICAL: shoptet_customer_delivery MUST be 'onemil'
