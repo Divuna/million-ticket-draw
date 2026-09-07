@@ -72,6 +72,37 @@ function getStatusBadge(status: string) {
   }
 }
 
+/**
+ * Odpověď bezpečných RPC pro změnu stavu provize.
+ * `status === "updated"` je JEDINÝ úspěšný výsledek — cokoli jiného znamená,
+ * že server zápis odmítl a v databázi se nic nezměnilo.
+ */
+interface CommissionRpcResult {
+  status?: string;
+  from?: string;
+  to?: string;
+  updated_at?: string;
+}
+
+function commissionRpcErrorMessage(result: CommissionRpcResult | null): string {
+  switch (result?.status) {
+    case "forbidden":
+      return "Nemáte oprávnění měnit stav provizí.";
+    case "not_found":
+      return "Provize už neexistuje. Obnovte přehled.";
+    case "invalid_transition":
+      return `Tento přechod stavu není povolen (${result.from ?? "?"} → ${result.to ?? "?"}). Obnovte přehled.`;
+    case "conflict":
+      return "Stav provize se mezitím změnil. Obnovte přehled.";
+    case "invalid_status":
+    case "invalid_commission":
+    case "invalid_input":
+      return "Neplatný požadavek na změnu stavu provize.";
+    default:
+      return "Nepodařilo se aktualizovat stav provize.";
+  }
+}
+
 export default function AdminInfluencerCommissions() {
   const { user } = useAuth();
   const { role, isAdmin, loading: roleLoading } = useUserRole();
@@ -253,31 +284,40 @@ export default function AdminInfluencerCommissions() {
   const executeStatusChange = async (commission: CommissionRow, newStatus: string) => {
     setActionLoadingId(commission.id);
 
-    const previous = [...commissions];
-    const now = new Date().toISOString();
-    setCommissions((prev) =>
-      prev.map((c) =>
-        c.id === commission.id ? { ...c, status: newStatus, updated_at: now } : c
-      )
-    );
-
     try {
-      const { error } = await supabase
-        .from("influencer_commissions")
-        .update({ status: newStatus, updated_at: now })
-        .eq("id", commission.id);
+      // Jediná povolená zápisová cesta. Tabulka `influencer_commissions` nemá UPDATE
+      // policy, takže přímý `.update()` by tiše zasáhl 0 řádků a tvářil se úspěšně.
+      const { data, error } = await supabase.rpc("admin_set_influencer_commission_status", {
+        p_commission_id: commission.id,
+        p_new_status: newStatus,
+      });
 
-      if (error) throw error;
+      if (error) throw new Error(commissionRpcErrorMessage(null));
+
+      const result = data as CommissionRpcResult | null;
+      if (result?.status !== "updated") {
+        throw new Error(commissionRpcErrorMessage(result));
+      }
+
+      // Stav se v UI mění až po potvrzeném úspěchu serveru a bere se serverový
+      // `updated_at`, ne čas z prohlížeče.
+      setCommissions((prev) =>
+        prev.map((c) =>
+          c.id === commission.id
+            ? { ...c, status: newStatus, updated_at: result.updated_at ?? c.updated_at }
+            : c
+        )
+      );
 
       toast.success(
         newStatus === "approved"
           ? "Provize schválena"
           : "Provize označena jako vyplacená"
       );
-    } catch (err) {
+    } catch (err: unknown) {
+      // Nic se needitovalo dopředu, takže není co vracet zpět — původní stav zůstává.
       console.error("Error updating commission status:", err);
-      setCommissions(previous);
-      toast.error("Nepodařilo se aktualizovat stav provize");
+      toast.error(err instanceof Error ? err.message : "Nepodařilo se aktualizovat stav provize");
     } finally {
       setActionLoadingId(null);
     }
@@ -299,21 +339,28 @@ export default function AdminInfluencerCommissions() {
     if (!confirmBulkPaid || confirmBulkPaid.length === 0) return;
     setBulkPaidLoading(true);
 
-    const now = new Date().toISOString();
     const ids = confirmBulkPaid.map((c) => c.id);
-    const previous = [...commissions];
-
-    setCommissions((prev) =>
-      prev.map((c) => (ids.includes(c.id) ? { ...c, status: "paid", updated_at: now } : c))
-    );
 
     try {
-      const { error } = await supabase
-        .from("influencer_commissions")
-        .update({ status: "paid", updated_at: now })
-        .in("id", ids);
+      // Hromadná cesta jde stejnou serverovou funkcí jako jednotlivý přechod,
+      // takže nemůže obejít kontrolu stavů. Je all-or-nothing.
+      const { data, error } = await supabase.rpc("admin_set_influencer_commissions_paid", {
+        p_commission_ids: ids,
+      });
 
-      if (error) throw error;
+      if (error) {
+        // RAISE EXCEPTION z databáze = žádná provize se nezměnila.
+        throw new Error(
+          error.message === "influencer_commission_bulk_rejected"
+            ? "Některé provize už nejsou ve stavu „Schváleno“. Žádná nebyla změněna — obnovte přehled."
+            : commissionRpcErrorMessage(null),
+        );
+      }
+
+      const result = data as { status?: string; updated_count?: number } | null;
+      if (result?.status !== "updated") {
+        throw new Error(commissionRpcErrorMessage(result));
+      }
 
       setExportedIds((prev) => {
         const next = new Set(prev);
@@ -321,11 +368,13 @@ export default function AdminInfluencerCommissions() {
         return next;
       });
 
-      toast.success(`${ids.length} provizí označeno jako vyplacené`);
-    } catch (err) {
+      toast.success(`${result.updated_count ?? ids.length} provizí označeno jako vyplacené`);
+
+      // Stav se přebírá až ze serveru — v UI se nic „neoznačí předem“.
+      await fetchCommissions();
+    } catch (err: unknown) {
       console.error("Error bulk-updating commission status:", err);
-      setCommissions(previous);
-      toast.error("Nepodařilo se hromadně aktualizovat stav");
+      toast.error(err instanceof Error ? err.message : "Nepodařilo se hromadně aktualizovat stav");
     } finally {
       setBulkPaidLoading(false);
       setConfirmBulkPaid(null);
