@@ -118,9 +118,12 @@ test.describe('160 — #349: one e-shop cannot be active under two partners', ()
   test('160h) the refusal never logs or returns the URL or the hash', () => {
     // Comments legitimately explain what must not leak; assert on the code.
     const code = codeOnly(approveEf);
+    // Řez končí na začátku snímku exportu (#289 část C), který mezitím přibyl
+    // mezi tenhle guard a `url_change` větev. Snímek má vlastní kontroly ve
+    // spec 162; sem nepatří, jinak by 160h posuzovalo cizí kód.
     const guardBlock = code.slice(
       code.indexOf('shoptet_pending_url_conflict'),
-      code.indexOf('action === "approve" && requestKind === "url_change"'),
+      code.indexOf('let approvalSnapshot'),
     );
     expect(guardBlock.length).toBeGreaterThan(0);
     expect(guardBlock).not.toMatch(/\burl\b/i);

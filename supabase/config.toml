@@ -185,6 +185,12 @@ verify_jwt = false
 [functions.approve-shoptet-connection]
 verify_jwt = false
 
+# Partnerské ověření napojení před aktivací (#289 část C). Stejný vzor jako
+# submit-: JWT se ověřuje uvnitř funkce, aby šlo vracet přesné chybové kódy
+# (missing_authorization / invalid_token / not_partner).
+[functions.verify-shoptet-connection]
+verify_jwt = false
+
 # Public read-only reward preview for the Shoptet widget. Intentionally
 # unauthenticated: the widget runs in the partner's storefront, where any secret
 # would be readable. Returns only the MioCoin figure for a given basket — never the
