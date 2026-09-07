@@ -1,6 +1,8 @@
-I want to apply the final OneMil brand style to the existing app UI. It should include:
-1. Use Poppins for headings, Inter for body/UI text, and the approved dark premium tech-luxury color system with orange as the main accent.
-2. Apply the approved OneMil logo usage consistently in header, app navigation, hero area and key brand placements without changing app logic.
+Before any visual change, treat docs/advertising/GRAPHICS_SOURCE_OF_TRUTH.md as the only authoritative source for the current OneMil public visual style. Old dark-premium brand-kit references must not override it.
+
+I want to apply the current OneMil brand style to the existing public UI. It should include:
+1. Use Poppins for headings, Inter for body/UI text, and the approved LIGHT premium OneMil color system: white/warm cream backgrounds, dark text, Energy Orange (#FF8A00) as the main accent, with subtle Warm Amber highlights. Do not use black/navy full-page backgrounds for new public UI or marketing graphics.
+2. Use only the approved original OneMil/MioCoin logo and icon assets already present in the project. Never invent, redraw or restyle a new OneMil/MioCoin logo. Keep the public look clean, airy, premium and consistent with the current live OneMil website.
 3. Keep the existing routes, tables, payments, contests, tickets, wallet, winners and Partner Offers logic unchanged; only improve visual consistency.
 
 Ensure to use best practices. Double-check the already existing code. Changes to other parts of the code must not be made without permission. Lovable must never create new files, rename files, or change UI/graphics unless explicitly specified in the prompt.
