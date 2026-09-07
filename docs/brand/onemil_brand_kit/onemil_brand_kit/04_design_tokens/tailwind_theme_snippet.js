@@ -1,2 +1,31 @@
-// OneMil Tailwind theme snippet — merge into existing config only after review
-module.exports={theme:{extend:{fontFamily:{heading:['Poppins','system-ui','sans-serif'],sans:['Inter','system-ui','sans-serif']},colors:{om:{black:'#0A0B0F',navy:'#101722',graphite:'#1D2128',platinum:'#E7EBF0',silver:'#BFC6CF',muted:'#8E98A6',orange:'#FF8A00',amber:'#FFB547',gold:'#D8BA78'}},boxShadow:{'om-glow':'0 0 24px rgba(255, 138, 0, 0.20)','om-card':'0 18px 50px rgba(0,0,0,0.35)'}}}};
+// OneMil PUBLIC Tailwind reference — merge into existing config only after review.
+// Authoritative visual source: docs/advertising/GRAPHICS_SOURCE_OF_TRUTH.md
+// Retired dark-premium colors must not be used as the default public background.
+module.exports = {
+  theme: {
+    extend: {
+      fontFamily: {
+        heading: ['Poppins', 'system-ui', 'sans-serif'],
+        sans: ['Inter', 'system-ui', 'sans-serif'],
+      },
+      colors: {
+        om: {
+          white: '#FFFFFF',
+          cream: '#FAFAF9',
+          cloud: '#F7F8FB',
+          ink: '#111827',
+          slate: '#4B5563',
+          border: '#E5E7EB',
+          orange: '#FF8A00',
+          uiOrange: '#F97316',
+          amber: '#FFB547',
+          gold: '#D8BA78',
+        },
+      },
+      boxShadow: {
+        'om-card': '0 12px 30px rgba(17,24,39,0.08)',
+        'om-cta': '0 8px 20px rgba(255,138,0,0.18)',
+      },
+    },
+  },
+};
