@@ -115,18 +115,21 @@ zpracování před jeho odvoláním a neovlivní vaši možnost platformu dál p
 Vaše údaje neprodáváme. Předáváme je pouze poskytovatelům, kteří pro nás zajišťují provoz
 platformy, a to v rozsahu nezbytném pro danou službu.
 
-| Poskytovatel | Role | Jaké údaje |
+| Služba | Role | Jaké údaje |
 |---|---|---|
-| **Supabase Inc.** | databáze, autentizace a serverová část platformy | veškeré údaje o účtu, MioCoinech, tiketech, výhrách, platbách a komunikaci |
-| **Vercel Inc.** | hosting a doručování webové aplikace | technické údaje spojené s návštěvou webu |
-| **Stripe, Inc.** | platební brána | údaje nutné k provedení platby a jejímu spárování s vaším účtem |
-| **Resend, Inc.** | odesílání e-mailů | e-mailová adresa a obsah zprávy, kterou vám posíláme |
-| **OneSignal, Inc.** | zasílání upozornění do zařízení | identifikátor zařízení, pokud upozornění povolíte |
-| **Google Ireland Limited** | měření návštěvnosti a reklama | technické údaje a údaje o používání webu, pouze pokud povolíte příslušné cookies |
-| **Meta Platforms Ireland Limited** | reklama na Facebooku a Instagramu | technické údaje a údaje o používání webu, pouze pokud povolíte marketingové cookies |
+| **Supabase** | databáze, autentizace a serverová část platformy | veškeré údaje o účtu, MioCoinech, tiketech, výhrách, platbách a komunikaci |
+| **Vercel** | hosting a doručování webové aplikace | technické údaje spojené s návštěvou webu |
+| **Stripe** | platební brána | údaje nutné k provedení platby a jejímu spárování s vaším účtem |
+| **Resend** | odesílání e-mailů | e-mailová adresa a obsah zprávy, kterou vám posíláme |
+| **OneSignal** | zasílání upozornění do zařízení | identifikátor zařízení, pokud upozornění povolíte |
+| **Google** | měření návštěvnosti a reklama | technické údaje a údaje o používání webu, pouze pokud povolíte příslušné cookies |
+| **Meta** | reklama na Facebooku a Instagramu | technické údaje a údaje o používání webu, pouze pokud povolíte marketingové cookies |
 | **Sofinity** | provozní vyhodnocování a zpracování zpráv zákaznické podpory | identifikátor uživatele a obsah zpráv podpory |
-| **OpenAI, L.L.C.** | jazykový model pro asistenta zákaznické podpory | obsah zpráv, které asistentovi napíšete — podrobnosti v článku 8 |
+| **OpenAI** | jazykový model pro asistenta zákaznické podpory | údaje popsané v článku 8 |
 | Dopravci | doručení věcné výhry | jméno, adresa a telefon, pouze pokud vyhrajete věcnou cenu |
+
+Uvedena jsou obchodní označení jednotlivých služeb. Přesnou identifikaci právnické osoby, která
+konkrétní službu provozuje, a její roli zpracovatele vám na vyžádání sdělíme na podpora@onemil.cz.
 
 Údaje můžeme dále předat orgánům veřejné moci, pokud nám to ukládá zákon.
 
@@ -154,8 +157,11 @@ na podpora@onemil.cz.
 Po zániku účtu údaje odstraníme nebo anonymizujeme, s výjimkou těch, které jsme povinni uchovávat
 podle právních předpisů nebo které potřebujeme k obhajobě právních nároků.
 
-O výmaz účtu můžete požádat kdykoli — postup najdete na stránce
-[Smazání účtu](https://onemil.cz/delete-account) nebo nám napište na podpora@onemil.cz.
+**Zrušení účtu.** O zrušení účtu a výmaz údajů můžete požádat kdykoli. Postup, jak žádost podat,
+najdete na stránce [Smazání účtu](https://onemil.cz/delete-account); žádost můžete poslat také
+přímo na podpora@onemil.cz. Účet se neruší automaticky samotným otevřením té stránky — jde
+o podání žádosti. Po jejím potvrzení vaše osobní údaje smažeme do 30 dnů, s výjimkou údajů, které
+jsme povinni uchovávat podle právních předpisů nebo které potřebujeme k obhajobě právních nároků.
 
 ---
 
@@ -167,8 +173,7 @@ a možným rizikům. Patří mezi ně zejména:
 - šifrovaný přenos dat mezi vaším zařízením a platformou,
 - řízení přístupu k databázi na úrovni jednotlivých záznamů,
 - omezení přístupu k údajům pouze na pověřené osoby,
-- ochrana proti automatizovaným útokům a zneužití účtu,
-- pravidelné zálohování.
+- ochrana proti automatizovaným útokům a zneužití účtu.
 
 Žádné opatření nedokáže vyloučit riziko úplně. Pokud by došlo k porušení zabezpečení, které by
 pravděpodobně znamenalo vysoké riziko pro vaše práva a svobody, budeme vás informovat.
@@ -206,15 +211,27 @@ www.uoou.cz
 
 ## 8. Asistent zákaznické podpory a automatizované zpracování
 
-Součástí platformy je asistent zákaznické podpory využívající jazykový model.
+Součástí platformy je asistent zákaznické podpory využívající jazykový model poskytovatele OpenAI.
+Asistent funguje pouze tehdy, když je tato funkce zapnutá.
 
-Když je asistent zapnutý a napíšete mu zprávu, předáváme obsah vaší zprávy a několik předchozích
-zpráv z téže konverzace poskytovateli jazykového modelu (OpenAI), aby mohl připravit odpověď.
-Neposíláme mu vaše jméno, e-mail ani jiné kontaktní údaje.
+**Co se asistentovi předává, když ho použijete:**
 
-Asistenta lze kdykoli obejít — v konverzaci můžete požádat o předání lidskému operátorovi.
-Pokud si nepřejete, aby byl obsah vaší zprávy takto zpracován, napište nám přímo na
-podpora@onemil.cz.
+- obsah vaší aktuální zprávy,
+- omezenou historii téže konverzace, nejvýše deset předchozích zpráv,
+- **jméno z vašeho profilu**, aby vás mohl oslovit,
+- **omezené údaje o vašem účtu potřebné k odpovědi** — zůstatek MioCoinů, počet výher, stav
+  voucherů a čas vaší poslední zprávy v konverzaci,
+- přehled aktuálně dostupných soutěží.
+
+Tyto údaje o účtu předáváme proto, aby vám asistent dokázal odpovědět konkrétně, například kolik
+máte MioCoinů, místo obecné odpovědi.
+
+**Vaši e-mailovou adresu do konverzace nepřidáváme.** Pokud ji ale napíšete přímo do textu své
+zprávy, stane se součástí zprávy a bude předána spolu s ní — stejně jako jakýkoli jiný údaj, který
+do zprávy sami uvedete.
+
+Asistenta můžete kdykoli obejít — v konverzaci požádejte o předání lidskému operátorovi. Pokud si
+nepřejete, aby byl obsah vaší komunikace takto zpracován, napište nám přímo na podpora@onemil.cz.
 
 **Nepoužíváme automatizované rozhodování**, které by pro vás mělo právní účinky nebo se vás
 obdobně významně dotýkalo. O výhře v soutěži nerozhoduje žádný algoritmus vyhodnocující vaši osobu:

@@ -32,6 +32,43 @@ Do dokumentu byl zařazen pouze poskytovatel, jehož zapojení šlo doložit v k
 Žádný poskytovatel nebyl zařazen jen proto, že byl v zadání. Naopak žádný ověřený zpracovatel
 nebyl vynechán.
 
+### Přesná identifikace právnických osob
+
+Tabulka v článku 4 uvádí **obchodní označení služeb** (Supabase, Stripe, Vercel, …), nikoli právní
+názvy provozujících společností. Z projektu lze doložit, že se daná služba používá, ale **ne, která
+konkrétní právnická osoba ji pro OneMil provozuje** — u řady poskytovatelů se liší podle regionu
+a smluvního vztahu. Vymyslet název („Supabase Inc.", „Google Ireland Limited") by znamenalo tvrdit
+neověřenou skutečnost, proto je text nahradil obchodním označením a nabídkou sdělit přesnou
+identifikaci na vyžádání.
+
+**Doplnění přesných právních názvů je otevřený bod pro právní kontrolu** — viz seznam níže.
+
+### Ověření faktických tvrzení (7. 9. 2026)
+
+| Tvrzení | Ověření | Výsledek |
+|---|---|---|
+| Nezpracováváme údaje o platební kartě | žádné pole typu `card_number`/`cvc`/`exp_*` v `src/`, `supabase/functions/`, `supabase/migrations/` | ✅ ponecháno |
+| Ochrana proti automatizovaným útokům | rate limit v `purchase-ticket`, tabulka `user_security_signals`, kontrola self-referralu | ✅ ponecháno |
+| Údaje o správci (IČO, DIČ, sídlo, spisová značka, datová schránka) | shoda s `COMPANY_CONTEXT.md` | ✅ ponecháno |
+| **Pravidelné zálohování** | doložen pouze **jednorázový** historický snímek (`CLAUDE.md`, 29. 6. 2026); aktuální nastavení záloh nelze z dostupných nástrojů ověřit | ❌ **odstraněno** |
+
+### Co asistent podpory skutečně předává OpenAI
+
+Původní návrh tvrdil, že se OpenAI neposílá jméno ani jiné kontaktní údaje. **To bylo nepravdivé.**
+Ověřeno v `supabase/functions/ai-chat/index.ts`:
+
+| Údaj | Důkaz |
+|---|---|
+| Jméno z profilu | `.select("full_name")` → `displayName` → `- Display name:` v system contextu |
+| Zůstatek MioCoinů, počet výher, stav voucherů | `buildBobContextSystemMessage` — sekce `USER DATA` |
+| Čas poslední zprávy | `- Last activity:` v system contextu |
+| Přehled soutěží | `Contests (from DB, JSON):` |
+| Historie konverzace | `OPENAI_CHAT_HISTORY_LIMIT = 10` |
+| **E-mailová adresa** | `grep "user.email\|\.email"` v `ai-chat` = **0 výskytů** → aplikace e-mail nepřidává |
+
+Článek 8 byl podle toho přepsán. E-mail se popisuje pravdivě: aplikace ho nepřidává, ale uživatel
+ho může sám napsat do textu zprávy.
+
 ### Poznámka k asistentovi podpory
 
 Přepínač `settings.bob_enabled` je v produkci **`false`**, asistent je tedy momentálně vypnutý.
@@ -69,6 +106,22 @@ Body, které nelze rozhodnout z projektu a musí je potvrdit právník:
 
 7. **Absence pověřence (DPO).** Dokument uvádí, že pověřenec nebyl jmenován. Právník má potvrdit,
    že OneMil povinnost jmenovat pověřence skutečně nemá.
+
+8. **Přesné právní názvy zpracovatelů.** Článek 4 uvádí jen obchodní označení služeb. Právník
+   a Pavel mají doplnit skutečné právnické osoby ze zpracovatelských smluv — z projektu je
+   ověřitelné pouze to, že se daná služba používá.
+
+9. **Zálohování.** Tvrzení o pravidelném zálohování bylo odstraněno, protože ho nešlo doložit
+   aktuálním nastavením. Pokud zálohování reálně probíhá, má se do článku 6 vrátit — ale až po
+   ověření skutečné konfigurace, ne z paměti.
+
+10. **Předání údajů asistentovi podpory.** Článek 8 nově přiznává, že se OpenAI předává jméno
+    z profilu a omezené údaje o účtu. Právník má potvrdit právní základ právě pro tenhle rozsah,
+    ne jen pro obsah samotné zprávy.
+
+11. **Lhůta 30 dnů pro smazání účtu.** Převzata z veřejné stránky `/delete-account`
+    (`src/pages/DeleteAccount.tsx`). Právník má potvrdit, že je závazek splnitelný a že
+    neodporuje zákonným lhůtám uchování.
 
 ---
 
