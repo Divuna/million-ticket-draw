@@ -94,7 +94,7 @@ Deno.serve(async (req) => {
   // ── 4. Load submitted request ──────────────────────────────────────────────
   const { data: scr, error: scrErr } = await admin
     .from("shoptet_connection_requests")
-    .select("id, partner_id, trigger_status, status, request_kind")
+    .select("id, partner_id, trigger_status, status, request_kind, verified_at")
     .eq("id", request_id)
     .eq("status", "submitted")
     .maybeSingle();
@@ -102,6 +102,21 @@ Deno.serve(async (req) => {
   if (!scr) return err(404, "request_not_found", "No submitted request found with this id");
 
   const requestKind = (scr.request_kind as string | null) ?? "initial";
+
+  // ── 4a. NOVÉ NAPOJENÍ SMÍ AKTIVOVAT JEN OVĚŘENÝ EXPORT (#289 část C) ───────
+  // `verify-shoptet-connection` je jediné místo, které baseline historických
+  // objednávek zapisuje. Bez něj by se napojení rozjelo nad exportem plným
+  // starých objednávek a ty by při první změně stavu vydaly odměnu.
+  //
+  // Záměrně JEN pro `initial`: `url_change` běží nad už živým napojením, kde
+  // baseline neexistuje a kde se chování stávajícího partnera nesmí měnit.
+  if (action === "approve" && requestKind === "initial" && !scr.verified_at) {
+    return err(
+      409,
+      "verification_required",
+      "Partner musí nejdřív úspěšně ověřit napojení („Ověřit napojení“). Bez ověření nelze aktivovat.",
+    );
+  }
 
   // ── 4b. DUPLICATE E-SHOP GUARD (TODO #349) ─────────────────────────────────
   // One e-shop must never be actively connected under two partner accounts —
@@ -250,6 +265,21 @@ Deno.serve(async (req) => {
     if (promoteErr) {
       console.error("vault promote:", promoteErr.message);
       return err(500, "vault_error", "Failed to promote URL to partner Vault key");
+    }
+
+    // Baseline se aktivuje PŘED zapnutím importu. Cron běží každou minutu, takže
+    // opačné pořadí by otevřelo okno, ve kterém by první běh zpracoval i staré
+    // objednávky. `activated_at` je zároveň požadovaný „přesný okamžik aktivace“.
+    const activatedAt = new Date().toISOString();
+    const { error: baselineErr } = await admin
+      .from("shoptet_connection_baseline_orders")
+      .update({ activated_at: activatedAt })
+      .eq("request_id", request_id)
+      .is("activated_at", null);
+    if (baselineErr) {
+      console.error("baseline activate:", baselineErr.message);
+      // Import se ještě nezapnul, takže se nic nevydalo — bezpečné zastavení.
+      return err(500, "baseline_error", "Failed to activate the historical order baseline");
     }
 
     // Update partner — CRITICAL: shoptet_customer_delivery MUST be 'onemil'

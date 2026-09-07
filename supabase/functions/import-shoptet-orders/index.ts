@@ -231,12 +231,37 @@ serve(async (req) => {
     // Orders the partner's selected-products rules do not cover. Reported in the
     // response only — deliberately NOT part of rows_failed, so the run stays `ok`.
     let rowsSkippedNoReward = 0;
+    // Objednávky vyřazené baseline (existovaly před aktivací napojení). Také jen
+    // do odpovědi a auditního logu — není to chyba, běh musí zůstat `ok`.
+    let rowsSkippedBaseline = 0;
 
     const { data: existing } = await admin
       .from("partner_reward_codes")
       .select("external_order_id")
       .eq("partner_id", partnerId);
     const existingIds = new Set((existing ?? []).map((r: { external_order_id: string }) => r.external_order_id));
+
+    // Baseline: objednávky, které v exportu existovaly UŽ PŘED aktivací napojení
+    // (#289 část C). Nikdy z nich nesmí vzniknout odměna, kód, zákaznický e-mail
+    // ani fakturační položka — ani když později přejdou na paid/delivered/completed.
+    //
+    // Načítají se jen řádky s vyplněným `activated_at`, tedy schválená napojení.
+    // Partner bez jediného takového řádku (BOHEMIA, vereonika sro a každé jiné
+    // napojení z doby před touto změnou) dostane prázdnou množinu a projde
+    // importem přesně jako dosud — tabulka je tím zároveň vypínačem funkce.
+    const { data: baselineRows, error: baselineErr } = await admin
+      .from("shoptet_connection_baseline_orders")
+      .select("external_order_id")
+      .eq("partner_id", partnerId)
+      .not("activated_at", "is", null);
+    if (baselineErr) {
+      // Fail-closed: bez jistoty, co do baseline patří, se nesmí vydat nic.
+      await finalize({ status: "failed", error_summary: "baseline_unavailable" });
+      return json({ status: "error", error: "baseline_unavailable", run_id: runId }, 500);
+    }
+    const baselineIds = new Set(
+      (baselineRows ?? []).map((r: { external_order_id: string }) => r.external_order_id),
+    );
 
     const logBatch: Array<Record<string, unknown>> = [];
     for (const inv of parsed.invalidRows) {
@@ -249,6 +274,20 @@ serve(async (req) => {
     for (const row of parsed.orders) {
       const orderId = row.orderId;
       rowsValid++;
+
+      // Baseline vyřazuje objednávku dřív, než se o ní vůbec začne rozhodovat —
+      // nedostane se tedy ani do `validRows`, ani do dry-run projekcí. Platí
+      // v obou režimech: dry run nesmí tvrdit, že by se odměna vydala.
+      if (baselineIds.has(orderId)) {
+        rowsSkippedBaseline++;
+        logBatch.push({
+          run_id: runId,
+          external_order_id: orderId,
+          action: "skip_baseline",
+          result: "pre_activation",
+        });
+        continue;
+      }
 
       if (mode === "dry_run" && existingIds.has(orderId)) {
         rowsSkipDup++;
@@ -273,7 +312,12 @@ serve(async (req) => {
     }
 
     if (mode === "live") {
-      const preLiveLogBatch = logBatch.filter((row) => row.action === "invalid");
+      // `would_create` / `skip_dup` jsou dry-run projekce a v živém běhu by lhaly.
+      // `skip_baseline` se naopak musí udržet — je to auditní důkaz, že se za
+      // historickou objednávku nic nevydalo.
+      const preLiveLogBatch = logBatch.filter(
+        (row) => row.action === "invalid" || row.action === "skip_baseline",
+      );
       logBatch.length = 0;
       logBatch.push(...preLiveLogBatch);
 
@@ -407,6 +451,8 @@ serve(async (req) => {
         skipped_duplicates: rowsSkipDup,
         // Orders without any selected product. Not a failure — see createOutcome.ts.
         skipped_no_reward: rowsSkippedNoReward,
+        // Objednávky z doby před aktivací napojení. Také ne chyba (#289 část C).
+        skipped_baseline: rowsSkippedBaseline,
         failed: rowsFailed,
       }, summary.status === "ok" ? 200 : 500);
     }
@@ -417,6 +463,7 @@ serve(async (req) => {
       run_id: runId,
       item_level_export: isItemLevel,
       items_total: validRows.reduce((n, r) => n + r.items.length, 0),
+      skipped_baseline: rowsSkippedBaseline,
       ...summary,
     });
   } catch (e) {

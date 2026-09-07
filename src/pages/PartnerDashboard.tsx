@@ -126,6 +126,27 @@ interface ShoptetConnRequest {
   // 'initial' = the first connection, 'url_change' = replacing the export URL of
   // an already active one. Older rows predate the column and are treated as initial.
   request_kind?: string | null;
+  // Okamžik posledního úspěšného ověření exportu partnerem (#289 část C).
+  // NULL = neověřeno → OneMil napojení nemůže aktivovat.
+  verified_at?: string | null;
+  verified_order_count?: number | null;
+}
+
+/**
+ * Výsledek `verify-shoptet-connection`. Samá čísla a příznaky — žádná zákaznická
+ * data, žádná exportní URL, žádný hash ani secret.
+ */
+interface ShoptetVerifyResult {
+  verified: boolean;
+  export_reachable: boolean;
+  http_status: number | null;
+  headers_ok: boolean;
+  missing_headers: string[];
+  rows_total: number;
+  rows_valid: number;
+  rows_invalid: number;
+  baseline_orders: number;
+  reason: string | null;
 }
 
 const PARTNER_ROTATE_ERROR_MESSAGES: Record<string, string> = {
@@ -290,6 +311,8 @@ const PartnerDashboard = () => {
   const [shoptetChangeSubmitting, setShoptetChangeSubmitting] = useState(false);
   const [shoptetSavingDraft, setShoptetSavingDraft] = useState(false);
   const [shoptetSubmitting, setShoptetSubmitting] = useState(false);
+  const [shoptetVerifying, setShoptetVerifying] = useState(false);
+  const [shoptetVerifyResult, setShoptetVerifyResult] = useState<ShoptetVerifyResult | null>(null);
 
   // ── Offer billing state ────────────────────────────────────────────────────
   const [offerActivationCount, setOfferActivationCount] = useState<number>(0);
@@ -945,7 +968,7 @@ const PartnerDashboard = () => {
 
 
   // ── Shoptet self-service handlers ────────────────────────────────────────────
-  const SHOPTET_SELECT = 'id, shop_name, trigger_status, reward_czk, reward_mc, url_received, status, partner_note, rejection_reason, submitted_at, reviewed_at, created_at, request_kind';
+  const SHOPTET_SELECT = 'id, shop_name, trigger_status, reward_czk, reward_mc, url_received, status, partner_note, rejection_reason, submitted_at, reviewed_at, created_at, request_kind, verified_at, verified_order_count';
 
   // The connection and a pending URL change are loaded SEPARATELY on purpose.
   // A change request is a newer row, so a single "latest row" query would make an
@@ -1183,6 +1206,42 @@ const PartnerDashboard = () => {
       toast.error('Nepodařilo se odeslat žádost ke schválení.');
     } finally {
       setShoptetSubmitting(false);
+    }
+  };
+
+  /**
+   * Ověření napojení nanečisto (#289 část C).
+   *
+   * Volá výhradně `verify-shoptet-connection`, která nic nevydává — žádné
+   * MioCoiny, kód, e-mail ani fakturační položku. Zpět chodí jen počty a důvod
+   * neúspěchu; exportní odkaz ani zákaznická data se sem nikdy nedostanou.
+   */
+  const handleShoptetVerify = async () => {
+    if (!partner || !shoptetReq) return;
+    setShoptetVerifying(true);
+    setShoptetVerifyResult(null);
+    try {
+      const { data, error } = await supabase.functions.invoke('verify-shoptet-connection', {
+        body: { request_id: shoptetReq.id },
+      });
+      if (error || !data?.success) {
+        toast.error('Ověření se nepodařilo spustit. Zkuste to prosím znovu.');
+        return;
+      }
+
+      const result = data as ShoptetVerifyResult;
+      setShoptetVerifyResult(result);
+      if (result.verified) {
+        toast.success('Export je v pořádku. Napojení je připravené ke schválení.');
+      } else {
+        toast.error('Export zatím není použitelný. Podrobnosti jsou pod tlačítkem.');
+      }
+      await loadShoptetRequest(partner.id);
+    } catch {
+      console.error('shoptet verify failed');
+      toast.error('Ověření se nepodařilo spustit. Zkuste to prosím znovu.');
+    } finally {
+      setShoptetVerifying(false);
     }
   };
 
@@ -2004,7 +2063,73 @@ const PartnerDashboard = () => {
                       </div>
                     )}
 
-                    {locked && shoptetReq?.status === 'submitted' && (
+                    {/* Ověření napojení nanečisto — jen pro odeslanou žádost o PRVNÍ
+                        napojení. Test nic nevydá; teprve po něm smí OneMil napojení
+                        aktivovat. Změna exportního odkazu (`url_change`) sem nepatří:
+                        běží nad už živým napojením. */}
+                    {locked && shoptetReq?.status === 'submitted' && (shoptetReq.request_kind ?? 'initial') === 'initial' && (
+                      <div data-testid="shoptet-verify" className="space-y-2 rounded-lg border border-border/60 bg-muted/20 p-3">
+                        <p className="text-xs text-muted-foreground leading-relaxed">
+                          Před aktivací si napojení ověřte. Test proběhne nanečisto — <strong>nevydá žádné
+                          MioCoiny, kódy ani e-maily</strong>. Zároveň si poznamenáme objednávky, které už
+                          v exportu jsou, aby za ně nikdy nevznikla odměna.
+                        </p>
+                        <Button
+                          type="button"
+                          size="sm"
+                          variant="outline"
+                          className="gap-2"
+                          onClick={handleShoptetVerify}
+                          disabled={shoptetVerifying}
+                          data-testid="shoptet-verify-btn"
+                        >
+                          {shoptetVerifying ? <Loader2 className="w-4 h-4 animate-spin" /> : <CheckCircle className="w-4 h-4" />}
+                          Ověřit napojení
+                        </Button>
+
+                        {shoptetVerifyResult && (
+                          <div data-testid="shoptet-verify-result" className="space-y-1 text-xs">
+                            <p className={shoptetVerifyResult.export_reachable ? 'text-emerald-500' : 'text-destructive'}>
+                              {shoptetVerifyResult.export_reachable
+                                ? 'Export je dostupný.'
+                                : `Export není dostupný${shoptetVerifyResult.http_status ? ` (chyba ${shoptetVerifyResult.http_status})` : ''}. Zkontrolujte odkaz v Shoptetu.`}
+                            </p>
+                            {shoptetVerifyResult.export_reachable && (
+                              <p className={shoptetVerifyResult.headers_ok ? 'text-emerald-500' : 'text-destructive'}>
+                                {shoptetVerifyResult.headers_ok
+                                  ? 'Povinná pole jsou v pořádku.'
+                                  : shoptetVerifyResult.missing_headers.length > 0
+                                    ? `V exportu chybí: ${shoptetVerifyResult.missing_headers.join(', ')}.`
+                                    : 'Export neobsahuje žádná data.'}
+                              </p>
+                            )}
+                            {shoptetVerifyResult.headers_ok && (
+                              <p className={shoptetVerifyResult.verified ? 'text-emerald-500' : 'text-destructive'}>
+                                {shoptetVerifyResult.verified
+                                  ? `Data jsou použitelná — načteno ${shoptetVerifyResult.rows_valid} objednávek.`
+                                  : 'V exportu není žádná použitelná objednávka.'}
+                              </p>
+                            )}
+                            {shoptetVerifyResult.verified && (
+                              <p className="text-muted-foreground">
+                                Stávajících {shoptetVerifyResult.baseline_orders} objednávek jsme si poznamenali jako
+                                historii — odměnu z nich nikdy nevydáme. Odměny začnou platit až pro objednávky,
+                                které přibudou po aktivaci.
+                              </p>
+                            )}
+                          </div>
+                        )}
+
+                        <p className="text-xs text-muted-foreground flex items-center gap-1">
+                          <Clock className="w-3 h-3" />
+                          {shoptetReq.verified_at
+                            ? 'Napojení je ověřené a čeká na schválení OneMil.'
+                            : 'Žádost čeká na schválení OneMil. Aktivovat ji lze až po úspěšném ověření.'}
+                        </p>
+                      </div>
+                    )}
+
+                    {locked && shoptetReq?.status === 'submitted' && (shoptetReq.request_kind ?? 'initial') !== 'initial' && (
                       <p className="text-xs text-muted-foreground flex items-center gap-1">
                         <Clock className="w-3 h-3" /> Žádost čeká na schválení OneMil. Po schválení se napojení aktivuje automaticky.
                       </p>
