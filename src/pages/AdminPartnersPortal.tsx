@@ -519,28 +519,42 @@ const AdminPartnersPortal = () => {
 
     setIssuingInvoice(true);
 
-    // Optimistic update
-    const previousInvoices = [...invoices];
-    setInvoices(invoices.map(inv => 
-      inv.id === selectedInvoice.id 
-        ? { ...inv, status: 'issued' as InvoiceStatus, issued_at: new Date().toISOString() } 
-        : inv
-    ));
-    setSelectedInvoice({ ...selectedInvoice, status: 'issued', issued_at: new Date().toISOString() });
-
     try {
-      const { error } = await supabase
-        .from('partner_invoices')
-        .update({ status: 'issued', issued_at: new Date().toISOString() })
-        .eq('id', selectedInvoice.id);
+      // Chráněná serverová cesta: draft -> issued. Server ověřuje oprávnění,
+      // zamyká řádek, povoluje jen správný přechod a nastavuje issued_at
+      // vlastním časem. Žádný přímý klientský UPDATE partner_invoices.
+      const { data, error } = await (supabase as any).rpc('admin_issue_partner_invoice', {
+        p_invoice_id: selectedInvoice.id,
+      });
 
       if (error) throw error;
+
+      const result = data as { status: string; issued_at?: string } | null;
+
+      if (!result || result.status !== 'issued' || !result.issued_at) {
+        // Server odmítl přechod (forbidden / not_found / invalid_transition /
+        // conflict) nebo nevrátil issued_at — lokální stav se nemění, žádný
+        // optimistický úspěch při 0 změněných řádcích.
+        const reason = result?.status ?? 'unknown_error';
+        console.error('Failed to issue invoice, server status:', reason);
+        toast.error('Nepodařilo se vydat fakturu');
+        return;
+      }
+
+      const issuedAt = result.issued_at;
+      setInvoices(prev =>
+        prev.map(inv =>
+          inv.id === selectedInvoice.id
+            ? { ...inv, status: 'issued' as InvoiceStatus, issued_at: issuedAt }
+            : inv
+        )
+      );
+      setSelectedInvoice({ ...selectedInvoice, status: 'issued', issued_at: issuedAt });
+
       toast.success('Faktura byla úspěšně vydána');
       setIssueConfirmOpen(false);
     } catch (error) {
       console.error('Error issuing invoice:', error);
-      setInvoices(previousInvoices);
-      setSelectedInvoice({ ...selectedInvoice, status: 'draft', issued_at: null });
       toast.error('Nepodařilo se vydat fakturu');
     } finally {
       setIssuingInvoice(false);
