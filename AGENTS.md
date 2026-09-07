@@ -73,7 +73,51 @@ Polož si tyto otázky. Pokud je odpověď na kteroukoli „ano“, dokumentaci 
 
 ---
 
-## 3. Co pravidlo NEMĚNÍ
+## 3. PŘEDSTARTOVNÍ RESET SYSTÉMU (potvrzeno Pavlem 07. 09. 2026)
+
+Stejné pravidlo je i v `CLAUDE.md` a `.cursorrules`.
+
+**Veškerá současná provozní data OneMil jsou stále testovací.** Před ostrým spuštěním a příchodem
+prvních skutečných zákazníků musí proběhnout **jeden řízený kompletní předstartovní reset systému**.
+
+**Reset zatím NEPROBĚHL.** Do jeho provedení se s produkčními daty pracuje jako s testovacími —
+ale to **není důvod je mazat, měnit ani „uklízet" mimochodem**. Jediná povolená cesta k jejich
+odstranění je ten jeden schválený reset.
+
+**Reset odstraní provozní testovací data:** zákaznické a testovací účty (kromě zachovaného
+superadmina), profily, MioCoin peněženky a jejich pohyby, soutěže, tikety, výhry a testovací ceny,
+vouchery a jejich testovací použití, zprávy a notifikace, testovací platby, testovací partnery
+a jejich provozní data, testovací faktury, referral / affiliate / influencer testovací data,
+Shoptet testovací objednávky a importní provozní data, e-mailovou frontu a další testovací
+provozní záznamy.
+
+**Reset NESMÍ odstranit samotný systém:** databázovou strukturu, migrace, Edge Functions, RLS
+a bezpečnostní pravidla, nutná systémová nastavení, právní obsah a jeho zdroje, potřebné systémové
+šablony a konfiguraci a **zachovaný superadmin účet**.
+
+### Závazný postup
+
+1. **Přesný seznam tabulek a pořadí mazání se musí těsně před resetem znovu vytvořit** podle
+   **aktuální produkční databáze** — read-only mapou dat. **Nepoužívat starší seznam z dokumentace
+   ani z dřívějšího chatu**: schéma se mezitím mění a zastaralé pořadí by narazilo na cizí klíče
+   nebo naopak nechalo osiřelá data.
+2. Reset je **destruktivní produkční operace** a smí být spuštěn **až po novém výslovném schválení
+   Pavla**. Dřívější souhlas s přípravou, s mapou dat ani s tímto pravidlem **není** souhlasem
+   se spuštěním.
+3. Před spuštěním musí existovat **ověřená záloha** (produkční PITR je vypnutý — platí postup
+   z `docs/rollback/`, tedy ruční `pg_dump` ověřený `pg_restore -l`).
+
+### Co z toho plyne pro tebe
+
+- **Reset nesmíš spustit sám, ani po částech, ani „jen pro jednu tabulku".** Hromadné `DELETE` /
+  `TRUNCATE` nad produkčními provozními daty je vždy dangerous action.
+- **Testovací povaha dat není povolení je smazat.** Drží auditní stopu a rozpracované ověřování.
+- **Zjevně testovací záznam, který překáží**, zaznamenej jako `OPEN ISSUE` s poznámkou
+  „vyřeší předstartovní reset" — neřeš ho mazáním.
+
+---
+
+## 4. Co pravidlo NEMĚNÍ
 
 Zůstávají v platnosti všechna dosavadní pravidla z `CLAUDE.md` a `.cursorrules`, zejména:
 produkční migrace, změny RLS, zásahy do peněženek, plateb a soutěžní logiky a destruktivní

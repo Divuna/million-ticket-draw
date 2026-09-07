@@ -2,6 +2,35 @@
 
 > **Autoritativní aktuální stav. Poslední aktualizace 05. 9. 2026 podle `origin/main` (`f051e248`), GitHubu a read-only synchronizačního auditu GitHub × produkční Supabase (`xkzhjldrojjlrkezorey`) × staging (`dxmowysntemfqfnanxua`).**
 
+## -2. Předstartovní reset systému — plánovaný, NEPROVEDENÝ (07. 09. 2026)
+
+**Současná provozní data v produkci `xkzhjldrojjlrkezorey` jsou stále testovací.** Účty, peněženky,
+soutěže, tikety, výhry, platby, partneři, faktury a Shoptet objednávky pocházejí z testovací fáze,
+ne z reálného zákaznického provozu.
+
+Pavel 07. 09. 2026 potvrdil trvalé pravidlo: **před ostrým spuštěním musí proběhnout jeden řízený
+kompletní předstartovní reset systému**, který odstraní testovací provozní data, ale ponechá
+databázovou strukturu, migrace, Edge Functions, RLS, systémová nastavení, právní obsah a jeho
+zdroje, systémové šablony a **zachovaný superadmin účet**.
+
+| | Stav |
+|---|---|
+| Trvalé pravidlo zapsané v `CLAUDE.md` / `AGENTS.md` / `.cursorrules` | ✅ hotovo |
+| Aktuální read-only mapa dat (seznam tabulek + pořadí mazání) | ⏳ **neexistuje** |
+| Ověřená záloha před resetem | ⏳ čeká |
+| Nové výslovné schválení Pavla ke spuštění | ⏳ **čeká** |
+| **Samotný reset** | ⛔ **NEPROVEDEN** |
+
+**Před provedením musí vzniknout aktuální read-only mapa dat** — seznam tabulek a pořadí mazání se
+odvodí až těsně před resetem z **aktuální produkční databáze**, nikdy ze staršího seznamu
+v dokumentaci nebo z dřívějšího chatu (schéma se mezitím mění). **Reset je destruktivní produkční
+operace a smí být spuštěn až po novém výslovném schválení Pavla** — dřívější souhlas s přípravou
+ani s tímto pravidlem souhlasem se spuštěním není.
+
+Otevřené položky, které na tento reset čekají, jsou už zaznamenané jinde v tomto souboru
+a v `CLAUDE.md`: rekonciliace wallet/ledger (§ dále v tomto souboru) a 52 historických `cs_test_`
+plateb v produkci.
+
 ## -1. Dávka bezpečnostních a funkčních oprav 02.–05. 09. 2026 — potvrzeno živé v produkci
 
 Kompletní synchronizační audit (05. 09. 2026) porovnal GitHub `main`, produkční Supabase a
