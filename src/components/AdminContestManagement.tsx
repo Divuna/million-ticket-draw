@@ -1594,13 +1594,23 @@ const ContestModal: React.FC<ContestModalProps> = ({ open, onClose, onSaved, edi
         imagePath = await handleImageUpload(form.main_image_file);
       }
 
+      // Soutěž se NIKDY nezakládá rovnou jako `active`, i když to admin zvolil.
+      // PDF s pravidly se nahrává až po vytvoření řádku (cesta v úložišti
+      // potřebuje contest id), takže by mezi vytvořením a nahráním existovalo
+      // okno, ve kterém je soutěž veřejně aktivní bez závazných pravidel.
+      // Vzniká proto jako `pending` a na `active` se přepne teprve po úspěšném
+      // uložení `rules_pdf_url`. Trigger `trg_contest_active_requires_rules_pdf`
+      // vynucuje totéž i pro cesty mimo tohle UI.
+      const wantsActivationAfterRules = !isEditingContest && form.status === "active";
+      const initialStatus = wantsActivationAfterRules ? "pending" : form.status;
+
       const { data: contestResult, error } = await supabase.rpc("admin_manage_contest", {
         p_contest_id: isEditingContest ? editingContest.contest_id : null,
         p_title: form.title,
         p_description: form.description || null,
         p_main_prize: form.main_prize,
         p_main_image: imagePath,
-        p_status: form.status,
+        p_status: initialStatus,
         p_ticket_count: normalizedTicketCount,
         p_ticket_price: form.ticket_price,
         p_operation: isEditingContest ? "update" : "create",
@@ -1739,7 +1749,36 @@ const ContestModal: React.FC<ContestModalProps> = ({ open, onClose, onSaved, edi
             // client UPDATE may be blocked by RLS on the freshly-created row.
             // Fall through to onSaved()/onClose() so the modal closes and the contest
             // appears in the list. Admin can reopen and fix extras.
+          } else if (wantsActivationAfterRules && additionalUpdates.rules_pdf_url) {
+            // Pravidla jsou uložená — teprve teď smí soutěž zveřejnit. Do téhle
+            // chvíle byla `pending`, takže nikdy neexistovala aktivní bez pravidel.
+            const { error: activateError } = await supabase.rpc("admin_manage_contest", {
+              p_contest_id: contestId,
+              p_status: "active",
+              p_operation: "update",
+            } as any);
+
+            if (activateError) {
+              console.error("Error activating contest after rules upload:", activateError);
+              toast({
+                title: "Soutěž zůstala neaktivní",
+                description:
+                  "Pravidla se uložila, ale aktivace se nezdařila. Soutěž je připravená jako čekající — aktivujte ji prosím ručně.",
+                variant: "destructive",
+              });
+            }
           }
+        }
+
+        // Admin chtěl aktivní soutěž, ale pravidla se neuložila → zůstává `pending`.
+        // Bez tohohle upozornění by si myslel, že soutěž běží.
+        if (wantsActivationAfterRules && !additionalUpdates.rules_pdf_url) {
+          toast({
+            title: "Soutěž zůstala neaktivní",
+            description:
+              "Bez uložených pravidel (PDF) nelze soutěž aktivovat. Doplňte pravidla v editaci a pak ji aktivujte.",
+            variant: "destructive",
+          });
         }
 
         // AUTO-FLUSH: pokud admin vybral soubor nebo URL v "Přidat nové médium" a neklikl
