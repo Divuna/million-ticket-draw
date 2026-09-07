@@ -4,17 +4,21 @@
  * Staging-only, self-contained. Ověřuje schválené chování end-to-end na reálném
  * toku submit → verify → approve → import, ne na jeho napodobenině:
  *
- *   A) export obsahuje staré objednávky           → připraveno v setupu
- *   B) partnerské ověření nic nevydá              → 0 kódů, 0 e-mailů, 0 aktivací, 0 fakturace
- *   C) baseline se uloží                          → 3 řádky, zatím NEAKTIVNÍ
- *   D) aktivace až po ověření                     → neověřená žádost → 409
- *   E) staré objednávky přejdou na paid            → pořád 0 kódů, 0 e-mailů, 0 fakturace
- *   F) nová objednávka po aktivaci                 → projde běžnou odměnovou logikou
- *   G) stávající napojení (BOHEMIA, vereonika sro) → beze změny
+ *   161a  partnerské ověření nic nevydá        → 0 kódů, 0 e-mailů, 0 aktivací, 0 fakturace
+ *   161b  předběžná baseline uložená           → zatím NEAKTIVNÍ
+ *   161b2 rozbitý export po úspěšném ověření   → `verified_at` zneplatněno
+ *   161b3 export s neplatným řádkem            → neprojde jako ověřený
+ *   161b4 opravený export                      → ověření zase projde
+ *   161c  neověřená žádost                     → aktivace odmítnuta (409)
+ *   161c2 rozbitý export při schválení         → fail-closed, import zůstává vypnutý
+ *   161d  objednávka D vzniklá PO ověření      → schválení ji pořád dostane do baseline
+ *   161e  staré objednávky přejdou na paid      → pořád 0 kódů, 0 e-mailů, 0 fakturace
+ *   161f  nová objednávka E po aktivaci        → projde běžnou odměnovou logikou
+ *   161g  BOHEMIA a vereonika sro              → beze změny, bez baseline řádku
  *
- * Export se hostuje jako veřejný soubor ve staging Storage, aby šlo jeho obsah
- * mezi kroky přepsat — je to jediný způsob, jak reálně simulovat „stará
- * objednávka se později změnila na zaplacenou".
+ * Export se hostuje jako veřejný soubor ve staging Storage — jinak nejde reálně
+ * odsimulovat „stará objednávka se později zaplatila". Každá verze má vlastní
+ * cestu a vlastní URL, protože veřejné Storage URL jde přes CDN (viz `uploadCsv`).
  *
  * Vyžadované env (playwright-staging.yml je má):
  *   VITE_SUPABASE_URL / VITE_SUPABASE_ANON_KEY / E2E_SUPABASE_SERVICE_ROLE_KEY
@@ -38,7 +42,9 @@ const SUPERADMIN_PASSWORD = process.env.E2E_SUPERADMIN_PASSWORD ?? '';
 
 const RUN_ID = Date.now();
 const BUCKET = 'spec161-shoptet-export';
-const CSV_PATH = `export-${RUN_ID}.csv`;
+// Každá verze exportu dostane vlastní cestu — viz `uploadCsv`.
+let csvVersion = 0;
+const csvPaths: string[] = [];
 
 const PARTNER_EMAIL   = `spec161-partner-${RUN_ID}@onemil.cz`;
 const UNVERIFIED_EMAIL = `spec161-unverified-${RUN_ID}@onemil.cz`;
@@ -104,20 +110,49 @@ const ctx: {
   unverifiedAuthId?: string;
   unverifiedRequestId?: string;
   legacySnapshot?: string;
+  approved?: boolean;
 } = {};
 
+/**
+ * Nahraje verzi exportu a přesměruje na ni uloženou URL.
+ *
+ * Každá verze má VLASTNÍ cestu. Přepisování jednoho objektu nefunguje: veřejné
+ * Storage URL jde přes CDN a další krok testu pak dostane ještě starý obsah —
+ * ověření vrátilo `verified: true` nad exportem, který už byl nahrazený rozbitým.
+ * Nová cesta = nová URL = žádná cache, takže je test deterministický.
+ *
+ * URL se ukládá stejnými cestami jako v provozu: do pending Vault klíče přes
+ * `store_shoptet_pending_url` a po aktivaci navíc do partnerského klíče přes
+ * `set_shoptet_export_secret` (obojí service_role, URL nikdy neopustí Vault).
+ */
 async function uploadCsv(csv: string): Promise<void> {
   const client = svc();
+  const path = `export-${RUN_ID}-${++csvVersion}.csv`;
   const { error } = await client.storage
     .from(BUCKET)
-    .upload(CSV_PATH, new Blob([csv], { type: 'text/csv' }), {
+    .upload(path, new Blob([csv], { type: 'text/csv' }), {
       upsert: true,
       contentType: 'text/csv',
-      // Veřejné Storage URL jde přes CDN — bez tohohle by další krok testu mohl
-      // dostat ještě starý obsah.
       cacheControl: '0',
     });
   if (error) throw new Error(`csv upload: ${error.message}`);
+  csvPaths.push(path);
+
+  const url = `${SUPABASE_URL}/storage/v1/object/public/${BUCKET}/${path}`;
+  for (const requestId of [ctx.requestId, ctx.unverifiedRequestId].filter(Boolean) as string[]) {
+    const { error: vaultErr } = await client.rpc('store_shoptet_pending_url', {
+      p_request_id: requestId,
+      p_url: url,
+    });
+    if (vaultErr) throw new Error(`vault store: ${vaultErr.message}`);
+  }
+  if (ctx.partnerId && ctx.approved) {
+    const { error: secretErr } = await client.rpc('set_shoptet_export_secret', {
+      p_partner_id: ctx.partnerId,
+      p_url: url,
+    });
+    if (secretErr) throw new Error(`partner secret: ${secretErr.message}`);
+  }
 }
 
 /** JWT konkrétního uživatele — Edge Functions se volají jeho jménem, ne service_role. */
@@ -234,10 +269,11 @@ test.describe.serial('161 — Shoptet baseline: staré objednávky nikdy nevydaj
   test.beforeAll(async () => {
     const client = svc();
 
-    // Veřejný bucket pro testovací export. Obsah se mezi kroky přepisuje.
+    // Veřejný bucket pro testovací export. Každá verze má vlastní cestu.
     await client.storage.createBucket(BUCKET, { public: true }).catch(() => undefined);
-    await uploadCsv(buildCsv(OLD_ORDERS.map((order) => ({ order, paid: false }))));
 
+    // Požadavky musí existovat dřív než první upload — `uploadCsv` ukládá URL
+    // do jejich pending Vault klíčů.
     const main = await createPartnerWithRequest(PARTNER_EMAIL);
     ctx.partnerId = main.partnerId;
     ctx.partnerAuthId = main.authId;
@@ -248,15 +284,7 @@ test.describe.serial('161 — Shoptet baseline: staré objednávky nikdy nevydaj
     ctx.unverifiedAuthId = second.authId;
     ctx.unverifiedRequestId = second.requestId;
 
-    // Exportní URL jde výhradně do Vaultu, stejnou cestou jako submit- EF.
-    const publicUrl = `${SUPABASE_URL}/storage/v1/object/public/${BUCKET}/${CSV_PATH}`;
-    for (const requestId of [main.requestId, second.requestId]) {
-      const { error } = await client.rpc('store_shoptet_pending_url', {
-        p_request_id: requestId,
-        p_url: publicUrl,
-      });
-      if (error) throw new Error(`vault store: ${error.message}`);
-    }
+    await uploadCsv(buildCsv(OLD_ORDERS.map((order) => ({ order, paid: false }))));
 
     // Otisk stávajících napojení PŘED testem — test G ho porovná po všem.
     const { data: legacy } = await client
@@ -288,7 +316,7 @@ test.describe.serial('161 — Shoptet baseline: staré objednávky nikdy nevydaj
     // `spec161-%`, ne jen zákaznický vzor: schválení navíc zařadí notifikaci
     // partnerovi, která by jinak zůstala v frontě viset.
     await client.from('email_queue').delete().like('email', `spec161-%${RUN_ID}%`);
-    await client.storage.from(BUCKET).remove([CSV_PATH]).catch(() => undefined);
+    if (csvPaths.length > 0) await client.storage.from(BUCKET).remove(csvPaths).catch(() => undefined);
     await client.storage.deleteBucket(BUCKET).catch(() => undefined);
   });
 
@@ -468,6 +496,8 @@ test.describe.serial('161 — Shoptet baseline: staré objednávky nikdy nevydaj
     });
     expect(status, `approve: ${JSON.stringify(json)}`).toBe(200);
     expect(json.status).toBe('active');
+    // Od teď se exportní URL mění v partnerském Vault klíči, ne v pending.
+    ctx.approved = true;
 
     const client = svc();
     const { data: rows } = await client
