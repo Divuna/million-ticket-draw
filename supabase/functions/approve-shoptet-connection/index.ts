@@ -171,7 +171,7 @@ Deno.serve(async (req) => {
       p_request_id: request_id,
     });
     if (pendingErr || !pendingUrl || typeof pendingUrl !== "string") {
-      console.error("approval snapshot url unavailable:", pendingErr?.message ?? "empty");
+      console.error("approval snapshot: pending export unavailable:", pendingErr?.message ?? "empty");
       return err(400, "export_url_unavailable", "Uložený exportní odkaz se nepodařilo načíst.");
     }
 
