@@ -455,12 +455,23 @@ const ContestDetailAdmin: React.FC = () => {
     setSavingBonus(true);
 
     try {
+      // Explicit p_image_url/p_detailed_description: production has two
+      // admin_manage_bonus_prize overloads (7-arg and 9-arg — the 9-arg one
+      // adds exactly these two parameters). Calling with only the 5 params
+      // shared by both signatures is genuinely ambiguous to PostgREST/Postgres
+      // ("function ... is not unique", 42725) — confirmed via a rolled-back
+      // staging probe before this fix. Naming these two params (even as null)
+      // makes the 7-arg overload structurally ineligible, so the call resolves
+      // unambiguously to the 9-arg overload. Do not remove without also
+      // resolving the underlying overload duplication.
       const { error } = await supabase.rpc("admin_manage_bonus_prize", {
         p_operation: "create",
         p_contest_id: contestId,
         p_description: bonusForm.description,
         p_ticket_position: bonusForm.ticket_position,
         p_amount: bonusForm.amount > 0 ? bonusForm.amount : null,
+        p_image_url: null,
+        p_detailed_description: null,
       });
 
       if (error) throw error;
