@@ -1933,14 +1933,66 @@ const ContestModal: React.FC<ContestModalProps> = ({ open, onClose, onSaved, edi
       if (contestId) {
         // Delete existing bonuses for this contest.
         // Edit mode keeps already-materialized MioCoin rows immutable.
+        //
+        // False-success fix: PostgREST/RLS report `error: null` on a DELETE
+        // that a policy silently filters down to 0 affected rows — there is
+        // no exception to catch. A missing/mismatched grant (e.g. a
+        // canonical superadmin whose session the RLS check rejects for any
+        // reason) would therefore look identical to "there was nothing to
+        // delete" if we only checked `error`. Zero affected rows is a
+        // legitimate, expected state here (a brand-new contest or a contest
+        // with no bonus_prizes yet), so we can't use "0 rows" as the failure
+        // signal either. Instead: after the DELETE, re-SELECT the exact same
+        // target set. A real success means that set is now empty regardless
+        // of how many rows the DELETE itself reported; anything still
+        // present means the delete didn't actually happen and the save must
+        // stop before any new bonus rows are inserted on top of stale ones.
         if (hasImmutablePersistedMioCoinBonuses) {
-          await supabase
+          const { error: deletePhysicalError } = await supabase
             .from("bonus_prizes")
             .delete()
             .eq("contest_id", contestId)
             .or("amount.is.null,amount.eq.0");
+          if (deletePhysicalError) {
+            throw new Error(`Chyba při mazání starých fyzických bonusových výher: ${deletePhysicalError.message}`);
+          }
+
+          const { count: remainingPhysicalCount, error: verifyPhysicalError } = await supabase
+            .from("bonus_prizes")
+            .select("id", { count: "exact", head: true })
+            .eq("contest_id", contestId)
+            .or("amount.is.null,amount.eq.0");
+          if (verifyPhysicalError) {
+            throw new Error(
+              `Nepodařilo se ověřit smazání starých fyzických bonusových výher: ${verifyPhysicalError.message}`
+            );
+          }
+          if ((remainingPhysicalCount ?? 0) > 0) {
+            throw new Error(
+              "Smazání starých fyzických bonusových výher se nepodařilo dokončit (řádky zůstaly v databázi). Uložení bylo zastaveno."
+            );
+          }
         } else {
-          await supabase.from("bonus_prizes").delete().eq("contest_id", contestId);
+          const { error: deleteAllError } = await supabase
+            .from("bonus_prizes")
+            .delete()
+            .eq("contest_id", contestId);
+          if (deleteAllError) {
+            throw new Error(`Chyba při mazání starých bonusových výher: ${deleteAllError.message}`);
+          }
+
+          const { count: remainingAllCount, error: verifyAllError } = await supabase
+            .from("bonus_prizes")
+            .select("id", { count: "exact", head: true })
+            .eq("contest_id", contestId);
+          if (verifyAllError) {
+            throw new Error(`Nepodařilo se ověřit smazání starých bonusových výher: ${verifyAllError.message}`);
+          }
+          if ((remainingAllCount ?? 0) > 0) {
+            throw new Error(
+              "Smazání starých bonusových výher se nepodařilo dokončit (řádky zůstaly v databázi). Uložení bylo zastaveno."
+            );
+          }
         }
 
         // Insert physical prizes FIRST so MioCoin generation excludes their positions
@@ -1982,9 +2034,14 @@ const ContestModal: React.FC<ContestModalProps> = ({ open, onClose, onSaved, edi
 
           // Persist economy metadata for this physical prize (Phase 4).
           // Non-blocking: a failure is logged but does not abort the save.
+          //
+          // False-success fix: `.select("id")` makes the response report which
+          // row (if any) was actually updated. A silent RLS-filtered UPDATE
+          // returns `error: null` with an empty array, indistinguishable from
+          // success unless we check the returned rows too.
           const savedPrizeId = (insertData as any)?.prize_id as string | undefined;
           if (savedPrizeId) {
-            const { error: econPrizeError } = await supabase
+            const { data: econPrizeData, error: econPrizeError } = await supabase
               .from("bonus_prizes")
               .update({
                 supplier_name: prize.supplier_name ?? null,
@@ -1992,9 +2049,14 @@ const ContestModal: React.FC<ContestModalProps> = ({ open, onClose, onSaved, edi
                 vat_rate_percent: prize.vat_rate ?? null,
                 handling_override_czk: prize.handling_override_czk ?? null,
               })
-              .eq("id", savedPrizeId);
-            if (econPrizeError) {
-              console.error("Error saving physical prize economy data:", econPrizeError);
+              .eq("id", savedPrizeId)
+              .select("id");
+            const econPrizeRowUpdated = (econPrizeData?.length ?? 0) === 1;
+            if (econPrizeError || !econPrizeRowUpdated) {
+              console.error(
+                "Error saving physical prize economy data:",
+                econPrizeError ?? `expected 1 updated row, got ${econPrizeData?.length ?? 0}`
+              );
               toast({
                 title: "Soutěž uložena",
                 description: "Ekonomická data fyzické výhry se nepodařilo uložit. Zkontrolujte konzoli a zkuste znovu.",
