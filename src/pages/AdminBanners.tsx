@@ -139,11 +139,15 @@ const AdminBanners: React.FC = () => {
     const newTitle = comingSoonTitles[slotIndex] || `Připravujeme ${slotIndex + 1}`;
     setComingSoonTitleSaving(prev => ({ ...prev, [slotIndex]: true }));
     try {
-      const { error } = await supabase
+      // `.select("id")` + affected-rows check: without it an RLS-blocked
+      // UPDATE (0 matched rows) returns no error and would report a false
+      // success.
+      const { data, error } = await supabase
         .from('coming_soon_banners')
         .update({ title: newTitle })
-        .eq('id', banner.id);
-      if (error) throw error;
+        .eq('id', banner.id)
+        .select('id');
+      if (error || !data || data.length === 0) throw error ?? new Error('no_rows_updated');
       toast.success('Popisek uložen');
       fetchComingSoonBanners();
     } catch {
@@ -161,11 +165,15 @@ const AdminBanners: React.FC = () => {
     }
     setComingSoonDescSaving(prev => ({ ...prev, [slotIndex]: true }));
     try {
-      const { error } = await supabase
+      // `.select("id")` + affected-rows check: without it an RLS-blocked
+      // UPDATE (0 matched rows) returns no error and would report a false
+      // success.
+      const { data, error } = await supabase
         .from('coming_soon_banners')
         .update({ description: comingSoonDescriptions[slotIndex] || null })
-        .eq('id', banner.id);
-      if (error) throw error;
+        .eq('id', banner.id)
+        .select('id');
+      if (error || !data || data.length === 0) throw error ?? new Error('no_rows_updated');
       toast.success('Info text uložen');
       fetchComingSoonBanners();
     } catch {
@@ -201,23 +209,27 @@ const AdminBanners: React.FC = () => {
       const existingBanner = comingSoonBanners[slotIndex];
       
       if (existingBanner) {
-        // Update existing record
-        const { error } = await supabase
+        // Update existing record. `.select("id")` + affected-rows check:
+        // without it an RLS-blocked UPDATE (0 matched rows) returns no
+        // error and would report a false success.
+        const { data, error } = await supabase
           .from('coming_soon_banners')
           .update({ image_url: imageUrl })
-          .eq('id', existingBanner.id);
-        
-        if (error) throw error;
+          .eq('id', existingBanner.id)
+          .select('id');
+
+        if (error || !data || data.length === 0) throw error ?? new Error('no_rows_updated');
       } else {
         // Insert new record
-        const { error } = await supabase
+        const { data, error } = await supabase
           .from('coming_soon_banners')
           .insert({
             image_url: imageUrl,
             title: comingSoonTitles[slotIndex] || `Připravujeme ${slotIndex + 1}`
-          });
-        
-        if (error) throw error;
+          })
+          .select('id');
+
+        if (error || !data || data.length === 0) throw error ?? new Error('no_rows_inserted');
       }
       
       toast.success(`Banner ${slotIndex + 1} byl úspěšně nahrán`);
@@ -320,14 +332,18 @@ const AdminBanners: React.FC = () => {
   const handleDeleteBanner = async (bannerId: string) => {
     try {
       setDeleteLoading(true);
-      
-      const { error } = await supabase
+
+      // `.select("id")` + affected-rows check: without it an RLS-blocked
+      // DELETE (0 matched rows) returns no error and would report a false
+      // success.
+      const { data, error } = await supabase
         .from('banners')
         .delete()
-        .eq('id', bannerId);
+        .eq('id', bannerId)
+        .select('id');
 
-      if (error) throw error;
-      
+      if (error || !data || data.length === 0) throw error ?? new Error('no_rows_deleted');
+
       toast.success('Banner byl úspěšně smazán');
       fetchBanners();
     } catch (error: any) {
@@ -340,13 +356,17 @@ const AdminBanners: React.FC = () => {
 
   const toggleBannerActive = async (bannerId: string, currentActive: boolean) => {
     try {
-      const { error } = await supabase
+      // `.select("id")` + affected-rows check: without it an RLS-blocked
+      // UPDATE (0 matched rows) returns no error and would report a false
+      // success.
+      const { data, error } = await supabase
         .from('banners')
         .update({ active: !currentActive })
-        .eq('id', bannerId);
+        .eq('id', bannerId)
+        .select('id');
 
-      if (error) throw error;
-      
+      if (error || !data || data.length === 0) throw error ?? new Error('no_rows_updated');
+
       toast.success(currentActive ? 'Banner byl deaktivován' : 'Banner byl aktivován');
       fetchBanners();
     } catch (error: any) {
@@ -414,7 +434,10 @@ const AdminBanners: React.FC = () => {
         imageUrl = await uploadImage(bannerForm.imageFile);
       }
 
-      const { error } = await supabase
+      // `.select("id")` + affected-rows check: without it an RLS-blocked
+      // UPDATE (0 matched rows) returns no error and would report a false
+      // success.
+      const { data, error } = await supabase
         .from('banners')
         .update({
           title: bannerForm.title,
@@ -424,9 +447,10 @@ const AdminBanners: React.FC = () => {
           start_date: bannerForm.permanent ? null : bannerForm.startDate?.toISOString().split('T')[0],
           end_date: bannerForm.permanent ? null : bannerForm.endDate?.toISOString().split('T')[0],
         })
-        .eq('id', editingBanner.id);
+        .eq('id', editingBanner.id)
+        .select('id');
 
-      if (error) throw error;
+      if (error || !data || data.length === 0) throw error ?? new Error('no_rows_updated');
 
       toast.success('Banner byl úspěšně aktualizován');
       setShowEditDialog(false);
