@@ -6,6 +6,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { supabase } from '@/integrations/supabase/client';
+import { analytics } from '@/lib/analytics';
 import { toast } from 'sonner';
 import { Loader2, Building2, ArrowLeft, CheckCircle } from 'lucide-react';
 import logo from '@/assets/logo-onemil.png';
@@ -112,6 +113,7 @@ const PartnerRegister = () => {
       });
 
       // Registration successful - show success message
+      analytics.partnerRegistrationCompleted();
       setSubmitted(true);
       toast.success('Registrace odeslána ke schválení');
     } catch (error: any) {
