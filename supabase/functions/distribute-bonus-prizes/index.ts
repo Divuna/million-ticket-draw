@@ -232,17 +232,22 @@ serve(async (req) => {
       return jsonFailure('auth_user', 'Unauthorized', null, 0, Date.now() - startTime, undefined)
     }
 
-    // Check if user is admin via user_roles (canonical role source)
+    // Check if user is superadmin via user_roles (canonical role source).
+    // Bonus prize distribution is SUPERADMIN ONLY — matches the bonus_prizes
+    // table RLS write policies (public.is_superadmin(), see PR #414). This
+    // function writes via the service-role client below, which bypasses RLS
+    // entirely, so this explicit check is the only authorization boundary
+    // for the actual DB writes that follow.
     const { data: roleData, error: roleError } = await supabaseAdmin
       .from('user_roles')
       .select('role')
       .eq('user_id', user.id)
       .maybeSingle()
 
-    if (roleError || !roleData || !['admin', 'superadmin'].includes(roleData.role)) {
+    if (roleError || !roleData || roleData.role !== 'superadmin') {
       return jsonFailure(
-        'admin_role',
-        'Admin access required',
+        'superadmin_role',
+        'Superadmin access required',
         { roleError: roleError?.message ?? null, role: roleData?.role ?? null },
         0,
         Date.now() - startTime,
