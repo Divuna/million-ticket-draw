@@ -42,15 +42,17 @@ serve(async (req) => {
       throw new Error('Unauthorized')
     }
 
-    // Check if user is admin via user_roles (canonical role source)
+    // Check if user is superadmin via user_roles (canonical role source).
+    // Bonus prize management is SUPERADMIN ONLY — matches the bonus_prizes
+    // table RLS write policies (public.is_superadmin(), see PR #414).
     const { data: roleData, error: roleError } = await supabaseAdmin
       .from('user_roles')
       .select('role')
       .eq('user_id', user.id)
       .maybeSingle()
 
-    if (roleError || !roleData || !['admin', 'superadmin'].includes(roleData.role)) {
-      throw new Error('Admin access required')
+    if (roleError || !roleData || roleData.role !== 'superadmin') {
+      throw new Error('Superadmin access required')
     }
 
     const { contest_id, description, ticket_position } = await req.json()
