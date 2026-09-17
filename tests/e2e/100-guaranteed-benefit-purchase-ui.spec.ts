@@ -331,6 +331,23 @@ async function primeConsent(page: import('@playwright/test').Page): Promise<void
 }
 
 /**
+ * Počká, až doběhnou všechny CSS reveal animace (transform/opacity) uvnitř
+ * daného elementu. Ticket/voucher redesign má vrstvené `animate-in` efekty
+ * (fade/slide/zoom/spin) se staggered delay — dokud běží transform, mění
+ * `getBoundingClientRect()` naměřenou geometrii, takže měření bounding boxů
+ * má smysl provádět až po usazení do finálního stavu, jinak je test flaky
+ * i když je layout ve skutečnosti správně.
+ */
+async function waitForAnimationsToSettle(
+  locator: import('@playwright/test').Locator,
+): Promise<void> {
+  await locator.evaluate(async (el) => {
+    const animations = (el as Element).getAnimations({ subtree: true });
+    await Promise.all(animations.map((a) => a.finished.catch(() => {})));
+  });
+}
+
+/**
  * Otevře detail soutěže a počká na nákupní tlačítko. Detail má realtime
  * i polling, takže `networkidle` nikdy nenastane — čeká se na tlačítko.
  */
@@ -928,6 +945,11 @@ test.describe.serial('Spec 100 — mystery kupon (UI)', () => {
       await expect(distance).toHaveText('2 tahy');
       await expect(page.getByTestId('mystery-result-next-win-stepper')).toBeVisible();
 
+      // Dialog má staggered reveal (fade/slide/zoom/spin s různým delay) — dokud
+      // transform animace běží, boundingBox() odráží mezistav, ne finální layout.
+      // Počkat na usazení, než se měří geometrie panelu vůči kuponu.
+      await waitForAnimationsToSettle(page.getByTestId('mystery-result-dialog'));
+
       const panelBox = (await panel.boundingBox())!;
       const couponBox = (await page.getByTestId('mystery-coupon-reveal').boundingBox())!;
       expect(panelBox.y).toBeGreaterThanOrEqual(couponBox.y + couponBox.height);
@@ -1048,6 +1070,7 @@ test.describe.serial('Spec 100 — mystery kupon (UI)', () => {
 
     const dialog = page.getByTestId('mystery-result-dialog');
     await expect(dialog).toBeVisible({ timeout: 30_000 });
+    await waitForAnimationsToSettle(dialog);
 
     const dialogBox = (await dialog.boundingBox())!;
     const coupon = page.getByTestId('mystery-coupon-reveal');
@@ -1096,11 +1119,17 @@ test.describe.serial('Spec 100 — mystery kupon (UI)', () => {
     const button = await openContest(page);
     await button.click();
 
+    const dialog = page.getByTestId('mystery-result-dialog');
     const ticketImage = page
       .getByTestId('mystery-coupon-reveal')
       .locator('img[src*="mystery-voucher-ticket"]')
       .first();
     await expect(ticketImage).toBeVisible({ timeout: 30_000 });
+
+    // Dokud běží vstupní reveal animace (fade/slide/zoom/spin), boundingBox()
+    // odráží přechodový transform stav, ne finální layout — počkat na usazení
+    // před každým měřením geometrie (stejně na desktopu i po resize na mobil).
+    await waitForAnimationsToSettle(dialog);
 
     // Desktop: ticket viditelný s reálným rozměrem.
     const desktopBox = (await ticketImage.boundingBox())!;
@@ -1111,6 +1140,7 @@ test.describe.serial('Spec 100 — mystery kupon (UI)', () => {
     // ticket je fixní fyzický objekt s pevným poměrem stran za všech šířek.
     await page.setViewportSize({ width: 375, height: 812 });
     await expect(ticketImage).toBeVisible();
+    await waitForAnimationsToSettle(dialog);
     const mobileBox = (await ticketImage.boundingBox())!;
     expect(mobileBox.width).toBeGreaterThan(0);
     expect(mobileBox.height).toBeGreaterThan(0);
@@ -1135,6 +1165,10 @@ test.describe.serial('Spec 100 — mystery kupon (UI)', () => {
 
     const coupon = page.getByTestId('mystery-coupon-reveal');
     await expect(coupon).toBeVisible();
+
+    // Dokud běží vstupní reveal animace, transform (zoom/spin) dočasně mění
+    // naměřený poměr stran — počkat na usazení před měřením geometrie.
+    await waitForAnimationsToSettle(page.getByTestId('mystery-result-dialog'));
 
     // Materiál/tvar/perforace pochází ze schváleného Higgsfield ticket
     // objektu (celý blok, ne pozadí uvnitř bílé karty) — poměr stran musí
