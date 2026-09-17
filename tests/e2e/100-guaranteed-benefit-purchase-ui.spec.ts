@@ -331,18 +331,25 @@ async function primeConsent(page: import('@playwright/test').Page): Promise<void
 }
 
 /**
- * Počká, až doběhnou všechny CSS reveal animace (transform/opacity) uvnitř
- * daného elementu. Ticket/voucher redesign má vrstvené `animate-in` efekty
- * (fade/slide/zoom/spin) se staggered delay — dokud běží transform, mění
- * `getBoundingClientRect()` naměřenou geometrii, takže měření bounding boxů
- * má smysl provádět až po usazení do finálního stavu, jinak je test flaky
- * i když je layout ve skutečnosti správně.
+ * Počká, až doběhnou všechny JEDNORÁZOVÉ CSS reveal animace (transform/opacity)
+ * uvnitř daného elementu. Ticket/voucher redesign má vrstvené `animate-in`
+ * efekty (fade/slide/zoom/spin) se staggered delay — dokud běží transform,
+ * mění `getBoundingClientRect()` naměřenou geometrii, takže měření bounding
+ * boxů má smysl provádět až po usazení do finálního stavu.
+ *
+ * Nevýherní stav má navíc trvale běžící `animate-[pulse_..._infinite]` na
+ * idle aurora obrázku v hero sekci — nekonečná animace nikdy nedosáhne stavu
+ * "finished" (Web Animations API to tak definuje), takže musí být z čekání
+ * vyloučena, jinak by `Promise.all` nikdy nedoběhl a test by visel do timeoutu.
  */
 async function waitForAnimationsToSettle(
   locator: import('@playwright/test').Locator,
 ): Promise<void> {
   await locator.evaluate(async (el) => {
-    const animations = (el as Element).getAnimations({ subtree: true });
+    const animations = (el as Element).getAnimations({ subtree: true }).filter((a) => {
+      const timing = a.effect?.getComputedTiming();
+      return !timing || timing.iterations !== Infinity;
+    });
     await Promise.all(animations.map((a) => a.finished.catch(() => {})));
   });
 }
