@@ -923,15 +923,14 @@ test.describe.serial('Spec 100 — mystery kupon (UI)', () => {
       await expect(panel).toContainText('za 2 tahy');
       await expect(panel).toContainText('Může obsahovat MioCoiny, bonusovou cenu nebo hlavní výhru.');
 
-      // Počet tahů je hlavní informace a panel je před kuponem, ne schovaný pod ním.
+      // Schválený návrh má panel postupu pod kuponem a obsahuje pětikrokovou osu.
       const distance = page.getByTestId('mystery-result-next-win-distance');
-      await expect(distance).toHaveText('2');
-      const distanceFontSize = await distance.evaluate((el) => parseFloat(getComputedStyle(el).fontSize));
-      expect(distanceFontSize).toBeGreaterThanOrEqual(36);
+      await expect(distance).toHaveText('2 tahy');
+      await expect(page.getByTestId('mystery-result-next-win-stepper')).toBeVisible();
 
       const panelBox = (await panel.boundingBox())!;
       const couponBox = (await page.getByTestId('mystery-coupon-reveal').boundingBox())!;
-      expect(panelBox.y + panelBox.height).toBeLessThanOrEqual(couponBox.y);
+      expect(panelBox.y).toBeGreaterThanOrEqual(couponBox.y + couponBox.height);
     } finally {
       await (admin as any).from('bonus_prizes').delete()
         .eq('contest_id', FIXTURE.contestId).eq('ticket_position', bonusAt);
@@ -987,7 +986,7 @@ test.describe.serial('Spec 100 — mystery kupon (UI)', () => {
     const noprize = page.getByTestId('mystery-result-noprize');
     await expect(noprize).toBeVisible();
     await expect(noprize).toContainText('TENTOKRÁT BEZ VÝHRY');
-    await expect(noprize).toContainText('Ale odcházíš s garantovaným kuponem.');
+    await expect(noprize).toContainText('Ale jsi stále ve hře!');
     await expect(noprize).toContainText(
       'Kupon najdeš ve Voucherech a tvůj tiket zůstává bezpečně uložený v účtu.',
     );
