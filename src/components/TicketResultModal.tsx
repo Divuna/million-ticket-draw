@@ -13,7 +13,7 @@ import { supabase, supabaseUrl } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { useToast } from '@/hooks/use-toast';
 import { useQueryClient } from '@tanstack/react-query';
-import { Facebook, Download, Share2, X } from 'lucide-react';
+import { Facebook, Download, Share2, X, ChevronRight } from 'lucide-react';
 import logoOnemil from '@/assets/logo-onemil.png';
 import miocoinLogo from '@/assets/miocoin.png';
 import { cn } from '@/lib/utils';
@@ -557,12 +557,12 @@ export const TicketResultModal: React.FC<TicketResultModalProps> = ({
       duration: `${5.5 + (i % 6) * 0.45}s`,
       color:
         i % 4 === 0
-          ? '#FFB547'
+          ? '#FF8A00'
           : i % 4 === 1
-            ? 'hsl(265 82% 68%)'
+            ? '#FFB547'
             : i % 4 === 2
-              ? 'hsl(195 90% 62%)'
-              : 'hsl(25 95% 58%)',
+              ? '#F97316'
+              : '#FFD69E',
     }));
   }, [shouldCelebrateWin, result?.ticket_number]);
 
@@ -581,6 +581,14 @@ export const TicketResultModal: React.FC<TicketResultModalProps> = ({
       : isPartnerOffer
         ? 'Gratulujeme!'
         : '';
+
+  // Small uppercase label shown above the prize headline (visual hierarchy only —
+  // derived purely from already-computed win flags/data, no new business logic).
+  const prizeLabel = isMainPrize
+    ? 'Hlavní výhra ze soutěže'
+    : isBonusWin && bonusPrize
+      ? (bonusPrize.amount && bonusPrize.amount > 0 ? 'Získané MioCoiny' : 'Bonusová výhra ze soutěže')
+      : '';
 
   // Keep keyboard / SR attention on the prize title (beat dialog auto-focus to close button)
   useLayoutEffect(() => {
@@ -772,8 +780,8 @@ export const TicketResultModal: React.FC<TicketResultModalProps> = ({
         className={cn(
           'data-[state=open]:duration-[280ms] data-[state=closed]:duration-[280ms]',
           shouldCelebrateWin
-            ? 'fixed left-1/2 top-1/2 z-[100] flex max-h-[min(calc(100dvh-2rem),56rem)] w-[min(calc(100vw-2rem),64rem)] max-w-5xl -translate-x-1/2 -translate-y-1/2 flex-col gap-0 overflow-hidden rounded-2xl border border-[rgba(255,138,0,0.4)] bg-[#050810] p-0 shadow-[0_0_100px_rgba(255,138,0,0.25)]'
-            : 'sm:max-w-md rounded-2xl border border-[rgba(255,138,0,0.4)] bg-gradient-to-b from-[#0b1220] via-[#0f1b33] to-[#0a1428] shadow-[0_0_40px_rgba(255,138,0,0.15)]'
+            ? 'fixed left-1/2 top-1/2 z-[100] flex max-h-[min(calc(100dvh-2rem),56rem)] w-[min(calc(100vw-2rem),64rem)] max-w-5xl -translate-x-1/2 -translate-y-1/2 flex-col gap-0 overflow-hidden rounded-2xl border border-[#F4D6AD] bg-[#FFF9F0] p-0 text-[#111827] shadow-[0_28px_100px_rgba(81,49,10,0.28)]'
+            : 'sm:max-w-md rounded-2xl border border-[#F4D6AD] bg-[#FFF9F0] text-[#111827] shadow-[0_28px_80px_rgba(81,49,10,0.24)]'
         )}
       >
         {/* Explicit close button — sits above confetti / glow layers so X always works */}
@@ -781,7 +789,7 @@ export const TicketResultModal: React.FC<TicketResultModalProps> = ({
           type="button"
           aria-label="Zavřít"
           onClick={() => onClose()}
-          className="absolute right-4 top-4 z-[200] flex h-9 w-9 items-center justify-center rounded-full bg-black/60 text-white/90 ring-1 ring-white/20 backdrop-blur transition hover:bg-black/80 hover:text-white focus:outline-none focus:ring-2 focus:ring-amber-400/70"
+          className="absolute right-4 top-4 z-[200] flex h-9 w-9 items-center justify-center rounded-full bg-white/80 text-[#7A5230] ring-1 ring-[#F4D6AD] backdrop-blur transition hover:bg-white hover:text-[#111827] focus:outline-none focus:ring-2 focus:ring-[#F97316]/60"
         >
           <X className="h-5 w-5" />
         </button>
@@ -804,15 +812,15 @@ export const TicketResultModal: React.FC<TicketResultModalProps> = ({
         {shouldCelebrateWin && (
           <div className="relative flex min-h-[min(42vh,380px)] shrink-0 flex-col items-center justify-center overflow-hidden px-0 pb-6 pt-10">
             <div
-              className="win-moment-glow-orb -left-1/4 h-[min(55vw,420px)] w-[min(55vw,420px)] bg-[radial-gradient(circle,rgba(255,138,0,0.55)_0%,transparent_70%)]"
+              className="win-moment-glow-orb -left-1/4 h-[min(55vw,420px)] w-[min(55vw,420px)] bg-[radial-gradient(circle,rgba(255,138,0,0.28)_0%,transparent_70%)]"
               style={{ top: '8%' }}
             />
             <div
-              className="win-moment-glow-orb -right-1/4 h-[min(45vw,340px)] w-[min(45vw,340px)] bg-[radial-gradient(circle,hsl(280_70%_55%/0.4)_0%,transparent_70%)]"
+              className="win-moment-glow-orb -right-1/4 h-[min(45vw,340px)] w-[min(45vw,340px)] bg-[radial-gradient(circle,rgba(255,181,71,0.30)_0%,transparent_70%)]"
               style={{ top: '20%', animationDelay: '0.5s' }}
             />
             <div
-              className="win-moment-glow-orb left-1/2 h-[min(70vw,520px)] w-[min(70vw,520px)] -translate-x-1/2 bg-[radial-gradient(circle,hsl(200_85%_50%/0.35)_0%,transparent_65%)]"
+              className="win-moment-glow-orb left-1/2 h-[min(70vw,520px)] w-[min(70vw,520px)] -translate-x-1/2 bg-[radial-gradient(circle,rgba(255,214,158,0.35)_0%,transparent_65%)]"
               style={{ bottom: '-25%', animationDelay: '1s' }}
             />
 
@@ -831,32 +839,30 @@ export const TicketResultModal: React.FC<TicketResultModalProps> = ({
               ))}
             </div>
 
-            <div className="relative z-20 mx-auto max-w-lg px-2 text-center">
-              <p
-                id="win-moment-shout"
-                className="win-moment-win-headline mb-3 text-center text-2xl font-black uppercase tracking-[0.08em] text-transparent bg-clip-text bg-gradient-to-r from-[#FFB547] via-[#E7EBF0] to-[#FFB547] drop-shadow-[0_0_28px_rgba(255,138,0,0.45)] md:text-3xl md:tracking-[0.12em]"
-              >
-                {isPartnerOffer && !isBonusWin && !isMainPrize ? '🎁 SPECIÁLNÍ NABÍDKA!' : '🎉 VYHRÁL JSI!'}
+            <div id="win-moment-shout" className="relative z-20 mx-auto max-w-lg px-2 text-center">
+              <p className="win-moment-win-headline text-xl font-extrabold tracking-wide text-transparent bg-clip-text bg-gradient-to-r from-[#FF8A00] to-[#FFB547] md:text-2xl">
+                {isPartnerOffer && !isBonusWin && !isMainPrize ? '🎁 SPECIÁLNÍ NABÍDKA!' : '🎉 GRATULUJEME!'}
               </p>
+              {!(isPartnerOffer && !isBonusWin && !isMainPrize) && (
+                <p className="mt-1 text-3xl font-black leading-none text-[#111827] md:text-4xl">
+                  VYHRÁL JSI!
+                </p>
+              )}
+              {prizeLabel && (
+                <p className="mt-4 text-[11px] font-semibold uppercase tracking-[0.2em] text-[#6B7280]">
+                  {prizeLabel}
+                </p>
+              )}
               <h2
                 ref={prizeTitleFocusRef}
                 tabIndex={-1}
                 aria-describedby="win-moment-shout"
-                className={cn(
-                  'win-moment-prize-title text-balance text-3xl font-black leading-tight text-white drop-shadow-[0_0_24px_rgba(255,138,0,0.35)] md:text-4xl',
-                  'outline-none focus-visible:ring-2 focus-visible:ring-amber-400/60 focus-visible:ring-offset-4 focus-visible:ring-offset-[#050810]'
-                )}
+                className="win-moment-prize-title mt-2 text-balance text-2xl font-extrabold leading-tight text-[#F97316] outline-none focus-visible:ring-2 focus-visible:ring-[#F97316]/60 focus-visible:ring-offset-4 focus-visible:ring-offset-[#FFF9F0] md:text-3xl"
               >
                 {prizeHeadline}
               </h2>
               {prizeValueLine && (
-                <p
-                  className={cn(
-                    'mt-4 text-2xl font-bold md:text-3xl',
-                    !isMainPrize && 'win-moment-value-shimmer',
-                    isMainPrize && 'text-amber-100/90'
-                  )}
-                >
+                <p className="mt-2 text-lg font-bold text-[#7A5230] md:text-xl">
                   {prizeValueLine}
                 </p>
               )}
@@ -899,7 +905,7 @@ export const TicketResultModal: React.FC<TicketResultModalProps> = ({
             </DialogTitle>
           </DialogHeader>
 
-        <div className={cn('space-y-4 py-4', shouldCelebrateWin && 'rounded-2xl border border-amber-500/20 bg-[hsl(220_30%_8%/0.85)] px-3 py-5 sm:px-5')}>
+        <div className={cn('space-y-4 py-4', shouldCelebrateWin && 'rounded-2xl border border-[#F4D6AD] bg-white/70 px-3 py-5 sm:px-5')}>
           {isWinner ? (
             isBonusWin && bonusPrize ? (
               <div className="text-center space-y-4">
@@ -919,7 +925,7 @@ export const TicketResultModal: React.FC<TicketResultModalProps> = ({
                     )}
                   </>
                 ) : (
-                  <p className="text-sm font-medium text-emerald-400/95">Gratulujeme k výhře!</p>
+                  <p className="text-sm font-medium text-emerald-700">Gratulujeme k výhře!</p>
                 )}
                 {/* Bonus prize image (or MioCoin logo for MioCoin prizes) */}
                 <div className="flex justify-center">
@@ -938,7 +944,7 @@ export const TicketResultModal: React.FC<TicketResultModalProps> = ({
                 </div>
                 {/* Bonus prize description */}
                 {(bonusPrize.detailed_description || bonusPrize.description) && (
-                  <p className="text-sm text-amber-100/90 whitespace-pre-line max-w-md mx-auto">
+                  <p className="text-sm text-[#4B5563] whitespace-pre-line max-w-md mx-auto">
                     {bonusPrize.detailed_description || bonusPrize.description}
                   </p>
                 )}
@@ -950,29 +956,29 @@ export const TicketResultModal: React.FC<TicketResultModalProps> = ({
                       : result.distance_to_next_bonus
                   );
                   return (
-                    <div className="mx-auto max-w-[360px] rounded-2xl border border-[rgba(255,138,0,0.25)] bg-[hsl(220_40%_13%)] px-5 py-3 text-center space-y-1">
-                      <p className="text-sm text-amber-100/80">
+                    <div className="mx-auto max-w-[360px] rounded-2xl border border-[#FFD69E] bg-white/75 px-5 py-3 text-center space-y-1 shadow-[0_12px_30px_rgba(249,115,22,0.12)]">
+                      <p className="text-sm text-[#111827]">
                         {nextN === 1 ? (
                           <>Další výherní ticket čeká už při dalším tahu.</>
                         ) : (
                           <>
                             Další výherní ticket čeká už za{' '}
-                            <span className="font-bold bg-gradient-to-r from-[#FFB547] to-[#FF8A00] bg-clip-text text-transparent">
+                            <span className="font-bold text-[#F97316]">
                               {nextN.toLocaleString('cs-CZ')}
                             </span>
                             {' '}{tahPlural(nextN)}.
                           </>
                         )}
                       </p>
-                      <p className="text-[11px] text-amber-100/60">
+                      <p className="text-[11px] text-[#94A3B8]">
                         {NEXT_WIN_EXPLAINER}
                       </p>
                     </div>
                   );
                 })()}
-                <p className="win-moment-cta-hint -mb-1 text-center text-[11px] font-semibold uppercase text-amber-200/75 sm:text-xs">
+                <p className="win-moment-cta-hint -mb-1 text-center text-[11px] font-semibold uppercase text-[#9A6B2E] sm:text-xs">
                   Štěstí frčí —{' '}
-                  <span className="text-amber-100">hrát znovu</span> je nejrychlejší cesta k další výhře
+                  <span className="text-[#F97316]">hrát znovu</span> je nejrychlejší cesta k další výhře
                 </p>
                 <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
                   <Button
@@ -989,7 +995,7 @@ export const TicketResultModal: React.FC<TicketResultModalProps> = ({
                     type="button"
                     variant="outline"
                     onClick={handleGoToWins}
-                    className="w-full font-semibold border-amber-500/40"
+                    className="w-full font-semibold border-[#F4D6AD] bg-white text-[#111827] hover:bg-[#FFF4E8]"
                   >
                     Zobrazit výhru
                   </Button>
@@ -1000,7 +1006,7 @@ export const TicketResultModal: React.FC<TicketResultModalProps> = ({
                     variant="ghost"
                     size="sm"
                     onClick={handleCopyWinShare}
-                    className="h-9 gap-1.5 text-amber-200/95 hover:bg-amber-500/10 hover:text-amber-50"
+                    className="h-9 gap-1.5 text-[#C26A00] hover:bg-[#FFF4E8] hover:text-[#F97316]"
                   >
                     <Share2 className="h-4 w-4 shrink-0 opacity-90" aria-hidden />
                     Sdílet výhru
@@ -1027,11 +1033,11 @@ export const TicketResultModal: React.FC<TicketResultModalProps> = ({
                     </p>
                   </>
                 ) : (
-                  <p className="text-sm font-medium text-amber-200/90">Gratulujeme k výhře!</p>
+                  <p className="text-sm font-medium text-[#7A5230]">Gratulujeme k výhře!</p>
                 )}
-                <p className="win-moment-cta-hint -mb-1 text-center text-[11px] font-semibold uppercase text-amber-200/75 sm:text-xs">
+                <p className="win-moment-cta-hint -mb-1 text-center text-[11px] font-semibold uppercase text-[#9A6B2E] sm:text-xs">
                   Štěstí frčí —{' '}
-                  <span className="text-amber-100">hrát znovu</span> je nejrychlejší cesta k další výhře
+                  <span className="text-[#F97316]">hrát znovu</span> je nejrychlejší cesta k další výhře
                 </p>
                 <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
                   <Button
@@ -1048,7 +1054,7 @@ export const TicketResultModal: React.FC<TicketResultModalProps> = ({
                     type="button"
                     variant="outline"
                     onClick={handleGoToWins}
-                    className="w-full font-semibold border-amber-500/40"
+                    className="w-full font-semibold border-[#F4D6AD] bg-white text-[#111827] hover:bg-[#FFF4E8]"
                   >
                     Zobrazit výhru
                   </Button>
@@ -1059,7 +1065,7 @@ export const TicketResultModal: React.FC<TicketResultModalProps> = ({
                     variant="ghost"
                     size="sm"
                     onClick={handleCopyWinShare}
-                    className="h-9 gap-1.5 text-amber-200/95 hover:bg-amber-500/10 hover:text-amber-50"
+                    className="h-9 gap-1.5 text-[#C26A00] hover:bg-[#FFF4E8] hover:text-[#F97316]"
                   >
                     <Share2 className="h-4 w-4 shrink-0 opacity-90" aria-hidden />
                     Sdílet výhru
@@ -1084,31 +1090,31 @@ export const TicketResultModal: React.FC<TicketResultModalProps> = ({
                   {!shouldCelebrateWin && <div className="text-5xl">🎁</div>}
                   <div className="flex flex-col items-center gap-2">
                     {!shouldCelebrateWin && (
-                      <p className="text-lg font-bold text-amber-300">Gratulujeme!</p>
+                      <p className="text-lg font-bold text-[#F97316]">Gratulujeme!</p>
                     )}
-                    <p className="text-sm text-muted-foreground">
+                    <p className="text-sm text-[#4B5563]">
                       Získal jsi speciální nabídku od našeho partnera
                     </p>
                   </div>
                   <div className="flex w-full flex-col items-center gap-2 text-center">
                     {result.partner_offer.partner_name && (
-                      <p className="text-xs font-semibold text-[#FFB547] uppercase tracking-wider">
+                      <p className="text-xs font-semibold text-[#F97316] uppercase tracking-wider">
                         {result.partner_offer.partner_name}
                       </p>
                     )}
-                    <p className="text-base font-bold text-white">{result.partner_offer.title}</p>
+                    <p className="text-base font-bold text-[#111827]">{result.partner_offer.title}</p>
                     {result.partner_offer.short_text && (
-                      <p className="text-sm text-muted-foreground">{result.partner_offer.short_text}</p>
+                      <p className="text-sm text-[#4B5563]">{result.partner_offer.short_text}</p>
                     )}
                     {result.partner_offer.valid_to && (
-                      <p className="text-xs text-muted-foreground">
+                      <p className="text-xs text-[#6B7280]">
                         Platná do: {new Date(result.partner_offer.valid_to).toLocaleDateString('cs-CZ')}
                       </p>
                     )}
                   </div>
-                  <p className="win-moment-cta-hint text-center text-[11px] font-semibold uppercase text-[rgba(255,181,71,0.75)] sm:text-xs">
+                  <p className="win-moment-cta-hint text-center text-[11px] font-semibold uppercase text-[#9A6B2E] sm:text-xs">
                     Nabídka je uložena v tvých{' '}
-                    <span className="text-[#FFB547]">výhrách → Nabídky</span>
+                    <span className="text-[#F97316]">výhrách → Nabídky</span>
                   </p>
                   <div className="grid w-full grid-cols-1 gap-2 sm:grid-cols-2">
                     <Button
@@ -1122,7 +1128,7 @@ export const TicketResultModal: React.FC<TicketResultModalProps> = ({
                       type="button"
                       variant="outline"
                       onClick={handleGoToWins}
-                      className="w-full font-semibold border-[rgba(255,138,0,0.4)]"
+                      className="w-full font-semibold border-[#F4D6AD] bg-white text-[#111827] hover:bg-[#FFF4E8]"
                     >
                       Zobrazit nabídku
                     </Button>
@@ -1133,7 +1139,7 @@ export const TicketResultModal: React.FC<TicketResultModalProps> = ({
                       variant="ghost"
                       size="sm"
                       onClick={handleCopyWinShare}
-                      className="h-9 gap-1.5 text-amber-200/95 hover:bg-amber-500/10 hover:text-amber-50"
+                      className="h-9 gap-1.5 text-[#C26A00] hover:bg-[#FFF4E8] hover:text-[#F97316]"
                     >
                       <Share2 className="h-4 w-4 shrink-0 opacity-90" aria-hidden />
                       Sdílet výhru
@@ -1148,23 +1154,44 @@ export const TicketResultModal: React.FC<TicketResultModalProps> = ({
               <p className="text-lg font-medium">Kontroluji výhru...</p>
             </div>
           ) : (
-            <div className="text-center space-y-4">
-              <div className="text-4xl">🎯</div>
-              <p className="text-lg font-medium">
-                {funnyMessage}
-              </p>
-              {lossRetentionNudge && (
-                <p className="text-sm font-medium text-amber-200/90">{lossRetentionNudge}</p>
-              )}
-              <div className="rounded-2xl p-5 space-y-2 border border-[rgba(255,138,0,0.3)] bg-gradient-to-b from-[#101c33] to-[#0d172b] shadow-xl">
-                <p className="text-sm text-amber-100/85 text-center">
+            <div className="space-y-4">
+              <div className="grid grid-cols-[minmax(0,1fr)_6rem] items-center gap-3 text-left sm:grid-cols-[minmax(0,1fr)_7rem]">
+                <div className="min-w-0">
+                  <p className="font-heading text-[clamp(1.05rem,4vw,1.6rem)] font-black leading-[1.1] tracking-tight text-[#111827]">
+                    TENTOKRÁT <span className="text-[#F97316]">BEZ VÝHRY</span>
+                  </p>
+                  <p className="font-heading mt-1 text-sm font-black text-[#111827] sm:text-base">
+                    Ale jsi stále ve hře!
+                  </p>
+                  <p className="mt-2 text-sm text-[#4B5563]">{funnyMessage}</p>
+                  {lossRetentionNudge && (
+                    <p className="mt-1 text-sm font-medium text-[#9A6B2E]">{lossRetentionNudge}</p>
+                  )}
+                </div>
+                {/* Decorative gift box — reuses the existing OneMil logo asset as-is, never redrawn */}
+                <div aria-hidden="true" className="relative h-[86px] w-full shrink-0 sm:h-[100px]">
+                  <span className="absolute left-1 top-3 h-[64px] w-[62px] rotate-[8deg] rounded-md border border-[#F0C58D] bg-gradient-to-br from-white via-[#FFF9F0] to-[#FFE8C6] shadow-[0_12px_24px_rgba(180,94,8,0.22)] sm:left-2 sm:top-4 sm:h-[74px] sm:w-[72px]">
+                    <span className="absolute inset-x-0 top-0 h-3 rounded-t-md bg-gradient-to-r from-[#FFB547] via-[#F97316] to-[#FFB547]" />
+                    <span className="absolute left-1/2 top-0 h-full w-2 -translate-x-1/2 bg-gradient-to-b from-[#FFB547] to-[#F97316]" />
+                    <span className="absolute -top-3.5 left-1/2 h-6 w-8 -translate-x-1/2 rounded-[50%] border-[4px] border-[#F97316]" />
+                    <span className="absolute left-1/2 top-6 flex h-7 w-7 -translate-x-1/2 items-center justify-center rounded-full bg-white/95 shadow-sm">
+                      <img src={logoOnemil} alt="" className="h-5 w-5 object-contain" />
+                    </span>
+                  </span>
+                  <span className="absolute left-0 top-1 text-xs text-[#F97316]">✦</span>
+                  <span className="absolute right-2 top-0 text-sm text-[#FFB547]">✦</span>
+                </div>
+              </div>
+
+              <div className="space-y-2 rounded-2xl border border-[#FFD69E] bg-white/75 px-5 py-3 text-center shadow-[0_12px_30px_rgba(249,115,22,0.12)]">
+                <p className="text-sm text-[#111827]">
                   {nearestPrizeDistance !== null ? (
                     nearestPrizeDistance === 1 ? (
                       <>Další výherní ticket čeká už při dalším tahu.</>
                     ) : (
                       <>
                         Další výherní ticket čeká už za{' '}
-                        <span className="font-bold bg-gradient-to-r from-[#FFB547] to-[#FF8A00] bg-clip-text text-transparent">
+                        <span className="font-bold text-[#F97316]">
                           {nearestPrizeDistance.toLocaleString('cs-CZ')}
                         </span>
                         {' '}{tahPlural(nearestPrizeDistance)}.
@@ -1175,10 +1202,41 @@ export const TicketResultModal: React.FC<TicketResultModalProps> = ({
                   )}
                 </p>
                 {nearestPrizeDistance !== null && (
-                  <p className="text-[11px] text-amber-100/60 text-center">
+                  <p className="text-[11px] text-[#94A3B8]">
                     {NEXT_WIN_EXPLAINER}
                   </p>
                 )}
+                {nearestPrizeDistance !== null && nearestPrizeDistance <= 4 && (() => {
+                  const completedSteps = Math.min(Math.trunc(nearestPrizeDistance), 4);
+                  return (
+                    <div aria-hidden="true" className="relative mt-1 grid grid-cols-5 items-center px-2">
+                      <span className="absolute left-[10%] right-[10%] top-1/2 h-[2px] -translate-y-1/2 bg-[#F1E3D2]" />
+                      <span
+                        className="absolute left-[10%] top-1/2 h-[2px] -translate-y-1/2 bg-[#FF8A00]"
+                        style={{ width: `${completedSteps * 20}%` }}
+                      />
+                      {Array.from({ length: 5 }, (_, index) => {
+                        const isDone = index < completedSteps;
+                        const isCurrent = index === completedSteps;
+                        return (
+                          <span
+                            key={index}
+                            className={cn(
+                              'relative z-10 mx-auto flex h-5 w-5 items-center justify-center rounded-full text-[10px] font-bold',
+                              isDone
+                                ? 'bg-[#FF8A00] text-white shadow-[0_4px_10px_rgba(249,115,22,0.25)]'
+                                : isCurrent
+                                  ? 'border border-[#FFB35C] bg-white text-[#F97316]'
+                                  : 'border border-[#E8DED2] bg-[#FAF8F5] text-[#C9C0B7]'
+                            )}
+                          >
+                            {index + 1}
+                          </span>
+                        );
+                      })}
+                    </div>
+                  );
+                })()}
               </div>
             </div>
           )}
@@ -1186,27 +1244,27 @@ export const TicketResultModal: React.FC<TicketResultModalProps> = ({
 
         {/* Social Sharing Section with Preview — only for real wins */}
         {isWinner && (
-        <div className="border-t border-transparent pt-4 mt-2" style={{ borderImage: 'linear-gradient(to right, transparent, rgba(255,138,0,0.4), transparent) 1' }}>
-          <p className="text-sm text-muted-foreground text-center mb-3">
+        <div className="border-t border-[#F4D6AD] pt-4 mt-2">
+          <p className="text-sm text-[#6B7280] text-center mb-3">
             Sdílet výsledek
             {isUploading && <span className="ml-2 text-xs">(nahrávám...)</span>}
           </p>
-          
+
           {/* Preview Image */}
           <div className="flex justify-center mb-4">
             {isGeneratingImage ? (
-              <div className="w-full max-w-[300px] aspect-[1200/630] bg-muted/30 rounded-lg flex items-center justify-center">
-                <div className="text-sm text-muted-foreground">Generuji náhled...</div>
+              <div className="w-full max-w-[300px] aspect-[1200/630] bg-white/70 border border-[#F4D6AD] rounded-lg flex items-center justify-center">
+                <div className="text-sm text-[#6B7280]">Generuji náhled...</div>
               </div>
             ) : previewImageUrl ? (
-              <img 
-                src={previewImageUrl} 
-                alt="Náhled sdílení" 
-                className="w-full max-w-[300px] rounded-lg shadow-lg border border-border/30"
+              <img
+                src={previewImageUrl}
+                alt="Náhled sdílení"
+                className="w-full max-w-[300px] rounded-lg shadow-lg border border-[#F4D6AD]"
               />
             ) : (
-              <div className="w-full max-w-[300px] aspect-[1200/630] bg-muted/30 rounded-lg flex items-center justify-center">
-                <div className="text-sm text-muted-foreground">Načítám...</div>
+              <div className="w-full max-w-[300px] aspect-[1200/630] bg-white/70 border border-[#F4D6AD] rounded-lg flex items-center justify-center">
+                <div className="text-sm text-[#6B7280]">Načítám...</div>
               </div>
             )}
           </div>
@@ -1217,19 +1275,19 @@ export const TicketResultModal: React.FC<TicketResultModalProps> = ({
             <Button
               variant="outline"
               size="icon"
-              className="h-10 w-10 rounded-full"
+              className="h-10 w-10 rounded-full border-[#F4D6AD] bg-white hover:bg-[#FFF4E8]"
               onClick={() => handleShare('facebook')}
               disabled={isGeneratingImage || isUploading || !publicShareUrl}
               title={isUploading ? "Nahrávám obrázek..." : "Sdílet na Facebook"}
             >
               <Facebook className="h-5 w-5 text-[#1877F2]" />
             </Button>
-            
+
             {/* Instagram */}
             <Button
               variant="outline"
               size="icon"
-              className="h-10 w-10 rounded-full"
+              className="h-10 w-10 rounded-full border-[#F4D6AD] bg-white hover:bg-[#FFF4E8]"
               onClick={() => handleShare('instagram')}
               disabled={isGeneratingImage || !previewBlob}
               title="Sdílet na Instagram"
@@ -1252,7 +1310,7 @@ export const TicketResultModal: React.FC<TicketResultModalProps> = ({
             <Button
               variant="outline"
               size="icon"
-              className="h-10 w-10 rounded-full"
+              className="h-10 w-10 rounded-full border-[#F4D6AD] bg-white hover:bg-[#FFF4E8]"
               onClick={() => handleShare('tiktok')}
               disabled={isGeneratingImage || !previewBlob}
               title="Sdílet na TikTok"
@@ -1266,7 +1324,7 @@ export const TicketResultModal: React.FC<TicketResultModalProps> = ({
             <Button
               variant="outline"
               size="icon"
-              className="h-10 w-10 rounded-full"
+              className="h-10 w-10 rounded-full border-[#F4D6AD] bg-white hover:bg-[#FFF4E8]"
               onClick={() => handleShare('x')}
               disabled={isGeneratingImage || isUploading || !publicShareUrl}
               title={isUploading ? "Nahrávám obrázek..." : "Sdílet na X"}
@@ -1280,7 +1338,7 @@ export const TicketResultModal: React.FC<TicketResultModalProps> = ({
             <Button
               variant="outline"
               size="icon"
-              className="h-10 w-10 rounded-full"
+              className="h-10 w-10 rounded-full border-[#F4D6AD] bg-white hover:bg-[#FFF4E8]"
               onClick={handleDownloadCard}
               disabled={isGeneratingImage || !previewBlob}
               title="Stáhnout obrázek"
@@ -1292,9 +1350,24 @@ export const TicketResultModal: React.FC<TicketResultModalProps> = ({
         )}
 
         <div className="flex justify-center">
-          <Button type="button" onClick={onClose} variant={shouldCelebrateWin ? 'outline' : 'default'} className="w-full border-white/10">
-            Zavřít
-          </Button>
+          {isWinner ? (
+            <Button
+              type="button"
+              onClick={onClose}
+              variant="outline"
+              className="w-full font-semibold border-[#F4D6AD] bg-white text-[#111827] hover:bg-[#FFF4E8]"
+            >
+              Zavřít
+            </Button>
+          ) : (
+            <Button
+              type="button"
+              onClick={onClose}
+              className="h-11 w-full rounded-full font-bold bg-gradient-to-b from-[#F6A63A] via-[#E47B0A] to-[#C35A00] text-white shadow-[0_8px_20px_rgba(180,82,0,0.3)] hover:brightness-105"
+            >
+              Pokračovat <ChevronRight className="h-4 w-4" />
+            </Button>
+          )}
         </div>
         </div>
         </div>
