@@ -182,7 +182,7 @@ export function MysteryPurchaseResultDialog({
     <Dialog open={open} onOpenChange={(next) => { if (!next) onClose(); }}>
       <DialogContent
         data-testid="mystery-result-dialog"
-        className="bg-[hsl(220_25%_7%)] border-[2px] border-[rgba(255,138,0,0.35)] text-white max-w-2xl w-[calc(100vw-1.5rem)] max-h-[92vh] overflow-y-auto overflow-x-hidden p-4 sm:p-6"
+        className="bg-[#FFF9F0] border border-[#F3D6AE] text-[#111827] shadow-[0_28px_80px_rgba(81,49,10,0.22)] max-w-2xl w-[calc(100vw-1.5rem)] max-h-[92vh] overflow-y-auto overflow-x-hidden p-4 sm:p-6 [&>button]:text-[#6B7280] [&>button]:hover:text-[#111827]"
       >
         {isWin && (
           <Confetti
@@ -213,10 +213,10 @@ export function MysteryPurchaseResultDialog({
                   <p className="text-xl sm:text-2xl font-extrabold tracking-wide bg-gradient-to-r from-[#FF8A00] to-[#FFB547] bg-clip-text text-transparent">
                     🎉 GRATULUJEME!
                   </p>
-                  <p className="text-3xl sm:text-5xl font-black text-white leading-none mt-1">
+                  <p className="text-3xl sm:text-5xl font-black text-[#111827] leading-none mt-1">
                     VYHRÁL JSI!
                   </p>
-                  <p className="text-[11px] uppercase tracking-[0.2em] text-gray-400 font-semibold mt-4">
+                  <p className="text-[11px] uppercase tracking-[0.2em] text-[#6B7280] font-semibold mt-4">
                     {prizeLabel}
                   </p>
                 </>
@@ -224,13 +224,13 @@ export function MysteryPurchaseResultDialog({
                 // Nevýherní tiket není chyba ani prázdná obrazovka: zákazník
                 // se dozví, co se stalo, a rovnou i to, co si odnáší.
                 <div data-testid="mystery-result-noprize">
-                  <p className="text-2xl sm:text-4xl font-black text-white leading-tight tracking-tight">
+                  <p className="text-2xl sm:text-4xl font-black text-[#111827] leading-tight tracking-tight">
                     TENTOKRÁT BEZ VÝHRY
                   </p>
-                  <p className="text-lg sm:text-xl font-bold text-[#FFB547] mt-2 break-words">
+                  <p className="text-lg sm:text-xl font-bold text-[#F97316] mt-2 break-words">
                     Ale odcházíš s garantovaným kuponem.
                   </p>
-                  <p className="text-sm text-gray-300 mt-3 break-words">
+                  <p className="text-sm text-[#4B5563] mt-3 break-words">
                     Kupon najdeš ve Voucherech a tvůj tiket zůstává bezpečně uložený v účtu.
                   </p>
                 </div>
@@ -240,12 +240,12 @@ export function MysteryPurchaseResultDialog({
                 <>
                   <p
                     data-testid={isMioCoinWin ? "mystery-result-miocoin-amount" : "mystery-result-prize-title"}
-                    className="text-2xl sm:text-3xl font-extrabold text-[#FFB547] mt-2 break-words"
+                    className="text-2xl sm:text-3xl font-extrabold text-[#F97316] mt-2 break-words"
                   >
                     {prizeTitle}
                   </p>
                   {prizeDescription && (
-                    <p className="text-sm text-gray-300 mt-2 break-words">{prizeDescription}</p>
+                    <p className="text-sm text-[#4B5563] mt-2 break-words">{prizeDescription}</p>
                   )}
                 </>
               )}
@@ -258,8 +258,8 @@ export function MysteryPurchaseResultDialog({
                 data-testid="mystery-result-prize-image"
                 className={
                   isMioCoinWin
-                    ? "order-1 md:order-2 h-28 w-28 mx-auto object-contain drop-shadow-[0_0_24px_rgba(255,138,0,0.5)]"
-                    : "order-1 md:order-2 h-40 w-40 sm:h-48 sm:w-48 mx-auto object-contain drop-shadow-[0_0_30px_rgba(255,138,0,0.28)]"
+                    ? "order-1 md:order-2 h-28 w-28 mx-auto object-contain drop-shadow-[0_12px_22px_rgba(249,115,22,0.28)]"
+                    : "order-1 md:order-2 h-40 w-40 sm:h-48 sm:w-48 mx-auto object-contain drop-shadow-[0_16px_26px_rgba(91,57,16,0.2)]"
                 }
               />
             )}
@@ -270,15 +270,53 @@ export function MysteryPurchaseResultDialog({
               <span
                 data-testid="mystery-result-noprize-icon"
                 aria-hidden="true"
-                className="order-1 md:order-2 h-24 w-24 sm:h-28 sm:w-28 mx-auto rounded-full bg-[rgba(255,138,0,0.08)] border border-[rgba(255,138,0,0.28)] flex items-center justify-center"
+                className="order-1 md:order-2 h-24 w-24 sm:h-28 sm:w-28 mx-auto rounded-full bg-gradient-to-br from-[#FFF2DE] to-[#FFE3BC] border border-[#F4C88C] shadow-[0_14px_32px_rgba(249,115,22,0.14)] flex items-center justify-center"
               >
                 <Gift className="h-10 w-10 sm:h-12 sm:w-12 text-[#FF8A00]" />
               </span>
             )}
           </section>
 
+          {/* ── Dominantní informace: kdy padne další výherní tiket ───── */}
+          {showNextWin && (
+            <section
+              data-testid="mystery-result-next-win"
+              className="relative overflow-hidden rounded-[1.4rem] border-2 border-[#FF8A00] bg-gradient-to-br from-[#FFF4E3] via-white to-[#FFF0D8] p-4 sm:p-5 shadow-[0_16px_34px_rgba(249,115,22,0.16)] min-w-0"
+            >
+              <span
+                aria-hidden="true"
+                className="absolute -right-12 -top-16 h-40 w-40 rounded-full bg-[#FFB547]/20 blur-2xl"
+              />
+              <div className="relative flex items-center gap-4 sm:gap-5 min-w-0">
+                <span className="h-12 w-12 sm:h-14 sm:w-14 rounded-2xl bg-[#FF8A00] flex items-center justify-center flex-shrink-0 shadow-[0_8px_18px_rgba(249,115,22,0.28)]">
+                  <Calendar className="h-6 w-6 sm:h-7 sm:w-7 text-white" />
+                </span>
+                <div className="min-w-0 flex-1">
+                  <p className="text-[10px] sm:text-xs font-extrabold uppercase tracking-[0.18em] text-[#C45F00]">
+                    Další výherní tiket čeká
+                  </p>
+                  <p className="mt-0.5 flex flex-wrap items-baseline gap-x-2 leading-none text-[#111827]">
+                    <span className="text-lg sm:text-xl font-black uppercase">už za{" "}</span>
+                    <span
+                      data-testid="mystery-result-next-win-distance"
+                      className="text-4xl sm:text-5xl font-black text-[#F97316] tabular-nums"
+                    >
+                      {distance.toLocaleString("cs-CZ")}
+                    </span>
+                    <span className="text-xl sm:text-2xl font-black uppercase">
+                      {" "}{tahPlural(distance)}
+                    </span>
+                  </p>
+                  <p className="text-xs sm:text-sm text-[#4B5563] mt-2 break-words">
+                    Může obsahovat MioCoiny, bonusovou cenu nebo hlavní výhru.
+                  </p>
+                </div>
+              </div>
+            </section>
+          )}
+
           {/* ── Druhý, garantovaný bonus: kupon ────────────────────────── */}
-          <div className="flex items-center justify-center gap-2 text-[#FF8A00]">
+          <div className="flex items-center justify-center gap-2 text-[#D76500]">
             <Gift className="h-4 w-4 shrink-0" />
             <p className="text-[11px] sm:text-xs uppercase tracking-[0.18em] font-bold">
               A navíc získáváš kupon
@@ -294,24 +332,24 @@ export function MysteryPurchaseResultDialog({
           */}
           <section
             data-testid="mystery-coupon-reveal"
-            className="relative rounded-2xl bg-[#FCF3E4] text-[hsl(220_25%_12%)] grid grid-cols-1 sm:grid-cols-[1fr_auto] min-w-0"
+            className="relative rounded-2xl bg-white text-[#111827] border border-[#F0D7B8] shadow-[0_12px_30px_rgba(91,57,16,0.1)] grid grid-cols-1 sm:grid-cols-[1fr_auto] min-w-0"
           >
             {/* Velké polokruhové výřezy uprostřed levé a pravé hrany. */}
             <span
               data-testid="mystery-coupon-notch-left"
               aria-hidden="true"
-              className="absolute left-0 top-1/2 -translate-x-1/2 -translate-y-1/2 h-7 w-7 sm:h-9 sm:w-9 rounded-full bg-[hsl(220_25%_7%)]"
+              className="absolute left-0 top-1/2 -translate-x-1/2 -translate-y-1/2 h-7 w-7 sm:h-9 sm:w-9 rounded-full bg-[#FFF9F0]"
             />
             <span
               data-testid="mystery-coupon-notch-right"
               aria-hidden="true"
-              className="absolute right-0 top-1/2 translate-x-1/2 -translate-y-1/2 h-7 w-7 sm:h-9 sm:w-9 rounded-full bg-[hsl(220_25%_7%)]"
+              className="absolute right-0 top-1/2 translate-x-1/2 -translate-y-1/2 h-7 w-7 sm:h-9 sm:w-9 rounded-full bg-[#FFF9F0]"
             />
 
             {/*
               Drobná pravidelná perforace po celé délce obou bočních hran.
-              Půlkolečka v barvě pozadí dialogu — na tmavém podkladu jsou
-              vidět jako skutečné vykousnutí papíru.
+              Půlkolečka v barvě pozadí dialogu vytvoří skutečné vykousnutí
+              papírového kuponu i ve světlém OneMil provedení.
             */}
             <span
               data-testid="mystery-coupon-edge-left"
@@ -319,7 +357,7 @@ export function MysteryPurchaseResultDialog({
               className="pointer-events-none absolute inset-y-3 left-0 w-[7px] -translate-x-1/2"
               style={{
                 backgroundImage:
-                  "radial-gradient(circle at 50% 50%, hsl(220 25% 7%) 3.2px, transparent 3.6px)",
+                  "radial-gradient(circle at 50% 50%, #FFF9F0 3.2px, transparent 3.6px)",
                 backgroundSize: "7px 15px",
                 backgroundRepeat: "repeat-y",
               }}
@@ -330,7 +368,7 @@ export function MysteryPurchaseResultDialog({
               className="pointer-events-none absolute inset-y-3 right-0 w-[7px] translate-x-1/2"
               style={{
                 backgroundImage:
-                  "radial-gradient(circle at 50% 50%, hsl(220 25% 7%) 3.2px, transparent 3.6px)",
+                  "radial-gradient(circle at 50% 50%, #FFF9F0 3.2px, transparent 3.6px)",
                 backgroundSize: "7px 15px",
                 backgroundRepeat: "repeat-y",
               }}
@@ -342,7 +380,7 @@ export function MysteryPurchaseResultDialog({
                   src={couponImage}
                   alt={coupon?.name ?? "Kupon"}
                   data-testid="mystery-coupon-image"
-                  className="h-16 w-16 sm:h-20 sm:w-20 rounded-full object-contain bg-white flex-shrink-0 border border-black/10 p-2"
+                  className="h-16 w-16 sm:h-20 sm:w-20 rounded-full object-contain bg-[#FAFAF9] flex-shrink-0 border border-[#E5E7EB] p-2"
                 />
               )}
               <div className="min-w-0 flex-1">
@@ -373,17 +411,17 @@ export function MysteryPurchaseResultDialog({
                 <span
                   data-testid="mystery-coupon-perf-cap-start"
                   aria-hidden="true"
-                  className="absolute -top-3.5 -left-3.5 h-7 w-7 rounded-full bg-[hsl(220_25%_7%)]"
+                  className="absolute -top-3.5 -left-3.5 h-7 w-7 rounded-full bg-[#FFF9F0]"
                 />
                 <span
                   data-testid="mystery-coupon-perf-cap-mobile-end"
                   aria-hidden="true"
-                  className="absolute -top-3.5 -right-3.5 h-7 w-7 rounded-full bg-[hsl(220_25%_7%)] sm:hidden"
+                  className="absolute -top-3.5 -right-3.5 h-7 w-7 rounded-full bg-[#FFF9F0] sm:hidden"
                 />
                 <span
                   data-testid="mystery-coupon-perf-cap-desktop-end"
                   aria-hidden="true"
-                  className="hidden sm:block absolute -bottom-3.5 -left-3.5 h-7 w-7 rounded-full bg-[hsl(220_25%_7%)]"
+                  className="hidden sm:block absolute -bottom-3.5 -left-3.5 h-7 w-7 rounded-full bg-[#FFF9F0]"
                 />
 
                 <p className="text-[10px] uppercase tracking-[0.18em] text-[#C26A00] font-bold">
@@ -408,39 +446,14 @@ export function MysteryPurchaseResultDialog({
             )}
           </section>
 
-          {/* ── Informační panel: kdy padne další výherní tiket ────────── */}
-          {showNextWin && (
-            <section
-              data-testid="mystery-result-next-win"
-              className="rounded-2xl bg-white/[0.04] border border-white/10 p-4 flex items-center gap-3 min-w-0"
-            >
-              <span className="h-10 w-10 rounded-full bg-white/[0.06] flex items-center justify-center flex-shrink-0">
-                <Calendar className="h-5 w-5 text-[#FF8A00]" />
-              </span>
-              <div className="min-w-0">
-                <p className="text-sm font-semibold text-white break-words">
-                  Další výherní tiket čeká už za{" "}
-                  <span className="text-[#FFB547]">
-                    {distance.toLocaleString("cs-CZ")} {tahPlural(distance)}
-                  </span>
-                  .
-                </p>
-                <p className="text-xs text-gray-400 break-words">
-                  Může obsahovat MioCoiny, bonusovou cenu nebo hlavní výhru.
-                </p>
-              </div>
-            </section>
-          )}
-
-          <p data-testid="mystery-result-storage-note" className="text-xs text-gray-400 text-center break-words">
-            Kupon najdeš ve <span className="text-gray-200">Voucherech</span>, tiket máš uložený ve svém účtu.
+          <p data-testid="mystery-result-storage-note" className="text-xs text-[#6B7280] text-center break-words">
+            Kupon najdeš ve <span className="font-semibold text-[#374151]">Voucherech</span>, tiket máš uložený ve svém účtu.
           </p>
 
           <Button
             data-testid="mystery-result-continue"
             onClick={onClose}
-            variant="premium"
-            className="h-12 font-bold rounded-full w-full text-base"
+            className="h-12 font-bold rounded-full w-full text-base bg-gradient-to-r from-[#F97316] to-[#FF8A00] text-white shadow-[0_10px_24px_rgba(249,115,22,0.24)] hover:from-[#EA650C] hover:to-[#F57C00]"
           >
             Pokračovat
           </Button>

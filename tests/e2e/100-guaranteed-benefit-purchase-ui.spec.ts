@@ -922,6 +922,16 @@ test.describe.serial('Spec 100 — mystery kupon (UI)', () => {
       // 2 tahy — ne „2 tahů", ne „2 tah".
       await expect(panel).toContainText('za 2 tahy');
       await expect(panel).toContainText('Může obsahovat MioCoiny, bonusovou cenu nebo hlavní výhru.');
+
+      // Počet tahů je hlavní informace a panel je před kuponem, ne schovaný pod ním.
+      const distance = page.getByTestId('mystery-result-next-win-distance');
+      await expect(distance).toHaveText('2');
+      const distanceFontSize = await distance.evaluate((el) => parseFloat(getComputedStyle(el).fontSize));
+      expect(distanceFontSize).toBeGreaterThanOrEqual(36);
+
+      const panelBox = (await panel.boundingBox())!;
+      const couponBox = (await page.getByTestId('mystery-coupon-reveal').boundingBox())!;
+      expect(panelBox.y + panelBox.height).toBeLessThanOrEqual(couponBox.y);
     } finally {
       await (admin as any).from('bonus_prizes').delete()
         .eq('contest_id', FIXTURE.contestId).eq('ticket_position', bonusAt);
