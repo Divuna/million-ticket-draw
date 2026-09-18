@@ -55,7 +55,7 @@ const isStaging =
 
 const RUN_ID = Date.now();
 const CONTEST_TITLE = `FINAL TEST – Ticket Flow ${RUN_ID}`;
-const MAIN_IMAGE_PATH = path.resolve(__dirname, '../../public/miocoin-icon.png');
+const MAIN_IMAGE_PATH = path.resolve(process.cwd(), 'public/miocoin-icon.png');
 
 const ctx: { contestId?: string } = {};
 
