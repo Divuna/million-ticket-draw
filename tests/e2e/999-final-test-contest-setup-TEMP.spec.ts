@@ -70,7 +70,10 @@ function inputByLabel(container: Locator, labelText: string): Locator {
 }
 
 async function openContestEditDialog(page: import('@playwright/test').Page) {
-  await page.getByRole('button', { name: /Archiv test/i }).click();
+  // Freshly created contests default to status "pending", which the admin
+  // list groups under "Aktivní soutěže" (archiveTab "active" — pending/
+  // active/paused), NOT "Archiv test" (that tab is status === "draft" only).
+  await page.getByRole('button', { name: /Aktivní soutěže/i }).click();
   await page.waitForTimeout(500);
   const row = page.locator('tr', { hasText: CONTEST_TITLE });
   await expect(row).toBeVisible({ timeout: 15_000 });
