@@ -116,6 +116,23 @@ test.describe('999 TEMP — Final test contest setup via normal admin UI', () =>
     await inputByLabel(dialog, 'Počet tiketů').fill('12');
     await inputByLabel(dialog, 'Cena tiketu (MioCoins)').fill('1');
 
+    // handleSave() unconditionally requires rules_pdf_file/rules_pdf_url before
+    // it will submit anything (regardless of status) — this is a stricter
+    // runtime guard than the Save-button's isFormValid check, which does NOT
+    // require it. Without this upload the dialog silently fails to close.
+    // A minimal in-memory PDF buffer is enough — the client only checks
+    // file.type === "application/pdf"; Supabase Storage doesn't validate
+    // PDF structure on upload.
+    const rulesPdfInput = dialog
+      .locator('label', { hasText: 'Pravidla soutěže' })
+      .locator('..')
+      .locator('input[type="file"]');
+    await rulesPdfInput.setInputFiles({
+      name: 'final-test-rules.pdf',
+      mimeType: 'application/pdf',
+      buffer: Buffer.from('%PDF-1.4\n1 0 obj<</Type/Catalog>>endobj\ntrailer<</Root 1 0 R>>\n%%EOF'),
+    });
+
     // ── Step 4: Grafika — nahrát hlavní obrázek (vyžadováno pro save) ────────
     await dialog.getByRole('tab', { name: /Grafika/i }).click();
     const graphicsPanel = dialog.locator('[role="tabpanel"][data-state="active"]');
