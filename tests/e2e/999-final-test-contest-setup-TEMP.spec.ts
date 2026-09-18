@@ -167,6 +167,16 @@ test.describe('999 TEMP — Final test contest setup via normal admin UI', () =>
     await saveBtn.click();
     await expect(dialog).not.toBeVisible({ timeout: 20_000 });
 
+    // CREATE mode shows a second, separate confirmation AlertDialog
+    // ("Soutěž byla vytvořena" / OK — showCreatedDialog in
+    // AdminContestManagement.tsx) after the create dialog itself closes.
+    // It sits on top of the admin list and must be dismissed, otherwise the
+    // next click on an underlying tab button hangs until the test timeout.
+    const createdConfirmDialog = page.getByRole('alertdialog');
+    await expect(createdConfirmDialog).toBeVisible({ timeout: 10_000 });
+    await createdConfirmDialog.getByRole('button', { name: 'OK' }).click();
+    await expect(createdConfirmDialog).not.toBeVisible({ timeout: 10_000 });
+
     // ── Step 8: Zjistit contest ID (read-only service-role SELECT podle titulku) ──
     const admin = makeServiceClient();
     const { data: createdRow, error: createdErr } = await (admin as any)
