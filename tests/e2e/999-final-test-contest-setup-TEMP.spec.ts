@@ -134,8 +134,10 @@ test.describe('999 TEMP — Final test contest setup via normal admin UI', () =>
     await inputByLabel(coinsPanel, 'Hodnota jednoho bonusu (po kolika)').fill('250');
     // Rozmístění zůstává na výchozí hodnotě "Rovnoměrně".
     await coinsPanel.getByRole('button', { name: /Vygenerovat MioCoiny/i }).click();
-    await expect(coinsPanel.getByText(/Vygenerováno 1 pozic/)).toBeVisible({ timeout: 5_000 });
-    await expect(coinsPanel.getByText(/250/)).toBeVisible({ timeout: 5_000 });
+    // Regex is scoped to the full summary sentence (not bare /250/) because the
+    // "Celkem: 250 MC (1 pozic)" badge elsewhere in this panel also contains
+    // "250" — a bare match caused a Playwright strict-mode violation (2 elements).
+    await expect(coinsPanel.getByText(/Vygenerováno 1 pozic s celkovou hodnotou\s*250/)).toBeVisible({ timeout: 5_000 });
 
     // ── Step 7: Uložit ─────────────────────────────────────────────────────────
     await dialog.getByRole('tab', { name: /Vytvořit soutěž/i }).click();
@@ -176,8 +178,11 @@ test.describe('999 TEMP — Final test contest setup via normal admin UI', () =>
 
     await dialog2.getByRole('tab', { name: 'Bonusy – MioCoins' }).click();
     const coinsPanel2 = dialog2.locator('[role="tabpanel"][data-state="active"]');
-    await expect(coinsPanel2.getByText(/1 pozic/)).toBeVisible({ timeout: 5_000 });
-    await expect(coinsPanel2.getByText(/250/)).toBeVisible({ timeout: 5_000 });
+    // Scoped to the "Celkem: … MC (N pozic)" badge specifically — after reopen
+    // this panel also renders "Vygenerováno 1 pozic s celkovou hodnotou 250
+    // MioCoinů." elsewhere, and a bare /1 pozic/ or /250/ regex matches both
+    // (Playwright strict-mode violation).
+    await expect(coinsPanel2.getByText(/Celkem:\s*250\s*MC\s*\(1 pozic\)/)).toBeVisible({ timeout: 5_000 });
 
     await page.screenshot({ path: 'test-results/999-after-reload.png', fullPage: true });
 
