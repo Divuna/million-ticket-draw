@@ -1,3 +1,3 @@
 import { serveLegacyGone } from "../_shared/legacyGone.ts";
 
-serveLegacyGone("sofinity-noop");
+serveLegacyGone("event_forward_log_listener");
