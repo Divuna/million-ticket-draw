@@ -13,7 +13,12 @@
  *
  * 177a poslední tiket vrátí contests.main_prize (ne 'Hlavni vyhra')
  * 177b bonusová výhra dál vrací název bonusové ceny (nedotčená větev)
- * 177c soutěž bez vyplněného main_prize spadne na bezpečný fallback
+ * 177c prázdný (mezerový) main_prize spadne na bezpečný fallback
+ *
+ * Pozn. k 177c: `contests.main_prize` je NOT NULL, takže soutěž s NULL
+ * názvem vůbec nemůže vzniknout. Dosažitelná je jen varianta s prázdným
+ * / mezerovým řetězcem, kterou fallback `nullif(btrim(...), '')` řeší —
+ * proto test používá '   ', ne NULL.
  */
 
 import { test, expect } from '@playwright/test';
@@ -140,10 +145,12 @@ test.describe.serial('177 — hlavní výhra vrací skutečný název', () => {
     expect(data?.won_prize, 'bonusová větev zůstává beze změny').toBe('Spec177 bonusová cena');
   });
 
-  test('177c: soutěž bez main_prize použije bezpečný fallback', async () => {
+  test('177c: prázdný main_prize použije bezpečný fallback', async () => {
     const db = svc();
     const userId    = await anyUserId(db);
-    const contestId = await createOneTicketContest(db, 'c', null);
+    // NOT NULL sloupec prázdný řetězec připouští — tohle je reálně
+    // dosažitelný vstup do fallbacku, na rozdíl od NULL.
+    const contestId = await createOneTicketContest(db, 'c', '   ');
 
     const { data, error } = await (db as any).rpc('assign_contest_ticket_atomic', {
       p_user_id: userId,
@@ -151,7 +158,11 @@ test.describe.serial('177 — hlavní výhra vrací skutečný název', () => {
     });
     expect(error, JSON.stringify(error)).toBeNull();
     expect(data?.won_type).toBe('main');
-    // Nikdy nesmí vzniknout výhra bez názvu.
-    expect(data?.won_prize).toBeTruthy();
+
+    // Samotné `toBeTruthy()` by tu neobstálo: '   ' je truthy, takže by test
+    // prošel i s rozbitým fallbackem. Ověřujeme proto, že se fallback opravdu
+    // uplatnil a výhra nikdy nezůstane bez názvu.
+    expect(String(data?.won_prize).trim(), 'výhra nesmí zůstat bez názvu').not.toBe('');
+    expect(data?.won_prize, 'prázdný main_prize musí spadnout na fallback').toBe('Hlavni vyhra');
   });
 });
