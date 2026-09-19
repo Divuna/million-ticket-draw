@@ -1,7 +1,7 @@
 # OneMil — business context
 
 **Status:** permanent business/product context  
-**Last updated:** 2026-07-24  
+**Last updated:** 2026-09-19  
 **Owner:** Pavel Diviš  
 **Company context:** see `COMPANY_CONTEXT.md`
 
@@ -10,6 +10,13 @@ This file is the source of truth for understanding what OneMil is, how the busin
 All AI assistants, Claude Code, Cursor, ChatGPT, Paperclip agents, Lovable, Codex, and future automation systems must read this file before working on OneMil strategy, product positioning, partner outreach, marketing, business documentation, Paperclip setup, or public explanation of the project.
 
 Do not treat OneMil as only a contest app. OneMil is primarily a partner reward and marketing platform for companies, e-shops, brands, influencers, agencies, and end users.
+
+### Operator role — confirmed 2026-09-19
+
+- **iCONIC POINT s.r.o. is the operator of the OneMil system/platform.**
+- Do **not** infer from the operator role that iCONIC POINT is a partner supplying vouchers, guaranteed benefits, contest rewards, or other partner-funded benefits.
+- iCONIC POINT must **not** be assigned as a default or fallback guaranteed partner unless Pavel Diviš explicitly decides so.
+- When a contest requires a guaranteed voucher/benefit, the actual supplying partner and the concrete real benefit must be explicitly defined. Assistants must never invent them.
 
 ---
 
