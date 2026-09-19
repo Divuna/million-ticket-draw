@@ -47,8 +47,10 @@ test.describe('Win Flow', () => {
 
     // The result modal is always shown — confirm it opened.
     // Scoped by accessible name to avoid strict-mode conflict with the
-    // CookieConsentBanner which also renders role="dialog".
-    const resultDialog = page.getByRole('dialog', { name: /Výhra/i });
+    // CookieConsentBanner which also renders role="dialog". Accessible name
+    // comes from TicketResultModal's sr-only DialogTitle, which for a winner
+    // is `Vyhrál jsi: ${winName}` (schválený ticket/voucher redesign).
+    const resultDialog = page.getByRole('dialog', { name: /Vyhrál/i });
     await expect(resultDialog).toBeVisible({ timeout: 5_000 });
 
     // won_type captured from API must be main or bonus

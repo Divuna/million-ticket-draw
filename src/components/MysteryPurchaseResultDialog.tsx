@@ -8,6 +8,11 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { Copy, Check, Gift, Calendar, ChevronRight } from "lucide-react";
 import { toast } from "sonner";
 import type { MysteryCoupon } from "@/lib/mysteryCouponPurchase";
+import auroraIdle from "@/assets/aurora-idle.jpg";
+import auroraWinVideo from "@/assets/aurora-win.mp4";
+import auroraWinPoster from "@/assets/aurora-win-poster.jpg";
+import logoOnemil from "@/assets/logo-onemil.png";
+import voucherTicket from "@/assets/mystery-voucher-ticket.jpg";
 
 /**
  * Jeden výsledek mystery nákupu.
@@ -203,6 +208,35 @@ export function MysteryPurchaseResultDialog({
           </DialogTitle>
         </DialogHeader>
 
+        {/* ── Reveal hero — same Aurora Ignition footage as TicketResultModal;
+             pure visual backdrop, no text (headline below already carries it
+             and has its own tested data-testid markup, kept untouched). ── */}
+        <div className="relative -mx-4 -mt-4 h-40 w-[calc(100%+2rem)] animate-in fade-in zoom-in-95 duration-500 overflow-hidden rounded-t-[10px] bg-[#FFF9F0] sm:-mx-6 sm:-mt-6 sm:h-48 sm:w-[calc(100%+3rem)]">
+          <img
+            src={logoOnemil}
+            alt="OneMil"
+            className="absolute left-4 top-4 z-10 h-6 w-auto object-contain drop-shadow-[0_1px_4px_rgba(255,255,255,0.9)] sm:h-7"
+          />
+          {isWin ? (
+            <video
+              key={`aurora-mystery-${contestId}-${ticket?.ticket_number}`}
+              src={auroraWinVideo}
+              poster={auroraWinPoster}
+              autoPlay
+              muted
+              playsInline
+              className="absolute inset-0 h-full w-full object-cover"
+            />
+          ) : (
+            <img
+              src={auroraIdle}
+              alt=""
+              className="absolute inset-0 h-full w-full animate-[pulse_3.4s_ease-in-out_infinite] object-cover"
+            />
+          )}
+          <div aria-hidden className="absolute inset-x-0 bottom-0 h-16 bg-gradient-to-t from-[#FFF9F0] to-transparent" />
+        </div>
+
         <span
           aria-hidden="true"
           className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_82%_10%,rgba(255,181,71,0.18),transparent_23%),radial-gradient(circle_at_10%_88%,rgba(255,138,0,0.11),transparent_26%)]"
@@ -212,7 +246,7 @@ export function MysteryPurchaseResultDialog({
           {/* ── Hlavní sdělení: výhra z tiketu ─────────────────────────── */}
           <section
             data-testid="mystery-result-prize"
-            className="grid grid-cols-[minmax(0,1fr)_7rem] sm:grid-cols-[minmax(0,1fr)_10rem] gap-2 sm:gap-4 items-center min-w-0"
+            className="grid grid-cols-[minmax(0,1fr)_7rem] sm:grid-cols-[minmax(0,1fr)_10rem] gap-2 sm:gap-4 items-center min-w-0 animate-in fade-in slide-in-from-bottom-3 duration-700 [animation-delay:150ms] fill-mode-both"
           >
             <div className="text-left min-w-0">
               {isWin ? (
@@ -238,7 +272,7 @@ export function MysteryPurchaseResultDialog({
                     Ale jsi stále ve hře!
                   </p>
                   <p className="text-[11px] sm:text-xs text-[#6B7280] mt-2 max-w-[24rem] break-words">
-                    Kupon najdeš ve Voucherech a tvůj tiket zůstává bezpečně uložený v účtu.
+                    Voucher najdeš ve Voucherech a tvůj ticket zůstává bezpečně uložený v účtu.
                   </p>
                 </div>
               )}
@@ -296,121 +330,95 @@ export function MysteryPurchaseResultDialog({
             )}
           </section>
 
-          {/* ── Druhý, garantovaný bonus: kupon ────────────────────────── */}
-          <div className="flex items-center justify-center gap-2">
+          {/* ── Druhý, garantovaný bonus: kupon — má vlastní, opožděný reveal,
+                aby to působilo jako druhá odměna odhalená až po hlavním výsledku ── */}
+          <div className="flex items-center justify-center gap-2 animate-in fade-in slide-in-from-bottom-2 duration-700 [animation-delay:450ms] fill-mode-both">
             <Gift className="h-4 w-4 shrink-0 text-[#F97316]" />
             <p className="text-[11px] sm:text-xs uppercase tracking-[0.18em] font-bold text-[#334155]">
-              A navíc získáváš kupon
+              A navíc získáváš voucher
             </p>
           </div>
 
           {/*
-            Kupon má vypadat jako utržený papírový ticket. Výřezy a perforace
-            jsou kolečka v barvě pozadí dialogu, posazená na hranu bloku —
-            proto `overflow-visible`, jinak by se ořízla. Na desktopu dělí
-            ticket svisle, na mobilu vodorovně, a výřezy se přesunou spolu
-            s dělicí čárou.
+            Kupon JE fyzický ticket — vygenerovaný Higgsfield objekt (prémiový
+            papír, ražba, fóliová hrana, perforovaný oddíl útržku) tvoří celý
+            tvar a materiál bloku, žádná bílá karta kolem něj. Živá data se
+            pokládají jako HTML vrstva přímo na jeho povrch. Poměr stran musí
+            přesně odpovídat zdrojovému obrázku, jinak by se textové zóny
+            rozjely od natištěných panelů.
           */}
           <section
             data-testid="mystery-coupon-reveal"
-            className="relative rounded-2xl bg-white text-[#111827] border border-[#F0D7B8] shadow-[0_12px_30px_rgba(91,57,16,0.09)] grid grid-cols-1 sm:grid-cols-[minmax(0,1fr)_17.1rem] min-w-0"
+            className="relative w-full rounded-xl overflow-hidden text-[#111827] drop-shadow-[0_16px_28px_rgba(91,57,16,0.28)] animate-in fade-in slide-in-from-bottom-4 zoom-in-95 spin-in-[6deg] duration-[900ms] [animation-delay:550ms] fill-mode-both"
+            style={{ aspectRatio: "2688 / 1152" }}
           >
-            {/* Velké polokruhové výřezy uprostřed levé a pravé hrany. */}
-            <span
-              data-testid="mystery-coupon-notch-left"
-              aria-hidden="true"
-              className="absolute left-0 top-1/2 -translate-x-1/2 -translate-y-1/2 h-7 w-7 sm:h-9 sm:w-9 rounded-full bg-[#FFF9F0]"
-            />
-            <span
-              data-testid="mystery-coupon-notch-right"
-              aria-hidden="true"
-              className="absolute right-0 top-1/2 translate-x-1/2 -translate-y-1/2 h-7 w-7 sm:h-9 sm:w-9 rounded-full bg-[#FFF9F0]"
+            {/* Samotný ticket — nosný vizuální objekt, ne pozadí karty. */}
+            <img
+              src={voucherTicket}
+              alt=""
+              className="block h-full w-full object-cover"
             />
 
-            {/*
-              Drobná pravidelná perforace po celé délce obou bočních hran.
-              Půlkolečka v barvě pozadí dialogu vytvoří skutečné vykousnutí
-              papírového kuponu i ve světlém OneMil provedení.
-            */}
+            {/* Jemný jednorázový světelný přejezd po fóliové hraně — imituje
+                záblesk kovového detailu při usazení ticketu na místo. */}
             <span
-              data-testid="mystery-coupon-edge-left"
               aria-hidden="true"
-              className="pointer-events-none absolute inset-y-3 left-0 w-[7px] -translate-x-1/2"
+              className="pointer-events-none absolute inset-0 mix-blend-overlay opacity-80 animate-[golden-shimmer_1.3s_ease-out_1] [animation-delay:900ms] fill-mode-both"
               style={{
                 backgroundImage:
-                  "radial-gradient(circle at 50% 50%, #FFF9F0 3.2px, transparent 3.6px)",
-                backgroundSize: "7px 15px",
-                backgroundRepeat: "repeat-y",
-              }}
-            />
-            <span
-              data-testid="mystery-coupon-edge-right"
-              aria-hidden="true"
-              className="pointer-events-none absolute inset-y-3 right-0 w-[7px] translate-x-1/2"
-              style={{
-                backgroundImage:
-                  "radial-gradient(circle at 50% 50%, #FFF9F0 3.2px, transparent 3.6px)",
-                backgroundSize: "7px 15px",
-                backgroundRepeat: "repeat-y",
+                  "linear-gradient(115deg, transparent 35%, rgba(255,255,255,0.8) 48%, rgba(255,196,110,0.6) 52%, transparent 65%)",
+                backgroundSize: "260% 100%",
               }}
             />
 
-            <div className="flex items-center gap-4 sm:gap-5 p-4 sm:pl-6 min-w-0">
-              {couponImage && (
-                <img
-                  src={couponImage}
-                  alt={coupon?.name ?? "Kupon"}
-                  data-testid="mystery-coupon-image"
-                  className="h-16 w-16 sm:h-[68px] sm:w-[68px] rounded-full object-contain bg-[#FAFAF9] flex-shrink-0 border border-[#E5E7EB] p-2"
-                />
-              )}
-              <div className="min-w-0 flex-1">
-                <p data-testid="mystery-coupon-name" className="text-lg sm:text-xl font-extrabold text-[#111827] break-words leading-tight">
+            {/* Hlavní tělo ticketu — název, partner, popis. Pozice odpovídá
+                levému ~72% panelu vygenerovaného obrázku. */}
+            <div
+              className="absolute flex flex-col justify-center gap-1 sm:gap-1.5 overflow-hidden"
+              style={{ left: "5%", right: "34%", top: "10%", bottom: "10%" }}
+            >
+              <div className="flex items-center gap-1.5 sm:gap-2 min-w-0">
+                {couponImage && (
+                  <img
+                    src={couponImage}
+                    alt=""
+                    data-testid="mystery-coupon-image"
+                    className="h-4 w-4 sm:h-6 sm:w-6 rounded-full object-contain bg-white/70 flex-shrink-0 border border-[#E9D8B8] p-0.5"
+                  />
+                )}
+                <p
+                  data-testid="mystery-coupon-name"
+                  className="font-heading text-[12px] sm:text-xl font-extrabold text-[#1C1A14] leading-[1.15] tracking-[-0.01em] break-words line-clamp-2"
+                >
                   {coupon?.name}
                 </p>
-                {coupon?.partner_name && (
-                  <p data-testid="mystery-coupon-partner" className="text-sm font-semibold text-black/70 break-words">
-                    {coupon.partner_name}
-                  </p>
-                )}
-                {coupon?.short_description && (
-                  <p className="text-xs text-black/60 mt-1 break-words">{coupon.short_description}</p>
-                )}
               </div>
+              {coupon?.partner_name && (
+                <p data-testid="mystery-coupon-partner" className="font-heading text-[8px] sm:text-[11px] font-semibold uppercase tracking-[0.08em] text-[#9A7A42] break-words line-clamp-1">
+                  {coupon.partner_name}
+                </p>
+              )}
+              {coupon?.short_description && (
+                <p className="font-sans text-[8px] sm:text-xs font-normal leading-relaxed text-[#5B5648]/80 break-words line-clamp-1 sm:line-clamp-2">
+                  {coupon.short_description}
+                </p>
+              )}
             </div>
 
-            {coupon?.code && (
-              <div
-                data-testid="mystery-coupon-perforation"
-                className="relative flex flex-col items-center justify-center gap-1 p-4 sm:px-5 text-center border-t-2 border-dashed border-[#9CA3AF] sm:border-t-0 sm:border-l-2 min-w-0"
-              >
-                {/*
-                  Kruhové zakončení perforace. Na desktopu je čára svislá, takže
-                  výřezy patří na její horní a dolní konec; na mobilu je čára
-                  vodorovná a výřezy jdou na levý a pravý konec.
-                */}
-                <span
-                  data-testid="mystery-coupon-perf-cap-start"
-                  aria-hidden="true"
-                  className="absolute -top-3.5 -left-3.5 h-7 w-7 rounded-full bg-[#FFF9F0]"
-                />
-                <span
-                  data-testid="mystery-coupon-perf-cap-mobile-end"
-                  aria-hidden="true"
-                  className="absolute -top-3.5 -right-3.5 h-7 w-7 rounded-full bg-[#FFF9F0] sm:hidden"
-                />
-                <span
-                  data-testid="mystery-coupon-perf-cap-desktop-end"
-                  aria-hidden="true"
-                  className="hidden sm:block absolute -bottom-3.5 -left-3.5 h-7 w-7 rounded-full bg-[#FFF9F0]"
-                />
-
-                <p className="text-[10px] uppercase tracking-[0.18em] text-[#C26A00] font-bold">
+            {/* Útržek ticketu — kód a kopírování. Pozice odpovídá pravému
+                ~28% panelu za perforovanou dělicí čárou. */}
+            <div
+              className="absolute flex flex-col items-center justify-center gap-0.5 sm:gap-1 text-center"
+              style={{ left: "76%", right: "4%", top: "10%", bottom: "10%" }}
+            >
+              {coupon?.code && (
+                <>
+                <p className="font-sans text-[6.5px] sm:text-[9px] font-semibold uppercase tracking-[0.22em] sm:tracking-[0.26em] text-[#B07A2E]">
                   Tvůj kód
                 </p>
                 <p
                   data-testid="mystery-coupon-code"
-                  className="text-lg sm:text-xl font-extrabold text-[#334155] break-all leading-tight max-w-full"
+                  className="font-heading text-[9px] sm:text-[15px] font-bold tracking-[0.02em] text-[#2B2A24] break-all leading-snug max-w-full px-0.5 mt-0.5 sm:mt-1"
                 >
                   {coupon.code}
                 </p>
@@ -418,20 +426,22 @@ export function MysteryPurchaseResultDialog({
                   type="button"
                   data-testid="mystery-coupon-copy"
                   onClick={handleCopy}
-                  className="inline-flex items-center gap-1.5 rounded-lg border border-[#F97316] bg-white px-2 py-1 text-xs font-semibold text-[#C26A00] hover:bg-[#FFF4E8] hover:text-[#FF8A00] transition-colors mt-1"
+                  className="inline-flex items-center gap-1 rounded-full border border-[#D9A85C]/70 bg-white/70 px-2 py-0.5 sm:px-2.5 sm:py-1 text-[6.5px] sm:text-[10.5px] font-medium tracking-[0.02em] text-[#9A6B24] hover:bg-white hover:border-[#D9A85C] transition-colors mt-1 sm:mt-1.5 whitespace-nowrap"
                 >
-                  {copied ? <Check className="h-3.5 w-3.5" /> : <Copy className="h-3.5 w-3.5" />}
-                  {copied ? "Zkopírováno" : "Kopírovat kód"}
+                  {copied ? <Check className="h-2 w-2 sm:h-3 sm:w-3" /> : <Copy className="h-2 w-2 sm:h-3 sm:w-3" />}
+                  <span className="hidden sm:inline">{copied ? "Zkopírováno" : "Kopírovat kód"}</span>
+                  <span className="sm:hidden">{copied ? "OK" : "Kopírovat"}</span>
                 </button>
-              </div>
-            )}
+                </>
+              )}
+            </div>
           </section>
 
           {/* ── Výrazný postup k dalšímu výhernímu tiketu ─────────────── */}
           {showNextWin && (
             <section
               data-testid="mystery-result-next-win"
-              className="rounded-2xl border border-[#FFD69E] bg-white/75 px-3 py-3 sm:px-4 sm:py-3 shadow-[0_12px_30px_rgba(249,115,22,0.12)] min-w-0"
+              className="rounded-2xl border border-[#FFD69E] bg-white/75 px-3 py-3 sm:px-4 sm:py-3 shadow-[0_12px_30px_rgba(249,115,22,0.12)] min-w-0 animate-in fade-in slide-in-from-bottom-2 duration-700 [animation-delay:650ms] fill-mode-both"
             >
               <div className="grid grid-cols-[3rem_minmax(0,1fr)] sm:grid-cols-[3.25rem_minmax(0,1fr)_5.5rem] items-center gap-3 min-w-0">
                 <span className="h-12 w-12 sm:h-[52px] sm:w-[52px] rounded-full bg-gradient-to-br from-[#FF9B22] to-[#C85D00] flex items-center justify-center shadow-[0_9px_22px_rgba(201,93,0,0.34)]">
@@ -439,7 +449,7 @@ export function MysteryPurchaseResultDialog({
                 </span>
                 <div className="min-w-0">
                   <p className="font-heading text-xs sm:text-sm font-black text-[#111827] leading-tight break-words">
-                    Další výherní tiket čeká už za{" "}
+                    Další výherní ticket čeká už za{" "}
                     <span
                       data-testid="mystery-result-next-win-distance"
                       className="text-[#F97316]"
@@ -492,14 +502,14 @@ export function MysteryPurchaseResultDialog({
             </section>
           )}
 
-          <p data-testid="mystery-result-storage-note" className="text-xs text-[#6B7280] text-center break-words">
-            Kupon najdeš ve <span className="font-semibold text-[#374151]">Voucherech</span>, tiket máš uložený ve svém účtu.
+          <p data-testid="mystery-result-storage-note" className="text-xs text-[#6B7280] text-center break-words animate-in fade-in duration-700 [animation-delay:700ms] fill-mode-both">
+            Voucher najdeš ve <span className="font-semibold text-[#374151]">Voucherech</span>, ticket máš uložený ve svém účtu.
           </p>
 
           <Button
             data-testid="mystery-result-continue"
             onClick={onClose}
-            className="h-11 font-heading font-bold rounded-full w-full text-base bg-gradient-to-b from-[#F6A63A] via-[#E47B0A] to-[#C35A00] text-white shadow-[0_8px_20px_rgba(180,82,0,0.3)] hover:brightness-105"
+            className="h-11 font-heading font-bold rounded-full w-full text-base animate-in fade-in slide-in-from-bottom-2 duration-700 [animation-delay:750ms] fill-mode-both bg-gradient-to-b from-[#F6A63A] via-[#E47B0A] to-[#C35A00] text-white shadow-[0_8px_20px_rgba(180,82,0,0.3)] hover:brightness-105"
           >
             Pokračovat <ChevronRight className="h-4 w-4" />
           </Button>
