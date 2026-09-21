@@ -18,6 +18,7 @@ export const ADMIN_PERMISSION_KEYS = [
   'users.view.basic',
   'partner_offers.finance.manage',
   'sales_leads.manage',
+  'guaranteed_benefits.manage',
 ] as const;
 export type AdminPermissionKey = (typeof ADMIN_PERMISSION_KEYS)[number];
 
@@ -30,6 +31,9 @@ export const ADMIN_PERMISSION_LABELS: Record<AdminPermissionKey, string> = {
   'users.view.basic': 'Uživatelé (základní)',
   'partner_offers.finance.manage': 'Partnerské nabídky (finance)',
   'sales_leads.manage': 'Obchodní leady',
+  // Citlivá oblast: obsahuje partnerská cenová data a blokuje aktivaci soutěže.
+  // Záměrně samostatný klíč, nikoli rozšíření vouchers.manage.
+  'guaranteed_benefits.manage': 'Garantované benefity',
 };
 
 interface UseAdminPermissions {
@@ -104,6 +108,7 @@ export const ADMIN_ROUTE_PERMISSION: Record<string, AdminPermissionKey> = {
   '/admin/users': 'users.view.basic',
   '/admin/partner-offers': 'partner_offers.finance.manage',
   '/admin/sales-leads': 'sales_leads.manage',
+  '/admin/guaranteed-benefits': 'guaranteed_benefits.manage',
 };
 
 /**
@@ -129,4 +134,6 @@ export const SUBADMIN_ENTRY_ROUTES: {
   { path: '/admin/partner-offers', permission: 'partner_offers.finance.manage', label: 'Partnerské nabídky' },
   // Sales Leads Phase 2 — modul Obchod / Leady (docs/SALES_LEADS_ADMIN_SPEC.md).
   { path: '/admin/sales-leads', permission: 'sales_leads.manage', label: 'Obchod' },
+  // Garantované nákupní benefity — admin-only správa (první verze).
+  { path: '/admin/guaranteed-benefits', permission: 'guaranteed_benefits.manage', label: 'Garantované benefity' },
 ];

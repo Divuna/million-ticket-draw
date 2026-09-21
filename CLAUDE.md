@@ -58,6 +58,68 @@ prvních skutečných zákazníků musí proběhnout **jeden řízený kompletn�
 ale to **není důvod je mazat, měnit ani „uklízet" mimochodem**. Jediná povolená cesta k jejich
 odstranění je ten jeden schválený reset.
 
+## GARANTOVANÉ NÁKUPNÍ BENEFITY — ADMIN-ONLY ZÁKLAD (21. 09. 2026, STAGING ONLY)
+
+Základ centrální admin správy garantovaných nákupních benefitů. **Aplikováno POUZE na staging
+`dxmowysntemfqfnanxua`. Produkce `xkzhjldrojjlrkezorey` NEDOTČENA** (ověřeno read-only: 0 nových
+sloupců, 0 nových tabulek, 0 nových RPC, 13 partnerů / 1 order / 50 issuances / 50 bundles beze změny).
+
+**Model (neměnit bez nového rozhodnutí Pavla):**
+- Benefity zakládá a spravuje **výhradně OneMil** — superadmin nebo admin s klíčem
+  `guaranteed_benefits.manage`. Partner v aplikaci **nic nevytváří ani neschvaluje**; obchodní
+  dohoda se řeší mimo aplikaci.
+- **`PartnerDashboard.tsx` se kvůli garantovaným benefitům NESMÍ rozšiřovat.**
+- Klíč `guaranteed_benefits.manage` je **samostatný** — NEslučovat s `vouchers.manage`. Ten je
+  v `useAdminPermissions.ts` označen jako „safe slice"; garantované benefity nesou partnerská
+  cenová data a budou blokovat aktivaci soutěže.
+- **Cena a schválení do provozu zůstávají superadminovi** přes existující
+  `superadmin_review_voucher_distribution_order` / `superadmin_review_guaranteed_benefit_version` /
+  `superadmin_set_voucher_distribution_price`. Tyto 4 RPC **nerozvolňovat**.
+- Benefit vzniká jako **koncept**: `vouchers.workflow_status='draft'`,
+  `voucher_versions.status='draft'`, `voucher_distribution_orders.status='requested'`.
+
+**Evidenční firma (`partners.benefit_only_record = true`)** nesmí nikdy získat auth účet,
+partnerské přihlášení, API klíč, Shoptet integraci, affiliate atribuci, payout ani `approved` status
+— vynuceno guard triggery `trg_guard_benefit_only_partner` (partners) a
+`trg_guard_benefit_only_partner_api_key` (partner_api_keys). **Nemazat.**
+
+**Deduplikace firmy je povinná** (`admin_create_benefit_partner` = find-or-create):
+IČO → doména webu (`sales_lead_normalize_domain`) → kontaktní e-mail → fuzzy název **jen jako návrh
+k potvrzení**. `partners.ico` nemá unique index a má ho jen menšina partnerů — proto tři úrovně.
+
+**Neomezený benefit bez zásoby kódů:** `voucher_versions.code_source='shared_static'` +
+`shared_code_or_url`, `voucher_distribution_orders.is_unlimited=true`. Negeneruje `voucher_codes`.
+
+**Distribuce:** `voucher_distribution_orders.distribution_scope` = `all_contests` (rozsah, nevytváří
+výčtové vazby) / `selected_contests` (vazby ve `voucher_distribution_contests`) / `single_contest`
+(legacy, default — existující ordery beze změny).
+
+**Zápis výhradně přes SECURITY DEFINER RPC.** `voucher_distribution_contests` má RLS a **pouze
+SELECT policy** — žádnou write policy záměrně. Frontend nikdy nezapisuje přímo do `partners`,
+`vouchers`, `voucher_versions`, `voucher_codes`, `voucher_distribution_orders` ani
+`voucher_distribution_contests`.
+
+**Pozor — drift staging × produkce:** produkční `public.vouchers` má sloupce `short_description`,
+`usage_description`, `terms_text`, `how_to_use_text`, staging **ne**. RPC je proto **záměrně
+nezapisují** — autoritativní obsah je vždy ve `voucher_versions`. Nepřidávat je zpět.
+
+**Beze změny (nedotčeno):** `purchase_guaranteed_benefit_bundle_atomic`,
+`get_guaranteed_benefit_offer`, `buy_ticket_atomic` (včetně oprávnění), zákaznický nákupní flow,
+wallets, payments, contest activation guard, Partner Offers.
+
+**Migrace (staging):** `20260921090000_benefit_only_partner_record.sql`,
+`20260921091000_guaranteed_benefit_unlimited_and_scope.sql`,
+`20260921092000_guaranteed_benefit_partner_rpcs.sql`,
+`20260921093000_guaranteed_benefit_admin_rpcs.sql`.
+
+**Testy:** `supabase/tests/guaranteed_benefit_admin_base.sql` (pgTAP kontrakt — **zatím nespuštěn**,
+lokálně chybí Docker) a `supabase/tests/staging/guaranteed_benefit_admin_base_staging_checks.sql`
+(funkční ověření proti stagingu v transakci s ROLLBACK — **prošlo**).
+
+**Při psaní dalších staging testů:** čtení `voucher_*` tabulek pod rolí `authenticated` blokuje RLS
+(read-back dělat po `reset role` nebo přes RPC); `admin_get_guaranteed_benefit` je `STABLE` —
+nevolat ve stejném statementu jako `admin_set_benefit_distribution`.
+
 ## Co reset odstraní (provozní testovací data)
 
 - zákaznické a testovací účty — **kromě zachovaného superadmina**,
