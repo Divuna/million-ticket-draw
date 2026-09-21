@@ -74,8 +74,8 @@ const linkButtonClass = (active: boolean) =>
   inline-flex items-center no-underline relative h-9 shrink-0 rounded-full px-3.5 gap-2 text-[13px] font-semibold tracking-tight transition-all duration-200
   ${
     active
-      ? "bg-primary/18 text-primary border border-primary/35 shadow-[0_0_0_1px_hsl(var(--primary)/0.2),0_4px_14px_hsl(var(--primary)/0.12)] ring-2 ring-primary/25"
-      : "text-muted-foreground/90 border border-transparent hover:bg-muted/60 hover:text-foreground hover:border-border/40"
+      ? "bg-primary/10 text-primary border border-primary/30 shadow-sm"
+      : "text-muted-foreground border border-transparent hover:bg-muted hover:text-foreground"
   }
 `;
 
@@ -84,8 +84,8 @@ const menuTriggerClass = (active: boolean) =>
   relative h-9 shrink-0 rounded-full px-3 gap-1.5 text-[13px] font-semibold tracking-tight transition-all duration-200
   ${
     active
-      ? "bg-primary/18 text-primary border border-primary/35 shadow-[0_0_0_1px_hsl(var(--primary)/0.2),0_4px_14px_hsl(var(--primary)/0.12)] ring-2 ring-primary/25"
-      : "text-muted-foreground/90 border border-transparent hover:bg-muted/60 hover:text-foreground hover:border-border/40"
+      ? "bg-primary/10 text-primary border border-primary/30 shadow-sm"
+      : "text-muted-foreground border border-transparent hover:bg-muted hover:text-foreground"
   }
 `;
 

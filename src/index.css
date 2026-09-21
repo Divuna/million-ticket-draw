@@ -32,6 +32,32 @@
     --om-font-heading: 'Poppins', system-ui, sans-serif;
     --om-font-body:    'Inter', system-ui, sans-serif;
 
+    /* Badge semantic tokens — defaults reproduce Badge's previous hardcoded
+       Tailwind colors (destructive/success/warning/pending/info) exactly, so
+       every existing consumer (customer, partner, affiliate, admin) renders
+       byte-identical to before. Only .admin-theme redefines these, for
+       legibility on a light background — see that scope below. */
+    --badge-destructive-fg: #fecaca;
+    --badge-destructive-bg: #ef444426;
+    --badge-destructive-bg-hover: #ef444433;
+    --badge-destructive-border: #ef444459;
+    --badge-success-fg: #a7f3d0;
+    --badge-success-bg: #10b9811f;
+    --badge-success-bg-hover: #10b9812e;
+    --badge-success-border: #10b98166;
+    --badge-warning-fg: #fef3c7;
+    --badge-warning-bg: #f59e0b1f;
+    --badge-warning-bg-hover: #f59e0b2e;
+    --badge-warning-border: #f59e0b66;
+    --badge-pending-fg: #e0f2fe;
+    --badge-pending-bg: #0ea5e91a;
+    --badge-pending-bg-hover: #0ea5e929;
+    --badge-pending-border: #0ea5e959;
+    --badge-info-fg: #FFB547;
+    --badge-info-bg: rgba(255,138,0,0.1);
+    --badge-info-bg-hover: rgba(255,138,0,0.16);
+    --badge-info-border: rgba(255,138,0,0.35);
+
     /* Premium Dark Theme — aligned with OneMil brand */
     --background: 228 22% 5%;
     --foreground: 212 25% 92%;
@@ -292,6 +318,116 @@
     border-color: hsl(243 75% 59% / 0.25);
     box-shadow: 0 4px 14px hsl(248 40% 25% / 0.08), 0 16px 36px hsl(248 45% 40% / 0.12);
   }
+
+  /* Admin (superadmin + admin) — light modern SaaS theme, scoped to /admin/*
+     only via AdminLayout. Same technique as .partner-portal-theme /
+     .affiliate-portal-theme: redefine the shadcn CSS variables every existing
+     admin Card/Button/Badge/Table/Dialog/Tabs/Input already reads, so the
+     whole admin surface re-themes with zero JSX/behavior changes. Nothing
+     here is read outside /admin/* — public, partner and affiliate surfaces
+     are untouched. OneMil orange stays the only accent (--primary/--accent/
+     --ring); everything else is neutral light/dark, per Pavel's brief. */
+  .admin-theme {
+    --background: 220 20% 97%;
+    --foreground: 224 24% 14%;
+    --card: 0 0% 100%;
+    --card-foreground: 224 24% 14%;
+    --popover: 0 0% 100%;
+    --popover-foreground: 224 24% 14%;
+    --primary: 33 100% 50%;
+    --primary-foreground: 0 0% 7%;
+    --secondary: 220 14% 93%;
+    --secondary-foreground: 224 20% 20%;
+    --muted: 220 16% 95%;
+    --muted-foreground: 220 9% 42%;
+    --accent: 33 100% 50%;
+    --accent-foreground: 0 0% 7%;
+    --destructive: 0 72% 45%;
+    --destructive-foreground: 0 0% 100%;
+    --border: 220 14% 90%;
+    --input: 220 14% 90%;
+    --ring: 33 100% 50%;
+
+    /* Unified box styles — soft, light-appropriate shadow/border. */
+    --card-shadow: 0 1px 2px hsl(220 20% 20% / 0.04), 0 8px 24px hsl(220 20% 20% / 0.07);
+    --card-border: 1px solid hsl(220 14% 90%);
+
+    /* Dark left navigation rail. */
+    --sidebar-background: 222 32% 8%;
+    --sidebar-foreground: 212 25% 92%;
+    --sidebar-primary: 33 100% 50%;
+    --sidebar-primary-foreground: 0 0% 7%;
+    --sidebar-accent: 222 28% 15%;
+    --sidebar-accent-foreground: 212 25% 96%;
+    --sidebar-border: 222 24% 16%;
+    --sidebar-ring: 33 100% 50%;
+
+    /* Status accents — darkened for AA legibility on white (positive =
+       green, warning = amber, danger = red/--destructive above). */
+    --neon-green: 152 62% 30%;
+    --neon-gold: 38 92% 40%;
+    --neon-red: 0 70% 45%;
+    --neon-blue: 217 85% 45%;
+    --neon-cyan: 199 85% 36%;
+    --neon-purple: 262 55% 45%;
+    --neon-pink: 330 55% 45%;
+    --heading-gold: 33 100% 42%;
+    --text-silver: 224 24% 16%;
+    --text-muted-gray: 220 9% 42%;
+
+    /* Badge semantic tokens — same 5 statuses, re-tuned for a white card
+       instead of a dark one. Badge component/variant list is unchanged;
+       only these CSS variables change, see src/components/ui/badge.tsx. */
+    --badge-destructive-fg: #991b1b;
+    --badge-destructive-bg: #fef2f2;
+    --badge-destructive-bg-hover: #fee2e2;
+    --badge-destructive-border: #fecaca;
+    --badge-success-fg: #065f46;
+    --badge-success-bg: #ecfdf5;
+    --badge-success-bg-hover: #d1fae5;
+    --badge-success-border: #a7f3d0;
+    --badge-warning-fg: #92400e;
+    --badge-warning-bg: #fffbeb;
+    --badge-warning-bg-hover: #fef3c7;
+    --badge-warning-border: #fde68a;
+    --badge-pending-fg: #075985;
+    --badge-pending-bg: #f0f9ff;
+    --badge-pending-bg-hover: #e0f2fe;
+    --badge-pending-border: #bae6fd;
+    --badge-info-fg: #b45309;
+    --badge-info-bg: rgba(255,138,0,0.08);
+    --badge-info-bg-hover: rgba(255,138,0,0.14);
+    --badge-info-border: rgba(255,138,0,0.35);
+
+    color: hsl(var(--foreground));
+    background: hsl(var(--background));
+  }
+}
+
+/* Deliberately OUTSIDE any @layer: Tailwind's own utility classes (including
+   border-white/10 etc.) live in @layer utilities, which always outranks
+   @layer base regardless of selector specificity — an override placed inside
+   @layer base would silently lose. Unlayered rules outrank every layer, so
+   this is the only place such a fallback can actually take effect.
+
+   Purpose: any leftover hardcoded "translucent white divider" utility
+   (border-white/N, bg-white/N, ring-white/N, divide-white/N) in admin markup
+   that has not been individually restyled — these were only ever meant as
+   subtle separators against the old dark surface. Redirecting them to the
+   theme's neutral border/muted tokens is a like-for-like equivalent on a
+   light surface, scoped to .admin-theme only, so nothing outside /admin/* is
+   affected and no component file needs touching for this fallback. */
+.admin-theme [class*="border-white/"] {
+  border-color: hsl(var(--border));
+}
+.admin-theme [class*="bg-white/"] {
+  background-color: hsl(var(--muted));
+}
+.admin-theme [class*="ring-white/"] {
+  --tw-ring-color: hsl(var(--border));
+}
+.admin-theme [class*="divide-white/"] > :not([hidden]) ~ :not([hidden]) {
+  border-color: hsl(var(--border));
 }
 
 @layer base {
