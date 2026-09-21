@@ -174,6 +174,36 @@ SELECT policy** — žádnou write policy záměrně. Frontend nikdy nezapisuje 
 `usage_description`, `terms_text`, `how_to_use_text`, staging **ne**. RPC je proto **záměrně
 nezapisují** — autoritativní obsah je vždy ve `voucher_versions`. Nepřidávat je zpět.
 
+**Aktivní soutěž nesmí zůstat bez posledního neomezeného fallbacku (21. 09. 2026, staging only).**
+Rozšiřuje výše uvedené pravidlo výběru — zajišťuje, že fallback (bod 2) má vždy koho nabídnout.
+
+- **Blokace aktivace:** AFTER INSERT OR UPDATE OF status trigger
+  `trg_require_unlimited_benefit_for_active_contest` na `contests` (funkce
+  `trg_fn_require_unlimited_benefit_for_active_contest`) odmítne přechod do `active` (INSERT rovnou
+  jako `active`, nebo UPDATE z jiného stavu), pokud soutěž nemá žádný `approved`,
+  `is_unlimited=true` benefit s aktivní vazbou v `voucher_distribution_contests`. **Je to AFTER, ne
+  BEFORE** — u INSERTu ještě neexistuje řádek v `contests`, takže by BEFORE insert do
+  `voucher_distribution_contests` vždy selhal na FK; AFTER trigger při chybějícím fallbacku vyhodí
+  výjimku, která rollbackne celou transakci (i právě vložený řádek). Jméno triggeru je záměrně
+  zvoleno tak, aby v abecedním pořadí AFTER triggerů běželo **až po**
+  `trg_link_guaranteed_benefits_to_contest` — guard tak vidí výsledek existující (nefatální)
+  synchronizace dřív, než sám provede vlastní domaterializaci + finální kontrolu. Běžné UPDATE
+  aktivní soutěže (např. `next_ticket_number` z `buy_ticket_atomic`) guard neblokuje — je vázán na
+  `UPDATE OF status` a funkce navíc přeskočí kontrolu, pokud `old.status` už `active` bylo.
+- **Ochrana posledního fallbacku:** `admin_set_guaranteed_benefit_status` (přechod
+  `approved → suspended/ended`) a `admin_set_benefit_distribution` (přechod do
+  `selected_contests`, ať už z `all_contests`, nebo zúžení výběru) se odmítnou
+  (`would_leave_active_contest_without_unlimited_fallback`) a **nic nezapíšou**, pokud by některá
+  `active` soutěž zůstala bez JINÉHO schváleného neomezeného benefitu. Kontrola běží nad
+  `public.guaranteed_benefit_has_active_unlimited_fallback(contest_id, exclude_order_id)` — kritéria
+  jsou záměrně identická s fallback větví nákupního RPC.
+- **Kill-switch:** `settings.guaranteed_benefit_active_contest_guard_enabled` (`'true'`/`'false'`).
+  Chybějící řádek nebo hodnota různá od `'false'` = guard ZAPNUTÝ (fail-safe default). Na stagingu
+  nastaveno na `'true'`.
+- **Beze změny (Partner Offers izolace platí i zde):** `trg_contest_link_offers`,
+  `trg_fn_link_offers_to_new_contest`; funkčně ověřeno, že nový guard trigger neovlivňuje počet ani
+  obsah Partner Offers vazeb nové soutěže.
+
 **Beze změny (nedotčeno):** `buy_ticket_atomic` (včetně oprávnění), **frontendový fallback na
 `buy_ticket_atomic`**, wallets mimo dnešní odečet, payments, contest activation guard,
 Partner Offers, feature flag `guaranteed_benefit_purchase_enabled`, allowlist, idempotency přes
@@ -185,7 +215,8 @@ Partner Offers, feature flag `guaranteed_benefit_purchase_enabled`, allowlist, i
 `20260921093000_guaranteed_benefit_admin_rpcs.sql`,
 `20260921100000_guaranteed_benefit_no_approval_workflow.sql`,
 `20260921110000_guaranteed_benefit_contest_distribution_sync.sql`,
-`20260921120000_guaranteed_benefit_purchase_contest_links.sql`.
+`20260921120000_guaranteed_benefit_purchase_contest_links.sql`,
+`20260921130000_guaranteed_benefit_active_contest_fallback_guard.sql`.
 
 **Past při psaní staging testů soutěží:** `public.contests` má NOT NULL `title` **i** `name`
 (INSERT bez `title` spadne) a soutěž ve stavu `active` vyžaduje `rules_pdf_url`. Linkovací trigger
@@ -202,7 +233,8 @@ konstantní, takže uzavření pravidla založeného ve stejné transakci potře
 lokálně chybí Docker), `supabase/tests/staging/guaranteed_benefit_admin_base_staging_checks.sql`,
 `supabase/tests/staging/guaranteed_benefit_no_approval_staging_checks.sql`,
 `supabase/tests/staging/guaranteed_benefit_distribution_staging_checks.sql` a
-`supabase/tests/staging/guaranteed_benefit_purchase_links_staging_checks.sql`
+`supabase/tests/staging/guaranteed_benefit_purchase_links_staging_checks.sql` a
+`supabase/tests/staging/guaranteed_benefit_active_contest_fallback_guard_staging_checks.sql`
 (funkční ověření proti stagingu v transakci s ROLLBACK — **vše prošlo**).
 
 **Při psaní dalších staging testů:** čtení `voucher_*` tabulek pod rolí `authenticated` blokuje RLS
