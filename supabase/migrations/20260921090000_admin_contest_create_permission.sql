@@ -11,27 +11,65 @@
 --     tato migrace se toho vědomě nedotýká).
 -- Bez tohoto oprávnění nesmí plain admin založit ani upravit ŽÁDNOU soutěž.
 --
--- POTVRZENÝ STAV PŘED TOUTO MIGRACÍ (read-only audit repozitáře, 21. 09. 2026)
+-- POTVRZENÝ STAV PŘED TOUTO MIGRACÍ — ověřeno READ-ONLY přímo na produkci
+-- (xkzhjldrojjlrkezorey) a stagingu (dxmowysntemfqfnanxua), 21. 09. 2026.
+-- ⚠️ Toto nahrazuje dřívější verzi popisu založenou jen na grepu přes soubory
+-- v `supabase/migrations/` — produkce má oproti repu drift (viz bod 2).
 --
 -- 1) `admin_manage_contest` (RPC, SECURITY DEFINER) guardovala pouze na
 --    `has_role(admin) OR has_role(superadmin)` — JAKÝKOLI plain admin už mohl
 --    zavolat tuto RPC a nastavit libovolný status (včetně 'active') u
---    libovolné soutěže. Frontend byl jediná bariéra (superadmin-only routy).
+--    libovolné soutěže. Živá definice na produkci ověřena a je byte-identická
+--    s `20260903160000_admin_manage_contest_hardening.sql` — žádný novější
+--    neaplikovaný zásah.
 --
--- 2) `public.contests` mělo navíc legacy policy "Allow admin full access to
---    contests" (FOR ALL, `public.users.role IN ('admin','superadmin')` —
---    STARÝ sloupec, ne kanonická `user_roles`). Tato policy dávala JAKÉMUKOLI
---    adminovi neomezený přímý INSERT/UPDATE/DELETE nad `contests` přes
---    PostgREST, zcela mimo `admin_manage_contest` a mimo jeho guardy. Navíc
---    ji používá i Edge Function `create-contest` (user-scoped klient →
---    skutečný zápis jde přes RLS, ne přes service-role bypass), takže ji
---    NELZE jen smazat bez náhrady — musí se nahradit precizními policy.
+-- 2) `public.contests` RLS na produkci/stagingu má DNES přesně 5 policy a
+--    legacy "Allow admin full access to contests" (FOR ALL,
+--    `public.users.role`) mezi nimi NENÍ — byla odstraněna dřív mimo
+--    zachycené migrační soubory (produkční drift, běžný jev v tomto
+--    projektu). Skutečný živý stav:
+--      - "Public can see only visible contests" (SELECT, anon+authenticated,
+--        status IN active/pending/paused) — beze změny.
+--      - contests_admin_select_all (SELECT, admin/superadmin) — beze změny.
+--      - contests_winner_select_own (SELECT, vlastní výherní řádek) — beze změny.
+--      - contests_admin_update (UPDATE, `has_role(admin) OR has_role(superadmin)`,
+--        BEZ omezení na status) — JAKÝKOLI admin mohl přímým PostgREST
+--        `.update()` (i mimo `admin_manage_contest`) přepsat libovolnou
+--        soutěž do libovolného stavu. Toto reálně používá i
+--        `AdminContestManagement.tsx` (ukládání rules/rules_pdf_url/obrázků)
+--        — nová verze ji zpřísňuje, ne odstraňuje.
+--      - contests_admin_delete (DELETE, `has_role(admin) OR has_role(superadmin)`,
+--        BEZ omezení na status) — JAKÝKOLI admin mohl smazat libovolnou
+--        soutěž přímo přes PostgREST. Tato policy v repu vůbec nebyla
+--        zachycena žádným migračním souborem (čistý produkční drift).
+--      - INSERT policy na `contests` DNES NEEXISTUJE VŮBEC. To mimo jiné
+--        znamená, že Edge Function `create-contest` (v366 ACTIVE; INSERT jde
+--        přes user-scoped klienta, tedy přes RLS, ne přes service-role
+--        bypass) má dnes svůj `.insert()` krok fakticky nefunkční pro
+--        KAŽDÉHO volajícího včetně superadmina (RLS s nulou INSERT policy
+--        znamená deny-by-default). Tato migrace INSERT policy poprvé
+--        přidává — pro superadmina to `create-contest` opravuje, pro
+--        `contests.create` admina ho zároveň správně omezuje na draft/pending
+--        (EF sama status='active' už odmítá vlastní validací, ale 'closed'
+--        v jejím `validStatuses` bez DB vrstvy odmítnuté nebylo).
 --
--- 3) `contests_admin_update` (FOR UPDATE, `has_role(admin) OR
---    has_role(superadmin)`) měla stejnou vlastnost — žádné omezení na status
---    ani na aktuální stav řádku. Přímý klientský `.update()` na `contests`
---    (AdminContestManagement.tsx — ukládání rules/rules_pdf_url/obrázků)
---    touto policy prochází i dnes; nová verze ji zpřísňuje, ne odstraňuje.
+-- 3) `pause_contest(contest_id)`, `resume_contest(contest_id)` a
+--    `close_contest(p_contest_id)` (všechny SECURITY DEFINER, `authenticated`
+--    EXECUTE) mají VŠECHNY stejný guard `has_role(admin) OR
+--    has_role(superadmin)` — tedy JAKÝKOLI plain admin je mohl (a stále může,
+--    dokud tato migrace neproběhne) zavolat přímo přes `supabase.rpc(...)`
+--    ve VLASTNÍ přihlášené session (kde `auth.uid()` správně ukazuje na
+--    jeho účet) a pozastavit/znovuaktivovat (`resume_contest` nastavuje
+--    `status='active'` — publikace!) nebo uzavřít libovolnou soutěž. Tohle
+--    je NEZÁVISLÉ na `admin_manage_contest` i na `contests` RLS výše — je to
+--    samostatná, dosud nedokumentovaná cesta, kterou by `contests.create`
+--    admin (má roli 'admin') mohl použít k obejití přesně toho, co má tato
+--    permission zakazovat. Frontend tyto tři akce dnes zobrazuje jen
+--    superadminovi (`/admin` a `/admin/contest/:id` jsou superadmin-only
+--    routy) — žádný legitimní volající není plain admin, takže zúžení na
+--    superadmin-only nic nerozbíjí. `fn_close_contest` má EXECUTE jen pro
+--    `postgres` (orphan, neřešeno), `close_contest_on_million_ticket` je
+--    trigger function bez smysluplné přímé volatelnosti (neřešeno).
 --
 -- ŘEŠENÍ (v tomto pořadí, aby žádné okno nezůstalo šířeji otevřené než dřív)
 --
@@ -50,40 +88,49 @@
 --          opustí přípravnou fázi, tento admin ji už nikdy nenačte k zápisu
 --          (ani touto RPC, viz níže i přes RLS).
 --    Zbytek těla (zámek ticket_count, closed-je-finální, audit_actions,
---    notify_sofinity_event, návratový tvar) je BYTE-IDENTICKÝ s
---    20260903160000_admin_manage_contest_hardening.sql — mění se jen guard.
+--    notify_sofinity_event, návratový tvar) je BYTE-IDENTICKÝ s živou
+--    produkční definicí — mění se jen guard.
 --
--- B) `public.contests` RLS — nahrazuje legacy ALL policy třemi precizními
---    policy (INSERT / UPDATE / DELETE), symetrickými s guardem výše:
+-- B) `public.contests` RLS — nahrazuje `contests_admin_update`/
+--    `contests_admin_delete` (širokou `admin OR superadmin` verzi) a poprvé
+--    přidává `contests_admin_insert`, vše symetricky s guardem výše:
 --    - superadmin: neomezeno (USING/WITH CHECK vždy true pro něj).
 --    - plain admin s `contests.create`: jen když (existující i nový) status
 --      je 'draft'/'pending'.
 --    - plain admin bez `contests.create`: 0 policy match → RLS default deny.
---    Řádek, který dřív obcházel `admin_manage_contest` (přímý PostgREST
---    UPDATE/DELETE i `create-contest` EF INSERT), je tím poprvé skutečně
---    vynucen na DB vrstvě, ne jen ve frontendové routě — přesně požadavek
---    "nelze obejít přímým požadavkem".
+--    Tím se poprvé skutečně vynucuje na DB vrstvě i cesta mimo
+--    `admin_manage_contest` (přímý PostgREST UPDATE/DELETE i `create-contest`
+--    EF INSERT) — přesně požadavek "nelze obejít přímým požadavkem".
 --    SELECT policy (`contests_admin_select_all`, `contests_winner_select_own`,
 --    veřejná active/pending/paused) se NEMĚNÍ.
 --
+-- C) `pause_contest` / `resume_contest` / `close_contest`: guard zúžen z
+--    `has_role(admin) OR has_role(superadmin)` na `has_role(superadmin)`.
+--    Business logika (audit_logs, výběr/zápis výherce, event_logs, Sofinity)
+--    beze změny — mění se jen guard a jeho chybová hláška.
+--
 -- ROZSAH: tato migrace se NEDOTÝKÁ `bonus_prizes`, `winners`, `wallets`,
--- `payments`, `tickets`, `buy_ticket_atomic`, `close-contest` Edge Function
--- ani `admin_permissions`/`has_admin_permission()` (Phase 2 základ z
+-- `payments`, `tickets`, `buy_ticket_atomic`, `assign_contest_ticket_atomic`,
+-- `close-contest`/`create-contest` Edge Functions (zdrojový kód), ani
+-- `admin_permissions`/`has_admin_permission()` (Phase 2 základ z
 -- 20260623_admin_permissions.sql, beze změny). Nemaže a nepřejmenovává žádná
 -- data.
 --
--- ROLLBACK:
---   -- 1) vrátit admin_manage_contest na definici z
---   --    20260903160000_admin_manage_contest_hardening.sql
---   -- 2) DROP POLICY "contests_admin_insert" ON public.contests;
---   --    DROP POLICY "contests_admin_delete" ON public.contests;
---   --    DROP POLICY IF EXISTS "contests_admin_update" ON public.contests;
---   --    CREATE POLICY "contests_admin_update" ON public.contests FOR UPDATE
---   --      TO authenticated
---   --      USING (has_role(auth.uid(),'admin'::app_role) OR has_role(auth.uid(),'superadmin'::app_role))
---   --      WITH CHECK (has_role(auth.uid(),'admin'::app_role) OR has_role(auth.uid(),'superadmin'::app_role));
---   --    CREATE POLICY "Allow admin full access to contests" ON public.contests
---   --      FOR ALL USING (EXISTS (SELECT 1 FROM public.users u WHERE u.id = auth.uid() AND u.role IN ('admin','superadmin')));
+-- ROLLBACK (odpovídá skutečnému stavu PŘED touto migrací, ověřenému výše —
+-- NE staršímu repo-based předpokladu s legacy "Allow admin full access"):
+--   DROP POLICY IF EXISTS "contests_admin_insert" ON public.contests;
+--   DROP POLICY IF EXISTS "contests_admin_update" ON public.contests;
+--   CREATE POLICY "contests_admin_update" ON public.contests FOR UPDATE
+--     TO authenticated
+--     USING (has_role(auth.uid(),'admin'::app_role) OR has_role(auth.uid(),'superadmin'::app_role))
+--     WITH CHECK (has_role(auth.uid(),'admin'::app_role) OR has_role(auth.uid(),'superadmin'::app_role));
+--   DROP POLICY IF EXISTS "contests_admin_delete" ON public.contests;
+--   CREATE POLICY "contests_admin_delete" ON public.contests FOR DELETE
+--     TO authenticated
+--     USING (EXISTS (SELECT 1 FROM user_roles WHERE user_roles.user_id = auth.uid()
+--       AND user_roles.role = ANY (ARRAY['admin'::app_role, 'superadmin'::app_role])));
+--   -- a vrátit admin_manage_contest / pause_contest / resume_contest / close_contest
+--   -- na definice zachycené v tomto souboru jako "PŘED touto migrací" (bod 1 a 3 výše).
 
 BEGIN;
 
@@ -300,9 +347,12 @@ GRANT EXECUTE ON FUNCTION public.admin_manage_contest(uuid, text, text, text, te
 GRANT EXECUTE ON FUNCTION public.admin_manage_contest(uuid, text, text, text, text, text, integer, numeric, text, boolean) TO service_role;
 
 -- ─────────────────────────────────────────────────────────────────────────────
--- B) public.contests RLS — legacy plošná ALL policy nahrazena precizními
---    INSERT/UPDATE/DELETE policy symetrickými s guardem výše.
+-- B) public.contests RLS — contests_admin_update/contests_admin_delete
+--    zpřesněny, contests_admin_insert nově přidána (dřív žádná neexistovala).
 -- ─────────────────────────────────────────────────────────────────────────────
+-- Defenzivní no-op na produkci/stagingu (tam už tato policy neexistuje — viz
+-- bod 2 výše), ale repo migrace ji v pořadí ještě vytváří (20250921124919…),
+-- takže na čerstvém `supabase db reset` je potřeba ji i tady odstranit.
 DROP POLICY IF EXISTS "Allow admin full access to contests" ON public.contests;
 
 DROP POLICY IF EXISTS "contests_admin_update" ON public.contests;
@@ -354,5 +404,259 @@ USING (
     AND status IN ('draft', 'pending')
   )
 );
+
+-- ─────────────────────────────────────────────────────────────────────────────
+-- C) pause_contest / resume_contest / close_contest — zúženo na superadmin-only
+--    (dřív: has_role(admin) OR has_role(superadmin) — nezávislá cesta, kterou
+--    by mohl zavolat přímo i `contests.create` admin, protože MÁ roli 'admin').
+--    Business logika beze změny.
+-- ─────────────────────────────────────────────────────────────────────────────
+CREATE OR REPLACE FUNCTION public.pause_contest(contest_id uuid)
+ RETURNS void
+ LANGUAGE plpgsql
+ SECURITY DEFINER
+ SET search_path TO 'public'
+AS $function$
+DECLARE
+  v_status text;
+BEGIN
+  IF NOT public.has_role(auth.uid(), 'superadmin'::public.app_role) THEN
+    RAISE EXCEPTION 'Superadmin access required';
+  END IF;
+
+  SELECT status INTO v_status
+  FROM public.contests
+  WHERE id = contest_id
+  FOR UPDATE;
+
+  IF NOT FOUND THEN
+    RETURN;
+  END IF;
+
+  IF v_status = 'closed' THEN
+    RAISE EXCEPTION 'Uzavřenou soutěž nelze pozastavit.';
+  END IF;
+
+  UPDATE public.contests
+  SET status = 'paused'
+  WHERE id = contest_id;
+END;
+$function$;
+
+CREATE OR REPLACE FUNCTION public.resume_contest(contest_id uuid)
+ RETURNS void
+ LANGUAGE plpgsql
+ SECURITY DEFINER
+ SET search_path TO 'public'
+AS $function$
+DECLARE
+  v_status text;
+BEGIN
+  IF NOT public.has_role(auth.uid(), 'superadmin'::public.app_role) THEN
+    RAISE EXCEPTION 'Superadmin access required';
+  END IF;
+
+  SELECT status INTO v_status
+  FROM public.contests
+  WHERE id = contest_id
+  FOR UPDATE;
+
+  IF NOT FOUND THEN
+    RETURN;
+  END IF;
+
+  IF v_status = 'closed' THEN
+    RAISE EXCEPTION 'Uzavřenou soutěž nelze znovu aktivovat.';
+  END IF;
+
+  UPDATE public.contests
+  SET status = 'active'
+  WHERE id = contest_id;
+END;
+$function$;
+
+CREATE OR REPLACE FUNCTION public.close_contest(p_contest_id uuid)
+ RETURNS void
+ LANGUAGE plpgsql
+ SECURITY DEFINER
+ SET search_path TO 'public'
+AS $function$
+DECLARE
+  v_ticket record;
+  v_status text;
+  v_main_winner_id uuid;
+BEGIN
+  IF NOT public.has_role(auth.uid(), 'superadmin'::app_role) THEN
+    RAISE EXCEPTION 'Superadmin access required';
+  END IF;
+
+  -- AUDIT: admin_action
+  INSERT INTO public.audit_logs (event, event_type, user_id, reference_id, metadata, created_at)
+  VALUES (
+    'admin_action',
+    'admin_action',
+    auth.uid(),
+    p_contest_id,
+    jsonb_build_object(
+      'reference_id',  p_contest_id,
+      'action',        'close_contest',
+      'admin_action',  true
+    ),
+    now()
+  );
+
+  SELECT status INTO v_status
+  FROM   public.contests
+  WHERE  id = p_contest_id
+  FOR UPDATE;
+
+  IF NOT FOUND THEN RETURN; END IF;
+  IF v_status = 'closed' THEN RETURN; END IF;
+
+  -- Main winner already exists: sync status only
+  IF EXISTS (
+    SELECT 1 FROM public.winners
+    WHERE  contest_id = p_contest_id AND type = 'main'
+  ) THEN
+    UPDATE public.contests SET status = 'closed' WHERE id = p_contest_id;
+
+    INSERT INTO public.audit_logs (event, event_type, user_id, reference_id, metadata, created_at)
+    VALUES (
+      'contest_closed',
+      'contest_closed',
+      auth.uid(),
+      p_contest_id,
+      jsonb_build_object(
+        'reference_id', p_contest_id,
+        'source',       'close_contest_sync',
+        'admin_action', true
+      ),
+      now()
+    );
+
+    SELECT w.user_id INTO v_main_winner_id
+    FROM   public.winners w
+    WHERE  w.contest_id = p_contest_id AND w.type = 'main'
+    LIMIT  1;
+
+    IF v_main_winner_id IS NOT NULL THEN
+      INSERT INTO public.event_logs (event_name, user_id, contest_id, metadata, source_system)
+      VALUES (
+        'contest_closed',
+        v_main_winner_id,
+        p_contest_id,
+        jsonb_build_object('source', 'close_contest_sync'),
+        'onemil'
+      );
+    END IF;
+
+    RETURN;
+  END IF;
+
+  -- Pick a random winning ticket
+  SELECT * INTO v_ticket
+  FROM   public.tickets
+  WHERE  contest_id = p_contest_id
+  ORDER  BY random()
+  LIMIT  1;
+
+  -- No tickets sold: close with no winner
+  IF v_ticket IS NULL THEN
+    UPDATE public.contests SET status = 'closed' WHERE id = p_contest_id;
+
+    INSERT INTO public.audit_logs (event, event_type, user_id, reference_id, metadata, created_at)
+    VALUES (
+      'contest_closed',
+      'contest_closed',
+      auth.uid(),
+      p_contest_id,
+      jsonb_build_object(
+        'reference_id', p_contest_id,
+        'source',       'close_contest_no_tickets',
+        'admin_action', true
+      ),
+      now()
+    );
+
+    INSERT INTO public.event_logs (event_name, user_id, contest_id, metadata, source_system)
+    VALUES (
+      'contest_closed',
+      auth.uid(),
+      p_contest_id,
+      jsonb_build_object('source', 'close_contest_no_tickets'),
+      'onemil'
+    );
+
+    RETURN;
+  END IF;
+
+  -- Insert main winner
+  INSERT INTO public.winners (contest_id, user_id, ticket_id, type, created_at)
+  VALUES (p_contest_id, v_ticket.user_id, v_ticket.id, 'main', now());
+
+  -- AUDIT: winner_created — reference_id stays NULL; ticket_row_id is BIGINT in metadata
+  INSERT INTO public.audit_logs (event, event_type, user_id, reference_id, metadata, created_at)
+  VALUES (
+    'winner_created',
+    'winner_created',
+    v_ticket.user_id,
+    NULL,
+    jsonb_build_object(
+      'ticket_row_id', v_ticket.id,
+      'contest_id',    p_contest_id,
+      'ticket_number', v_ticket.number,
+      'type',          'main',
+      'admin_action',  true
+    ),
+    now()
+  );
+
+  INSERT INTO public.event_logs (event_name, user_id, contest_id, metadata, source_system)
+  VALUES (
+    'prize_won',
+    v_ticket.user_id,
+    p_contest_id,
+    jsonb_build_object(
+      'notes',         'Hlavni vyhra',
+      'type',          'main',
+      'ticket_number', v_ticket.number,
+      'ticket_row_id', v_ticket.id,
+      'source',        'close_contest'
+    ),
+    'onemil'
+  );
+
+  UPDATE public.contests SET status = 'closed' WHERE id = p_contest_id;
+
+  -- AUDIT: contest_closed
+  INSERT INTO public.audit_logs (event, event_type, user_id, reference_id, metadata, created_at)
+  VALUES (
+    'contest_closed',
+    'contest_closed',
+    auth.uid(),
+    p_contest_id,
+    jsonb_build_object(
+      'reference_id',      p_contest_id,
+      'winner_user_id',    v_ticket.user_id,
+      'winner_ticket_id',  v_ticket.id,
+      'source',            'close_contest',
+      'admin_action',      true
+    ),
+    now()
+  );
+
+  INSERT INTO public.event_logs (event_name, user_id, contest_id, metadata, source_system)
+  VALUES (
+    'contest_closed',
+    v_ticket.user_id,
+    p_contest_id,
+    jsonb_build_object(
+      'source',            'close_contest',
+      'winner_ticket_id',  v_ticket.id
+    ),
+    'onemil'
+  );
+END;
+$function$;
 
 COMMIT;

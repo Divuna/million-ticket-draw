@@ -224,3 +224,56 @@ test.describe('179 — contests RLS cannot be bypassed by a direct PostgREST req
     expect(sql).not.toContain('admin_begin_miocoin_save');
   });
 });
+
+test.describe('179 — pause_contest / resume_contest / close_contest are tightened to superadmin-only', () => {
+  // Found during final pre-merge review: these three SECURITY DEFINER RPCs
+  // (authenticated EXECUTE) independently guarded on `has_role(admin) OR
+  // has_role(superadmin)` — a plain admin could call them directly via their
+  // own session (bypassing admin_manage_contest and the contests RLS policies
+  // entirely) and resume_contest sets status='active' (publish), pause_contest
+  // sets 'paused', close_contest sets 'closed' + picks a winner. Since a
+  // contests.create admin still has role='admin', this was a live bypass of
+  // the entire "cannot publish/pause/close" guarantee.
+  for (const fn of ['pause_contest', 'resume_contest', 'close_contest']) {
+    test(`${fn} guard requires superadmin only, not "admin OR superadmin"`, () => {
+      const sql = findMigration();
+      const start = sql.indexOf(`CREATE OR REPLACE FUNCTION public.${fn}(`);
+      expect(start, `${fn} definition not found`).toBeGreaterThan(0);
+      const end = sql.indexOf('\n$function$;', start);
+      expect(end, `${fn} end not found`).toBeGreaterThan(start);
+      const body = sql.slice(start, end);
+
+      expect(body).toContain("public.has_role(auth.uid(), 'superadmin'");
+      expect(body).not.toMatch(/has_role\(auth\.uid\(\),\s*'admin'/);
+      expect(body).not.toContain('OR public.has_role');
+      expect(body).not.toContain('OR has_role');
+    });
+  }
+
+  test('resume_contest still sets status to active (business logic unchanged)', () => {
+    const sql = findMigration();
+    const start = sql.indexOf('CREATE OR REPLACE FUNCTION public.resume_contest(');
+    const end = sql.indexOf('\n$function$;', start);
+    const body = sql.slice(start, end);
+    expect(body).toContain("SET status = 'active'");
+    expect(body).toContain("Uzavřenou soutěž nelze znovu aktivovat.");
+  });
+
+  test('close_contest still creates the audit trail and winner selection (business logic unchanged)', () => {
+    const sql = findMigration();
+    const start = sql.indexOf('CREATE OR REPLACE FUNCTION public.close_contest(');
+    const end = sql.indexOf('\n$function$;', start);
+    const body = sql.slice(start, end);
+    expect(body).toContain("INSERT INTO public.winners (contest_id, user_id, ticket_id, type, created_at)");
+    expect(body).toContain("INSERT INTO public.audit_logs");
+    expect(body).toContain("UPDATE public.contests SET status = 'closed'");
+  });
+
+  test('fn_close_contest and close_contest_on_million_ticket are untouched (postgres-only orphan / trigger, out of scope)', () => {
+    const sql = findMigration();
+    // Mentioned in the header comment (documenting why they're out of scope)
+    // but must never appear as an actual CREATE OR REPLACE FUNCTION statement.
+    expect(sql).not.toContain('CREATE OR REPLACE FUNCTION public.fn_close_contest');
+    expect(sql).not.toContain('CREATE OR REPLACE FUNCTION public.close_contest_on_million_ticket');
+  });
+});
