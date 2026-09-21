@@ -416,17 +416,25 @@
    subtle separators against the old dark surface. Redirecting them to the
    theme's neutral border/muted tokens is a like-for-like equivalent on a
    light surface, scoped to .admin-theme only, so nothing outside /admin/* is
-   affected and no component file needs touching for this fallback. */
-.admin-theme [class*="border-white/"] {
+   affected and no component file needs touching for this fallback.
+
+   Scoped to "main" (the light content area rendered inside AdminLayout's
+   <Outlet/>) ONLY — never the dark left rail (<aside>) or its children. The
+   rail intentionally keeps its own dark-surface translucent-white utilities
+   (e.g. AdminPrimaryNav's hover:bg-white/5, the brand-tile bg-white/10);
+   this fallback matching them unconditionally (not just on :hover) was what
+   painted the nav's inactive rows near-white, making light-on-light text
+   unreadable — see AdminPrimaryNav.tsx / AdminLayout.tsx for the real fix. */
+.admin-theme main [class*="border-white/"] {
   border-color: hsl(var(--border));
 }
-.admin-theme [class*="bg-white/"] {
+.admin-theme main [class*="bg-white/"] {
   background-color: hsl(var(--muted));
 }
-.admin-theme [class*="ring-white/"] {
+.admin-theme main [class*="ring-white/"] {
   --tw-ring-color: hsl(var(--border));
 }
-.admin-theme [class*="divide-white/"] > :not([hidden]) ~ :not([hidden]) {
+.admin-theme main [class*="divide-white/"] > :not([hidden]) ~ :not([hidden]) {
   border-color: hsl(var(--border));
 }
 

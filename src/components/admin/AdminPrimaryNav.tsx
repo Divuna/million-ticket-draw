@@ -112,8 +112,8 @@ export const AdminPrimaryNav: React.FC = () => {
                   `inline-flex items-center relative h-8 md:h-10 shrink-0 rounded-full md:rounded-lg px-3 gap-1.5 md:gap-2.5 text-[12px] md:text-[13px] font-semibold tracking-tight transition-all duration-200 no-underline w-auto md:w-full
                       ${
                         active
-                          ? "bg-sidebar-accent text-sidebar-accent-foreground border border-transparent shadow-sm"
-                          : "text-sidebar-foreground/70 border border-transparent hover:bg-white/5 hover:text-sidebar-foreground"
+                          ? "bg-primary text-primary-foreground border border-transparent shadow-sm"
+                          : "bg-transparent text-sidebar-foreground border border-transparent hover:bg-sidebar-accent hover:text-sidebar-foreground"
                       }
                       ${
                         bobOffOnMessages
@@ -124,7 +124,7 @@ export const AdminPrimaryNav: React.FC = () => {
               >
                 <Icon
                   className={`h-3.5 w-3.5 md:h-4 md:w-4 shrink-0 ${
-                    bobOffOnMessages ? "opacity-100 text-[hsl(35,90%,62%)]" : active ? "opacity-100 text-primary" : "opacity-75"
+                    bobOffOnMessages ? "opacity-100 text-[hsl(35,90%,62%)]" : active ? "opacity-100 text-primary-foreground" : "opacity-90"
                   }`}
                   aria-hidden
                 />
