@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
-import { Card, CardContent } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
@@ -2325,9 +2325,11 @@ const ContestModal: React.FC<ContestModalProps> = ({ open, onClose, onSaved, edi
       "Bod zvratu je vyšší než počet dostupných ticketů.",
   ].filter(Boolean) as string[];
   const hasEconomyWarning = estimatedProfit < 0 || marginPercent < economyAssumptions.targetMarginPercent;
+  // KPI card accent — same hasEconomyWarning flag as before, just a light-card
+  // palette (amber = warning, emerald = healthy) instead of the old dark-tuned wash.
   const economySummaryClass = hasEconomyWarning
-    ? "border-yellow-500/30 bg-yellow-500/10 text-yellow-100"
-    : "border-emerald-500/20 bg-emerald-500/10 text-emerald-50";
+    ? "border-amber-200 bg-amber-50 text-amber-900"
+    : "border-emerald-200 bg-emerald-50 text-emerald-900";
 
   // Validation logic for each tab
   const hasMainImage = !!(form.main_image_file || form.main_image_url || (isEditing && editingContest?.main_image));
@@ -2366,13 +2368,16 @@ const ContestModal: React.FC<ContestModalProps> = ({ open, onClose, onSaved, edi
         onInteractOutside={(e) => e.preventDefault()}
         onEscapeKeyDown={(e) => e.preventDefault()}
       >
-        <DialogHeader className="px-6 pt-6 pb-4 border-b border-white/10 shrink-0">
+        <DialogHeader className="px-6 pt-6 pb-4 border-b border-border shrink-0">
           <DialogTitle>{isEditing ? "Upravit soutěž" : "Vytvořit novou soutěž"}</DialogTitle>
         </DialogHeader>
 
         <Tabs value={activeTab} onValueChange={setActiveTab} className="flex-1 flex flex-col min-h-0 px-6">
-          <div className="shrink-0 py-4 space-y-3">
-            <div className={`grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-2 rounded-lg border p-3 ${economySummaryClass}`}>
+          <div className="shrink-0 py-4 space-y-4">
+            {/* Horní souhrn — 5 samostatných KPI karet. Stejné hodnoty jako dřív
+                (form.ticket_count / totalEstimatedCost / recommendedTicketPrice /
+                estimatedProfit / marginPercent), žádný nový výpočet — jen jiné rozložení. */}
+            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3">
               {[
                 ["Počet ticketů", `${Math.max(0, form.ticket_count || 0).toLocaleString("cs-CZ")}`],
                 ["Celkové odhadované náklady", formatCzk(totalEstimatedCost)],
@@ -2383,25 +2388,28 @@ const ContestModal: React.FC<ContestModalProps> = ({ open, onClose, onSaved, edi
                 ["Odhadovaný čistý zisk", formatCzk(estimatedProfit)],
                 ["Marže", formatPercent(marginPercent)],
               ].map(([label, value]) => (
-                <div key={label}>
-                  <div className="text-[11px] uppercase tracking-wide opacity-70">{label}</div>
-                  <div className="mt-1 text-sm font-semibold text-foreground">{value}</div>
+                <div
+                  key={label}
+                  className={`rounded-xl border p-3.5 shadow-sm ${economySummaryClass}`}
+                >
+                  <div className="text-[10px] font-semibold uppercase tracking-wide opacity-70">{label}</div>
+                  <div className="mt-1.5 text-base font-bold leading-tight">{value}</div>
                 </div>
               ))}
             </div>
-            <TabsList className="flex flex-wrap h-auto w-full gap-1">
-              <TabsTrigger value="basic" className="flex items-center">
+            <TabsList className="flex flex-wrap h-auto w-full gap-1.5 bg-muted/60 p-1.5 rounded-xl">
+              <TabsTrigger value="basic" className="flex items-center rounded-lg">
                 Základní údaje
                 <TabIndicator isValid={validation.basic.isValid} />
               </TabsTrigger>
               {isSuperAdmin && (
                 <>
-                  <TabsTrigger value="bonus-coins">Bonusy – MioCoins</TabsTrigger>
-                  <TabsTrigger value="bonus-physical">Bonusy – věcné</TabsTrigger>
-                  <TabsTrigger value="economy">Ekonomika</TabsTrigger>
+                  <TabsTrigger value="bonus-coins" className="rounded-lg">Bonusy – MioCoins</TabsTrigger>
+                  <TabsTrigger value="bonus-physical" className="rounded-lg">Bonusy – věcné</TabsTrigger>
+                  <TabsTrigger value="economy" className="rounded-lg">Ekonomika</TabsTrigger>
                 </>
               )}
-              <TabsTrigger value="graphics" className="flex items-center">
+              <TabsTrigger value="graphics" className="flex items-center rounded-lg">
                 Grafika
                 <TabIndicator isValid={validation.graphics.isValid} />
               </TabsTrigger>
@@ -2410,148 +2418,166 @@ const ContestModal: React.FC<ContestModalProps> = ({ open, onClose, onSaved, edi
           </div>
 
           <div className="flex-1 overflow-y-auto pr-2 pb-4 min-h-0">
-            {/* Tab 1: Základní údaje */}
+            {/* Tab 1: Základní údaje — stejná pole/hodnoty/handlery jako dřív,
+                jen vizuálně rozdělené do karet podle významu údajů. */}
             <TabsContent value="basic" className="space-y-4 mt-0">
-              <div>
-                <Label>Název soutěže</Label>
-                <Input value={form.title} onChange={handleTitleChange} placeholder="Např. Corvette C8" />
-              </div>
+              <Card>
+                <CardHeader className="pb-3">
+                  <CardTitle className="text-base">Základní informace</CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <div>
+                    <Label>Název soutěže</Label>
+                    <Input value={form.title} onChange={handleTitleChange} placeholder="Např. Corvette C8" />
+                  </div>
 
-              <div>
-                <Label>Hlavní výhra</Label>
-                <Input value={form.main_prize} onChange={handleChange("main_prize")} placeholder="Např. Corvette C8" />
-                <p className="text-xs text-muted-foreground mt-1">Automaticky předvyplněno z názvu soutěže</p>
-              </div>
+                  <div>
+                    <Label>Hlavní výhra</Label>
+                    <Input value={form.main_prize} onChange={handleChange("main_prize")} placeholder="Např. Corvette C8" />
+                    <p className="text-xs text-muted-foreground mt-1">Automaticky předvyplněno z názvu soutěže</p>
+                  </div>
 
-              <div>
-                <Label>Náklad na hlavní výhru v Kč</Label>
-                <Input
-                  type="number"
-                  min={0}
-                  value={economyAssumptions.mainPrizeRealCost}
-                  onChange={updateEconomyAssumption("mainPrizeRealCost")}
-                  onFocus={handleNumericFocus}
-                  placeholder="0"
-                />
-                <p className="text-xs text-muted-foreground mt-1">Pořizovací náklad hlavní výhry — použije se v ekonomické kalkulaci.</p>
-              </div>
-
-              {/* Popis soutěže */}
-              <div className="space-y-3">
-                <div className="flex items-center justify-between">
-                  <Label>Popis soutěže</Label>
-                  <Button
-                    type="button"
-                    variant="outline"
-                    size="sm"
-                    onClick={handleGenerateDescription}
-                    disabled={generatingDescription || (!form.title && !form.main_prize)}
-                    className="text-xs"
-                  >
-                    {generatingDescription ? (
-                      <>
-                        <Loader2 className="mr-1.5 h-3 w-3 animate-spin" />
-                        Generuji…
-                      </>
-                    ) : (
-                      <>
-                        <Sparkles className="mr-1.5 h-3 w-3" />
-                        Vygenerovat AI popis
-                      </>
-                    )}
-                  </Button>
-                </div>
-                <Textarea
-                  value={form.description}
-                  onChange={handleChange("description")}
-                  placeholder="Stručný popis soutěže… Nebo klikni na tlačítko pro AI generování."
-                  rows={4}
-                />
-              </div>
-
-              <div>
-                <Label>Pravidla soutěže (PDF) <span className="text-red-400">*</span></Label>
-                <Input
-                  type="file"
-                  accept="application/pdf,.pdf"
-                  onChange={(e) => {
-                    const file = e.target.files?.[0] || null;
-                    setForm((prev) => ({ ...prev, rules_pdf_file: file }));
-                  }}
-                />
-                {form.rules_pdf_url && !form.rules_pdf_file && (
-                  <p className="text-xs text-muted-foreground mt-1">
-                    Aktuální PDF:{" "}
-                    <a href={form.rules_pdf_url} target="_blank" rel="noopener noreferrer" className="underline text-primary">
-                      Zobrazit
-                    </a>
-                  </p>
-                )}
-                {form.rules_pdf_file && (
-                  <p className="text-xs text-muted-foreground mt-1">
-                    Vybráno: {form.rules_pdf_file.name}
-                  </p>
-                )}
-              </div>
-
-              <div className="flex gap-4">
-                <div className="flex-1">
-                  <Label>Počet tiketů</Label>
-                  <Input
-                    type="number"
-                    min={1}
-                    value={form.ticket_count}
-                    onChange={handleChange("ticket_count")}
-                    onFocus={handleNumericFocus}
-                    disabled={ticketCountLocked}
-                  />
-                  {ticketCountLocked && (
-                    <p className="text-xs text-destructive mt-1">
-                      Počet tiketů už nelze změnit — soutěž má vydané tikety a toto číslo
-                      určuje pozici hlavní výhry.
-                    </p>
-                  )}
-                </div>
-                <div className="flex-1">
-                  <Label>Cena tiketu (MioCoins)</Label>
-                  <Input type="number" min={1} value={form.ticket_price} onChange={handleChange("ticket_price")} onFocus={handleNumericFocus} />
-                </div>
-              </div>
-
-              <div>
-                <Label>Status</Label>
-                <Select value={form.status} onValueChange={handleStatusChange}>
-                  <SelectTrigger className="bg-background">
-                    <SelectValue placeholder="Vyber status" />
-                  </SelectTrigger>
-                  <SelectContent className="bg-neutral-800 border-neutral-700 z-50">
-                    {statusOptionsForRole.map((option) => (
-                      <SelectItem
-                        key={option.value}
-                        value={option.value}
-                        className="text-white hover:bg-neutral-700 focus:bg-neutral-700 focus:text-white cursor-pointer"
+                  {/* Popis soutěže */}
+                  <div className="space-y-3">
+                    <div className="flex items-center justify-between">
+                      <Label>Popis soutěže</Label>
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        onClick={handleGenerateDescription}
+                        disabled={generatingDescription || (!form.title && !form.main_prize)}
+                        className="text-xs"
                       >
-                        {option.label}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-                {!isSuperAdmin && (
-                  <p className="text-xs text-muted-foreground mt-1">
-                    Soutěž můžete pouze vytvořit a připravit. Spuštění (Aktivní) provede superadmin.
-                  </p>
-                )}
-              </div>
+                        {generatingDescription ? (
+                          <>
+                            <Loader2 className="mr-1.5 h-3 w-3 animate-spin" />
+                            Generuji…
+                          </>
+                        ) : (
+                          <>
+                            <Sparkles className="mr-1.5 h-3 w-3" />
+                            Vygenerovat AI popis
+                          </>
+                        )}
+                      </Button>
+                    </div>
+                    <Textarea
+                      value={form.description}
+                      onChange={handleChange("description")}
+                      placeholder="Stručný popis soutěže… Nebo klikni na tlačítko pro AI generování."
+                      rows={4}
+                    />
+                  </div>
 
-              <div className="flex items-center gap-2 mt-2">
-                <input
-                  type="checkbox"
-                  id="fast_game"
-                  checked={form.fast_game}
-                  onChange={(e) => setForm((f) => ({ ...f, fast_game: e.target.checked }))}
-                />
-                <label htmlFor="fast_game" className="text-sm text-white">Fast game</label>
-              </div>
+                  <div>
+                    <Label>Pravidla soutěže (PDF) <span className="text-destructive">*</span></Label>
+                    <Input
+                      type="file"
+                      accept="application/pdf,.pdf"
+                      onChange={(e) => {
+                        const file = e.target.files?.[0] || null;
+                        setForm((prev) => ({ ...prev, rules_pdf_file: file }));
+                      }}
+                    />
+                    {form.rules_pdf_url && !form.rules_pdf_file && (
+                      <p className="text-xs text-muted-foreground mt-1">
+                        Aktuální PDF:{" "}
+                        <a href={form.rules_pdf_url} target="_blank" rel="noopener noreferrer" className="underline text-primary">
+                          Zobrazit
+                        </a>
+                      </p>
+                    )}
+                    {form.rules_pdf_file && (
+                      <p className="text-xs text-muted-foreground mt-1">
+                        Vybráno: {form.rules_pdf_file.name}
+                      </p>
+                    )}
+                  </div>
+                </CardContent>
+              </Card>
+
+              <Card>
+                <CardHeader className="pb-3">
+                  <CardTitle className="text-base">Ceny a počet tiketů</CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <div>
+                    <Label>Náklad na hlavní výhru v Kč</Label>
+                    <Input
+                      type="number"
+                      min={0}
+                      value={economyAssumptions.mainPrizeRealCost}
+                      onChange={updateEconomyAssumption("mainPrizeRealCost")}
+                      onFocus={handleNumericFocus}
+                      placeholder="0"
+                    />
+                    <p className="text-xs text-muted-foreground mt-1">Pořizovací náklad hlavní výhry — použije se v ekonomické kalkulaci.</p>
+                  </div>
+
+                  <div className="flex gap-4">
+                    <div className="flex-1">
+                      <Label>Počet tiketů</Label>
+                      <Input
+                        type="number"
+                        min={1}
+                        value={form.ticket_count}
+                        onChange={handleChange("ticket_count")}
+                        onFocus={handleNumericFocus}
+                        disabled={ticketCountLocked}
+                      />
+                      {ticketCountLocked && (
+                        <p className="text-xs text-destructive mt-1">
+                          Počet tiketů už nelze změnit — soutěž má vydané tikety a toto číslo
+                          určuje pozici hlavní výhry.
+                        </p>
+                      )}
+                    </div>
+                    <div className="flex-1">
+                      <Label>Cena tiketu (MioCoins)</Label>
+                      <Input type="number" min={1} value={form.ticket_price} onChange={handleChange("ticket_price")} onFocus={handleNumericFocus} />
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+
+              <Card>
+                <CardHeader className="pb-3">
+                  <CardTitle className="text-base">Stav a nastavení</CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <div>
+                    <Label>Status</Label>
+                    <Select value={form.status} onValueChange={handleStatusChange}>
+                      <SelectTrigger className="bg-background">
+                        <SelectValue placeholder="Vyber status" />
+                      </SelectTrigger>
+                      <SelectContent className="z-50">
+                        {statusOptionsForRole.map((option) => (
+                          <SelectItem key={option.value} value={option.value} className="cursor-pointer">
+                            {option.label}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    {!isSuperAdmin && (
+                      <p className="text-xs text-muted-foreground mt-1">
+                        Soutěž můžete pouze vytvořit a připravit. Spuštění (Aktivní) provede superadmin.
+                      </p>
+                    )}
+                  </div>
+
+                  <div className="flex items-center gap-2">
+                    <input
+                      type="checkbox"
+                      id="fast_game"
+                      checked={form.fast_game}
+                      onChange={(e) => setForm((f) => ({ ...f, fast_game: e.target.checked }))}
+                    />
+                    <label htmlFor="fast_game" className="text-sm text-foreground">Fast game</label>
+                  </div>
+                </CardContent>
+              </Card>
             </TabsContent>
 
             {/* Tab 2: Bonusy – MioCoins */}
