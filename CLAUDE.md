@@ -108,9 +108,39 @@ k potvrzení**. `partners.ico` nemá unique index a má ho jen menšina partner�
 **Neomezený benefit bez zásoby kódů:** `voucher_versions.code_source='shared_static'` +
 `shared_code_or_url`, `voucher_distribution_orders.is_unlimited=true`. Negeneruje `voucher_codes`.
 
-**Distribuce:** `voucher_distribution_orders.distribution_scope` = `all_contests` (rozsah, nevytváří
-výčtové vazby) / `selected_contests` (vazby ve `voucher_distribution_contests`) / `single_contest`
-(legacy, default — existující ordery beze změny).
+**Distribuce:** `voucher_distribution_orders.distribution_scope` = `all_contests` /
+`selected_contests` / `single_contest` (legacy, default — existující ordery beze změny).
+**`voucher_distribution_contests` je runtime vazební tabulka i pro `all_contests`** — rozsah se
+vždy materializuje do skutečných vazeb, nikdy nezůstává jen jako text na orderu.
+
+- **`all_contests`** = všechny soutěže ve stavu `active`/`pending` + každá budoucí, jakmile vznikne
+  nebo do těchto stavů přejde. Materializuje `sync_guaranteed_benefit_order_contests(uuid)`
+  (interní, **bez klientských grantů**) přes dva triggery:
+  `trg_sync_benefit_order_contests` na `voucher_distribution_orders` (nový approved order,
+  návrat `suspended → approved`, změna rozsahu) a `trg_link_guaranteed_benefits_to_contest`
+  na `contests` (vznik soutěže / přechod do `active`/`pending`).
+- **`selected_contests`** = zdrojem pravdy je výběr; `sync_…` je pro něj **no-op**. Vazby spravuje
+  výhradně `admin_set_benefit_distribution`: odpojí jen odebrané (`detached_at`), přidá jen nové,
+  existující správné nechá beze změny (partial unique index + `ON CONFLICT DO NOTHING`).
+- **Sync nikdy neodpojuje.** Odpojení je vždy vědomá admin akce. `all_contests` proto při přepnutí
+  jen dopojí chybějící active/pending — **nevracet plošné odpojení** (rozbilo by přechod
+  `selected → all`).
+- **Pozastavený ani ukončený benefit se do nové soutěže nenapojí** (`sync` i trigger na `contests`
+  filtrují `o.status = 'approved'`). Po návratu na `approved` se vazby dosynchronizují.
+
+⚠️ **Izolace od Partner Offers (neměnit):** garantované benefity mají **vlastní** funkce i **vlastní**
+triggery. `trg_fn_link_offers_to_new_contest`, `trg_fn_link_approved_offer_to_contests`,
+`trg_contest_link_offers`, `assign_partner_offer_to_ticket`, `partner_offer_contests` a
+`partner_offer_selected_contests` se **nesmí dotknout**. Na `contests` běží oba triggery nezávisle
+vedle sebe. **Nepřidávat benefity do Partner Offers funkcí a naopak.**
+
+⚠️ Oba triggery jsou **nefatální** (`EXCEPTION … RAISE WARNING`) — chyba v napojení benefitu nesmí
+zablokovat vznik ani aktivaci soutěže. Neúspěch se dohání opětovným uložením distribuce.
+
+⚠️ **Pozn. pro pozdější napojení nákupu:** nové ordery mají `contest_id IS NULL` a
+`validate_guaranteed_benefit_links` u `voucher_issuances` dnes vyžaduje
+`v_order.contest_id = v_ticket.contest_id`. Při zapojení do nákupu se bude muset upravit na
+čtení přes `voucher_distribution_contests`.
 
 **Zápis výhradně přes SECURITY DEFINER RPC.** `voucher_distribution_contests` má RLS a **pouze
 SELECT policy** — žádnou write policy záměrně. Frontend nikdy nezapisuje přímo do `partners`,
@@ -129,7 +159,13 @@ wallets, payments, contest activation guard, Partner Offers.
 `20260921091000_guaranteed_benefit_unlimited_and_scope.sql`,
 `20260921092000_guaranteed_benefit_partner_rpcs.sql`,
 `20260921093000_guaranteed_benefit_admin_rpcs.sql`,
-`20260921100000_guaranteed_benefit_no_approval_workflow.sql`.
+`20260921100000_guaranteed_benefit_no_approval_workflow.sql`,
+`20260921110000_guaranteed_benefit_contest_distribution_sync.sql`.
+
+**Past při psaní staging testů soutěží:** `public.contests` má NOT NULL `title` **i** `name`
+(INSERT bez `title` spadne) a soutěž ve stavu `active` vyžaduje `rules_pdf_url`. Linkovací trigger
+Partner Offers navíc **nefiltruje** `valid_from`/`valid_to` — platnost řeší až
+`assign_partner_offer_to_ticket`, takže očekávaný počet vazeb musí sedět s podmínkou v triggeru.
 
 **Dvě pasti v cenovém pravidle (neopakovat):** `resolve_benefit_price_rule` může vložit nový
 řádek — **nevolat ji uvnitř `WHERE` téhož `SELECTu`**, snímek dotazu nový řádek neuvidí a cenové
@@ -138,9 +174,10 @@ konstantní, takže uzavření pravidla založeného ve stejné transakci potře
 `greatest(now(), valid_from + interval '1 microsecond')` kvůli CHECK `valid_until > valid_from`.
 
 **Testy:** `supabase/tests/guaranteed_benefit_admin_base.sql` (pgTAP kontrakt — **zatím nespuštěn**,
-lokálně chybí Docker), `supabase/tests/staging/guaranteed_benefit_admin_base_staging_checks.sql`
-a `supabase/tests/staging/guaranteed_benefit_no_approval_staging_checks.sql`
-(funkční ověření proti stagingu v transakci s ROLLBACK — **obojí prošlo**).
+lokálně chybí Docker), `supabase/tests/staging/guaranteed_benefit_admin_base_staging_checks.sql`,
+`supabase/tests/staging/guaranteed_benefit_no_approval_staging_checks.sql` a
+`supabase/tests/staging/guaranteed_benefit_distribution_staging_checks.sql`
+(funkční ověření proti stagingu v transakci s ROLLBACK — **vše prošlo**).
 
 **Při psaní dalších staging testů:** čtení `voucher_*` tabulek pod rolí `authenticated` blokuje RLS
 (read-back dělat po `reset role` nebo přes RPC); `admin_get_guaranteed_benefit` je `STABLE` —

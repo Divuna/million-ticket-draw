@@ -729,7 +729,12 @@ const AdminGuaranteedBenefits: React.FC = () => {
                     <TableCell>{b.is_unlimited ? 'Neomezený' : 'Omezený'}</TableCell>
                     <TableCell>
                       {SCOPE_LABEL[b.distribution_scope] ?? b.distribution_scope}
-                      {b.distribution_scope === 'selected_contests' && ` (${b.linked_contests})`}
+                      {/* Vazby jsou materializované i pro „Všechny soutěže". */}
+                      {b.distribution_scope !== 'single_contest' && (
+                        <span className="ml-1 text-muted-foreground">
+                          ({b.linked_contests} {b.linked_contests === 1 ? 'soutěž' : 'soutěží'})
+                        </span>
+                      )}
                     </TableCell>
                     <TableCell>{b.is_unlimited ? '∞' : `${b.available_codes} volných`}</TableCell>
                     <TableCell>

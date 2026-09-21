@@ -18,7 +18,7 @@ begin;
 create extension if not exists pgtap with schema extensions;
 set search_path = public, extensions, pg_temp;
 
-select plan(31);
+select plan(36);
 
 -- ── Gate helper ────────────────────────────────────────────────────────────
 select ok(
@@ -187,6 +187,50 @@ select ok(
   not has_function_privilege('anon', 'public.resolve_benefit_price_rule(uuid,numeric,numeric,text,uuid)', 'EXECUTE')
   and not has_function_privilege('authenticated', 'public.resolve_benefit_price_rule(uuid,numeric,numeric,text,uuid)', 'EXECUTE'),
   'interní resolve_benefit_price_rule není volatelný z klienta'
+);
+
+-- ── Distribuce do soutěží ──────────────────────────────────────────────────
+select ok(
+  to_regprocedure('public.sync_guaranteed_benefit_order_contests(uuid)') is not null
+  and not has_function_privilege('anon', 'public.sync_guaranteed_benefit_order_contests(uuid)', 'EXECUTE')
+  and not has_function_privilege('authenticated', 'public.sync_guaranteed_benefit_order_contests(uuid)', 'EXECUTE'),
+  'interní sync distribuce existuje a není volatelný z klienta'
+);
+
+select ok(
+  exists (select 1 from pg_trigger t join pg_class c on c.oid = t.tgrelid
+          join pg_namespace n on n.oid = c.relnamespace
+          where n.nspname = 'public' and c.relname = 'voucher_distribution_orders'
+            and t.tgname = 'trg_sync_benefit_order_contests' and not t.tgisinternal),
+  'trigger synchronizace na voucher_distribution_orders existuje'
+);
+
+select ok(
+  exists (select 1 from pg_trigger t join pg_class c on c.oid = t.tgrelid
+          join pg_namespace n on n.oid = c.relnamespace
+          where n.nspname = 'public' and c.relname = 'contests'
+            and t.tgname = 'trg_link_guaranteed_benefits_to_contest' and not t.tgisinternal),
+  'vlastní trigger garantovaných benefitů na contests existuje'
+);
+
+-- Partner Offers musí zůstat izolované: jejich trigger na contests zůstává
+-- beze změny a běží nezávisle vedle benefitového.
+select ok(
+  exists (select 1 from pg_trigger t join pg_class c on c.oid = t.tgrelid
+          join pg_namespace n on n.oid = c.relnamespace
+          join pg_proc p on p.oid = t.tgfoid
+          where n.nspname = 'public' and c.relname = 'contests'
+            and t.tgname = 'trg_contest_link_offers'
+            and p.proname = 'trg_fn_link_offers_to_new_contest'
+            and not t.tgisinternal),
+  'Partner Offers trigger na contests je nedotčený'
+);
+
+select ok(
+  (select pg_get_functiondef(p.oid) from pg_proc p join pg_namespace n on n.oid = p.pronamespace
+   where n.nspname = 'public' and p.proname = 'trg_fn_link_offers_to_new_contest')
+   not ilike '%voucher_distribution%',
+  'Partner Offers linkovací funkce nesahá na benefitové tabulky'
 );
 
 select * from finish();
