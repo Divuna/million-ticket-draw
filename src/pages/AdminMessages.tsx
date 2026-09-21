@@ -279,10 +279,10 @@ export default function AdminMessages() {
             data-testid="admin-bob-toggle"
           >
             <div className="flex flex-col">
-              <span className="text-sm font-semibold text-foreground" data-testid="admin-bob-status">
+              <span className={`text-sm font-semibold ${bobEnabled ? "text-foreground" : "text-white"}`} data-testid="admin-bob-status">
                 {bobEnabled ? "Bob aktivní" : "Bob vypnutý"}
               </span>
-              <span className="text-[11px] text-muted-foreground">
+              <span className={`text-[11px] ${bobEnabled ? "text-muted-foreground" : "text-white/70"}`}>
                 {bobEnabled
                   ? "AI odpovídá zákazníkům"
                   : "Zprávy jdou přímo adminovi"}
@@ -312,6 +312,18 @@ export default function AdminMessages() {
             const isSupportRed = thread.support_active && thread.last_sender === "user";
             const isActiveChatOrange = !isSupportRed && thread.last_sender === "user";
             const showUnreadIndicator = thread.has_unread;
+            // Mirrors the card-background ternary below exactly (same priority
+            // order, isSupportRed checked first) — true for every branch that
+            // renders a literal dark hsl(...) card background instead of the
+            // light bg-card. Used only to pick readable text colors for those
+            // cards; the card itself stays exactly as dark as before.
+            const cardIsDark =
+              !isSupportRed &&
+              (isActiveChatOrange ||
+                (thread.is_influencer && isSpecialUnread) ||
+                (thread.is_partner && isSpecialUnread) ||
+                (thread.is_influencer && isSpecialRead) ||
+                (thread.is_partner && isSpecialRead));
 
             return (
               <div
@@ -399,38 +411,47 @@ export default function AdminMessages() {
 
                   <p
                     className={`text-[11px] font-medium mb-2 ${
-                      thread.last_sender === "user" ? "text-[hsl(35,90%,70%)]" : "text-muted-foreground/70"
+                      cardIsDark
+                        ? thread.last_sender === "user" ? "text-amber-300" : "text-white/70"
+                        : thread.last_sender === "user" ? "text-amber-700" : "text-muted-foreground"
                     }`}
                   >
                     {thread.last_sender === "user" ? "Čeká na odpověď" : "Vyřešeno"}
                   </p>
-                  
+
                   {/* Sender */}
                   <p className={`font-semibold text-sm truncate ${isSpecial ? "pr-2" : "pr-6"} ${
                     thread.is_influencer && isSpecialUnread ? "text-[hsl(280,80%,85%)]"
                       : thread.is_partner && isSpecialUnread ? "text-[hsl(200,80%,85%)]"
-                        : isSpecialRead ? "text-muted-foreground"
-                          : isUserUnread ? "text-foreground"
-                            : "text-muted-foreground"
+                        : isSpecialRead ? "text-white/80"
+                          : cardIsDark ? "text-white/80"
+                            : isUserUnread ? "text-foreground"
+                              : "text-muted-foreground"
                   }`}>
                     {thread.user_name || thread.user_email || `${thread.user_id.slice(0, 8)}…`}
                   </p>
 
                   {/* Email subtitle */}
                   {thread.user_email && thread.user_name && (
-                    <p className="text-xs text-muted-foreground/60 truncate mt-0.5">{thread.user_email}</p>
+                    <p className={`text-xs truncate mt-0.5 ${cardIsDark ? "text-white/60" : "text-muted-foreground"}`}>
+                      {thread.user_email}
+                    </p>
                   )}
-                  
+
                   {/* Last message */}
                   <p className={`text-sm mt-2 line-clamp-2 min-h-[2.5rem] ${
-                    thread.has_unread ? "text-muted-foreground" : "text-muted-foreground/50"
+                    cardIsDark
+                      ? thread.has_unread ? "text-white/85" : "text-white/60"
+                      : thread.has_unread ? "text-foreground/80" : "text-muted-foreground"
                   }`}>
                     {thread.last_message}
                   </p>
-                  
+
                   {/* Timestamp */}
                   <p className={`text-xs mt-3 font-medium ${
-                    thread.has_unread ? "text-muted-foreground/70" : "text-muted-foreground/40"
+                    cardIsDark
+                      ? thread.has_unread ? "text-white/70" : "text-white/45"
+                      : thread.has_unread ? "text-muted-foreground" : "text-muted-foreground/70"
                   }`}>
                     {new Date(thread.last_date).toLocaleString("cs-CZ", {
                       day: "numeric",
