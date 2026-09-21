@@ -18,6 +18,7 @@ export const ADMIN_PERMISSION_KEYS = [
   'users.view.basic',
   'partner_offers.finance.manage',
   'sales_leads.manage',
+  'contests.create',
 ] as const;
 export type AdminPermissionKey = (typeof ADMIN_PERMISSION_KEYS)[number];
 
@@ -30,6 +31,10 @@ export const ADMIN_PERMISSION_LABELS: Record<AdminPermissionKey, string> = {
   'users.view.basic': 'Uživatelé (základní)',
   'partner_offers.finance.manage': 'Partnerské nabídky (finance)',
   'sales_leads.manage': 'Obchodní leady',
+  // Vytvoření a příprava soutěže před spuštěním (draft/pending). Publikaci
+  // (přechod na active), bonusové výhry/MioCoin bonusy, ekonomiku a uzavření
+  // soutěže tento klíč NEDÁVÁ — to zůstává výhradně superadmin.
+  'contests.create': 'Vytváření a příprava soutěží',
 };
 
 interface UseAdminPermissions {
@@ -104,6 +109,7 @@ export const ADMIN_ROUTE_PERMISSION: Record<string, AdminPermissionKey> = {
   '/admin/users': 'users.view.basic',
   '/admin/partner-offers': 'partner_offers.finance.manage',
   '/admin/sales-leads': 'sales_leads.manage',
+  '/admin/contests': 'contests.create',
 };
 
 /**
@@ -129,4 +135,7 @@ export const SUBADMIN_ENTRY_ROUTES: {
   { path: '/admin/partner-offers', permission: 'partner_offers.finance.manage', label: 'Partnerské nabídky' },
   // Sales Leads Phase 2 — modul Obchod / Leady (docs/SALES_LEADS_ADMIN_SPEC.md).
   { path: '/admin/sales-leads', permission: 'sales_leads.manage', label: 'Obchod' },
+  // Contest creation/prep delegation — vytvoření a příprava soutěže (draft/pending
+  // only); publikace, bonusové výhry a uzavření zůstávají superadmin-only.
+  { path: '/admin/contests', permission: 'contests.create', label: 'Soutěže' },
 ];

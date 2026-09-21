@@ -38,6 +38,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { toast } from "@/hooks/use-toast";
 import { useUserRole } from "@/hooks/useUserRole";
+import { useAdminPermissions } from "@/hooks/useAdminPermissions";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { useNavigate } from "react-router-dom";
@@ -142,6 +143,14 @@ const STATUS_OPTIONS = [
 
 const SELECTABLE_STATUS_OPTIONS = STATUS_OPTIONS.filter((opt) => opt.value !== "closed");
 
+// Non-superadmin holders of the `contests.create` permission may only create
+// and prepare a contest before launch — never publish it. DB-layer enforcement
+// lives in admin_manage_contest (guard) and the contests RLS policies; this is
+// UX-only so the dropdown never even offers a status the server would reject.
+const PREPARE_ONLY_STATUS_OPTIONS = SELECTABLE_STATUS_OPTIONS.filter(
+  (opt) => opt.value === "draft" || opt.value === "pending"
+);
+
 const DEFAULT_ECONOMY_ASSUMPTIONS: EconomyAssumptions = {
   mainPrizeRealCost: 0,
   mioCoinRealCost: 0,
@@ -190,6 +199,11 @@ const ContestModal: React.FC<ContestModalProps> = ({ open, onClose, onSaved, edi
   // Sensitive contest internals (MioCoin/physical bonus positions, economy/profit/margin)
   // are superadmin-only. Scoped subadmins must not see these tabs.
   const { isSuperAdmin } = useUserRole();
+  // Non-superadmin admin holding `contests.create` may create/prepare a
+  // contest (draft/pending) but never publish it or touch bonus prizes.
+  // (Route/permission gate already ensures only superadmin or a `contests.create`
+  // holder can reach this modal at all — here we only need to know which one.)
+  const statusOptionsForRole = isSuperAdmin ? SELECTABLE_STATUS_OPTIONS : PREPARE_ONLY_STATUS_OPTIONS;
   const [form, setForm] = useState<ContestFormData>({
     title: "",
     description: "",
@@ -2511,7 +2525,7 @@ const ContestModal: React.FC<ContestModalProps> = ({ open, onClose, onSaved, edi
                     <SelectValue placeholder="Vyber status" />
                   </SelectTrigger>
                   <SelectContent className="bg-neutral-800 border-neutral-700 z-50">
-                    {SELECTABLE_STATUS_OPTIONS.map((option) => (
+                    {statusOptionsForRole.map((option) => (
                       <SelectItem
                         key={option.value}
                         value={option.value}
@@ -2522,6 +2536,11 @@ const ContestModal: React.FC<ContestModalProps> = ({ open, onClose, onSaved, edi
                     ))}
                   </SelectContent>
                 </Select>
+                {!isSuperAdmin && (
+                  <p className="text-xs text-muted-foreground mt-1">
+                    Soutěž můžete pouze vytvořit a připravit. Spuštění (Aktivní) provede superadmin.
+                  </p>
+                )}
               </div>
 
               <div className="flex items-center gap-2 mt-2">
@@ -3311,6 +3330,16 @@ export const AdminContestManagement: React.FC = () => {
   // Sensitive contest progress/revenue/activity is superadmin-only. Scoped
   // subadmins see only the basic contest list (name, prize, status).
   const { isSuperAdmin } = useUserRole();
+  // Non-superadmin admin holding `contests.create` may create/prepare a
+  // contest (draft/pending) but never publish, close, or open the superadmin
+  // contest detail. DB layer (admin_manage_contest guard + contests RLS)
+  // enforces this independently of these UI restrictions.
+  const { can: hasAdminPermission } = useAdminPermissions();
+  const canPrepareContests = isSuperAdmin || hasAdminPermission("contests.create");
+  const isPrepareOnlyAdmin = canPrepareContests && !isSuperAdmin;
+  const rowStatusOptions = isSuperAdmin ? SELECTABLE_STATUS_OPTIONS : PREPARE_ONLY_STATUS_OPTIONS;
+  const canEditContestRow = (status: string) =>
+    isSuperAdmin || (isPrepareOnlyAdmin && (status === "draft" || status === "pending"));
   const [contests, setContests] = useState<ContestData[]>([]);
   const [statsMap, setStatsMap] = useState<Record<string, ContestViewStats>>({});
   const [loading, setLoading] = useState(true);
@@ -3789,7 +3818,9 @@ export const AdminContestManagement: React.FC = () => {
   });
 
   const movableSelected = filteredContests.filter(
-    (c) => selectedIds.has(c.contest_id) && (c.status === "pending" || c.status === "paused")
+    (c) =>
+      selectedIds.has(c.contest_id) &&
+      (c.status === "pending" || (isSuperAdmin && c.status === "paused"))
   );
 
   const toggleSelect = (id: string) => {
@@ -4070,7 +4101,11 @@ export const AdminContestManagement: React.FC = () => {
                           <Select
                             value={contest.status}
                             onValueChange={(value) => handleStatusChange(contest.contest_id, value)}
-                            disabled={updatingStatus === contest.contest_id || contest.status === "closed"}
+                            disabled={
+                              updatingStatus === contest.contest_id ||
+                              contest.status === "closed" ||
+                              (isPrepareOnlyAdmin && !canEditContestRow(contest.status))
+                            }
                           >
                             <SelectTrigger className="w-8 h-8 p-0 bg-transparent border-white/10 hover:bg-white/10">
                               {updatingStatus === contest.contest_id ? (
@@ -4080,7 +4115,7 @@ export const AdminContestManagement: React.FC = () => {
                               )}
                             </SelectTrigger>
                             <SelectContent className="bg-neutral-800 border-neutral-700 z-50">
-                              {SELECTABLE_STATUS_OPTIONS.map((option) => {
+                              {rowStatusOptions.map((option) => {
                                 const isBlocked = option.value === "draft" && contest.status === "active";
                                 return (
                                   <SelectItem
@@ -4134,18 +4169,40 @@ export const AdminContestManagement: React.FC = () => {
 
                       <TableCell className="text-right">
                         <div className="flex justify-end gap-2">
-                          <Button variant="outline" size="sm" onClick={() => handleEdit(contest)}>
-                            <Pencil className="h-4 w-4 mr-1" />
-                            Upravit
-                          </Button>
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={() => navigate(`/admin/contest/${contest.contest_id}`)}
-                          >
-                            Otevřít
-                          </Button>
-                          {contest.status === "active" && (
+                          <TooltipProvider>
+                            <Tooltip>
+                              <TooltipTrigger asChild>
+                                <span>
+                                  <Button
+                                    variant="outline"
+                                    size="sm"
+                                    onClick={() => handleEdit(contest)}
+                                    disabled={!canEditContestRow(contest.status)}
+                                  >
+                                    <Pencil className="h-4 w-4 mr-1" />
+                                    Upravit
+                                  </Button>
+                                </span>
+                              </TooltipTrigger>
+                              {!canEditContestRow(contest.status) && (
+                                <TooltipContent>
+                                  <p>Bez oprávnění superadmina lze upravovat jen soutěže ve stavu Archiv test nebo Čeká na start.</p>
+                                </TooltipContent>
+                              )}
+                            </Tooltip>
+                          </TooltipProvider>
+                          {/* Detail se soutěžovými interními daty (mapa tiketů, bonusy) je superadmin-only. */}
+                          {isSuperAdmin && (
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => navigate(`/admin/contest/${contest.contest_id}`)}
+                            >
+                              Otevřít
+                            </Button>
+                          )}
+                          {/* Uzavření soutěže je publikační/finální krok — zůstává výhradně superadmin. */}
+                          {isSuperAdmin && contest.status === "active" && (
                             <Button
                               variant="destructive"
                               size="sm"
