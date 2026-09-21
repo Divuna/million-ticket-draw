@@ -22,12 +22,12 @@ import { Loader2, ShieldCheck, Search, Building2, Infinity as InfinityIcon, Hash
  * s oprávněním `guaranteed_benefits.manage`). Partner v této verzi v aplikaci
  * nic nevytváří ani neschvaluje — obchodní dohoda se řeší mimo aplikaci.
  *
+ * První verze NEMÁ schvalovací workflow: benefit je po uložení rovnou provozní
+ * a admin s oprávněním si sám nastaví i cenu pro OneMil — nečeká na superadmina.
+ *
  * Všechny zápisy jdou přes SECURITY DEFINER RPC. Tato stránka nikdy nezapisuje
  * přímo do `partners`, `vouchers`, `voucher_versions`, `voucher_codes`,
  * `voucher_distribution_orders` ani `voucher_distribution_contests`.
- *
- * Cenová nastavení a schválení benefitu do provozu zůstávají superadminovi
- * přes existující `superadmin_*` RPC — tato obrazovka je nenabízí.
  */
 
 type RpcResult = Record<string, unknown> | null;
@@ -51,6 +51,9 @@ interface BenefitRow {
   distribution_scope: string;
   requested_quantity: number;
   issued_quantity: number;
+  unit_price_ex_vat_snapshot: number | null;
+  vat_rate_percent_snapshot: number | null;
+  currency_snapshot: string | null;
   created_at: string;
   partner_id: string;
   partner_name: string;
@@ -78,6 +81,16 @@ const SCOPE_LABEL: Record<string, string> = {
   single_contest: 'Jedna soutěž (legacy)',
 };
 
+/** Provozní stav benefitu. Žádný schvalovací krok — `approved` = rovnou aktivní. */
+const STATUS_LABEL: Record<string, string> = {
+  approved: 'Aktivní',
+  suspended: 'Pozastavený',
+  ended: 'Ukončený',
+  requested: 'Rozpracovaný (legacy)',
+  rejected: 'Zamítnutý (legacy)',
+  cancelled: 'Zrušený (legacy)',
+};
+
 const RPC_ERROR_LABEL: Record<string, string> = {
   forbidden: 'K této oblasti nemáte oprávnění.',
   name_required: 'Název je povinný.',
@@ -92,8 +105,15 @@ const RPC_ERROR_LABEL: Record<string, string> = {
   contest_selection_required: 'Vyberte alespoň jednu soutěž.',
   not_a_benefit_only_partner: 'Tato firma je běžný partner — spravuje se v /admin/partners.',
   order_not_found: 'Benefit nebyl nalezen.',
-  benefit_not_editable: 'Benefit už není ve stavu konceptu.',
-  version_not_editable: 'Verze benefitu už není editovatelná.',
+  invalid_unit_price: 'Cena pro OneMil nesmí být záporná.',
+  invalid_vat_rate: 'Sazba DPH musí být mezi 0 a 100 %.',
+  invalid_currency: 'Měna musí být třípísmenný kód (např. CZK).',
+  price_rule_not_resolved: 'Nepodařilo se nastavit cenu pro OneMil.',
+  invalid_status: 'Neplatný stav benefitu.',
+  benefit_not_operational: 'Tento benefit není v provozním stavu.',
+  benefit_already_ended: 'Ukončený benefit už nelze znovu zapnout. Založte nový.',
+  benefit_content_immutable:
+    'Obsah už vydaného benefitu nelze zpětně měnit. Ukončete ho a založte nový.',
 };
 
 function rpcErrorMessage(code: unknown): string {
@@ -139,6 +159,11 @@ const AdminGuaranteedBenefits: React.FC = () => {
   const [bContestIds, setBContestIds] = useState<string[]>([]);
   const [contests, setContests] = useState<ContestOption[]>([]);
   const [savingBenefit, setSavingBenefit] = useState(false);
+
+  // Cena pro OneMil — nastavuje ji admin s oprávněním, ne superadmin.
+  const [bPrice, setBPrice] = useState('0');
+  const [bVat, setBVat] = useState('21');
+  const [savingStatusId, setSavingStatusId] = useState<string | null>(null);
 
   const loadBenefits = useCallback(async () => {
     setLoading(true);
@@ -262,7 +287,41 @@ const AdminGuaranteedBenefits: React.FC = () => {
     setBCodesRaw('');
     setBScope('all_contests');
     setBContestIds([]);
+    setBPrice('0');
+    setBVat('21');
   }, []);
+
+  /** Provozní stav benefitu — náhrada za schvalovací krok. */
+  const changeBenefitStatus = useCallback(
+    async (orderId: string, status: 'approved' | 'suspended' | 'ended') => {
+      setSavingStatusId(orderId);
+      try {
+        const { data, error } = await supabase.rpc('admin_set_guaranteed_benefit_status' as never, {
+          p_order_id: orderId,
+          p_status: status,
+        } as never);
+        if (error) throw error;
+        const res = data as RpcResult;
+        if (!res || res.success !== true) {
+          toast.error(rpcErrorMessage(res?.error));
+          return;
+        }
+        toast.success(
+          status === 'approved'
+            ? 'Benefit je opět aktivní.'
+            : status === 'suspended'
+              ? 'Benefit byl pozastaven.'
+              : 'Benefit byl ukončen.',
+        );
+        await loadBenefits();
+      } catch {
+        toast.error('Změna stavu benefitu se nepodařila.');
+      } finally {
+        setSavingStatusId(null);
+      }
+    },
+    [loadBenefits],
+  );
 
   const createBenefit = useCallback(async () => {
     if (!selectedPartner) {
@@ -292,6 +351,8 @@ const AdminGuaranteedBenefits: React.FC = () => {
         p_codes: bUnlimited ? null : codes,
         p_distribution_scope: bScope,
         p_contest_ids: bScope === 'selected_contests' ? bContestIds : null,
+        p_unit_price_ex_vat: bPrice.trim() ? Number(bPrice) : 0,
+        p_vat_rate_percent: bVat.trim() ? Number(bVat) : 21,
       } as never);
       if (error) throw error;
       const res = data as RpcResult;
@@ -299,7 +360,7 @@ const AdminGuaranteedBenefits: React.FC = () => {
         toast.error(rpcErrorMessage(res?.error));
         return;
       }
-      toast.success('Garantovaný benefit byl vytvořen jako koncept.');
+      toast.success('Garantovaný benefit byl vytvořen a je rovnou aktivní.');
       resetBenefitForm();
       await loadBenefits();
     } catch {
@@ -310,7 +371,7 @@ const AdminGuaranteedBenefits: React.FC = () => {
   }, [
     selectedPartner, bName, bShort, bHowToUse, bTerms, bKind, bValue, bMinPurchase,
     bValidFrom, bValidUntil, bUnlimited, bSharedCode, bCodesRaw, bScope, bContestIds,
-    resetBenefitForm, loadBenefits,
+    bPrice, bVat, resetBenefitForm, loadBenefits,
   ]);
 
   const toggleContest = (id: string) => {
@@ -326,8 +387,8 @@ const AdminGuaranteedBenefits: React.FC = () => {
         </h1>
         <p className="text-sm text-muted-foreground">
           Centrální správa garantovaných nákupních benefitů. Zakládá a spravuje je výhradně OneMil —
-          partner zde nic nevytváří ani neschvaluje. Cenová nastavení a schválení benefitu do provozu
-          zůstávají superadminovi.
+          partner zde nic nevytváří ani neschvaluje. Benefit je po uložení rovnou aktivní, žádné
+          další schválení se nečeká.
         </p>
       </div>
 
@@ -467,7 +528,8 @@ const AdminGuaranteedBenefits: React.FC = () => {
         <CardHeader>
           <CardTitle className="text-lg">2. Garantovaný benefit</CardTitle>
           <CardDescription>
-            Benefit vznikne jako koncept. Schválení do provozu a cenu nastavuje superadmin.
+            Po uložení je benefit rovnou aktivní a připravený k distribuci podle zvoleného rozsahu.
+            Cenu pro OneMil nastavujete rovnou zde.
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
@@ -562,6 +624,34 @@ const AdminGuaranteedBenefits: React.FC = () => {
             </div>
           )}
 
+          <div className="space-y-3 rounded-md border p-3">
+            <div className="text-sm font-medium">Cena pro OneMil</div>
+            <p className="text-xs text-muted-foreground">
+              Kolik OneMil účtuje partnerovi za jedno vydání benefitu. Benefit poskytovaný zdarma
+              nechte na 0. Nastavení se uloží jako partnerské cenové pravidlo.
+            </p>
+            <div className="grid gap-3 sm:grid-cols-2">
+              <div>
+                <Label htmlFor="gb-price">Cena bez DPH</Label>
+                <Input
+                  id="gb-price"
+                  inputMode="decimal"
+                  value={bPrice}
+                  onChange={(e) => setBPrice(e.target.value)}
+                />
+              </div>
+              <div>
+                <Label htmlFor="gb-vat">Sazba DPH (%)</Label>
+                <Input
+                  id="gb-vat"
+                  inputMode="decimal"
+                  value={bVat}
+                  onChange={(e) => setBVat(e.target.value)}
+                />
+              </div>
+            </div>
+          </div>
+
           <div className="space-y-2">
             <Label htmlFor="gb-scope">Distribuce</Label>
             <Select value={bScope} onValueChange={setBScope}>
@@ -621,7 +711,9 @@ const AdminGuaranteedBenefits: React.FC = () => {
                   <TableHead>Typ</TableHead>
                   <TableHead>Distribuce</TableHead>
                   <TableHead>Zásoba</TableHead>
+                  <TableHead>Cena pro OneMil</TableHead>
                   <TableHead>Stav</TableHead>
+                  <TableHead className="text-right">Akce</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -641,9 +733,49 @@ const AdminGuaranteedBenefits: React.FC = () => {
                     </TableCell>
                     <TableCell>{b.is_unlimited ? '∞' : `${b.available_codes} volných`}</TableCell>
                     <TableCell>
+                      {b.unit_price_ex_vat_snapshot === null
+                        ? '—'
+                        : `${b.unit_price_ex_vat_snapshot} ${b.currency_snapshot ?? ''} bez DPH`}
+                    </TableCell>
+                    <TableCell>
                       <Badge variant={b.order_status === 'approved' ? 'default' : 'outline'}>
-                        {b.order_status === 'requested' ? 'Koncept' : b.order_status}
+                        {STATUS_LABEL[b.order_status] ?? b.order_status}
                       </Badge>
+                    </TableCell>
+                    <TableCell className="text-right">
+                      {b.order_status === 'approved' && (
+                        <div className="flex justify-end gap-2">
+                          <Button
+                            type="button"
+                            size="sm"
+                            variant="outline"
+                            disabled={savingStatusId === b.order_id}
+                            onClick={() => void changeBenefitStatus(b.order_id, 'suspended')}
+                          >
+                            Pozastavit
+                          </Button>
+                          <Button
+                            type="button"
+                            size="sm"
+                            variant="ghost"
+                            disabled={savingStatusId === b.order_id}
+                            onClick={() => void changeBenefitStatus(b.order_id, 'ended')}
+                          >
+                            Ukončit
+                          </Button>
+                        </div>
+                      )}
+                      {b.order_status === 'suspended' && (
+                        <Button
+                          type="button"
+                          size="sm"
+                          variant="outline"
+                          disabled={savingStatusId === b.order_id}
+                          onClick={() => void changeBenefitStatus(b.order_id, 'approved')}
+                        >
+                          Obnovit
+                        </Button>
+                      )}
                     </TableCell>
                   </TableRow>
                 ))}

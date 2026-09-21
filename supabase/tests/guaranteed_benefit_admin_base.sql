@@ -18,7 +18,7 @@ begin;
 create extension if not exists pgtap with schema extensions;
 set search_path = public, extensions, pg_temp;
 
-select plan(26);
+select plan(31);
 
 -- ── Gate helper ────────────────────────────────────────────────────────────
 select ok(
@@ -153,6 +153,40 @@ select is(
    where schemaname = 'public' and tablename = 'voucher_distribution_contests' and cmd <> 'SELECT'),
   0,
   'vazební tabulka nemá žádnou write policy — zápis jen přes SECURITY DEFINER RPC'
+);
+
+-- ── Bez schvalovacího workflow (první verze) ───────────────────────────────
+select ok(
+  to_regprocedure('public.admin_create_guaranteed_benefit(uuid,text,text,text,text,text,numeric,numeric,text,timestamptz,timestamptz,text,boolean,text,text[],text,uuid[],numeric,numeric)') is not null,
+  'admin_create_guaranteed_benefit přijímá i cenu pro OneMil'
+);
+
+select is(
+  (select count(*)::int from pg_proc p join pg_namespace n on n.oid = p.pronamespace
+   where n.nspname = 'public' and p.proname = 'admin_create_guaranteed_benefit'),
+  1,
+  'existuje právě jedna verze admin_create_guaranteed_benefit (žádný nejednoznačný overload)'
+);
+
+select ok(
+  to_regprocedure('public.admin_set_guaranteed_benefit_price(uuid,numeric,numeric,text)') is not null
+  and has_function_privilege('authenticated', 'public.admin_set_guaranteed_benefit_price(uuid,numeric,numeric,text)', 'EXECUTE')
+  and not has_function_privilege('anon', 'public.admin_set_guaranteed_benefit_price(uuid,numeric,numeric,text)', 'EXECUTE'),
+  'cenu pro OneMil smí nastavit admin s oprávněním, nikdy anon'
+);
+
+select ok(
+  to_regprocedure('public.admin_set_guaranteed_benefit_status(uuid,text,text)') is not null
+  and has_function_privilege('authenticated', 'public.admin_set_guaranteed_benefit_status(uuid,text,text)', 'EXECUTE')
+  and not has_function_privilege('anon', 'public.admin_set_guaranteed_benefit_status(uuid,text,text)', 'EXECUTE'),
+  'provozní stav benefitu řídí admin s oprávněním, nikdy anon'
+);
+
+-- Interní cenový helper se nesmí volat z klienta.
+select ok(
+  not has_function_privilege('anon', 'public.resolve_benefit_price_rule(uuid,numeric,numeric,text,uuid)', 'EXECUTE')
+  and not has_function_privilege('authenticated', 'public.resolve_benefit_price_rule(uuid,numeric,numeric,text,uuid)', 'EXECUTE'),
+  'interní resolve_benefit_price_rule není volatelný z klienta'
 );
 
 select * from finish();

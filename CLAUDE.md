@@ -72,11 +72,29 @@ sloupců, 0 nových tabulek, 0 nových RPC, 13 partnerů / 1 order / 50 issuance
 - Klíč `guaranteed_benefits.manage` je **samostatný** — NEslučovat s `vouchers.manage`. Ten je
   v `useAdminPermissions.ts` označen jako „safe slice"; garantované benefity nesou partnerská
   cenová data a budou blokovat aktivaci soutěže.
-- **Cena a schválení do provozu zůstávají superadminovi** přes existující
-  `superadmin_review_voucher_distribution_order` / `superadmin_review_guaranteed_benefit_version` /
-  `superadmin_set_voucher_distribution_price`. Tyto 4 RPC **nerozvolňovat**.
-- Benefit vzniká jako **koncept**: `vouchers.workflow_status='draft'`,
-  `voucher_versions.status='draft'`, `voucher_distribution_orders.status='requested'`.
+- **V první verzi NENÍ žádný schvalovací workflow** (rozhodnutí Pavla, 21. 09. 2026).
+  Benefit po uložení se všemi povinnými údaji je **rovnou provozní**; nikdo ho už neschvaluje.
+  Vzniká jako `vouchers.workflow_status='approved'`, `voucher_versions.status='approved'`,
+  `voucher_distribution_orders.status='approved'` s vyplněným cenovým snapshotem.
+  **Nevracet stav `draft`/`requested` jako „čeká na schválení".**
+- **Cenu pro OneMil si nastaví admin s klíčem sám** přes `admin_set_guaranteed_benefit_price`
+  nebo rovnou při zakládání (`p_unit_price_ex_vat`, `p_vat_rate_percent`). Rozsah je
+  **partnerský** (`scope='partner'`); benefit bez sjednané ceny se zakládá s 0.
+  **Globální ceník** zůstává superadminovi přes `superadmin_set_voucher_distribution_price`.
+- Existující `superadmin_*` RPC (`superadmin_review_voucher_distribution_order`,
+  `superadmin_review_guaranteed_benefit_version`, `superadmin_set_guaranteed_benefit_status`,
+  `superadmin_set_voucher_distribution_price`) zůstávají **nedotčené** jako superadmin cesta.
+- **Provozní stav** benefitu (`approved` / `suspended` / `ended`) řídí admin s klíčem přes
+  `admin_set_guaranteed_benefit_status`. Ukončený benefit se znovu nezapíná — založí se nový.
+- ⚠️ **Obsah vydaného benefitu je neměnný** — `guard_guaranteed_benefit_history` drží schválenou
+  `voucher_versions` immutable. To **není** schvalovací krok, ale auditní invariant:
+  obsah už vydaného benefitu se nesmí zpětně přepsat. `admin_update_guaranteed_benefit` proto
+  vrací `benefit_content_immutable`. Oprava = ukončit a založit nový. **Distribuci
+  (`distribution_scope` + vazby soutěží) měnit lze.**
+- ⚠️ `guard_voucher_delete_and_review` na `public.vouchers` je **jediná trigger-level schvalovací
+  brána**. Je uvolněná **VÝHRADNĚ** pro `distribution_mode='guaranteed_purchase_benefit'` a jen
+  pro držitele klíče; podmínka vyžaduje tento mód **před i po** změně, aby nešlo klasický voucher
+  překlopit na benefit a bránu obejít. **Klasický voucherový katalog zůstává superadmin-only.**
 
 **Evidenční firma (`partners.benefit_only_record = true`)** nesmí nikdy získat auth účet,
 partnerské přihlášení, API klíč, Shoptet integraci, affiliate atribuci, payout ani `approved` status
@@ -110,11 +128,19 @@ wallets, payments, contest activation guard, Partner Offers.
 **Migrace (staging):** `20260921090000_benefit_only_partner_record.sql`,
 `20260921091000_guaranteed_benefit_unlimited_and_scope.sql`,
 `20260921092000_guaranteed_benefit_partner_rpcs.sql`,
-`20260921093000_guaranteed_benefit_admin_rpcs.sql`.
+`20260921093000_guaranteed_benefit_admin_rpcs.sql`,
+`20260921100000_guaranteed_benefit_no_approval_workflow.sql`.
+
+**Dvě pasti v cenovém pravidle (neopakovat):** `resolve_benefit_price_rule` může vložit nový
+řádek — **nevolat ji uvnitř `WHERE` téhož `SELECTu`**, snímek dotazu nový řádek neuvidí a cenové
+sloupce zůstanou NULL (porušení `voucher_distribution_orders_check2`). A `now()` je v transakci
+konstantní, takže uzavření pravidla založeného ve stejné transakci potřebuje
+`greatest(now(), valid_from + interval '1 microsecond')` kvůli CHECK `valid_until > valid_from`.
 
 **Testy:** `supabase/tests/guaranteed_benefit_admin_base.sql` (pgTAP kontrakt — **zatím nespuštěn**,
-lokálně chybí Docker) a `supabase/tests/staging/guaranteed_benefit_admin_base_staging_checks.sql`
-(funkční ověření proti stagingu v transakci s ROLLBACK — **prošlo**).
+lokálně chybí Docker), `supabase/tests/staging/guaranteed_benefit_admin_base_staging_checks.sql`
+a `supabase/tests/staging/guaranteed_benefit_no_approval_staging_checks.sql`
+(funkční ověření proti stagingu v transakci s ROLLBACK — **obojí prošlo**).
 
 **Při psaní dalších staging testů:** čtení `voucher_*` tabulek pod rolí `authenticated` blokuje RLS
 (read-back dělat po `reset role` nebo přes RPC); `admin_get_guaranteed_benefit` je `STABLE` —
