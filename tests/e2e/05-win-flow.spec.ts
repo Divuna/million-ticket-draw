@@ -25,10 +25,13 @@ test.describe('Win Flow', () => {
     const buyButton = page.getByRole('button', { name: /Uplatnit.*MioCoin/i });
     await expect(buyButton).toBeVisible({ timeout: 15_000 });
 
-    // Capture won_type from the RPC response before asserting UI
+    // Every customer purchase now goes exclusively through
+    // purchase_guaranteed_benefit_bundle_atomic — the classic bare
+    // buy_ticket_atomic RPC is no longer reachable from any customer page.
+    // Capture won_type from that RPC response before asserting UI.
     let wonType: string | null = null;
     page.on('response', async (res) => {
-      if (res.url().includes('/rest/v1/rpc/buy_ticket_atomic')) {
+      if (res.url().includes('/rest/v1/rpc/purchase_guaranteed_benefit_bundle_atomic')) {
         try {
           const body = await res.json();
           const result = Array.isArray(body) ? body[0] : body;
@@ -39,19 +42,17 @@ test.describe('Win Flow', () => {
 
     await buyButton.click();
 
-    // Win toast is shown only on main or bonus win.
-    // Scoped to [data-sonner-toast] to avoid strict-mode conflict with
-    // the modal's "Gratulujeme k výhře!" paragraph inside [role="dialog"].
-    const winToast = page.locator('[data-sonner-toast]').getByText(/Gratulujeme/i);
-    await expect(winToast).toBeVisible({ timeout: 20_000 });
-
-    // The result modal is always shown — confirm it opened.
+    // The mystery/benefit result dialog is always shown — confirm it opened.
     // Scoped by accessible name to avoid strict-mode conflict with the
     // CookieConsentBanner which also renders role="dialog". Accessible name
-    // comes from TicketResultModal's sr-only DialogTitle, which for a winner
-    // is `Vyhrál jsi: ${winName}` (schválený ticket/voucher redesign).
+    // comes from MysteryPurchaseResultDialog's sr-only DialogTitle, which for
+    // a winner is `Vyhrál jsi: ${prizeTitle}`.
     const resultDialog = page.getByRole('dialog', { name: /Vyhrál/i });
-    await expect(resultDialog).toBeVisible({ timeout: 5_000 });
+    await expect(resultDialog).toBeVisible({ timeout: 20_000 });
+
+    // Win celebration is rendered inline inside the dialog (no separate
+    // sonner toast for a win in the mystery/benefit flow).
+    await expect(resultDialog.getByText(/GRATULUJEME/i)).toBeVisible({ timeout: 5_000 });
 
     // won_type captured from API must be main or bonus
     expect(['main', 'bonus']).toContain(wonType);

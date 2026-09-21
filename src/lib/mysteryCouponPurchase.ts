@@ -1,16 +1,19 @@
 import { supabase } from "@/integrations/supabase/client";
 
 /**
- * Mystery kupon — sdílená nákupní vrstva.
+ * Mystery kupon — jediná zákaznická nákupní cesta.
  *
  * Zákazník používá jediné existující tlačítko „Uplatnit X MioCoinů". Cena je
- * vždy contests.ticket_price, tedy stejná jako u klasického nákupu. Před
- * nákupem se o kuponu nesmí prozradit nic — read-only RPC
+ * vždy contests.ticket_price, tedy stejná jako u dřívějšího klasického
+ * nákupu. Před nákupem se o kuponu nesmí prozradit nic — read-only RPC
  * get_guaranteed_benefit_offer proto vrací jen dostupnost a cenu.
  *
- * U soutěží, které v pilotu nejsou, se tenhle modul chová jako by neexistoval
- * (isMysteryContestAvailable vrátí false) a stránka pokračuje nezměněným
- * buy_ticket_atomic.
+ * Nákup vždy volá `purchase_guaranteed_benefit_bundle_atomic` — žádná
+ * zákaznická cesta už nefallbackuje na holý `buy_ticket_atomic`. Když benefit
+ * není dostupný, je vypnutý feature flag, nebo soutěž není na allowlistu, RPC
+ * to vrátí jako běžnou chybu (viz `mysteryErrorMessage`) — MioCoiny se
+ * nestrhnou a tiket nevznikne. `isMysteryContestAvailable` níže už o tomhle
+ * nerozhoduje; je to jen informativní/zobrazovací pomůcka.
  */
 
 export interface MysteryCoupon {
@@ -48,6 +51,12 @@ export type MysteryPurchaseResult = MysteryPurchaseSuccess | MysteryPurchaseFail
 /**
  * Zjistí, jestli je pro soutěž dostupný mystery kupon. Vrací jen dostupnost —
  * cena se bere z contest.ticket_price, který stránka už má.
+ *
+ * DŮLEŽITÉ: tahle funkce už nesmí rozhodovat o tom, jestli se nákup provede
+ * přes `purchase_guaranteed_benefit_bundle_atomic`, nebo přes starý holý
+ * nákup tiketu — druhá cesta byla ze zákaznického flow odstraněna úplně.
+ * Smí sloužit jen jako informativní/zobrazovací pomůcka (např. pro budoucí
+ * UI, které by chtělo dopředu naznačit, že nákup zahrne i kupon).
  */
 export async function isMysteryContestAvailable(contestId: string): Promise<boolean> {
   try {
@@ -130,6 +139,12 @@ export function mysteryErrorMessage(code: string | undefined): string {
     case "unauthorized":
     case "forbidden":
       return "Pro nákup se prosím znovu přihlas.";
+    case "feature_disabled":
+    case "contest_not_in_pilot":
+      return "Nákup teď pro tuto soutěž není dostupný. Zkus to prosím později.";
+    case "idempotency_key_required":
+    case "rpc_error":
+      return "Nákup se nepodařilo odeslat. Zkus to prosím znovu.";
     default:
       return "Nákup se nepodařil.";
   }

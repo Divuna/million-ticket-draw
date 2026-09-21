@@ -6,16 +6,13 @@ import { TicketResultModal } from '@/components/TicketResultModal';
 import { ContestCard } from '@/components/ContestCard';
 import { useUserRole } from '@/hooks/useUserRole';
 import { supabase } from '@/integrations/supabase/client';
-import { buildBuyTicketAtomicRpcPayload } from '@/utils/buyTicketAtomicRpcArgs';
 import { useAuth } from '@/hooks/useAuth';
 import { toast } from 'sonner';
 import { recordLocalTicketPlay } from '@/lib/retentionLocal';
 import {
-  logRpcHttpFailure,
   logTicketPurchaseException,
   logTicketPurchaseRejected,
   logTicketPurchaseSuccess,
-  recordTicketPurchaseAttemptForAbuseCheck,
 } from '@/lib/monitoring';
 import { analytics } from '@/lib/analytics';
 import { Trophy, Medal } from 'lucide-react';
@@ -26,7 +23,6 @@ import {
   type MysteryTicketOutcome,
 } from '@/components/MysteryPurchaseResultDialog';
 import {
-  isMysteryContestAvailable,
   mysteryErrorMessage,
   purchaseMysteryCoupon,
   type MysteryCoupon,
@@ -240,6 +236,23 @@ const Index = () => {
     });
     analytics.ticketPurchase({ contestId, ticketNumber: outcome.ticket_number });
 
+    // Send event to Sofinity
+    try {
+      await supabase.functions.invoke('send_event_to_sofinity', {
+        body: {
+          event_name: 'coin_redeemed',
+          user_id: user.id,
+          contest_id: contestId,
+          metadata: {
+            ticket_number: outcome.ticket_number,
+            ticket_price: outcome.charged_miocoins,
+          },
+        },
+      });
+    } catch (sofinityError) {
+      console.error('Sofinity event error:', sofinityError);
+    }
+
     recordLocalTicketPlay();
     fetchContests();
     await loadWallet();
@@ -291,155 +304,13 @@ const Index = () => {
     setProcessingContestId(contestId);
 
     try {
-      // Mystery kupon: u zapojených soutěží zákazník za stejnou cenu dostane
-      // náhodný kupon a tiket zdarma. Ostatní soutěže jdou beze změny dál.
-      if (await isMysteryContestAvailable(contestId)) {
-        await runMysteryPurchase(contestId);
-        return;
-      }
-
-      const built = buildBuyTicketAtomicRpcPayload(contestId, user.id);
-      if (!built.ok) {
-        toast.error((built as { ok: false; message: string }).message);
-        setProcessingContestId(null);
-        return;
-      }
-      const payload = built.payload;
-      console.log('buy_ticket_atomic RPC payload', payload);
-
-      const { data, error } = await supabase.rpc('buy_ticket_atomic', payload);
-
-      if (error) {
-        console.error('RPC error:', error);
-        if (error.message?.includes('closed') || error.message?.includes('uzavřena')) {
-          toast.error('Soutěž je uzavřena');
-        } else if (error.message?.includes('coins') || error.message?.includes('mincí') || error.message?.includes('balance')) {
-          toast.error('Nedostatek miocoinů pro nákup tiketu');
-        } else if (error.message?.includes('full') || error.message?.includes('plná')) {
-          toast.error('Soutěž je plná');
-        } else {
-          toast.error('Chyba při koupi tiketu');
-        }
-        return;
-      }
-
-      // Normalize result - handle both array and object responses
-      const rpcResult = Array.isArray(data) ? data[0] : data;
-      
-      if (!rpcResult) {
-        toast.error('Chyba při koupi tiketu');
-        logTicketPurchaseRejected({
-          userId: user.id,
-          contestId: contestId,
-          errorCode: 'empty_rpc_payload',
-        });
-        return;
-      }
-
-      if (!rpcResult.success) {
-        const errorMsg = String(rpcResult.error || 'Chyba při koupi tiketu');
-        logTicketPurchaseRejected({
-          userId: user.id,
-          contestId: contestId,
-          errorCode: errorMsg.slice(0, 200),
-        });
-        if (errorMsg.includes('closed') || errorMsg.includes('uzavřena')) {
-          toast.error('Soutěž je uzavřena');
-        } else if (errorMsg.includes('coins') || errorMsg.includes('mincí') || errorMsg.includes('balance')) {
-          toast.error('Nedostatek miocoinů pro nákup tiketu');
-        } else if (errorMsg.includes('full') || errorMsg.includes('plná')) {
-          toast.error('Soutěž je plná');
-        } else {
-          toast.error(errorMsg);
-        }
-        return;
-      }
-
-      console.log('🔥 RPC raw response:', JSON.stringify(rpcResult, null, 2));
-
-      logTicketPurchaseSuccess({
-        userId: user.id,
-        contestId: contestId,
-        ticketNumber: rpcResult.ticket_number,
-      });
-      analytics.ticketPurchase({ contestId: contestId, ticketNumber: rpcResult.ticket_number });
-
-      // ── Partner Offer lookup ──────────────────────────────────────────────
-      let partnerOffer: PartnerOfferResult | null = null;
-      const ticketRowId = rpcResult.ticket_row_id as string | undefined;
-      if (ticketRowId && user) {
-        try {
-          const { data: upoRow } = await supabase
-            .from('user_partner_offers')
-            .select(`
-              id,
-              partner_offers (
-                title, short_text, logo_url, banner_url, link_or_code, valid_to,
-                partners (company_name, name)
-              )
-            `)
-            .eq('ticket_id', ticketRowId)
-            .eq('user_id', user.id)
-            .maybeSingle();
-          if (upoRow?.partner_offers) {
-            const po = upoRow.partner_offers as any;
-            partnerOffer = {
-              id: upoRow.id,
-              title: po.title ?? '',
-              short_text: po.short_text ?? null,
-              logo_url: po.logo_url ?? null,
-              banner_url: po.banner_url ?? null,
-              link_or_code: po.link_or_code ?? null,
-              valid_to: po.valid_to ?? null,
-              partner_name: po.partners?.company_name || po.partners?.name || '',
-            };
-          }
-        } catch (poErr) {
-          console.warn('[Games] partner offer lookup skipped:', poErr);
-        }
-      }
-
-      const result: UnlockTicketResult = {
-        ticket_number: rpcResult.ticket_number,
-        ticket_row_id: ticketRowId ?? null,
-        ticket_price: rpcResult.ticket_price ?? 1,
-        next_bonus_position: rpcResult.next_bonus_position ?? null,
-        distance_to_next_bonus: rpcResult.distance_to_next_bonus ?? null,
-        won_prize: rpcResult.won_prize ?? null,
-        won_type: rpcResult.won_type ?? null,
-        bonus_prize_id: rpcResult.bonus_prize_id ?? null,
-        remaining_tickets: rpcResult.remaining_tickets ?? undefined,
-        partner_offer: partnerOffer,
-      };
-
-      // Send event to Sofinity
-      try {
-        await supabase.functions.invoke('send_event_to_sofinity', {
-          body: {
-            event_name: 'coin_redeemed',
-            user_id: user.id,
-            contest_id: contestId,
-            metadata: {
-              ticket_number: result.ticket_number,
-              ticket_price: result.ticket_price
-            }
-          }
-        });
-      } catch (sofinityError) {
-        console.error('Sofinity event error:', sofinityError);
-      }
-
-      setModalResult(result);
-      setModalContestId(contestId);
-      recordLocalTicketPlay();
-
-      // Refresh contests (includes progress)
-      fetchContests();
-      await loadWallet();
-
-      if (result.won_prize) {
-        toast.success(`Gratulujeme! Vyhrál jsi ${result.won_prize}!`);
-      }
+      // Nákup vede vždy přes garantovaný benefit bundle
+      // (purchase_guaranteed_benefit_bundle_atomic — omezený i neomezený
+      // fallback). Klasický holý nákup tiketu (`buy_ticket_atomic`) z téhle
+      // cesty už NENÍ dosažitelný: když benefit není dostupný, je vypnutý
+      // feature flag, nebo soutěž není na allowlistu, RPC to vrátí jako
+      // běžnou chybu — MioCoiny se nestrhnou a tiket nevznikne.
+      await runMysteryPurchase(contestId);
     } catch (error: any) {
       console.error('Error unlocking ticket:', error);
       if (user) {

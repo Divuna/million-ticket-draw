@@ -2,9 +2,13 @@
  * Spec 100 — Mystery kupon: zákaznický nákup na detailu soutěže
  *
  * Staging-only, idempotentní. Zákazník používá JEDINÉ existující tlačítko
- * „Uplatnit X MioCoinů". U zapojené soutěže za stejnou cenu (contests.ticket_price)
- * dostane náhodný kupon a tiket zdarma; u nezapojené běží beze změny klasický
- * buy_ticket_atomic. Před nákupem se o kuponu nesmí prozradit vůbec nic.
+ * „Uplatnit X MioCoinů" a nákup vždy volá výhradně
+ * `purchase_guaranteed_benefit_bundle_atomic` — u zapojené soutěže za stejnou
+ * cenu (contests.ticket_price) dostane náhodný kupon a tiket zdarma. Klasický
+ * holý nákup tiketu (`buy_ticket_atomic`) je ze zákaznické cesty ODSTRANĚN
+ * ÚPLNĚ: když je feature flag vypnutý, nebo soutěž není na allowlistu, nákup
+ * se bezpečně zastaví — žádné stržení MioCoinů, žádný tiket, jen srozumitelná
+ * chybová hláška. Před nákupem se o kuponu nesmí prozradit vůbec nic.
  *
  * ── Stabilní fixture ──────────────────────────────────────────────────────
  * Partner, kupon (voucher), schválená verze, cenové pravidlo, soutěž
@@ -29,7 +33,7 @@
  * absolutně — opakované vydání téhož kuponu je záměrně neúčtovatelné.
  *
  * Testy:
- *   100a) vypnutý pilot → klasický nákup tiketu beze změny (ticket_purchase)
+ *   100a) soutěž mimo allowlist → nákup se zastaví, žádné stržení, žádný tiket
  *   100b) zapnutý pilot → před nákupem není o kuponu vidět nic, cena zůstává
  *         contests.ticket_price
  *   100c) nákup strhne přesně ticket_price, vytvoří kupon i tiket zdarma,
@@ -37,9 +41,10 @@
  *   100d) dvojklik na detailu nevytvoří druhý nákup
  *   100d-games) dvojklik z karty v Games → jeden odečet, kupon i tiket
  *   100d-favorites) dvojklik z karty v Oblíbených → jeden odečet, kupon i tiket
- *   100d-classic) dvojklik z karty u nezapojené soutěže → jen jeden tiket
+ *   100d-classic) dvojklik z karty u soutěže mimo allowlist → žádný nákup vůbec
  *   100d-cold) dvojklik na detailu, než dorazí zůstatek → jen jeden nákup
- *   100d-cold-classic) totéž u nezapojené soutěže → jediný ticket_purchase
+ *   100d-cold-classic) totéž u soutěže mimo allowlist → žádný nákup vůbec
+ *   100r) vypnutý feature flag (i s allowlistem) → nákup se zastaví stejně
  *   100e) nákup posledního kódu — výsledek zůstane, „Pokračovat" ho zavře
  *   100f) výhra MioCoinů + kupon v jednom dialogu
  *   100g) věcná výhra + kupon v jednom dialogu
@@ -484,7 +489,7 @@ test.describe.serial('Spec 100 — mystery kupon (UI)', () => {
     } catch { /* flag se musí vrátit i při selhání testu */ }
   });
 
-  test('100a: vypnutý pilot — klasický nákup tiketu beze změny', async ({ page }) => {
+  test('100a: soutěž mimo allowlist — nákup se zastaví, žádné stržení, žádný tiket', async ({ page }) => {
     const admin = makeAdmin();
     // Neprázdný allowlist BEZ této soutěže = soutěž mimo pilot.
     await setFlag(admin, true, JSON.stringify(['f0000100-0000-4000-8000-0000000000ff']));
@@ -493,30 +498,73 @@ test.describe.serial('Spec 100 — mystery kupon (UI)', () => {
     await resetMutableState(admin, customerId);
     const issuancesBefore = await countIssuances(admin, customerId);
     const ticketsBefore   = await countTickets(admin, customerId);
+    const bundlesBefore   = await countBundles(admin, customerId);
     const since           = await latestTxnStamp(admin, customerId);
+    const { data: walletBefore } = await (admin as any)
+      .from('wallets').select('balance_coins').eq('user_id', customerId).single();
 
     await primeConsent(page);
     await loginViaUI(page, CUSTOMER_EMAIL, PASSWORD);
     const button = await openContest(page);
     await button.click();
 
-    // Klasický tok jde rovnou na výsledek tiketu, žádné odhalení kuponu.
+    // Zákazník musí dostat srozumitelnou chybu — žádný nákup neproběhne
+    // klasickou cestou (`buy_ticket_atomic` už z téhle cesty NENÍ dosažitelný).
+    await expect(page.locator('[data-sonner-toast]')).toContainText(/není dostupný/i, {
+      timeout: 15_000,
+    });
+    await expect(page.getByTestId('mystery-result-dialog')).toHaveCount(0);
     await expect(
       page.locator('[role="dialog"]:has(button[aria-label="Zavřít"])'),
-    ).toBeVisible({ timeout: 30_000 });
-    await expect(page.getByTestId('mystery-result-dialog')).toHaveCount(0);
+    ).toHaveCount(0);
 
-    expect(await countTickets(admin, customerId)).toBe(ticketsBefore + 1);
+    // Žádný tiket, žádný kupon, žádná bundle položka, žádné stržení.
+    expect(await countTickets(admin, customerId)).toBe(ticketsBefore);
     expect(await countIssuances(admin, customerId)).toBe(issuancesBefore);
+    expect(await countBundles(admin, customerId)).toBe(bundlesBefore);
 
-    // Klasický nákup účtuje ticket_purchase a strhne cenu tiketu.
     const types = await txnTypesSince(admin, customerId, since);
-    expect(types).toContain('ticket_purchase');
+    expect(types).not.toContain('ticket_purchase');
     expect(types).not.toContain('benefit_purchase');
 
     const { data: wallet } = await (admin as any)
       .from('wallets').select('balance_coins').eq('user_id', customerId).single();
-    expect(Number(wallet.balance_coins)).toBe(START_BALANCE - TICKET_PRICE);
+    expect(Number(wallet.balance_coins)).toBe(Number(walletBefore.balance_coins));
+  });
+
+  test('100r: vypnutý feature flag — nákup se zastaví stejně, i s allowlistem', async ({ page }) => {
+    const admin = makeAdmin();
+    // Flag vypnutý, i když je soutěž na allowlistu — flag má přednost.
+    await setFlag(admin, false, JSON.stringify([FIXTURE.contestId]));
+
+    const customerId = ctx.customerAuthId!;
+    await resetMutableState(admin, customerId);
+    const issuancesBefore = await countIssuances(admin, customerId);
+    const ticketsBefore   = await countTickets(admin, customerId);
+    const bundlesBefore   = await countBundles(admin, customerId);
+    const { data: walletBefore } = await (admin as any)
+      .from('wallets').select('balance_coins').eq('user_id', customerId).single();
+
+    await primeConsent(page);
+    await loginViaUI(page, CUSTOMER_EMAIL, PASSWORD);
+    const button = await openContest(page);
+    await button.click();
+
+    await expect(page.locator('[data-sonner-toast]')).toContainText(/není dostupný/i, {
+      timeout: 15_000,
+    });
+    await expect(page.getByTestId('mystery-result-dialog')).toHaveCount(0);
+    await expect(
+      page.locator('[role="dialog"]:has(button[aria-label="Zavřít"])'),
+    ).toHaveCount(0);
+
+    expect(await countTickets(admin, customerId)).toBe(ticketsBefore);
+    expect(await countIssuances(admin, customerId)).toBe(issuancesBefore);
+    expect(await countBundles(admin, customerId)).toBe(bundlesBefore);
+
+    const { data: wallet } = await (admin as any)
+      .from('wallets').select('balance_coins').eq('user_id', customerId).single();
+    expect(Number(wallet.balance_coins)).toBe(Number(walletBefore.balance_coins));
   });
 
   test('100b: zapnutý pilot — o kuponu není před nákupem vidět nic', async ({ page }) => {
@@ -663,31 +711,37 @@ test.describe.serial('Spec 100 — mystery kupon (UI)', () => {
     expect(Number(wallet.balance_coins)).toBe(START_BALANCE - TICKET_PRICE);
   });
 
-  test('100d-classic: dvojklik z karty u nezapojené soutěže koupí jen jeden tiket', async ({ page }) => {
+  test('100d-classic: dvojklik z karty u soutěže mimo allowlist nevytvoří žádný nákup', async ({ page }) => {
     const admin = makeAdmin();
-    // Neprázdný allowlist BEZ této soutěže = klasický nákup.
+    // Neprázdný allowlist BEZ této soutěže = soutěž mimo pilot.
     await setFlag(admin, true, JSON.stringify(['f0000100-0000-4000-8000-0000000000ff']));
 
     const customerId = ctx.customerAuthId!;
     await resetMutableState(admin, customerId);
     const ticketsBefore   = await countTickets(admin, customerId);
     const issuancesBefore = await countIssuances(admin, customerId);
+    const bundlesBefore   = await countBundles(admin, customerId);
 
     await primeConsent(page);
     await loginViaUI(page, CUSTOMER_EMAIL, PASSWORD);
     const button = await openListCard(page, '/games');
     await doubleClickSameTick(button);
 
+    await expect(page.locator('[data-sonner-toast]')).toContainText(/není dostupný/i, {
+      timeout: 15_000,
+    });
     await expect(
       page.locator('[role="dialog"]:has(button[aria-label="Zavřít"])'),
-    ).toBeVisible({ timeout: 30_000 });
+    ).toHaveCount(0);
+    await expect(page.getByTestId('mystery-result-dialog')).toHaveCount(0);
 
-    // Jeden tiket, jeden odečet ceny tiketu, žádný kupon.
-    expect(await countTickets(admin, customerId)).toBe(ticketsBefore + 1);
+    // Žádný tiket, žádný kupon, žádné stržení — ani z jednoho ze dvou kliků.
+    expect(await countTickets(admin, customerId)).toBe(ticketsBefore);
     expect(await countIssuances(admin, customerId)).toBe(issuancesBefore);
+    expect(await countBundles(admin, customerId)).toBe(bundlesBefore);
     const { data: wallet } = await (admin as any)
       .from('wallets').select('balance_coins').eq('user_id', customerId).single();
-    expect(Number(wallet.balance_coins)).toBe(START_BALANCE - TICKET_PRICE);
+    expect(Number(wallet.balance_coins)).toBe(START_BALANCE);
   });
 
   test('100d-cold: dvojklik na detailu s nenačteným zůstatkem koupí jen jednou', async ({ page }) => {
@@ -728,15 +782,16 @@ test.describe.serial('Spec 100 — mystery kupon (UI)', () => {
     expect(types).toEqual(['benefit_purchase']);
   });
 
-  test('100d-cold-classic: totéž u nezapojené soutěže — jediný ticket_purchase', async ({ page }) => {
+  test('100d-cold-classic: totéž u soutěže mimo allowlist — žádný nákup vůbec', async ({ page }) => {
     const admin = makeAdmin();
-    // Neprázdný allowlist BEZ této soutěže = klasický nákup.
+    // Neprázdný allowlist BEZ této soutěže = soutěž mimo pilot.
     await setFlag(admin, true, JSON.stringify(['f0000100-0000-4000-8000-0000000000ff']));
 
     const customerId = ctx.customerAuthId!;
     await resetMutableState(admin, customerId);
     const ticketsBefore   = await countTickets(admin, customerId);
     const issuancesBefore = await countIssuances(admin, customerId);
+    const bundlesBefore   = await countBundles(admin, customerId);
     const since           = await latestTxnStamp(admin, customerId);
 
     await primeConsent(page);
@@ -748,19 +803,24 @@ test.describe.serial('Spec 100 — mystery kupon (UI)', () => {
 
     await doubleClickSameTick(button);
 
+    await expect(page.locator('[data-sonner-toast]')).toContainText(/není dostupný/i, {
+      timeout: 40_000,
+    });
     await expect(
       page.locator('[role="dialog"]:has(button[aria-label="Zavřít"])'),
-    ).toBeVisible({ timeout: 40_000 });
+    ).toHaveCount(0);
+    await expect(page.getByTestId('mystery-result-dialog')).toHaveCount(0);
 
-    expect(await countTickets(admin, customerId)).toBe(ticketsBefore + 1);
+    expect(await countTickets(admin, customerId)).toBe(ticketsBefore);
     expect(await countIssuances(admin, customerId)).toBe(issuancesBefore);
+    expect(await countBundles(admin, customerId)).toBe(bundlesBefore);
 
     const { data: wallet } = await (admin as any)
       .from('wallets').select('balance_coins').eq('user_id', customerId).single();
-    expect(Number(wallet.balance_coins)).toBe(START_BALANCE - TICKET_PRICE);
+    expect(Number(wallet.balance_coins)).toBe(START_BALANCE);
 
     const types = await txnTypesSince(admin, customerId, since);
-    expect(types).toEqual(['ticket_purchase']);
+    expect(types).toEqual([]);
   });
 
   test('100f: výhra MioCoinů + kupon v jednom dialogu', async ({ page }) => {

@@ -204,10 +204,44 @@ Rozšiřuje výše uvedené pravidlo výběru — zajišťuje, že fallback (bod
   `trg_fn_link_offers_to_new_contest`; funkčně ověřeno, že nový guard trigger neovlivňuje počet ani
   obsah Partner Offers vazeb nové soutěže.
 
-**Beze změny (nedotčeno):** `buy_ticket_atomic` (včetně oprávnění), **frontendový fallback na
-`buy_ticket_atomic`**, wallets mimo dnešní odečet, payments, contest activation guard,
+**Beze změny (nedotčeno):** `buy_ticket_atomic` (definice i EXECUTE oprávnění — zůstává
+`authenticated`-callable), wallets mimo dnešní odečet, payments, contest activation guard,
 Partner Offers, feature flag `guaranteed_benefit_purchase_enabled`, allowlist, idempotency přes
 `contest_bundle_purchases`, `assign_contest_ticket_atomic`.
+
+**Zákaznický fallback na holý `buy_ticket_atomic` byl ze všech nákupních cest ODSTRANĚN (21. 09.
+2026, staging only).** Dřív `isMysteryContestAvailable(contestId)` rozhodovala, jestli se zavolá
+`purchase_guaranteed_benefit_bundle_atomic`, nebo klasický `buy_ticket_atomic` — u soutěže mimo
+pilot/s vypnutým flagem tak zákazník dostal obyčejný tiket bez benefitu. Teď `ContestDetail.tsx`,
+`Games.tsx` i `FavoriteGames.tsx` volají **výhradně** `purchase_guaranteed_benefit_bundle_atomic`
+(sdílené přes `runMysteryPurchase` → `purchaseMysteryCoupon` v `mysteryCouponPurchase.ts`) —
+`isMysteryContestAvailable` už v žádném z nich neřídí, kterou RPC nákup zavolá; zůstává jen jako
+nevyužitá informativní/zobrazovací pomůcka (viz její vlastní docstring).
+
+- **Selhání = bezpečné zastavení, nikdy tichý přechod na holý tiket.** Když RPC vrátí
+  `feature_disabled`, `contest_not_in_pilot` nebo `no_benefit_available`, `mysteryErrorMessage`
+  ukáže srozumitelnou českou hlášku a **nic dalšího se nezavolá** — žádné MioCoiny se nestrhnou,
+  žádný tiket nevznikne, `buy_ticket_atomic` se z těchto tří stránek nikdy nevolá.
+- **Kill-switch, allowlist, idempotency a nový guard z předchozí sekce fungují beze změny** —
+  frontend jen přestal mít druhou (fallback) cestu, jak je obejít. Ověřeno přímo na stagingu nad
+  `purchase_guaranteed_benefit_bundle_atomic` v transakci s ROLLBACK: omezený benefit → tiket +
+  kupon; jen neomezený → tiket + kupon (`is_unlimited=true`); žádný benefit →
+  `no_benefit_available`, 0 tiketů, 0 stržení; flag vypnutý → `feature_disabled`, 0 stržení; soutěž
+  mimo allowlist → `contest_not_in_pilot`, 0 stržení — a `wallets.balance_coins` i
+  `wallet_transactions` po všech pěti scénářích odpovídají jen dvěma úspěšným nákupům.
+- **Repo audit `buy_ticket_atomic` (21. 09. 2026):** jediní zbývající volající v celém repu jsou
+  RPC kontraktní testy (`tests/e2e/155-…`, `95-…`, `96-…`, `supabase/tests/…`) a osiřelá Edge
+  Function `supabase/functions/purchase-ticket/` (nemá žádného volajícího v `src/`, nikdy nebyla
+  součástí zákaznické cesty). `src/utils/buyTicketAtomicRpcArgs.ts` je po odstranění fallbacku
+  nepoužívaný — ponechán beze změny, kandidát na budoucí úklid. **EXECUTE oprávnění
+  `buy_ticket_atomic` se v tomto kroku neměnilo** — dokud existuje `supabase/functions/purchase-ticket`
+  a DB kontraktní testy nad ním, odebrání `authenticated` EXECUTE by je bez dalšího schváleného
+  kroku rozbilo.
+- **Spec 05 (`tests/e2e/05-win-flow.spec.ts`) a spec 100
+  (`tests/e2e/100-guaranteed-benefit-purchase-ui.spec.ts`) přepsány** na nový univerzální tok:
+  100a/100d-classic/100d-cold-classic (dřív testovaly „soutěž mimo pilot → klasický nákup") teď
+  testují „soutěž mimo pilot / vypnutý flag → žádné stržení, žádný tiket, jasná hláška"; přidán
+  100r (flag vypnutý i s allowlistem). Staging-only, vyžadují CI secrety.
 
 **Migrace (staging):** `20260921090000_benefit_only_partner_record.sql`,
 `20260921091000_guaranteed_benefit_unlimited_and_scope.sql`,
