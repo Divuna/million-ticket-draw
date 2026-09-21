@@ -137,10 +137,33 @@ vedle sebe. **Nepřidávat benefity do Partner Offers funkcí a naopak.**
 ⚠️ Oba triggery jsou **nefatální** (`EXCEPTION … RAISE WARNING`) — chyba v napojení benefitu nesmí
 zablokovat vznik ani aktivaci soutěže. Neúspěch se dohání opětovným uložením distribuce.
 
-⚠️ **Pozn. pro pozdější napojení nákupu:** nové ordery mají `contest_id IS NULL` a
-`validate_guaranteed_benefit_links` u `voucher_issuances` dnes vyžaduje
-`v_order.contest_id = v_ticket.contest_id`. Při zapojení do nákupu se bude muset upravit na
-čtení přes `voucher_distribution_contests`.
+**Nákup čte výhradně materializované vazby** (21. 09. 2026, staging). `contest_id` na orderu už
+není zdrojem pravdy pro výběr benefitu — nové ordery ho mají `NULL`.
+
+- **Pořadí výběru je závazné: 1) OMEZENÝ benefit, 2) NEOMEZENÝ jako fallback.** Neomezený se
+  použije **jen** tehdy, když není dostupný žádný omezený (approved, `not is_unlimited`,
+  `issued_quantity < requested_quantity`, volný `voucher_code`, aktivní vazba na soutěž).
+  **Nepřehazovat pořadí ani neslučovat do jednoho dotazu.**
+- **Souběh nad posledními kódy drží `for update of vc skip locked limit 1`.** Kdo kód nedostane,
+  spadne na neomezený benefit. **Neodstraňovat `SKIP LOCKED`** — bez něj by se souběžní kupující
+  buď blokovali, nebo by dostali týž kód.
+- **Neomezený benefit nespotřebovává ani nevytváří `voucher_codes`.** Zákazník dostane
+  `voucher_versions.shared_code_or_url`; `user_vouchers.voucher_code_id` i
+  `voucher_issuances.voucher_code_id` jsou **NULL** (kvůli tomu je na `voucher_issuances`
+  uvolněn `NOT NULL`; UNIQUE index zůstává — více NULL Postgres povoluje).
+  **`issued_quantity` roste i u neomezeného** kvůli reportingu, `billable_issued_quantity`
+  jen podle dnešního pravidla (první vydání benefitu zákazníkovi = billable).
+- **`validate_guaranteed_benefit_links`**: vazbu soutěže ověřuje přes
+  `voucher_distribution_contests`; **historické `single_contest` issuances projdou i bez vazby**
+  přes legacy shodu `order.contest_id = ticket.contest_id` — **tuto větev neodstraňovat**.
+  Chybějící `voucher_code_id` je povolen **výhradně** u orderu s `is_unlimited = true`, jehož
+  verze má `code_source = 'shared_static'` a neprázdný `shared_code_or_url`; jinak výjimka.
+  Omezený benefit dál vyžaduje platný vydaný kód.
+- **Pozastavený ani ukončený benefit se nenakupuje** a **odpojená vazba** (`detached_at`)
+  benefit z nabídky i nákupu vyřadí — obojí přes filtr `o.status = 'approved'` + aktivní vazbu.
+- **Atomicita beze změny:** celý nákup běží v `begin … exception` bloku. Když není žádný benefit
+  (`no_benefit_available`), rollbackne se i pending řádek `contest_bundle_purchases` — neodečte se
+  MioCoin, nevznikne tiket, `user_voucher` ani `voucher_issuance`.
 
 **Zápis výhradně přes SECURITY DEFINER RPC.** `voucher_distribution_contests` má RLS a **pouze
 SELECT policy** — žádnou write policy záměrně. Frontend nikdy nezapisuje přímo do `partners`,
@@ -151,16 +174,18 @@ SELECT policy** — žádnou write policy záměrně. Frontend nikdy nezapisuje 
 `usage_description`, `terms_text`, `how_to_use_text`, staging **ne**. RPC je proto **záměrně
 nezapisují** — autoritativní obsah je vždy ve `voucher_versions`. Nepřidávat je zpět.
 
-**Beze změny (nedotčeno):** `purchase_guaranteed_benefit_bundle_atomic`,
-`get_guaranteed_benefit_offer`, `buy_ticket_atomic` (včetně oprávnění), zákaznický nákupní flow,
-wallets, payments, contest activation guard, Partner Offers.
+**Beze změny (nedotčeno):** `buy_ticket_atomic` (včetně oprávnění), **frontendový fallback na
+`buy_ticket_atomic`**, wallets mimo dnešní odečet, payments, contest activation guard,
+Partner Offers, feature flag `guaranteed_benefit_purchase_enabled`, allowlist, idempotency přes
+`contest_bundle_purchases`, `assign_contest_ticket_atomic`.
 
 **Migrace (staging):** `20260921090000_benefit_only_partner_record.sql`,
 `20260921091000_guaranteed_benefit_unlimited_and_scope.sql`,
 `20260921092000_guaranteed_benefit_partner_rpcs.sql`,
 `20260921093000_guaranteed_benefit_admin_rpcs.sql`,
 `20260921100000_guaranteed_benefit_no_approval_workflow.sql`,
-`20260921110000_guaranteed_benefit_contest_distribution_sync.sql`.
+`20260921110000_guaranteed_benefit_contest_distribution_sync.sql`,
+`20260921120000_guaranteed_benefit_purchase_contest_links.sql`.
 
 **Past při psaní staging testů soutěží:** `public.contests` má NOT NULL `title` **i** `name`
 (INSERT bez `title` spadne) a soutěž ve stavu `active` vyžaduje `rules_pdf_url`. Linkovací trigger
@@ -175,13 +200,23 @@ konstantní, takže uzavření pravidla založeného ve stejné transakci potře
 
 **Testy:** `supabase/tests/guaranteed_benefit_admin_base.sql` (pgTAP kontrakt — **zatím nespuštěn**,
 lokálně chybí Docker), `supabase/tests/staging/guaranteed_benefit_admin_base_staging_checks.sql`,
-`supabase/tests/staging/guaranteed_benefit_no_approval_staging_checks.sql` a
-`supabase/tests/staging/guaranteed_benefit_distribution_staging_checks.sql`
+`supabase/tests/staging/guaranteed_benefit_no_approval_staging_checks.sql`,
+`supabase/tests/staging/guaranteed_benefit_distribution_staging_checks.sql` a
+`supabase/tests/staging/guaranteed_benefit_purchase_links_staging_checks.sql`
 (funkční ověření proti stagingu v transakci s ROLLBACK — **vše prošlo**).
 
 **Při psaní dalších staging testů:** čtení `voucher_*` tabulek pod rolí `authenticated` blokuje RLS
 (read-back dělat po `reset role` nebo přes RPC); `admin_get_guaranteed_benefit` je `STABLE` —
-nevolat ve stejném statementu jako `admin_set_benefit_distribution`.
+nevolat ve stejném statementu jako `admin_set_benefit_distribution`;
+`public.users.id` i `admin_permissions.user_id` mají FK na `auth.users(id)`, takže testovací admin
+musí vzniknout v obou (a `select id from user_roles` vrací `user_roles.id`, **ne** `user_id`);
+`guard_guaranteed_benefit_history` drží u schváleného orderu neměnné i `contest_id`, takže legacy
+`single_contest` order nelze vyrobit UPDATEm — musí se vložit rovnou v legacy tvaru.
+
+⚠️ **Skutečný paralelní test souběhu z jedné session nejde spustit** — staging má
+`max_prepared_transactions = 0` a `dblink` není nainstalovaný (a vyžadoval by DB heslo).
+Souběh se proto ověřuje staticky (přítomnost `for update of vc skip locked`) plus funkčním
+důsledkem (sekvenční nákupy: právě jeden dostane omezený kód, ostatní neomezený).
 
 ## Co reset odstraní (provozní testovací data)
 

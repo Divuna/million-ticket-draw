@@ -18,7 +18,7 @@ begin;
 create extension if not exists pgtap with schema extensions;
 set search_path = public, extensions, pg_temp;
 
-select plan(36);
+select plan(42);
 
 -- ── Gate helper ────────────────────────────────────────────────────────────
 select ok(
@@ -231,6 +231,50 @@ select ok(
    where n.nspname = 'public' and p.proname = 'trg_fn_link_offers_to_new_contest')
    not ilike '%voucher_distribution%',
   'Partner Offers linkovací funkce nesahá na benefitové tabulky'
+);
+
+-- ── Napojení nákupu na materializované vazby ───────────────────────────────
+-- Neomezený benefit nespotřebovává voucher_codes → issuance musí kód povolit
+-- jako NULL. Omezený benefit kód dál vyžaduje (drží trigger, ne sloupec).
+select col_is_null(
+  'public', 'voucher_issuances', 'voucher_code_id',
+  'voucher_issuances.voucher_code_id je nullable (neomezený benefit bez kódu)'
+);
+
+select ok(
+  (select pg_get_functiondef(p.oid) from pg_proc p join pg_namespace n on n.oid = p.pronamespace
+   where n.nspname = 'public' and p.proname = 'purchase_guaranteed_benefit_bundle_atomic')
+   ilike '%voucher_distribution_contests%',
+  'nákup vybírá benefit přes voucher_distribution_contests'
+);
+
+select ok(
+  (select pg_get_functiondef(p.oid) from pg_proc p join pg_namespace n on n.oid = p.pronamespace
+   where n.nspname = 'public' and p.proname = 'purchase_guaranteed_benefit_bundle_atomic')
+   ilike '%for update of vc skip locked%',
+  'souběh nad posledními kódy drží FOR UPDATE ... SKIP LOCKED'
+);
+
+select ok(
+  (select pg_get_functiondef(p.oid) from pg_proc p join pg_namespace n on n.oid = p.pronamespace
+   where n.nspname = 'public' and p.proname = 'get_guaranteed_benefit_offer')
+   ilike '%voucher_distribution_contests%',
+  'dostupnost nabídky se počítá přes voucher_distribution_contests'
+);
+
+select ok(
+  (select pg_get_functiondef(p.oid) from pg_proc p join pg_namespace n on n.oid = p.pronamespace
+   where n.nspname = 'public' and p.proname = 'validate_guaranteed_benefit_links')
+   ilike '%voucher_distribution_contests%',
+  'validace issuance ověřuje vazbu soutěže přes voucher_distribution_contests'
+);
+
+-- buy_ticket_atomic zůstává mimo benefitovou logiku.
+select ok(
+  (select pg_get_functiondef(p.oid) from pg_proc p join pg_namespace n on n.oid = p.pronamespace
+   where n.nspname = 'public' and p.proname = 'buy_ticket_atomic')
+   not ilike '%voucher_distribution%',
+  'buy_ticket_atomic nesahá na garantované benefity'
 );
 
 select * from finish();
