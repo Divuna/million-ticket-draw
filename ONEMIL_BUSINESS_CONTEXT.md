@@ -996,6 +996,8 @@ Partners can place their own classic vouchers in the main OneMil voucher offer o
 
 The **garantovaný nákupní benefit** is a separate supported-purchase model: the customer receives one garantovaný nákupní benefit and a contest ticket free as a bonus. Its distribution can be priced globally or per partner, including an explicit 0 CZK price, and only the first issuance of the same benefit to the same customer is billable.
 
+**Initial rollout control:** garantované nákupní benefity will be created and managed only by OneMil administration — superadmin, or an admin who has the explicit permission for this area. A partner will not create or manage these guaranteed benefits directly in the initial version. The admin selects or records the partner company, defines the real voucher/discount benefit, and then assigns it to all contests or selected contests. This is intentionally centralized at launch so OneMil keeps full control over what can become the guaranteed fallback benefit.
+
 This is a confirmed target model, not confirmation that the full feature is already deployed.
 
 Partner Offers, vouchers, coupons, contests, MioCoins, and social campaigns are different parts of the same reward ecosystem.
