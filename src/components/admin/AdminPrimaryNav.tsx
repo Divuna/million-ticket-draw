@@ -1,7 +1,7 @@
 import React from "react";
 import { NavLink, useLocation } from "react-router-dom";
 import type { LucideIcon } from "lucide-react";
-import { Gift, BookOpen, Image as ImageIcon, Bell, MessageSquare, Users, Tag, Briefcase } from "lucide-react";
+import { Gift, BookOpen, Image as ImageIcon, Bell, MessageSquare, Users, Tag, Briefcase, Gamepad2 } from "lucide-react";
 import { useUnreadMessagesCount } from "@/hooks/useUnreadMessagesCount";
 import { useUnseenWinsCount } from "@/hooks/useUnseenWinsCount";
 import { usePendingOffersCount } from "@/hooks/usePendingOffersCount";
@@ -31,6 +31,7 @@ const SUBADMIN_NAV_ICON: Record<string, LucideIcon> = {
   "users.view.basic": Users,
   "partner_offers.finance.manage": Tag,
   "sales_leads.manage": Briefcase,
+  "contests.create": Gamepad2,
 };
 
 /** Řádek 1: sekce (Dashboard, Soutěže, …) pro superadmina; přímé safe odkazy pro subadmina. */
