@@ -51,12 +51,12 @@ export function AdminLayout() {
         </aside>
         <div className="flex-1 min-w-0 flex flex-col">
           <div className="border-b border-border bg-card/70 backdrop-blur-sm">
-            <div className="px-3 sm:px-6 max-w-[1600px] mx-auto w-full">
+            <div className="px-3 sm:px-6 max-w-[1920px] mx-auto w-full">
               <AdminContextSubNav />
             </div>
           </div>
           <main className="flex-1 min-h-0 w-full px-3 sm:px-6 py-6 pb-12">
-            <div className="max-w-[1600px] mx-auto w-full">
+            <div className="max-w-[1920px] mx-auto w-full">
               <Outlet />
             </div>
           </main>

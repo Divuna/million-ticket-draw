@@ -4060,7 +4060,7 @@ export const AdminContestManagement: React.FC = () => {
                 </div>
               )}
             <div className="rounded-md border border-white/10 max-h-[550px] overflow-auto relative">
-              <div className="min-w-max">
+              <div>
                 <Table>
                   <TableHeader className="sticky top-0 z-10 bg-card">
                   <TableRow className="border-b border-white/10 hover:bg-transparent">
