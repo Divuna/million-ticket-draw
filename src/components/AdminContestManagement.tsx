@@ -134,11 +134,11 @@ interface ContestModalProps {
 }
 
 const STATUS_OPTIONS = [
-  { value: "draft", label: "Archiv test", color: "bg-gray-500/20 text-gray-300 border-gray-500/30" },
-  { value: "pending", label: "Čeká na start", color: "bg-yellow-500/20 text-yellow-300 border-yellow-500/30" },
-  { value: "active", label: "Aktivní", color: "bg-green-500/20 text-green-300 border-green-500/30" },
-  { value: "paused", label: "Pozastaveno", color: "bg-orange-500/20 text-orange-300 border-orange-500/30" },
-  { value: "closed", label: "Ukončeno", color: "bg-red-500/20 text-red-300 border-red-500/30", disabled: true },
+  { value: "draft", label: "Archiv test", color: "bg-gray-100 text-gray-700 border-gray-300" },
+  { value: "pending", label: "Čeká na start", color: "bg-amber-50 text-amber-800 border-amber-300" },
+  { value: "active", label: "Aktivní", color: "bg-emerald-50 text-emerald-800 border-emerald-300" },
+  { value: "paused", label: "Pozastaveno", color: "bg-orange-50 text-orange-800 border-orange-300" },
+  { value: "closed", label: "Ukončeno", color: "bg-red-50 text-red-800 border-red-300", disabled: true },
 ];
 
 const SELECTABLE_STATUS_OPTIONS = STATUS_OPTIONS.filter((opt) => opt.value !== "closed");
@@ -163,7 +163,7 @@ const DEFAULT_ECONOMY_ASSUMPTIONS: EconomyAssumptions = {
 
 const getStatusBadgeClass = (status: string) => {
   const option = STATUS_OPTIONS.find((opt) => opt.value === status);
-  return option?.color || "bg-gray-500/20 text-gray-300 border-gray-500/30";
+  return option?.color || "bg-gray-100 text-gray-700 border-gray-300";
 };
 
 /**
@@ -4140,7 +4140,7 @@ export const AdminContestManagement: React.FC = () => {
                                 <Pencil className="h-3 w-3" />
                               )}
                             </SelectTrigger>
-                            <SelectContent className="bg-neutral-800 border-neutral-700 z-50">
+                            <SelectContent className="z-50">
                               {rowStatusOptions.map((option) => {
                                 const isBlocked = option.value === "draft" && contest.status === "active";
                                 return (
@@ -4148,7 +4148,7 @@ export const AdminContestManagement: React.FC = () => {
                                     key={option.value}
                                     value={option.value}
                                     disabled={isBlocked}
-                                    className={isBlocked ? "text-neutral-500 cursor-not-allowed" : "text-white hover:bg-neutral-700 focus:bg-neutral-700 focus:text-white cursor-pointer"}
+                                    className={isBlocked ? "text-muted-foreground cursor-not-allowed" : "cursor-pointer"}
                                   >
                                     {option.label}
                                   </SelectItem>
@@ -4169,7 +4169,7 @@ export const AdminContestManagement: React.FC = () => {
                                   zbývá {statsMap[contest.contest_id].tickets_remaining.toLocaleString("cs-CZ")}
                                 </span>
                                 {statsMap[contest.contest_id].tickets_last_24h > 0 && (
-                                  <span className="inline-flex items-center gap-0.5 text-[10px] text-blue-400">
+                                  <span className="inline-flex items-center gap-0.5 text-[10px] text-blue-700 font-medium">
                                     <Activity className="h-2.5 w-2.5" />
                                     +{statsMap[contest.contest_id].tickets_last_24h.toLocaleString("cs-CZ")} 24h
                                   </span>
@@ -4181,7 +4181,7 @@ export const AdminContestManagement: React.FC = () => {
                           <TableCell className="text-center">
                             <div>{contest.progress_percentage}%</div>
                             {statsMap[contest.contest_id] && (
-                              <div className="text-[10px] text-yellow-400 mt-1 tabular-nums">
+                              <div className="text-[10px] text-amber-700 font-medium mt-1 tabular-nums">
                                 {statsMap[contest.contest_id].estimated_revenue.toLocaleString("cs-CZ")} MC
                               </div>
                             )}
