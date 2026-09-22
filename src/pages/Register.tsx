@@ -1,9 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
-import '@/components/ContestCard.css';
+import './Register.css';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Checkbox } from '@/components/ui/checkbox';
 import { useAuth } from '@/hooks/useAuth';
 import { toast } from '@/hooks/use-toast';
@@ -19,9 +18,11 @@ import {
 import { analytics } from '@/lib/analytics';
 import { ENABLED_OAUTH_PROVIDERS, type OAuthProvider } from '@/config/socialAuth';
 import { getSafeRedirectPath } from '@/lib/loginRedirect';
+import { Mail, Lock, Loader2, ShieldCheck } from 'lucide-react';
+import { OneMilTrophyIcon, OneMilWinIcon, OneMilVoucherIcon } from '@/components/icons/OneMilIcons';
 
 const GoogleIcon = () => (
-  <svg aria-hidden="true" viewBox="0 0 24 24" className="h-6 w-6 shrink-0">
+  <svg aria-hidden="true" viewBox="0 0 24 24" className="h-5 w-5 shrink-0">
     <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" />
     <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" />
     <path fill="#FBBC05" d="M5.84 14.1c-.22-.66-.35-1.36-.35-2.1s.13-1.44.35-2.1V7.06H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.94l3.66-2.84z" />
@@ -30,7 +31,7 @@ const GoogleIcon = () => (
 );
 
 const FacebookIcon = () => (
-  <svg aria-hidden="true" viewBox="0 0 24 24" className="h-7 w-7 shrink-0">
+  <svg aria-hidden="true" viewBox="0 0 24 24" className="h-6 w-6 shrink-0">
     <circle cx="12" cy="12" r="11" fill="#1877F2" />
     <path fill="#FFFFFF" d="M15.25 12.65l.35-2.29h-2.2V8.88c0-.63.31-1.24 1.29-1.24h1V5.69s-.91-.16-1.78-.16c-1.82 0-3.01 1.1-3.01 3.1v1.73H8.88v2.29h2.02v5.53h2.5v-5.53h1.85z" />
   </svg>
@@ -119,7 +120,7 @@ const Register: React.FC = () => {
       });
       return;
     }
-    
+
     if (password !== confirmPassword) {
       toast({
         title: "Chyba",
@@ -152,7 +153,7 @@ const Register: React.FC = () => {
         ageConfirmed,
         redirectTarget,
       );
-      
+
       if (error) {
         toast({
           title: "Chyba registrace",
@@ -227,67 +228,125 @@ const Register: React.FC = () => {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-b from-background via-background to-[hsl(222_40%_8%)] p-4">
-      <div className="w-full max-w-md">
-        <img
-          src={logo}
-          alt="OneMil logo"
-          className="h-16 w-auto object-contain mx-auto mb-4 onemil-logo-animated"
-        />
-        <Card className="w-full voucher-card-glow rounded-[20px] bg-gradient-to-b from-[hsl(220_30%_12%)] via-[hsl(220_28%_9%)] to-[hsl(222_35%_7%)] border-[2px] border-[rgba(255,138,0,0.15)] shadow-[0_4px_24px_hsl(222_50%_3%/0.6)]">
-        <CardHeader>
-          <CardTitle className="customer-premium-orange-heading text-heading-gold">Registrace</CardTitle>
-          <CardDescription>
-            Vytvořte si nový účet OneMil
-          </CardDescription>
-        </CardHeader>
-        
-        <form onSubmit={handleSubmit}>
-          <CardContent className="space-y-4">
-            <div className="space-y-2">
-              <label htmlFor="email" className="text-sm font-medium">
+    <div className="relative min-h-screen w-full overflow-x-hidden bg-gradient-to-b from-[#FFF8EE] via-[#FFF4E7] to-white px-4 py-10 sm:py-14">
+      {/* Ambient decorative glow — purely visual, does not affect layout flow */}
+      <div
+        aria-hidden="true"
+        className="om-register-blob-a pointer-events-none absolute -top-20 -right-14 h-64 w-64 rounded-full bg-[#FF8A00]/25 blur-[90px] sm:h-80 sm:w-80"
+      />
+      <div
+        aria-hidden="true"
+        className="om-register-blob-b pointer-events-none absolute -bottom-24 -left-16 h-64 w-64 rounded-full bg-[#FFB547]/30 blur-[90px] sm:h-80 sm:w-80"
+      />
+      <div
+        aria-hidden="true"
+        className="om-register-dotgrid pointer-events-none absolute inset-x-0 top-0 h-[420px]"
+      />
+
+      <div className="relative z-10 mx-auto flex w-full max-w-md flex-col items-center">
+        {/* Logo medallion */}
+        <Link
+          to="/"
+          aria-label="Zpět na OneMil"
+          className="om-register-medallion om-register-rise mb-5 block overflow-hidden rounded-[26px] shadow-[0_18px_40px_-14px_rgba(255,138,0,0.4)]"
+        >
+          <img
+            src={logo}
+            alt="OneMil — luxusní soutěže, skutečné výhry"
+            className="h-24 w-24 object-cover sm:h-28 sm:w-28"
+          />
+        </Link>
+
+        {/* Tagline */}
+        <div className="om-register-rise om-register-rise-1 mb-5 text-center">
+          <p className="mb-1.5 text-[11px] font-semibold uppercase tracking-[0.22em] text-[#C2570A]">
+            Vítejte v OneMil
+          </p>
+          <h1 className="font-heading text-2xl font-bold leading-tight text-[#1A1A1A] sm:text-[28px]">
+            Otevřete si cestu k luxusním soutěžím
+          </h1>
+        </div>
+
+        {/* Benefit chips */}
+        <div className="om-register-rise om-register-rise-2 mb-6 grid w-full grid-cols-3 gap-2">
+          <div className="om-register-chip flex flex-col items-center gap-1.5 rounded-2xl border border-[#FFE3C2] bg-white/80 px-2 py-3 text-center shadow-[0_2px_10px_rgba(255,138,0,0.08)]">
+            <OneMilTrophyIcon active size={20} />
+            <span className="text-[11px] font-medium text-[#4A4A4A]">Soutěže</span>
+          </div>
+          <div className="om-register-chip flex flex-col items-center gap-1.5 rounded-2xl border border-[#FFE3C2] bg-white/80 px-2 py-3 text-center shadow-[0_2px_10px_rgba(255,138,0,0.08)]">
+            <OneMilWinIcon active size={20} />
+            <span className="text-[11px] font-medium text-[#4A4A4A]">Výhry</span>
+          </div>
+          <div className="om-register-chip flex flex-col items-center gap-1.5 rounded-2xl border border-[#FFE3C2] bg-white/80 px-2 py-3 text-center shadow-[0_2px_10px_rgba(255,138,0,0.08)]">
+            <OneMilVoucherIcon active size={20} />
+            <span className="text-[11px] font-medium text-[#4A4A4A]">Vouchery</span>
+          </div>
+        </div>
+
+        {/* Registration card */}
+        <div className="om-register-rise om-register-rise-3 w-full rounded-[28px] border border-[#F3E4CF] bg-white p-6 shadow-[0_20px_60px_-24px_rgba(26,20,10,0.25)] sm:p-8">
+          <div className="mb-6 text-center">
+            <h2 className="font-heading text-xl font-bold text-[#1A1A1A]">Registrace</h2>
+            <p className="mt-1 text-sm text-[#8A8A8A]">Vytvořte si nový účet OneMil</p>
+          </div>
+
+          <form onSubmit={handleSubmit} className="space-y-4">
+            <div className="space-y-1.5">
+              <label htmlFor="email" className="text-sm font-medium text-[#2B2B2B]">
                 E-mail
               </label>
-              <Input
-                id="email"
-                type="email"
-                placeholder="vas@email.cz"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                required
-              />
-            </div>
-            
-            <div className="space-y-2">
-              <label htmlFor="password" className="text-sm font-medium">
-                Heslo
-              </label>
-              <Input
-                id="password"
-                type="password"
-                placeholder="Alespoň 6 znaků"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                required
-              />
-            </div>
-            
-            <div className="space-y-2">
-              <label htmlFor="confirmPassword" className="text-sm font-medium">
-                Potvrzení hesla
-              </label>
-              <Input
-                id="confirmPassword"
-                type="password"
-                placeholder="Zopakujte heslo"
-                value={confirmPassword}
-                onChange={(e) => setConfirmPassword(e.target.value)}
-                required
-              />
+              <div className="relative">
+                <Mail className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-[#C7A97A]" />
+                <Input
+                  id="email"
+                  type="email"
+                  placeholder="vas@email.cz"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  required
+                  className="h-11 rounded-xl border-[#E7E1D8] bg-[#FCFAF7] pl-10 text-[#1A1A1A] placeholder:text-[#B4ACA0] focus-visible:border-[#FF8A00] focus-visible:ring-[#FF8A00]/25 focus-visible:ring-offset-white"
+                />
+              </div>
             </div>
 
-            <div className="space-y-2">
-              <div className="flex items-start space-x-2">
+            <div className="space-y-1.5">
+              <label htmlFor="password" className="text-sm font-medium text-[#2B2B2B]">
+                Heslo
+              </label>
+              <div className="relative">
+                <Lock className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-[#C7A97A]" />
+                <Input
+                  id="password"
+                  type="password"
+                  placeholder="Alespoň 6 znaků"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  required
+                  className="h-11 rounded-xl border-[#E7E1D8] bg-[#FCFAF7] pl-10 text-[#1A1A1A] placeholder:text-[#B4ACA0] focus-visible:border-[#FF8A00] focus-visible:ring-[#FF8A00]/25 focus-visible:ring-offset-white"
+                />
+              </div>
+            </div>
+
+            <div className="space-y-1.5">
+              <label htmlFor="confirmPassword" className="text-sm font-medium text-[#2B2B2B]">
+                Potvrzení hesla
+              </label>
+              <div className="relative">
+                <Lock className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-[#C7A97A]" />
+                <Input
+                  id="confirmPassword"
+                  type="password"
+                  placeholder="Zopakujte heslo"
+                  value={confirmPassword}
+                  onChange={(e) => setConfirmPassword(e.target.value)}
+                  required
+                  className="h-11 rounded-xl border-[#E7E1D8] bg-[#FCFAF7] pl-10 text-[#1A1A1A] placeholder:text-[#B4ACA0] focus-visible:border-[#FF8A00] focus-visible:ring-[#FF8A00]/25 focus-visible:ring-offset-white"
+                />
+              </div>
+            </div>
+
+            <div className="space-y-2.5 rounded-2xl border border-[#F0E9DD] bg-[#FCFAF7] p-3.5">
+              <div className="flex items-start gap-2.5">
                 <Checkbox
                   id="ageConfirm"
                   checked={ageConfirmed}
@@ -295,123 +354,145 @@ const Register: React.FC = () => {
                     setAgeConfirmed(checked === true);
                     setAgeError('');
                   }}
+                  className="mt-0.5 border-[#D8C9AE] data-[state=checked]:border-[#FF8A00] data-[state=checked]:bg-[#FF8A00]"
                 />
-                <label htmlFor="ageConfirm" className="text-sm leading-tight cursor-pointer">
+                <label htmlFor="ageConfirm" className="cursor-pointer text-sm leading-snug text-[#3A3A3A]">
                   {ADULT_CONFIRMATION_TEXT} *
                 </label>
               </div>
               {ageError && (
-                <p className="text-sm text-destructive">{ageError}</p>
+                <p className="text-sm text-red-600">{ageError}</p>
               )}
-            </div>
 
-            <div className="flex items-start space-x-2">
-              <Checkbox
-                id="terms"
-                checked={termsAccepted}
-                onCheckedChange={(checked) => setTermsAccepted(checked === true)}
-              />
-              <label htmlFor="terms" className="text-sm leading-tight cursor-pointer">
-                Souhlasím s{' '}
-                <Link 
-                  to="/vop"
-                  className="text-primary hover:underline"
-                  target="_blank"
-                >
-                  Obchodními podmínkami
-                </Link>
-                {' '}*
-              </label>
-            </div>
-            
-            <div className="flex items-start space-x-2">
-              <Checkbox
-                id="gdpr"
-                checked={gdprAccepted}
-                onCheckedChange={(checked) => setGdprAccepted(checked === true)}
-              />
-              <label htmlFor="gdpr" className="text-sm leading-tight cursor-pointer">
-                Souhlasím se{' '}
-                <Link 
-                  to="/gdpr"
-                  className="text-primary hover:underline"
-                  target="_blank"
-                >
-                  Zásadami ochrany osobních údajů
-                </Link>
-                {' '}*
-              </label>
-            </div>
-            
-            <div className="flex items-start space-x-2">
-              <Checkbox
-                id="marketing"
-                checked={marketingAccepted}
-                onCheckedChange={(checked) => setMarketingAccepted(checked === true)}
-              />
-              <label htmlFor="marketing" className="text-sm leading-tight cursor-pointer text-muted-foreground">
-                Souhlasím se zasíláním marketingových sdělení
-              </label>
-            </div>
-          </CardContent>
-          
-          <CardFooter className="flex flex-col space-y-4">
-            <Button 
-              type="submit" 
-              className="w-full rounded-xl bg-gradient-to-r from-[#FF8A00] to-[#FFB547] text-black shadow-[0_2px_12px_rgba(255,138,0,0.25)] hover:shadow-[0_4px_16px_rgba(255,138,0,0.35)] hover:brightness-110 transition-all"
-              disabled={loading}
-            >
-              {loading ? 'Registruji...' : 'Zaregistrovat se'}
-            </Button>
-            
-            {ENABLED_OAUTH_PROVIDERS.length > 0 && (
-              <div className="flex flex-col space-y-2 w-full">
-                {ENABLED_OAUTH_PROVIDERS.includes('google') && (
-                  <Button 
-                    type="button"
-                    variant="outline" 
-                    className="relative w-full border-[rgba(255,138,0,0.2)] hover:border-[rgba(255,138,0,0.4)] hover:bg-[rgba(255,138,0,0.08)]"
-                    onClick={() => handleOAuthSignIn('google')}
+              <div className="flex items-start gap-2.5">
+                <Checkbox
+                  id="terms"
+                  checked={termsAccepted}
+                  onCheckedChange={(checked) => setTermsAccepted(checked === true)}
+                  className="mt-0.5 border-[#D8C9AE] data-[state=checked]:border-[#FF8A00] data-[state=checked]:bg-[#FF8A00]"
+                />
+                <label htmlFor="terms" className="cursor-pointer text-sm leading-snug text-[#3A3A3A]">
+                  Souhlasím s{' '}
+                  <Link
+                    to="/vop"
+                    className="font-medium text-[#C2570A] hover:underline"
+                    target="_blank"
                   >
-                    <span className="absolute left-4 top-1/2 -translate-y-1/2"><GoogleIcon /></span>
-                    <span>Registrovat se přes Google</span>
-                  </Button>
-                )}
-              
-                {ENABLED_OAUTH_PROVIDERS.includes('apple') && (
-                  <Button 
-                    type="button"
-                    variant="outline" 
-                    className="w-full border-[rgba(255,138,0,0.2)] hover:border-[rgba(255,138,0,0.4)] hover:bg-[rgba(255,138,0,0.08)]"
-                    onClick={() => handleOAuthSignIn('apple')}
-                  >
-                    Registrovat se přes Apple
-                  </Button>
-                )}
-
-                {ENABLED_OAUTH_PROVIDERS.includes('facebook') && (
-                  <Button 
-                    type="button"
-                    variant="outline" 
-                    className="relative w-full border-[rgba(255,138,0,0.2)] hover:border-[rgba(255,138,0,0.4)] hover:bg-[rgba(255,138,0,0.08)]"
-                    onClick={() => handleOAuthSignIn('facebook')}
-                  >
-                    <span className="absolute left-4 top-1/2 -translate-y-1/2"><FacebookIcon /></span>
-                    <span>Registrovat se přes Facebook</span>
-                  </Button>
-                )}
+                    Obchodními podmínkami
+                  </Link>
+                  {' '}*
+                </label>
               </div>
+
+              <div className="flex items-start gap-2.5">
+                <Checkbox
+                  id="gdpr"
+                  checked={gdprAccepted}
+                  onCheckedChange={(checked) => setGdprAccepted(checked === true)}
+                  className="mt-0.5 border-[#D8C9AE] data-[state=checked]:border-[#FF8A00] data-[state=checked]:bg-[#FF8A00]"
+                />
+                <label htmlFor="gdpr" className="cursor-pointer text-sm leading-snug text-[#3A3A3A]">
+                  Souhlasím se{' '}
+                  <Link
+                    to="/gdpr"
+                    className="font-medium text-[#C2570A] hover:underline"
+                    target="_blank"
+                  >
+                    Zásadami ochrany osobních údajů
+                  </Link>
+                  {' '}*
+                </label>
+              </div>
+
+              <div className="flex items-start gap-2.5">
+                <Checkbox
+                  id="marketing"
+                  checked={marketingAccepted}
+                  onCheckedChange={(checked) => setMarketingAccepted(checked === true)}
+                  className="mt-0.5 border-[#D8C9AE] data-[state=checked]:border-[#FF8A00] data-[state=checked]:bg-[#FF8A00]"
+                />
+                <label htmlFor="marketing" className="cursor-pointer text-sm leading-snug text-[#8A8A8A]">
+                  Souhlasím se zasíláním marketingových sdělení
+                </label>
+              </div>
+            </div>
+
+            <Button
+              type="submit"
+              disabled={loading}
+              className="om-register-cta h-12 w-full rounded-xl bg-gradient-to-r from-[#FF8A00] to-[#FFB547] text-base font-semibold text-[#1A1200] shadow-[0_10px_30px_-8px_rgba(255,138,0,0.55)] transition-all hover:shadow-[0_14px_36px_-6px_rgba(255,138,0,0.65)] hover:brightness-105 active:scale-[0.99]"
+            >
+              {loading ? (
+                <>
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                  Registruji...
+                </>
+              ) : (
+                'Zaregistrovat se'
+              )}
+            </Button>
+
+            {ENABLED_OAUTH_PROVIDERS.length > 0 && (
+              <>
+                <div className="relative py-1 text-center">
+                  <div className="absolute left-0 top-1/2 h-px w-full -translate-y-1/2 bg-[#EFE7DA]" />
+                  <span className="relative bg-white px-3 text-xs uppercase tracking-wide text-[#B4ACA0]">
+                    nebo
+                  </span>
+                </div>
+
+                <div className="flex flex-col gap-2">
+                  {ENABLED_OAUTH_PROVIDERS.includes('google') && (
+                    <Button
+                      type="button"
+                      variant="outline"
+                      className="relative h-11 w-full justify-center border-[#E7E1D8] bg-white text-[#2B2B2B] hover:border-[#FF8A00]/50 hover:bg-[#FFF7EC] hover:text-[#2B2B2B]"
+                      onClick={() => handleOAuthSignIn('google')}
+                    >
+                      <span className="absolute left-4 top-1/2 -translate-y-1/2"><GoogleIcon /></span>
+                      <span>Registrovat se přes Google</span>
+                    </Button>
+                  )}
+
+                  {ENABLED_OAUTH_PROVIDERS.includes('apple') && (
+                    <Button
+                      type="button"
+                      variant="outline"
+                      className="h-11 w-full justify-center border-[#E7E1D8] bg-white text-[#2B2B2B] hover:border-[#FF8A00]/50 hover:bg-[#FFF7EC] hover:text-[#2B2B2B]"
+                      onClick={() => handleOAuthSignIn('apple')}
+                    >
+                      Registrovat se přes Apple
+                    </Button>
+                  )}
+
+                  {ENABLED_OAUTH_PROVIDERS.includes('facebook') && (
+                    <Button
+                      type="button"
+                      variant="outline"
+                      className="relative h-11 w-full justify-center border-[#E7E1D8] bg-white text-[#2B2B2B] hover:border-[#FF8A00]/50 hover:bg-[#FFF7EC] hover:text-[#2B2B2B]"
+                      onClick={() => handleOAuthSignIn('facebook')}
+                    >
+                      <span className="absolute left-4 top-1/2 -translate-y-1/2"><FacebookIcon /></span>
+                      <span>Registrovat se přes Facebook</span>
+                    </Button>
+                  )}
+                </div>
+              </>
             )}
-            
-            <p className="text-sm text-muted-foreground text-center">
+
+            <p className="pt-1 text-center text-sm text-[#8A8A8A]">
               Už máte účet?{' '}
-              <Link to="/login" className="text-primary hover:underline">
+              <Link to="/login" className="font-medium text-[#C2570A] hover:underline">
                 Přihlaste se
               </Link>
             </p>
-          </CardFooter>
-        </form>
-        </Card>
+          </form>
+        </div>
+
+        <p className="om-register-rise om-register-rise-4 mt-5 flex items-center justify-center gap-1.5 text-xs text-[#A79A82]">
+          <ShieldCheck className="h-3.5 w-3.5 text-[#C2570A]" />
+          Bezpečná registrace · pouze 18+
+        </p>
       </div>
     </div>
   );
