@@ -243,14 +243,24 @@ nevyužitá informativní/zobrazovací pomůcka (viz její vlastní docstring).
   testují „soutěž mimo pilot / vypnutý flag → žádné stržení, žádný tiket, jasná hláška"; přidán
   100r (flag vypnutý i s allowlistem). Staging-only, vyžadují CI secrety.
 
-**Migrace (staging):** `20260921090000_benefit_only_partner_record.sql`,
+**Migrace (staging):** `20260921090500_benefit_only_partner_record.sql`,
 `20260921091000_guaranteed_benefit_unlimited_and_scope.sql`,
 `20260921092000_guaranteed_benefit_partner_rpcs.sql`,
 `20260921093000_guaranteed_benefit_admin_rpcs.sql`,
-`20260921100000_guaranteed_benefit_no_approval_workflow.sql`,
+`20260921100500_guaranteed_benefit_no_approval_workflow.sql`,
 `20260921110000_guaranteed_benefit_contest_distribution_sync.sql`,
-`20260921120000_guaranteed_benefit_purchase_contest_links.sql`,
+`20260921120500_guaranteed_benefit_purchase_contest_links.sql`,
 `20260921130000_guaranteed_benefit_active_contest_fallback_guard.sql`.
+
+**Pozn. (22. 09. 2026):** tři z těchto souborů byly po mergi s `main` přejmenovány kvůli
+kolizi timestamp prefixu se třemi novými `main` migracemi ze stejného dne
+(`20260921090000_admin_contest_create_permission.sql`,
+`20260921100000_winners_single_source_of_truth.sql`,
+`20260921120000_protect_won_miocoin_bonus_prizes.sql`) — obsah souborů se neměnil, jen
+jméno (`090000→090500`, `100000→100500`, `120000→120500`). Pořadí guaranteed-benefit
+řetězu zůstává stejné (`090500 < 091000 < 092000 < 093000 < 100500 < 110000 < 120500 <
+130000`). Nikdy nespouštěno na produkci; staging na tyto konkrétní přejmenované soubory
+znovu neaplikován (obsah je identický s tím, co už na stagingu běží pod starým jménem).
 
 **Past při psaní staging testů soutěží:** `public.contests` má NOT NULL `title` **i** `name`
 (INSERT bez `title` spadne) a soutěž ve stavu `active` vyžaduje `rules_pdf_url`. Linkovací trigger
