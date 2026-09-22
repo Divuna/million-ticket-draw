@@ -1,6 +1,51 @@
 # OneMil – aktuální stav projektu
 
-> **Autoritativní aktuální stav. Poslední aktualizace 21. 9. 2026 podle `origin/main` (`76e69d9c`), GitHubu a read-only produkční kontroly Supabase (`xkzhjldrojjlrkezorey`) po nasazení systému výher jako jediného zdroje pravdy. Předchozí aktualizace: 05. 9. 2026 podle `origin/main` (`f051e248`) a read-only synchronizačního auditu GitHub × produkční Supabase × staging (`dxmowysntemfqfnanxua`).**
+> **Autoritativní aktuální stav. Poslední aktualizace 22. 9. 2026 podle `origin/main` (`03402ff2`), GitHubu, Vercelu a produkční Supabase (`xkzhjldrojjlrkezorey`) po nasazení garantovaných nákupních benefitů. Předchozí hlavní aktualizace: 21. 9. 2026 — systém výher jako jediný zdroj pravdy.**
+
+
+## -4. Garantované nákupní benefity — nasazeno do produkce (22. 09. 2026)
+
+Po výslovném schválení Pavla byla větev `feat/guaranteed-benefits-admin-base` bezpečně
+fast-forward posunuta do `main` na commit `03402ff2`. Vercel produkční deployment pro tento
+commit je **READY**.
+
+Do produkční Supabase `xkzhjldrojjlrkezorey` byly aplikovány všechny schválené migrace
+garantovaných benefitů:
+
+- `20260921090500_benefit_only_partner_record.sql`
+- `20260921091000_guaranteed_benefit_unlimited_and_scope.sql`
+- `20260921092000_guaranteed_benefit_partner_rpcs.sql`
+- `20260921093000_guaranteed_benefit_admin_rpcs.sql`
+- `20260921100500_guaranteed_benefit_no_approval_workflow.sql`
+- `20260921110000_guaranteed_benefit_contest_distribution_sync.sql`
+- `20260921120500_guaranteed_benefit_purchase_contest_links.sql`
+- `20260921130000_guaranteed_benefit_active_contest_fallback_guard.sql`
+
+Výsledný produkční model:
+- garantované benefity spravuje pouze superadmin nebo admin s oprávněním
+  `guaranteed_benefits.manage`;
+- firma benefit v první verzi sama nevytváří ani neschvaluje;
+- omezené benefity mají přednost, neomezený benefit je fallback;
+- aktivní soutěž musí mít alespoň jeden schválený neomezený fallback;
+- zákaznický nákup už nesmí spadnout na samotný ticket bez benefitu;
+- Partner Offers zůstávají oddělené a nebyly změněny.
+
+Pro produkční testovací stav byl založen evidenční dodavatel **Apartmán Portus**
+(`benefit_only_record=true`, bez loginu, API klíčů a integrací) a neomezený benefit
+**„Sleva 10 % na ubytování – Apartmán Portus“** se sdíleným kódem `PORTUS26`,
+cenou distribuce 0 Kč a rozsahem `all_contests`. Benefit je materializovaně napojen na všechny
+4 současné eligible soutěže (1 active + 3 pending); budoucí active/pending soutěže se napojují
+automaticky. Produkční guard je zapnutý a aktivní soutěž má potvrzený fallback.
+
+Stávající pilotní feature flag zůstal zapnutý. Allowlist byl rozšířen na všechny 4 současné
+active/pending soutěže, aby po případné aktivaci pending soutěží nebyl nákup blokovaný pilotním
+omezením. Historický testovací finite benefit s 50/50 vydanými kódy zůstal beze změny jako
+historie; nový neomezený fallback řeší stav po vyčerpání.
+
+Produkční data jsou nadále testovací a před ostrým spuštěním stále platí samostatně schvalovaný
+předstartovní reset podle § -2 níže.
+
+---
 
 ## -3. Systém výher jako jediný zdroj pravdy — mergnuto a nasazeno do produkce (21. 09. 2026)
 
