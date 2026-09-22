@@ -101,9 +101,9 @@ Uživatel může mít jeden režim nebo oba. Nezakládají se dva paralelní ú�
 
 Další obchodní a výplatní pravidla pro agentury, firmy a obchodníky v bodech níže zůstávají samostatným tématem a nesmí se měnit bez schválení Pavla.
 
-### 3. Influencer účet
+### 3. Influencer režim
 
-Influencer účet je pro lidi, kteří přivádějí hráče / soutěžící do OneMil.
+Influencer režim jednoho Affiliate účtu je pro lidi, kteří přivádějí hráče / soutěžící do OneMil.
 
 Patří sem:
 
@@ -115,7 +115,7 @@ Všichni v této větvi mají stejné prostředí.
 
 Rozlišení influencer / UGC partner / běžný doporučující člověk se eviduje hlavně kvůli marketingu, komunikaci a dalšímu řízení spolupráce.
 
-Influencer účet má zobrazovat hlavně:
+Influencer režim má zobrazovat hlavně:
 
 - doporučovací kód / odkaz,
 - přivedené hráče / soutěžící,
@@ -128,11 +128,11 @@ Influencer / UGC partner / doporučující člověk přivede hráče nebo soutě
 
 Tento hráč se registruje, používá aplikaci a později si může dobíjet MioCoiny.
 
-Z dobíjení tohoto hráče vzniká provize pro influencer účet.
+Z dobíjení tohoto hráče vzniká provize pro Affiliate účet v režimu Influencer.
 
-### 4. Firemní účet
+### 4. Obchodník / firemní režim
 
-Firemní účet je pro ty, kteří přivádějí nebo zakládají firemní spolupráce v OneMil.
+Režim Obchodník v jednom Affiliate účtu je pro ty, kteří přivádějí nebo zakládají firemní spolupráce v OneMil.
 
 Patří sem:
 
@@ -144,7 +144,7 @@ Všichni v této větvi mají stejné prostředí.
 
 Rozlišení firma / agentura / obchodník se eviduje hlavně kvůli obchodnímu řízení, marketingu a vyhodnocení spolupráce.
 
-Firemní účet má zobrazovat hlavně:
+Režim Obchodník má zobrazovat hlavně:
 
 - založené / přivedené firmy,
 - provize z fakturace firem,
@@ -152,7 +152,7 @@ Firemní účet má zobrazovat hlavně:
 - nastavení příjemců provizí,
 - výplatní profil.
 
-### 5. Pravidlo pro firemní účet
+### 5. Pravidlo pro režim Obchodník
 
 Kdo firemní spolupráci založí nebo přivede, ten nastavuje provize u této firmy.
 
@@ -240,7 +240,7 @@ Admin musí vidět:
 
 ### 10. Ochrana proti převzetí firmy
 
-Při založení nebo přivedení firmy přes Firemní účet musí systém ověřit, zda už firma není evidovaná podle e-mailu, IČO nebo existujícího partner účtu.
+Při založení nebo přivedení firmy přes Affiliate účet v režimu Obchodník musí systém ověřit, zda už firma není evidovaná podle e-mailu, IČO nebo existujícího partner účtu.
 
 Pokud firma už existuje nebo má aktivní lead, nesmí ji jiný Firemní účet znovu založit ani převzít.
 
