@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { format } from 'date-fns';
 import { ChevronRight, Image as ImageIcon, Ticket } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
@@ -28,6 +28,7 @@ export interface VoucherShowcaseVoucher {
   usage_description?: string | null;
   terms_text?: string | null;
   how_to_use_text?: string | null;
+  gallery_images?: string[];
   available_code_count?: number;
 }
 
@@ -214,33 +215,76 @@ export const VoucherDetailDialog: React.FC<VoucherDetailDialogProps> = ({
   purchaseLabel = 'Koupit za 5 MioCoinů',
 }) => {
   const detailText = voucher ? buildVoucherDetailText(voucher) : null;
-  const bannerUrl = voucher?.banner_url || voucher?.image_url || null;
+  const galleryImages = voucher
+    ? Array.from(new Set([
+        voucher.banner_url,
+        voucher.image_url,
+        ...(voucher.gallery_images ?? []),
+      ].filter((url): url is string => Boolean(url))))
+    : [];
+  const galleryKey = galleryImages.join('|');
+  const [activeImage, setActiveImage] = useState<string | null>(galleryImages[0] ?? null);
+
+  useEffect(() => {
+    setActiveImage(galleryImages[0] ?? null);
+  }, [voucher?.id, galleryKey]);
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="voucher-detail-light-dialog max-w-4xl max-h-[90vh] overflow-y-auto border-[rgba(255,138,0,0.35)] bg-gradient-to-b from-[hsl(220_30%_8%)] to-[hsl(220_35%_5%)] p-0">
+      <DialogContent className="voucher-detail-light-dialog max-w-5xl max-h-[92vh] overflow-y-auto border-[rgba(255,138,0,0.35)] bg-gradient-to-b from-[hsl(220_30%_8%)] to-[hsl(220_35%_5%)] p-0">
         {voucher && (
           <>
-            <div className="relative h-56 overflow-hidden rounded-t-[20px]">
-              {bannerUrl ? (
+            <div className="relative aspect-[16/9] max-h-[480px] overflow-hidden rounded-t-[20px] bg-[hsl(220_30%_10%)]">
+              {activeImage ? (
                 <img
-                  src={bannerUrl}
-                  alt={`${voucher.name} banner`}
+                  src={activeImage}
+                  alt={voucher.name}
                   className="h-full w-full object-cover object-center"
                 />
               ) : (
-                <div className="flex h-full items-center justify-center bg-[hsl(220_30%_10%)]">
+                <div className="flex h-full items-center justify-center">
                   <ImageIcon className="h-16 w-16 text-[rgba(255,138,0,0.45)]" />
                 </div>
               )}
-              <div className="absolute inset-0 bg-gradient-to-t from-[rgba(0,0,0,0.82)] via-[rgba(0,0,0,0.18)] to-transparent" />
+              <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-[rgba(0,0,0,0.38)] via-transparent to-transparent" />
             </div>
+
+            {galleryImages.length > 1 && (
+              <div className="grid grid-cols-3 gap-2 px-4 pt-4 sm:grid-cols-4 md:grid-cols-6">
+                {galleryImages.map((url, index) => (
+                  <button
+                    key={`${url}-${index}`}
+                    type="button"
+                    onClick={() => setActiveImage(url)}
+                    className={cn(
+                      'aspect-[4/3] overflow-hidden rounded-xl border bg-black/20 transition-all',
+                      activeImage === url
+                        ? 'border-[#FF9D24] ring-2 ring-[#FF9D24]/35'
+                        : 'border-white/10 hover:border-white/30',
+                    )}
+                    aria-label={`Zobrazit fotografii ${index + 1}`}
+                  >
+                    <img
+                      src={url}
+                      alt={`${voucher.name} – fotografie ${index + 1}`}
+                      className="h-full w-full object-cover"
+                      loading="lazy"
+                    />
+                  </button>
+                ))}
+              </div>
+            )}
 
             <div className="space-y-5 p-6">
               <DialogHeader className="space-y-2 text-left">
-                <DialogTitle className="text-2xl font-bold text-white">{voucher.name}</DialogTitle>
+                <div>
+                  <Badge className="mb-3 border border-[#FF9D24]/35 bg-[#FF9D24]/12 text-[#FFB547]">
+                    Váš garantovaný benefit
+                  </Badge>
+                  <DialogTitle className="text-2xl font-bold text-white sm:text-3xl">{voucher.name}</DialogTitle>
+                </div>
                 <DialogDescription className="text-sm text-white/70">
-                  Detail nabídky vyplňuje administrátor OneMil.
+                  Podívejte se, co jste získali a jak benefit využít.
                 </DialogDescription>
               </DialogHeader>
 
