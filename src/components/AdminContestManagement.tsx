@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
-import { Card, CardContent } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
@@ -38,6 +38,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { toast } from "@/hooks/use-toast";
 import { useUserRole } from "@/hooks/useUserRole";
+import { useAdminPermissions } from "@/hooks/useAdminPermissions";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { useNavigate } from "react-router-dom";
@@ -133,14 +134,22 @@ interface ContestModalProps {
 }
 
 const STATUS_OPTIONS = [
-  { value: "draft", label: "Archiv test", color: "bg-gray-500/20 text-gray-300 border-gray-500/30" },
-  { value: "pending", label: "Čeká na start", color: "bg-yellow-500/20 text-yellow-300 border-yellow-500/30" },
-  { value: "active", label: "Aktivní", color: "bg-green-500/20 text-green-300 border-green-500/30" },
-  { value: "paused", label: "Pozastaveno", color: "bg-orange-500/20 text-orange-300 border-orange-500/30" },
-  { value: "closed", label: "Ukončeno", color: "bg-red-500/20 text-red-300 border-red-500/30", disabled: true },
+  { value: "draft", label: "Archiv test", color: "bg-gray-100 text-gray-700 border-gray-300" },
+  { value: "pending", label: "Čeká na start", color: "bg-amber-50 text-amber-800 border-amber-300" },
+  { value: "active", label: "Aktivní", color: "bg-emerald-50 text-emerald-800 border-emerald-300" },
+  { value: "paused", label: "Pozastaveno", color: "bg-orange-50 text-orange-800 border-orange-300" },
+  { value: "closed", label: "Ukončeno", color: "bg-red-50 text-red-800 border-red-300", disabled: true },
 ];
 
 const SELECTABLE_STATUS_OPTIONS = STATUS_OPTIONS.filter((opt) => opt.value !== "closed");
+
+// Non-superadmin holders of the `contests.create` permission may only create
+// and prepare a contest before launch — never publish it. DB-layer enforcement
+// lives in admin_manage_contest (guard) and the contests RLS policies; this is
+// UX-only so the dropdown never even offers a status the server would reject.
+const PREPARE_ONLY_STATUS_OPTIONS = SELECTABLE_STATUS_OPTIONS.filter(
+  (opt) => opt.value === "draft" || opt.value === "pending"
+);
 
 const DEFAULT_ECONOMY_ASSUMPTIONS: EconomyAssumptions = {
   mainPrizeRealCost: 0,
@@ -154,7 +163,7 @@ const DEFAULT_ECONOMY_ASSUMPTIONS: EconomyAssumptions = {
 
 const getStatusBadgeClass = (status: string) => {
   const option = STATUS_OPTIONS.find((opt) => opt.value === status);
-  return option?.color || "bg-gray-500/20 text-gray-300 border-gray-500/30";
+  return option?.color || "bg-gray-100 text-gray-700 border-gray-300";
 };
 
 /**
@@ -190,6 +199,11 @@ const ContestModal: React.FC<ContestModalProps> = ({ open, onClose, onSaved, edi
   // Sensitive contest internals (MioCoin/physical bonus positions, economy/profit/margin)
   // are superadmin-only. Scoped subadmins must not see these tabs.
   const { isSuperAdmin } = useUserRole();
+  // Non-superadmin admin holding `contests.create` may create/prepare a
+  // contest (draft/pending) but never publish it or touch bonus prizes.
+  // (Route/permission gate already ensures only superadmin or a `contests.create`
+  // holder can reach this modal at all — here we only need to know which one.)
+  const statusOptionsForRole = isSuperAdmin ? SELECTABLE_STATUS_OPTIONS : PREPARE_ONLY_STATUS_OPTIONS;
   const [form, setForm] = useState<ContestFormData>({
     title: "",
     description: "",
@@ -2311,9 +2325,11 @@ const ContestModal: React.FC<ContestModalProps> = ({ open, onClose, onSaved, edi
       "Bod zvratu je vyšší než počet dostupných ticketů.",
   ].filter(Boolean) as string[];
   const hasEconomyWarning = estimatedProfit < 0 || marginPercent < economyAssumptions.targetMarginPercent;
+  // KPI card accent — same hasEconomyWarning flag as before, just a light-card
+  // palette (amber = warning, emerald = healthy) instead of the old dark-tuned wash.
   const economySummaryClass = hasEconomyWarning
-    ? "border-yellow-500/30 bg-yellow-500/10 text-yellow-100"
-    : "border-emerald-500/20 bg-emerald-500/10 text-emerald-50";
+    ? "border-amber-200 bg-amber-50 text-amber-900"
+    : "border-emerald-200 bg-emerald-50 text-emerald-900";
 
   // Validation logic for each tab
   const hasMainImage = !!(form.main_image_file || form.main_image_url || (isEditing && editingContest?.main_image));
@@ -2352,13 +2368,16 @@ const ContestModal: React.FC<ContestModalProps> = ({ open, onClose, onSaved, edi
         onInteractOutside={(e) => e.preventDefault()}
         onEscapeKeyDown={(e) => e.preventDefault()}
       >
-        <DialogHeader className="px-6 pt-6 pb-4 border-b border-white/10 shrink-0">
+        <DialogHeader className="px-6 pt-6 pb-4 border-b border-border shrink-0">
           <DialogTitle>{isEditing ? "Upravit soutěž" : "Vytvořit novou soutěž"}</DialogTitle>
         </DialogHeader>
 
         <Tabs value={activeTab} onValueChange={setActiveTab} className="flex-1 flex flex-col min-h-0 px-6">
-          <div className="shrink-0 py-4 space-y-3">
-            <div className={`grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-2 rounded-lg border p-3 ${economySummaryClass}`}>
+          <div className="shrink-0 py-4 space-y-4">
+            {/* Horní souhrn — 5 samostatných KPI karet. Stejné hodnoty jako dřív
+                (form.ticket_count / totalEstimatedCost / recommendedTicketPrice /
+                estimatedProfit / marginPercent), žádný nový výpočet — jen jiné rozložení. */}
+            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3">
               {[
                 ["Počet ticketů", `${Math.max(0, form.ticket_count || 0).toLocaleString("cs-CZ")}`],
                 ["Celkové odhadované náklady", formatCzk(totalEstimatedCost)],
@@ -2369,25 +2388,28 @@ const ContestModal: React.FC<ContestModalProps> = ({ open, onClose, onSaved, edi
                 ["Odhadovaný čistý zisk", formatCzk(estimatedProfit)],
                 ["Marže", formatPercent(marginPercent)],
               ].map(([label, value]) => (
-                <div key={label}>
-                  <div className="text-[11px] uppercase tracking-wide opacity-70">{label}</div>
-                  <div className="mt-1 text-sm font-semibold text-foreground">{value}</div>
+                <div
+                  key={label}
+                  className={`rounded-xl border p-3.5 shadow-sm ${economySummaryClass}`}
+                >
+                  <div className="text-[10px] font-semibold uppercase tracking-wide opacity-70">{label}</div>
+                  <div className="mt-1.5 text-base font-bold leading-tight">{value}</div>
                 </div>
               ))}
             </div>
-            <TabsList className="flex flex-wrap h-auto w-full gap-1">
-              <TabsTrigger value="basic" className="flex items-center">
+            <TabsList className="flex flex-wrap h-auto w-full gap-1.5 bg-muted/60 p-1.5 rounded-xl">
+              <TabsTrigger value="basic" className="flex items-center rounded-lg">
                 Základní údaje
                 <TabIndicator isValid={validation.basic.isValid} />
               </TabsTrigger>
               {isSuperAdmin && (
                 <>
-                  <TabsTrigger value="bonus-coins">Bonusy – MioCoins</TabsTrigger>
-                  <TabsTrigger value="bonus-physical">Bonusy – věcné</TabsTrigger>
-                  <TabsTrigger value="economy">Ekonomika</TabsTrigger>
+                  <TabsTrigger value="bonus-coins" className="rounded-lg">Bonusy – MioCoins</TabsTrigger>
+                  <TabsTrigger value="bonus-physical" className="rounded-lg">Bonusy – věcné</TabsTrigger>
+                  <TabsTrigger value="economy" className="rounded-lg">Ekonomika</TabsTrigger>
                 </>
               )}
-              <TabsTrigger value="graphics" className="flex items-center">
+              <TabsTrigger value="graphics" className="flex items-center rounded-lg">
                 Grafika
                 <TabIndicator isValid={validation.graphics.isValid} />
               </TabsTrigger>
@@ -2396,143 +2418,166 @@ const ContestModal: React.FC<ContestModalProps> = ({ open, onClose, onSaved, edi
           </div>
 
           <div className="flex-1 overflow-y-auto pr-2 pb-4 min-h-0">
-            {/* Tab 1: Základní údaje */}
+            {/* Tab 1: Základní údaje — stejná pole/hodnoty/handlery jako dřív,
+                jen vizuálně rozdělené do karet podle významu údajů. */}
             <TabsContent value="basic" className="space-y-4 mt-0">
-              <div>
-                <Label>Název soutěže</Label>
-                <Input value={form.title} onChange={handleTitleChange} placeholder="Např. Corvette C8" />
-              </div>
+              <Card>
+                <CardHeader className="pb-3">
+                  <CardTitle className="text-base">Základní informace</CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <div>
+                    <Label>Název soutěže</Label>
+                    <Input value={form.title} onChange={handleTitleChange} placeholder="Např. Corvette C8" />
+                  </div>
 
-              <div>
-                <Label>Hlavní výhra</Label>
-                <Input value={form.main_prize} onChange={handleChange("main_prize")} placeholder="Např. Corvette C8" />
-                <p className="text-xs text-muted-foreground mt-1">Automaticky předvyplněno z názvu soutěže</p>
-              </div>
+                  <div>
+                    <Label>Hlavní výhra</Label>
+                    <Input value={form.main_prize} onChange={handleChange("main_prize")} placeholder="Např. Corvette C8" />
+                    <p className="text-xs text-muted-foreground mt-1">Automaticky předvyplněno z názvu soutěže</p>
+                  </div>
 
-              <div>
-                <Label>Náklad na hlavní výhru v Kč</Label>
-                <Input
-                  type="number"
-                  min={0}
-                  value={economyAssumptions.mainPrizeRealCost}
-                  onChange={updateEconomyAssumption("mainPrizeRealCost")}
-                  onFocus={handleNumericFocus}
-                  placeholder="0"
-                />
-                <p className="text-xs text-muted-foreground mt-1">Pořizovací náklad hlavní výhry — použije se v ekonomické kalkulaci.</p>
-              </div>
-
-              {/* Popis soutěže */}
-              <div className="space-y-3">
-                <div className="flex items-center justify-between">
-                  <Label>Popis soutěže</Label>
-                  <Button
-                    type="button"
-                    variant="outline"
-                    size="sm"
-                    onClick={handleGenerateDescription}
-                    disabled={generatingDescription || (!form.title && !form.main_prize)}
-                    className="text-xs"
-                  >
-                    {generatingDescription ? (
-                      <>
-                        <Loader2 className="mr-1.5 h-3 w-3 animate-spin" />
-                        Generuji…
-                      </>
-                    ) : (
-                      <>
-                        <Sparkles className="mr-1.5 h-3 w-3" />
-                        Vygenerovat AI popis
-                      </>
-                    )}
-                  </Button>
-                </div>
-                <Textarea
-                  value={form.description}
-                  onChange={handleChange("description")}
-                  placeholder="Stručný popis soutěže… Nebo klikni na tlačítko pro AI generování."
-                  rows={4}
-                />
-              </div>
-
-              <div>
-                <Label>Pravidla soutěže (PDF) <span className="text-red-400">*</span></Label>
-                <Input
-                  type="file"
-                  accept="application/pdf,.pdf"
-                  onChange={(e) => {
-                    const file = e.target.files?.[0] || null;
-                    setForm((prev) => ({ ...prev, rules_pdf_file: file }));
-                  }}
-                />
-                {form.rules_pdf_url && !form.rules_pdf_file && (
-                  <p className="text-xs text-muted-foreground mt-1">
-                    Aktuální PDF:{" "}
-                    <a href={form.rules_pdf_url} target="_blank" rel="noopener noreferrer" className="underline text-primary">
-                      Zobrazit
-                    </a>
-                  </p>
-                )}
-                {form.rules_pdf_file && (
-                  <p className="text-xs text-muted-foreground mt-1">
-                    Vybráno: {form.rules_pdf_file.name}
-                  </p>
-                )}
-              </div>
-
-              <div className="flex gap-4">
-                <div className="flex-1">
-                  <Label>Počet tiketů</Label>
-                  <Input
-                    type="number"
-                    min={1}
-                    value={form.ticket_count}
-                    onChange={handleChange("ticket_count")}
-                    onFocus={handleNumericFocus}
-                    disabled={ticketCountLocked}
-                  />
-                  {ticketCountLocked && (
-                    <p className="text-xs text-destructive mt-1">
-                      Počet tiketů už nelze změnit — soutěž má vydané tikety a toto číslo
-                      určuje pozici hlavní výhry.
-                    </p>
-                  )}
-                </div>
-                <div className="flex-1">
-                  <Label>Cena tiketu (MioCoins)</Label>
-                  <Input type="number" min={1} value={form.ticket_price} onChange={handleChange("ticket_price")} onFocus={handleNumericFocus} />
-                </div>
-              </div>
-
-              <div>
-                <Label>Status</Label>
-                <Select value={form.status} onValueChange={handleStatusChange}>
-                  <SelectTrigger className="bg-background">
-                    <SelectValue placeholder="Vyber status" />
-                  </SelectTrigger>
-                  <SelectContent className="bg-neutral-800 border-neutral-700 z-50">
-                    {SELECTABLE_STATUS_OPTIONS.map((option) => (
-                      <SelectItem
-                        key={option.value}
-                        value={option.value}
-                        className="text-white hover:bg-neutral-700 focus:bg-neutral-700 focus:text-white cursor-pointer"
+                  {/* Popis soutěže */}
+                  <div className="space-y-3">
+                    <div className="flex items-center justify-between">
+                      <Label>Popis soutěže</Label>
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        onClick={handleGenerateDescription}
+                        disabled={generatingDescription || (!form.title && !form.main_prize)}
+                        className="text-xs"
                       >
-                        {option.label}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
+                        {generatingDescription ? (
+                          <>
+                            <Loader2 className="mr-1.5 h-3 w-3 animate-spin" />
+                            Generuji…
+                          </>
+                        ) : (
+                          <>
+                            <Sparkles className="mr-1.5 h-3 w-3" />
+                            Vygenerovat AI popis
+                          </>
+                        )}
+                      </Button>
+                    </div>
+                    <Textarea
+                      value={form.description}
+                      onChange={handleChange("description")}
+                      placeholder="Stručný popis soutěže… Nebo klikni na tlačítko pro AI generování."
+                      rows={4}
+                    />
+                  </div>
 
-              <div className="flex items-center gap-2 mt-2">
-                <input
-                  type="checkbox"
-                  id="fast_game"
-                  checked={form.fast_game}
-                  onChange={(e) => setForm((f) => ({ ...f, fast_game: e.target.checked }))}
-                />
-                <label htmlFor="fast_game" className="text-sm text-white">Fast game</label>
-              </div>
+                  <div>
+                    <Label>Pravidla soutěže (PDF) <span className="text-destructive">*</span></Label>
+                    <Input
+                      type="file"
+                      accept="application/pdf,.pdf"
+                      onChange={(e) => {
+                        const file = e.target.files?.[0] || null;
+                        setForm((prev) => ({ ...prev, rules_pdf_file: file }));
+                      }}
+                    />
+                    {form.rules_pdf_url && !form.rules_pdf_file && (
+                      <p className="text-xs text-muted-foreground mt-1">
+                        Aktuální PDF:{" "}
+                        <a href={form.rules_pdf_url} target="_blank" rel="noopener noreferrer" className="underline text-primary">
+                          Zobrazit
+                        </a>
+                      </p>
+                    )}
+                    {form.rules_pdf_file && (
+                      <p className="text-xs text-muted-foreground mt-1">
+                        Vybráno: {form.rules_pdf_file.name}
+                      </p>
+                    )}
+                  </div>
+                </CardContent>
+              </Card>
+
+              <Card>
+                <CardHeader className="pb-3">
+                  <CardTitle className="text-base">Ceny a počet tiketů</CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <div>
+                    <Label>Náklad na hlavní výhru v Kč</Label>
+                    <Input
+                      type="number"
+                      min={0}
+                      value={economyAssumptions.mainPrizeRealCost}
+                      onChange={updateEconomyAssumption("mainPrizeRealCost")}
+                      onFocus={handleNumericFocus}
+                      placeholder="0"
+                    />
+                    <p className="text-xs text-muted-foreground mt-1">Pořizovací náklad hlavní výhry — použije se v ekonomické kalkulaci.</p>
+                  </div>
+
+                  <div className="flex gap-4">
+                    <div className="flex-1">
+                      <Label>Počet tiketů</Label>
+                      <Input
+                        type="number"
+                        min={1}
+                        value={form.ticket_count}
+                        onChange={handleChange("ticket_count")}
+                        onFocus={handleNumericFocus}
+                        disabled={ticketCountLocked}
+                      />
+                      {ticketCountLocked && (
+                        <p className="text-xs text-destructive mt-1">
+                          Počet tiketů už nelze změnit — soutěž má vydané tikety a toto číslo
+                          určuje pozici hlavní výhry.
+                        </p>
+                      )}
+                    </div>
+                    <div className="flex-1">
+                      <Label>Cena tiketu (MioCoins)</Label>
+                      <Input type="number" min={1} value={form.ticket_price} onChange={handleChange("ticket_price")} onFocus={handleNumericFocus} />
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+
+              <Card>
+                <CardHeader className="pb-3">
+                  <CardTitle className="text-base">Stav a nastavení</CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <div>
+                    <Label>Status</Label>
+                    <Select value={form.status} onValueChange={handleStatusChange}>
+                      <SelectTrigger className="bg-background">
+                        <SelectValue placeholder="Vyber status" />
+                      </SelectTrigger>
+                      <SelectContent className="z-50">
+                        {statusOptionsForRole.map((option) => (
+                          <SelectItem key={option.value} value={option.value} className="cursor-pointer">
+                            {option.label}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    {!isSuperAdmin && (
+                      <p className="text-xs text-muted-foreground mt-1">
+                        Soutěž můžete pouze vytvořit a připravit. Spuštění (Aktivní) provede superadmin.
+                      </p>
+                    )}
+                  </div>
+
+                  <div className="flex items-center gap-2">
+                    <input
+                      type="checkbox"
+                      id="fast_game"
+                      checked={form.fast_game}
+                      onChange={(e) => setForm((f) => ({ ...f, fast_game: e.target.checked }))}
+                    />
+                    <label htmlFor="fast_game" className="text-sm text-foreground">Fast game</label>
+                  </div>
+                </CardContent>
+              </Card>
             </TabsContent>
 
             {/* Tab 2: Bonusy – MioCoins */}
@@ -3311,6 +3356,16 @@ export const AdminContestManagement: React.FC = () => {
   // Sensitive contest progress/revenue/activity is superadmin-only. Scoped
   // subadmins see only the basic contest list (name, prize, status).
   const { isSuperAdmin } = useUserRole();
+  // Non-superadmin admin holding `contests.create` may create/prepare a
+  // contest (draft/pending) but never publish, close, or open the superadmin
+  // contest detail. DB layer (admin_manage_contest guard + contests RLS)
+  // enforces this independently of these UI restrictions.
+  const { can: hasAdminPermission } = useAdminPermissions();
+  const canPrepareContests = isSuperAdmin || hasAdminPermission("contests.create");
+  const isPrepareOnlyAdmin = canPrepareContests && !isSuperAdmin;
+  const rowStatusOptions = isSuperAdmin ? SELECTABLE_STATUS_OPTIONS : PREPARE_ONLY_STATUS_OPTIONS;
+  const canEditContestRow = (status: string) =>
+    isSuperAdmin || (isPrepareOnlyAdmin && (status === "draft" || status === "pending"));
   const [contests, setContests] = useState<ContestData[]>([]);
   const [statsMap, setStatsMap] = useState<Record<string, ContestViewStats>>({});
   const [loading, setLoading] = useState(true);
@@ -3789,7 +3844,9 @@ export const AdminContestManagement: React.FC = () => {
   });
 
   const movableSelected = filteredContests.filter(
-    (c) => selectedIds.has(c.contest_id) && (c.status === "pending" || c.status === "paused")
+    (c) =>
+      selectedIds.has(c.contest_id) &&
+      (c.status === "pending" || (isSuperAdmin && c.status === "paused"))
   );
 
   const toggleSelect = (id: string) => {
@@ -4003,7 +4060,7 @@ export const AdminContestManagement: React.FC = () => {
                 </div>
               )}
             <div className="rounded-md border border-white/10 max-h-[550px] overflow-auto relative">
-              <div className="min-w-max">
+              <div>
                 <Table>
                   <TableHeader className="sticky top-0 z-10 bg-card">
                   <TableRow className="border-b border-white/10 hover:bg-transparent">
@@ -4070,7 +4127,11 @@ export const AdminContestManagement: React.FC = () => {
                           <Select
                             value={contest.status}
                             onValueChange={(value) => handleStatusChange(contest.contest_id, value)}
-                            disabled={updatingStatus === contest.contest_id || contest.status === "closed"}
+                            disabled={
+                              updatingStatus === contest.contest_id ||
+                              contest.status === "closed" ||
+                              (isPrepareOnlyAdmin && !canEditContestRow(contest.status))
+                            }
                           >
                             <SelectTrigger className="w-8 h-8 p-0 bg-transparent border-white/10 hover:bg-white/10">
                               {updatingStatus === contest.contest_id ? (
@@ -4079,15 +4140,15 @@ export const AdminContestManagement: React.FC = () => {
                                 <Pencil className="h-3 w-3" />
                               )}
                             </SelectTrigger>
-                            <SelectContent className="bg-neutral-800 border-neutral-700 z-50">
-                              {SELECTABLE_STATUS_OPTIONS.map((option) => {
+                            <SelectContent className="z-50">
+                              {rowStatusOptions.map((option) => {
                                 const isBlocked = option.value === "draft" && contest.status === "active";
                                 return (
                                   <SelectItem
                                     key={option.value}
                                     value={option.value}
                                     disabled={isBlocked}
-                                    className={isBlocked ? "text-neutral-500 cursor-not-allowed" : "text-white hover:bg-neutral-700 focus:bg-neutral-700 focus:text-white cursor-pointer"}
+                                    className={isBlocked ? "text-muted-foreground cursor-not-allowed" : "cursor-pointer"}
                                   >
                                     {option.label}
                                   </SelectItem>
@@ -4108,7 +4169,7 @@ export const AdminContestManagement: React.FC = () => {
                                   zbývá {statsMap[contest.contest_id].tickets_remaining.toLocaleString("cs-CZ")}
                                 </span>
                                 {statsMap[contest.contest_id].tickets_last_24h > 0 && (
-                                  <span className="inline-flex items-center gap-0.5 text-[10px] text-blue-400">
+                                  <span className="inline-flex items-center gap-0.5 text-[10px] text-blue-700 font-medium">
                                     <Activity className="h-2.5 w-2.5" />
                                     +{statsMap[contest.contest_id].tickets_last_24h.toLocaleString("cs-CZ")} 24h
                                   </span>
@@ -4120,7 +4181,7 @@ export const AdminContestManagement: React.FC = () => {
                           <TableCell className="text-center">
                             <div>{contest.progress_percentage}%</div>
                             {statsMap[contest.contest_id] && (
-                              <div className="text-[10px] text-yellow-400 mt-1 tabular-nums">
+                              <div className="text-[10px] text-amber-700 font-medium mt-1 tabular-nums">
                                 {statsMap[contest.contest_id].estimated_revenue.toLocaleString("cs-CZ")} MC
                               </div>
                             )}
@@ -4134,18 +4195,40 @@ export const AdminContestManagement: React.FC = () => {
 
                       <TableCell className="text-right">
                         <div className="flex justify-end gap-2">
-                          <Button variant="outline" size="sm" onClick={() => handleEdit(contest)}>
-                            <Pencil className="h-4 w-4 mr-1" />
-                            Upravit
-                          </Button>
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={() => navigate(`/admin/contest/${contest.contest_id}`)}
-                          >
-                            Otevřít
-                          </Button>
-                          {contest.status === "active" && (
+                          <TooltipProvider>
+                            <Tooltip>
+                              <TooltipTrigger asChild>
+                                <span>
+                                  <Button
+                                    variant="outline"
+                                    size="sm"
+                                    onClick={() => handleEdit(contest)}
+                                    disabled={!canEditContestRow(contest.status)}
+                                  >
+                                    <Pencil className="h-4 w-4 mr-1" />
+                                    Upravit
+                                  </Button>
+                                </span>
+                              </TooltipTrigger>
+                              {!canEditContestRow(contest.status) && (
+                                <TooltipContent>
+                                  <p>Bez oprávnění superadmina lze upravovat jen soutěže ve stavu Archiv test nebo Čeká na start.</p>
+                                </TooltipContent>
+                              )}
+                            </Tooltip>
+                          </TooltipProvider>
+                          {/* Detail se soutěžovými interními daty (mapa tiketů, bonusy) je superadmin-only. */}
+                          {isSuperAdmin && (
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => navigate(`/admin/contest/${contest.contest_id}`)}
+                            >
+                              Otevřít
+                            </Button>
+                          )}
+                          {/* Uzavření soutěže je publikační/finální krok — zůstává výhradně superadmin. */}
+                          {isSuperAdmin && contest.status === "active" && (
                             <Button
                               variant="destructive"
                               size="sm"

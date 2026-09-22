@@ -1,6 +1,92 @@
 # OneMil – aktuální stav projektu
 
-> **Autoritativní aktuální stav. Poslední aktualizace 05. 9. 2026 podle `origin/main` (`f051e248`), GitHubu a read-only synchronizačního auditu GitHub × produkční Supabase (`xkzhjldrojjlrkezorey`) × staging (`dxmowysntemfqfnanxua`).**
+> **Autoritativní aktuální stav. Poslední aktualizace 21. 9. 2026 podle `origin/main` (`76e69d9c`), GitHubu a read-only produkční kontroly Supabase (`xkzhjldrojjlrkezorey`) po nasazení systému výher jako jediného zdroje pravdy. Předchozí aktualizace: 05. 9. 2026 podle `origin/main` (`f051e248`) a read-only synchronizačního auditu GitHub × produkční Supabase × staging (`dxmowysntemfqfnanxua`).**
+
+## -3. Systém výher jako jediný zdroj pravdy — mergnuto a nasazeno do produkce (21. 09. 2026)
+
+Větev `feature/winners-single-source-of-truth` (commity `4c52ef62` a `76e69d9c`) prošla úplným
+finálním review celého diffu proti `origin/main` (žádný nález BLOKUJE MERGE) a byla bezpečně
+**fast-forward mergnuta** do `main` — `origin/main` `5cdf93be` → `main` `76e69d9c`, bez merge
+commitu, bez konfliktu. Vercel automaticky nasadil tento commit na produkční frontend; deployment
+je **READY**, správně aliasovaný na `onemil.cz` i `www.onemil.cz`, 0 runtime chyb. Po ověření, že
+`main` i produkční stav od review nedoznaly driftu, byly se **samostatným výslovným schválením
+Pavla** aplikovány na produkční Supabase `xkzhjldrojjlrkezorey` obě migrace:
+
+- `20260921100000_winners_single_source_of_truth.sql`
+- `20260921120000_protect_won_miocoin_bonus_prizes.sql`
+
+### Výsledný produkční model
+
+**`public.winners` je autoritativní zdroj pravdy** pro skutečně vzniklé výhry a jejich
+administrativní stav (`status`, `delivered`). `public.bonus_prizes` zůstává definicí/pozicí
+bonusové ceny (co a kde lze vyhrát), ne evidencí toho, co se s výhrou stalo. Neexistují dvě
+nezávislá místa, kde by šlo měnit stav předání.
+
+**`/admin/winners` — Správa výher:**
+- výchozí pracovní seznam (`statusFilter='open_physical'`) obsahuje jen nedokončené fyzické
+  hlavní a bonusové výhry (`winners.delivered=false`, MioCoin vyloučen);
+- MioCoinové bonusové výhry pracovní seznam nezaplňují;
+- zůstávají dohledatelné přes samostatný filtr „Automaticky připsáno (MioCoin)“;
+- MioCoin bonus se rozpoznává výhradně strukturovaně přes `bonus_prizes.amount > 0`
+  (`isAutoCreditBonus`), nikdy podle textu popisu;
+- označení fyzické výhry jako `delivered` (přes RPC `admin_update_winner_status`, zápis do
+  `winners` beze změny) ji z pracovního seznamu odstraní.
+
+**`/admin/prize-delivery` — Předání výher:**
+- čistě read-only historie dokončených fyzických výher, žádný přímý zápis do `winners`;
+- obsahuje hlavní i bonusové fyzické výhry, MioCoin výhry nikdy;
+- čte `winners` výhradně přes novou view `public.admin_physical_winners`
+  (`security_invoker=on`; `main` je vždy fyzická, `bonus` je fyzická jen když
+  `bonus_prizes.amount` je null/0);
+- statistiky používají opravenou view `public.admin_winner_delivery_stats` — nově `contests.title`
+  místo nespolehlivého `contests.name`, počítá jen fyzické výhry a dělí je podle
+  `winners.delivered` (dřív podle nekonzistentního textového `status`);
+- žádná duplicitní evidence a žádné kopírování výher — obě stránky čtou stejnou `winners` tabulku.
+
+**MioCoin bonusy — ochrana proti smazání vyhrané pozice (`20260921120000`):**
+- `admin_begin_miocoin_save` a `admin_bulk_insert_miocoin_bonuses` už při přeuložení nemažou
+  `bonus_prizes` řádek, na který existuje `winners.prize_id` — jeho `id` i vazba na `winners`
+  zůstávají zachované;
+- budoucí nevyhrané pozice zůstávají dál plně editovatelné (mažou se a přegenerují přesně jako
+  dřív);
+- `admin_append_miocoin_chunk` a `admin_bulk_insert_miocoin_bonuses` bezpečně odmítnou
+  (`success:false`) payload, který by kolidoval s pozicí, jež už má vítěze;
+- `admin_finalize_miocoin_save` počítá očekávaný počet nových pozic bez už-vyhraných řádků, takže
+  přeuložení nezpůsobí falešnou chybu ani neshodu počtu;
+- žádná ze čtyř funkcí nezapisuje do `winners` ani `wallet_transactions` — jen do `bonus_prizes`
+  a `contests.total_miocoin_bonus`. Protože `trg_bonus_to_wallet` je `AFTER INSERT ON winners`
+  (nikdy `UPDATE`), je strukturálně vyloučené, aby přeuložení znovu připsalo MioCoiny, vytvořilo
+  duplicitní výhru nebo duplicitní wallet transakci.
+
+### Produkční ověření po nasazení (read-only, 21. 09. 2026)
+
+| Metrika | Před migracemi | Po migracích |
+|---|---|---|
+| `winners` počet | 154 | 154 |
+| `wallets` počet | 776 | 776 |
+| `wallets.balance_coins` součet | 139 452,81 | 139 452,81 |
+| `wallets.bonus_balance_coins` součet | 1 051,00 | 1 051,00 |
+| `wallet_transactions` počet | 3 804 | 3 804 |
+| `payments` počet | 139 | 139 |
+
+Beze změny do posledního desetinného místa. **Žádná historická data nebyla dotčena, žádný reset
+nebyl proveden**, žádné MioCoiny nebyly touto migrací připsány a žádná nová výhra nevznikla.
+Ověřeno i funkčně: obě nové views vrací korektní a vzájemně konzistentní data —
+`admin_winner_delivery_stats` 45 řádků (přesně 1 na soutěž), `admin_physical_winners` 30 fyzických
+výher (0 MioCoin řádků), součet `total_winners` napříč soutěžemi odpovídá počtu řádků druhé view.
+
+### Staré testovací nesrovnalosti — vědomě neopraveny
+
+**142 osiřelých bonusových výher** na produkci (`winners.type='bonus'` s `prize_id` na
+neexistující `bonus_prizes` řádek, vzniklé stejným pre-existujícím chováním, které
+`20260921120000` teď opravuje jen do budoucna) zůstávají **beze změny**. Migrace chrání výhradně
+**budoucí** přeuložení MioCoin bonusů — historické osiřelé řádky se neopravují, nebackfillují ani
+nemažou. Produkční provozní data jsou stále testovací a jejich úklid patří výhradně do
+samostatně schváleného předstartovního resetu (§ -2 níže), který je **stále NEPROVEDENÝ**. Totéž
+platí pro testovací řádek `regg` a ostatní historická testovací data zmíněná jinde v tomto
+dokumentu.
+
+---
 
 ## -2. Předstartovní reset systému — plánovaný, NEPROVEDENÝ (07. 09. 2026)
 
@@ -28,8 +114,10 @@ operace a smí být spuštěn až po novém výslovném schválení Pavla** — 
 ani s tímto pravidlem souhlasem se spuštěním není.
 
 Otevřené položky, které na tento reset čekají, jsou už zaznamenané jinde v tomto souboru
-a v `CLAUDE.md`: rekonciliace wallet/ledger (§ dále v tomto souboru) a 52 historických `cs_test_`
-plateb v produkci.
+a v `CLAUDE.md`: rekonciliace wallet/ledger (§ dále v tomto souboru), 52 historických `cs_test_`
+plateb v produkci a **142 osiřelých bonusových výher** (`winners.type='bonus'` s `prize_id` na
+neexistující `bonus_prizes` řádek — viz § -3 výše). Nové přeuložení MioCoin bonusů je od
+21. 09. 2026 chrání před dalším růstem, ale samotné historické řádky reset ještě neodstranil.
 
 ## -1. Dávka bezpečnostních a funkčních oprav 02.–05. 09. 2026 — potvrzeno živé v produkci
 

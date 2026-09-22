@@ -1,7 +1,7 @@
 import React from "react";
 import { NavLink, useLocation } from "react-router-dom";
 import type { LucideIcon } from "lucide-react";
-import { Gift, BookOpen, Image as ImageIcon, Bell, MessageSquare, Users, Tag, Briefcase, ShieldCheck } from "lucide-react";
+import { Gift, BookOpen, Image as ImageIcon, Bell, MessageSquare, Users, Tag, Briefcase, ShieldCheck, Gamepad2 } from "lucide-react";
 import { useUnreadMessagesCount } from "@/hooks/useUnreadMessagesCount";
 import { useUnseenWinsCount } from "@/hooks/useUnseenWinsCount";
 import { usePendingOffersCount } from "@/hooks/usePendingOffersCount";
@@ -9,6 +9,7 @@ import { useAdminUsersPendingCounts } from "@/hooks/useAdminUsersPendingCounts";
 import { useBobEnabled } from "@/hooks/useBobEnabled";
 import { useUserRole } from "@/hooks/useUserRole";
 import { useAdminPermissions, SUBADMIN_ENTRY_ROUTES } from "@/hooks/useAdminPermissions";
+import { OneMilTrophyIcon } from "@/components/icons/OneMilIcons";
 import {
   ADMIN_BOTTOM_NAV,
   adminBottomNavLinkEnd,
@@ -32,9 +33,16 @@ const SUBADMIN_NAV_ICON: Record<string, LucideIcon> = {
   "partner_offers.finance.manage": Tag,
   "sales_leads.manage": Briefcase,
   "guaranteed_benefits.manage": ShieldCheck,
+  "contests.create": Gamepad2,
 };
 
-/** Řádek 1: sekce (Dashboard, Soutěže, …) pro superadmina; přímé safe odkazy pro subadmina. */
+/**
+ * Admin navigation — same entry list / permission filtering / badge counts as
+ * before (see visibleNav below, unchanged logic). Only the layout classes
+ * changed: a horizontal scrollable strip on narrow screens (unchanged from
+ * before), a full-width vertical list styled for the dark left rail from
+ * `md:` up (see .admin-theme's --sidebar-* tokens in index.css).
+ */
 export const AdminPrimaryNav: React.FC = () => {
   const location = useLocation();
   const { unreadCount } = useUnreadMessagesCount();
@@ -61,73 +69,85 @@ export const AdminPrimaryNav: React.FC = () => {
       }));
 
   return (
-    <div className="flex items-center gap-2 py-2 border-b border-border/50 min-h-[2.75rem] overflow-x-auto -mx-1 px-1 [scrollbar-width:thin]">
-      <div className="flex items-center gap-1.5 w-max sm:flex-wrap sm:w-auto pr-2">
-        {visibleNav.map((entry) => {
-          const Icon = entry.icon;
-          // Superadmin: highlight by section. Subadmin: highlight by direct path match.
-          const active = isSuperAdmin
-            ? entry.id === activeSection
-            : typeof entry.to === "string" &&
-              (location.pathname === entry.to || location.pathname.startsWith(`${entry.to}/`));
-          const showMessagesBadge = entry.id === "messages" && unreadCount > 0;
-          const bobOffOnMessages = entry.id === "messages" && !bobEnabled;
-          const showWinsBadge = entry.id === "wins" && unseenWinsCount > 0;
-          // "Uživatelé" = součet všech čekajících položek v sekci (partnerské
-          // registrace/Shoptet/log + žádosti firem + nepřečtené odpovědi leadů +
-          // nabídky partnerů ke schválení), ne jen nabídky.
-          const usersTotalPendingCount = pendingOffersCount + pendingUsersSectionCount;
-          const showOffersBadge = entry.id === "users" && usersTotalPendingCount > 0;
-          const badgeCount =
-            entry.id === "messages" ? unreadCount :
-            entry.id === "wins" ? unseenWinsCount :
-            entry.id === "users" ? usersTotalPendingCount : 0;
-          return (
-            <NavLink
-              key={entry.id}
-              to={entry.to}
-              end={adminBottomNavLinkEnd(entry.to)}
-              aria-current={active ? "page" : undefined}
-              title={bobOffOnMessages ? "Bob je vypnutý – zprávy jdou přímo adminovi." : undefined}
-              data-testid={bobOffOnMessages ? "admin-nav-messages-bob-off" : undefined}
-              className={() =>
-                `inline-flex items-center relative h-8 shrink-0 rounded-full px-3 gap-1.5 text-[12px] font-semibold tracking-tight transition-all duration-200 no-underline
-                    ${
-                      active
-                        ? "bg-muted/80 text-foreground border border-border/60 shadow-sm"
-                        : "text-muted-foreground/90 border border-transparent hover:bg-muted/50 hover:text-foreground"
-                    }
-                    ${
-                      bobOffOnMessages
-                        ? "border-[hsl(35,90%,55%,0.55)] bg-[hsl(35,90%,55%,0.08)] text-[hsl(35,90%,72%)] shadow-[0_0_14px_hsl(35,90%,55%,0.28)]"
-                        : ""
-                    }`
-              }
-            >
-              <Icon
-                className={`h-3.5 w-3.5 shrink-0 ${
-                  bobOffOnMessages ? "opacity-100 text-[hsl(35,90%,62%)]" : active ? "opacity-100 text-primary" : "opacity-75"
-                }`}
-                aria-hidden
-              />
-              <span className="whitespace-nowrap">{entry.label}</span>
-              {bobOffOnMessages && (
-                <span className="relative flex h-2 w-2 ml-0.5" aria-hidden>
-                  <span className="absolute inline-flex h-full w-full rounded-full bg-[hsl(35,90%,55%)] opacity-60 animate-ping" />
-                  <span className="relative inline-flex h-2 w-2 rounded-full bg-[hsl(35,90%,58%)] shadow-[0_0_6px_hsl(35,90%,55%,0.9)]" />
-                </span>
-              )}
-              {(showMessagesBadge || showWinsBadge || showOffersBadge) && (
-                <span
-                  data-testid={entry.id === "messages" ? "admin-messages-unread-badge" : undefined}
-                  className="absolute -top-1 -right-1 min-w-[1.125rem] h-[1.125rem] flex items-center justify-center rounded-full bg-destructive text-[9px] font-bold text-destructive-foreground px-0.5"
-                >
-                  {badgeCount > 99 ? "99+" : badgeCount}
-                </span>
-              )}
-            </NavLink>
-          );
-        })}
+    <div className="flex flex-col md:h-full">
+      <div className="hidden md:flex items-center gap-2.5 px-4 py-4 border-b border-sidebar-border">
+        <div className="w-8 h-8 rounded-lg bg-white/10 flex items-center justify-center shrink-0">
+          <OneMilTrophyIcon size={18} active />
+        </div>
+        <div className="min-w-0">
+          <p className="text-sm font-bold text-sidebar-foreground leading-tight truncate">OneMil</p>
+          <p className="text-[11px] text-sidebar-foreground/60 leading-tight truncate">Administrace</p>
+        </div>
+      </div>
+
+      <div className="flex items-center gap-2 py-2 px-1 border-b border-sidebar-border md:border-b-0 min-h-[2.75rem] overflow-x-auto md:overflow-visible [scrollbar-width:thin] md:px-3 md:py-3">
+        <div className="flex items-center gap-1.5 w-max pr-2 md:w-full md:flex-col md:items-stretch md:gap-1 md:pr-0">
+          {visibleNav.map((entry) => {
+            const Icon = entry.icon;
+            // Superadmin: highlight by section. Subadmin: highlight by direct path match.
+            const active = isSuperAdmin
+              ? entry.id === activeSection
+              : typeof entry.to === "string" &&
+                (location.pathname === entry.to || location.pathname.startsWith(`${entry.to}/`));
+            const showMessagesBadge = entry.id === "messages" && unreadCount > 0;
+            const bobOffOnMessages = entry.id === "messages" && !bobEnabled;
+            const showWinsBadge = entry.id === "wins" && unseenWinsCount > 0;
+            // "Uživatelé" = součet všech čekajících položek v sekci (partnerské
+            // registrace/Shoptet/log + žádosti firem + nepřečtené odpovědi leadů +
+            // nabídky partnerů ke schválení), ne jen nabídky.
+            const usersTotalPendingCount = pendingOffersCount + pendingUsersSectionCount;
+            const showOffersBadge = entry.id === "users" && usersTotalPendingCount > 0;
+            const badgeCount =
+              entry.id === "messages" ? unreadCount :
+              entry.id === "wins" ? unseenWinsCount :
+              entry.id === "users" ? usersTotalPendingCount : 0;
+            return (
+              <NavLink
+                key={entry.id}
+                to={entry.to}
+                end={adminBottomNavLinkEnd(entry.to)}
+                aria-current={active ? "page" : undefined}
+                title={bobOffOnMessages ? "Bob je vypnutý – zprávy jdou přímo adminovi." : undefined}
+                data-testid={bobOffOnMessages ? "admin-nav-messages-bob-off" : undefined}
+                className={() =>
+                  `inline-flex items-center relative h-8 md:h-10 shrink-0 rounded-full md:rounded-lg px-3 gap-1.5 md:gap-2.5 text-[12px] md:text-[13px] font-semibold tracking-tight transition-all duration-200 no-underline w-auto md:w-full
+                      ${
+                        active
+                          ? "bg-primary text-primary-foreground border border-transparent shadow-sm"
+                          : "bg-transparent text-sidebar-foreground border border-transparent hover:bg-sidebar-accent hover:text-sidebar-foreground"
+                      }
+                      ${
+                        bobOffOnMessages
+                          ? "border-[hsl(35,90%,55%,0.55)] bg-[hsl(35,90%,55%,0.08)] text-[hsl(35,90%,72%)] shadow-[0_0_14px_hsl(35,90%,55%,0.28)]"
+                          : ""
+                      }`
+                }
+              >
+                <Icon
+                  className={`h-3.5 w-3.5 md:h-4 md:w-4 shrink-0 ${
+                    bobOffOnMessages ? "opacity-100 text-[hsl(35,90%,62%)]" : active ? "opacity-100 text-primary-foreground" : "opacity-90"
+                  }`}
+                  aria-hidden
+                />
+                <span className="whitespace-nowrap">{entry.label}</span>
+                {bobOffOnMessages && (
+                  <span className="relative flex h-2 w-2 ml-0.5" aria-hidden>
+                    <span className="absolute inline-flex h-full w-full rounded-full bg-[hsl(35,90%,55%)] opacity-60 animate-ping" />
+                    <span className="relative inline-flex h-2 w-2 rounded-full bg-[hsl(35,90%,58%)] shadow-[0_0_6px_hsl(35,90%,55%,0.9)]" />
+                  </span>
+                )}
+                {(showMessagesBadge || showWinsBadge || showOffersBadge) && (
+                  <span
+                    data-testid={entry.id === "messages" ? "admin-messages-unread-badge" : undefined}
+                    className="absolute -top-1 -right-1 md:static md:ml-auto min-w-[1.125rem] h-[1.125rem] flex items-center justify-center rounded-full bg-destructive text-[9px] font-bold text-destructive-foreground px-0.5"
+                  >
+                    {badgeCount > 99 ? "99+" : badgeCount}
+                  </span>
+                )}
+              </NavLink>
+            );
+          })}
+        </div>
       </div>
     </div>
   );

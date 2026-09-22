@@ -750,102 +750,6 @@ const AdminVouchers: React.FC = () => {
     }
   };
 
-  const generateTestVouchers = async () => {
-    try {
-      setCreateLoading(true);
-      
-      const testVouchers = [
-        {
-          name: "Test Voucher 1 - Sleva 20%",
-          image_url: "/placeholder.svg",
-          banner_url: "/placeholder.svg",
-          max_quantity: 5,
-          start_date: new Date().toISOString(),
-          end_date: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(), // 30 days from now
-        },
-        {
-          name: "Test Voucher 2 - Doprava zdarma",
-          image_url: "/placeholder.svg",
-          banner_url: "/placeholder.svg",
-          max_quantity: 10,
-          start_date: new Date().toISOString(),
-          end_date: new Date(Date.now() + 60 * 24 * 60 * 60 * 1000).toISOString(), // 60 days from now
-        },
-        {
-          name: "Test Voucher 3 - Unlimited",
-          image_url: "/placeholder.svg",
-          banner_url: "/placeholder.svg",
-          max_quantity: null, // unlimited
-          start_date: new Date().toISOString(),
-          end_date: null, // no end date
-        },
-        {
-          name: "Test Voucher 4 - Exkluzivní nabídka",
-          image_url: "/placeholder.svg",
-          banner_url: "/placeholder.svg",
-          max_quantity: 3,
-          start_date: new Date().toISOString(),
-          end_date: new Date(Date.now() + 14 * 24 * 60 * 60 * 1000).toISOString(), // 14 days from now
-        }
-      ];
-
-      const { data, error } = await supabase
-        .from('vouchers')
-        .insert(testVouchers.map(voucher => ({
-          ...voucher,
-          redeemed_count: 0,
-          user_id: null,
-        })))
-        .select();
-
-      if (error) throw error;
-
-      toast.success(`Vytvořeno ${testVouchers.length} test voucherů`);
-      fetchVouchers();
-    } catch (error: any) {
-      console.error('Error generating test vouchers:', error);
-      toast.error('Chyba při generování test voucherů');
-    } finally {
-      setCreateLoading(false);
-    }
-  };
-
-  const testVoucherTrigger = async () => {
-    if (!user?.id) {
-      toast.error('Chybí přihlášený uživatel pro test triggeru');
-      return;
-    }
-    try {
-      setCreateLoading(true);
-
-      const { data, error } = await supabase.functions.invoke('test-voucher-trigger', {
-        body: { testUserId: user.id }
-      });
-
-      if (error) throw error;
-
-      console.log('Trigger test results:', data);
-
-      const payload = data && typeof data === 'object' ? (data as Record<string, unknown>) : null;
-      if (payload?.success === true) {
-        const tt = payload.triggerTest as
-          | { testVoucherShouldNotTrigger?: unknown; realVoucherShouldTrigger?: unknown }
-          | undefined;
-        toast.success(
-          `Trigger test completed! Test voucher should NOT trigger: ${String(tt?.testVoucherShouldNotTrigger)}, Real voucher should trigger: ${String(tt?.realVoucherShouldTrigger)}`
-        );
-        fetchVouchers();
-      } else {
-        toast.error('Trigger test failed');
-      }
-    } catch (error: any) {
-      console.error('Error testing trigger:', error);
-      toast.error('Chyba při testování triggeru');
-    } finally {
-      setCreateLoading(false);
-    }
-  };
-
   const handleDeleteVoucher = async (voucherId: string) => {
     if (!voucherId) {
       console.error('handleDeleteVoucher: missing id');
@@ -1582,24 +1486,6 @@ const AdminVouchers: React.FC = () => {
           </div>
 
           <div className="flex gap-2">
-            <Button 
-              onClick={generateTestVouchers}
-              variant="outline"
-              disabled={createLoading}
-            >
-              <Gift className="mr-2 h-4 w-4" />
-              Generovat Test Vouchery
-            </Button>
-            
-            <Button 
-              onClick={testVoucherTrigger}
-              variant="secondary"
-              disabled={createLoading}
-            >
-              <Gift className="mr-2 h-4 w-4" />
-              Test Trigger
-            </Button>
-            
             <Dialog
               open={showCreateDialog}
               onOpenChange={(open) => {

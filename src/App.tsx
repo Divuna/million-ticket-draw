@@ -105,6 +105,7 @@ import CustomerReferralShortLink from "@/pages/CustomerReferralShortLink";
 import { BottomNavigation } from "@/components/BottomNavigation";
 import { PartnerPortalLayout } from "@/components/partner/PartnerPortalLayout";
 import { AdminLayout } from "@/components/admin/AdminLayout";
+import { AdminContestManagement } from "@/components/AdminContestManagement";
 import { RequirePermission } from "@/components/admin/RequirePermission";
 import { RequireSuperadminOrRedirect } from "@/components/admin/RequireSuperadminOrRedirect";
 import { RequireSuperadmin } from "@/components/admin/RequireSuperadmin";
@@ -536,6 +537,7 @@ function AppContent() {
               <Route path="/admin/partner-offers" element={<RequirePermission permission="partner_offers.finance.manage"><AdminPartnerOffers /></RequirePermission>} />
               <Route path="/admin/sales-leads" element={<RequirePermission permission="sales_leads.manage"><AdminSalesLeads /></RequirePermission>} />
               <Route path="/admin/guaranteed-benefits" element={<RequirePermission permission="guaranteed_benefits.manage"><AdminGuaranteedBenefits /></RequirePermission>} />
+              <Route path="/admin/contests" element={<RequirePermission permission="contests.create"><AdminContestManagement /></RequirePermission>} />
               <Route path="/admin/messages" element={<RequirePermission permission="support.messages"><AdminMessages /></RequirePermission>} />
               <Route path="/admin/messages/:userId" element={<RequirePermission permission="support.messages"><AdminMessageThread /></RequirePermission>} />
               <Route path="/admin/audit-logs" element={<RequireSuperadmin><AdminAuditLogs /></RequireSuperadmin>} />
