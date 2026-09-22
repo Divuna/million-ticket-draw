@@ -134,7 +134,7 @@ export const Footer: React.FC = () => {
                 </Link>
               </li>
               <li>
-                <Link to="/influencer/register" className="text-muted-foreground hover:text-neon-gold transition-colors duration-200">
+                <Link to="/affiliate/register" className="text-muted-foreground hover:text-neon-gold transition-colors duration-200">
                   Registrace Affiliate partnera
                 </Link>
               </li>

@@ -1,123 +1,184 @@
 import React from 'react';
-import '@/components/ContestCard.css';
 import { Link } from 'react-router-dom';
+import './AuthVisual.css';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent } from '@/components/ui/card';
-import { ArrowLeft, Star, Users, TrendingUp, Gift, ChevronRight } from 'lucide-react';
+import logo from '@/assets/logo-onemil.png';
+import {
+  ArrowLeft,
+  ChevronRight,
+  Megaphone,
+  Coins,
+  Users,
+  Handshake,
+  UserPlus,
+  ClipboardCheck,
+  Link2,
+  LineChart,
+} from 'lucide-react';
 
 const InfluencerLanding = () => {
   return (
-    <div className="min-h-screen bg-background">
-      {/* Hero Section */}
-      <div className="relative overflow-hidden">
-        <div className="absolute inset-0 bg-gradient-to-br from-primary/10 via-transparent to-secondary/10" />
-        <div className="container mx-auto px-4 py-16 sm:py-24 relative z-10">
+    <div className="relative min-h-screen w-full overflow-x-hidden bg-gradient-to-b from-[#FFF8EE] via-[#FFF4E7] to-white px-4 py-10 sm:py-14">
+      {/* Ambient decorative glow — purely visual, does not affect layout flow */}
+      <div
+        aria-hidden="true"
+        className="om-auth-blob-a pointer-events-none absolute -top-20 -right-14 h-64 w-64 rounded-full bg-[#FF8A00]/25 blur-[90px] sm:h-80 sm:w-80"
+      />
+      <div
+        aria-hidden="true"
+        className="om-auth-blob-b pointer-events-none absolute -bottom-24 -left-16 h-64 w-64 rounded-full bg-[#FFB547]/30 blur-[90px] sm:h-80 sm:w-80"
+      />
+      <div
+        aria-hidden="true"
+        className="om-auth-dotgrid pointer-events-none absolute inset-x-0 top-0 h-[420px]"
+      />
+
+      <div className="relative z-10 mx-auto flex w-full max-w-4xl flex-col items-center">
+        <Link
+          to="/"
+          aria-label="Zpět na OneMil"
+          className="om-auth-medallion om-auth-rise mb-5 block overflow-hidden rounded-[26px] shadow-[0_18px_40px_-14px_rgba(255,138,0,0.4)]"
+        >
+          <img
+            src={logo}
+            alt="OneMil — luxusní soutěže, skutečné výhry"
+            className="h-20 w-20 object-cover sm:h-24 sm:w-24"
+          />
+        </Link>
+
+        <div className="om-auth-rise om-auth-rise-1 mb-6 text-center">
+          <p className="mb-1.5 text-[11px] font-semibold uppercase tracking-[0.22em] text-[#C2570A]">
+            Affiliate program OneMil
+          </p>
+          <h1 className="font-heading text-2xl font-bold leading-tight text-[#1A1A1A] sm:text-[32px]">
+            Doporučujte OneMil a vydělávejte
+          </h1>
+          <p className="mx-auto mt-3 max-w-xl text-sm leading-relaxed text-[#5B6572] sm:text-base">
+            Affiliate program má dva režimy spolupráce: přivádíte zákazníky, nebo přivádíte firmy
+            a e-shopy. Oba lze kombinovat na jednom účtu.
+          </p>
+        </div>
+
+        <div className="om-auth-rise om-auth-rise-2 mb-8 flex flex-col gap-3 sm:flex-row">
+          <Link to="/affiliate/register">
+            <Button
+              size="lg"
+              className="om-auth-cta h-12 w-full rounded-xl bg-gradient-to-r from-[#FF8A00] to-[#FFB547] px-8 text-base font-semibold text-[#1A1200] shadow-[0_10px_30px_-8px_rgba(255,138,0,0.55)] transition-all hover:shadow-[0_14px_36px_-6px_rgba(255,138,0,0.65)] hover:brightness-105 active:scale-[0.99] sm:w-auto"
+            >
+              Zaregistrovat se do Affiliate programu
+              <ChevronRight className="ml-1 h-5 w-5" />
+            </Button>
+          </Link>
+          <Link to="/influencer/how-to-earn">
+            <Button
+              size="lg"
+              variant="outline"
+              className="h-12 w-full rounded-xl border-[#E7E1D8] bg-white px-8 text-base font-semibold text-[#2B2B2B] hover:border-[#FF8A00]/50 hover:bg-[#FFF7EC] hover:text-[#2B2B2B] sm:w-auto"
+            >
+              Jak to funguje
+            </Button>
+          </Link>
+        </div>
+
+        {/* Benefit chips — same visual language as /affiliate/login, /affiliate/register */}
+        <div className="om-auth-rise om-auth-rise-2 mb-10 grid w-full max-w-md grid-cols-3 gap-2">
+          <div className="om-auth-chip flex flex-col items-center gap-1.5 rounded-2xl border border-[#FFE3C2] bg-white/80 px-2 py-3 text-center shadow-[0_2px_10px_rgba(255,138,0,0.08)]">
+            <Megaphone className="h-5 w-5 text-[#FF8A00]" />
+            <span className="text-[11px] font-medium text-[#4A4A4A]">Doporučení</span>
+          </div>
+          <div className="om-auth-chip flex flex-col items-center gap-1.5 rounded-2xl border border-[#FFE3C2] bg-white/80 px-2 py-3 text-center shadow-[0_2px_10px_rgba(255,138,0,0.08)]">
+            <Coins className="h-5 w-5 text-[#FF8A00]" />
+            <span className="text-[11px] font-medium text-[#4A4A4A]">Odměny</span>
+          </div>
+          <div className="om-auth-chip flex flex-col items-center gap-1.5 rounded-2xl border border-[#FFE3C2] bg-white/80 px-2 py-3 text-center shadow-[0_2px_10px_rgba(255,138,0,0.08)]">
+            <Users className="h-5 w-5 text-[#FF8A00]" />
+            <span className="text-[11px] font-medium text-[#4A4A4A]">Síť</span>
+          </div>
+        </div>
+
+        {/* Two modes */}
+        <div className="om-auth-rise om-auth-rise-3 mb-12 grid w-full grid-cols-1 gap-5 sm:grid-cols-2">
+          <div className="rounded-[28px] border border-[#F3E4CF] bg-white p-6 shadow-[0_20px_60px_-24px_rgba(26,20,10,0.25)] sm:p-8">
+            <div className="mb-4 flex h-14 w-14 items-center justify-center rounded-full border border-[#FFD9A6] bg-[#FFF1DF]">
+              <Megaphone className="h-7 w-7 text-[#C96A00]" />
+            </div>
+            <h2 className="font-heading text-xl font-bold text-[#1A1A1A]">Influencer</h2>
+            <p className="mt-1 text-sm text-[#5B6572]">Přivádíte zákazníky</p>
+            <p className="mt-4 text-sm leading-relaxed text-[#3A3A3A]">
+              Sdílíte svůj osobní odkaz se svým publikem. Za každou dokončenou platbu
+              zákazníka, který se přes váš odkaz zaregistroval, získáváte provizi
+              z jeho obratu — opakovaně, dokud je aktivní.
+            </p>
+            <p className="mt-4 text-sm font-semibold text-[#1A1A1A]">
+              Aktuální sazba: 5&nbsp;% z obratu přivedeného zákazníka
+            </p>
+          </div>
+
+          <div className="rounded-[28px] border border-[#F3E4CF] bg-white p-6 shadow-[0_20px_60px_-24px_rgba(26,20,10,0.25)] sm:p-8">
+            <div className="mb-4 flex h-14 w-14 items-center justify-center rounded-full border border-[#FFD9A6] bg-[#FFF1DF]">
+              <Handshake className="h-7 w-7 text-[#C96A00]" />
+            </div>
+            <h2 className="font-heading text-xl font-bold text-[#1A1A1A]">Obchodník</h2>
+            <p className="mt-1 text-sm text-[#5B6572]">Přivádíte firmy a e-shopy</p>
+            <p className="mt-4 text-sm leading-relaxed text-[#3A3A3A]">
+              Doporučujete OneMil firmám a e-shopům. Jakmile je přivedená firma
+              schválena a OneMil jí vyfakturuje aktivované MioCoiny, dostáváte
+              provizi z každé zaplacené faktury.
+            </p>
+            <p className="mt-4 text-sm font-semibold text-[#1A1A1A]">
+              Aktuální sazba: 5&nbsp;% z fakturace přivedené firmy
+            </p>
+          </div>
+        </div>
+
+        {/* How it works */}
+        <div className="om-auth-rise om-auth-rise-3 mb-12 w-full">
+          <h2 className="mb-6 text-center font-heading text-2xl font-bold text-[#1A1A1A]">Jak začít</h2>
+          <div className="mx-auto max-w-2xl space-y-4">
+            {[
+              { icon: UserPlus, title: 'Zaregistrujte se', desc: 'Vyberte režim Influencer, Obchodník, nebo oba — lze je kombinovat na jednom účtu.' },
+              { icon: ClipboardCheck, title: 'Počkejte na schválení', desc: 'Administrátor zkontroluje a schválí vaši registraci.' },
+              { icon: Link2, title: 'Získejte svůj odkaz', desc: 'Po schválení najdete v Affiliate dashboardu svůj doporučovací kód a odkazy pro zákazníky i firmy.' },
+              { icon: LineChart, title: 'Sledujte provize', desc: 'Provize se počítají z reálné aktivity přivedených zákazníků a firem a jsou vidět přímo v dashboardu.' },
+            ].map((item, i) => (
+              <div
+                key={item.title}
+                className="flex items-start gap-4 rounded-2xl border border-[#F3E4CF] bg-white p-4 shadow-[0_2px_10px_rgba(255,138,0,0.08)] sm:p-5"
+              >
+                <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full border border-[#FFD9A6] bg-[#FFF1DF] text-sm font-bold text-[#C96A00]">
+                  {i + 1}
+                </div>
+                <div>
+                  <h3 className="font-heading text-base font-semibold text-[#1A1A1A]">{item.title}</h3>
+                  <p className="mt-0.5 text-sm text-[#5B6572]">{item.desc}</p>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        <div className="om-auth-rise om-auth-rise-4 flex flex-col items-center gap-4 text-center">
+          <Link to="/affiliate/register">
+            <Button
+              size="lg"
+              className="om-auth-cta h-12 rounded-xl bg-gradient-to-r from-[#FF8A00] to-[#FFB547] px-8 text-base font-semibold text-[#1A1200] shadow-[0_10px_30px_-8px_rgba(255,138,0,0.55)] transition-all hover:shadow-[0_14px_36px_-6px_rgba(255,138,0,0.65)] hover:brightness-105 active:scale-[0.99]"
+            >
+              Registrovat se nyní
+              <ChevronRight className="ml-1 h-5 w-5" />
+            </Button>
+          </Link>
+          <p className="text-sm text-[#8A8A8A]">
+            Už máte účet?{' '}
+            <Link to="/affiliate/login" className="font-medium text-[#C2570A] hover:underline">
+              Přihlaste se
+            </Link>
+          </p>
           <Link
             to="/"
-            className="inline-flex items-center text-sm text-muted-foreground hover:text-neon-gold transition-colors mb-8"
+            className="inline-flex items-center text-sm text-[#8A8A8A] transition-colors hover:text-[#1A1A1A]"
           >
             <ArrowLeft className="mr-1 h-4 w-4" />
             Zpět na hlavní stránku
-          </Link>
-
-          <div className="max-w-3xl mx-auto text-center space-y-6">
-            <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full border border-secondary/30 bg-secondary/5">
-              <Star className="w-4 h-4 text-secondary" />
-              <span className="text-sm font-medium text-secondary">Affiliate program OneMil</span>
-            </div>
-            <h1 className="text-4xl sm:text-5xl font-bold">
-              Staňte se Affiliate partnerem OneMil
-            </h1>
-            <p className="text-lg text-muted-foreground leading-relaxed max-w-2xl mx-auto">
-              Affiliate partner doporučuje OneMil a získává provize za přivedené uživatele.
-              Program je vhodný pro tvůrce, freelancery, agentury, obchodníky i aktivní komunity.
-            </p>
-            <div className="flex flex-col sm:flex-row gap-4 justify-center pt-4">
-              <Link to="/influencer/register">
-                <Button size="lg" className="w-full sm:w-auto text-base px-8">
-                  Registrovat se jako Affiliate partner
-                  <ChevronRight className="ml-1 w-5 h-5" />
-                </Button>
-              </Link>
-              <Link to="/influencer/how-to-earn">
-                <Button variant="outline" size="lg" className="w-full sm:w-auto text-base px-8">
-                  Jak to funguje
-                </Button>
-              </Link>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      {/* Benefits Section */}
-      <div className="container mx-auto px-4 py-16">
-        <h2 className="text-3xl font-bold text-center mb-12">Proč spolupracovat s OneMil?</h2>
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 max-w-5xl mx-auto">
-          <Card className="voucher-card-glow rounded-[20px] bg-gradient-to-b from-[hsl(40_20%_14%)] via-[hsl(40_15%_10%)] to-[hsl(40_12%_7%)] border-[2px] border-[hsl(40_30%_35%/0.5)] shadow-[0_4px_16px_hsl(222_50%_3%/0.5)] transition-all duration-300 hover:border-[hsl(40_40%_45%/0.6)]">
-            <CardContent className="p-6 text-center space-y-4">
-              <div className="w-14 h-14 rounded-xl bg-[hsl(43_90%_55%/0.1)] border border-[hsl(43_90%_55%/0.2)] flex items-center justify-center mx-auto">
-                <Users className="w-7 h-7 text-neon-gold" />
-              </div>
-              <h3 className="text-xl font-semibold text-heading-gold">Rostoucí komunita</h3>
-              <p className="text-muted-foreground text-sm">
-                Připojte se k platformě s aktivní komunitou a rozšiřte svůj dosah.
-              </p>
-            </CardContent>
-          </Card>
-
-          <Card className="voucher-card-glow rounded-[20px] bg-gradient-to-b from-[hsl(40_20%_14%)] via-[hsl(40_15%_10%)] to-[hsl(40_12%_7%)] border-[2px] border-[hsl(40_30%_35%/0.5)] shadow-[0_4px_16px_hsl(222_50%_3%/0.5)] transition-all duration-300 hover:border-[hsl(40_40%_45%/0.6)]">
-            <CardContent className="p-6 text-center space-y-4">
-              <div className="w-14 h-14 rounded-xl bg-[hsl(43_90%_55%/0.1)] border border-[hsl(43_90%_55%/0.2)] flex items-center justify-center mx-auto">
-                <TrendingUp className="w-7 h-7 text-neon-gold" />
-              </div>
-              <h3 className="text-xl font-semibold text-heading-gold">Atraktivní odměny</h3>
-              <p className="text-muted-foreground text-sm">
-                Získejte Affiliate provize za nové uživatele, kteří přijdou přes váš odkaz.
-              </p>
-            </CardContent>
-          </Card>
-
-          <Card className="voucher-card-glow rounded-[20px] bg-gradient-to-b from-[hsl(40_20%_14%)] via-[hsl(40_15%_10%)] to-[hsl(40_12%_7%)] border-[2px] border-[hsl(40_30%_35%/0.5)] shadow-[0_4px_16px_hsl(222_50%_3%/0.5)] transition-all duration-300 hover:border-[hsl(40_40%_45%/0.6)]">
-            <CardContent className="p-6 text-center space-y-4">
-              <div className="w-14 h-14 rounded-xl bg-[hsl(43_90%_55%/0.1)] border border-[hsl(43_90%_55%/0.2)] flex items-center justify-center mx-auto">
-                <Gift className="w-7 h-7 text-neon-gold" />
-              </div>
-              <h3 className="text-xl font-semibold text-heading-gold">Affiliate materiály</h3>
-              <p className="text-muted-foreground text-sm">
-                Přístup k materiálům, bannerům a kampaním pro vaše publikum, kontakty nebo komunitu.
-              </p>
-            </CardContent>
-          </Card>
-        </div>
-      </div>
-
-      {/* How it works */}
-      <div className="container mx-auto px-4 py-16">
-        <h2 className="text-3xl font-bold text-center mb-12">Jak začít?</h2>
-        <div className="max-w-2xl mx-auto space-y-6">
-          {[
-            { step: '1', title: 'Zaregistrujte se', desc: 'Vyplňte registrační formulář s údaji o vašem kanálu, webu nebo profilu.' },
-            { step: '2', title: 'Počkejte na schválení', desc: 'Náš tým zkontroluje váš profil a schválí vaši registraci.' },
-            { step: '3', title: 'Začněte doporučovat', desc: 'Po schválení získáte přístup k Affiliate materiálům a můžete začít sdílet.' },
-          ].map((item) => (
-            <div key={item.step} className="flex gap-4 items-start p-4 rounded-[16px] bg-gradient-to-b from-[hsl(40_20%_14%)] via-[hsl(40_15%_10%)] to-[hsl(40_12%_7%)] border border-[hsl(40_30%_35%/0.5)] shadow-[0_4px_16px_hsl(222_50%_3%/0.5)] transition-all duration-300 hover:border-[hsl(40_40%_45%/0.6)]">
-              <div className="w-10 h-10 rounded-full bg-[hsl(43_90%_55%/0.15)] border border-[hsl(43_90%_55%/0.3)] flex items-center justify-center shrink-0">
-                <span className="text-neon-gold font-bold">{item.step}</span>
-              </div>
-              <div>
-                <h4 className="font-semibold text-lg text-heading-gold">{item.title}</h4>
-                <p className="text-muted-foreground text-sm">{item.desc}</p>
-              </div>
-            </div>
-          ))}
-        </div>
-
-        <div className="text-center mt-12">
-          <Link to="/influencer/register">
-            <Button size="lg" className="text-base px-8">
-              Registrovat se nyní
-              <ChevronRight className="ml-1 w-5 h-5" />
-            </Button>
           </Link>
         </div>
       </div>
