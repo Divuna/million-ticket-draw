@@ -13,7 +13,7 @@ import {
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
-import { Loader2, ShieldCheck, Search, Building2, Infinity as InfinityIcon, Hash } from 'lucide-react';
+import { Loader2, ShieldCheck, Search, Building2, Infinity as InfinityIcon, Hash, ImagePlus } from 'lucide-react';
 
 /**
  * Garantované nákupní benefity — centrální admin správa (první verze).
@@ -114,6 +114,7 @@ const RPC_ERROR_LABEL: Record<string, string> = {
   benefit_already_ended: 'Ukončený benefit už nelze znovu zapnout. Založte nový.',
   benefit_content_immutable:
     'Obsah už vydaného benefitu nelze zpětně měnit. Ukončete ho a založte nový.',
+  image_url_required: 'Vyberte obrázek benefitu.',
 };
 
 function rpcErrorMessage(code: unknown): string {
@@ -159,6 +160,8 @@ const AdminGuaranteedBenefits: React.FC = () => {
   const [bContestIds, setBContestIds] = useState<string[]>([]);
   const [contests, setContests] = useState<ContestOption[]>([]);
   const [savingBenefit, setSavingBenefit] = useState(false);
+  const [bImageFile, setBImageFile] = useState<File | null>(null);
+  const [savingImageId, setSavingImageId] = useState<string | null>(null);
 
   // Cena pro OneMil — nastavuje ji admin s oprávněním, ne superadmin.
   const [bPrice, setBPrice] = useState('0');
@@ -289,7 +292,72 @@ const AdminGuaranteedBenefits: React.FC = () => {
     setBContestIds([]);
     setBPrice('0');
     setBVat('21');
+    setBImageFile(null);
   }, []);
+
+  const uploadBenefitImage = useCallback(async (file: File) => {
+    if (!file.type.startsWith('image/')) {
+      throw new Error('invalid_image_type');
+    }
+    if (file.size > 8 * 1024 * 1024) {
+      throw new Error('image_too_large');
+    }
+
+    const safeName = file.name.replace(/[^a-zA-Z0-9._-]+/g, '-');
+    const path = `guaranteed-benefits/${Date.now()}-${Math.random().toString(36).slice(2, 10)}-${safeName}`;
+    const { error } = await supabase.storage.from('voucher-images').upload(path, file, {
+      cacheControl: '3600',
+      upsert: false,
+      contentType: file.type || undefined,
+    });
+    if (error) throw error;
+
+    const { data } = supabase.storage.from('voucher-images').getPublicUrl(path);
+    return { path, url: data.publicUrl };
+  }, []);
+
+  const removeUploadedImage = useCallback(async (path: string | null) => {
+    if (!path) return;
+    await supabase.storage.from('voucher-images').remove([path]);
+  }, []);
+
+  const updateBenefitImage = useCallback(
+    async (orderId: string, file: File) => {
+      setSavingImageId(orderId);
+      let uploadedPath: string | null = null;
+      try {
+        const uploaded = await uploadBenefitImage(file);
+        uploadedPath = uploaded.path;
+
+        const { data, error } = await supabase.rpc('admin_set_guaranteed_benefit_image' as never, {
+          p_order_id: orderId,
+          p_image_url: uploaded.url,
+        } as never);
+        if (error) throw error;
+
+        const res = data as RpcResult;
+        if (!res || res.success !== true) {
+          await removeUploadedImage(uploadedPath);
+          toast.error(rpcErrorMessage(res?.error));
+          return;
+        }
+
+        toast.success('Obrázek benefitu byl uložen.');
+      } catch (error) {
+        await removeUploadedImage(uploadedPath);
+        if (error instanceof Error && error.message === 'invalid_image_type') {
+          toast.error('Vyberte soubor obrázku.');
+        } else if (error instanceof Error && error.message === 'image_too_large') {
+          toast.error('Obrázek může mít maximálně 8 MB.');
+        } else {
+          toast.error('Nahrání obrázku se nepodařilo.');
+        }
+      } finally {
+        setSavingImageId(null);
+      }
+    },
+    [removeUploadedImage, uploadBenefitImage],
+  );
 
   /** Provozní stav benefitu — náhrada za schvalovací krok. */
   const changeBenefitStatus = useCallback(
@@ -334,7 +402,15 @@ const AdminGuaranteedBenefits: React.FC = () => {
       .filter(Boolean);
 
     setSavingBenefit(true);
+    let uploadedPath: string | null = null;
     try {
+      let imageUrl: string | null = null;
+      if (bImageFile) {
+        const uploaded = await uploadBenefitImage(bImageFile);
+        uploadedPath = uploaded.path;
+        imageUrl = uploaded.url;
+      }
+
       const { data, error } = await supabase.rpc('admin_create_guaranteed_benefit' as never, {
         p_partner_id: selectedPartner.id,
         p_name: bName.trim(),
@@ -346,6 +422,7 @@ const AdminGuaranteedBenefits: React.FC = () => {
         p_minimum_purchase_amount: bMinPurchase.trim() ? Number(bMinPurchase) : null,
         p_valid_from: bValidFrom || null,
         p_valid_until: bValidUntil || null,
+        p_image_url: imageUrl,
         p_is_unlimited: bUnlimited,
         p_shared_code_or_url: bUnlimited ? bSharedCode.trim() || null : null,
         p_codes: bUnlimited ? null : codes,
@@ -357,21 +434,30 @@ const AdminGuaranteedBenefits: React.FC = () => {
       if (error) throw error;
       const res = data as RpcResult;
       if (!res || res.success !== true) {
+        await removeUploadedImage(uploadedPath);
         toast.error(rpcErrorMessage(res?.error));
         return;
       }
+      uploadedPath = null;
       toast.success('Garantovaný benefit byl vytvořen a je rovnou aktivní.');
       resetBenefitForm();
       await loadBenefits();
-    } catch {
-      toast.error('Vytvoření benefitu se nepodařilo.');
+    } catch (error) {
+      await removeUploadedImage(uploadedPath);
+      if (error instanceof Error && error.message === 'invalid_image_type') {
+        toast.error('Vyberte soubor obrázku.');
+      } else if (error instanceof Error && error.message === 'image_too_large') {
+        toast.error('Obrázek může mít maximálně 8 MB.');
+      } else {
+        toast.error('Vytvoření benefitu se nepodařilo.');
+      }
     } finally {
       setSavingBenefit(false);
     }
   }, [
     selectedPartner, bName, bShort, bHowToUse, bTerms, bKind, bValue, bMinPurchase,
     bValidFrom, bValidUntil, bUnlimited, bSharedCode, bCodesRaw, bScope, bContestIds,
-    bPrice, bVat, resetBenefitForm, loadBenefits,
+    bPrice, bVat, bImageFile, resetBenefitForm, loadBenefits, removeUploadedImage, uploadBenefitImage,
   ]);
 
   const toggleContest = (id: string) => {
@@ -583,6 +669,22 @@ const AdminGuaranteedBenefits: React.FC = () => {
             <Textarea id="gb-terms" rows={3} value={bTerms} onChange={(e) => setBTerms(e.target.value)} />
           </div>
 
+          <div className="space-y-2">
+            <Label htmlFor="gb-image">Obrázek benefitu</Label>
+            <Input
+              id="gb-image"
+              type="file"
+              accept="image/png,image/jpeg,image/webp"
+              onChange={(e) => setBImageFile(e.target.files?.[0] ?? null)}
+            />
+            <p className="text-xs text-muted-foreground">
+              PNG, JPG nebo WebP, maximálně 8 MB. Obrázek se zobrazí na kartě voucheru i v detailu benefitu.
+            </p>
+            {bImageFile && (
+              <p className="text-xs font-medium">Vybráno: {bImageFile.name}</p>
+            )}
+          </div>
+
           <div className="flex items-center gap-3 rounded-md border p-3">
             <Switch id="gb-unlimited" checked={bUnlimited} onCheckedChange={setBUnlimited} />
             <Label htmlFor="gb-unlimited" className="cursor-pointer">
@@ -748,6 +850,34 @@ const AdminGuaranteedBenefits: React.FC = () => {
                       </Badge>
                     </TableCell>
                     <TableCell className="text-right">
+                      <div className="mb-2 flex justify-end">
+                        <input
+                          id={`gb-existing-image-${b.order_id}`}
+                          type="file"
+                          accept="image/png,image/jpeg,image/webp"
+                          className="hidden"
+                          disabled={savingImageId === b.order_id}
+                          onChange={(e) => {
+                            const file = e.target.files?.[0];
+                            e.target.value = '';
+                            if (file) void updateBenefitImage(b.order_id, file);
+                          }}
+                        />
+                        <Button
+                          type="button"
+                          size="sm"
+                          variant="outline"
+                          disabled={savingImageId === b.order_id}
+                          onClick={() => document.getElementById(`gb-existing-image-${b.order_id}`)?.click()}
+                        >
+                          {savingImageId === b.order_id ? (
+                            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                          ) : (
+                            <ImagePlus className="mr-2 h-4 w-4" />
+                          )}
+                          Obrázek
+                        </Button>
+                      </div>
                       {b.order_status === 'approved' && (
                         <div className="flex justify-end gap-2">
                           <Button
