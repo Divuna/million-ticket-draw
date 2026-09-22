@@ -1,6 +1,50 @@
 # OneMil – aktuální stav projektu
 
-> **Autoritativní aktuální stav. Poslední aktualizace 22. 9. 2026 podle `origin/main` (`03402ff2`), GitHubu, Vercelu a produkční Supabase (`xkzhjldrojjlrkezorey`) po nasazení garantovaných nákupních benefitů. Předchozí hlavní aktualizace: 21. 9. 2026 — systém výher jako jediný zdroj pravdy.**
+> **Autoritativní aktuální stav. Poslední aktualizace 22. 9. 2026 podle `origin/main` (`14b302e0`), GitHubu, Vercelu a produkční Supabase (`xkzhjldrojjlrkezorey`) po nasazení garantovaných nákupních benefitů a dokončení veřejného Auth/Affiliate flow. Předchozí hlavní aktualizace: 22. 9. 2026 — garantované nákupní benefity.**
+
+
+## -5. Auth + Affiliate veřejný tok a krátká registrace — nasazeno do produkce (22. 09. 2026)
+
+Dne 22. 09. 2026 byl dokončen a nasazen sjednocený veřejný Auth/Affiliate tok.
+
+**Veřejné Auth stránky:** schválený světlý OneMil vizuální systém (bílé / teplé krémové pozadí,
+tmavý text, Energy Orange) byl sjednocen na zákaznické, partnerské i Affiliate registraci/přihlášení.
+Finální série změn byla nejprve nasazena na `main` v commitu `e5a63e9a`.
+
+**Affiliate veřejné stránky a canonical flow:**
+- `/affiliate/register`, `/affiliate/login`, `/affiliate/dashboard` jsou kanonické Affiliate v2 cesty;
+- `/influencer` a `/influencer/how-to-earn` byly přepracovány do aktuálního světlého stylu a
+  vysvětlují oba režimy: Influencer (zákazníci) a Obchodník (firmy/e-shopy);
+- starý duplicitní formulář `/influencer/register` byl odstraněn; URL zůstává jen kvůli zpětné
+  kompatibilitě a přesměrovává na `/affiliate/register` včetně query stringu;
+- Footer odkazuje registraci přímo na `/affiliate/register`;
+- veřejná provizní formulace byla zpřesněna podle skutečné logiky: zákaznická provize je z placených
+  dobití; firemní provize je z částky bez DPH, kterou OneMil skutečně vyfakturuje přivedené firmě
+  a firma ji zaplatí;
+- odstraněno nepodložené tvrzení, že schválení Affiliate účtu posílá e-mail — současný admin flow
+  mění stav účtu, ale takový e-mail neposílá.
+
+**Krátká Affiliate registrace — produkce `14b302e0`:**
+- `/affiliate/register` sbírá už jen jméno/název, e-mail, heslo, heslo znovu, volitelný telefon
+  a režim Influencer / Obchodník / oba;
+- web, Instagram, TikTok, YouTube, Facebook, dosah a kategorie obsahu se při registraci nevyplňují;
+- IČO/DIČ, fakturační a výplatní údaje se rovněž řeší až uvnitř `Affiliate dashboard → Profil`;
+- uživatel ručně nezadává doporučovací kód; `ref_code` generuje existující serverová logika;
+- `AffiliateProfileSection` zůstal funkčně beze změny a nadále ukládá profilové, sociální,
+  fakturační a výplatní údaje.
+
+**Důležitá kompatibilita:** produkční Supabase má stále dvě signatury
+`register_affiliate_account` — 5parametrovou a 12parametrovou. Frontend proto zachovává původní
+fallback při `PGRST202` / „Could not find". Při zjednodušení registrace byl fallback omylem
+krátce odstraněn v preview, ale po přímém ověření produkce byl vrácen před mergem do `main`.
+
+**Ověření:** finální diff zjednodušení registrace obsahoval jen
+`src/pages/AffiliateRegister.tsx` a `tests/e2e/28-affiliate-registration-profile-fields.spec.ts`.
+Build prošel, spec 13 prošel 4/4; spec 28 je staging-only a lokálně se korektně přeskočil bez
+CI service-role secretu. Produkční Vercel deployment pro `14b302e0` je **READY**.
+
+V této finální změně nebyla měněna databáze, RLS, migrace, Edge Functions, provizní sazby,
+first-touch atribuce, payout logika, peněženky, platby ani soutěžní logika.
 
 
 ## -4. Garantované nákupní benefity — nasazeno do produkce (22. 09. 2026)
