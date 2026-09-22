@@ -1,18 +1,20 @@
 # OneMil — TODO: Affiliate provize a výplaty pro reklamní agentury
 
 **Datum:** 07. 07. 2026  
-**Stav:** návrh nutný před implementací / neschváleno pro ostré použití
+**Poslední aktualizace:** 22. 09. 2026  
+**Stav:** částečně realizováno — veřejná Affiliate registrace/profil je hotová; finanční a výplatní pravidla zůstávají předmětem samostatného schválení
 
 ## Poznámka
 
 Affiliate provize a výplaty pro reklamní agentury se nesmí začít obchodně slibovat ani technicky zapínat bez nového návrhu a výslovného schválení Pavlem.
 
 Aktuální stav v projektu:
-- existuje technický základ affiliate účtů,
+- Affiliate v2 má veřejnou registraci `/affiliate/register`, přihlášení `/affiliate/login` a dashboard `/affiliate/dashboard`,
 - existuje evidence přivedených zákazníků a firem,
 - existuje výpočet provizí z placených zákaznických dobití a z placených B2B faktur,
 - existuje základ výplatních dávek a bankovního exportu,
-- ale affiliate program byl pro první veřejný test odložen mimo scope a výplaty se mají řešit až ve fázi zapnutí affiliate.
+- veřejná registrace byla 22. 09. 2026 zjednodušena na základní údaje; profilové, sociální, fakturační a výplatní údaje se doplňují až uvnitř profilu,
+- obchodní/ostrý režim výplat a případná další pravidla agenturní struktury se stále nesmí měnit ani veřejně slibovat bez výslovného schválení Pavla.
 
 ## Co se musí před spuštěním navrhnout
 
@@ -53,29 +55,23 @@ Současný affiliate systém se nemá rušit ani odebírat.
 
 Cílem je pouze doplnit a zpřehlednit provizní část tak, aby byla jasná pro influencery, UGC partnery, běžné doporučující lidi, firmy, agentury a obchodníky.
 
-### 1. Přepracovat registraci affiliate / provizního účtu
+### 1. Registrace affiliate / provizního účtu — HOTOVO 22. 09. 2026
 
-Současná stránka „Registrace Affiliate partnera“ je příliš zaměřená na influencery.
+Původní problém byl potvrzen: stará registrace byla příliš dlouhá a obsahovala influencerová/profilová pole, která nedávala smysl při prvním vstupu pro obchodníka, agenturu nebo firmu.
 
-Obsahuje pole jako Instagram, TikTok, YouTube, Facebook, velikost publika a kategorie obsahu, což nedává smysl pro firmu, agenturu ani obchodníka.
+Aktuální produkční řešení používá **jednu krátkou Affiliate v2 registraci** pro oba režimy.
 
-Registrace se musí nejdřív zeptat, jaký typ účtu chce člověk nebo firma založit:
+Při registraci se vyplňuje pouze:
 
-1. **Influencer účet**  
-   Pro ty, kteří chtějí doporučovat OneMil hráčům / soutěžícím.
-
-2. **Firemní účet**  
-   Pro ty, kteří chtějí přivádět nebo zakládat firemní spolupráce.
-
-#### Influencer účet — registrace
-
-Influencer účet slouží pro ty, kteří přivádějí hráče / soutěžící do OneMil.
-
-Formulář může obsahovat:
-
-- jméno / název / přezdívku,
+- jméno / název,
 - e-mail,
-- telefon,
+- heslo,
+- heslo znovu,
+- telefon (volitelný),
+- režim spolupráce: **Influencer**, **Obchodník**, nebo oba.
+
+Při registraci se již nevyplňuje:
+
 - hlavní kanál / web / profil,
 - Instagram,
 - TikTok,
@@ -83,42 +79,27 @@ Formulář může obsahovat:
 - Facebook,
 - velikost publika / dosah,
 - kategorie obsahu,
-- heslo.
+- IČO / DIČ,
+- fakturační adresa,
+- bankovní / výplatní údaje,
+- ručně zvolený doporučovací kód.
 
-V dalším kroku se pouze eviduje typ:
+Doporučovací `ref_code` vytváří systém automaticky. Profilové, sociální, fakturační a výplatní údaje se doplňují až po registraci uvnitř **Affiliate dashboard → Profil**.
 
-- influencer,
-- UGC partner,
-- běžný doporučující člověk.
+Původní návrh na dva rozdílné registrační formuláře se nepoužil. Influencer i Obchodník zůstávají režimy jednoho Affiliate v2 účtu; uživatel může mít jeden nebo oba režimy.
 
-Všichni mají stejné prostředí. Rozlišení slouží hlavně pro marketing, komunikaci a další práci s nimi.
+Tato změna byla nasazena bez změny provizí, atribuce, payout logiky, RLS, databázového modelu nebo schvalování Affiliate účtů.
 
-#### Firemní účet — registrace
+### 2. Dva režimy v jednom Affiliate účtu — aktuální stav
 
-Firemní účet slouží pro ty, kteří přivádějí nebo zakládají firemní spolupráce v OneMil.
+Affiliate v2 používá jeden účet se dvěma obchodními režimy:
 
-Formulář nemá vyžadovat influencer údaje jako Instagram, TikTok, YouTube, velikost publika nebo kategorii obsahu.
+1. **Influencer** — přivádí zákazníky.
+2. **Obchodník** — přivádí firmy / e-shopy.
 
-Formulář má obsahovat hlavně:
+Uživatel může mít jeden režim nebo oba. Nezakládají se dva paralelní účty ani dva samostatné registrační systémy.
 
-- název firmy / agentury / obchodníka,
-- e-mail,
-- telefon,
-- web,
-- IČO, pokud existuje,
-- typ účtu: firma / agentura / obchodník,
-- heslo.
-
-Všichni mají stejné prostředí. Rozlišení slouží hlavně pro obchodní řízení, marketing a vyhodnocení spolupráce.
-
-### 2. Rozdělit affiliate / provizní část na dvě větve
-
-Affiliate / provizní část má mít dvě hlavní větve:
-
-1. Influencer účet
-2. Firemní účet
-
-Nejde o rušení současného systému. Jde o přehlednější rozdělení toho, kdo co v systému dělá.
+Další obchodní a výplatní pravidla pro agentury, firmy a obchodníky v bodech níže zůstávají samostatným tématem a nesmí se měnit bez schválení Pavla.
 
 ### 3. Influencer účet
 
@@ -228,9 +209,9 @@ Nebo:
 
 Každý příjemce provize musí mít vlastní výplatní profil.
 
-Výplatní profil se nemusí řešit hned v prvním registračním formuláři.
+Výplatní profil se v prvním registračním formuláři nevyplňuje.
 
-Může být doplněný později v nastavení účtu nebo před první výplatou.
+Doplňuje se později v **Affiliate dashboard → Profil** a musí být připraven před první výplatou.
 
 Výplatní profil má obsahovat:
 
