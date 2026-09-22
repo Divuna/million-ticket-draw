@@ -1,7 +1,7 @@
 # OneMil — business context
 
 **Status:** permanent business/product context  
-**Last updated:** 2026-09-19  
+**Last updated:** 2026-09-22  
 **Owner:** Pavel Diviš  
 **Company context:** see `COMPANY_CONTEXT.md`
 
@@ -466,6 +466,32 @@ Influencers may work with:
 Influencer payouts are monetary, CZK-based, invoiced, and admin-controlled.
 
 The influencer system must not be merged with the regular user reward system.
+
+### 12.1 Affiliate v2 registration and profile — confirmed 2026-09-22
+
+The canonical Affiliate v2 entry points are:
+
+- registration: `/affiliate/register`
+- login: `/affiliate/login`
+- dashboard: `/affiliate/dashboard`
+
+The legacy public URL `/influencer/register` is kept only for backward compatibility and redirects to the canonical `/affiliate/register` flow.
+
+Affiliate registration is intentionally short. The public registration form collects only:
+
+- name / company or display name,
+- e-mail,
+- password and password confirmation,
+- phone (optional),
+- cooperation mode: **Influencer**, **Obchodník**, or both.
+
+The registration form must **not** require website/social-profile details, Instagram, TikTok, YouTube, Facebook, audience size, content categories, IČO/DIČ, billing address, bank account, or other payout-profile details.
+
+Those profile, social, billing, tax, and payout details are completed later inside **Affiliate dashboard → Profil**. This keeps first registration simple for influencers, agencies, sales representatives, companies, and other approved affiliate participants.
+
+The user does not manually choose the Affiliate recommendation code during registration. The system creates a unique `ref_code` automatically. The code is then shown and used by the existing Affiliate v2 tracking/attribution system.
+
+The two cooperation modes remain part of one Affiliate v2 account. This registration simplification does not create a second affiliate system and does not change commission rates, attribution, payout logic, account approval, or the existing Affiliate dashboard.
 
 ---
 
