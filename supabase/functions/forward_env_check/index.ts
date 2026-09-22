@@ -1,3 +1,3 @@
 import { serveLegacyGone } from "../_shared/legacyGone.ts";
 
-serveLegacyGone("sofinity-noop");
+serveLegacyGone("forward_env_check");
