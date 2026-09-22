@@ -1128,9 +1128,9 @@ const AdminGuaranteedBenefits: React.FC = () => {
                       className="hidden"
                       disabled={galleryUploading || galleryImages.length >= 6}
                       onChange={(e) => {
-                        const files = e.target.files;
+                        const files = e.target.files ? Array.from(e.target.files) : [];
                         e.target.value = '';
-                        if (files) void addGalleryFiles(files);
+                        if (files.length > 0) void addGalleryFiles(files);
                       }}
                     />
                   </label>
