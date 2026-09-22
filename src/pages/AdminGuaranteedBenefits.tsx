@@ -11,9 +11,17 @@ import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from '@/components/ui/select';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
-import { Loader2, ShieldCheck, Search, Building2, Infinity as InfinityIcon, Hash, ImagePlus } from 'lucide-react';
+import { Loader2, ShieldCheck, Search, Building2, Infinity as InfinityIcon, Hash, ImagePlus, Images, Trash2, ArrowLeft, ArrowRight } from 'lucide-react';
 
 /**
  * Garantované nákupní benefity — centrální admin správa (první verze).
@@ -115,6 +123,7 @@ const RPC_ERROR_LABEL: Record<string, string> = {
   benefit_content_immutable:
     'Obsah už vydaného benefitu nelze zpětně měnit. Ukončete ho a založte nový.',
   image_url_required: 'Vyberte obrázek benefitu.',
+  gallery_limit_exceeded: 'Galerie může obsahovat maximálně 6 dalších fotografií.',
 };
 
 function rpcErrorMessage(code: unknown): string {
@@ -162,6 +171,12 @@ const AdminGuaranteedBenefits: React.FC = () => {
   const [savingBenefit, setSavingBenefit] = useState(false);
   const [bImageFile, setBImageFile] = useState<File | null>(null);
   const [savingImageId, setSavingImageId] = useState<string | null>(null);
+  const [galleryOrderId, setGalleryOrderId] = useState<string | null>(null);
+  const [galleryMainImage, setGalleryMainImage] = useState<string | null>(null);
+  const [galleryImages, setGalleryImages] = useState<Array<{ image_url: string; uploadedPath?: string }>>([]);
+  const [galleryLoading, setGalleryLoading] = useState(false);
+  const [galleryUploading, setGalleryUploading] = useState(false);
+  const [gallerySaving, setGallerySaving] = useState(false);
 
   // Cena pro OneMil — nastavuje ji admin s oprávněním, ne superadmin.
   const [bPrice, setBPrice] = useState('0');
@@ -358,6 +373,137 @@ const AdminGuaranteedBenefits: React.FC = () => {
     },
     [removeUploadedImage, uploadBenefitImage],
   );
+
+  const openGallery = useCallback(async (orderId: string) => {
+    setGalleryOrderId(orderId);
+    setGalleryLoading(true);
+    setGalleryImages([]);
+    setGalleryMainImage(null);
+
+    try {
+      const { data, error } = await supabase.rpc('admin_get_guaranteed_benefit_gallery' as never, {
+        p_order_id: orderId,
+      } as never);
+      if (error) throw error;
+
+      const res = data as RpcResult;
+      if (!res || res.success !== true) {
+        toast.error(rpcErrorMessage(res?.error));
+        setGalleryOrderId(null);
+        return;
+      }
+
+      const images = Array.isArray(res.images)
+        ? (res.images as Array<{ image_url?: unknown }>)
+            .map((item) => typeof item?.image_url === 'string' ? item.image_url : '')
+            .filter(Boolean)
+            .map((image_url) => ({ image_url }))
+        : [];
+
+      setGalleryMainImage(typeof res.main_image_url === 'string' ? res.main_image_url : null);
+      setGalleryImages(images);
+    } catch {
+      toast.error('Galerii se nepodařilo načíst.');
+      setGalleryOrderId(null);
+    } finally {
+      setGalleryLoading(false);
+    }
+  }, []);
+
+  const closeGallery = useCallback(async () => {
+    const pendingPaths = galleryImages
+      .map((item) => item.uploadedPath)
+      .filter((path): path is string => Boolean(path));
+
+    if (pendingPaths.length > 0) {
+      await supabase.storage.from('voucher-images').remove(pendingPaths);
+    }
+
+    setGalleryOrderId(null);
+    setGalleryMainImage(null);
+    setGalleryImages([]);
+  }, [galleryImages]);
+
+  const addGalleryFiles = useCallback(async (files: FileList | File[]) => {
+    const incoming = Array.from(files);
+    if (incoming.length === 0) return;
+
+    if (galleryImages.length + incoming.length > 6) {
+      toast.error('Galerie může mít maximálně 6 dalších fotografií.');
+      return;
+    }
+
+    setGalleryUploading(true);
+    const uploadedThisBatch: Array<{ image_url: string; uploadedPath: string }> = [];
+
+    try {
+      for (const file of incoming) {
+        const uploaded = await uploadBenefitImage(file);
+        uploadedThisBatch.push({ image_url: uploaded.url, uploadedPath: uploaded.path });
+      }
+      setGalleryImages((prev) => [...prev, ...uploadedThisBatch]);
+    } catch (error) {
+      if (uploadedThisBatch.length > 0) {
+        await supabase.storage
+          .from('voucher-images')
+          .remove(uploadedThisBatch.map((item) => item.uploadedPath));
+      }
+
+      if (error instanceof Error && error.message === 'image_too_large') {
+        toast.error('Každá fotografie může mít maximálně 8 MB.');
+      } else {
+        toast.error('Nahrání fotografií se nepodařilo.');
+      }
+    } finally {
+      setGalleryUploading(false);
+    }
+  }, [galleryImages.length, uploadBenefitImage]);
+
+  const moveGalleryImage = useCallback((index: number, direction: -1 | 1) => {
+    setGalleryImages((prev) => {
+      const nextIndex = index + direction;
+      if (nextIndex < 0 || nextIndex >= prev.length) return prev;
+      const next = [...prev];
+      [next[index], next[nextIndex]] = [next[nextIndex], next[index]];
+      return next;
+    });
+  }, []);
+
+  const removeGalleryImage = useCallback(async (index: number) => {
+    const item = galleryImages[index];
+    if (item?.uploadedPath) {
+      await removeUploadedImage(item.uploadedPath);
+    }
+    setGalleryImages((prev) => prev.filter((_, itemIndex) => itemIndex !== index));
+  }, [galleryImages, removeUploadedImage]);
+
+  const saveGallery = useCallback(async () => {
+    if (!galleryOrderId) return;
+    setGallerySaving(true);
+
+    try {
+      const { data, error } = await supabase.rpc('admin_set_guaranteed_benefit_gallery' as never, {
+        p_order_id: galleryOrderId,
+        p_image_urls: galleryImages.map((item) => item.image_url),
+      } as never);
+      if (error) throw error;
+
+      const res = data as RpcResult;
+      if (!res || res.success !== true) {
+        toast.error(rpcErrorMessage(res?.error));
+        return;
+      }
+
+      toast.success('Galerie benefitu byla uložena.');
+      setGalleryOrderId(null);
+      setGalleryMainImage(null);
+      setGalleryImages([]);
+    } catch {
+      toast.error('Galerii se nepodařilo uložit.');
+    } finally {
+      setGallerySaving(false);
+    }
+  }, [galleryImages, galleryOrderId]);
 
   /** Provozní stav benefitu — náhrada za schvalovací krok. */
   const changeBenefitStatus = useCallback(
@@ -678,7 +824,7 @@ const AdminGuaranteedBenefits: React.FC = () => {
               onChange={(e) => setBImageFile(e.target.files?.[0] ?? null)}
             />
             <p className="text-xs text-muted-foreground">
-              PNG, JPG nebo WebP, maximálně 8 MB. Obrázek se zobrazí na kartě voucheru i v detailu benefitu.
+              PNG, JPG nebo WebP, maximálně 8 MB. Toto je hlavní obrázek. Další fotografie přidáte po vytvoření v přehledu přes tlačítko Galerie.
             </p>
             {bImageFile && (
               <p className="text-xs font-medium">Vybráno: {bImageFile.name}</p>
@@ -877,6 +1023,16 @@ const AdminGuaranteedBenefits: React.FC = () => {
                           )}
                           Obrázek
                         </Button>
+                        <Button
+                          type="button"
+                          size="sm"
+                          variant="outline"
+                          className="ml-2"
+                          onClick={() => void openGallery(b.order_id)}
+                        >
+                          <Images className="mr-2 h-4 w-4" />
+                          Galerie
+                        </Button>
                       </div>
                       {b.order_status === 'approved' && (
                         <div className="flex justify-end gap-2">
@@ -919,6 +1075,142 @@ const AdminGuaranteedBenefits: React.FC = () => {
           )}
         </CardContent>
       </Card>
+
+      <Dialog
+        open={Boolean(galleryOrderId)}
+        onOpenChange={(open) => {
+          if (!open && !gallerySaving && !galleryUploading) void closeGallery();
+        }}
+      >
+        <DialogContent className="max-w-4xl">
+          <DialogHeader>
+            <DialogTitle>Galerie garantovaného benefitu</DialogTitle>
+            <DialogDescription>
+              Hlavní obrázek zůstává na kartě voucheru. Sem můžete přidat až 6 dalších fotografií,
+              měnit jejich pořadí a odebírat je.
+            </DialogDescription>
+          </DialogHeader>
+
+          {galleryLoading ? (
+            <div className="flex min-h-48 items-center justify-center">
+              <Loader2 className="h-6 w-6 animate-spin" />
+            </div>
+          ) : (
+            <div className="space-y-5">
+              {galleryMainImage && (
+                <div>
+                  <div className="mb-2 text-sm font-medium">Hlavní obrázek</div>
+                  <img
+                    src={galleryMainImage}
+                    alt="Hlavní obrázek benefitu"
+                    className="aspect-video w-full max-w-md rounded-xl border object-cover"
+                  />
+                </div>
+              )}
+
+              <div className="space-y-3">
+                <div className="flex items-center justify-between gap-3">
+                  <div>
+                    <div className="text-sm font-medium">Další fotografie</div>
+                    <div className="text-xs text-muted-foreground">{galleryImages.length}/6</div>
+                  </div>
+                  <label className="inline-flex cursor-pointer items-center rounded-md border px-3 py-2 text-sm font-medium hover:bg-muted">
+                    {galleryUploading ? (
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    ) : (
+                      <ImagePlus className="mr-2 h-4 w-4" />
+                    )}
+                    Přidat fotografie
+                    <input
+                      type="file"
+                      multiple
+                      accept="image/png,image/jpeg,image/webp"
+                      className="hidden"
+                      disabled={galleryUploading || galleryImages.length >= 6}
+                      onChange={(e) => {
+                        const files = e.target.files;
+                        e.target.value = '';
+                        if (files) void addGalleryFiles(files);
+                      }}
+                    />
+                  </label>
+                </div>
+
+                {galleryImages.length === 0 ? (
+                  <div className="rounded-xl border border-dashed p-8 text-center text-sm text-muted-foreground">
+                    Zatím nejsou přidané žádné další fotografie.
+                  </div>
+                ) : (
+                  <div className="grid gap-3 sm:grid-cols-2 md:grid-cols-3">
+                    {galleryImages.map((item, index) => (
+                      <div key={`${item.image_url}-${index}`} className="overflow-hidden rounded-xl border bg-card">
+                        <img
+                          src={item.image_url}
+                          alt={`Fotografie ${index + 1}`}
+                          className="aspect-[4/3] w-full object-cover"
+                        />
+                        <div className="flex items-center justify-between gap-1 p-2">
+                          <div className="text-xs font-medium">#{index + 1}</div>
+                          <div className="flex gap-1">
+                            <Button
+                              type="button"
+                              size="icon"
+                              variant="ghost"
+                              disabled={index === 0}
+                              onClick={() => moveGalleryImage(index, -1)}
+                              aria-label="Posunout doleva"
+                            >
+                              <ArrowLeft className="h-4 w-4" />
+                            </Button>
+                            <Button
+                              type="button"
+                              size="icon"
+                              variant="ghost"
+                              disabled={index === galleryImages.length - 1}
+                              onClick={() => moveGalleryImage(index, 1)}
+                              aria-label="Posunout doprava"
+                            >
+                              <ArrowRight className="h-4 w-4" />
+                            </Button>
+                            <Button
+                              type="button"
+                              size="icon"
+                              variant="ghost"
+                              onClick={() => void removeGalleryImage(index)}
+                              aria-label="Odebrat fotografii"
+                            >
+                              <Trash2 className="h-4 w-4" />
+                            </Button>
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
+
+          <DialogFooter>
+            <Button
+              type="button"
+              variant="outline"
+              disabled={gallerySaving || galleryUploading}
+              onClick={() => void closeGallery()}
+            >
+              Zrušit
+            </Button>
+            <Button
+              type="button"
+              disabled={galleryLoading || gallerySaving || galleryUploading}
+              onClick={() => void saveGallery()}
+            >
+              {gallerySaving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+              Uložit galerii
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };
