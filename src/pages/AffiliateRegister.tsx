@@ -12,14 +12,10 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Checkbox } from '@/components/ui/checkbox';
-import { Textarea } from '@/components/ui/textarea';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import { Loader2, Megaphone, ArrowLeft, CheckCircle, Coins, Users } from 'lucide-react';
 import logo from '@/assets/logo-onemil.png';
-
-const proposeRefCode = (name: string) =>
-  name.normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/[^a-zA-Z0-9]/g, '').toUpperCase().slice(0, 12);
 
 const inputClass =
   'rounded-xl border-[#E7E1D8] bg-[#FCFAF7] text-[#1A1A1A] placeholder:text-[#B4ACA0] focus-visible:border-[#FF8A00] focus-visible:ring-[#FF8A00]/25 focus-visible:ring-offset-white';
@@ -66,25 +62,11 @@ const AffiliateRegister = () => {
     password: '',
     confirmPassword: '',
     phone: '',
-    websiteUrl: '',
-    instagramUrl: '',
-    tiktokUrl: '',
-    youtubeUrl: '',
-    facebookUrl: '',
-    audienceSize: '',
-    contentCategories: '',
-    refCode: '',
   });
   const [modeInfluencer, setModeInfluencer] = useState(true);
   const [modeSalesRep, setModeSalesRep] = useState(false);
 
   const onChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const next = { ...form, [e.target.name]: e.target.value };
-    if (e.target.name === 'name' && !form.refCode) next.refCode = proposeRefCode(e.target.value);
-    setForm(next);
-  };
-
-  const onTextAreaChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
     setForm({ ...form, [e.target.name]: e.target.value });
   };
 
@@ -121,32 +103,26 @@ const AffiliateRegister = () => {
         throw new Error('Tento e-mail je již zaregistrován.');
       }
 
-      let { data: rpcData, error: rpcError } = await (supabase as any).rpc('register_affiliate_account', {
+      // Profile/social fields (website, Instagram, TikTok, YouTube, Facebook,
+      // audience size, content categories) are no longer collected at
+      // registration — they're filled in later in Affiliate dashboard -> Profil
+      // (AffiliateProfileSection, via update_affiliate_own_profile). The
+      // ref_code is likewise no longer user-entered: passing null lets the
+      // server derive and dedupe it from the name automatically.
+      const { data: rpcData, error: rpcError } = await (supabase as any).rpc('register_affiliate_account', {
         p_name: form.name.trim(),
         p_email: email,
         p_phone: form.phone.trim() || null,
         p_modes: modes,
-        p_ref_code: form.refCode.trim() || null,
-        p_website_url: form.websiteUrl.trim() || null,
-        p_instagram_url: form.instagramUrl.trim() || null,
-        p_tiktok_url: form.tiktokUrl.trim() || null,
-        p_youtube_url: form.youtubeUrl.trim() || null,
-        p_facebook_url: form.facebookUrl.trim() || null,
-        p_audience_size: form.audienceSize.trim() || null,
-        p_content_categories: form.contentCategories.trim() || null,
+        p_ref_code: null,
+        p_website_url: null,
+        p_instagram_url: null,
+        p_tiktok_url: null,
+        p_youtube_url: null,
+        p_facebook_url: null,
+        p_audience_size: null,
+        p_content_categories: null,
       });
-
-      if (rpcError?.code === 'PGRST202' || rpcError?.message?.includes('Could not find')) {
-        const fallback = await (supabase as any).rpc('register_affiliate_account', {
-          p_name: form.name.trim(),
-          p_email: email,
-          p_phone: form.phone.trim() || null,
-          p_modes: modes,
-          p_ref_code: form.refCode.trim() || null,
-        });
-        rpcData = fallback.data;
-        rpcError = fallback.error;
-      }
 
       if (rpcError) throw new Error(rpcError.message || 'Registrace affiliate účtu selhala.');
 
@@ -207,7 +183,7 @@ const AffiliateRegister = () => {
     <div className="relative min-h-screen w-full overflow-x-hidden bg-gradient-to-b from-[#FFF8EE] via-[#FFF4E7] to-white px-4 py-10 sm:py-14">
       <AmbientBackdrop />
 
-      <div className="relative z-10 mx-auto flex w-full max-w-2xl flex-col items-center">
+      <div className="relative z-10 mx-auto flex w-full max-w-md flex-col items-center">
         <LogoMedallion />
 
         <div className="om-auth-rise om-auth-rise-1 mb-5 text-center">
@@ -272,55 +248,6 @@ const AffiliateRegister = () => {
                      className={inputClass} />
             </div>
 
-            <div className="space-y-1.5">
-              <Label htmlFor="websiteUrl" className="text-sm font-medium text-[#2B2B2B]">Hlavní kanál / web / profil</Label>
-              <Input id="websiteUrl" name="websiteUrl" value={form.websiteUrl} onChange={onChange}
-                     placeholder="https://..."
-                     className={inputClass} />
-            </div>
-
-            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-              <div className="space-y-1.5">
-                <Label htmlFor="instagramUrl" className="text-sm font-medium text-[#2B2B2B]">Instagram</Label>
-                <Input id="instagramUrl" name="instagramUrl" value={form.instagramUrl} onChange={onChange}
-                       placeholder="https://instagram.com/..."
-                       className={inputClass} />
-              </div>
-              <div className="space-y-1.5">
-                <Label htmlFor="tiktokUrl" className="text-sm font-medium text-[#2B2B2B]">TikTok</Label>
-                <Input id="tiktokUrl" name="tiktokUrl" value={form.tiktokUrl} onChange={onChange}
-                       placeholder="https://tiktok.com/@..."
-                       className={inputClass} />
-              </div>
-              <div className="space-y-1.5">
-                <Label htmlFor="youtubeUrl" className="text-sm font-medium text-[#2B2B2B]">YouTube</Label>
-                <Input id="youtubeUrl" name="youtubeUrl" value={form.youtubeUrl} onChange={onChange}
-                       placeholder="https://youtube.com/..."
-                       className={inputClass} />
-              </div>
-              <div className="space-y-1.5">
-                <Label htmlFor="facebookUrl" className="text-sm font-medium text-[#2B2B2B]">Facebook</Label>
-                <Input id="facebookUrl" name="facebookUrl" value={form.facebookUrl} onChange={onChange}
-                       placeholder="https://facebook.com/..."
-                       className={inputClass} />
-              </div>
-            </div>
-
-            <div className="space-y-1.5">
-              <Label htmlFor="audienceSize" className="text-sm font-medium text-[#2B2B2B]">Velikost publika / dosah</Label>
-              <Input id="audienceSize" name="audienceSize" value={form.audienceSize} onChange={onChange}
-                     placeholder="např. 25 000 sledujících, 100 000 měsíční dosah"
-                     className={inputClass} />
-            </div>
-
-            <div className="space-y-1.5">
-              <Label htmlFor="contentCategories" className="text-sm font-medium text-[#2B2B2B]">Kategorie obsahu</Label>
-              <Textarea id="contentCategories" name="contentCategories" value={form.contentCategories}
-                        onChange={onTextAreaChange}
-                        placeholder="např. lifestyle, luxusní produkty, cestování, automotive, e-commerce..."
-                        className={inputClass} />
-            </div>
-
             <div className="space-y-2 rounded-2xl border border-[#F0E9DD] bg-[#FCFAF7] p-3.5">
               <Label className="text-sm font-medium text-[#2B2B2B]">Režim spolupráce *</Label>
               <div className="flex items-center gap-2.5">
@@ -343,15 +270,10 @@ const AffiliateRegister = () => {
               </div>
             </div>
 
-            <div className="space-y-1.5">
-              <Label htmlFor="refCode" className="text-sm font-medium text-[#2B2B2B]">Doporučovací kód (návrh)</Label>
-              <Input id="refCode" name="refCode" value={form.refCode} onChange={onChange}
-                     placeholder="např. JANNOVAK"
-                     className={`font-mono ${inputClass}`} />
-              <p className="text-xs text-[#8A8A8A]">
-                Kód použijete v odkazech. Pokud je obsazený, systém ho upraví.
-              </p>
-            </div>
+            <p className="text-xs text-[#8A8A8A]">
+              Doporučovací kód a profilové/sociální odkazy si po schválení doplníte
+              v Affiliate dashboardu v sekci Profil.
+            </p>
 
             <Button
               type="submit"
