@@ -230,6 +230,7 @@ export const ADMIN_NAV_SECTIONS: readonly AdminNavSectionDefinition[] = [
     mainNav: { label: "Vouchery", icon: Gift, to: "/admin/vouchers" },
     subNavEntries: [
       { kind: "link", item: { path: "/admin/vouchers", label: "Vouchery", icon: Gift } },
+      { kind: "link", item: { path: "/admin/guaranteed-benefits", label: "Garantované benefity", icon: ShieldCheck } },
       { kind: "link", item: { path: "/admin/referrals", label: "Doporučení hráčů", icon: Link2 } },
       { kind: "link", item: { path: "/admin/referral-dashboard", label: "Přehled doporučení", icon: BarChart3 } },
     ],
@@ -350,6 +351,7 @@ export function getAdminSectionFromPath(pathname: string, search: string = ""): 
 
   if (
     path.startsWith("/admin/vouchers") ||
+    path.startsWith("/admin/guaranteed-benefits") ||
     path.startsWith("/admin/referrals") ||
     path.startsWith("/admin/referral-dashboard")
   ) {
