@@ -60,6 +60,7 @@ const Vouchers: React.FC = () => {
     usage_description?: string | null;
     terms_text?: string | null;
     how_to_use_text?: string | null;
+    gallery_images?: string[];
   } | null>(null);
 
   // Separate user vouchers into favorites (redeemed=false) and purchased (redeemed=true)
@@ -87,6 +88,66 @@ const Vouchers: React.FC = () => {
 
   const isPurchasedVoucher = (voucherId: string) => {
     return userVouchers.some(uv => uv.voucher_id === voucherId && uv.redeemed);
+  };
+
+  const openVoucherDetail = async (voucher: {
+    id: string;
+    name: string;
+    image_url: string | null;
+    banner_url: string | null;
+    max_quantity: number | null;
+    redeemed_count: number;
+    start_date: string | null;
+    end_date: string | null;
+    short_description?: string | null;
+    usage_description?: string | null;
+    terms_text?: string | null;
+    how_to_use_text?: string | null;
+    gallery_images?: string[];
+  }) => {
+    setSelectedVoucher(voucher);
+
+    try {
+      const { data, error } = await supabase.rpc('get_voucher_customer_detail' as never, {
+        p_voucher_id: voucher.id,
+      } as never);
+
+      if (error) throw error;
+
+      const result = data as {
+        success?: boolean;
+        voucher?: {
+          id?: string;
+          name?: string;
+          image_url?: string | null;
+          banner_url?: string | null;
+          short_description?: string | null;
+          usage_description?: string | null;
+          terms_text?: string | null;
+          how_to_use_text?: string | null;
+          gallery_images?: string[];
+        };
+      } | null;
+
+      if (!result?.success || !result.voucher) return;
+
+      setSelectedVoucher((current) => {
+        if (!current || current.id !== voucher.id) return current;
+        return {
+          ...current,
+          ...result.voucher,
+          id: current.id,
+          name: result.voucher?.name ?? current.name,
+          image_url: result.voucher?.image_url ?? current.image_url,
+          banner_url: result.voucher?.banner_url ?? current.banner_url,
+          gallery_images: Array.isArray(result.voucher?.gallery_images)
+            ? result.voucher.gallery_images
+            : [],
+        };
+      });
+    } catch (error) {
+      console.error('Error loading voucher detail:', error);
+    }
   };
 
   const handleFavoriteClick = (e: React.MouseEvent, voucherId: string) => {
@@ -368,7 +429,7 @@ const Vouchers: React.FC = () => {
                   <VoucherShowcaseCard
                     key={voucher.id}
                     voucher={voucher}
-                    onDetail={() => setSelectedVoucher(voucher)}
+                    onDetail={() => void openVoucherDetail(voucher)}
                     onFavoriteToggle={(event) => handleFavoriteClick(event, voucher.id)}
                     favoriteActive={isFavoriteVoucher(voucher.id)}
                     favoriteDisabled={togglingFavoriteId === voucher.id}
@@ -415,7 +476,7 @@ const Vouchers: React.FC = () => {
                     <VoucherShowcaseCard
                       key={userVoucher.id}
                       voucher={voucher}
-                      onDetail={() => setSelectedVoucher(voucher)}
+                      onDetail={() => void openVoucherDetail(voucher)}
                       onFavoriteToggle={(event) => handleFavoriteClick(event, userVoucher.voucher_id)}
                       favoriteActive
                       favoriteDisabled={togglingFavoriteId === userVoucher.voucher_id}
@@ -504,7 +565,7 @@ const Vouchers: React.FC = () => {
                           <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
                             <Button
                               className="h-10 rounded-xl border-0 bg-gradient-to-r from-[#FF8A00] to-[#FFB547] text-sm font-bold text-[#111] shadow-[0_2px_8px_rgba(255,138,0,0.25)] hover:brightness-105"
-                              onClick={() => setSelectedVoucher(voucher)}
+                              onClick={() => void openVoucherDetail(voucher)}
                             >
                               Detail
                             </Button>
