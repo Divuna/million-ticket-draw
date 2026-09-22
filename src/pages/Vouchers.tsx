@@ -140,6 +140,10 @@ const Vouchers: React.FC = () => {
           name: result.voucher?.name ?? current.name,
           image_url: result.voucher?.image_url ?? current.image_url,
           banner_url: result.voucher?.banner_url ?? current.banner_url,
+          short_description: result.voucher?.short_description ?? current.short_description ?? null,
+          usage_description: result.voucher?.usage_description ?? current.usage_description ?? null,
+          terms_text: result.voucher?.terms_text ?? current.terms_text ?? null,
+          how_to_use_text: result.voucher?.how_to_use_text ?? current.how_to_use_text ?? null,
           gallery_images: Array.isArray(result.voucher?.gallery_images)
             ? result.voucher.gallery_images
             : [],
