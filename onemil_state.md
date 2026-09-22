@@ -40,8 +40,12 @@ krátce odstraněn v preview, ale po přímém ověření produkce byl vrácen p
 
 **Ověření:** finální diff zjednodušení registrace obsahoval jen
 `src/pages/AffiliateRegister.tsx` a `tests/e2e/28-affiliate-registration-profile-fields.spec.ts`.
-Build prošel, spec 13 prošel 4/4; spec 28 je staging-only a lokálně se korektně přeskočil bez
-CI service-role secretu. Produkční Vercel deployment pro `14b302e0` je **READY**.
+Build prošel, spec 13 prošel 4/4. Spec 28 byl následně spuštěn skutečně proti stagingu
+v GitHub Actions runu `35770030095` nad `main` SHA `78913731` a skončil **1/1 passed,
+0 failed, 0 skipped**. Ověřil celý tok: krátká registrace → automatický `ref_code` → pending
+Affiliate účet → schválení → přihlášení → Profil → doplnění 7 profilových/sociálních polí →
+uložení → DB read-back → reload se zachovanými hodnotami. Testovací staging data uklidil v
+`afterAll`. Produkční Vercel deployment pro aplikační SHA `14b302e0` je **READY**.
 
 V této finální změně nebyla měněna databáze, RLS, migrace, Edge Functions, provizní sazby,
 first-touch atribuce, payout logika, peněženky, platby ani soutěžní logika.
