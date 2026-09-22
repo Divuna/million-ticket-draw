@@ -1,6 +1,6 @@
 # OneMil – aktuální stav projektu
 
-> **Autoritativní aktuální stav. Poslední aktualizace 22. 9. 2026 podle `origin/main` (`14b302e0`), GitHubu, Vercelu a produkční Supabase (`xkzhjldrojjlrkezorey`) po nasazení garantovaných nákupních benefitů a dokončení veřejného Auth/Affiliate flow. Předchozí hlavní aktualizace: 22. 9. 2026 — garantované nákupní benefity.**
+> **Autoritativní aktuální stav. Poslední aktualizace 22. 9. 2026 podle produkčního aplikačního SHA `14b302e0`, GitHubu, Vercelu a produkční Supabase (`xkzhjldrojjlrkezorey`) po nasazení garantovaných nákupních benefitů a dokončení veřejného Auth/Affiliate flow. Předchozí hlavní aktualizace: 22. 9. 2026 — garantované nákupní benefity.**
 
 
 ## -5. Auth + Affiliate veřejný tok a krátká registrace — nasazeno do produkce (22. 09. 2026)
