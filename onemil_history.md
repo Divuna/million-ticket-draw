@@ -1,3 +1,60 @@
+# 22. 09. 2026 — Auth/Affiliate flow sjednocen, legacy registrace odstraněna a Affiliate registrace zkrácena (PRODUKCE)
+
+Dne 22. 09. 2026 byla dokončena série frontendových oprav Auth/Affiliate části OneMil a nasazena do produkce.
+
+## Sjednocení Auth vzhledu a veřejného Affiliate flow
+
+Schválený světlý OneMil vizuální systém byl rozšířen na zákaznické, partnerské a Affiliate
+přihlášení/registrace. Současně byly modernizovány veřejné Affiliate stránky
+`/influencer` a `/influencer/how-to-earn`.
+
+Forenzní kontrola potvrdila, že starý `/influencer/register` byl duplicitní legacy formulář,
+který obcházel kanonický Affiliate v2 model. Formulář byl odstraněn a legacy URL nyní pouze
+přesměrovává na `/affiliate/register` se zachováním query stringu. Footer byl přepojen na
+kanonickou Affiliate registraci.
+
+Veřejné texty byly zároveň srovnány se skutečnou produkční logikou:
+- zákaznická Affiliate provize = z placených dobití přivedeného zákazníka;
+- firemní Affiliate provize = z částky bez DPH, kterou OneMil skutečně vyfakturuje přivedené firmě
+  a firma zaplatí;
+- odstraněno tvrzení o e-mailu po schválení Affiliate účtu, protože současný admin approve/reject
+  žádný takový e-mail neposílá.
+
+Tato část skončila na `main` v commitu `e5a63e9a` a produkční Vercel deployment byl READY.
+
+## Zjednodušení Affiliate registrace
+
+Následně byla dokončena dříve evidovaná potřeba zkrátit `/affiliate/register`.
+
+Registrace nyní obsahuje pouze:
+- jméno / název,
+- e-mail,
+- heslo,
+- heslo znovu,
+- telefon (volitelný),
+- režim Influencer / Obchodník / oba.
+
+Web, sociální sítě, dosah, kategorie obsahu, IČO/DIČ, fakturační a výplatní údaje se doplňují až
+uvnitř **Affiliate dashboard → Profil**. Ruční pole doporučovacího kódu bylo odstraněno; unikátní
+`ref_code` vytváří existující serverová logika automaticky.
+
+Při první preview verzi (`f6fe20c9`) byl omylem odstraněn fallback na starší 5parametrovou
+signaturu `register_affiliate_account`, protože byla chybně považována za odstraněnou. Přímá
+kontrola produkční Supabase potvrdila, že v produkci existují **obě** signatury — 5parametrová
+i 12parametrová. Fallback byl proto vrácen ještě před produkčním mergem.
+
+Finální commit `14b302e00789ee3f5fba2f97d5de7f5cd836428c` změnil proti předchozímu `main` jen:
+- `src/pages/AffiliateRegister.tsx`,
+- `tests/e2e/28-affiliate-registration-profile-fields.spec.ts`.
+
+Build prošel, spec 13 prošel 4/4; spec 28 zůstal staging-only a bez CI service-role secretu se
+lokálně korektně přeskočil. Produkční Vercel deployment pro `14b302e0` byl ověřen jako READY.
+
+Žádná databáze, RLS, migrace, Edge Function, provizní sazba, first-touch atribuce, payout logika,
+peněženka, platba ani soutěžní logika nebyla touto změnou upravena.
+
+---
+
 # 07. 09. 2026 — Soutěž nesmí být aktivní bez PDF pravidel (PR #400, PRODUKCE)
 
 Právní audit veřejného obsahu ukázal, že formulář v `AdminContestManagement.tsx` PDF pravidel
