@@ -689,84 +689,103 @@ After purchase:
 
 A supported purchase must not complete without an available garantovaný nákupní benefit. Benefit assignment, code issue, MioCoin deduction, and ticket creation must succeed together; if any part fails, none of them may be completed.
 
-### 17.5 Partner creation and voucher codes
+### 17.5 Admin-only creation and benefit code modes
 
-A partner can create its own garantovaný nákupní benefit as a draft in the partner portal and submit it for superadmin approval.
+For the initial rollout, garantované nákupní benefity are created and managed only by OneMil administration — a superadmin or an admin with the explicit permission `guaranteed_benefits.manage`.
 
-The partner defines:
+The company/partner does **not** create, edit, manage, or approve the benefit inside OneMil in this first version. Any commercial agreement with the company is handled outside the app.
 
-- voucher name and description,
+The admin selects an existing partner company or, if the company is not yet present, may create a minimal benefit-provider company record. That minimal record must not automatically create:
+
+- a partner login,
+- an auth account,
+- API keys,
+- Shoptet/API integrations,
+- affiliate rights,
+- payout rights,
+- broader partner access.
+
+The admin defines the real benefit, including:
+
+- name and description,
 - real discount or benefit,
 - minimum purchase if applicable,
 - validity,
 - conditions and method of use,
 - graphics,
-- requested quantity.
+- distribution price for OneMil where applicable,
+- whether the benefit is limited or unlimited.
 
-The partner has two code options:
+A **limited** garantovaný nákupní benefit uses a finite set of unique codes. One code can be issued only once.
 
-1. import its own unique codes from its own system,
-2. ask OneMil to generate the required number of unique codes and download them for import into the partner's own system.
+An **unlimited** garantovaný nákupní benefit uses one shared static code or link and does not consume a finite `voucher_codes` inventory.
 
-OneMil assigns one available unique code when the garantovaný nákupní benefit is issued. The code is then marked as issued and cannot be issued again.
+### 17.6 Initial rollout has no approval workflow
 
-The partner cannot activate a garantovaný nákupní benefit for distribution without superadmin approval.
+There is no partner approval step and no second internal approval step in the initial rollout.
 
-### 17.6 Superadmin approval
+A superadmin or an admin with `guaranteed_benefits.manage` can create a complete benefit and make it operational directly when all required data are valid.
 
-The superadmin checks that:
+The same permitted admin can set the benefit's operational distribution price for OneMil. Superadmin keeps platform-level/global pricing authority.
 
-- the discount or benefit is real and usable,
-- the value is sufficient for the MioCoin amount connected to the purchase,
-- the minimum purchase and conditions are reasonable,
-- the garantovaný nákupní benefit is not only a formal or misleading substitute,
-- the validity is reasonable,
-- enough valid codes are available.
+The admin can pause, resume, or end a benefit, subject to the active-contest fallback safety rule below.
 
-The superadmin can approve, reject, return for correction, pause, or end distribution of the garantovaný nákupní benefit.
+Benefit history must remain auditable. Once a benefit has been issued, historical content, pricing snapshots, and issued records must not be silently rewritten. Material content changes should be handled by ending the old benefit and creating a new one when necessary.
 
-Approved terms of the garantovaný nákupní benefit must not be silently changed. A material partner change requires a new approval while earlier issued benefits keep their original approved conditions.
+### 17.7 Distribution to contests
 
-### 17.7 Partner distribution orders for contests
+The admin assigns each garantovaný nákupní benefit to either:
 
-After benefit approval, the partner chooses a specific contest and orders a quantity of distribution positions, for example 200 positions.
+- **all_contests** — all current eligible contests and future contests when they enter an eligible state,
+- **selected_contests** — only explicitly selected contests.
 
-The partner sees:
+One company may have multiple garantované nákupní benefity.
 
-- ordered quantity,
-- actually issued quantity,
-- remaining quantity,
-- available code count,
-- price excluding VAT per billable distribution,
-- estimated amount for the next invoice.
+One benefit may serve multiple contests.
 
-The order can be pending approval, active, paused, completed, or cancelled.
+One contest may use multiple benefits from multiple companies.
 
-One order can be distributed and invoiced gradually across multiple billing periods and multiple invoices until the requested quantity is exhausted or the order is ended.
+For `all_contests`, active links are materialized for current `active` and `pending` contests, and future contests are linked when they enter those states.
+
+For `selected_contests`, only the chosen contest links are active. Removed links are detached rather than deleted so the history remains auditable.
+
+A contest may exist in `draft` or `pending` without a guaranteed fallback. It must **not** become `active` unless it has at least one approved unlimited garantovaný nákupní benefit linked to it.
+
+While a contest remains `active`, the system must not allow an admin action to suspend, end, or detach its last approved unlimited fallback benefit.
 
 ### 17.8 Distribution rules and fallback
 
 Every supported purchase receives exactly one garantovaný nákupní benefit and the related contest ticket free as a bonus.
 
-The system should maximise partner reach and minimise repeated issuance of the same garantovaný nákupní benefit to the same customer:
+The purchase selection order is:
 
-1. prefer a benefit from a company from which the customer has not yet received that benefit,
-2. prefer a benefit variant the customer has not yet received,
-3. then prefer the least-used or longest-not-issued suitable benefit,
-4. distribute active partner orders fairly,
-5. use an approved fallback benefit if no other suitable benefit is available.
+1. use an eligible **limited** benefit with an available unique code,
+2. among eligible limited benefits, prefer a benefit the customer has not received before,
+3. if more eligible candidates remain, choose among them without exceeding inventory,
+4. if no limited benefit is available, use an approved **unlimited** garantovaný nákupní benefit linked to the contest.
 
-The same code must never be issued twice and the ordered quantity must never be exceeded.
+A supported purchase must never fall back to a bare ticket without a garantovaný nákupní benefit.
 
-If a customer receives the same garantovaný nákupní benefit again, it may receive a new valid code, but the partner is charged only for the first issue of that same benefit to that customer.
+If neither a limited nor an unlimited benefit is available, the entire purchase fails safely:
 
-Iconic Point will be handled as a standard partner with an individual distribution price of 0 Kč and may provide approved fallback benefits that ensure a garantovaný nákupní benefit is always available.
+- no MioCoins are deducted,
+- no ticket is created,
+- no user voucher is created,
+- no benefit issuance is created.
+
+The same limited code must never be issued twice and the limited ordered quantity must never be exceeded.
+
+For an unlimited benefit, no unique voucher code is consumed; the customer receives the configured shared code or link.
+
+If a customer receives the same garantovaný nákupní benefit again, the issuance is allowed, but only the first issue of that same benefit to that customer is billable under the current billing rule.
+
+The actual supplying company and the concrete real benefit must always be explicitly defined. The operator role of iCONIC POINT s.r.o. must never be used to infer that iCONIC POINT supplies the fallback benefit.
 
 ### 17.9 Billing for garantovaný nákupní benefit distribution
 
-Distribution of the garantovaný nákupní benefit is a marketing service provided by OneMil to the partner.
+Distribution of the garantovaný nákupní benefit is a marketing service provided by OneMil to the supplying partner/company.
 
-The partner does not pay for the value of the discount. The partner covers the discount or benefit itself and pays OneMil only for the distribution service according to the approved price.
+The company covers the actual discount or benefit itself. OneMil charges only for the distribution service according to the configured price.
 
 Billing rules:
 
@@ -775,49 +794,28 @@ Billing rules:
 - repeated issue of that same benefit to that customer is not billed again,
 - only issued and not-yet-invoiced items are added to an invoice,
 - the same issue must never be invoiced twice,
-- one distribution order may appear gradually on several invoices,
 - distribution of the garantovaný nákupní benefit appears as a separate item on the existing partner invoice,
 - the partner receives one combined invoice for existing services and benefit distribution.
 
-Example invoice item:
+An admin with `guaranteed_benefits.manage` or a superadmin can set the operational distribution price for a specific garantovaný nákupní benefit. Global/platform-wide pricing remains a superadmin responsibility.
 
-```text
-Distribuce garantovaného nákupního benefitu [název] v soutěži [název] – 45 účtovaných vydání × 1 Kč
-```
+An individual benefit/partner price may be 0 Kč. The price actually used for an issuance must be stored as a historical snapshot so later price changes do not alter older billing.
 
-The superadmin sets the distribution price excluding VAT.
-
-Example:
-
-```text
-1 Kč bez DPH za jedno účtované vydání
-+ 21 % DPH
-= 1,21 Kč včetně DPH
-```
-
-The superadmin can:
-
-- set a global price for all partners,
-- set the global price to 0 Kč,
-- set an individual partner price including 0 Kč,
-- change future pricing without changing historical billed amounts.
-
-An individual partner price has priority over the global price. The price used for an approved order and issue must be stored as a historical snapshot so later price changes do not alter older billing.
-
-The standard VAT rate is 21 %. The administration displays and stores the service price excluding VAT, and the invoice automatically adds the partner's applicable VAT rate.
+The standard VAT rate is currently modeled as 21 % where applicable, but final VAT/accounting treatment remains subject to the separate accounting/legal review listed in the open items.
 
 ### 17.10 Safe implementation requirement
 
 The target model must be implemented additively and safely:
 
 - existing historical vouchers, tickets, partner offers, winnings, and invoices must remain unchanged,
-- the current ticket purchase must not be directly replaced without a rollback path,
-- the new combined voucher-and-ticket purchase should use a new versioned atomic purchase flow,
+- benefit issue, MioCoin deduction, and free ticket creation must succeed atomically,
 - repeated requests must not cause double deduction, double ticket creation, double code issue, or double billing,
-- approved voucher conditions and prices must be historically preserved,
-- rollout should begin with Iconic Point and one controlled contest before broader activation.
+- an active contest must always retain at least one approved unlimited fallback benefit,
+- the customer purchase path must never silently return to `buy_ticket_atomic` as a bare-ticket fallback,
+- Partner Offers remain a separate module and must not be mixed with guaranteed-benefit distribution,
+- rollout to production requires an explicitly defined real supplying company and concrete fallback benefit.
 
-This section describes the confirmed target model. It is not a statement that the full feature is already implemented in production.
+This section describes the confirmed target model. It is not a statement that the full feature is already deployed in production.
 
 The classic vouchers in sections 17.1–17.3 remain free for the partner. Their placement, contest-reward role, and business rules are not changed by the garantovaný nákupní benefit model.
 
