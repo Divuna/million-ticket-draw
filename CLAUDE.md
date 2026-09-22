@@ -243,7 +243,7 @@ nevyužitá informativní/zobrazovací pomůcka (viz její vlastní docstring).
   testují „soutěž mimo pilot / vypnutý flag → žádné stržení, žádný tiket, jasná hláška"; přidán
   100r (flag vypnutý i s allowlistem). Staging-only, vyžadují CI secrety.
 
-**Migrace (staging):** `20260921090500_benefit_only_partner_record.sql`,
+**Migrace (staging + produkce od 22. 09. 2026):** `20260921090500_benefit_only_partner_record.sql`,
 `20260921091000_guaranteed_benefit_unlimited_and_scope.sql`,
 `20260921092000_guaranteed_benefit_partner_rpcs.sql`,
 `20260921093000_guaranteed_benefit_admin_rpcs.sql`,
@@ -252,6 +252,13 @@ nevyužitá informativní/zobrazovací pomůcka (viz její vlastní docstring).
 `20260921120500_guaranteed_benefit_purchase_contest_links.sql`,
 `20260921130000_guaranteed_benefit_active_contest_fallback_guard.sql`.
 
+**Produkční stav 22. 09. 2026:** po výslovném schválení Pavla byly všechny migrace aplikovány
+na `xkzhjldrojjlrkezorey`, `main` fast-forward posunut na `03402ff2` a Vercel production
+deployment tohoto commitu je READY. Produkční testovací evidenční dodavatel je Apartmán Portus
+(bez loginu/integrací), neomezený fallback „Sleva 10 % na ubytování – Apartmán Portus“ používá
+kód `PORTUS26`, cenu distribuce 0 Kč a `all_contests`. Má aktivní vazby na všechny 4 současné
+eligible soutěže; guard je zapnutý.
+
 **Pozn. (22. 09. 2026):** tři z těchto souborů byly po mergi s `main` přejmenovány kvůli
 kolizi timestamp prefixu se třemi novými `main` migracemi ze stejného dne
 (`20260921090000_admin_contest_create_permission.sql`,
@@ -259,8 +266,9 @@ kolizi timestamp prefixu se třemi novými `main` migracemi ze stejného dne
 `20260921120000_protect_won_miocoin_bonus_prizes.sql`) — obsah souborů se neměnil, jen
 jméno (`090000→090500`, `100000→100500`, `120000→120500`). Pořadí guaranteed-benefit
 řetězu zůstává stejné (`090500 < 091000 < 092000 < 093000 < 100500 < 110000 < 120500 <
-130000`). Nikdy nespouštěno na produkci; staging na tyto konkrétní přejmenované soubory
-znovu neaplikován (obsah je identický s tím, co už na stagingu běží pod starým jménem).
+130000`). Staging na tyto konkrétní přejmenované soubory nebyl znovu aplikován
+(obsah je identický s tím, co už na stagingu běží pod starým jménem). Na produkci byly
+přejmenované soubory aplikovány 22. 09. 2026 po výslovném schválení Pavla.
 
 **Past při psaní staging testů soutěží:** `public.contests` má NOT NULL `title` **i** `name`
 (INSERT bez `title` spadne) a soutěž ve stavu `active` vyžaduje `rules_pdf_url`. Linkovací trigger
