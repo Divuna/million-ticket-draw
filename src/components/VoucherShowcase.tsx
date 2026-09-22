@@ -233,8 +233,8 @@ export const VoucherDetailDialog: React.FC<VoucherDetailDialogProps> = ({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="voucher-detail-light-dialog max-w-5xl max-h-[92vh] overflow-y-auto border-[rgba(255,138,0,0.35)] bg-gradient-to-b from-[hsl(220_30%_8%)] to-[hsl(220_35%_5%)] p-0">
         {voucher && (
-          <>
-            <div className="relative aspect-[16/9] max-h-[480px] overflow-hidden rounded-t-[20px] bg-[hsl(220_30%_10%)]">
+          <div className="block w-full min-w-0">
+            <div className="relative aspect-[16/9] w-full max-h-[480px] overflow-hidden rounded-t-[20px] bg-[hsl(220_30%_10%)]">
               {activeImage ? (
                 <img
                   src={activeImage}
@@ -250,28 +250,36 @@ export const VoucherDetailDialog: React.FC<VoucherDetailDialogProps> = ({
             </div>
 
             {galleryImages.length > 1 && (
-              <div className="grid grid-cols-3 gap-2 px-4 pt-4 sm:grid-cols-4 md:grid-cols-6">
-                {galleryImages.map((url, index) => (
-                  <button
-                    key={`${url}-${index}`}
-                    type="button"
-                    onClick={() => setActiveImage(url)}
-                    className={cn(
-                      'aspect-[4/3] overflow-hidden rounded-xl border bg-black/20 transition-all',
-                      activeImage === url
-                        ? 'border-[#FF9D24] ring-2 ring-[#FF9D24]/35'
-                        : 'border-white/10 hover:border-white/30',
-                    )}
-                    aria-label={`Zobrazit fotografii ${index + 1}`}
-                  >
-                    <img
-                      src={url}
-                      alt={`${voucher.name} – fotografie ${index + 1}`}
-                      className="h-full w-full object-cover"
-                      loading="lazy"
-                    />
-                  </button>
-                ))}
+              <div className="w-full border-t border-white/10 bg-black/20 px-4 py-4">
+                <div className="mb-2 text-xs font-medium uppercase tracking-[0.16em] text-white/55">
+                  Fotogalerie
+                </div>
+                <div className="flex w-full gap-2 overflow-x-auto pb-1">
+                  {galleryImages.map((url, index) => (
+                    <button
+                      key={`${url}-${index}`}
+                      type="button"
+                      onClick={() => setActiveImage(url)}
+                      className={cn(
+                        'relative h-20 w-28 shrink-0 overflow-hidden rounded-xl border bg-black/20 transition-all sm:h-24 sm:w-36',
+                        activeImage === url
+                          ? 'border-[#FF9D24] ring-2 ring-[#FF9D24]/35'
+                          : 'border-white/10 hover:border-white/30',
+                      )}
+                      aria-label={`Zobrazit fotografii ${index + 1}`}
+                    >
+                      <img
+                        src={url}
+                        alt={`${voucher.name} – fotografie ${index + 1}`}
+                        className="h-full w-full object-cover"
+                        loading="lazy"
+                      />
+                      <span className="absolute bottom-1 right-1 rounded bg-black/65 px-1.5 py-0.5 text-[10px] font-semibold text-white">
+                        {index + 1}/{galleryImages.length}
+                      </span>
+                    </button>
+                  ))}
+                </div>
               </div>
             )}
 
@@ -335,7 +343,7 @@ export const VoucherDetailDialog: React.FC<VoucherDetailDialogProps> = ({
                 </Button>
               </DialogFooter>
             </div>
-          </>
+          </div>
         )}
       </DialogContent>
     </Dialog>
