@@ -94,8 +94,8 @@ const InfluencerHowToEarn = () => {
                 Počkejte na schválení
               </h3>
               <p className="mt-0.5 text-sm text-[#5B6572]">
-                Administrátor OneMil zkontroluje vaši registraci. O výsledku vás budeme
-                informovat e-mailem na adresu, kterou jste zadali.
+                Administrátor OneMil zkontroluje vaši registraci. Po schválení získáte
+                přístup do Affiliate dashboardu.
               </p>
             </div>
           </div>
@@ -124,8 +124,8 @@ const InfluencerHowToEarn = () => {
               </h3>
               <p className="mt-0.5 text-sm text-[#5B6572]">
                 Provize se počítají z reálné aktivity přivedených zákazníků a firem —
-                z dokončených plateb zákazníků a ze zaplacených faktur firem. Přehled
-                a stav výplaty vidíte přímo v Affiliate dashboardu.
+                z placených dobití zákazníků a ze skutečně zaplacených faktur firem.
+                Přehled a stav výplaty vidíte přímo v Affiliate dashboardu.
               </p>
             </div>
           </div>
@@ -139,7 +139,8 @@ const InfluencerHowToEarn = () => {
             </div>
             <h3 className="font-heading text-lg font-bold text-[#1A1A1A]">Influencer</h3>
             <p className="mt-2 text-sm leading-relaxed text-[#3A3A3A]">
-              5&nbsp;% z obratu každého přivedeného zákazníka, opakovaně z každé jeho dokončené platby.
+              5&nbsp;% z placených dobití přivedeného zákazníka, opakovaně z každého dalšího dobití.
+              Bonusová, partnerská a API dobití se do provize nepočítají.
             </p>
           </div>
           <div className="rounded-[28px] border border-[#F3E4CF] bg-white p-6 shadow-[0_20px_60px_-24px_rgba(26,20,10,0.25)]">
@@ -148,8 +149,8 @@ const InfluencerHowToEarn = () => {
             </div>
             <h3 className="font-heading text-lg font-bold text-[#1A1A1A]">Obchodník</h3>
             <p className="mt-2 text-sm leading-relaxed text-[#3A3A3A]">
-              5&nbsp;% z fakturace každé přivedené firmy, z každé faktury, kterou OneMil firmě
-              vystaví a firma zaplatí.
+              5&nbsp;% z částky bez DPH, kterou OneMil vyfakturuje přivedené firmě
+              a firma ji skutečně zaplatí.
             </p>
           </div>
         </div>
@@ -173,7 +174,7 @@ const InfluencerHowToEarn = () => {
               },
               {
                 q: 'Jak a kdy dostanu vyplaceno?',
-                a: 'Provize se počítají z reálné aktivity přivedených zákazníků a firem. Stav a historii výplat vidíte v Affiliate dashboardu.',
+                a: 'Provize se počítají z placených dobití přivedených zákazníků a ze skutečně zaplacených faktur přivedených firem. Stav a historii výplat vidíte v Affiliate dashboardu.',
               },
             ].map((faq) => (
               <div

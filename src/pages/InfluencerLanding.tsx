@@ -105,12 +105,12 @@ const InfluencerLanding = () => {
             <h2 className="font-heading text-xl font-bold text-[#1A1A1A]">Influencer</h2>
             <p className="mt-1 text-sm text-[#5B6572]">Přivádíte zákazníky</p>
             <p className="mt-4 text-sm leading-relaxed text-[#3A3A3A]">
-              Sdílíte svůj osobní odkaz se svým publikem. Za každou dokončenou platbu
-              zákazníka, který se přes váš odkaz zaregistroval, získáváte provizi
-              z jeho obratu — opakovaně, dokud je aktivní.
+              Sdílíte svůj osobní odkaz se svým publikem. Z každého placeného dobití,
+              které přivedený zákazník provede, získáváte provizi — opakovaně, dokud
+              je aktivní. Bonusová, partnerská a API dobití se do provize nepočítají.
             </p>
             <p className="mt-4 text-sm font-semibold text-[#1A1A1A]">
-              Aktuální sazba: 5&nbsp;% z obratu přivedeného zákazníka
+              Aktuální sazba: 5&nbsp;% z placených dobití přivedeného zákazníka
             </p>
           </div>
 
@@ -122,11 +122,12 @@ const InfluencerLanding = () => {
             <p className="mt-1 text-sm text-[#5B6572]">Přivádíte firmy a e-shopy</p>
             <p className="mt-4 text-sm leading-relaxed text-[#3A3A3A]">
               Doporučujete OneMil firmám a e-shopům. Jakmile je přivedená firma
-              schválena a OneMil jí vyfakturuje aktivované MioCoiny, dostáváte
-              provizi z každé zaplacené faktury.
+              schválena, OneMil jí fakturuje aktivované MioCoiny a vy získáváte
+              provizi z každé faktury, kterou firma skutečně zaplatí.
             </p>
             <p className="mt-4 text-sm font-semibold text-[#1A1A1A]">
-              Aktuální sazba: 5&nbsp;% z fakturace přivedené firmy
+              Aktuální sazba: 5&nbsp;% z částky bez DPH, kterou OneMil firmě
+              vyfakturuje a firma zaplatí
             </p>
           </div>
         </div>
@@ -139,7 +140,7 @@ const InfluencerLanding = () => {
               { icon: UserPlus, title: 'Zaregistrujte se', desc: 'Vyberte režim Influencer, Obchodník, nebo oba — lze je kombinovat na jednom účtu.' },
               { icon: ClipboardCheck, title: 'Počkejte na schválení', desc: 'Administrátor zkontroluje a schválí vaši registraci.' },
               { icon: Link2, title: 'Získejte svůj odkaz', desc: 'Po schválení najdete v Affiliate dashboardu svůj doporučovací kód a odkazy pro zákazníky i firmy.' },
-              { icon: LineChart, title: 'Sledujte provize', desc: 'Provize se počítají z reálné aktivity přivedených zákazníků a firem a jsou vidět přímo v dashboardu.' },
+              { icon: LineChart, title: 'Sledujte provize', desc: 'Provize se počítají z placených dobití zákazníků a ze skutečně zaplacených faktur firem — přehled najdete přímo v dashboardu.' },
             ].map((item, i) => (
               <div
                 key={item.title}
