@@ -109,7 +109,7 @@ const AffiliateRegister = () => {
       // (AffiliateProfileSection, via update_affiliate_own_profile). The
       // ref_code is likewise no longer user-entered: passing null lets the
       // server derive and dedupe it from the name automatically.
-      const { data: rpcData, error: rpcError } = await (supabase as any).rpc('register_affiliate_account', {
+      let { data: rpcData, error: rpcError } = await (supabase as any).rpc('register_affiliate_account', {
         p_name: form.name.trim(),
         p_email: email,
         p_phone: form.phone.trim() || null,
@@ -123,6 +123,18 @@ const AffiliateRegister = () => {
         p_audience_size: null,
         p_content_categories: null,
       });
+
+      if (rpcError?.code === 'PGRST202' || rpcError?.message?.includes('Could not find')) {
+        const fallback = await (supabase as any).rpc('register_affiliate_account', {
+          p_name: form.name.trim(),
+          p_email: email,
+          p_phone: form.phone.trim() || null,
+          p_modes: modes,
+          p_ref_code: null,
+        });
+        rpcData = fallback.data;
+        rpcError = fallback.error;
+      }
 
       if (rpcError) throw new Error(rpcError.message || 'Registrace affiliate účtu selhala.');
 
