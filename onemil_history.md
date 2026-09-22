@@ -47,8 +47,17 @@ Finální commit `14b302e00789ee3f5fba2f97d5de7f5cd836428c` změnil proti předc
 - `src/pages/AffiliateRegister.tsx`,
 - `tests/e2e/28-affiliate-registration-profile-fields.spec.ts`.
 
-Build prošel, spec 13 prošel 4/4; spec 28 zůstal staging-only a bez CI service-role secretu se
-lokálně korektně přeskočil. Produkční Vercel deployment pro `14b302e0` byl ověřen jako READY.
+Build prošel, spec 13 prošel 4/4. Spec 28 se lokálně bez CI service-role secretu korektně
+přeskočil, proto byl následně spuštěn skutečný staging E2E přes GitHub Actions workflow
+`playwright-staging.yml`, run `35770030095`, nad `main` SHA `78913731`.
+
+Výsledek skutečného staging testu: **1/1 passed, 0 failed, 0 skipped**. Test ověřil krátkou
+`/affiliate/register`, automatické vytvoření `ref_code`, pending účet, schválení, přihlášení,
+`Affiliate dashboard → Profil`, doplnění webu + Instagram/TikTok/YouTube/Facebook/dosahu/kategorií,
+uložení, DB read-back a zachování všech hodnot po reloadu. `afterAll` odstranil testovací Affiliate
+řádek i Auth uživatele ze stagingu. Produkce nebyla testem změněna.
+
+Produkční Vercel deployment pro aplikační SHA `14b302e0` byl ověřen jako READY.
 
 Žádná databáze, RLS, migrace, Edge Function, provizní sazba, first-touch atribuce, payout logika,
 peněženka, platba ani soutěžní logika nebyla touto změnou upravena.
