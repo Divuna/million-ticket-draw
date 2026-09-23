@@ -302,7 +302,7 @@ serve(async (req) => {
 
     const { data: contest, error: contestError } = await supabaseAdmin
       .from('contests')
-      .select('id, ticket_count, title')
+      .select('id, ticket_count, title, next_ticket_number')
       .eq('id', contest_id)
       .single()
 
@@ -316,6 +316,38 @@ serve(async (req) => {
         0,
         Date.now() - startTime,
         undefined,
+      )
+    }
+
+    // Po vydání prvního tiketu se bonusové pozice nesmí měnit. Tato funkce
+    // zapisuje přes service_role, na kterou DB guard
+    // `trg_guard_bonus_prizes_after_contest_start` záměrně nedosáhne — proto
+    // stejné pravidlo vynucujeme tady.
+    const { count: issuedTickets, error: ticketsError } = await supabaseAdmin
+      .from('tickets')
+      .select('id', { count: 'exact', head: true })
+      .eq('contest_id', contest_id)
+
+    if (ticketsError) {
+      return jsonFailure(
+        'check_contest_started',
+        'Nelze ověřit, zda soutěž už má vydané tikety',
+        { message: ticketsError.message, code: ticketsError.code },
+        0,
+        Date.now() - startTime,
+        undefined,
+      )
+    }
+
+    if ((contest.next_ticket_number ?? 1) > 1 || (issuedTickets ?? 0) > 0) {
+      return jsonFailure(
+        'contest_already_started',
+        'Bonusové pozice nelze měnit: soutěž už má vydané tikety.',
+        { contest_id, next_ticket_number: contest.next_ticket_number, issued_tickets: issuedTickets ?? 0 },
+        0,
+        Date.now() - startTime,
+        undefined,
+        409,
       )
     }
 

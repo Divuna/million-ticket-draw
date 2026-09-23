@@ -82,7 +82,11 @@ test.describe('high-risk payment and wallet RPC contract', () => {
     expect(read('src/pages/ContestDetail.tsx')).toContain('buy_ticket_atomic');
     expect(read('src/pages/Games.tsx')).toContain('buy_ticket_atomic');
     expect(read('src/pages/FavoriteGames.tsx')).toContain('buy_ticket_atomic');
-    expect(read('supabase/functions/purchase-ticket/index.ts')).toContain('buy_ticket_atomic');
+    // Fáze 1 (23. 9. 2026): purchase-ticket je vyřazený — vrací 410 a nic nevolá.
+    const purchaseTicket = read('supabase/functions/purchase-ticket/index.ts');
+    expect(purchaseTicket).toContain('status: 410');
+    expect(purchaseTicket).not.toContain('/rest/v1/rpc/');
+    expect(purchaseTicket).not.toContain('.rpc(');
   });
 
   test('known payment and refund boundaries stay unchanged', () => {

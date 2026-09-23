@@ -1,7 +1,7 @@
 # OneMil — business context
 
 **Status:** permanent business/product context  
-**Last updated:** 2026-09-22  
+**Last updated:** 2026-09-23  
 **Owner:** Pavel Diviš  
 **Company context:** see `COMPANY_CONTEXT.md`
 
@@ -467,6 +467,13 @@ Current player reward system:
 - the intended one-time **15 MIO** bonus after the referred user's first paid top-up is **not yet implemented**,
 - therefore neither the 5 % wallet credit nor the 15 MIO first-top-up bonus may be represented as fully live/working until the technical flow is completed and verified,
 - any change to wallet credit/referral payout logic is a money-related production change and requires Pavel's explicit approval before implementation.
+
+**Permanent player referral link — confirmed 2026-09-23:**
+- The link between the referring user and the referred user is **permanent**.
+- It must **not** be deactivated automatically because the referred user is inactive (for example after a year without playing). Inactivity alone never ends the link.
+- The link history and the original first-touch attribution are preserved.
+- The link may end only on an explicitly justified event: deletion of the account, confirmed fraud or abuse, or another legitimate reason recorded with its cause.
+- This rule supersedes the earlier technical behaviour in which a daily job (`process_referral_inactivity`, cron `referral_inactivity_daily`) switched the link to `permanently_inactive` after one year of inactivity. Links that were already switched by that job are historical records and are not rewritten by this decision.
 
 Important separation:
 
