@@ -77,6 +77,10 @@
 11. **Změna pravidel po spuštění:** za jakých okolností lze po aktivaci soutěže změnit její pravidla a které parametry už změnit nelze?
 12. **Ukončení/přerušení soutěže:** jak právně postupovat při závažné technické poruše, zásahu vyšší moci, podvodu nebo jiném mimořádném důvodu? Co se stane s již vydanými tikety, zakoupenými garantovanými benefity a právy účastníků?
 13. **Uzavřená soutěž:** současná produkční logika považuje stav `closed` za konečný a počet tiketů po prvním vydaném tiketu nelze změnit. Potvrdit, zda toto má být výslovně promítnuto do pravidel/VOP.
+14. **Reklamace a podpora:** jaký reklamační postup, lhůty, náležitosti a komunikační kanály musí VOP obsahovat pro placené MIO, garantované benefity, vouchery, soutěžní výhry a technické chyby?
+15. **Odpovědnost:** jak správně rozdělit odpovědnost mezi iCONIC POINT s.r.o. jako provozovatele OneMil, konkrétního partnera jako poskytovatele benefitu/voucheru a externí poskytovatele (např. Stripe)?
+16. **Omezení/blokace účtu:** za jakých podmínek lze účet dočasně omezit nebo zablokovat při podvodu, manipulaci, zneužívání či bezpečnostním incidentu a jak vypořádat MIO, benefity, tikety a již vzniklé výhry?
+17. **Mimosoudní řešení sporů:** potvrdit přesné aktuální poučení pro českého spotřebitele, včetně příslušného subjektu ADR, způsobu podání návrhu a údajů, které musí být uvedeny ve VOP.
 
 ---
 
