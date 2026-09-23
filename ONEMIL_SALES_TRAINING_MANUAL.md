@@ -20,19 +20,19 @@ Tento dokument se má načíst nejen při dotazu na „školící manuál“, al
 
 OneMil je B2B odměnová, partnerská a marketingová platforma pro český a slovenský trh. Propojuje firmy, e-shopy, značky, influencery, obchodníky a zákazníky. Spotřebitelské soutěže jsou atraktivní část systému pro zákazníka, ale OneMil není jen soutěžní aplikace.
 
-Základní princip: zákazník nakoupí u zapojeného partnera → získá odměnu v podobě MioCoinů nebo kuponu → aktivuje ji v OneMil → MioCoiny může využít v soutěžích, na vouchery a další vybrané výhody.
+Základní princip: zákazník nakoupí u zapojeného partnera → získá odměnu v podobě MIO nebo kuponu → aktivuje ji v OneMil → MIO může využít v soutěžích, na vouchery a další vybrané výhody.
 
 Pro firmu je OneMil nástroj, jak zákazníka odměnit, motivovat k návratu a současně získat další marketingové možnosti.
 
 ### OneMil ve 30 sekundách
 
-„OneMil je partnerský odměnový systém pro firmy a e-shopy. Firma může zákazníky za nákup nebo jinou aktivitu odměňovat MioCoiny. Zákazník je potom využívá v OneMil například v soutěžích o hodnotné věcné ceny, na vouchery a další výhody. Firma si sama určuje, jak své zákazníky odměňuje, a u standardního partner modelu platí jen za skutečně aktivované nebo použité MioCoiny.“
+„OneMil je partnerský odměnový systém pro firmy a e-shopy. Firma může zákazníky za nákup nebo jinou aktivitu odměňovat MIO. Zákazník je potom využívá v OneMil například v soutěžích o hodnotné věcné ceny, na vouchery a další výhody. Firma si sama určuje, jak své zákazníky odměňuje, a u standardního partner modelu platí jen za skutečně aktivované nebo použité MIO.“
 
-## 2. MioCoin
+## 2. MIO
 
-MioCoin je interní kredit OneMil. Není to kryptoměna a nelze jej vybrat nebo směnit zpět za peníze.
+MIO je interní kredit OneMil. Není to kryptoměna a nelze jej vybrat nebo směnit zpět za peníze.
 
-Zákazník může MioCoiny získat:
+Zákazník může MIO získat:
 
 - od partnerské firmy,
 - aktivací partnerského kuponu,
@@ -41,14 +41,14 @@ Zákazník může MioCoiny získat:
 
 Může je využít na soutěže, vouchery a vybrané další výhody v OneMil.
 
-Potvrzený základní partnerský cenový princip je **1 použitý MioCoin = 1 Kč + 21 % DPH**. Firma standardně neplatí za celý potenciál rozdaných kuponů, ale za skutečně aktivované/použité MioCoiny.
+Potvrzený základní partnerský cenový princip je **1 použitý MIO = 1 Kč + 21 % DPH**. Firma standardně neplatí za celý potenciál rozdaných kuponů, ale za skutečně aktivované/použité MIO.
 
 ## 3. Zákazník
 
 Zákazník může:
 
 - aktivovat odměnu nebo kupon od partnerské firmy,
-- spravovat své MioCoiny,
+- spravovat své MIO,
 - účastnit se spotřebitelských soutěží,
 - získávat a používat vouchery,
 - využívat partnerské nabídky a další dostupné výhody,
@@ -56,9 +56,9 @@ Zákazník může:
 
 ### Osobní OneMil kód
 
-Běžný uživatel může doporučit OneMil dalším lidem prostřednictvím osobního kódu nebo odkazu. Potvrzený model odměny je 5 % v MioCoinech z placených dobití přivedeného uživatele a jednorázový bonus 15 MioCoinů po jeho prvním placeném dobití. Za samotnou registraci se odměna neposkytuje.
+Běžný uživatel může doporučit OneMil dalším lidem prostřednictvím osobního kódu nebo odkazu. Potvrzený model odměny je 5 % v MIOech z placených dobití přivedeného uživatele a jednorázový bonus 15 MIO po jeho prvním placeném dobití. Za samotnou registraci se odměna neposkytuje.
 
-Běžný zákazník dostává nepeněžní odměnu v MioCoinech, nikoli peněžní provizi.
+Běžný zákazník dostává nepeněžní odměnu v MIOech, nikoli peněžní provizi.
 
 ## 4. E-shop nebo partnerská firma
 
@@ -75,11 +75,11 @@ Firma může zákazníka odměnit například za:
 - omluvu nebo kompenzaci,
 - vlastní marketingovou aktivitu.
 
-Partner si určuje vlastní štědrost a pravidla. OneMil mu nenařizuje jednu pevnou částku MioCoinů za objednávku.
+Partner si určuje vlastní štědrost a pravidla. OneMil mu nenařizuje jednu pevnou částku MIO za objednávku.
 
 ### Partnerská část OneMil
 
-Partnerská část slouží firmě ke správě jejího zapojení do OneMil. Partner má podle potvrzeného obchodního modelu kontrolu nad tím, kolik MioCoinů rozdává, za jaké aktivity, jaké používá kampaně, odměny, nabídky a vouchery a jaké je jejich využití.
+Partnerská část slouží firmě ke správě jejího zapojení do OneMil. Partner má podle potvrzeného obchodního modelu kontrolu nad tím, kolik MIO rozdává, za jaké aktivity, jaké používá kampaně, odměny, nabídky a vouchery a jaké je jejich využití.
 
 Přesné názvy obrazovek a ovládacích prvků se mohou s vývojem aplikace měnit. Obchodník nemá klientovi slibovat konkrétní tlačítko nebo umístění funkce bez aktuálního ověření.
 
@@ -91,19 +91,19 @@ Bezpečná obchodní formulace: „Podíváme se na systém, který používáte
 
 ## 5. Jak firma za OneMil platí
 
-Jedna z hlavních výhod partner modelu je výkonové účtování. Firma může distribuovat větší množství odměn, ale u potvrzeného modelu platí za MioCoiny, které zákazníci skutečně aktivují/použijí.
+Jedna z hlavních výhod partner modelu je výkonové účtování. Firma může distribuovat větší množství odměn, ale u potvrzeného modelu platí za MIO, které zákazníci skutečně aktivují/použijí.
 
-Příklad: firma rozdá kupony s potenciálem 100 000 MioCoinů. Zákazníci aktivují 20 000 MioCoinů. Základ pro účtování je 20 000 aktivovaných/použitých MioCoinů, nikoli všech 100 000 potenciálně rozdaných.
+Příklad: firma rozdá kupony s potenciálem 100 000 MIO. Zákazníci aktivují 20 000 MIO. Základ pro účtování je 20 000 aktivovaných/použitých MIO, nikoli všech 100 000 potenciálně rozdaných.
 
 ## 6. Kupon, voucher a Partner Offer
 
 ### Kupon
 
-Kupon je odměna od firmy zákazníkovi. Zákazník jej aktivuje v OneMil a získá odpovídající MioCoiny.
+Kupon je odměna od firmy zákazníkovi. Zákazník jej aktivuje v OneMil a získá odpovídající MIO.
 
 ### Voucher
 
-Voucher je nabídka, kterou může zákazník v OneMil koupit nebo odemknout pomocí MioCoinů. Partner může své vouchery umístit do hlavní nabídky voucherů nebo je poskytnout do vybraných soutěží jako další benefit či odměnu.
+Voucher je nabídka, kterou může zákazník v OneMil koupit nebo odemknout pomocí MIO. Partner může své vouchery umístit do hlavní nabídky voucherů nebo je poskytnout do vybraných soutěží jako další benefit či odměnu.
 
 U klasických partnerských voucherů je jejich umístění v OneMil v rámci spolupráce zdarma. Partner si určuje hodnotu, platnost, podmínky, množství a cílovou nabídku. Samotnou slevu nebo benefit poskytuje partner.
 
@@ -113,17 +113,17 @@ Partner Offer je bezplatná nebo speciální nabídka partnera zobrazovaná v On
 
 ## 7. Garantovaný nákupní benefit
 
-Garantovaný nákupní benefit je samostatný potvrzený model. U podporovaného nákupu zákazník pořizuje garantovaný nákupní benefit za MioCoiny a soutěžní ticket získává zdarma jako bonus.
+Garantovaný nákupní benefit je samostatný potvrzený model. U podporovaného nákupu zákazník pořizuje garantovaný nákupní benefit za MIO a soutěžní ticket získává zdarma jako bonus. Konkrétní bonusové výherní pozice jsou určeny předem interně, ale jejich čísla se účastníkům předem nezobrazují.
 
 Veřejná komunikace musí být jasná, například: **„Garantovaný nákupní benefit + 1 ticket zdarma“**. Nesmí se označovat jako soutěžní voucher.
 
 ## 8. Soutěže
 
-Soutěže jsou spotřebitelsky atraktivní vrstva OneMil. Mají věcné hlavní ceny, mohou obsahovat bonusové věcné ceny nebo MioCoinové bonusy, mají pevný počet ticketů a jasná pravidla.
+Soutěže jsou spotřebitelsky atraktivní vrstva OneMil. Mají věcné hlavní ceny, mohou obsahovat bonusové věcné ceny nebo MIOové bonusy, mají pevný počet ticketů a jasná pravidla.
 
 Aktuální hlavní princip uvedený v obchodním kontextu je, že hlavní výhra patří držiteli posledního ticketu.
 
-Používat výrazy: spotřebitelská soutěž, ticket, hlavní výhra, věcná výhra, bonusová výhra, MioCoin, voucher, partnerská nabídka.
+Používat výrazy: spotřebitelská soutěž, ticket, hlavní výhra, věcná výhra, bonusová výhra, MIO, voucher, partnerská nabídka.
 
 Nepoužívat: casino, hazard, sázení, sázka, jackpot, gambling, betting, žetony.
 
@@ -145,7 +145,7 @@ Influencer model může obsahovat:
 - peněžní provize v Kč,
 - fakturaci,
 - kampanové bonusy,
-- MioCoinové bonusy pro přivedené uživatele.
+- MIOové bonusy pro přivedené uživatele.
 
 Peněžní odměny influencerů jsou spravované a schvalované OneMil. Konkrétní sazbu nelze slíbit bez schválení.
 
@@ -155,7 +155,7 @@ Obchodník nebo agentura může přivádět do OneMil partnerské firmy i koncov
 
 ### Provize z přivedené firmy
 
-Provize se počítá z částky bez DPH, kterou OneMil skutečně vyfakturuje přivedené firmě za aktivované/použité MioCoiny. Nejde o procento z obratu e-shopu ani z potenciální hodnoty všech rozdaných odměn.
+Provize se počítá z částky bez DPH, kterou OneMil skutečně vyfakturuje přivedené firmě za aktivované/použité MIO. Nejde o procento z obratu e-shopu ani z potenciální hodnoty všech rozdaných odměn.
 
 V potvrzeném obchodním kontextu je jako příklad používána sazba 5 %. Pokud OneMil vyfakturuje přivedenému e-shopu 20 000 Kč bez DPH, při 5% sazbě činí provize 1 000 Kč.
 
@@ -191,7 +191,7 @@ Cílem není vysvětlit celý OneMil. Cílem je zjistit, zda firma dává pro sp
 
 Možný začátek:
 
-„Dobrý den, volám za OneMil. Vytváříme partnerský odměnový systém pro e-shopy a firmy, který umožňuje odměňovat zákazníky za nákupy MioCoiny a zároveň je zapojit do dalších výhod a spotřebitelských soutěží. Potřeboval bych zjistit, kdo u vás řeší marketing, věrnost zákazníků nebo partnerské spolupráce.“
+„Dobrý den, volám za OneMil. Vytváříme partnerský odměnový systém pro e-shopy a firmy, který umožňuje odměňovat zákazníky za nákupy MIO a zároveň je zapojit do dalších výhod a spotřebitelských soutěží. Potřeboval bych zjistit, kdo u vás řeší marketing, věrnost zákazníků nebo partnerské spolupráce.“
 
 Když mluvíte se správným člověkem:
 
@@ -203,7 +203,7 @@ Potom se ptejte na současný způsob odměňování zákazníků, věrnostní s
 
 ### Kolik nás to bude stát?
 
-„Základní potvrzený model je 1 použitý MioCoin za 1 Kč + DPH. Firma si sama nastavuje, kolik MioCoinů chce rozdávat. U standardního modelu neplatíte za nevyužitou část rozdaných kuponů, ale za skutečně aktivované/použité MioCoiny.“
+„Základní potvrzený model je 1 použitý MIO za 1 Kč + DPH. Firma si sama nastavuje, kolik MIO chce rozdávat. U standardního modelu neplatíte za nevyužitou část rozdaných kuponů, ale za skutečně aktivované/použité MIO.“
 
 ### Musíme zákazníkům dávat pevnou částku?
 
@@ -211,7 +211,7 @@ Potom se ptejte na současný způsob odměňování zákazníků, věrnostní s
 
 ### Co z toho má zákazník?
 
-„Dostane od vás odměnu v MioCoinech, které může v OneMil využívat například v soutěžích, na vouchery a další dostupné výhody.“
+„Dostane od vás odměnu v MIOech, které může v OneMil využívat například v soutěžích, na vouchery a další dostupné výhody.“
 
 ### Můžeme nabídnout vlastní slevu nebo voucher?
 
@@ -227,7 +227,7 @@ Potom se ptejte na současný způsob odměňování zákazníků, věrnostní s
 
 ### Je OneMil hazard?
 
-„OneMil je partnerská odměnová a spotřebitelská soutěžní platforma. Pracuje s věcnými výhrami a interním kreditem MioCoin, který nelze vybrat zpět za peníze.“
+„OneMil je partnerská odměnová a spotřebitelská soutěžní platforma. Pracuje s věcnými výhrami a interním kreditem MIO, který nelze vybrat zpět za peníze.“
 
 ## 16. Co obchodník nesmí slíbit
 
@@ -236,7 +236,7 @@ Potom se ptejte na současný způsob odměňování zákazníků, věrnostní s
 - konkrétní dosah reklamy, počet zákazníků, prodeje nebo výsledek kampaně,
 - umístění produktu do konkrétní soutěže bez potvrzení OneMil,
 - funkci aplikace, pokud není ověřeno, že je dostupná,
-- že MioCoin je kryptoměna, peníze nebo prostředek, který lze vybrat,
+- že MIO je kryptoměna, peníze nebo prostředek, který lze vybrat,
 - neověřenou cenu, slevu, bonus nebo obchodní podmínku.
 
 Když obchodník něco neví: **„Tohle Vám nechci říct špatně. Ověřím přesné podmínky a vrátím se k Vám.“**
@@ -265,7 +265,7 @@ Možnost přivádět firmy i zákazníky a dlouhodobý provizní model. Konkrét
 
 ### Koncový zákazník
 
-Získává MioCoiny, využívá je na výhody a soutěže, může sdílet osobní kód a vše spravuje v OneMil.
+Získává MIO, využívá je na výhody a soutěže, může sdílet osobní kód a vše spravuje v OneMil.
 
 ## 18. Nejdůležitější pravidlo pro obchodníka
 
