@@ -553,6 +553,8 @@ The intended model is long-term. If the brought e-shop continues using OneMil an
 
 An agency can also bring end users through its tracking link or code. Paid top-ups of these customers can create a separate customer commission.
 
+**Current technical gap — verified 2026-09-23:** the affiliate customer-commission calculator currently sums `payments.amount`. The live Stripe webhook writes the **credited MIO amount** into that field, not the actual CZK amount paid. Because bonus bundles can credit more MIO than the customer paid in CZK, this field is not a reliable monetary base for a CZK percentage commission. Before live affiliate customer commissions are paid, the commission base must be explicitly defined and the technical calculation aligned with the actual paid CZK amount. This is a money-related change and requires Pavel's explicit approval before production implementation.
+
 For this customer commission, the agency can determine who receives it:
 
 - the agency can keep the commission itself,
