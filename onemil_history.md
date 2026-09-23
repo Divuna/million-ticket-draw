@@ -1,3 +1,9 @@
+# 24. 09. 2026 — Refund blok F2 + F3 + F4 (JEN STAGING)
+
+Implementován na větvi `claude/refund-block-f2-f4` a ověřen na stagingu: ekonomika platby (zaplacené Kč, základ, bonus, Stripe režim), MIO sady s jediným FEFO algoritmem a 12měsíční expirací, refundace v2 jen z vlastní sady platby a technická podpora souhlasu s okamžitým použitím MIO (bez vymyšleného textu, výchozí vypnuto). Staging drift: peněženkové funkce se sjednotily s produkcí a doplnila se chybějící `record_stripe_refund_status`. Produkce nedotčena.
+
+---
+
 # 23. 09. 2026 — Audit opravného úkolu a Fáze 1: integrita soutěží (PRODUKCE)
 
 ## Read-only audit

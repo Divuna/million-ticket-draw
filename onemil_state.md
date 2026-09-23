@@ -3,6 +3,45 @@
 > **Autoritativní aktuální stav. Poslední aktualizace 23. 9. 2026 — Fáze 1 opravného úkolu (integrita soutěží) nasazena do produkční Supabase (`xkzhjldrojjlrkezorey`), commit `69990255`. Předchozí hlavní aktualizace: 22. 9. 2026 — Auth/Affiliate flow a garantované nákupní benefity.**
 
 
+## -7. Refund blok (Fáze 2 + 3 + 4) — JEN STAGING, do produkce NENASAZENO (24. 09. 2026)
+
+Větev `claude/refund-block-f2-f4`, migrace `supabase/migrations/20260924100000_refund_block_wallet_lots.sql`.
+Aplikováno **pouze na staging `dxmowysntemfqfnanxua`** (DB + Edge Functions `create-stripe-checkout`,
+`stripe-webhook`, `stripe-refund`). **Produkce `xkzhjldrojjlrkezorey` beze změny**, Stripe live
+nezapnut. Produkční nasazení čeká na výslovné schválení Pavla.
+
+- **F2 platba:** `payments` + `paid_amount_czk`, `base_mio`, `bonus_mio`, `currency`,
+  `stripe_livemode`, `immediate_use_consent_id`, `refund_amount_czk`, `refund_paid_mio`,
+  `refund_bonus_mio`. `payments.amount` zůstává = celkem připsaná MIO (referral a affiliate se
+  nemění). Webhook zapisuje 300 Kč → base 300 + bonus 10 (amount 310).
+- **F3 MIO sady:** `wallet_lots` (zdroj, reference, připsáno, zbývá, placená/bonusová MIO, Kč,
+  `credited_at`, `expires_at` = +12 měsíců, stav) + neměnné `wallet_lot_movements`. Jediný
+  algoritmus čerpání `wallet_debit_fefo` (nejbližší `expires_at`, při shodě dříve připsaná sada),
+  připsání `wallet_credit_lot`, denní cron `expire_wallet_lots_daily` + líná expirace před každým
+  čerpáním. Placená sada dobití se připisuje před bonusovou, takže se čerpá první. Přes sady jdou:
+  Stripe dobití, partnerský kód (90denní platnost kódu beze změny, po aktivaci sada na 12 měsíců),
+  partnerský bonus 15 MIO, přesuny MIO výher z bonusové kapsy, nákup garantovaného benefitu,
+  voucher, refundace. Trigger `trg_wallets_lot_sync` převádí každou jinou přímou změnu
+  `balance_coins` (legacy/servisní cesty) na sadu nebo FEFO odečet. Dnešní kladné zůstatky mají
+  jednu sadu `legacy_opening`. Kontrola: `wallet_lot_consistency_issues()`.
+- **F4 refundace v2:** tok `prepare → Stripe → record → finalize / reverse` zachován. Refunduje se
+  jen nevyčerpaná placená část sady dané platby (Kč poměrně ke skutečně zaplacené částce), ruší se
+  nevyčerpaný bonus této platby, cizí sady se nedotknou, Stripe dostane přesnou částku v haléřích.
+  Selhání Stripe vrátí přesně pohyby této refundace. Platby bez rozpadu na Kč → `legacy_payment_not_supported`.
+- **Souhlas s okamžitým použitím MIO:** tabulka `payment_immediate_use_consents`, nastavení
+  `immediate_use_consent_required/version/text` (výchozí vypnuto a prázdné — schválené znění
+  v projektu zatím není), dialog před checkoutem, EF souhlas vynutí a uloží.
+- **Ověření:** SQL scénáře `supabase/tests/refund_block_wallet_lots_scenarios.sql` 35/35,
+  spec 190 11/11 (souběh), spec 191 3/3, cílený staging běh 142 passed (selhal jen spec 09 —
+  známý vypnutý flag stagingu). Rollback `docs/rollback/refund_block_rollback.sql` ověřen na
+  stagingu (funkce po rollbacku = produkce, pak znovu nasazeno).
+
+**OPEN ISSUE (vědomě mimo rozsah):** referral 5 % / 15 MIO, affiliate základ, `try_credit_wallet_mc`
+a `buy_ticket_atomic` mění zůstatek přímo — konzistenci drží sync trigger. Produkční `legacy_opening`
+sady vzniknou až při nasazení.
+
+---
+
 ## -6. Fáze 1 opravného úkolu — integrita soutěží — nasazeno do produkce (23. 09. 2026)
 
 Po read-only auditu z 23. 9. 2026 (origin/main `c47881ed`, produkce `xkzhjldrojjlrkezorey`) byla
