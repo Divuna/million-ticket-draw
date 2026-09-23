@@ -11,6 +11,19 @@ All AI assistants, Claude Code, Cursor, ChatGPT, Paperclip agents, Lovable, Code
 
 Do not treat OneMil as only a contest app. OneMil is primarily a partner reward and marketing platform for companies, e-shops, brands, influencers, agencies, and end users.
 
+### Public credit naming — confirmed 2026-09-23
+
+- The public name of the OneMil internal credit is **MIO**.
+- In customer-facing UI, marketing, legal texts and new documentation use **MIO**, for example: `15 MIO`, `125 MIO`.
+- When a descriptive term is needed, use **„MIO kredit“** or **„MIO kredity“**. The primary visible name remains **MIO**.
+- Do **not** use „MioCoin“ / „MioCoiny“ as the new public product name.
+- Legal wording should describe MIO as **internal digital credit of the OneMil platform** that can be obtained or topped up and used only inside OneMil according to the current offer.
+- MIO cannot be withdrawn as money or transferred outside OneMil.
+- Existing database columns, RPC names, historical documents and source-code identifiers containing `coin`, `miocoin`, `MC` or `MioCoin` are **legacy technical/internal names** until a separately approved technical rename is carried out. This naming decision by itself does not authorize a database/schema migration or mass code rename.
+- This rule supersedes older public-facing references to „MioCoin“ elsewhere in project documentation.
+
+---
+
 ### Operator role — confirmed 2026-09-19
 
 - **iCONIC POINT s.r.o. is the operator of the OneMil system/platform.**
