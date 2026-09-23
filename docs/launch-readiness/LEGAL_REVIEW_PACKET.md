@@ -39,7 +39,9 @@
 **VOP (`/vop`)** — ⚠️ nejslabší (jen 712 znaků):
 - **Chybí identifikace firmy** — žádné IČO, žádný název iCONIC POINT s.r.o.
 - Reklamační řád zmíněn jen okrajově — chybí plný reklamační proces, lhůty, postup.
-- Chybí typicky: práva spotřebitele, odstoupení od smlouvy, povaha MioCoinů (interní kredit, nevyplatitelný), platební podmínky.
+- Chybí typicky: práva spotřebitele, odstoupení od smlouvy, povaha MIO (interní kredit, nevyplatitelný a nepřevoditelný mimo OneMil), platební podmínky.
+- Text neodpovídá aktuálnímu podporovanému nákupnímu modelu: zákazník pořizuje za MIO **garantovaný nákupní benefit** a získává k němu **1 soutěžní tiket zdarma jako bonus**.
+- VOP zatím neřeší potvrzený produktový záměr, že MIO z placeného dobití má mít platnost **12 měsíců od daného dobití**; tato expirace zatím není technicky v produkční peněžence vynucena a musí být před zveřejněním implementována a právně posouzena.
 
 **GDPR (`/gdpr`)**:
 - **Chybí Supabase jako zpracovatel** (hosting/DB zpracovatel není uveden).
@@ -52,7 +54,8 @@
 **Pravidla soutěží (`/pravidla-souteze`)**:
 - Obsahuje **placeholdery** `[NÁZEV SOUTĚŽE]`, `[DATUM]`, `[POPIS HLAVNÍ VÝHRY]`, `[HODNOTA]` — obecná CMS stránka, ne závazný zdroj konkrétní soutěže.
 - Per-contest závazná pravidla jdou přes `rules_pdf_url` u každé soutěže.
-- Veřejná copy nesmí používat hazard/loterie framing (model = sekvenční tikety 1, 2, 3…, předem dané výherní pozice).
+- Aktuální produktový model: tikety se přidělují sekvenčně 1, 2, 3…, hlavní výhru získává držitel posledního tiketu. Bonusové výherní pozice jsou určeny interně předem, ale jejich konkrétní čísla se účastníkům předem nezobrazují.
+- Právní review má výslovně posoudit, zda je tento způsob skrytých předem určených bonusových pozic a model „garantovaný nákupní benefit + 1 tiket zdarma“ v pořádku podle českého práva.
 
 **Duplicita GDPR**:
 - `gdpr` (1281 zn.) i `ochrana-osobnich-udaju` (3030 zn.) existují souběžně. Kód směruje `/privacy` → `/gdpr`. Právník by měl rozhodnout, která je kanonická, a druhou sjednotit/zrušit.
@@ -62,14 +65,15 @@
 ## 3. Otázky pro právníka
 
 1. **VOP:** doplnit plnou identifikaci provozovatele (iCONIC POINT s.r.o., IČO 17795851, sídlo) + kompletní reklamační řád — jaký rozsah požaduje české právo pro tuto službu?
-2. **MioCoin:** jak právně ukotvit interní kredit (nevyplatitelný, nepřevoditelný mimo platformu) ve VOP?
-3. **Odstoupení od smlouvy:** jak řešit 14denní odstoupení u digitálního kreditu/voucherů?
+2. **MIO:** jak právně ukotvit interní digitální kredit MIO (nevyplatitelný a nepřevoditelný mimo OneMil) a jak jej odlišit od elektronických peněz, kryptoměny nebo jiného regulovaného platebního prostředku?
+3. **Odstoupení od smlouvy:** jak řešit 14denní odstoupení u placeného dobití MIO, garantovaných nákupních benefitů a voucherů?
 4. **GDPR:** potvrdit úplný seznam zpracovatelů (Supabase, Stripe, OneSignal, Resend, případně Sofinity/GTM/GA) + právní základy + doby uchování.
 5. **GDPR duplicita:** sjednotit `/gdpr` vs. `/legal/ochrana-osobnich-udaju` — která je kanonická?
 6. **Cookies:** schválit přesný popis cookies + localStorage + tracking (Stripe, OneSignal, GTM/GA) odpovídající reálnému chování a consent banneru.
-7. **Pravidla soutěží:** jaký obecný text na `/pravidla-souteze` + jaká povinná struktura per-contest rules PDF (název, datum, hlavní výhra, hodnota, výherní pozice, provozovatel)?
-8. **Wording:** je framing „sekvenční tikety + předem dané výherní pozice" (ne loterie/hazard) právně v pořádku pro ČR?
+7. **Pravidla soutěží:** jaký obecný text na `/pravidla-souteze` a jaká je povinná struktura pravidel jednotlivé soutěže? Je nutné účastníkům předem zveřejnit konkrétní čísla bonusových výherních pozic, nebo mohou zůstat předem určená interně a nezveřejněná?
+8. **Soutěžní model:** právně posoudit celý model „garantovaný nákupní benefit za MIO + 1 soutěžní tiket zdarma“, sekvenční přidělování tiketů, hlavní výhru pro držitele posledního tiketu a skryté předem určené bonusové pozice. Určit, zda a za jakých podmínek tento model nespadá pod regulaci hazardních her.
 9. **Věk 18+:** je gating dostatečný, nebo je třeba doplnit do VOP/pravidel?
+10. **Platnost placeného MIO:** lze nastavit expiraci MIO z placeného dobití na 12 měsíců od konkrétního dobití? Jaké informační povinnosti, upozornění a pravidla pro spotřebu/propadnutí je nutné dodržet?
 
 ---
 
@@ -86,7 +90,7 @@
 > 3. **Zásady cookies** — `https://onemil.cz/legal/cookies` (sjednotit s reálnými nástroji: Stripe, OneSignal, Google Tag Manager; rozlišit cookies vs. localStorage)
 > 4. **Pravidla soutěží** — `https://onemil.cz/pravidla-souteze` (obecná stránka má placeholdery; + struktura pravidel jednotlivých soutěží)
 >
-> Stručný kontext: OneMil je soutěžní platforma s věcnými výhrami. Uživatel kupuje interní kredit „MioCoin" (Stripe), za nějž pořizuje tikety; tikety se otevírají sekvenčně (1, 2, 3…) a výherní pozice jsou předem dané v pravidlech dané soutěže (nejde o loterii/hazard). Věkový limit 18+.
+> Stručný kontext: OneMil je partnerská odměnová a spotřebitelská platforma. Uživatel může získat nebo placeně dobít interní kredit **MIO**. U podporovaného soutěžního nákupu uživatel za MIO pořizuje **garantovaný nákupní benefit** a získává k němu **1 soutěžní tiket zdarma jako bonus**. Tikety se přidělují sekvenčně (1, 2, 3…). Hlavní výhru získává držitel posledního tiketu. Bonusové výherní pozice jsou určeny interně předem, ale jejich konkrétní čísla se účastníkům předem nezobrazují. Prosíme o právní posouzení tohoto modelu, včetně jeho vztahu k regulaci hazardních her. Věkový limit je 18+.
 >
 > V příloze posílám konkrétní seznam zjištěných nedostatků a otázek (sekce 2 a 3 tohoto podkladu). Můžete prosím dokumenty zrevidovat a doplnit do podoby vhodné pro ostrý provoz?
 >
