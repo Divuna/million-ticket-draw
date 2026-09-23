@@ -8,7 +8,7 @@ const TermsConditions = () => {
     <div className="min-h-screen bg-background">
       <Helmet>
         <title>Obchodní podmínky | OneMil</title>
-        <meta name="description" content="Obchodní podmínky aplikace OneMil. Pravidla spotřebitelských soutěží a používání interního kreditu MioCoin." />
+        <meta name="description" content="Obchodní podmínky aplikace OneMil. Pravidla spotřebitelských soutěží a používání interního kreditu MIO." />
       </Helmet>
 
       <div className="container max-w-3xl mx-auto px-4 py-8">
@@ -50,13 +50,15 @@ const TermsConditions = () => {
           <section>
             <h2 className="text-xl font-semibold text-foreground mt-8 mb-4">2. Popis služby</h2>
             <p className="text-muted-foreground mb-4">
-              OneMil je platforma pro účast ve spotřebitelských soutěžích. Aplikace umožňuje:
+              OneMil je partnerská odměnová a spotřebitelská platforma. Aplikace umožňuje:
             </p>
             <ul className="list-disc pl-6 text-muted-foreground space-y-2">
-              <li>Uplatnění interního kreditu MioCoin na soutěžní tikety</li>
-              <li>Účast ve spotřebitelských soutěžích o věcné ceny</li>
-              <li>Správu uživatelského účtu a historie soutěží</li>
-              <li>Příjem informací o nových soutěžích a výhrách</li>
+              <li>Získávat a používat interní kredit MIO</li>
+              <li>Pořizovat za MIO garantované nákupní benefity</li>
+              <li>Získat s garantovaným nákupním benefitem 1 soutěžní tiket zdarma jako bonus</li>
+              <li>Účastnit se spotřebitelských soutěží o věcné ceny</li>
+              <li>Využívat vouchery a partnerské nabídky</li>
+              <li>Spravovat uživatelský účet, peněženku a historii</li>
             </ul>
             <p className="text-muted-foreground mt-4 font-semibold">
               OneMil pořádá spotřebitelské soutěže ve smyslu § 2881 a násl. občanského zákoníku.
@@ -77,21 +79,21 @@ const TermsConditions = () => {
           </section>
 
           <section>
-            <h2 className="text-xl font-semibold text-foreground mt-8 mb-4">4. MioCoin – interní kredit OneMil</h2>
+            <h2 className="text-xl font-semibold text-foreground mt-8 mb-4">4. MIO – interní kredit OneMil</h2>
             <p className="text-muted-foreground mb-4">
-              MioCoin je interní kredit OneMil používaný výhradně v rámci Aplikace OneMil:
+              MIO je interní digitální kredit OneMil používaný výhradně v rámci Aplikace OneMil:
             </p>
             <ul className="list-disc pl-6 text-muted-foreground space-y-2">
-              <li>MioCoin lze získat nákupem za reálnou měnu (CZK) prostřednictvím platební brány</li>
-              <li>MioCoin lze použít pouze uvnitř OneMil</li>
-              <li>MioCoin slouží k uplatnění na soutěžní tikety, vouchery a další vybrané funkce OneMil</li>
-              <li>MioCoin <strong>nelze</strong> vybrat ani vyplatit jako peníze</li>
-              <li>MioCoin <strong>nelze</strong> převádět mimo OneMil</li>
-              <li>MioCoin nemá žádnou hodnotu mimo Aplikaci</li>
+              <li>MIO lze získat placeným dobitím prostřednictvím platební brány nebo jako odměnu podle aktuální nabídky OneMil</li>
+              <li>MIO lze použít pouze uvnitř OneMil</li>
+              <li>MIO lze použít zejména na garantované nákupní benefity, vouchery a další vybrané funkce OneMil</li>
+              <li>MIO <strong>nelze</strong> vybrat ani vyplatit jako peníze</li>
+              <li>MIO <strong>nelze</strong> převádět mimo OneMil</li>
+              <li>MIO nemá žádnou hodnotu mimo Aplikaci</li>
               <li>Nevyužitý MioCoin propadá při zrušení účtu</li>
             </ul>
             <p className="text-muted-foreground mt-4">
-              Bonusový MioCoin získaný v rámci soutěže podléhá stejným pravidlům
+              Bonusové MIO získané v rámci soutěže podléhá stejným pravidlům
               a může být použit pouze uvnitř OneMil.
             </p>
           </section>
@@ -103,7 +105,8 @@ const TermsConditions = () => {
               <li>Mají pevně stanovený počet tiketů</li>
               <li>Tikety se otevírají postupně v pořadí 1, 2, 3 a dále</li>
               <li>Každý tiket má přiřazeno unikátní číslo</li>
-              <li>Výherní pozice jsou předem určeny v pravidlech dané soutěže</li>
+              <li>Hlavní výhru získává držitel posledního tiketu soutěže</li>
+              <li>Bonusové výherní pozice jsou stanoveny předem, ale jejich konkrétní čísla nejsou účastníkům předem zobrazována</li>
               <li>Výsledky jsou zveřejněny v Aplikaci a oznámeny výhercům</li>
               <li>Jeden uživatel může vlastnit více tiketů v jedné soutěži</li>
             </ul>
@@ -124,12 +127,12 @@ const TermsConditions = () => {
 
           <section>
             <h2 className="text-xl font-semibold text-foreground mt-8 mb-4">7. Platební podmínky</h2>
-            <p className="text-muted-foreground mb-4">Nákup MioCoin:</p>
+            <p className="text-muted-foreground mb-4">Placené dobití MIO:</p>
             <ul className="list-disc pl-6 text-muted-foreground space-y-2">
               <li>Platby jsou zpracovávány prostřednictvím platební brány Stripe</li>
               <li>Akceptujeme platební karty (Visa, Mastercard)</li>
               <li>Ceny jsou uvedeny včetně DPH</li>
-              <li>Po úspěšné platbě je MioCoin ihned připsán na účet</li>
+              <li>Po úspěšné platbě je MIO připsáno na účet</li>
               <li>Daňový doklad je k dispozici v historii plateb</li>
             </ul>
           </section>
@@ -137,8 +140,8 @@ const TermsConditions = () => {
           <section>
             <h2 className="text-xl font-semibold text-foreground mt-8 mb-4">8. Reklamace a vrácení</h2>
             <p className="text-muted-foreground">
-              Vzhledem k povaze interního kreditu MioCoin <strong>není možné</strong> požadovat
-              vrácení peněz za zakoupený MioCoin. Uplatněné soutěžní tikety rovněž nelze vrátit ani
+              Vzhledem k povaze interního kreditu MIO <strong>není možné</strong> požadovat
+              vrácení peněz za zakoupené MIO. Uplatněné soutěžní tikety rovněž nelze vrátit ani
               vyměnit. V případě technických problémů s platbou kontaktujte zákaznickou podporu 
               na <a href="mailto:podpora@onemil.cz" className="text-primary hover:underline">podpora@onemil.cz</a>.
             </p>
@@ -153,7 +156,7 @@ const TermsConditions = () => {
               <li>Využívat automatizované nástroje nebo boty</li>
               <li>Narušovat funkčnost nebo bezpečnost Aplikace</li>
               <li>Šířit nepravdivé informace o Aplikaci nebo soutěžích</li>
-              <li>Prodávat nebo převádět účet či MioCoin třetím osobám</li>
+              <li>Prodávat nebo převádět účet či MIO třetím osobám</li>
             </ul>
             <p className="text-muted-foreground mt-4">
               Porušení těchto pravidel může vést k zablokování účtu bez náhrady.
@@ -174,7 +177,7 @@ const TermsConditions = () => {
             <h2 className="text-xl font-semibold text-foreground mt-8 mb-4">11. Zrušení účtu</h2>
             <p className="text-muted-foreground">
               Uživatel může kdykoli požádat o zrušení účtu v nastavení Aplikace nebo kontaktováním 
-              podpory. Při zrušení účtu dochází ke ztrátě veškerého nevyužitého MioCoin bez náhrady. 
+              podpory. Při zrušení účtu dochází ke ztrátě veškerého nevyužitého MIO bez náhrady. 
               Více informací naleznete na stránce <Link to="/delete-account" className="text-primary hover:underline">Smazání účtu</Link>.
             </p>
           </section>
@@ -205,7 +208,7 @@ const TermsConditions = () => {
             <div className="bg-muted/50 rounded-lg p-4 text-muted-foreground space-y-1">
               <p className="font-medium text-foreground">iCONIC POINT s.r.o.</p>
               <p>E-mail: <a href="mailto:podpora@onemil.cz" className="text-primary hover:underline">podpora@onemil.cz</a></p>
-              <p>Telefon: <a href="tel:+420776532562" className="text-primary hover:underline">+420 776 532 562</a></p>
+              <p>Telefon: <a href="tel:+420731215816" className="text-primary hover:underline">+420 731 215 816</a></p>
               <p>Adresa: Na Folimance 2155/15, Vinohrady, 120 00 Praha 2</p>
             </div>
           </section>
