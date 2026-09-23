@@ -113,13 +113,14 @@ const TermsConditions = () => {
 
           <section>
             <h2 className="text-xl font-semibold text-foreground mt-8 mb-4">6. Výhry a jejich předání</h2>
-            <p className="text-muted-foreground mb-4">Podmínky pro předání výhry:</p>
+            <p className="text-muted-foreground mb-4">
+              Konkrétní podmínky předání výhry stanovují pravidla dané soutěže.
+            </p>
             <ul className="list-disc pl-6 text-muted-foreground space-y-2">
-              <li>Výherce bude kontaktován prostřednictvím Aplikace a e-mailu</li>
-              <li>Výherce je povinen poskytnout údaje potřebné pro doručení</li>
-              <li>Fyzické výhry jsou doručovány na adresu v České republice</li>
-              <li>Výhry nelze směnit za peníze ani jiné výhry</li>
-              <li>Nepřevzaté výhry propadají po 30 dnech od oznámení</li>
+              <li>Výherce je o výhře informován prostřednictvím Aplikace; pravidla konkrétní soutěže mohou stanovit i další způsob kontaktu</li>
+              <li>Výherce poskytne údaje nezbytné pro předání konkrétní výhry</li>
+              <li>Věcné výhry nelze směnit za peníze</li>
+              <li>Způsob předání, lhůty, související náklady a postup při nepřevzetí musí být uvedeny v pravidlech konkrétní soutěže</li>
               <li>Účast v soutěžích je určena pouze uživatelům starším 18 let</li>
             </ul>
           </section>
