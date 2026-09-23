@@ -8,6 +8,16 @@
 
 ---
 
+## Zadání pro Libru
+
+Libra má z tohoto balíčku připravit právní dokumentaci pro **cílový ostrý stav OneMil**. Má:
+- zachovat potvrzený obchodní model a pouze jej právně správně formulovat,
+- upozornit na body, které jsou právně nepřípustné nebo vyžadují změnu,
+- u otevřených bodů navrhnout konkrétní řešení a znění,
+- nevymýšlet chybějící obchodní fakta,
+- dodat finální návrhy VOP, GDPR, Cookies, obecných pravidel soutěží, partnerských B2B podmínek/smluvního rámce, Affiliate podmínek a doporučených textů souhlasů,
+- zvlášť vypsat všechny změny v aplikaci/procesu, které musí OneMil udělat, aby právní text a skutečné chování byly shodné.
+
 ## Provozovatel
 
 | Pole | Hodnota |
@@ -159,7 +169,7 @@ obchodní fakta.
 
 ## 1. Nalezené právní/CMS texty
 
-**Zdroj pravdy = databáze** `content_pages` (section `legal`), editovatelné přes `/admin/content`. Frontend je jen renderuje (`SlugContentPage.tsx`, `TermsConditions.tsx`, `PrivacyPolicy.tsx`, `CookieConsentBanner.tsx`).
+**Zdroj právního znění = `docs/pravni-dokumenty/` v GitHubu.** Produkční `content_pages` je pouze publikovaná kopie pro web/aplikaci. Obchodní a produktová fakta mají přednostně vycházet z `ONEMIL_BUSINESS_CONTEXT.md` a identita provozovatele z `COMPANY_CONTEXT.md`. Frontend publikovaný obsah jen renderuje.
 
 | Slug (DB) | Titul | Veřejná routa | Délka | Aktualizováno | Placeholdery |
 |-----------|-------|---------------|-------|---------------|--------------|
