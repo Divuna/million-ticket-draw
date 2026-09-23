@@ -118,8 +118,8 @@ test.describe('191 souhlas s okamžitým použitím MIO (staging)', () => {
       page.getByTestId('immediate-use-consent-confirm').click(),
     ]);
     expect(response.status()).toBe(200);
-    const body = await response.json();
-    expect(String(body.checkout_url)).toContain('checkout.stripe.com');
+    // Tělo odpovědi nečteme — stránka se hned přesměruje na Stripe (zachyceno).
+    await page.waitForURL(/checkout\.stripe\.com/, { timeout: 20_000 });
 
     const { data: user } = await db.from('users').select('id').eq('email', EMAIL).single();
     const { data: consents } = await db
