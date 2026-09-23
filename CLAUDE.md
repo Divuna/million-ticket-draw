@@ -58,6 +58,40 @@ prvních skutečných zákazníků musí proběhnout **jeden řízený kompletn�
 ale to **není důvod je mazat, měnit ani „uklízet" mimochodem**. Jediná povolená cesta k jejich
 odstranění je ten jeden schválený reset.
 
+## FÁZE 1 — INTEGRITA SOUTĚŽÍ (23. 09. 2026, PRODUKCE) — TRVALÉ INVARIANTY
+
+Migrace `20260923120000_phase1_contest_integrity_hardening.sql`, commit `69990255`. Detail stavu:
+`onemil_state.md` § -6. Rollback: `docs/rollback/phase1_integrity_rollback.sql`.
+
+- **Bonusové pozice po startu soutěže jsou zamčené na úrovni DB.** Trigger
+  `trg_guard_bonus_prizes_after_contest_start` (BEFORE INSERT/UPDATE/DELETE na `bonus_prizes`)
+  blokuje role `anon`/`authenticated` — tedy i admin UI, přímé RLS zápisy superadmina a SECURITY
+  DEFINER admin RPC, které běží pod JWT volajícího. Soutěž je rozběhnutá při
+  `next_ticket_number > 1` nebo existujícím řádku v `tickets`. Povoleno: `pending → won`,
+  stav doručení vyhrané výhry, `image_url`, `admin_notes`, nákladové sloupce, `guardian_required`.
+  **Nerušit, neobcházet ani nepřepínat na „jen frontendovou" kontrolu.**
+- `service_role` a přímá DB relace bez JWT guardem neprocházejí (údržba, migrace, předstartovní
+  reset, úklid e2e), ale **každá změna u rozběhnuté soutěže se zapíše** do `audit_logs`
+  (`event_type='bonus_prize_integrity'`). Edge Function, která zapisuje bonusy přes service_role,
+  musí stejné pravidlo vynutit sama — `distribute-bonus-prizes` vrací 409 `contest_already_started`.
+- **Vzdálenost k další bonusové výhře zůstává** (`next_bonus_position`, `distance_to_next_bonus`
+  z `assign_contest_ticket_atomic` a panel „Další výherní ticket čeká už za N tahů") — rozhodnutí
+  Pavla 23. 9. 2026, je to záměrná součást hráčského zážitku. Předem se nesmí zobrazit jen přesné
+  číslo výherního tiketu. Neodstraňovat bez nového rozhodnutí Pavla.
+- **`purchase-ticket` je vyřazený endpoint** (410, bez přístupu k DB). Neobnovovat nákup
+  samotného tiketu; zákaznická cesta je výhradně `purchase_guaranteed_benefit_bundle_atomic`.
+- **Garantovaný benefit se vydá jen ze schválené a platné verze** (`vv.status='approved'`,
+  `valid_until` NULL nebo v budoucnosti) — v omezené i neomezené větvi.
+- **Player referral vazba je trvalá.** `process_referral_inactivity()` je záměrně no-op a cron
+  `referral_inactivity_daily` nesmí být znovu naplánován. Vazba zaniká jen při smazání účtu,
+  potvrzeném podvodu/zneužití nebo jiné oprávněné události s uvedeným důvodem.
+- Legacy cron `influencer_commissions_monthly` (2 % z MioCoin částky) nesmí být znovu naplánován;
+  provize počítá výhradně Affiliate v2 (cron 25).
+- Na `contests` se nesmí vrátit trigger, který volá cizí projekt nebo posílá service-role klíč
+  (dřív `trg_generate_miocoin_on_contest_insert`).
+- **Lokální Supabase CLI je propojené s produkcí** (`supabase/.temp/project-ref`). Každý deploy
+  nebo DB příkaz přes CLI musí mít výslovné `--project-ref`; staging = `dxmowysntemfqfnanxua`.
+
 ## GARANTOVANÉ NÁKUPNÍ BENEFITY — ADMIN-ONLY ZÁKLAD (21. 09. 2026, STAGING ONLY)
 
 Základ centrální admin správy garantovaných nákupních benefitů. **Aplikováno POUZE na staging

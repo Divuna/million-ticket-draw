@@ -1,7 +1,67 @@
 # OneMil – aktuální stav projektu
 
-> **Autoritativní aktuální stav. Poslední aktualizace 22. 9. 2026 podle produkčního aplikačního SHA `14b302e0`, GitHubu, Vercelu a produkční Supabase (`xkzhjldrojjlrkezorey`) po nasazení garantovaných nákupních benefitů a dokončení veřejného Auth/Affiliate flow. Předchozí hlavní aktualizace: 22. 9. 2026 — garantované nákupní benefity.**
+> **Autoritativní aktuální stav. Poslední aktualizace 23. 9. 2026 — Fáze 1 opravného úkolu (integrita soutěží) nasazena do produkční Supabase (`xkzhjldrojjlrkezorey`), commit `69990255`. Předchozí hlavní aktualizace: 22. 9. 2026 — Auth/Affiliate flow a garantované nákupní benefity.**
 
+
+## -6. Fáze 1 opravného úkolu — integrita soutěží — nasazeno do produkce (23. 09. 2026)
+
+Po read-only auditu z 23. 9. 2026 (origin/main `c47881ed`, produkce `xkzhjldrojjlrkezorey`) byla
+se schválením Pavla nasazena **Fáze 1** — samostatné bezpečnostní a integritní opravy bez zásahu
+do peněženek, plateb, provizí a pořadí tiketů. Commit `69990255` (větev `claude/phase1-integrity`),
+migrace `supabase/migrations/20260923120000_phase1_contest_integrity_hardening.sql`.
+
+**Co je v produkci (ověřeno md5 těl funkcí proti souboru migrace):**
+- **Zrušen trigger `trg_generate_miocoin_on_contest_insert`** a funkce
+  `on_contest_created_generate_miocoin`: při INSERTu soutěže s `total_miocoin_bonus > 0` posílal
+  požadavek do cizího Supabase projektu Sofinity (`rrmvxsldrjgbdxluklka`) s hlavičkou
+  `Bearer current_setting('app.settings.service_role_key')`.
+- **Garantovaný benefit se nevydá**, pokud jeho verze není `approved` nebo je po `valid_until`
+  (`purchase_guaranteed_benefit_bundle_atomic`, obě větve). Výstup RPC je jinak beze změny.
+- **Guard bonusových výher** `trg_guard_bonus_prizes_after_contest_start`: jakmile má soutěž
+  první tiket (`next_ticket_number > 1` nebo řádek v `tickets`), role `anon`/`authenticated`
+  (admin UI, RLS zápisy superadmina i admin RPC) nemůže bonusovou výhru přidat, smazat, přesunout,
+  změnit `amount`/`title`/`description`/`detailed_description`, zrušit čekající výhru ani vrátit
+  vyhranou mezi čekající. Povoleno zůstává `pending → won`, stav doručení vyhrané výhry, obrázek,
+  admin poznámka, nákladové údaje a `guardian_required`. `service_role` a přímá DB relace bez JWT
+  (migrace, údržba, předstartovní reset) guardem neprocházejí.
+- **Audit** `trg_audit_bonus_prizes_after_contest_start`: každá změna bonusové výhry u rozběhnuté
+  soutěže → `audit_logs` (`event_type='bonus_prize_integrity'`, role volajícího, old/new).
+- **Edge Function `purchase-ticket` vyřazena**: vrací 410 `endpoint_retired`, nesahá do DB.
+- **Edge Function `distribute-bonus-prizes`** odmítne soutěž s vydanými tikety (409
+  `contest_already_started`) — zapisuje přes service_role, na kterou DB guard nedosáhne.
+- **Odplánovány crony** `influencer_commissions_monthly` (legacy 2 % z MioCoin částky, filtr
+  `status='paid'`, souběžná mrtvá provizní cesta) a `referral_inactivity_daily`.
+- **Player referral vazba je trvalá** (rozhodnutí Pavla 23. 9. 2026, zapsáno v
+  `ONEMIL_BUSINESS_CONTEXT.md` § 11): `process_referral_inactivity()` je no-op a vrací 0. Obě
+  produkční vazby jsou `active`, žádná historie se nepřepisovala.
+
+**Záměrně beze změny:** `assign_contest_ticket_atomic` (md5 `4b1c0f50…`), `buy_ticket_atomic`,
+vzdálenost k další bonusové výhře (`next_bonus_position` / `distance_to_next_bonus`) a panel
+„Další výherní ticket čeká už za N tahů" — Pavel potvrdil, že jde o záměrnou součást hráčského
+zážitku; předem se nesmí zobrazit jen přesné číslo výherního tiketu. Frontend se neměnil.
+
+**Ověření:** staging SQL 29/29, produkční SQL guard test 9/9 (obojí v transakci s vynuceným
+ROLLBACK), produkční HTTP smoke `purchase-ticket` → 410. Staging E2E: cílený běh `35872703128`
+61 passed / 4 failed / 25 skipped, P0 specy přes plný workflow `35875107121` 24 passed /
+2 failed / 1 skipped — všechna selhání mají doloženou příčinu mimo Fázi 1 (viz OPEN ISSUE níže).
+
+**Záloha:** plný ruční `pg_dump` nebyl proveden (na stroji chybí pg_dump i Docker). Pavel
+výslovně schválil nasazení s přesným rollback skriptem ze živé produkce:
+`docs/rollback/phase1_integrity_rollback.sql` (migrace nemění data v tabulkách).
+
+**OPEN ISSUE (mimo Fázi 1, zjištěno při testech, neopraveno):**
+- Staging `settings.guaranteed_benefit_purchase_enabled='false'` od 27. 7. 2026 → specy 05 a 09
+  na stagingu nemohou nakoupit (`feature_disabled`); na produkci je flag zapnutý.
+- `playwright-staging-p0.yml` padá na seedu výherní soutěže (chybí `rules_pdf_url`) už od 25. 8.
+- Specy 18, 19, 20: dialog úprav soutěže se po uložení nezavře, uložení se nedostane k DB
+  (žádné `admin_actions`, žádná DB chyba). Poslední zelený plný staging běh na `main` je ze 7. 9.
+- Staging nemá RPC `get_admin_top_bar_stats` (404) a PostgREST tam odmítá agregaci `amount.sum()`.
+- Lokální Supabase CLI je propojené s produkcí (`supabase/.temp/project-ref`) — každé nasazení
+  musí mít výslovné `--project-ref`.
+- Další fáze opravného úkolu (MIO sady, FEFO, expirace, refundace, referral kredit, affiliate
+  základ, 18+, výherní workflow, smazání účtu, cookies, terminologie) čekají na samostatné schválení.
+
+---
 
 ## -5. Auth + Affiliate veřejný tok a krátká registrace — nasazeno do produkce (22. 09. 2026)
 

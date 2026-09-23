@@ -1,3 +1,37 @@
+# 23. 09. 2026 — Audit opravného úkolu a Fáze 1: integrita soutěží (PRODUKCE)
+
+## Read-only audit
+Kompletní read-only audit proti `origin/main` `c47881ed` a produkci `xkzhjldrojjlrkezorey`
+potvrdil hlavní mezery před ostrým startem: MIO nemají sady ani 12měsíční expiraci, čerpání není
+FEFO, refundace umí jen celou platbu, 5 % referral odměna se eviduje, ale nepřipisuje, 15 MIO bonus
+neexistuje, affiliate zákaznická provize se počítá z MIO místo zaplacených Kč, smazání účtu nemá
+backend, 18+ je jen checkbox bez serverové kontroly, výherní workflow nemá lhůty a upomínky,
+GA4 a Meta skripty se stahují před souhlasem. Z auditu vznikl jeden opravný úkol rozdělený
+na fáze; Fáze 0 (rozhodnutí) byla uzavřena.
+
+Nález N1 (zobrazení vzdálenosti k další bonusové výhře) byl **zrušen**: Pavel potvrdil, že
+informace „další výhra je za N tiketů" je záměrná součást hráčského zážitku. Zakázané je jen
+předem zobrazit přesné číslo výherního tiketu. Pokus o odstranění byl vrácen dřív, než se dostal
+do produkce.
+
+## Fáze 1 — nasazeno
+Migrace `20260923120000_phase1_contest_integrity_hardening.sql` (commit `69990255`):
+- zrušen trigger na `contests`, který při INSERTu volal cizí projekt Sofinity s hlavičkou
+  service-role klíče z GUC,
+- garantovaný benefit se nevydá, pokud jeho verze není schválená nebo je po `valid_until`,
+- DB guard a audit bonusových výher po vydání prvního tiketu,
+- `purchase-ticket` vyřazen (410), `distribute-bonus-prizes` odmítá rozběhnutou soutěž,
+- odplánovány crony `influencer_commissions_monthly` a `referral_inactivity_daily`,
+- player referral vazba je trvalá — `process_referral_inactivity` je no-op
+  (rozhodnutí Pavla, zapsáno do `ONEMIL_BUSINESS_CONTEXT.md`).
+
+Staging SQL 29/29, produkční guard test 9/9, produkční smoke `purchase-ticket` → 410. Staging E2E
+selhání (specy 05, 09, 18, 19, 20 a seed P0 workflow) mají doložené starší příčiny mimo Fázi 1 —
+vedené jako OPEN ISSUE v `onemil_state.md` § -6. Plný `pg_dump` nešel udělat (chybí pg_dump i
+Docker); Pavel schválil nasazení s rollback skriptem `docs/rollback/phase1_integrity_rollback.sql`.
+
+---
+
 # 22. 09. 2026 — Auth/Affiliate flow sjednocen, legacy registrace odstraněna a Affiliate registrace zkrácena (PRODUKCE)
 
 Dne 22. 09. 2026 byla dokončena série frontendových oprav Auth/Affiliate části OneMil a nasazena do produkce.
