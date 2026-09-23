@@ -21,6 +21,9 @@ Do not treat OneMil as only a contest app. OneMil is primarily a partner reward 
 - MIO cannot be withdrawn as money or transferred outside OneMil.
 - Existing database columns, RPC names, historical documents and source-code identifiers containing `coin`, `miocoin`, `MC` or `MioCoin` are **legacy technical/internal names** until a separately approved technical rename is carried out. This naming decision by itself does not authorize a database/schema migration or mass code rename.
 - This rule supersedes older public-facing references to „MioCoin“ elsewhere in project documentation.
+- **Paid MIO top-up validity — confirmed 2026-09-23:** MIO credited through a paid top-up expires **12 months from the moment of that top-up**. This is a business/product rule for paid top-up MIO.
+- The current production wallet implementation does **not yet enforce this 12-month expiry**. Before this rule is published in final VOP or exposed to live customers, the technical expiry mechanism must be implemented and verified so the legal text and product behavior match.
+- This rule does not by itself define expiry for partner-issued MIO, bonus MIO, referral MIO or other non-paid sources; those sources must be treated separately unless Pavel confirms the same rule for them.
 
 ---
 
