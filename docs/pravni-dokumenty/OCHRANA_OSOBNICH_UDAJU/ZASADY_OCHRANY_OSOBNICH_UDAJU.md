@@ -47,11 +47,11 @@ a jaká máte práva. Postupujeme podle Nařízení Evropského parlamentu a Rad
 | Kategorie | Konkrétně |
 |---|---|
 | Údaje o účtu | datum registrace, stav účtu, role, poslední aktivita |
-| MioCoiny | zůstatek a historie připsání a odečtení |
+| MIO | zůstatek a historie připsání a odečtení |
 | Tikety | soutěže, kterých jste se zúčastnili, a čísla vašich tiketů |
 | Výhry | evidence hlavních a bonusových výher a stav jejich předání |
 | Platby | částka, datum, stav platby a identifikátor transakce u platební brány |
-| Odměny od partnerů | kódy MioCoinů získané nákupem u partnerských e-shopů a jejich uplatnění |
+| Odměny od partnerů | kódy MIO získané nákupem u partnerských e-shopů a jejich uplatnění |
 | Doporučení | zda vás pozval jiný uživatel a jaké odměny z toho vznikly |
 
 ### Technické údaje
@@ -84,10 +84,10 @@ které pro vyřízení vašeho dotazu nejsou potřeba.
 Bez těchto údajů vám nemůžeme službu poskytnout.
 
 - vytvoření a správa uživatelského účtu
-- evidence MioCoinů a jejich připisování či odečítání
+- evidence MIO a jejich připisování či odečítání
 - účast v soutěžích a přidělování tiketů
 - evidence výher a jejich předání
-- zpracování plateb za MioCoiny
+- zpracování plateb za MIO
 - vyřizování vašich dotazů na zákaznické podpoře
 
 ### 3.2 Plnění zákonné povinnosti
@@ -122,7 +122,7 @@ platformy, a to v rozsahu nezbytném pro danou službu.
 
 | Služba | Role | Jaké údaje |
 |---|---|---|
-| **Supabase** | databáze, autentizace a serverová část platformy | veškeré údaje o účtu, MioCoinech, tiketech, výhrách, platbách a komunikaci |
+| **Supabase** | databáze, autentizace a serverová část platformy | veškeré údaje o účtu, MIOech, tiketech, výhrách, platbách a komunikaci |
 | **Vercel** | hosting a doručování webové aplikace | technické údaje spojené s návštěvou webu |
 | **Stripe** | platební brána | údaje nutné k provedení platby a jejímu spárování s vaším účtem |
 | **Resend** | odesílání e-mailů | e-mailová adresa a obsah zprávy, kterou vám posíláme |
@@ -224,12 +224,12 @@ Asistent funguje pouze tehdy, když je tato funkce zapnutá.
 - obsah vaší aktuální zprávy,
 - omezenou historii téže konverzace, nejvýše deset předchozích zpráv,
 - **jméno z vašeho profilu**, aby vás mohl oslovit,
-- **omezené údaje o vašem účtu potřebné k odpovědi** — zůstatek MioCoinů, počet výher, stav
+- **omezené údaje o vašem účtu potřebné k odpovědi** — zůstatek MIO, počet výher, stav
   voucherů a čas vaší poslední zprávy v konverzaci,
 - přehled aktuálně dostupných soutěží.
 
 Tyto údaje o účtu předáváme proto, aby vám asistent dokázal odpovědět konkrétně, například kolik
-máte MioCoinů, místo obecné odpovědi.
+máte MIO, místo obecné odpovědi.
 
 **Vaši e-mailovou adresu do konverzace nepřidáváme.** Pokud ji ale napíšete přímo do textu své
 zprávy, stane se součástí zprávy a bude předána spolu s ní — stejně jako jakýkoli jiný údaj, který
