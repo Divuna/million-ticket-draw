@@ -77,6 +77,86 @@ jednotlivých stran.
 
 ---
 
+## 0A. Otevřené právní a procesní otázky — Libra má navrhnout řešení
+
+Níže uvedené body nejsou pevně určeny obchodním modelem. Libra má navrhnout právně bezpečné
+řešení a přesné znění. Pokud některý bod vyžaduje obchodní rozhodnutí vlastníka, má to výslovně
+označit místo toho, aby si rozhodnutí sama domyslela.
+
+1. **Právní kvalifikace MIO** — jak MIO právně vymezit, aby odpovídalo skutečnému internímu
+   kreditu a nebylo nesprávně popsáno jako elektronické peníze, kryptoměna nebo jiný regulovaný
+   platební prostředek.
+2. **14denní odstoupení a okamžité čerpání** — jak přesně nastavit souhlas/poučení při placeném
+   dobití MIO a kdy může spotřebitel právo na odstoupení ztratit nebo zachovat.
+3. **Refundace a částečně spotřebované MIO** — jak vypořádat zákonnou refundaci, pokud už část
+   MIO byla spotřebována, včetně bonusové části balíčku.
+4. **Expirace placeného MIO** — 12 měsíců je pevné pravidlo; Libra má určit informační povinnosti,
+   upozornění před expirací, právní důsledky expirace a zda je potřeba zvláštní souhlas.
+5. **Platnost neplaceného MIO** — expirace partnerského, bonusového, referral nebo jiného
+   neplaceného MIO zatím není obecně sjednocena. Libra má říct, zda je právně vhodné mít odlišná
+   pravidla; konkrétní dobu případně potvrdí Pavel.
+6. **Pořadí čerpání MIO** — právně a spotřebitelsky doporučit, zda se mají nejdřív čerpat nejdříve
+   expirující placené MIO nebo jiný typ kreditu. Finální obchodní pravidlo potvrdí Pavel.
+7. **Smazání/blokace účtu** — co se právně musí stát s placeným MIO, neplaceným MIO, benefity,
+   vouchery, tikety a již vzniklými výhrami.
+8. **Odpovědnost za garantovaný benefit/voucher** — rozdělení odpovědnosti mezi OneMil a
+   konkrétního partnera a reklamační cesta pro zákazníka.
+9. **Nepřevzetí výhry** — zda a po jaké lhůtě může výhra zaniknout, jaké pokusy o kontakt jsou
+   nutné a co se s výhrou následně stane.
+10. **Daně a náklady výher** — kdo nese daň, dopravu, přepis, registraci nebo jiné náklady podle
+    typu výhry a co musí být vždy v pravidlech konkrétní soutěže.
+11. **Změna/předčasné ukončení soutěže** — zákonné limity změn pravidel, technické havárie, vyšší
+    moc, podvod a ochrana již vzniklých práv účastníků.
+12. **Formulace „na výhru není právní nárok“** — posoudit, zda může být použita a v jakém rozsahu,
+    zejména po okamžiku, kdy už byl konkrétní výherce určen.
+13. **Věk 18+** — potvrdit, zda současné čestné potvrzení věku stačí, nebo zda je nutný silnější
+    mechanismus ověření.
+14. **Reklamační řád a ADR** — přesné lhůty, náležitosti reklamace, komunikační kanály a aktuální
+    poučení o mimosoudním řešení spotřebitelských sporů.
+15. **GDPR při registraci** — zda má uživatel „souhlasit s GDPR“, nebo pouze potvrdit, že se se
+    zásadami ochrany osobních údajů seznámil.
+16. **GDPR partner ↔ OneMil** — určit role správce/zpracovatele/společných správců při předávání
+    objednávkových údajů z e-shopu a zda je nutná samostatná zpracovatelská smlouva.
+17. **AI Bob** — právní základ, rozsah informační povinnosti a případná omezení při předávání
+    konverzace a omezených údajů o účtu OpenAI.
+18. **Doby uchování a výmaz** — přesné retenční lhůty pro účty, platby, MIO, soutěže, výhry,
+    podporu, bezpečnostní logy, souhlasy a data po zrušení účtu.
+19. **Přenosy mimo EU/EHP a zpracovatelé** — přesně identifikovat právnické osoby, jejich role a
+    mechanismy předávání pro Supabase, Vercel, Stripe, Resend, OneSignal, Google, Meta, Sofinity a
+    OpenAI.
+20. **Marketing, cookies a push** — finální právní text souhlasů, Google/Meta měření, localStorage,
+    OneSignal a způsob odvolání souhlasu.
+21. **Affiliate smluvní režim** — fakturace, daně, vznik nároku, storna, výplata a vypořádání
+    nevyplacených provizí po ukončení spolupráce.
+22. **Partner B2B smluvní režim** — zda použít partnerské podmínky, individuální smlouvu nebo
+    kombinaci; fakturace, trial, reklamace, odpovědnost za data a ukončení spolupráce.
+23. **Dokumentová hierarchie a nové souhlasy** — přednost VOP, pravidel konkrétní soutěže,
+    partnerských/Affiliate podmínek a individuálních smluv; kdy změna vyžaduje nový aktivní souhlas.
+24. **0 Kč během partnerského trialu** — účetní a daňově správná forma: zda nulová faktura, jiný
+    doklad nebo pouze přehled.
+25. **Právní posouzení soutěžního modelu** — potvrdit, za jakých podmínek model
+    „garantovaný nákupní benefit + 1 tiket zdarma“, poslední tiket jako hlavní výhra a skryté předem
+    určené bonusové pozice nespadá do režimu hazardních her.
+
+### Co Libra nemá sama rozhodnout bez Pavla
+
+U každé konkrétní soutěže musí Pavel nebo odpovědná osoba dodat obchodní fakta, která nelze odvodit
+právním výkladem:
+
+- území konkrétní soutěže,
+- přesnou specifikaci a hodnotu hlavní výhry,
+- způsob předání výhry,
+- lhůtu pro reakci výherce,
+- lhůtu pro předání,
+- kdo hradí konkrétní náklady předání,
+- obchodní postup při nevyzvednutí, pokud zákon připouští více variant,
+- případné zvláštní podmínky konkrétní soutěže.
+
+Libra má u těchto bodů určit **právní mantinely a doporučenou formulaci**, nikoli vymýšlet chybějící
+obchodní fakta.
+
+---
+
 ## 1. Nalezené právní/CMS texty
 
 **Zdroj pravdy = databáze** `content_pages` (section `legal`), editovatelné přes `/admin/content`. Frontend je jen renderuje (`SlugContentPage.tsx`, `TermsConditions.tsx`, `PrivacyPolicy.tsx`, `CookieConsentBanner.tsx`).
