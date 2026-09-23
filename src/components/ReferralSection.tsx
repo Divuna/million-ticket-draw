@@ -44,6 +44,7 @@ import {
 interface ReferralReward {
   id: string;
   reward_mc: number;
+  reversal_target_mc?: number | null;
   status: string;
   created_at: string;
 }
@@ -130,7 +131,7 @@ const ReferralSection: React.FC<{ isLoaded: boolean }> = ({ isLoaded }) => {
     try {
       const { data, error } = await supabase
         .from('referral_rewards')
-        .select('id, reward_mc, status, created_at')
+        .select('id, reward_mc, reversal_target_mc, status, created_at')
         .eq('referrer_user_id', user!.id)
         .order('created_at', { ascending: false });
 
@@ -142,7 +143,8 @@ const ReferralSection: React.FC<{ isLoaded: boolean }> = ({ isLoaded }) => {
       setRewards(data || []);
       const totalEarned = (data || [])
         .filter((r) => r.status !== 'reversed')
-        .reduce((sum, r) => sum + Number(r.reward_mc || 0), 0);
+        // Částečně stornovaná odměna se počítá jen v části, která zůstala připsaná.
+        .reduce((sum, r) => sum + Number(r.reward_mc || 0) - Number(r.reversal_target_mc || 0), 0);
       setSummary((prev) => ({ ...prev, totalEarned }));
     } catch (err) {
       console.error('Error:', err);
@@ -258,6 +260,8 @@ const ReferralSection: React.FC<{ isLoaded: boolean }> = ({ isLoaded }) => {
         return { text: 'Připsáno', cls: 'text-green-500 bg-green-500/15 border-green-500/25' };
       case 'reversed':
         return { text: 'Stornováno', cls: 'text-destructive bg-destructive/15 border-destructive/25' };
+      case 'partially_reversed':
+        return { text: 'Částečně stornováno', cls: 'text-amber-500 bg-amber-500/15 border-amber-500/25' };
       case 'blocked':
         return { text: 'Zablokováno', cls: 'text-muted-foreground bg-muted/15 border-border/25' };
       default:

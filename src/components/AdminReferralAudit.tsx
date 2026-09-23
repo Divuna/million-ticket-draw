@@ -200,6 +200,7 @@ const AdminReferralAudit: React.FC = () => {
     switch (status) {
       case 'earned': return <Badge className="text-[10px] bg-green-500/15 text-green-500 border-green-500/25">Připsáno</Badge>;
       case 'reversed': return <Badge variant="destructive" className="text-[10px]">Stornováno</Badge>;
+      case 'partially_reversed': return <Badge variant="outline" className="text-[10px]">Částečně stornováno</Badge>;
       case 'blocked': return <Badge variant="secondary" className="text-[10px]">Zablokováno</Badge>;
       default: return <Badge variant="outline" className="text-[10px]">{status}</Badge>;
     }

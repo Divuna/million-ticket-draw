@@ -25,6 +25,10 @@ export const MIOCOIN_HISTORY_ENTRY_LABELS: Record<string, string> = {
   bonus_transfer_to_main: 'Převod bonusových MioCoinů',
   admin_adjustment: 'Úprava zůstatku MioCoinů',
   mio_expiry: 'Vypršení platnosti MioCoinů',
+  referral_reward: 'Odměna za doporučení',
+  referral_first_topup_bonus: 'Bonus za první dobití doporučeného hráče',
+  referral_reversal: 'Vrácení odměny za doporučení',
+  referral_restore: 'Obnovení odměny za doporučení',
 };
 
 export function getMioCoinHistoryLabel(entry: Pick<MioCoinHistoryEntry, 'entry_type' | 'partner_name'>): string {

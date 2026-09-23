@@ -303,6 +303,8 @@ const AdminReferrals: React.FC = () => {
     switch (status) {
       case 'earned':
         return { text: 'Připsáno', cls: 'text-green-500 bg-green-500/15 border-green-500/25' };
+      case 'partially_reversed':
+        return { text: 'Částečně stornováno', cls: 'text-amber-500 bg-amber-500/15 border-amber-500/25' };
       case 'reversed':
         return { text: 'Stornováno', cls: 'text-destructive bg-destructive/15 border-destructive/25' };
       case 'blocked':

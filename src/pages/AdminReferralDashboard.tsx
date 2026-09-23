@@ -250,6 +250,12 @@ const AdminReferralDashboard: React.FC = () => {
             Připsáno
           </Badge>
         );
+      case "partially_reversed":
+        return (
+          <Badge variant="warning" className="text-[10px]">
+            Částečně stornováno
+          </Badge>
+        );
       case "reversed":
         return (
           <Badge variant="destructive" className="text-[10px]">
