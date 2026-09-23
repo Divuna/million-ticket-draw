@@ -16,10 +16,10 @@ Do not treat OneMil as only a contest app. OneMil is primarily a partner reward 
 - The public name of the OneMil internal credit is **MIO**.
 - In customer-facing UI, marketing, legal texts and new documentation use **MIO**, for example: `15 MIO`, `125 MIO`.
 - When a descriptive term is needed, use **„MIO kredit“** or **„MIO kredity“**. The primary visible name remains **MIO**.
-- Do **not** use „MioCoin“ / „MioCoiny“ as the new public product name.
+- Do **not** use the legacy public names „MioCoin“ / „MioCoiny“ as the new public product name.
 - Legal wording should describe MIO as **internal digital credit of the OneMil platform** that can be obtained or topped up and used only inside OneMil according to the current offer.
 - MIO cannot be withdrawn as money or transferred outside OneMil.
-- Existing database columns, RPC names, historical documents and source-code identifiers containing `coin`, `miocoin`, `MC` or `MioCoin` are **legacy technical/internal names** until a separately approved technical rename is carried out. This naming decision by itself does not authorize a database/schema migration or mass code rename.
+- Existing database columns, RPC names, historical documents and source-code identifiers containing `coin`, `miocoin`, `MC` or the legacy string `MioCoin` are **legacy technical/internal names** until a separately approved technical rename is carried out. This naming decision by itself does not authorize a database/schema migration or mass code rename.
 - This rule supersedes older public-facing references to „MioCoin“ elsewhere in project documentation.
 - **Paid MIO top-up validity — confirmed 2026-09-23:** MIO credited through a paid top-up expires **12 months from the moment of that top-up**. This is a business/product rule for paid top-up MIO.
 - The current production wallet implementation does **not yet enforce this 12-month expiry**. Before this rule is published in final VOP or exposed to live customers, the technical expiry mechanism must be implemented and verified so the legal text and product behavior match.
@@ -38,7 +38,7 @@ Do not treat OneMil as only a contest app. OneMil is primarily a partner reward 
 
 ## 1. OneMil in one sentence
 
-OneMil is a B2B reward, partner, and marketing platform that allows companies and e-shops to reward customers with MioCoins, coupons, vouchers, partner offers, and consumer-contest experiences, while giving end users a premium app experience with physical prizes and partner benefits.
+OneMil is a B2B reward, partner, and marketing platform that allows companies and e-shops to reward customers with MIO, coupons, vouchers, partner offers, and consumer-contest experiences, while giving end users a premium app experience with physical prizes and partner benefits.
 
 ---
 
@@ -69,7 +69,7 @@ It should be presented as a local, premium, partner-driven reward platform for e
 The core loop is:
 
 ```text
-purchase at partner → customer receives MioCoins / coupon → customer activates reward in OneMil → customer uses MioCoins in contest / voucher / offer → customer returns to partner or OneMil
+purchase at partner → customer receives MIO / coupon → customer activates reward in OneMil → customer uses MIO in contest / voucher / offer → customer returns to partner or OneMil
 ```
 
 This loop is the key business logic. OneMil gives the customer a reason to come back and gives the partner a measurable reward system.
@@ -80,7 +80,7 @@ This loop is the key business logic. OneMil gives the customer a reason to come 
 
 A partner company can use OneMil to reward its customers.
 
-A partner can give customers MioCoins or reward coupons for:
+A partner can give customers MIO or reward coupons for:
 
 - purchase
 - registration
@@ -98,9 +98,9 @@ OneMil does not force a fixed reward amount per purchase. Each partner can set i
 
 Examples:
 
-- 5 MioCoins for a small purchase
-- 50 MioCoins for a larger order
-- special MioCoin amount for a campaign
+- 5 MIO for a small purchase
+- 50 MIO for a larger order
+- special MIO amount for a campaign
 - higher reward for selected product categories
 - one-time customer reward
 
@@ -112,7 +112,7 @@ The partner dashboard is a central part of OneMil.
 
 Partners should be able to control:
 
-- how many MioCoins they give customers
+- how many MIO they give customers
 - for which purchase or action
 - campaign rules
 - reward value
@@ -120,7 +120,7 @@ Partners should be able to control:
 - voucher / coupon logic
 - performance and usage
 
-The partner has control over how many MioCoins are distributed. OneMil measures what customers actually activate and use.
+The partner has control over how many MIO are distributed. OneMil measures what customers actually activate and use.
 
 ### 6.0 One partner company can connect several e-shops — confirmed
 
@@ -144,8 +144,8 @@ partner / company  →  e-shop connection  →  order
 A partner chooses **how** they reward, in one place in the partner dashboard:
 
 1. **Whole e-shop** — the partner's global conversion applies to the whole order
-   (`100 Kč = 5 MioCoins`). This is the default and today's behaviour.
-2. **Selected products only** — only products with an explicit rule earn MioCoins.
+   (`100 Kč = 5 MIO`). This is the default and today's behaviour.
+2. **Selected products only** — only products with an explicit rule earn MIO.
    Everything else in the basket earns nothing.
 3. **Whole e-shop + exceptions** — the global conversion applies, but individual
    products can override it.
@@ -153,11 +153,11 @@ A partner chooses **how** they reward, in one place in the partner dashboard:
 Confirmed rules:
 
 - The partner can change the global conversion at any time (`100/5 → 100/10`) **without any
-  superadmin approval**. The new rate applies to new orders only. Orders and MioCoin rewards that
+  superadmin approval**. The new rate applies to new orders only. Orders and MIO rewards that
   already exist are never recalculated.
 - A product rule is matched **only by the stable product code / SKU**. The product name is
-  display-only information for the partner. Example: `ABC123 — Parfém do auta — 10 MioCoins`.
-- **Quantity multiplies the reward.** `ABC123 = 10 MC` and the customer buys 2 pieces → 20 MioCoins.
+  display-only information for the partner. Example: `ABC123 — Parfém do auta — 10 MIO`.
+- **Quantity multiplies the reward.** `ABC123 = 10 MC` and the customer buys 2 pieces → 20 MIO.
 - A ratio-based product reward uses the **real after-discount price** of the product.
 - Rounding happens **once**, on the reward for the whole relevant purchase — never separately per
   item.
@@ -166,17 +166,17 @@ Confirmed rules:
 
 A small OneMil widget (one JS snippet, no secret key) shows the customer, before they buy:
 
-- a badge on the product listing and product detail — e.g. *"Za tento produkt získáte 10 MioCoinů"*
-- the expected reward for the current basket — e.g. *"Za tento nákup získáte přibližně 37 MioCoinů"*
+- a badge on the product listing and product detail — e.g. *"Za tento produkt získáte 10 MIO"*
+- the expected reward for the current basket — e.g. *"Za tento nákup získáte přibližně 37 MIO"*
 
 The basket figure recalculates whenever quantity, products or prices change. The partner can switch
-the **product badge** off; the **basket information stays on** whenever the Shoptet MioCoin
+the **product badge** off; the **basket information stays on** whenever the Shoptet MIO
 connection is active.
 
 **Non-negotiable technical invariant:** the amount shown to the customer and the amount OneMil
 actually issues after the order are produced by **one shared server-side reward engine**. The widget
 only displays the result of that engine — it never calculates a reward itself. The Shoptet import and
-the Partner Order API issue MioCoins through the same engine, so a preview and a real payout can
+the Partner Order API issue MIO through the same engine, so a preview and a real payout can
 never drift apart.
 
 ### 6.2a One e-shop, one active partner connection
@@ -188,7 +188,7 @@ administrator is told which partner holds the existing connection; that connecti
 first.
 
 The reason is financial, not cosmetic: two live imports of the same shop would read the same order
-twice and issue the MioCoin reward twice.
+twice and issue the MIO reward twice.
 
 "Actively connected" means the other partner has the Shoptet import switched on, or holds a
 connection in the *approved* / *active* state. A partner repointing their own already-live connection
@@ -202,12 +202,12 @@ not-yet-implemented topic (TODO #348) and nothing here should be read as support
 Before a **new** Shoptet connection can be activated, the partner runs the check themselves in the
 partner portal (**Ověřit napojení**). The check is a dry run: it downloads the export and reports
 whether it is reachable, whether the required fields are present and whether the rows are usable — and
-it issues nothing at all. No MioCoins, no code, no customer e-mail, no invoice line.
+it issues nothing at all. No MIO, no code, no customer e-mail, no invoice line.
 
 The shop's **history** is recorded at the moment the connection is **activated**, not at the moment
 the partner ran the check — an order placed between the two still existed before activation and
 belongs to the history just like the rest. Those orders are permanently excluded: they can never
-produce a MioCoin reward, a code, a customer e-mail or an invoice line — not even if they later change
+produce a MIO reward, a code, a customer e-mail or an invoice line — not even if they later change
 to paid, shipped or completed.
 
 If the export cannot be read at the moment of activation — unreachable, missing required fields, empty,
@@ -253,14 +253,14 @@ export**, uses **PŘIDAT** to add fields to the export template, and enters the 
 
 This is one of the most important business rules of OneMil.
 
-A company does not pay for all coupons, promised rewards, or MioCoin value it distributes.
+A company does not pay for all coupons, promised rewards, or MIO value it distributes.
 
-The company pays only when the customer actually activates the coupon and loads / uses the MioCoins inside OneMil.
+The company pays only when the customer actually activates the coupon and loads / uses the MIO inside OneMil.
 
 Confirmed pricing principle:
 
 ```text
-1 used MioCoin = 1 Kč + 21 % VAT
+1 used MIO = 1 Kč + 21 % VAT
 ```
 
 The price is the same for every company unless a future confirmed agreement changes this.
@@ -268,10 +268,10 @@ The price is the same for every company unless a future confirmed agreement chan
 Example:
 
 ```text
-A company distributes coupons with total potential value of 1,000,000 MioCoins.
-Customers activate only 100,000 MioCoins.
-The company pays only for 100,000 activated / used MioCoins.
-The remaining 900,000 unused MioCoins create no cost for the company.
+A company distributes coupons with total potential value of 1,000,000 MIO.
+Customers activate only 100,000 MIO.
+The company pays only for 100,000 activated / used MIO.
+The remaining 900,000 unused MIO create no cost for the company.
 ```
 
 Business value for partners:
@@ -285,11 +285,11 @@ Business value for partners:
 
 ---
 
-## 8. MioCoin
+## 8. MIO
 
-MioCoin is the internal credit unit of OneMil.
+MIO is the internal credit unit of OneMil.
 
-Users can get MioCoins through:
+Users can get MIO through:
 
 - direct top-up inside OneMil
 - partner reward after purchase or other action
@@ -298,23 +298,23 @@ Users can get MioCoins through:
 - social contests and community campaigns
 - campaigns from influencers or brands
 
-MioCoins can be used for:
+MIO can be used for:
 
 - tickets in contests
 - vouchers
 - selected benefits
 - partner offers or other in-app reward flows
 
-MioCoins cannot be withdrawn or exchanged back for money.
+MIO cannot be withdrawn or exchanged back for money.
 
-MioCoin must never be publicly described as a gambling token, betting token, casino chip, or money-equivalent withdrawal product.
+MIO must never be publicly described as a gambling token, betting token, casino chip, or money-equivalent withdrawal product.
 
-### 8.1 MioCoin decimal rule — confirmed (16. 08. 2026)
+### 8.1 MIO decimal rule — confirmed (16. 08. 2026)
 
-**MioCoiny mají maximálně 1 desetinné místo.**
+**MIO mají maximálně 1 desetinné místo.**
 
 Platné hodnoty: `0,5` · `0,6` · `1,0` · `1,2` · `4,9` · `5,0` · `15,7`.
-Neplatné jako výsledná MioCoin hodnota: `1,25` · `4,333` · `0,55`.
+Neplatné jako výsledná MIO hodnota: `1,25` · `4,333` · `0,55`.
 
 **Partnerská odměna**
 
@@ -337,12 +337,12 @@ až na výsledku celé objednávky** — nikdy po jednotlivých položkách.
 - `4,84 MC` → `4,8 MC`
 - `24,42 MC` → `24,4 MC` (660 Kč při 100 Kč = 3,7 MC)
 
-**MioCoin množství vs. peníze:** MioCoin množství má max. 1 desetinné místo;
+**MIO množství vs. peníze:** MIO množství má max. 1 desetinné místo;
 finanční částky v CZK (faktury, DPH, ceny) zůstávají standardně na 2 desetinných
 místech. Tato dvě pravidla se nemíchají.
 
 **1 MC = 1 Kč** (`partners.price_per_coin`) tímto pravidlem není dotčeno — mění se
-jen počet desetinných míst množství, nikoli cena za MioCoin.
+jen počet desetinných míst množství, nikoli cena za MIO.
 
 > **Stav implementace (18. 08. 2026):** technická implementace pro **partnerský
 > reward řetězec** (numerické coin sloupce, `compute_partner_reward`, issuance,
@@ -363,13 +363,13 @@ These terms must be used consistently.
 
 ### Coupon
 
-A coupon is a prepaid or promised reward from a company to a customer. The customer activates it in OneMil to receive MioCoins.
+A coupon is a prepaid or promised reward from a company to a customer. The customer activates it in OneMil to receive MIO.
 
 A company may distribute many coupons, but pays only for the part that customers actually activate and use.
 
 ### Voucher
 
-A voucher is an offer that the customer can buy or unlock with MioCoins inside OneMil.
+A voucher is an offer that the customer can buy or unlock with MIO inside OneMil.
 
 The proceeds from selected vouchers may support a good cause.
 
@@ -391,7 +391,7 @@ Every contest should be transparent and clearly structured:
 
 - physical main prize
 - optional bonus physical prizes
-- optional MioCoin bonuses
+- optional MIO bonuses
 - fixed number of tickets
 - visible rules
 - clear contest conditions
@@ -425,7 +425,7 @@ Use instead:
 
 - soutěž
 - tiket
-- MioCoin
+- MIO
 - voucher
 - věcná výhra
 - hlavní výhra
@@ -453,16 +453,16 @@ Current player reward system:
 - user shares personal code or link
 - invited user registers / uses the code
 - rewards are non-monetary
-- rewards are paid in MioCoins only
-- current reward: 5 % in MioCoins from paid top-ups of the invited user
+- rewards are paid in MIO only
+- current reward: 5 % in MIO from paid top-ups of the invited user
 - current one-time bonus: 15 MC after the invited user’s first paid top-up
 - no reward is paid for registration alone
-- MioCoins cannot be withdrawn or exchanged for money
+- MIO cannot be withdrawn or exchanged for money
 
 Important separation:
 
 ```text
-Regular users receive non-monetary MioCoin rewards.
+Regular users receive non-monetary MIO rewards.
 Influencers / partners / agencies may have monetary commission models controlled by admin.
 ```
 
@@ -483,7 +483,7 @@ Influencers may work with:
 - CZK commissions
 - invoicing
 - campaign bonuses
-- MioCoin bonuses for referred users
+- MIO bonuses for referred users
 
 Influencer payouts are monetary, CZK-based, invoiced, and admin-controlled.
 
@@ -527,7 +527,7 @@ The model is long-term and has two separate commission streams.
 
 An agency or sales representative brings an e-shop or company into OneMil. After approval, the company is linked to the affiliate account that brought it.
 
-The commission is calculated from the amount excluding VAT that OneMil actually invoices to the brought e-shop for activated / used MioCoins.
+The commission is calculated from the amount excluding VAT that OneMil actually invoices to the brought e-shop for activated / used MIO.
 
 It is not calculated from the e-shop's turnover and not from the potential value of all distributed coupons.
 
@@ -559,7 +559,7 @@ This allows the agency to own the relationship with the e-shop while the person 
 ```text
 agency / sales representative brings an e-shop
 → the e-shop is approved and linked to the affiliate account
-→ OneMil invoices the e-shop for actually activated / used MioCoins
+→ OneMil invoices the e-shop for actually activated / used MIO
 → the linked affiliate receives an agreed commission from the invoiced amount excluding VAT
 → the agency selects who will receive customer top-up commissions
 → customers register through the relevant code or link
@@ -595,7 +595,7 @@ OneMil can give partners:
 
 Important business direction:
 
-Companies that want long-term contest or product cooperation should also become OneMil partners and distribute MioCoins to their own customers.
+Companies that want long-term contest or product cooperation should also become OneMil partners and distribute MIO to their own customers.
 
 OneMil can also support partner sales by buying products from partner companies for contests when it makes sense.
 
@@ -610,7 +610,7 @@ OneMil may buy part of the contest products from that partner, according to the 
 This creates a mutual support loop:
 
 ```text
-partner gives MioCoins to customers → OneMil gives partner visibility → OneMil may buy partner products for contests → partner gains both promotion and real sales
+partner gives MIO to customers → OneMil gives partner visibility → OneMil may buy partner products for contests → partner gains both promotion and real sales
 ```
 
 ---
@@ -669,7 +669,7 @@ Detailed technical handling of social comments, imports, and centralized draws i
 
 Vouchers are a separate user-facing value layer.
 
-A customer may buy or unlock a voucher with MioCoins.
+A customer may buy or unlock a voucher with MIO.
 
 The proceeds from selected voucher activity can go to a good cause.
 
@@ -677,7 +677,7 @@ Vouchers should not be identical to partner offers. A voucher is an unlocked/bou
 
 ### 17.1 Partner vouchers in the main OneMil voucher offer
 
-A partner can place its own voucher in the main OneMil voucher section. Users can buy or unlock this voucher with MioCoins.
+A partner can place its own voucher in the main OneMil voucher section. Users can buy or unlock this voucher with MIO.
 
 This can bring users directly back to the partner's e-shop, selected category, product page, seasonal campaign, or clearance sale.
 
@@ -723,10 +723,10 @@ Public presentation must make the purchase clear, for example:
 
 ```text
 Garantovaný nákupní benefit + 1 ticket zdarma
-Za 20 MioCoinů
+Za 20 MIO
 ```
 
-The customer must see before confirmation that MioCoins are used for the garantovaný nákupní benefit and that the contest ticket is included free of charge.
+The customer must see before confirmation that MIO are used for the garantovaný nákupní benefit and that the contest ticket is included free of charge.
 
 After purchase:
 
@@ -735,7 +735,7 @@ After purchase:
 - the ticket links to the garantovaný nákupní benefit received with that purchase,
 - classic contest vouchers, partner offers, winning vouchers, bonus prizes, and garantovaný nákupní benefit remain separate concepts.
 
-A supported purchase must not complete without an available garantovaný nákupní benefit. Benefit assignment, code issue, MioCoin deduction, and ticket creation must succeed together; if any part fails, none of them may be completed.
+A supported purchase must not complete without an available garantovaný nákupní benefit. Benefit assignment, code issue, MIO deduction, and ticket creation must succeed together; if any part fails, none of them may be completed.
 
 ### 17.5 Admin-only creation and benefit code modes
 
@@ -816,7 +816,7 @@ A supported purchase must never fall back to a bare ticket without a garantovan�
 
 If neither a limited nor an unlimited benefit is available, the entire purchase fails safely:
 
-- no MioCoins are deducted,
+- no MIO are deducted,
 - no ticket is created,
 - no user voucher is created,
 - no benefit issuance is created.
@@ -856,7 +856,7 @@ The standard VAT rate is currently modeled as 21 % where applicable, but final V
 The target model must be implemented additively and safely:
 
 - existing historical vouchers, tickets, partner offers, winnings, and invoices must remain unchanged,
-- benefit issue, MioCoin deduction, and free ticket creation must succeed atomically,
+- benefit issue, MIO deduction, and free ticket creation must succeed atomically,
 - repeated requests must not cause double deduction, double ticket creation, double code issue, or double billing,
 - an active contest must always retain at least one approved unlimited fallback benefit,
 - the customer purchase path must never silently return to `buy_ticket_atomic` as a bare-ticket fallback,
@@ -925,7 +925,7 @@ It can receive event data such as:
 
 - registrations
 - voucher purchases
-- MioCoin activity
+- MIO activity
 - ticket purchases
 - wins
 - contest events
@@ -973,7 +973,7 @@ Admin and production actions are sensitive and must follow the existing project 
 
 ### For end users
 
-- get MioCoins
+- get MIO
 - activate coupons
 - unlock vouchers
 - receive one garantovaný nákupní benefit with each supported purchase
@@ -981,7 +981,7 @@ Admin and production actions are sensitive and must follow the existing project 
 - enter contests
 - win physical prizes
 - receive partner offers
-- use personal codes to earn MioCoin rewards
+- use personal codes to earn MIO rewards
 
 ### For influencers
 
@@ -1009,13 +1009,13 @@ Admin and production actions are sensitive and must follow the existing project 
 
 ## 24. Short official description
 
-OneMil is a B2B reward, partner, and marketing platform for e-shops, companies, brands, influencers, and agencies. It lets companies reward customers with MioCoins, coupons, vouchers, partner offers, and contest experiences. For end users, OneMil works as a premium reward app where they can activate rewards, use MioCoins, receive a garantovaný nákupní benefit with a free contest ticket, access partner offers, and join consumer contests for physical prizes.
+OneMil is a B2B reward, partner, and marketing platform for e-shops, companies, brands, influencers, and agencies. It lets companies reward customers with MIO, coupons, vouchers, partner offers, and contest experiences. For end users, OneMil works as a premium reward app where they can activate rewards, use MIO, receive a garantovaný nákupní benefit with a free contest ticket, access partner offers, and join consumer contests for physical prizes.
 
 ---
 
 ## 25. Czech official description
 
-OneMil je B2B odměnová, partnerská a marketingová platforma pro e-shopy, firmy, značky, influencery a agentury. Firmám umožňuje odměňovat zákazníky pomocí MioCoinů, kuponů, voucherů, partnerských nabídek a soutěžních zážitků. Pro koncového uživatele OneMil funguje jako prémiová odměnová aplikace, kde může aktivovat odměny, používat MioCoiny, získat garantovaný nákupní benefit a k němu soutěžní tiket zdarma, využívat partnerské nabídky a zapojovat se do spotřebitelských soutěží o věcné výhry.
+OneMil je B2B odměnová, partnerská a marketingová platforma pro e-shopy, firmy, značky, influencery a agentury. Firmám umožňuje odměňovat zákazníky pomocí MIO, kuponů, voucherů, partnerských nabídek a soutěžních zážitků. Pro koncového uživatele OneMil funguje jako prémiová odměnová aplikace, kde může aktivovat odměny, používat MIO, získat garantovaný nákupní benefit a k němu soutěžní tiket zdarma, využívat partnerské nabídky a zapojovat se do spotřebitelských soutěží o věcné výhry.
 
 ---
 
@@ -1028,11 +1028,11 @@ OneMil is not just a contest app.
 OneMil is a partner reward system for companies, with a premium contest and reward experience for users.
 ```
 
-The partner pays only for activated / used MioCoins, not for all distributed coupons.
+The partner pays only for activated / used MIO, not for all distributed coupons.
 
-Companies choose how many MioCoins they want to give customers.
+Companies choose how many MIO they want to give customers.
 
-Users can earn MioCoins through personal codes.
+Users can earn MIO through personal codes.
 
 Influencers and agencies can be growth and commission channels.
 
@@ -1046,7 +1046,7 @@ The **garantovaný nákupní benefit** is a separate supported-purchase model: t
 
 This is a confirmed target model, not confirmation that the full feature is already deployed.
 
-Partner Offers, vouchers, coupons, contests, MioCoins, and social campaigns are different parts of the same reward ecosystem.
+Partner Offers, vouchers, coupons, contests, MIO, and social campaigns are different parts of the same reward ecosystem.
 
 ---
 
