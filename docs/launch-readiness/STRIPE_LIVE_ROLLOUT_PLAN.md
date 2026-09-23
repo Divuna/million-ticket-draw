@@ -59,14 +59,14 @@ Produkční `PUBLIC_APP_URL` je již nastaven na **`https://onemil.cz`** — pro
 
 ## 5. První live platba bez rizika
 
-1. Použít **nejnižší tier 50 Kč** (= 50 MioCoinů). Tiery: `50→50`, `300→310`, `500→525`, `1200→1280`.
+1. Použít **nejnižší tier 50 Kč** (= 50 MIO). Aktuální tiery: `50→50`, `300→310`, `500→525`, `1200→1280`.
 2. Pavel se přihlásí jako **vlastní reálný účet** na `https://onemil.cz` a koupí 1× 50 Kč top-up **reálnou kartou**.
 3. Read-only ověření na produkci po platbě:
    - `payments`: nový řádek `status='completed'`, `amount=50`, `method='stripe'`, session prefix `cs_live_`
    - wallet daného uživatele: **+50**
    - webhook log: `stripe-webhook` → **200**
    - **žádná duplicita** (unikátní `stripe_session_id`)
-4. Pavel volitelně platbu **refunduje** ve Stripe Dashboardu (live refund). Pozn.: refund vrátí peníze na kartu, ale MioCoiny v peněžence zůstanou — pokud je třeba je odebrat, řeší se zvlášť guarded postupem (samostatné schválení).
+4. Pavel může volitelně provést kontrolovanou refundaci přes aktuální OneMil refund flow. Produkční refund logika nejdřív ověří, že odpovídající MIO z dané platby jsou stále k dispozici, bezpečně je odečte a teprve potom pokračuje Stripe refundace. Pokud už část MIO z platby byla spotřebována a požadovaný zůstatek není k dispozici, automatická refundace se nespustí.
 5. Teprve po úspěšném ověření je live flow potvrzený pro reálné zákazníky.
 
 ---
