@@ -159,17 +159,19 @@ const TermsConditions = () => {
               <li>Prodávat nebo převádět účet či MIO třetím osobám</li>
             </ul>
             <p className="text-muted-foreground mt-4">
-              Porušení těchto pravidel může vést k zablokování účtu bez náhrady.
+              Porušení těchto pravidel může podle závažnosti vést k dočasnému omezení nebo zablokování účtu.
+              Vypořádání MIO, benefitů, voucherů a případných již vzniklých práv se posuzuje samostatně
+              podle konkrétní situace a platných právních předpisů.
             </p>
           </section>
 
           <section>
             <h2 className="text-xl font-semibold text-foreground mt-8 mb-4">10. Odpovědnost</h2>
             <p className="text-muted-foreground">
-              Provozovatel nenese odpovědnost za škody způsobené nesprávným používáním Aplikace, 
-              výpadky služeb třetích stran, nebo za ztráty vzniklé v důsledku nedodržení těchto Podmínek 
-              uživatelem. Provozovatel si vyhrazuje právo dočasně omezit přístup k Aplikaci z důvodu 
-              údržby nebo technických problémů.
+              Rozsah odpovědnosti Provozovatele, partnerských poskytovatelů a poskytovatelů služeb třetích stran
+              se řídí platnými právními předpisy a konkrétními podmínkami dané služby.
+              Přístup k Aplikaci může být dočasně omezen zejména z důvodu údržby, bezpečnostního incidentu
+              nebo technických problémů.
             </p>
           </section>
 
