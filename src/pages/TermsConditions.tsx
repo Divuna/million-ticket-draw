@@ -90,7 +90,7 @@ const TermsConditions = () => {
               <li>MIO <strong>nelze</strong> vybrat ani vyplatit jako peníze</li>
               <li>MIO <strong>nelze</strong> převádět mimo OneMil</li>
               <li>MIO nemá žádnou hodnotu mimo Aplikaci</li>
-              <li>Nevyužitý MioCoin propadá při zrušení účtu</li>
+              <li>Nevyužité MIO propadá při zrušení účtu</li>
             </ul>
             <p className="text-muted-foreground mt-4">
               Bonusové MIO získané v rámci soutěže podléhá stejným pravidlům
