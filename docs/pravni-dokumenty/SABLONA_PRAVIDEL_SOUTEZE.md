@@ -24,11 +24,11 @@ Vše v `{{…}}` se musí vyplnit. **Žádná nesmí zůstat nevyplněná ve fin
 | `{{ZPUSOB_UKONCENI}}` | typicky „vydáním posledního tiketu"; jiný způsob musí potvrdit Pavel |
 | `{{UZEMI_SOUTEZE}}` | **Pavel** — nelze zjistit ze systému |
 | `{{POCET_TIKETU}}` | `contests.ticket_count` |
-| `{{PODMINKA_ZISKANI_TIKETU}}` | `contests.ticket_price` v MioCoinech |
+| `{{PODMINKA_ZISKANI_TIKETU}}` | `contests.ticket_price` v MIOech |
 | `{{HLAVNI_VYHRA}}` | `contests.main_prize` |
 | `{{SPECIFIKACE_HLAVNI_VYHRY}}` | **Pavel** — přesná specifikace, model, výbava, barva |
 | `{{HODNOTA_HLAVNI_VYHRY}}` | **Pavel** |
-| `{{BONUSOVE_VYHRY}}` | `bonus_prizes` — věcné i MioCoinové |
+| `{{BONUSOVE_VYHRY}}` | `bonus_prizes` — věcné i MIO |
 | `{{ZPUSOB_PREDANI}}` | **Pavel** |
 | `{{LHUTA_PRO_REAKCI_VYHERCE}}` | **Pavel** |
 | `{{LHUTA_PRO_PREDANI}}` | **Pavel** |
@@ -48,7 +48,7 @@ Následující platí pro **každou** soutěž OneMil a nesmí se v konkrétníc
 4. Hlavní výhru získává **držitel posledního tiketu**.
 5. Hlavní výhra **není určována následným losováním**.
 6. **Každá soutěž má vlastní pravidla** a vlastní PDF; sdílený generický soubor je zakázaný.
-7. **MioCoin nelze vyplatit** ani směnit zpět za peníze.
+7. **MIO nelze vyplatit** ani směnit zpět za peníze.
 8. Veřejná terminologie **nesmí** OneMil popisovat jako hazard, casino, sázení, betting, gambling,
    jackpot ani podobně (`ONEMIL_BUSINESS_CONTEXT.md` §10).
 9. Soutěž **nesmí být `active` bez PDF pravidel** (vynuceno triggerem
@@ -126,9 +126,9 @@ uveden v aplikaci u dané soutěže. Pozice bonusových výher nejsou účastní
 
 Věcné výhry nelze směnit za peníze.
 
-### 6. MioCoin
+### 6. MIO
 
-MioCoin je digitální kredit použitelný výhradně v aplikaci OneMil. **MioCoin nelze vyplatit
+MIO je digitální kredit použitelný výhradně v aplikaci OneMil. **MIO nelze vyplatit
 v penězích ani směnit zpět za peníze** a nelze jej převádět mimo OneMil.
 
 ### 7. Oznámení výhry a předání
