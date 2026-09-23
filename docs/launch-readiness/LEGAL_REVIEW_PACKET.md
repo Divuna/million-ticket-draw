@@ -90,6 +90,15 @@
 24. **AI podpora:** při použití Boba se OpenAI předává aktuální zpráva, až 10 předchozích zpráv, jméno z profilu, omezené údaje o účtu (zůstatek MIO, počet výher, stav voucherů, poslední aktivita) a přehled soutěží; e-mail aplikace sama nepřidává. Potvrdit právní základ a rozsah informační povinnosti.
 25. **Doby uchování a výmaz:** stanovit konkrétní lhůty pro účet, podporu, platby, soutěže, výhry, souhlasy, bezpečnostní logy a data po zrušení účtu; potvrdit deklarovanou 30denní lhůtu pro výmaz.
 26. **DPO a ÚOOÚ:** potvrdit, zda OneMil nemá povinnost jmenovat pověřence pro ochranu osobních údajů a zda je stávající poučení o stížnosti k ÚOOÚ správné.
+27. **Osobní kód běžného uživatele:** právně posoudit nepeněžní odměnu v MIO za placená dobití doporučeného uživatele. Potvrdit, jak musí být podmínky odměny popsány, zda lze odměnu stornovat při refundaci původní platby a jak upravit zákaz self-referralu a zneužití.
+28. **První placené dobití:** potvrdit právní podmínky zamýšleného jednorázového bonusu 15 MIO po prvním placeném dobití doporučeného uživatele. Tento bonus zatím není technicky implementován a nesmí být považován za aktivní nárok, dokud nebude implementace hotová a ověřená.
+29. **Oddělení běžného uživatele a Affiliate:** běžný uživatel dostává pouze nepeněžní MIO; schválený Affiliate/influencer/obchodník může dostávat peněžní provize v Kč. Potvrdit, že mají mít tyto dva programy samostatné podmínky.
+30. **Affiliate zákaznická provize:** aktuální technický model počítá provizi ze skutečně dokončených placených dobití přivedených zákazníků; sazba je nastavena na affiliate účtu (aktuální výchozí hodnota 5 %). Posoudit smluvní, daňové a informační požadavky.
+31. **Affiliate provize za firmu:** provize vzniká ze skutečně uhrazené partnerské faktury a počítá se z částky bez DPH; sazba je nastavena na affiliate účtu (aktuální výchozí hodnota 5 %). Posoudit smluvní, daňové, účetní a fakturační požadavky.
+32. **Storno provizí:** určit, kdy lze již vypočtenou nebo schválenou odměnu/provizi stornovat nebo korigovat při refundaci, storno platby, chybné atribuci, podvodu nebo zrušení partnerské faktury.
+33. **Atribuce:** potvrdit, jak dlouho může být zákazník nebo firma přiřazena ke konkrétnímu doporučiteli/Affiliate a jak o této skutečnosti informovat dotčené osoby z hlediska GDPR.
+34. **Affiliate marketing:** potvrdit povinnosti influencera/Affiliate při označování reklamy, obchodní spolupráce a propagace osobního/affiliate odkazu nebo kódu.
+35. **Ukončení Affiliate spolupráce:** stanovit, co se stane s již vzniklými, schválenými a dosud nevyplacenými provizemi při ukončení spolupráce, blokaci účtu nebo porušení pravidel.
 
 ---
 
