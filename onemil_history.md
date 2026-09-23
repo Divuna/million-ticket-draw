@@ -1,6 +1,10 @@
-# 24. 09. 2026 — Refund blok F2 + F3 + F4 (JEN STAGING)
+# 23. 09. 2026 — Refund blok F2 + F3 + F4 (STAGING → PRODUKCE)
 
-Implementován na větvi `claude/refund-block-f2-f4` a ověřen na stagingu: ekonomika platby (zaplacené Kč, základ, bonus, Stripe režim), MIO sady s jediným FEFO algoritmem a 12měsíční expirací, refundace v2 jen z vlastní sady platby a technická podpora souhlasu s okamžitým použitím MIO (bez vymyšleného textu, výchozí vypnuto). Staging drift: peněženkové funkce se sjednotily s produkcí a doplnila se chybějící `record_stripe_refund_status`. Produkce nedotčena.
+Implementován na větvi `claude/refund-block-f2-f4` a ověřen na stagingu: ekonomika platby (zaplacené Kč, základ, bonus, Stripe režim), MIO sady s jediným FEFO algoritmem a 12měsíční expirací, refundace v2 jen z vlastní sady platby a technická podpora souhlasu s okamžitým použitím MIO (bez vymyšleného textu, výchozí vypnuto). Staging drift: peněženkové funkce se sjednotily s produkcí a doplnila se chybějící `record_stripe_refund_status`.
+
+Pavel rozhodl ponechat pořadí čerpání: u jednoho dobití nejdřív placená MIO, pak bonus (zákazník nesmí spotřebovat bonus a pak refundovat celou platbu). Poslední ověření na stagingu: skutečný Stripe TEST checkout 300 Kč → 310 MIO (placená sada 300 + bonusová 10), TEST refundace 300 Kč přes admin UI (zůstatek 359 → 49, cizí sada nedotčena), druhé spuštění `409 already_refunded` bez druhého odečtu.
+
+Po výslovném schválení Pavla nasazeno do produkce: migrace (73 úvodních sad = 73 kladných zůstatků, 0 nesrovnalostí), Edge Functions `create-stripe-checkout` v367, `stripe-webhook` v365, `stripe-refund` v164, frontend přes merge do `main`. Ruční `pg_dump` nebyl k dispozici (chybí heslo k DB); návrat zajišťuje ověřený rollback skript. Stripe live nezapnut.
 
 ---
 

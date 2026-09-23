@@ -1,14 +1,35 @@
 # OneMil – aktuální stav projektu
 
-> **Autoritativní aktuální stav. Poslední aktualizace 23. 9. 2026 — Fáze 1 opravného úkolu (integrita soutěží) nasazena do produkční Supabase (`xkzhjldrojjlrkezorey`), commit `69990255`. Předchozí hlavní aktualizace: 22. 9. 2026 — Auth/Affiliate flow a garantované nákupní benefity.**
+> **Autoritativní aktuální stav. Poslední aktualizace 23. 9. 2026 — refund blok F2 + F3 + F4 (MIO sady, FEFO, 12měsíční expirace, refundace v2) nasazen do produkce `xkzhjldrojjlrkezorey` se schválením Pavla. Předchozí: Fáze 1 (integrita soutěží), commit `69990255`.**
 
 
-## -7. Refund blok (Fáze 2 + 3 + 4) — JEN STAGING, do produkce NENASAZENO (24. 09. 2026)
+## -7. Refund blok (Fáze 2 + 3 + 4) — NASAZENO DO PRODUKCE (23. 09. 2026, schválení Pavla)
 
-Větev `claude/refund-block-f2-f4`, migrace `supabase/migrations/20260924100000_refund_block_wallet_lots.sql`.
-Aplikováno **pouze na staging `dxmowysntemfqfnanxua`** (DB + Edge Functions `create-stripe-checkout`,
-`stripe-webhook`, `stripe-refund`). **Produkce `xkzhjldrojjlrkezorey` beze změny**, Stripe live
-nezapnut. Produkční nasazení čeká na výslovné schválení Pavla.
+Větev `claude/refund-block-f2-f4` (fast-forward do `main`), migrace
+`supabase/migrations/20260924100000_refund_block_wallet_lots.sql`.
+
+**Produkce `xkzhjldrojjlrkezorey`:**
+- Migrace aplikována a zapsaná do `supabase_migrations.schema_migrations` jako `20260924100000`
+  (`refund_block_wallet_lots`). Před nasazením ověřeno, že všech 12 přepisovaných funkcí má na
+  produkci md5 shodné s rollback skriptem (žádný drift) a poslední migrace byla Fáze 1.
+- Postcheck: 3 nové tabulky s RLS, 9 nových sloupců `payments`, trigger `trg_wallets_lot_sync`,
+  cron `expire_wallet_lots_daily` (`10 3 * * *`, aktivní), **73 sad `legacy_opening` = 73 kladných
+  peněženek, 139 417,81 MIO = součet zůstatků**, `wallet_lot_consistency_issues()` = 0, souhlas
+  vypnutý a prázdný, interní a refundační funkce bez `anon`/`authenticated` EXECUTE,
+  `record_stripe_refund_status` beze změny. Všech 21 funkcí refund bloku má md5 shodné se stagingem.
+- Edge Functions: `create-stripe-checkout` v367 (`verify_jwt=false`), `stripe-webhook` v365
+  (`verify_jwt=false`), `stripe-refund` v164 (`verify_jwt=true`) — nastavení JWT beze změny.
+  Smoke: webhook bez podpisu → 500 `No Stripe signature found` (stejně jako před nasazením),
+  checkout bez JWT → 401, refund bez JWT → 401.
+- 139 historických plateb nemá rozpad na Kč → jejich refundace vrací `legacy_payment_not_supported`.
+- **Záloha:** ruční `pg_dump` nebyl proveden (na stroji chybí heslo k DB). Migrace nemění
+  existující řádky (jen přidává sloupce, tabulky a sady); návrat je
+  `docs/rollback/refund_block_rollback.sql` + předchozí verze tří Edge Functions (v366/v364/v163,
+  zdroj z `main` `51122473`).
+- Stripe live nezapnut, produkce dál v TEST režimu.
+
+Staging `dxmowysntemfqfnanxua` má totéž od 23. 9. 2026 (tam ověřeno end-to-end skutečnou Stripe
+TEST platbou 300 Kč → 310 MIO a TEST refundací 300 Kč, druhý pokus `409 already_refunded`).
 
 - **F2 platba:** `payments` + `paid_amount_czk`, `base_mio`, `bonus_mio`, `currency`,
   `stripe_livemode`, `immediate_use_consent_id`, `refund_amount_czk`, `refund_paid_mio`,
@@ -37,8 +58,9 @@ nezapnut. Produkční nasazení čeká na výslovné schválení Pavla.
   stagingu (funkce po rollbacku = produkce, pak znovu nasazeno).
 
 **OPEN ISSUE (vědomě mimo rozsah):** referral 5 % / 15 MIO, affiliate základ, `try_credit_wallet_mc`
-a `buy_ticket_atomic` mění zůstatek přímo — konzistenci drží sync trigger. Produkční `legacy_opening`
-sady vzniknou až při nasazení.
+a `buy_ticket_atomic` mění zůstatek přímo — konzistenci drží sync trigger. Schválené právní znění
+souhlasu s okamžitým použitím MIO chybí — do té doby zůstává souhlas vypnutý. Staré platby bez
+rozpadu na Kč nejdou refundovat automaticky (vyřeší předstartovní reset).
 
 ---
 

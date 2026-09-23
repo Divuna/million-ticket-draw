@@ -58,6 +58,33 @@ prvních skutečných zákazníků musí proběhnout **jeden řízený kompletn�
 ale to **není důvod je mazat, měnit ani „uklízet" mimochodem**. Jediná povolená cesta k jejich
 odstranění je ten jeden schválený reset.
 
+## REFUND BLOK F2 + F3 + F4 — MIO SADY, FEFO, REFUNDACE V2 (23. 09. 2026, PRODUKCE) — TRVALÉ INVARIANTY
+
+Migrace `20260924100000_refund_block_wallet_lots.sql`. Detail: `onemil_state.md` § -7.
+Rollback: `docs/rollback/refund_block_rollback.sql`.
+
+- **`wallets.balance_coins` je jen rychlý souhrn; pravdou jsou sady `wallet_lots`.** Platí
+  `součet remaining_amount aktivních neexpirovaných sad = balance_coins`. Kontrola:
+  `wallet_lot_consistency_issues()` musí vracet 0 řádků.
+- **Jediný algoritmus čerpání je FEFO** (`wallet_debit_fefo` / `_wallet_lots_consume`): nejbližší
+  `expires_at`, při shodě dřívější `credited_at`. **Nezavádět druhý výpočet čerpání.**
+- **Placená sada dobití se připisuje před bonusovou** (`clock_timestamp()`), takže se čerpá první —
+  rozhodnutí Pavla: zákazník nesmí spotřebovat bonus a pak refundovat celou platbu. Nepřehazovat.
+- **Všechna MIO vyprší 12 měsíců od skutečného připsání/aktivace.** 90denní lhůta partnerského
+  kódu na aktivaci je jiná věc a zůstává.
+- **Nové připisování nebo odečítání MIO musí jít přes `wallet_credit_lot` / `wallet_debit_fefo`.**
+  Trigger `trg_wallets_lot_sync` jen zachytí legacy přímé změny `balance_coins` — nerušit ho.
+- **`wallet_lot_movements` jsou neměnné.** Neupravovat ani nemazat.
+- **Refundace v2** vrací jen nevyčerpanou placenou část sady dané platby (Kč poměrně k zaplacené
+  částce), ruší nevyčerpaný bonus té platby, **nikdy nesáhne na cizí sadu**, Stripe dostane přesnou
+  částku v haléřích a selhání Stripe vrátí přesně pohyby dané refundace. Tok
+  `prepare → Stripe → record → finalize/reverse` zachovat.
+- **Webhook musí zapisovat `paid_amount_czk`, `base_mio`, `bonus_mio`, `stripe_livemode`.**
+  `payments.amount` zůstává = celkem připsaná MIO (referral/affiliate beze změny).
+- **Souhlas s okamžitým použitím MIO zůstává vypnutý**, dokud Pavel/právník nedodá schválené znění.
+  Text nevymýšlet.
+- Interní a peněženkové funkce smí volat jen `service_role`; nevracet `anon`/`authenticated`.
+
 ## FÁZE 1 — INTEGRITA SOUTĚŽÍ (23. 09. 2026, PRODUKCE) — TRVALÉ INVARIANTY
 
 Migrace `20260923120000_phase1_contest_integrity_hardening.sql`, commit `69990255`. Detail stavu:
