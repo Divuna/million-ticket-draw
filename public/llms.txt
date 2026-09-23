@@ -1,14 +1,14 @@
 # OneMil
 
-> Luxusní soutěže o skutečné věcné výhry. Získávejte MioCoiny u partnerů a hrajte o auta, dovolené a luxusní elektroniku.
+> Partnerská odměnová a spotřebitelská platforma s prémiovými věcnými výhrami a interním kreditem MIO.
 
-OneMil je česká soutěžní platforma s předem definovanými výherními pozicemi. Tickety se otevírají postupně 1, 2, 3… a výherní pozice jsou uvedeny v pravidlech každé soutěže. MioCoin je interní kredit OneMil — nelze ho vyplatit ani převést mimo platformu.
+OneMil je česká partnerská odměnová a spotřebitelská platforma. MIO je interní digitální kredit OneMil — nelze ho vyplatit ani převést mimo platformu. U podporovaného soutěžního nákupu zákazník pořizuje garantovaný nákupní benefit za MIO a získává 1 soutěžní tiket zdarma jako bonus. Tikety se přidělují postupně 1, 2, 3…; hlavní výhru získává držitel posledního tiketu. Bonusové výherní pozice jsou určeny předem, ale jejich konkrétní čísla nejsou účastníkům předem zobrazována.
 
 ## Pages
 
 - [Domů](/): Přehled aktuálních soutěží a hlavních výher.
 - [Soutěže](/games): Seznam všech aktivních soutěží OneMil.
-- [Vouchery](/vouchers): Nákup voucherů a získání MioCoinů.
+- [Vouchery](/vouchers): Vouchery, garantované benefity a práce s MIO.
 - [Výherci](/winners): Skuteční výherci a jejich ceny.
 - [Influencer program](/influencer): Spolupráce s tvůrci obsahu.
 - [Kontakt](/kontakt): Kontaktní údaje provozovatele iCONIC POINT s.r.o.
