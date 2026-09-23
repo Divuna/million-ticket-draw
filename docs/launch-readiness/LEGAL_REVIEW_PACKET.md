@@ -81,6 +81,15 @@
 15. **Odpovědnost:** jak správně rozdělit odpovědnost mezi iCONIC POINT s.r.o. jako provozovatele OneMil, konkrétního partnera jako poskytovatele benefitu/voucheru a externí poskytovatele (např. Stripe)?
 16. **Omezení/blokace účtu:** za jakých podmínek lze účet dočasně omezit nebo zablokovat při podvodu, manipulaci, zneužívání či bezpečnostním incidentu a jak vypořádat MIO, benefity, tikety a již vzniklé výhry?
 17. **Mimosoudní řešení sporů:** potvrdit přesné aktuální poučení pro českého spotřebitele, včetně příslušného subjektu ADR, způsobu podání návrhu a údajů, které musí být uvedeny ve VOP.
+18. **GDPR právní základy:** potvrdit právní základ pro jednotlivé účely (smlouva, zákonná povinnost, oprávněný zájem, souhlas), zejména pro bezpečnost, zlepšování služby, 18+ kontrolu a AI podporu.
+19. **Registrace a GDPR:** registrace dnes vyžaduje zaškrtnutí VOP i GDPR a UI používá formulaci „souhlasit se zásadami ochrany osobních údajů“. Posoudit, zda má být GDPR potvrzení pouze seznámením/potvrzením informace, nikoli „souhlasem“ jako právním základem.
+20. **Marketing:** marketingový souhlas je při registraci samostatný a dobrovolný a lze jej později udělit nebo odvolat v profilu. Potvrdit správné znění, evidenci a požadavky na obchodní sdělení.
+21. **Cookies a obdobné technologie:** skutečný systém má pouze kategorie nezbytné / analytické / marketingové; GTM se načte až po souhlasu s analytikou nebo marketingem, Meta Pixel až po marketingovém souhlasu. Souhlas se ukládá do localStorage i databáze. Přepsat cookie zásady tak, aby toto přesně popisovaly.
+22. **OneSignal:** potvrdit právní a informační režim pro push notifikace a lokální úložiště/identifikátory používané OneSignalem.
+23. **Zpracovatelé a přenosy mimo EU/EHP:** potvrdit přesné právnické osoby, role a mechanismy předávání u Supabase, Vercel, Stripe, Resend, OneSignal, Google, Meta, Sofinity a OpenAI.
+24. **AI podpora:** při použití Boba se OpenAI předává aktuální zpráva, až 10 předchozích zpráv, jméno z profilu, omezené údaje o účtu (zůstatek MIO, počet výher, stav voucherů, poslední aktivita) a přehled soutěží; e-mail aplikace sama nepřidává. Potvrdit právní základ a rozsah informační povinnosti.
+25. **Doby uchování a výmaz:** stanovit konkrétní lhůty pro účet, podporu, platby, soutěže, výhry, souhlasy, bezpečnostní logy a data po zrušení účtu; potvrdit deklarovanou 30denní lhůtu pro výmaz.
+26. **DPO a ÚOOÚ:** potvrdit, zda OneMil nemá povinnost jmenovat pověřence pro ochranu osobních údajů a zda je stávající poučení o stížnosti k ÚOOÚ správné.
 
 ---
 
