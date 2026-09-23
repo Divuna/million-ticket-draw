@@ -402,6 +402,12 @@ The main prize principle currently used in OneMil:
 The main prize belongs to the holder of the last ticket.
 ```
 
+**Bonus prize positions — confirmed 2026-09-23:**
+- bonus prize positions are determined internally in advance,
+- the concrete ticket numbers of bonus prize positions are **not shown to participants in advance**,
+- the customer may see that the contest contains bonus prizes and what types of bonus prizes are available, but not the hidden ticket numbers before they are reached,
+- this rule supersedes older public or derived wording claiming that concrete winning positions are published in the rules of each contest.
+
 Contests must be presented as consumer contests with physical prizes, not as gambling.
 
 Forbidden public framing:
