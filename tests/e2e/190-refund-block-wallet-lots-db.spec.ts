@@ -42,6 +42,12 @@ async function createUser(db: SupabaseClient): Promise<string> {
   });
   if (error || !data.user) throw new Error(`createUser failed: ${error?.message}`);
   createdUserIds.push(data.user.id);
+  // payments.user_id → public.users(id); na stagingu se řádek po createUser
+  // nezakládá automaticky.
+  const { error: usersError } = await db
+    .from('users')
+    .upsert({ id: data.user.id, email }, { onConflict: 'id' });
+  if (usersError) throw new Error(`public.users seed failed: ${usersError.message}`);
   return data.user.id;
 }
 
