@@ -111,6 +111,16 @@
 43. **Odpovědnost za data objednávky:** určit odpovědnost partnera za správnost údajů předávaných OneMilu (stav zaplacení, cena objednávky, produkty, e-mail zákazníka) a postup při chybě nebo duplicitním importu.
 44. **Zpracování údajů zákazníků partnera:** posoudit role OneMil/partnera podle GDPR při předávání údajů zákazníka z e-shopu do OneMil a určit potřebné smluvní dokumenty a informační povinnosti.
 45. **Ukončení partnerství:** určit, co se stane s již vydanými, ale dosud neaktivovanými kódy, již aktivovanými MIO, nevyfakturovanými aktivacemi a existujícími benefity/nabídkami při ukončení spolupráce s partnerem.
+46. **Architektura právních dokumentů:** potvrdit, které dokumenty mají být samostatné pro koncového uživatele, partnera/e-shop, Affiliate/influencera/obchodníka a jednotlivé soutěže a které mohou být řešeny jedním společným dokumentem.
+47. **VOP koncového uživatele:** připravit finální rozsah pro používání OneMil, MIO, platby, refundace, garantované benefity, vouchery, účet, reklamace, soutěžní účast a obecnou odpovědnost.
+48. **Partnerské obchodní podmínky / smlouva:** rozhodnout, zda má mít partner samostatné B2B obchodní podmínky, individuální smlouvu, nebo kombinaci obojího; zahrnout odměny MIO, integraci e-shopu, fakturaci, trial, GDPR, odpovědnost za data, benefity/vouchery a ukončení spolupráce.
+49. **Affiliate podmínky / smlouva:** rozhodnout, zda má mít Affiliate/influencer/obchodník samostatné podmínky nebo smlouvu; zahrnout atribuci, sazby, vznik a schválení provize, fakturaci, daně, reklamní povinnosti, storna a ukončení spolupráce.
+50. **Pravidla konkrétní soutěže:** potvrdit, že každá soutěž má vlastní závazná pravidla/PDF a že obecná stránka /pravidla-souteze slouží jen k vysvětlení principu OneMil.
+51. **GDPR a cookies:** určit, zda mají zůstat jako samostatné dokumenty a jak mají být provázány s VOP, Partner podmínkami a Affiliate podmínkami.
+52. **Marketingové souhlasy:** potvrdit, zda mají být samostatným souhlasem mimo VOP/GDPR a jak evidovat jeho udělení/odvolání.
+53. **Pořadí přednosti dokumentů:** určit, co má platit při rozporu mezi VOP, pravidly konkrétní soutěže, partnerskými/Affiliate podmínkami a individuální smlouvou.
+54. **Verzování a účinnost:** určit, jak evidovat verze dokumentů, datum účinnosti, souhlasy uživatelů/partnerů/Affiliate a kdy je nutné získat nový souhlas po změně.
+55. **Publikace a dostupnost:** určit, které dokumenty musí být veřejně dostupné před registrací, před platbou, před účastí v soutěži, před partner registrací a před Affiliate registrací.
 
 ---
 
