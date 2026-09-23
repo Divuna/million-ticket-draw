@@ -455,9 +455,16 @@ Current player reward system:
 - rewards are non-monetary
 - rewards are paid in MIO only
 - current reward: 5 % in MIO from paid top-ups of the invited user
-- current one-time bonus: 15 MC after the invited user’s first paid top-up
+- current intended one-time bonus: 15 MIO after the invited user’s first paid top-up
 - no reward is paid for registration alone
 - MIO cannot be withdrawn or exchanged for money
+
+**Current technical state — verified 2026-09-23:**
+- the 5 % player referral reward is currently created as a `referral_rewards` record after a completed paid top-up,
+- the current audited implementation does **not** credit that reward into the user's wallet,
+- the intended one-time **15 MIO** bonus after the referred user's first paid top-up is **not yet implemented**,
+- therefore neither the 5 % wallet credit nor the 15 MIO first-top-up bonus may be represented as fully live/working until the technical flow is completed and verified,
+- any change to wallet credit/referral payout logic is a money-related production change and requires Pavel's explicit approval before implementation.
 
 Important separation:
 
