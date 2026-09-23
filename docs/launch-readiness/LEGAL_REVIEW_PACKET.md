@@ -43,7 +43,7 @@ jednotlivých stran.
    nemají používat „MioCoin/MioCoiny“ jako produktový název.
 4. **Povaha MIO:** MIO je interní digitální kredit použitelný uvnitř OneMil. Nelze jej vyplatit v
    penězích ani převést mimo OneMil.
-5. **Placené MIO:** MIO z placeného dobití má platnost **12 měsíců od konkrétního dobití**.
+5. **Platnost MIO:** všechny druhy MIO mají platnost **12 měsíců**. U placeného dobití běží lhůta od konkrétního dobití; u partnerského, bonusového, referral a jiného neplaceného MIO od okamžiku skutečného připsání/aktivace do peněženky. Samostatná 90denní platnost partnerského odměnového kódu před aktivací tím není dotčena.
 6. **Soutěžní nákup:** zákazník **nekupuje samostatný soutěžní tiket**. Za MIO pořizuje
    **garantovaný nákupní benefit** a k němu získává **1 soutěžní tiket zdarma jako bonus**.
 7. **Garantovaný benefit:** není soutěžní výhra. Musí mít skutečného konkrétního poskytovatele;
@@ -102,9 +102,10 @@ označit místo toho, aby si rozhodnutí sama domyslela.
    MIO byla spotřebována, včetně bonusové části balíčku.
 4. **Expirace placeného MIO** — 12 měsíců je pevné pravidlo; Libra má určit informační povinnosti,
    upozornění před expirací, právní důsledky expirace a zda je potřeba zvláštní souhlas.
-5. **Platnost neplaceného MIO** — expirace partnerského, bonusového, referral nebo jiného
-   neplaceného MIO zatím není obecně sjednocena. Libra má říct, zda je právně vhodné mít odlišná
-   pravidla; konkrétní dobu případně potvrdí Pavel.
+5. **Platnost neplaceného MIO — rozhodnuto 2026-09-23:** partnerské, bonusové, referral i jiné
+   neplacené MIO má stejně jako placené MIO platnost **12 měsíců od skutečného připsání/aktivace**
+   do peněženky. Samostatná 90denní platnost partnerského odměnového kódu před aktivací zůstává
+   zachována. Libra má pouze určit správné informační povinnosti a právní znění tohoto pravidla.
 6. **Pořadí čerpání MIO** — právně a spotřebitelsky doporučit, zda se mají nejdřív čerpat nejdříve
    expirující placené MIO nebo jiný typ kreditu. Finální obchodní pravidlo potvrdí Pavel.
 7. **Smazání/blokace účtu** — co se právně musí stát s placeným MIO, neplaceným MIO, benefity,
