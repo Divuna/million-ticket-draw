@@ -3,6 +3,39 @@
 > **Autoritativní aktuální stav. Poslední aktualizace 23. 9. 2026 — refund blok F2 + F3 + F4 (MIO sady, FEFO, 12měsíční expirace, refundace v2) nasazen do produkce `xkzhjldrojjlrkezorey` se schválením Pavla. Předchozí: Fáze 1 (integrita soutěží), commit `69990255`.**
 
 
+## -8. Fáze 5 — osobní doporučení hráčů — JEN STAGING, do produkce NENASAZENO (23. 09. 2026)
+
+Větev `claude/phase5-player-referral`, migrace
+`supabase/migrations/20260925100000_phase5_player_referral_rewards.sql`. Aplikováno **pouze na
+staging `dxmowysntemfqfnanxua`**. Produkce `xkzhjldrojjlrkezorey` beze změny.
+
+- **Opravena chyba:** `create_referral_reward_from_payment` zakládal `referral_rewards`, ale MIO
+  nepřipsal (a počítal 5 % z MIO včetně balíčkového bonusu). Produkční reverzní trigger navíc při
+  stornu odečítal doporučujícímu MIO, která nikdy nedostal.
+- **Nově:** 5 % ze skutečně zaplacených Kč každého dokončeného placeného dobití (MIO na 1 desetinné
+  místo) + jednorázových 15 MIO po prvním placeném dobití doporučeného. Každá odměna má vlastní sadu
+  (`referral_reward` / `referral_first_topup_bonus`, nepeněžní `bonus_mio`, expirace 12 měsíců) a
+  záznam v historii MIO. Připisuje výhradně `wallet_credit_lot`.
+- **Reverze:** refundace vrací 5 % poměrně ke skutečně refundovaným Kč, 15 MIO jen při refundaci celé
+  platby. Odečítá se jen ze sady dané odměny; co doporučující už utratil, se nevymáhá z jiných sad —
+  zapíše se jako `reversal_shortfall_mc` + audit `referral_reversal_shortfall`. Neúspěšná Stripe
+  refundace vrátí přesně odečtené MIO do stejné sady. Storno mimo refundaci (`completed → jiný stav`)
+  vrací celou odměnu triggerem.
+- **Jedinečnost:** odměna daného typu jednou na platbu (`uq_referral_rewards_payment_type`),
+  15 MIO jednou na doporučeného (`uq_referral_first_topup_bonus_per_referred`) — refundace prvního
+  dobití bonus znovu neotevře.
+- Ruční změna stavu již připsané odměny adminem je zablokovaná (`referral_reward_credited_locked`).
+- **Ověření:** SQL scénáře `supabase/tests/phase5_player_referral_scenarios.sql` 33/33, regrese
+  refund bloku 35/35, spec 192 (souběh) 5/5, cílený staging běh (190, 192, 55, 83, 88) 28 passed.
+  Rollback `docs/rollback/phase5_player_referral_rollback.sql` ověřen na stagingu (funkce = produkce
+  md5) a migrace znovu nasazena.
+
+**OPEN ISSUE:** 17 historických produkčních `referral_rewards` (16 `earned`, 1 `blocked`) nebylo
+nikdy připsáno a Fáze 5 je zpětně nepřipisuje (testovací data → předstartovní reset). Admin KPI
+v `AdminReferralDashboard` počítá jen stav `earned`, částečně stornované odměny v součtu chybí.
+
+---
+
 ## -7. Refund blok (Fáze 2 + 3 + 4) — NASAZENO DO PRODUKCE (23. 09. 2026, schválení Pavla)
 
 Větev `claude/refund-block-f2-f4` (fast-forward do `main`), migrace

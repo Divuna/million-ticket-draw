@@ -1,3 +1,9 @@
+# 23. 09. 2026 — Fáze 5: osobní doporučení hráčů (JEN STAGING)
+
+Odměny za doporučení se poprvé skutečně připisují: 5 % ze zaplacených Kč každého placeného dobití a jednorázových 15 MIO po prvním dobití, obojí jako samostatné 12měsíční sady MIO přes centrální lot cestu. Opravena chyba, kdy vznikal jen záznam bez MIO, a chyba, kdy storno odečítalo nikdy nepřipsanou odměnu. Refundace vrací 5 % poměrně k refundovaným Kč, 15 MIO jen při plné refundaci, neúspěšná refundace přesně obnovuje. Ověřeno na stagingu (33/33 scénářů, souběh 5/5, regrese refund bloku 35/35), produkce nedotčena.
+
+---
+
 # 23. 09. 2026 — Refund blok F2 + F3 + F4 (STAGING → PRODUKCE)
 
 Implementován na větvi `claude/refund-block-f2-f4` a ověřen na stagingu: ekonomika platby (zaplacené Kč, základ, bonus, Stripe režim), MIO sady s jediným FEFO algoritmem a 12měsíční expirací, refundace v2 jen z vlastní sady platby a technická podpora souhlasu s okamžitým použitím MIO (bez vymyšleného textu, výchozí vypnuto). Staging drift: peněženkové funkce se sjednotily s produkcí a doplnila se chybějící `record_stripe_refund_status`.

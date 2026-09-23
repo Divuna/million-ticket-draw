@@ -102,6 +102,8 @@ test.describe('192 osobní doporučení — souběh a idempotence (staging DB)',
   test.afterAll(async () => {
     if (!SUPABASE_URL.includes(STAGING_REF) || !SERVICE_ROLE) return;
     const db = admin();
+    // Jako spec 190: uživatele s platbami smazat nejde (FK plateb) — zůstanou
+    // jako konzistentní testovací data stagingu (sady ↔ odměny ↔ platby).
     for (const id of createdUserIds) {
       await db.auth.admin.deleteUser(id);
     }

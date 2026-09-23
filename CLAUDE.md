@@ -58,6 +58,22 @@ prvních skutečných zákazníků musí proběhnout **jeden řízený kompletn�
 ale to **není důvod je mazat, měnit ani „uklízet" mimochodem**. Jediná povolená cesta k jejich
 odstranění je ten jeden schválený reset.
 
+## FÁZE 5 — OSOBNÍ DOPORUČENÍ HRÁČŮ (23. 09. 2026, JEN STAGING — do produkce NENASAZENO)
+
+Migrace `20260925100000_phase5_player_referral_rewards.sql`. Detail: `onemil_state.md` § -8.
+Rollback: `docs/rollback/phase5_player_referral_rollback.sql`.
+
+- Odměna = **5 % ze skutečně zaplacených Kč** (`payments.paid_amount_czk`), nikdy z `payments.amount`
+  (MIO včetně balíčkového bonusu). Za registraci ani za neplacené platby nevzniká nic.
+- **15 MIO jen jednou na doporučeného** — drží unikátní index
+  `uq_referral_first_topup_bonus_per_referred`. Nerušit; refundace ho nesmí „uvolnit".
+- Připsání jde výhradně přes `wallet_credit_lot` do vlastní sady (`referral_reward`,
+  `referral_first_topup_bonus`). **Nikdy přes `try_credit_wallet_mc` ani přímou změnu zůstatku.**
+- Reverze při refundaci běží v `prepare_stripe_refund` poměrně k refundovaným Kč (15 MIO jen při
+  plné refundaci), obnova v `reverse_failed_stripe_refund`. Odečítá se **jen ze sady odměny**;
+  nedoplatek se eviduje, z jiných sad doporučujícího se nevymáhá.
+- Odměna bez `lot_id` nebyla nikdy připsána — její storno smí měnit jen stav, nikdy peněženku.
+
 ## REFUND BLOK F2 + F3 + F4 — MIO SADY, FEFO, REFUNDACE V2 (23. 09. 2026, PRODUKCE) — TRVALÉ INVARIANTY
 
 Migrace `20260924100000_refund_block_wallet_lots.sql`. Detail: `onemil_state.md` § -7.
