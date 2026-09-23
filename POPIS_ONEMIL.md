@@ -43,9 +43,9 @@ Doporučené pořadí čtení:
 
 OneMil je česká prémiová odměnová a soutěžní platforma.
 
-Firmám a e-shopům umožňuje odměňovat zákazníky MioCoiny, kupony, vouchery a speciálními nabídkami. Zákazník tyto odměny použije v aplikaci OneMil na soutěže, vouchery nebo další výhody.
+Firmám a e-shopům umožňuje odměňovat zákazníky MIO, kupony, vouchery a speciálními nabídkami. Zákazník tyto odměny použije v aplikaci OneMil na soutěže, vouchery nebo další výhody.
 
-Pro zákazníka je OneMil aplikace, kde může získat a používat MioCoiny, zapojovat se do soutěží o prémiové ceny, využívat vouchery a přijímat nabídky od partnerů.
+Pro zákazníka je OneMil aplikace, kde může získat a používat MIO, zapojovat se do soutěží o prémiové ceny, využívat vouchery a přijímat nabídky od partnerů.
 
 Pro partnera je OneMil marketingový a věrnostní systém, který pomáhá motivovat zákazníky k nákupu, návratu, registraci a další aktivitě.
 
@@ -63,7 +63,7 @@ OneMil se nesmí veřejně popisovat jako:
 - systém rychlého zbohatnutí,
 - platforma pro peněžní výhry.
 
-OneMil pracuje s interním kreditem MioCoin a s věcnými výhrami. MioCoin nelze vybrat zpět jako peníze ani převést mimo OneMil.
+OneMil pracuje s interním kreditem MIO a s věcnými výhrami. MIO nelze vybrat zpět jako peníze ani převést mimo OneMil.
 
 ---
 
@@ -74,8 +74,8 @@ OneMil pracuje s interním kreditem MioCoin a s věcnými výhrami. MioCoin nelz
 OneMil firmám umožňuje:
 
 - odměňovat zákazníky bez složité vlastní aplikace,
-- dávat zákazníkům MioCoiny za nákup nebo jinou akci,
-- platit jen za reálně aktivované / použité MioCoiny,
+- dávat zákazníkům MIO za nákup nebo jinou akci,
+- platit jen za reálně aktivované / použité MIO,
 - zvýšit atraktivitu nákupu bez klasické slevy,
 - budovat opakovaný kontakt se zákazníkem,
 - zapojit se do soutěží, voucherů a partnerských nabídek,
@@ -86,9 +86,9 @@ OneMil firmám umožňuje:
 
 OneMil zákazníkům umožňuje:
 
-- získávat MioCoiny za nákupy u partnerů,
-- dobíjet MioCoiny přímo v aplikaci,
-- používat MioCoiny na soutěže,
+- získávat MIO za nákupy u partnerů,
+- dobíjet MIO přímo v aplikaci,
+- používat MIO na soutěže,
 - využívat vouchery,
 - získávat Partner Offers,
 - sledovat výhry a komunikaci v aplikaci,
@@ -112,9 +112,9 @@ Základní tok zákazníka:
 
 ```text
 zákazník nakoupí u partnera
-→ získá MioCoiny / kupon / kód
+→ získá MIO / kupon / kód
 → aktivuje odměnu v OneMil
-→ MioCoiny se připíšou do peněženky
+→ MIO se připíšou do peněženky
 → použije je na soutěž, voucher nebo nabídku
 → vrací se zpět do OneMil nebo k partnerovi
 ```
@@ -136,9 +136,9 @@ partner nastaví odměnu
 
 ---
 
-## 8. MioCoin
+## 8. MIO
 
-MioCoin je interní kredit OneMil.
+MIO je interní kredit OneMil.
 
 Uživatel ho může získat:
 
@@ -148,14 +148,14 @@ Uživatel ho může získat:
 - bonusem v soutěži,
 - kampaní nebo akcí.
 
-MioCoin lze použít:
+MIO lze použít:
 
-- na soutěžní tickety,
+- na garantované nákupní benefity; k podporovanému nákupu je přidělen 1 soutěžní tiket zdarma jako bonus,
 - na vouchery,
 - na vybrané výhody v aplikaci,
 - na budoucí odměnové mechaniky.
 
-MioCoin nelze:
+MIO nelze:
 
 - vybrat jako peníze,
 - převést mimo OneMil,
@@ -172,12 +172,12 @@ Princip:
 
 - soutěž má pevný počet ticketů,
 - tickety se otevírají postupně,
-- výherní pozice jsou předem určeny,
+- bonusové výherní pozice jsou předem určeny interně, ale jejich konkrétní čísla nejsou účastníkům předem zobrazována,
 - hlavní výhra patří držiteli posledního ticketu,
-- bonusové výhry mohou být fyzické ceny nebo MioCoin bonusy,
+- bonusové výhry mohou být fyzické ceny nebo MIO bonusy,
 - soutěž musí mít jasná pravidla.
 
-Soutěže slouží k tomu, aby OneMil byl atraktivní pro zákazníky a aby MioCoiny měly zábavné využití.
+Soutěže slouží k tomu, aby OneMil byl atraktivní pro zákazníky a aby MIO měly zábavné využití.
 
 Zakázané veřejné vysvětlení soutěží:
 
@@ -231,7 +231,7 @@ OneMil podporuje napojení partnerů a e-shopů.
 
 Cílem je, aby partner mohl:
 
-- posílat zákazníkům MioCoin odměny,
+- posílat zákazníkům MIO odměny,
 - importovat objednávky,
 - rozhodovat, kdy zákazník získá odměnu,
 - používat vlastní napojení nebo jednodušší variantu bez API,
@@ -258,7 +258,7 @@ U plateb, peněženek a peněžních hodnot platí nejvyšší opatrnost. Žádn
 
 ## 14. Peněženka
 
-Peněženka drží MioCoin zůstatek uživatele.
+Peněženka drží MIO zůstatek uživatele.
 
 Pravidla:
 
@@ -317,7 +317,7 @@ OneMil může do Sofinity posílat eventy jako:
 
 - registrace uživatele,
 - nákup voucheru,
-- použití MioCoinu,
+- použití MIO,
 - uzavření soutěže,
 - výhra,
 - notifikace nebo e-mail.
@@ -372,7 +372,7 @@ Provize se vždy vyplácí konkrétnímu schválenému příjemci, ne pouze obec
 
 Influencer nebo UGC partner má vlastní kód nebo odkaz.
 
-Když se přes tento kód zaregistruje zákazník a později si v OneMil dobije MioCoiny, provize z tohoto dobíjení připadá influencerovi nebo UGC partnerovi podle nastavení jeho účtu.
+Když se přes tento kód zaregistruje zákazník a později si v OneMil dobije MIO, provize z tohoto dobíjení připadá influencerovi nebo UGC partnerovi podle nastavení jeho účtu.
 
 Influencer vidí pouze svoje přivedené uživatele, svůj kód, svoje provize a svůj výplatní profil.
 
@@ -382,11 +382,11 @@ Možnosti pro přivádění firem vidí pouze tehdy, pokud má schválený reži
 
 Firma má vlastní partner účet oddělený od agentury, influencera i běžného zákazníka.
 
-Ve svém partner účtu si firma nastavuje, kolik MioCoinů dává zákazníkům za nákup, návštěvu, registraci nebo jinou akci.
+Ve svém partner účtu si firma nastavuje, kolik MIO dává zákazníkům za nákup, návštěvu, registraci nebo jinou akci.
 
 Když zákazník přijde přes e-mail, kód nebo odměnu dané firmy, systém ho přiřadí ke konkrétní firmě.
 
-Pokud si tento zákazník později dobije MioCoiny, může z jeho dobíjení vznikat zákaznická provize firmy.
+Pokud si tento zákazník později dobije MIO, může z jeho dobíjení vznikat zákaznická provize firmy.
 
 Příjemcem této zákaznické provize může být:
 
@@ -411,7 +411,7 @@ U každé firmy jsou samostatně nastavené dvě provizní větve:
 
 Provize z fakturace firmy vzniká z placených faktur firmy vůči OneMil. Typicky připadá agentuře nebo obchodníkovi, který firmu přivedl.
 
-Provize z dobíjení zákazníků firmy vzniká z budoucích dobití MioCoinů zákazníků, kteří přišli přes e-mail, kód nebo odměnu této firmy.
+Provize z dobíjení zákazníků firmy vzniká z budoucích dobití MIO zákazníků, kteří přišli přes e-mail, kód nebo odměnu této firmy.
 
 Příjemce provize z dobíjení zákazníků firmy může být nastaven samostatně. Může to být agentura, samotná firma, konkrétní člověk z firmy, jiný schválený příjemce nebo nikdo.
 
@@ -423,7 +423,7 @@ Běžný zákazník vidí pouze zákaznickou část OneMil.
 
 Influencer vidí svůj kód, přivedené uživatele, provize z dobíjení a výplatní profil.
 
-Firma vidí svůj partner účet, nastavení MioCoin odměn, aktivace zákazníků, fakturaci a svoje schválené provizní nastavení.
+Firma vidí svůj partner účet, nastavení MIO odměn, aktivace zákazníků, fakturaci a svoje schválené provizní nastavení.
 
 Agentura vidí firmy, které přivedla, svoje provize a pouze ty partner účty firem, ke kterým jí firma výslovně povolila přístup.
 
@@ -463,7 +463,7 @@ Lead databáze má evidovat:
 - veřejný kontakt,
 - sociální sítě,
 - vhodnost pro OneMil,
-- vhodnost pro MioCoin odměny,
+- vhodnost pro MIO odměny,
 - vhodnost pro vouchery,
 - vhodnost pro Partner Offers,
 - vhodnost jako dodavatel soutěžních cen,
@@ -496,7 +496,7 @@ Automatizace nesmí:
 
 Když AI vysvětluje OneMil firmě, má používat tento rámec:
 
-OneMil pomáhá firmám odměňovat zákazníky MioCoiny, které zákazník využije v prémiové soutěžní a odměnové aplikaci. Firma může nabídnout atraktivnější benefit než běžnou slevu a platí jen za aktivovanou / použitou hodnotu podle nastavení spolupráce.
+OneMil pomáhá firmám odměňovat zákazníky MIO, které zákazník využije v prémiové soutěžní a odměnové aplikaci. Firma může nabídnout atraktivnější benefit než běžnou slevu a platí jen za aktivovanou / použitou hodnotu podle nastavení spolupráce.
 
 Hlavní argumenty:
 
@@ -505,7 +505,7 @@ Hlavní argumenty:
 - OneMil pomáhá s marketingovou viditelností,
 - systém je měřitelný,
 - partner může nastavovat výši odměn,
-- lze využít MioCoiny, vouchery i Partner Offers,
+- lze využít MIO, vouchery i Partner Offers,
 - OneMil vytváří důvod, proč se zákazník vrací.
 
 ---
@@ -516,7 +516,7 @@ Hlavní argumenty:
 
 Nabízet:
 
-- MioCoiny za nákup,
+- MIO za nákup,
 - kampaně podle hodnoty objednávky,
 - vouchery,
 - Partner Offers,
@@ -526,7 +526,7 @@ Nabízet:
 
 Nabízet:
 
-- MioCoiny za nákup vybavení,
+- MIO za nákup vybavení,
 - soutěže o sportovní produkty,
 - sezónní kampaně,
 - bonusové výhry.
@@ -538,7 +538,7 @@ Nabízet:
 - prémiovou viditelnost,
 - soutěže o auto-moto produkty,
 - partnerství kolem hlavních cen,
-- MioCoiny za servis, nákup nebo poptávku.
+- MIO za servis, nákup nebo poptávku.
 
 ### Móda a lifestyle
 
@@ -554,7 +554,7 @@ Nabízet:
 Nabízet:
 
 - soutěže o elektroniku,
-- MioCoiny za nákup,
+- MIO za nákup,
 - produktové kampaně,
 - vouchery a nabídky.
 
@@ -565,7 +565,7 @@ Nabízet:
 - jednoduché zákaznické odměny,
 - vouchery,
 - lokální kampaně,
-- menší MioCoin odměny za návštěvu nebo nákup.
+- menší MIO odměny za návštěvu nebo nákup.
 
 ---
 
@@ -579,12 +579,12 @@ Nastavení může být postavené tak, aby firma platila až podle reálně akti
 ### „Proč nedat zákazníkovi raději slevu?“
 
 Odpověď:
-Sleva často jen sníží marži. MioCoin dává zákazníkovi zážitek, možnost soutěžit a důvod vracet se do OneMil i zpět k partnerům.
+Sleva často jen sníží marži. MIO dává zákazníkovi zážitek, možnost soutěžit a důvod vracet se do OneMil i zpět k partnerům.
 
 ### „Není to hazard?“
 
 Odpověď:
-OneMil není hazardní platforma. MioCoin je interní kredit, nelze ho vybrat jako peníze a výhry jsou věcné. Soutěže mají jasná pravidla a předem daný průběh.
+OneMil není hazardní platforma. MIO je interní kredit, nelze ho vybrat jako peníze a výhry jsou věcné. Soutěže mají jasná pravidla a předem daný průběh.
 
 ### „Musíme něco složitě napojovat?“
 
@@ -610,7 +610,7 @@ Preferované výrazy:
 - soutěž,
 - výhra,
 - prémiová cena,
-- MioCoin,
+- MIO,
 - voucher,
 - odměna,
 - partner,
@@ -731,4 +731,4 @@ Krátkodobý směr:
 
 ## 30. Jedna věta pro AI asistenty
 
-OneMil je prémiová česká B2B odměnová a marketingová platforma s MioCoiny, vouchery, partnerskými nabídkami a soutěžní zákaznickou vrstvou; AI má vždy vycházet z aktuálních souborů projektu, chránit peněžní a soutěžní logiku a neprovádět žádné rizikové změny bez Pavlova schválení.
+OneMil je prémiová česká B2B odměnová a marketingová platforma s MIO, vouchery, partnerskými nabídkami a soutěžní zákaznickou vrstvou; AI má vždy vycházet z aktuálních souborů projektu, chránit peněžní a soutěžní logiku a neprovádět žádné rizikové změny bez Pavlova schválení.
