@@ -19,6 +19,64 @@
 
 ---
 
+## 0. Pevná obchodní a produktová pravidla — Libra je nemá redesignovat
+
+Tato pravidla jsou pro právní review **vstupní produktová fakta**. Libra má navrhnout právně správné
+znění, upozornit na právní riziko nebo nutné podmínky a případně říct, že konkrétní model není
+přípustný. Nemá však bez výslovného dotazu Pavla sama měnit ekonomiku, princip soutěže nebo role
+jednotlivých stran.
+
+1. **Provozovatel:** OneMil provozuje iCONIC POINT s.r.o., IČO 17795851.
+2. **Role OneMil:** OneMil je primárně partnerská odměnová a marketingová platforma s uživatelskou
+   soutěžní vrstvou; není pouze samostatná soutěžní aplikace.
+3. **Veřejný název kreditu:** interní kredit se veřejně jmenuje **MIO**. Nové právní a veřejné texty
+   nemají používat „MioCoin/MioCoiny“ jako produktový název.
+4. **Povaha MIO:** MIO je interní digitální kredit použitelný uvnitř OneMil. Nelze jej vyplatit v
+   penězích ani převést mimo OneMil.
+5. **Placené MIO:** MIO z placeného dobití má platnost **12 měsíců od konkrétního dobití**.
+6. **Soutěžní nákup:** zákazník **nekupuje samostatný soutěžní tiket**. Za MIO pořizuje
+   **garantovaný nákupní benefit** a k němu získává **1 soutěžní tiket zdarma jako bonus**.
+7. **Garantovaný benefit:** není soutěžní výhra. Musí mít skutečného konkrétního poskytovatele;
+   iCONIC POINT s.r.o. není automaticky poskytovatelem partnerových benefitů, voucherů nebo nabídek.
+8. **Tikety:** přidělují se postupně v číselné řadě.
+9. **Hlavní výhra:** získává ji držitel **posledního tiketu** dané soutěže.
+10. **Bonusové výhry:** mohou být navázány na předem určená konkrétní čísla tiketů. Konkrétní
+    bonusové výherní pozice se účastníkům **předem nezobrazují**; zákazník může vidět existenci a
+    druhy bonusových výher.
+11. **Pevný počet tiketů:** po vydání prvního tiketu se celkový počet tiketů nemění.
+12. **Věk:** zákaznická soutěžní část je určena pouze osobám **18+**.
+13. **Pravidla soutěží:** každá konkrétní soutěž má vlastní závazná pravidla/PDF; obecná stránka
+    pravidel vysvětluje pouze princip.
+14. **Partner/e-shop:** partner může odměňovat zákazníky MIO za nákupy a další potvrzené aktivity a
+    sám nastavuje odměnovou logiku pro budoucí objednávky.
+15. **Změny partnerovy odměny:** změna pravidel odměňování platí pro budoucí objednávky; již vzniklé
+    nebo aktivované odměny se zpětně nepřepočítávají.
+16. **Více e-shopů:** jedna partnerská firma může mít více samostatných e-shopových napojení.
+17. **Partnerský odměnový kód:** vydaný partnerský kód má platnost **90 dní**. Neaktivovaná odměna
+    se zákazníkovi nepřipíše.
+18. **Partnerská fakturace:** partner platí pouze za MIO, která zákazníci skutečně aktivují; za
+    vydané a neaktivované odměny neplatí.
+19. **Partnerská cena:** aktuální obchodní princip je **1 aktivované MIO = 1 Kč bez DPH + DPH**.
+20. **Zahajovací akce partnera:** první **30 dní** OneMil hradí první **2 MIO z každé aktivované
+    odměny**; partner platí případnou část nad 2 MIO.
+21. **Osobní kód běžného uživatele:** odměna je nepeněžní a vyplácí se v MIO, nikoli v Kč.
+22. **Osobní doporučení:** základní model je **5 % v MIO z placených dobití doporučeného uživatele**
+    a jednorázově **15 MIO po jeho prvním placeném dobití**; za samotnou registraci odměna nevzniká.
+23. **Affiliate je oddělený systém:** Influencer / Obchodník / Agentura může mít peněžní provize v
+    Kč; nesmí se směšovat s nepeněžním osobním doporučením běžných uživatelů.
+24. **Affiliate — zákazník:** cílový model počítá peněžní provizi z reálně zaplacených zákaznických
+    dobití v Kč; aktuální výchozí sazba je 5 %, pokud není individuálně nastavena jinak.
+25. **Affiliate — přivedená firma:** provize vzniká z reálně uhrazených partnerských faktur a počítá
+    se z částky bez DPH; aktuální výchozí sazba je 5 %, pokud není individuálně nastavena jinak.
+26. **Voucher, garantovaný benefit a Partner Offer jsou odlišné věci:** právní text je nemá slučovat
+    pod jeden pojem.
+27. **Marketingový souhlas:** je samostatný a dobrovolný; nesmí být podmínkou běžné registrace.
+28. **Cílový stav pro Libru:** známé technické mezery se mají před ostrým spuštěním dokončit.
+    Libra proto připravuje dokumentaci pro výše uvedený **cílový hotový stav**, ne pro dnešní
+    nedokončené technické mezikroky.
+
+---
+
 ## 1. Nalezené právní/CMS texty
 
 **Zdroj pravdy = databáze** `content_pages` (section `legal`), editovatelné přes `/admin/content`. Frontend je jen renderuje (`SlugContentPage.tsx`, `TermsConditions.tsx`, `PrivacyPolicy.tsx`, `CookieConsentBanner.tsx`).
