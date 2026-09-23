@@ -74,6 +74,9 @@
 8. **Soutěžní model:** právně posoudit celý model „garantovaný nákupní benefit za MIO + 1 soutěžní tiket zdarma“, sekvenční přidělování tiketů, hlavní výhru pro držitele posledního tiketu a skryté předem určené bonusové pozice. Určit, zda a za jakých podmínek tento model nespadá pod regulaci hazardních her.
 9. **Věk 18+:** je gating dostatečný, nebo je třeba doplnit do VOP/pravidel?
 10. **Platnost placeného MIO:** lze nastavit expiraci MIO z placeného dobití na 12 měsíců od konkrétního dobití? Jaké informační povinnosti, upozornění a pravidla pro spotřebu/propadnutí je nutné dodržet?
+11. **Změna pravidel po spuštění:** za jakých okolností lze po aktivaci soutěže změnit její pravidla a které parametry už změnit nelze?
+12. **Ukončení/přerušení soutěže:** jak právně postupovat při závažné technické poruše, zásahu vyšší moci, podvodu nebo jiném mimořádném důvodu? Co se stane s již vydanými tikety, zakoupenými garantovanými benefity a právy účastníků?
+13. **Uzavřená soutěž:** současná produkční logika považuje stav `closed` za konečný a počet tiketů po prvním vydaném tiketu nelze změnit. Potvrdit, zda toto má být výslovně promítnuto do pravidel/VOP.
 
 ---
 
