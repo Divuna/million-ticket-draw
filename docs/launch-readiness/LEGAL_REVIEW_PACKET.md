@@ -2,6 +2,8 @@
 
 > **Účel:** Launch blocker #1 — právní/CMS review (L01 VOP, L03 GDPR, L04 cookies, A13 CMS obsah). Texty jsou zatím **owner-accepted jen pro testovací fázi**, ne pro ostrý provoz. Tento dokument je read-only balíček pro právníka — **nic v CMS ani databázi se neměnilo**.
 >
+> **Pravidlo pro právní review — potvrzeno Pavlem 23. 9. 2026:** Libra má právní dokumenty připravit podle **cílového stavu při ostrém spuštění**, tedy jako by všechny zde popsané potvrzené funkce a obchodní mechanismy byly dokončené. Známé technické mezery jsou interní implementační úkoly OneMil a nesmí vést k tomu, že by Libra potvrzený produktový model z právních textů vynechala. OneMil musí tyto technické mezery odstranit a otestovat před ostrým spuštěním, aby produkt odpovídal schváleným právním textům.
+>
 > **⚠️ Stripe live se NEMÁ přepínat před dokončením tohoto právního review.** Live rollout plán viz [STRIPE_LIVE_ROLLOUT_PLAN.md](./STRIPE_LIVE_ROLLOUT_PLAN.md).
 
 ---
@@ -99,6 +101,16 @@
 33. **Atribuce:** potvrdit, jak dlouho může být zákazník nebo firma přiřazena ke konkrétnímu doporučiteli/Affiliate a jak o této skutečnosti informovat dotčené osoby z hlediska GDPR.
 34. **Affiliate marketing:** potvrdit povinnosti influencera/Affiliate při označování reklamy, obchodní spolupráce a propagace osobního/affiliate odkazu nebo kódu.
 35. **Ukončení Affiliate spolupráce:** stanovit, co se stane s již vzniklými, schválenými a dosud nevyplacenými provizemi při ukončení spolupráce, blokaci účtu nebo porušení pravidel.
+36. **Partnerské MIO a odměnové kódy:** potvrdit smluvní model, kdy partner nastavuje výši odměny a zákazník získává MIO až aktivací vydaného partnerského kódu/odměny.
+37. **Platnost partnerského kódu:** potvrdit 90denní platnost vydaného partnerského odměnového kódu a důsledky jeho neaktivování v této lhůtě.
+38. **Výkonnostní fakturace partnera:** potvrdit model, kdy partner neplatí za vydané/neaktivované odměny, ale pouze za zákazníkem skutečně aktivované MIO; aktuální obchodní cena je 1 MIO = 1 Kč bez DPH + 21 % DPH.
+39. **Partnerská fakturace:** potvrdit, jaké údaje musí obsahovat faktura/přehled aktivovaných MIO, jaké jsou náležitosti oprav a storna při chybné nebo zrušené aktivaci.
+40. **Zahajovací akce:** posoudit 30denní obchodní akci, v níž OneMil hradí první 2 MIO z každé aktivované odměny; partner hradí jen část nad 2 MIO. Určit správný účetní a daňový způsob zobrazení 100% slevy, včetně období, kdy výsledná částka vyjde 0 Kč.
+41. **Nastavení odměn partnerem:** potvrdit, že partner může měnit odměnovou logiku pro budoucí objednávky bez zpětného přepočtu již vydaných nebo aktivovaných odměn.
+42. **Více e-shopů jedné firmy:** právně a smluvně popsat, že jedna partnerská firma může mít více samostatných e-shopových napojení, přičemž odměny a objednávky musí být dohledatelné ke konkrétnímu napojení.
+43. **Odpovědnost za data objednávky:** určit odpovědnost partnera za správnost údajů předávaných OneMilu (stav zaplacení, cena objednávky, produkty, e-mail zákazníka) a postup při chybě nebo duplicitním importu.
+44. **Zpracování údajů zákazníků partnera:** posoudit role OneMil/partnera podle GDPR při předávání údajů zákazníka z e-shopu do OneMil a určit potřebné smluvní dokumenty a informační povinnosti.
+45. **Ukončení partnerství:** určit, co se stane s již vydanými, ale dosud neaktivovanými kódy, již aktivovanými MIO, nevyfakturovanými aktivacemi a existujícími benefity/nabídkami při ukončení spolupráce s partnerem.
 
 ---
 
