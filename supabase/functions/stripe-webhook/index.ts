@@ -380,13 +380,42 @@ serve(async (req) => {
         )
       }
 
-      const { error: paymentError } = await supabaseClient.from('payments').insert({
+      // Ekonomika platby (refund blok F2): skutečně zaplacené Kč, základní MIO
+      // (1 Kč = 1 MIO) a bonus balíčku. `amount` zůstává = celkem připsaná MIO.
+      const baseMio = priceCzk
+      const bonusMio = coinsToCredit - baseMio
+      const consentIdRaw = normalizeUuid(session.metadata?.immediate_use_consent_id)
+      let consentId: string | null = null
+      if (consentIdRaw) {
+        const { data: consentRow } = await supabaseClient
+          .from('payment_immediate_use_consents')
+          .select('id')
+          .eq('id', consentIdRaw)
+          .eq('user_id', userId)
+          .maybeSingle()
+        consentId = consentRow?.id ?? null
+      }
+
+      const { data: insertedPayment, error: paymentError } = await supabaseClient.from('payments').insert({
         user_id: userId,
         amount: coinsToCredit,
         method: 'stripe',
         status: 'completed',
         stripe_session_id: session.id,
-      })
+        paid_amount_czk: priceCzk,
+        base_mio: baseMio,
+        bonus_mio: bonusMio,
+        currency: 'czk',
+        stripe_livemode: event.livemode === true,
+        immediate_use_consent_id: consentId,
+      }).select('id').maybeSingle()
+
+      if (!paymentError && consentId && insertedPayment?.id) {
+        await supabaseClient
+          .from('payment_immediate_use_consents')
+          .update({ payment_id: insertedPayment.id })
+          .eq('id', consentId)
+      }
 
       if (paymentError) {
         omLog('error', 'payment_insert_failed', {

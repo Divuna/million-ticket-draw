@@ -23,6 +23,10 @@ import { toast } from "sonner";
  *   ztratí `sessionStorage` kontext z `setPendingPaymentSuccessContext`.
  * - Volá se výhradně Edge Function `create-stripe-checkout` s dvojicí
  *   `{ priceInCzk, totalCoins }`; částky ani bonusy se tady nepočítají.
+ * - Když server vyžaduje souhlas s okamžitým použitím MIO
+ *   (`get_immediate_use_consent_config().required`), checkout se spustí až po
+ *   aktivním potvrzení v `ImmediateUseConsentDialog`; volající ho vykreslí
+ *   z `consentDialogProps`. Text se nikdy nepíše do kódu.
  */
 
 export interface MioCoinPackage {
@@ -42,33 +46,35 @@ export const MIOCOIN_PACKAGES: readonly MioCoinPackage[] = [
   { priceInCzk: 1200, totalCoins: 1280, bonusLabel: "+80 navíc" },
 ] as const;
 
+export interface ImmediateUseConsentConfig {
+  required: boolean;
+  version: string;
+  text: string;
+}
+
+interface PendingCheckout {
+  priceInCzk: number;
+  totalCoins: number;
+}
+
 export const useMioCoinCheckout = () => {
   const { user } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
 
   const [loading, setLoading] = useState(false);
+  const [pending, setPending] = useState<PendingCheckout | null>(null);
+  const [consentConfig, setConsentConfig] = useState<ImmediateUseConsentConfig | null>(null);
 
-  const startCheckout = useCallback(
-    async (priceInCzk: number, totalCoins: number) => {
-      // Nativní aplikace nesmí spustit Stripe checkout (Apple/Google pravidla).
-      if (isNativeApp()) return;
-      if (!user) {
-        toast.error("Pro nákup MioCoinů se musíte přihlásit");
-        navigate(buildLoginRedirectUrl(location.pathname + location.search));
-        return;
-      }
-
-      if (loading) return; // Prevent double-clicks
-
+  const runCheckout = useCallback(
+    async (
+      priceInCzk: number,
+      totalCoins: number,
+      immediateUseConsent: { accepted: true; version: string } | null,
+    ) => {
       // Ensure clean numbers
       const cleanPrice = Number(priceInCzk);
       const cleanCoins = Number(totalCoins);
-
-      if (isNaN(cleanPrice) || cleanPrice < 50) {
-        toast.error("Neplatná částka");
-        return;
-      }
 
       setLoading(true);
 
@@ -94,7 +100,8 @@ export const useMioCoinCheckout = () => {
         const { data, error } = await supabase.functions.invoke("create-stripe-checkout", {
           body: {
             priceInCzk: cleanPrice,
-            totalCoins: cleanCoins
+            totalCoins: cleanCoins,
+            ...(immediateUseConsent ? { immediateUseConsent } : {}),
           },
         });
 
@@ -127,8 +134,71 @@ export const useMioCoinCheckout = () => {
         setLoading(false);
       }
     },
-    [user, navigate, location.pathname, location.search, loading],
+    [user],
   );
 
-  return { startCheckout, loading };
+  const startCheckout = useCallback(
+    async (priceInCzk: number, totalCoins: number) => {
+      // Nativní aplikace nesmí spustit Stripe checkout (Apple/Google pravidla).
+      if (isNativeApp()) return;
+      if (!user) {
+        toast.error("Pro nákup MioCoinů se musíte přihlásit");
+        navigate(buildLoginRedirectUrl(location.pathname + location.search));
+        return;
+      }
+
+      if (loading) return; // Prevent double-clicks
+
+      const cleanPrice = Number(priceInCzk);
+      if (isNaN(cleanPrice) || cleanPrice < 50) {
+        toast.error("Neplatná částka");
+        return;
+      }
+
+      // Souhlas s okamžitým použitím MIO — znění a povinnost řídí server.
+      const { data: cfgRaw, error: cfgError } = await supabase.rpc(
+        "get_immediate_use_consent_config" as never,
+      );
+      if (cfgError) {
+        toast.error("Nepodařilo se otevřít platební bránu");
+        return;
+      }
+      const cfg = (cfgRaw ?? { required: false, version: "", text: "" }) as ImmediateUseConsentConfig;
+
+      if (cfg.required) {
+        if (!cfg.version || !cfg.text) {
+          toast.error("Dobití je dočasně nedostupné. Zkuste to prosím později.");
+          return;
+        }
+        setConsentConfig(cfg);
+        setPending({ priceInCzk: cleanPrice, totalCoins: Number(totalCoins) });
+        return;
+      }
+
+      await runCheckout(cleanPrice, totalCoins, null);
+    },
+    [user, navigate, location.pathname, location.search, loading, runCheckout],
+  );
+
+  const confirmConsent = useCallback(() => {
+    if (!pending || !consentConfig) return;
+    const { priceInCzk, totalCoins } = pending;
+    const version = consentConfig.version;
+    setPending(null);
+    void runCheckout(priceInCzk, totalCoins, { accepted: true, version });
+  }, [pending, consentConfig, runCheckout]);
+
+  const cancelConsent = useCallback(() => setPending(null), []);
+
+  /** Props pro `<ImmediateUseConsentDialog />` — volající ho vykreslí vedle tlačítek. */
+  const consentDialogProps = {
+    open: pending !== null,
+    text: consentConfig?.text ?? "",
+    priceInCzk: pending?.priceInCzk ?? null,
+    loading,
+    onConfirm: confirmConsent,
+    onCancel: cancelConsent,
+  };
+
+  return { startCheckout, loading, consentDialogProps };
 };

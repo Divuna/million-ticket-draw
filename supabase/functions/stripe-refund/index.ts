@@ -20,6 +20,10 @@ const PREPARE_ERROR_STATUS: Record<string, number> = {
   missing_stripe_session: 400,
   invalid_amount: 400,
   insufficient_balance: 409,
+  legacy_payment_not_supported: 409,
+  nothing_to_refund: 409,
+  wallet_not_found: 409,
+  wallet_lot_inconsistent: 409,
 }
 
 const json = (body: unknown, status: number) =>
@@ -98,6 +102,10 @@ serve(async (req) => {
       message?: string
       already_prepared?: boolean
       amount?: number
+      refund_amount_czk?: number | null
+      refund_amount_haler?: number | null
+      refund_paid_mio?: number | null
+      refund_bonus_mio?: number | null
       stripe_session_id?: string
       stripe_refund_id?: string | null
     } | null
@@ -116,6 +124,13 @@ serve(async (req) => {
     // bezpečně zopakovat bez druhého odečtu.
     const sessionId = prep.stripe_session_id as string
     const amount = prep.amount as number
+    // Refundace v2: Stripe vrací konkrétní částku v haléřích — jen nevyčerpanou
+    // placenou část. Null = refundace připravená starou verzí (celá platba).
+    const refundAmountHaler =
+      typeof prep.refund_amount_haler === 'number' && Number.isInteger(prep.refund_amount_haler) &&
+      prep.refund_amount_haler > 0
+        ? prep.refund_amount_haler
+        : null
     const knownRefundId = prep.stripe_refund_id ?? null
 
     const stripe = new Stripe(Deno.env.get('STRIPE_SECRET_KEY') || '', {
@@ -157,6 +172,7 @@ serve(async (req) => {
         const refund = await stripe.refunds.create(
           {
             payment_intent: paymentIntentId,
+            ...(refundAmountHaler !== null ? { amount: refundAmountHaler } : {}),
             metadata: { onemil_payment_id: paymentId },
           },
           { idempotencyKey: `onemil-refund-${paymentId}` },
@@ -321,6 +337,9 @@ serve(async (req) => {
           payment_id: paymentId,
           stripe_refund_id: refundId,
           amount,
+          refund_amount_czk: prep.refund_amount_czk ?? null,
+          refund_paid_mio: prep.refund_paid_mio ?? null,
+          refund_bonus_mio: prep.refund_bonus_mio ?? null,
           admin_id: user.id,
           already_prepared: prep.already_prepared === true,
         },
@@ -335,6 +354,9 @@ serve(async (req) => {
         success: true,
         message: 'Platba byla refundována a MioCoiny odečteny.',
         refund_id: refundId,
+        refund_amount_czk: prep.refund_amount_czk ?? null,
+        refund_paid_mio: prep.refund_paid_mio ?? null,
+        refund_bonus_mio: prep.refund_bonus_mio ?? null,
         status: 'refunded',
       },
       200,

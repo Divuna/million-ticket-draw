@@ -117,7 +117,7 @@ serve(async (req) => {
       action: 'create_stripe_checkout',
     })
 
-    let body: { priceInCzk?: unknown; totalCoins?: unknown } = {}
+    let body: { priceInCzk?: unknown; totalCoins?: unknown; immediateUseConsent?: unknown } = {}
     try {
       const rawBody = await req.text()
       if (rawBody && rawBody.trim()) {
@@ -157,6 +157,55 @@ serve(async (req) => {
       throw new Error('Invalid price tier')
     }
 
+    // Souhlas s okamžitým použitím MIO. Znění a verzi spravuje OneMil v `settings`
+    // (get_immediate_use_consent_config); dokud není schválené, je `required=false`
+    // a nic se nevynucuje. Klient posílá jen potvrzení a verzi, kterou viděl.
+    const { data: consentCfgRaw, error: consentCfgError } = await supabaseClient.rpc(
+      'get_immediate_use_consent_config',
+    )
+    if (consentCfgError) {
+      throw new Error('Could not load immediate-use consent configuration')
+    }
+    const consentCfg = (consentCfgRaw ?? {}) as { required?: boolean; version?: string; text?: string }
+    const consentInput = body.immediateUseConsent as { accepted?: unknown; version?: unknown } | undefined
+    const consentConfigured = typeof consentCfg.version === 'string' && consentCfg.version.length > 0 &&
+      typeof consentCfg.text === 'string' && consentCfg.text.length > 0
+    const consentAccepted = consentConfigured &&
+      consentInput?.accepted === true &&
+      consentInput?.version === consentCfg.version
+
+    if (consentCfg.required === true && !consentAccepted) {
+      omLog('warn', 'checkout_missing_immediate_use_consent', {
+        user_id: user.id,
+        action: 'create_stripe_checkout',
+      })
+      return new Response(
+        JSON.stringify({
+          error: 'Před platbou je nutné potvrdit souhlas s okamžitým použitím MIO.',
+          code: 'immediate_use_consent_required',
+        }),
+        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } },
+      )
+    }
+
+    let consentId: string | null = null
+    if (consentAccepted) {
+      const { data: consentRow, error: consentError } = await supabaseClient
+        .from('payment_immediate_use_consents')
+        .insert({
+          user_id: user.id,
+          consent_version: consentCfg.version,
+          consent_text: consentCfg.text,
+          price_czk: priceInCzk,
+        })
+        .select('id')
+        .single()
+      if (consentError || !consentRow) {
+        throw new Error('Could not record immediate-use consent')
+      }
+      consentId = consentRow.id as string
+    }
+
     const { data: userData } = await supabaseClient
       .from('users')
       .select('email')
@@ -191,10 +240,26 @@ serve(async (req) => {
       metadata: {
         user_id: user.id,
         price_czk: String(priceInCzk),
+        immediate_use_consent_id: consentId ?? '',
       },
       success_url: `${siteBase}/payment-success?session_id={CHECKOUT_SESSION_ID}`,
       cancel_url: `${siteBase}/payment-cancel`,
     })
+
+    if (consentId) {
+      const { error: consentLinkError } = await supabaseClient
+        .from('payment_immediate_use_consents')
+        .update({ stripe_session_id: session.id })
+        .eq('id', consentId)
+      if (consentLinkError) {
+        omLog('error', 'checkout_consent_link_failed', {
+          user_id: user.id,
+          action: 'create_stripe_checkout',
+          stripe_session_id: session.id,
+          message: consentLinkError.message,
+        })
+      }
+    }
 
     omLog('info', 'checkout_session_created', {
       user_id: user.id,

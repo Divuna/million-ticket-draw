@@ -119,12 +119,17 @@ const AdminPayments: React.FC = () => {
       // HTTP 202 = Stripe refundaci přijal, ale ještě ji nedokončil.
       const stillPending = response.status === 202 || result.pending === true;
 
+      const refundedCzk =
+        typeof result.refund_amount_czk === 'number'
+          ? ` Vráceno ${result.refund_amount_czk.toLocaleString('cs-CZ', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} Kč.`
+          : '';
+
       toast({
         title: stillPending ? 'Refundace čeká na Stripe' : 'Refundace úspěšná',
         description:
-          typeof result.message === 'string'
+          (typeof result.message === 'string'
             ? result.message
-            : 'Platba byla refundována a MioCoiny odečteny.',
+            : 'Platba byla refundována a MioCoiny odečteny.') + refundedCzk,
       });
 
       await fetchPayments();

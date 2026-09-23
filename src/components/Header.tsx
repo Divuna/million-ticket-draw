@@ -14,6 +14,7 @@ import { useAuth } from '@/hooks/useAuth';
 import { useUserRole } from '@/hooks/useUserRole';
 import { isNativeApp } from '@/lib/nativeApp';
 import { MIOCOIN_PACKAGES, useMioCoinCheckout } from '@/hooks/useMioCoinCheckout';
+import { ImmediateUseConsentDialog } from '@/components/ImmediateUseConsentDialog';
 import { useAdminRealtimeContext } from '@/components/AdminRealtimeProvider';
 import { AdminSoundIndicator } from '@/components/AdminSoundIndicator';
 import { OneMilMioCoinIcon } from '@/components/icons/OneMilIcons';
@@ -51,7 +52,7 @@ export const Header: React.FC = () => {
   const { isAdmin } = useUserRole();
   const { soundEnabled, toggleSound, realtimeConnected, lastRealtimeEvent } = useAdminRealtimeContext();
   // Rychlé dobití používá stejný Stripe postup jako dobíjecí panel.
-  const { startCheckout, loading: checkoutLoading } = useMioCoinCheckout();
+  const { startCheckout, loading: checkoutLoading, consentDialogProps } = useMioCoinCheckout();
   const nativeApp = isNativeApp();
 
   const [account, setAccount] = useState<HeaderAccountState>({ balance: null, displayName: null });
@@ -285,6 +286,7 @@ export const Header: React.FC = () => {
         </nav>
       </div>
     </header>
+    <ImmediateUseConsentDialog {...consentDialogProps} />
     </>
   );
 };

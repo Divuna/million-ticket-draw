@@ -2,6 +2,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { isNativeApp } from "@/lib/nativeApp";
 import { useMioCoinCheckout } from "@/hooks/useMioCoinCheckout";
+import { ImmediateUseConsentDialog } from "@/components/ImmediateUseConsentDialog";
 import { OneMilMioCoinIcon } from "@/components/icons/OneMilIcons";
 
 /**
@@ -26,7 +27,7 @@ interface MioCoinTopUpSectionProps {
 
 export const MioCoinTopUpSection = ({ placementBanners }: MioCoinTopUpSectionProps) => {
   // Jediný společný Stripe postup — sdílený s rychlým dobíjením v hlavičce.
-  const { startCheckout, loading: topUpLoading } = useMioCoinCheckout();
+  const { startCheckout, loading: topUpLoading, consentDialogProps } = useMioCoinCheckout();
   const handleCoinPurchase = startCheckout;
 
   // Dobíjecí sekce se v nativní aplikaci nerenderuje (Apple/Google pravidla).
@@ -177,6 +178,7 @@ export const MioCoinTopUpSection = ({ placementBanners }: MioCoinTopUpSectionPro
                     </div>
                   </div>
                 </div>
+      <ImmediateUseConsentDialog {...consentDialogProps} />
     </>
   );
 };

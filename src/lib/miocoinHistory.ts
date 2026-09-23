@@ -24,6 +24,7 @@ export const MIOCOIN_HISTORY_ENTRY_LABELS: Record<string, string> = {
   bonus_credit: 'Získáno jako bonus',
   bonus_transfer_to_main: 'Převod bonusových MioCoinů',
   admin_adjustment: 'Úprava zůstatku MioCoinů',
+  mio_expiry: 'Vypršení platnosti MioCoinů',
 };
 
 export function getMioCoinHistoryLabel(entry: Pick<MioCoinHistoryEntry, 'entry_type' | 'partner_name'>): string {

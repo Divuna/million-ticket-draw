@@ -20,7 +20,13 @@ const STAGING_REF = 'dxmowysntemfqfnanxua';
 const SUPABASE_URL = process.env.VITE_SUPABASE_URL ?? '';
 const SUPABASE_ANON = process.env.VITE_SUPABASE_ANON_KEY ?? '';
 const SERVICE_ROLE = process.env.E2E_SUPABASE_SERVICE_ROLE_KEY ?? '';
-const ENABLED = process.env.E2E_REFUND_HARDENING === '1';
+// NAHRAZENO refund blokem (migrace 20260924100000): refundace už neodečítá celou
+// MIO částku platby z libovolného zůstatku, ale jen nevyčerpanou placenou část
+// vlastní sady platby. Platby bez rozpadu na Kč (jak je seeduje tento spec) se
+// automaticky nerefundují. Aktuální chování ověřuje spec 190 a
+// supabase/tests/refund_block_wallet_lots_scenarios.sql.
+const SUPERSEDED_BY_REFUND_BLOCK = true;
+const ENABLED = !SUPERSEDED_BY_REFUND_BLOCK && process.env.E2E_REFUND_HARDENING === '1';
 
 const INSUFFICIENT_MESSAGE =
   'Refundaci nelze provést, protože část MioCoinů z této platby již byla použita.';
