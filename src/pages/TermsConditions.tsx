@@ -90,7 +90,6 @@ const TermsConditions = () => {
               <li>MIO <strong>nelze</strong> vybrat ani vyplatit jako peníze</li>
               <li>MIO <strong>nelze</strong> převádět mimo OneMil</li>
               <li>MIO nemá žádnou hodnotu mimo Aplikaci</li>
-              <li>Nevyužité MIO propadá při zrušení účtu</li>
             </ul>
             <p className="text-muted-foreground mt-4">
               Bonusové MIO získané v rámci soutěže podléhá stejným pravidlům
@@ -140,10 +139,10 @@ const TermsConditions = () => {
           <section>
             <h2 className="text-xl font-semibold text-foreground mt-8 mb-4">8. Reklamace a vrácení</h2>
             <p className="text-muted-foreground">
-              Vzhledem k povaze interního kreditu MIO <strong>není možné</strong> požadovat
-              vrácení peněz za zakoupené MIO. Uplatněné soutěžní tikety rovněž nelze vrátit ani
-              vyměnit. V případě technických problémů s platbou kontaktujte zákaznickou podporu 
-              na <a href="mailto:podpora@onemil.cz" className="text-primary hover:underline">podpora@onemil.cz</a>.
+              Reklamace, odstoupení od smlouvy a případné vrácení platby za placené dobití MIO
+              se posuzují podle platných právních předpisů a okolností konkrétního případu.
+              V případě problému s platbou nebo službou kontaktujte zákaznickou podporu na{" "}
+              <a href="mailto:podpora@onemil.cz" className="text-primary hover:underline">podpora@onemil.cz</a>.
             </p>
           </section>
 
@@ -176,9 +175,10 @@ const TermsConditions = () => {
           <section>
             <h2 className="text-xl font-semibold text-foreground mt-8 mb-4">11. Zrušení účtu</h2>
             <p className="text-muted-foreground">
-              Uživatel může kdykoli požádat o zrušení účtu v nastavení Aplikace nebo kontaktováním 
-              podpory. Při zrušení účtu dochází ke ztrátě veškerého nevyužitého MIO bez náhrady. 
-              Více informací naleznete na stránce <Link to="/delete-account" className="text-primary hover:underline">Smazání účtu</Link>.
+              Uživatel může kdykoli požádat o zrušení účtu v nastavení Aplikace nebo kontaktováním
+              podpory. Vypořádání případného nevyužitého MIO při zrušení účtu se řídí jeho původem,
+              aktuálními podmínkami služby a platnými právními předpisy. Více informací naleznete na stránce{" "}
+              <Link to="/delete-account" className="text-primary hover:underline">Smazání účtu</Link>.
             </p>
           </section>
 
