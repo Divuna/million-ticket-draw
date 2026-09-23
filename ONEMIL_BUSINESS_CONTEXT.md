@@ -21,9 +21,11 @@ Do not treat OneMil as only a contest app. OneMil is primarily a partner reward 
 - MIO cannot be withdrawn as money or transferred outside OneMil.
 - Existing database columns, RPC names, historical documents and source-code identifiers containing `coin`, `miocoin`, `MC` or the legacy string `MioCoin` are **legacy technical/internal names** until a separately approved technical rename is carried out. This naming decision by itself does not authorize a database/schema migration or mass code rename.
 - This rule supersedes older public-facing references to „MioCoin“ elsewhere in project documentation.
-- **Paid MIO top-up validity — confirmed 2026-09-23:** MIO credited through a paid top-up expires **12 months from the moment of that top-up**. This is a business/product rule for paid top-up MIO.
-- The current production wallet implementation does **not yet enforce this 12-month expiry**. Before this rule is published in final VOP or exposed to live customers, the technical expiry mechanism must be implemented and verified so the legal text and product behavior match.
-- This rule does not by itself define expiry for partner-issued MIO, bonus MIO, referral MIO or other non-paid sources; those sources must be treated separately unless Pavel confirms the same rule for them.
+- **MIO validity — confirmed 2026-09-23:** **all MIO expires after 12 months**, regardless of source.
+- For paid top-up MIO, the 12-month period runs from the moment of the specific top-up.
+- For partner-issued, bonus, referral and other non-paid MIO, the 12-month period runs from the moment the MIO is actually credited/activated to the user's wallet.
+- A partner reward code may still have its separate **90-day activation validity** before activation. If activated in time, the resulting MIO then has its own 12-month wallet validity from activation.
+- The current production wallet implementation does **not yet fully enforce source-by-source 12-month expiry**. Before this rule is exposed to live customers, the technical expiry mechanism must be implemented and verified so the legal text and product behavior match.
 
 ---
 
