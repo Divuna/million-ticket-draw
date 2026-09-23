@@ -24,7 +24,7 @@ Vše v `{{…}}` se musí vyplnit. **Žádná nesmí zůstat nevyplněná ve fin
 | `{{ZPUSOB_UKONCENI}}` | typicky „vydáním posledního tiketu"; jiný způsob musí potvrdit Pavel |
 | `{{UZEMI_SOUTEZE}}` | **Pavel** — nelze zjistit ze systému |
 | `{{POCET_TIKETU}}` | `contests.ticket_count` |
-| `{{PODMINKA_ZISKANI_TIKETU}}` | `contests.ticket_price` v MIOech |
+| `{{CENA_GARANTOVANEHO_BENEFITU_MIO}}` | aktuální cena podporovaného nákupu v MIO; ticket je zdarma jako bonus |
 | `{{HLAVNI_VYHRA}}` | `contests.main_prize` |
 | `{{SPECIFIKACE_HLAVNI_VYHRY}}` | **Pavel** — přesná specifikace, model, výbava, barva |
 | `{{HODNOTA_HLAVNI_VYHRY}}` | **Pavel** |
@@ -106,10 +106,15 @@ Soutěž má pevně stanovený počet **{{POCET_TIKETU}}** tiketů.
 Tikety se účastníkům přidělují **postupně v pevně daném pořadí** 1, 2, 3 … Účastník vždy obdrží
 následující dostupný tiket. Pořadí tiketů není účastníkům předem zobrazováno.
 
-Získání tiketu je podmíněno: {{PODMINKA_ZISKANI_TIKETU}}
+U podporovaného soutěžního nákupu účastník za **{{CENA_GARANTOVANEHO_BENEFITU_MIO}} MIO**
+pořizuje garantovaný nákupní benefit a k němu získává **1 soutěžní tiket zdarma jako bonus**.
+Účastník nekupuje samotný soutěžní tiket jako samostatný produkt.
 
 **Hlavní výhru získává držitel posledního tiketu soutěže.** Hlavní výhra není určována následným
 losováním ani náhodným výběrem.
+
+> `VYŽADUJE PRÁVNÍ SCHVÁLENÍ` — právník musí potvrdit, zda je tento nákupní a soutěžní model
+> správně popsán a za jakých podmínek nespadá pod regulaci hazardních her.
 
 ### 5. Výhry
 
@@ -175,7 +180,7 @@ Na výhru není právní nárok. Účastí v soutěži účastník potvrzuje, ž
 
 - [ ] žádná proměnná `{{…}}` nezůstala nevyplněná
 - [ ] `{{POCET_TIKETU}}` odpovídá `contests.ticket_count`
-- [ ] `{{PODMINKA_ZISKANI_TIKETU}}` odpovídá `contests.ticket_price`
+- [ ] `{{CENA_GARANTOVANEHO_BENEFITU_MIO}}` odpovídá aktuální ceně podporovaného nákupu; ticket je popsán jako zdarma přidaný bonus
 - [ ] `{{HLAVNI_VYHRA}}` odpovídá `contests.main_prize`
 - [ ] `{{BONUSOVE_VYHRY}}` odpovídá skutečným `bonus_prizes` dané soutěže
 - [ ] dokument neobsahuje zakázanou terminologii (casino, hazard, sázení, jackpot, gambling…)
