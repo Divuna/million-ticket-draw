@@ -1,6 +1,7 @@
 import { useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/hooks/use-toast";
+import { isNativeApp } from "@/lib/nativeApp";
 
 export interface ConversationMessage {
   id: string;
@@ -66,7 +67,9 @@ export const useMessages = () => {
       const { data: aiData, error: invokeErr } = await supabase.functions.invoke("ai-chat", {
         body: { message_id: userMessage.id },
         headers: {
-          Authorization: `Bearer ${session.access_token}`
+          Authorization: `Bearer ${session.access_token}`,
+          // Nativní aplikace: Bob nesmí zmiňovat dobíjení/ceny (Apple/Google pravidla).
+          ...(isNativeApp() ? { "x-is-native-app": "true" } : {})
         }
       })
 
