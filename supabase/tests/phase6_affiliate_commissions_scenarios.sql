@@ -199,21 +199,25 @@ begin
   r := array_append(r, case when n = 0 and not (res->>'success')::boolean and res->>'status' = 'invalid_amount' then 'PASS' else 'FAIL' end
                       || ' P1b approved plně refundovaná → 0,00, výplatní doklad odmítnut (' || (res->>'status') || ')');
 
-  -- P2 výplatní doklad vystaven (ready_to_pay) → částka beze změny, refundace jen evidována
+  -- P2 výplatní doklad vystaven (ready_to_pay) → částka beze změny, vznikne recovery (detail: phase6_affiliate_recovery_scenarios.sql)
   update public.affiliate_commissions set status = 'ready_to_pay'
   where affiliate_id = a8 and period_month = v_month and commission_type = 'customer_payments';
   perform public.wallet_debit_fefo(c8, 200, 'test_consume', null, '{}'::jsonb, false);
   perform public.prepare_stripe_refund(p8);
   select amount_base_czk into n from public.affiliate_commissions where affiliate_id = a8 and period_month = v_month and commission_type = 'customer_payments';
   select unapplied_refund_czk, refunded_czk into n2, i from public.affiliate_commission_payments where payment_id = p8;
-  select count(*) into c from public.audit_logs where event = 'affiliate_commission_refund_after_document' and metadata->>'payment_id' = p8::text;
-  r := array_append(r, case when n = 15.00 and n2 = 100 and i = 0 and c = 1 then 'PASS' else 'FAIL' end
-                      || ' P2 ready_to_pay: částka 15,00 beze změny, nezapočteno 100 Kč + audit');
+  select count(*) into c from public.audit_logs where event = 'affiliate_commission_recovery_recorded' and metadata->>'payment_id' = p8::text;
+  select amount_czk into n from public.affiliate_commission_recoveries where payment_id = p8;
+  r := array_append(r, case when n = 5.00 and n2 = 100 and i = 0 and c = 1
+                              and (select amount_base_czk from public.affiliate_commissions where affiliate_id = a8 and period_month = v_month and commission_type = 'customer_payments') = 15.00
+                         then 'PASS' else 'FAIL' end
+                      || ' P2 ready_to_pay: provize 15,00 beze změny, nezapočteno 100 Kč, recovery 5,00 + audit');
   -- P2b neúspěšná refundace vrátí i evidenci
   perform public.record_stripe_refund_status(p8, 're_p6_' || p8, 'failed');
   perform public.reverse_failed_stripe_refund(p8, 'failed');
   select unapplied_refund_czk into n2 from public.affiliate_commission_payments where payment_id = p8;
-  r := array_append(r, case when n2 = 0 then 'PASS' else 'FAIL' end || ' P2b selhání Stripe: nezapočtená refundace zpět na 0');
+  select amount_czk into n from public.affiliate_commission_recoveries where payment_id = p8;
+  r := array_append(r, case when n2 = 0 and n = 0 then 'PASS' else 'FAIL' end || ' P2b selhání Stripe: nezapočtená refundace i recovery zpět na 0');
 
   -- P3 vyplacená (paid) → nic se automaticky nemění
   update public.affiliate_commissions set status = 'paid', paid_at = now()
@@ -224,8 +228,10 @@ begin
   select amount_base_czk, amount_total_czk into n, n2 from public.affiliate_commissions where affiliate_id = a9 and period_month = v_month and commission_type = 'customer_payments';
   select unapplied_refund_czk into i from public.affiliate_commission_payments where payment_id = p9;
   select count(*) into c from public.affiliate_commissions where affiliate_id = a9 and status = 'paid';
-  r := array_append(r, case when n = 15.00 and n2 = 15.00 and i = 300 and c = 1 then 'PASS' else 'FAIL' end
-                      || ' P3 paid: provize 15,00 beze změny, stav paid, nezapočteno 300 Kč');
+  r := array_append(r, case when n = 15.00 and n2 = 15.00 and i = 300 and c = 1
+                              and (select amount_czk from public.affiliate_commission_recoveries where payment_id = p9) = 15.00
+                         then 'PASS' else 'FAIL' end
+                      || ' P3 paid: provize 15,00 beze změny, stav paid, nezapočteno 300 Kč, recovery 15,00');
   -- P4 recalc nesahá na approved/ready/paid
   res := public.calculate_affiliate_commissions_for_month(v_month);
   select count(*) into c from public.affiliate_commissions
@@ -278,10 +284,10 @@ begin
   select count(*) into c from public.wallet_lot_consistency_issues();
   r := array_append(r, case when c = 0 then 'PASS' else 'FAIL' end || ' K1 MIO sady konzistentní (Fáze 6 nesahá na peněženky): ' || c);
   select count(*) into c from public.affiliate_commission_payments l join public.affiliate_commissions c0 on c0.id = l.commission_id
-  where c0.status in ('calculated') and c0.amount_base_czk <> (
+  where c0.status in ('calculated') and c0.gross_amount_base_czk <> (
     select coalesce(round(sum((x.paid_amount_czk - x.refunded_czk) * x.commission_rate / 100.0), 2), 0)
     from public.affiliate_commission_payments x where x.commission_id = c0.id);
-  r := array_append(r, case when c = 0 then 'PASS' else 'FAIL' end || ' K2 každá calculated provize = součet svých vazeb');
+  r := array_append(r, case when c = 0 then 'PASS' else 'FAIL' end || ' K2 každá calculated provize: hrubá částka = součet svých vazeb');
   select count(*) into c from (select payment_id from public.affiliate_commission_payments group by payment_id having count(*) > 1) d;
   r := array_append(r, case when c = 0 then 'PASS' else 'FAIL' end || ' K3 platba nejvýše v jedné provizi');
   r := array_append(r, case when not has_function_privilege('anon', 'public.affiliate_commission_sync_payment(uuid)', 'execute')

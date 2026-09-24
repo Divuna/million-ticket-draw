@@ -3,10 +3,9 @@
 -- read-only z xkzhjldrojjlrkezorey před nasazením Fáze 6 (md5 níže).
 -- Spouštět jen po rozhodnutí Pavla.
 --
--- Po rollbacku se zákaznická provize opět počítá z payments.amount (MIO vč. bonusu)
--- a refundace provizi neupravují. Tabulka affiliate_commission_payments zůstává
--- jako historie (měsíční výpočet ji po rollbacku nečte; mazání řádků calculated
--- ji dál čistí kaskádou).
+-- Po rollbacku se zákaznická provize opět počítá z payments.amount (MIO vč. bonusu),
+-- refundace provizi neupravují a recovery / umoření z budoucích provizí neexistuje.
+-- Rollback odstraní i tabulky a sloupce Fáze 6 (viz krok 4 — před tím exportovat).
 
 begin;
 
@@ -99,10 +98,21 @@ $function$;
 -- 3) Nové funkce Fáze 6.
 drop function if exists public.trg_fn_affiliate_commission_payment_sync();
 drop function if exists public.affiliate_commission_sync_payment(uuid);
+drop function if exists public._affiliate_recovery_reallocate(uuid);
+drop function if exists public._affiliate_recovery_lock(uuid);
 drop function if exists public._affiliate_commission_recompute(uuid);
 drop function if exists public._affiliate_payment_refunded_czk(text, numeric, numeric);
 
--- Volitelně (smaže vazby platba → provize):
--- drop table if exists public.affiliate_commission_payments;
+-- 4) Tabulky a sloupce Fáze 6 (návrat na produkční schéma).
+-- POZOR: smaže evidenci vazeb, recovery a umoření. Při rollbacku po ostrém
+-- provozu je NEJDŘÍV exportovat (audit_logs se nemaže). Částky už uložených
+-- provizí (amount_base_czk / amount_total_czk) zůstávají, jak jsou.
+drop table if exists public.affiliate_commission_recovery_allocations;
+drop table if exists public.affiliate_commission_recoveries;
+drop table if exists public.affiliate_commission_payments;
+alter table public.affiliate_commissions
+  drop column if exists gross_amount_base_czk,
+  drop column if exists recovery_offset_czk,
+  drop column if exists recovery_credit_czk;
 
 commit;

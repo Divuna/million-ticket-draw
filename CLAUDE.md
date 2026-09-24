@@ -68,15 +68,22 @@ Rollback: `docs/rollback/phase6_affiliate_commissions_rollback.sql`.
 - Každá platba je nejvýše v jedné provizi (`affiliate_commission_payments.payment_id` unique);
   částka provize = `round(Σ(zaplaceno − započtená refundace) × sazba / 100, 2)`.
 - Refundace upravuje částku **jen** u `calculated` a `approved` bez `payout_document_id`.
-  Po vystavení výplatního dokladu a u `paid` se částka nesmí automaticky měnit — jen
-  `unapplied_refund_czk` + audit. Žádné strhávání, záporná provize ani zápočet bez rozhodnutí Pavla.
+  Po vystavení výplatního dokladu / `ready_to_pay` / `in_payment_batch` / `paid` se provize ani doklad
+  **nikdy** nemění — vznikne recovery (`affiliate_commission_recoveries`, jedna na platbu, částka se
+  vždy přepočítá z celkových Kč, nikdy nesčítá přírůstky). Potvrzené pravidlo Pavla.
+- Recovery umořují **jen budoucí zákaznické provize téhož affiliate** (nejstarší první) přes
+  `_affiliate_recovery_reallocate`; `amount_base_czk` = `gross_amount_base_czk − recovery_offset_czk +
+  recovery_credit_czk` a nikdy není záporné. Alokace na uzamčené provizi jsou konečné a nesmí se
+  uvolnit; alokace se nemažou (jen `released_at`). Firemní provize se neumořují. Neúspěšná refundace
+  vrací konečně umořenou část jako `release` do další provize. Opravný daňový doklad se nevystavuje.
 - Firemní větev měsíčního výpočtu je doslova beze změny (5 % ze zaplacené faktury bez DPH,
   jedna provize na fakturu) — needitovat v rámci zákaznických úprav.
-- Měsíční výpočet a přepočet po refundaci se serializují **zámkem řádku platby** (výpočet si platby
-  měsíce nejdřív zamkne `FOR SHARE`, refundace je má `FOR UPDATE`), pořadí vždy platba → provize.
-  **Do `affiliate_commission_sync_payment` nepřidávat advisory lock** — běží uvnitř refundace, která
-  už drží zámek platby, a proti výpočtu by uvázl (ověřeno specem 194a). Advisory lock
-  `onemil_affiliate_customer_commissions` smí brát jen samotný měsíční výpočet (výpočet × výpočet).
+- Pořadí zámků je vždy **platba → affiliate → provize**: výpočet zamkne platby měsíce `FOR SHARE`,
+  pak `_affiliate_recovery_lock` pro všechny dotčené affiliate, teprve pak maže/vkládá provize;
+  refundace drží platbu `FOR UPDATE`, pak `_affiliate_recovery_lock`, pak provize. Globální advisory
+  lock `onemil_affiliate_customer_commissions` smí brát **jen** měsíční výpočet — v
+  `affiliate_commission_sync_payment` by uvázl (ověřeno specem 194a). Zámek affiliate nikdy nebrat
+  až po zámku provize.
 
 ## FÁZE 5 — OSOBNÍ DOPORUČENÍ HRÁČŮ (24. 09. 2026, PRODUKCE)
 

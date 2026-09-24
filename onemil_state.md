@@ -14,6 +14,9 @@ provizi `paid`, žádnou zákaznickou).
 (`payments.paid_amount_czk`), bonusová MIO se nepočítají (300 Kč / 310 MIO → 15 Kč). Refundace před
 výplatou provizi poměrně sníží, úplná ji stornuje (300 → 15 Kč, refundace 100 Kč → 10 Kč).
 Firemní provize beze změny (5 % ze zaplacené faktury bez DPH). DPH affiliate beze změny.
+Potvrzeno Pavlem: „Affiliate provize, kterou už kvůli vystavenému dokladu / dávce / výplatě nelze
+zpětně snížit, se při následné refundaci eviduje jako recovery a automaticky se umořuje z budoucích
+provizí stejného affiliate. Jiné provize se nemění a nevzniká záporná provize.“
 
 **B) Technický stav (staging):**
 - Nová tabulka `affiliate_commission_payments` = vazba platba → měsíční provize (snapshot Kč a
@@ -26,21 +29,42 @@ Firemní provize beze změny (5 % ze zaplacené faktury bez DPH). DPH affiliate 
 - Chování podle stavu provize při refundaci:
   - `calculated` → částka se sníží (a měsíční přepočet drží čistou částku),
   - `approved` bez výplatního dokladu → částka se sníží, stav zůstane; při nule doklad nevznikne,
-  - `ready_to_pay` / `in_payment_batch` (doklad vystaven) → částka beze změny, refundace jen
-    evidována (`unapplied_refund_czk`) + audit `affiliate_commission_refund_after_document`,
-  - `paid` → totéž, nic se automaticky nemění.
-- Neúspěšná Stripe refundace vrátí provizi i evidenci zpět.
-- Souběh: měsíční výpočet si nejdřív zamkne platby měsíce (`FOR SHARE`), přepočet po refundaci
-  běží pod zámkem platby → pořadí platba → provize (spec 194a odhalil a ověřil opravu uváznutí).
+  - `ready_to_pay` / `in_payment_batch` / `paid` (nebo existující výplatní doklad) → provize ani
+    doklad se nemění; vznikne recovery v `affiliate_commission_recoveries` (jedna na platbu,
+    kumulativně = provize z nezapočtených refundovaných Kč) + audit `affiliate_commission_recovery_recorded`.
+- Umoření: `_affiliate_recovery_reallocate` přepočte měnitelné zákaznické provize affiliate —
+  nejstarší recovery první, nejvýš do výše provize; `affiliate_commissions` nese
+  `gross_amount_base_czk`, `recovery_offset_czk`, `recovery_credit_czk` a `amount_base_czk` = k výplatě.
+  Alokace v `affiliate_commission_recovery_allocations` (offset / release), předběžné do vystavení
+  dokladu, pak konečné; nic se nemaže (`released_at`). Audit `affiliate_commission_recovery_applied`
+  (hrubá, umořeno, vrácený nárok, k výplatě, zbývající recovery). Firemní provize se neumořují.
+- Neúspěšná Stripe refundace: u měnitelné provize se částka vrátí; u uzamčené se recovery vrátí na 0,
+  předběžné umoření zmizí a už konečně umořená část se vrátí jako nárok (`release`) do další
+  zákaznické provize téhož affiliate. Jiné recovery ani provize se nemění.
+- Souběh: měsíční výpočet si nejdřív zamkne platby měsíce (`FOR SHARE`), pak affiliate (advisory
+  zámek per affiliate), pak provize; refundace drží platbu, pak affiliate, pak provize → pořadí vždy
+  platba → affiliate → provize (spec 194a/194d).
 - Staging CI: přípravný krok `playwright-staging.yml` hledá admin/superadmin E2E účet po stránkách
   (staging má přes 200 uživatelů kvůli nesmazatelným testovacím účtům).
-- Ověření: SQL scénáře `supabase/tests/phase6_affiliate_commissions_scenarios.sql` 28/28, regrese
-  Fáze 5 48/48, refund blok 35/35, spec 194 (souběh výpočtu s refundací), rollback
-  `docs/rollback/phase6_affiliate_commissions_rollback.sql` ověřen (funkce = produkce md5).
+- Ověření: SQL scénáře `supabase/tests/phase6_affiliate_commissions_scenarios.sql` 28/28 a
+  `supabase/tests/phase6_affiliate_recovery_scenarios.sql` 27/27, regrese Fáze 5 48/48, refund blok
+  35/35, spec 194 (souběh výpočtu s refundací i s recovery). Rollback
+  `docs/rollback/phase6_affiliate_commissions_rollback.sql` znovu ověřen po poslední změně: staging po
+  rollbacku = produkce (md5 výpočtu, ACL, trigger, funkce, tabulky, sloupce `affiliate_commissions`),
+  pak Fáze 6 znovu aplikována a testy zelené.
 
-**C) OPEN ISSUE — refundace už dokladované / vyplacené provize:** systém provizi nemění a jen eviduje
-nezapočtenou refundaci. Žádné strhávání, záporná provize, pohledávka ani zápočet z budoucích provizí
-neexistuje. Potřebné rozhodnutí Pavla: jak s takovým případem naložit.
+**C) OPEN ISSUE (nerozhodnuto, nic nevymyšleno):**
+- ~~refundace už dokladované / vyplacené provize~~ → vyřešeno pravidlem recovery výše (24. 09. 2026).
+- **Účetní/daňové řešení recovery:** opravný (daňový) doklad se automaticky nevystavuje, vystavené
+  doklady se nemění; zaúčtování recovery a DPH u plátce = samostatná kontrola účetní/právník.
+- **Recovery bez budoucí provize** zůstává otevřená; vrácený nárok po selhané refundaci čeká na další
+  zákaznickou provizi. Samostatná výplata nároku / umoření z firemní provize = nové rozhodnutí.
+- **Oprava/storno zaplacené partnerské faktury** systém nepodporuje (stav `void` existuje, ale nic do
+  něj zaplacenou fakturu nepřevádí, dobropis neexistuje) → firemní provize na opravu faktury nereaguje.
+- **Souběh výplatního dokladu:** `prepare_affiliate_payout_document` staví PDF z aktuální částky,
+  `finalize_affiliate_payout_document` zapíše částku v okamžiku dokončení. Přijde-li mezi nimi
+  refundace/umoření (provize je ještě `approved`), PDF a záznam se mohou lišit. Existovalo už před
+  recovery (refundace u `approved`); oprava = kontrola částky ve finalize (změna payout funkcí).
 
 **Zjištění (neměněno):** zákazník s affiliate atribucí i osobním doporučením vytvoří ze stejné platby
 5 % affiliate provizi v Kč i 5 % odměnu v MIO; žádná priorita ani blokace neexistuje.

@@ -1,3 +1,9 @@
+# 24. 09. 2026 — Fáze 6: recovery u uzamčené affiliate provize (JEN STAGING)
+
+Pavel potvrdil pravidlo pro refundaci po vystavení výplatního dokladu nebo po výplatě: provize ani doklad se nemění, vznikne recovery téhož affiliate a automaticky se umoří z jeho budoucích zákaznických provizí (nejstarší první, nikdy záporná provize, jiný affiliate nedotčen). Příklad recovery 25 → provize 15 (k výplatě 0, zbývá 10) → provize 20 (k výplatě 10) ověřen. Selhaná Stripe refundace zruší přesně svou recovery a už umořenou část vrátí jako nárok do další provize. Firemní provize beze změny; zjištěno, že systém opravu/storno zaplacené partnerské faktury nepodporuje. Rollback znovu ověřen po poslední změně (staging po rollbacku = produkce). Ověřeno na stagingu: recovery 27/27, Fáze 6 28/28, Fáze 5 48/48, refund blok 35/35. Produkce nedotčena.
+
+---
+
 # 24. 09. 2026 — Fáze 6: affiliate provize v Kč (JEN STAGING)
 
 Zákaznická affiliate provize se nově počítá z 5 % skutečně zaplacených Kč místo připsaných MIO (300 Kč / 310 MIO → 15 Kč místo 15,50 Kč). Každá platba má vazbu na svou měsíční provizi, takže refundace provizi poměrně sníží (300 → 15 Kč, refundace 100 Kč → 10 Kč), dokud k ní není vystavený výplatní doklad; u dokladované nebo vyplacené provize se refundace jen eviduje a čeká na rozhodnutí Pavla. Firemní provize, cron a payout workflow beze změny. Ověřeno na stagingu (28/28 scénářů, regrese Fáze 5 48/48 a refund bloku 35/35, souběh výpočtu s refundací), produkce nedotčena.

@@ -28,9 +28,10 @@ const admin = (): SupabaseClient =>
 
 const createdUserIds: string[] = [];
 const rand = () => Math.random().toString(36).slice(2, 10);
-const month = () => {
+const month = (offset = 0) => {
   const d = new Date();
-  return `${d.getUTCFullYear()}-${String(d.getUTCMonth() + 1).padStart(2, '0')}-01`;
+  const m = new Date(Date.UTC(d.getUTCFullYear(), d.getUTCMonth() + offset, 1));
+  return `${m.getUTCFullYear()}-${String(m.getUTCMonth() + 1).padStart(2, '0')}-01`;
 };
 
 async function createUser(db: SupabaseClient): Promise<string> {
@@ -59,13 +60,14 @@ async function createAffiliateWithCustomer(db: SupabaseClient) {
   return { affiliateId: aff.id as string, customer };
 }
 
-async function topUp(db: SupabaseClient, userId: string, czk: number, bonus: number): Promise<string> {
+async function topUp(db: SupabaseClient, userId: string, czk: number, bonus: number, monthOffset = 0): Promise<string> {
   const { data, error } = await db
     .from('payments')
     .insert({
       user_id: userId, amount: czk + bonus, method: 'stripe', status: 'completed',
       stripe_session_id: `cs_test_spec194_${Date.now()}_${rand()}`,
       paid_amount_czk: czk, base_mio: czk, bonus_mio: bonus, currency: 'czk', stripe_livemode: false,
+      ...(monthOffset ? { created_at: `${month(monthOffset)}T12:00:00Z` } : {}),
     })
     .select('id')
     .single();
@@ -73,13 +75,13 @@ async function topUp(db: SupabaseClient, userId: string, czk: number, bonus: num
   return data.id as string;
 }
 
-async function commission(db: SupabaseClient, affiliateId: string) {
+async function commission(db: SupabaseClient, affiliateId: string, monthOffset = 0) {
   const { data, error } = await db
     .from('affiliate_commissions')
-    .select('id, amount_base_czk, amount_total_czk, status')
+    .select('id, amount_base_czk, amount_total_czk, status, gross_amount_base_czk, recovery_offset_czk, recovery_credit_czk')
     .eq('affiliate_id', affiliateId)
     .eq('commission_type', 'customer_payments')
-    .eq('period_month', month());
+    .eq('period_month', month(monthOffset));
   if (error) throw new Error(error.message);
   return data ?? [];
 }
@@ -156,6 +158,44 @@ test.describe('194 affiliate provize v Kč (staging DB + kontrakt)', () => {
     expect(await linesFor(db, affiliateId)).toHaveLength(1);
   });
 
+  test('194d: souběh refundace uzamčené provize a vzniku nové provize → přesné umoření', async () => {
+    skipIfNotStaging();
+    const db = admin();
+
+    for (let round = 0; round < 3; round++) {
+      const { affiliateId, customer } = await createAffiliateWithCustomer(db);
+      const lockedPayment = await topUp(db, customer, 300, 0);
+      expect((await admin().rpc('calculate_affiliate_commissions_for_month', { p_month: month() })).error).toBeNull();
+      const locked = await commission(db, affiliateId);
+      expect(locked).toHaveLength(1);
+      const { error: lockErr } = await db.from('affiliate_commissions').update({ status: 'paid', paid_at: new Date().toISOString() }).eq('id', locked[0].id);
+      expect(lockErr).toBeNull();
+      await topUp(db, customer, 200, 0, 1); // provize příštího měsíce: hrubá 10
+
+      const results = await Promise.all([
+        admin().rpc('calculate_affiliate_commissions_for_month', { p_month: month(1) }),
+        admin().from('payments').update({ status: 'refunded', refund_amount_czk: 300 }).eq('id', lockedPayment),
+        admin().rpc('calculate_affiliate_commissions_for_month', { p_month: month(1) }),
+      ]);
+      for (const r of results) expect(r.error).toBeNull();
+
+      // Vyplacená provize beze změny, recovery 15, nová provize 10 celá umořena, zbývá 5.
+      const after = await commission(db, affiliateId);
+      expect(Number(after[0].amount_base_czk)).toBe(15);
+      const { data: rec } = await db.from('affiliate_commission_recoveries').select('amount_czk').eq('payment_id', lockedPayment);
+      expect(rec?.map((x) => Number(x.amount_czk))).toEqual([15]);
+      const next = await commission(db, affiliateId, 1);
+      expect(next).toHaveLength(1);
+      expect(Number(next[0].gross_amount_base_czk)).toBe(10);
+      expect(Number(next[0].recovery_offset_czk)).toBe(10);
+      expect(Number(next[0].amount_base_czk)).toBe(0);
+      const { data: alloc } = await db.from('affiliate_commission_recovery_allocations')
+        .select('amount_czk, kind').eq('affiliate_id', affiliateId).is('released_at', null);
+      expect(alloc?.length).toBe(1);
+      expect(Number(alloc?.[0].amount_czk)).toBe(10);
+    }
+  });
+
   test('194c: kontrakt — zákaznický základ ze zaplacených Kč, firemní větev beze změny', () => {
     const sql = readFileSync(MIGRATION, 'utf8');
     expect(sql).toContain('pay.paid_amount_czk IS NOT NULL');
@@ -167,6 +207,11 @@ test.describe('194 affiliate provize v Kč (staging DB + kontrakt)', () => {
     expect(sql).toContain('ON CONFLICT (source_invoice_id) WHERE source_invoice_id IS NOT NULL DO NOTHING');
     // Vyplacená / dokladovaná provize se automaticky nemění.
     expect(sql).toContain("v_c.status = 'calculated' or (v_c.status = 'approved' and v_c.payout_document_id is null)");
+    // Uzamčená provize se nemění: refundace vytvoří recovery, umoření jen u stejného affiliate.
+    expect(sql).toContain('insert into public.affiliate_commission_recoveries');
+    expect(sql).toContain("c.affiliate_id = p_affiliate_id");
+    expect(sql).toContain('exit when v_cap <= 0;');
+    expect(sql).not.toMatch(/amount_base_czks*=s*-/);
     // Fáze 6 nesahá na peněženky MIO ani na refundační funkce.
     expect(sql).not.toMatch(/update public\.wallets/i);
     expect(sql).not.toMatch(/create or replace function public\.(prepare_stripe_refund|reverse_failed_stripe_refund|finalize_stripe_refund)/i);
