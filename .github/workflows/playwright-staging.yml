@@ -442,23 +442,31 @@ jobs:
           # failure (bad key, GoTrue rejecting per_page, etc.) is diagnosable in
           # the log. per_page kept modest (200) — current GoTrue rejects very
           # large per_page values with HTTP 400.
-          LIST_RESP=$(curl -s -w $'\n%{http_code}' \
-            "${ADMIN_API}?page=1&per_page=200" \
-            -H "apikey: ${SERVICE_ROLE_KEY}" \
-            -H "Authorization: Bearer ${SERVICE_ROLE_KEY}")
-          LIST_CODE=$(printf '%s' "$LIST_RESP" | tail -n1)
-          LIST_BODY=$(printf '%s' "$LIST_RESP" | sed '$d')
+          # Staging má víc než 200 uživatelů (nesmazatelné testovací účty) →
+          # projít stránky, dokud se účet nenajde nebo stránka není plná.
+          ADMIN_UUID=""
+          for PAGE in 1 2 3 4 5 6 7 8 9 10; do
+            LIST_RESP=$(curl -s -w $'\n%{http_code}' \
+              "${ADMIN_API}?page=${PAGE}&per_page=200" \
+              -H "apikey: ${SERVICE_ROLE_KEY}" \
+              -H "Authorization: Bearer ${SERVICE_ROLE_KEY}")
+            LIST_CODE=$(printf '%s' "$LIST_RESP" | tail -n1)
+            LIST_BODY=$(printf '%s' "$LIST_RESP" | sed '$d')
 
-          if [ -z "$LIST_CODE" ] || [ "$LIST_CODE" -lt 200 ] || [ "$LIST_CODE" -ge 300 ]; then
-            # Body may contain a GoTrue error message (never the key) — truncate.
-            echo "ERROR: admin/users list failed (HTTP ${LIST_CODE:-no_response})." \
-                 "Body (truncated): $(printf '%s' "$LIST_BODY" | head -c 300)" >&2
-            exit 1
-          fi
+            if [ -z "$LIST_CODE" ] || [ "$LIST_CODE" -lt 200 ] || [ "$LIST_CODE" -ge 300 ]; then
+              # Body may contain a GoTrue error message (never the key) — truncate.
+              echo "ERROR: admin/users list failed (HTTP ${LIST_CODE:-no_response})." \
+                   "Body (truncated): $(printf '%s' "$LIST_BODY" | head -c 300)" >&2
+              exit 1
+            fi
 
-          ADMIN_UUID=$(printf '%s' "$LIST_BODY" | jq -r \
-            --arg e "${ADMIN_EMAIL}" \
-            '.users[]? | select(.email == $e) | .id' | head -1)
+            ADMIN_UUID=$(printf '%s' "$LIST_BODY" | jq -r \
+              --arg e "${ADMIN_EMAIL}" \
+              '.users[]? | select(.email == $e) | .id' | head -1)
+            if [ -n "$ADMIN_UUID" ] && [ "$ADMIN_UUID" != "null" ]; then break; fi
+            PAGE_COUNT=$(printf '%s' "$LIST_BODY" | jq '.users | length')
+            if [ "${PAGE_COUNT:-0}" -lt 200 ]; then break; fi
+          done
 
           if [ -z "$ADMIN_UUID" ] || [ "$ADMIN_UUID" = "null" ]; then
             # ── 2a. User missing — create via Admin API ──────────────────────
@@ -557,22 +565,28 @@ jobs:
           ADMIN_API="${SUPABASE_URL}/auth/v1/admin/users"
           REST_API="${SUPABASE_URL}/rest/v1"
 
-          LIST_RESP=$(curl -s -w $'\n%{http_code}' \
-            "${ADMIN_API}?page=1&per_page=200" \
-            -H "apikey: ${SERVICE_ROLE_KEY}" \
-            -H "Authorization: Bearer ${SERVICE_ROLE_KEY}")
-          LIST_CODE=$(printf '%s' "$LIST_RESP" | tail -n1)
-          LIST_BODY=$(printf '%s' "$LIST_RESP" | sed '$d')
+          SA_UUID=""
+          for PAGE in 1 2 3 4 5 6 7 8 9 10; do
+            LIST_RESP=$(curl -s -w $'\n%{http_code}' \
+              "${ADMIN_API}?page=${PAGE}&per_page=200" \
+              -H "apikey: ${SERVICE_ROLE_KEY}" \
+              -H "Authorization: Bearer ${SERVICE_ROLE_KEY}")
+            LIST_CODE=$(printf '%s' "$LIST_RESP" | tail -n1)
+            LIST_BODY=$(printf '%s' "$LIST_RESP" | sed '$d')
 
-          if [ -z "$LIST_CODE" ] || [ "$LIST_CODE" -lt 200 ] || [ "$LIST_CODE" -ge 300 ]; then
-            echo "ERROR: admin/users list failed (HTTP ${LIST_CODE:-no_response})." \
-                 "Body (truncated): $(printf '%s' "$LIST_BODY" | head -c 300)" >&2
-            exit 1
-          fi
+            if [ -z "$LIST_CODE" ] || [ "$LIST_CODE" -lt 200 ] || [ "$LIST_CODE" -ge 300 ]; then
+              echo "ERROR: admin/users list failed (HTTP ${LIST_CODE:-no_response})." \
+                   "Body (truncated): $(printf '%s' "$LIST_BODY" | head -c 300)" >&2
+              exit 1
+            fi
 
-          SA_UUID=$(printf '%s' "$LIST_BODY" | jq -r \
-            --arg e "${SUPERADMIN_EMAIL}" \
-            '.users[]? | select(.email == $e) | .id' | head -1)
+            SA_UUID=$(printf '%s' "$LIST_BODY" | jq -r \
+              --arg e "${SUPERADMIN_EMAIL}" \
+              '.users[]? | select(.email == $e) | .id' | head -1)
+            if [ -n "$SA_UUID" ] && [ "$SA_UUID" != "null" ]; then break; fi
+            PAGE_COUNT=$(printf '%s' "$LIST_BODY" | jq '.users | length')
+            if [ "${PAGE_COUNT:-0}" -lt 200 ]; then break; fi
+          done
 
           if [ -z "$SA_UUID" ] || [ "$SA_UUID" = "null" ]; then
             echo "Superadmin E2E user not found — creating (credentials masked)"
