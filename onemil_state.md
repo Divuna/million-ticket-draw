@@ -16,23 +16,36 @@ staging `dxmowysntemfqfnanxua`**. Produkce `xkzhjldrojjlrkezorey` beze změny.
   místo) + jednorázových 15 MIO po prvním placeném dobití doporučeného. Každá odměna má vlastní sadu
   (`referral_reward` / `referral_first_topup_bonus`, nepeněžní `bonus_mio`, expirace 12 měsíců) a
   záznam v historii MIO. Připisuje výhradně `wallet_credit_lot`.
-- **Reverze:** refundace vrací 5 % poměrně ke skutečně refundovaným Kč, 15 MIO jen při refundaci celé
-  platby. Odečítá se jen ze sady dané odměny; co doporučující už utratil, se nevymáhá z jiných sad —
-  zapíše se jako `reversal_shortfall_mc` + audit `referral_reversal_shortfall`. Neúspěšná Stripe
-  refundace vrátí přesně odečtené MIO do stejné sady. Storno mimo refundaci (`completed → jiný stav`)
-  vrací celou odměnu triggerem.
+- **Storno (finální pravidlo Pavla 24. 9. 2026):** refundace stornuje 5 % odměnu **i bonus 15 MIO
+  poměrně** podle refundované části zaplacených Kč (plná refundace = celé), max. 1 desetinné místo,
+  počítáno kumulativně (postupné částečné refundace nesčítají chybu zaokrouhlení). Dřívější
+  stagingová verze „15 MIO jen při plné refundaci" nebyla schválena a byla nahrazena.
+- **Pohledávka:** storno se odečítá jen ze sady dané odměny; peněženka nikdy do mínusu, jiné sady se
+  neberou. Co doporučující už utratil, vznikne jako `referral_shortfalls` a umořuje se z jeho
+  budoucích odměn (nejstarší první). Auditní stopa: `referral_shortfall_repayments` (neměnná),
+  u odměny `shortfall_offset_mc` a `credited_mc`, audit `referral_shortfall_created/repaid`.
+- **Neúspěšná Stripe refundace:** vrátí přesně MIO odečtená touto refundací do téže sady, zruší
+  přesně pohledávku z této refundace; už umořenou část vrátí jako sadu `referral_shortfall_release`.
+  Jiné pohledávky a odměny beze změny. Každá událost je v `referral_reward_adjustments`
+  (unikátní `reward_id + event_key`) → idempotence. Storno mimo refundaci (`completed → jiný stav`)
+  vrací celé odměny triggerem.
 - **Jedinečnost:** odměna daného typu jednou na platbu (`uq_referral_rewards_payment_type`),
   15 MIO jednou na doporučeného (`uq_referral_first_topup_bonus_per_referred`) — refundace prvního
   dobití bonus znovu neotevře.
+- Referral trigger přejmenován na `trg_wallet_referral_reward_after_topup` (běží po připsání dobití,
+  konzistentní pořadí zámků se refundací).
 - Ruční změna stavu již připsané odměny adminem je zablokovaná (`referral_reward_credited_locked`).
-- **Ověření:** SQL scénáře `supabase/tests/phase5_player_referral_scenarios.sql` 33/33, regrese
-  refund bloku 35/35, spec 192 (souběh) 5/5, cílený staging běh (190, 192, 55, 83, 88) 28 passed.
+- **Admin přehledy** (`AdminReferralDashboard`, `AdminReferrals`) i zákaznický `ReferralSection`
+  počítají čistou odměnu po stornech přes `src/lib/referralRewards.ts`.
+- **Ověření:** SQL scénáře `supabase/tests/phase5_player_referral_scenarios.sql` 43/43, regrese
+  refund bloku 35/35, spec 192 (souběh vč. souběhu odměny s refundací), spec 193 (čisté KPI).
   Rollback `docs/rollback/phase5_player_referral_rollback.sql` ověřen na stagingu (funkce = produkce
-  md5) a migrace znovu nasazena.
+  md5, trigger vrácen) a migrace znovu nasazena.
 
 **OPEN ISSUE:** 17 historických produkčních `referral_rewards` (16 `earned`, 1 `blocked`) nebylo
-nikdy připsáno a Fáze 5 je zpětně nepřipisuje (testovací data → předstartovní reset). Admin KPI
-v `AdminReferralDashboard` počítá jen stav `earned`, částečně stornované odměny v součtu chybí.
+nikdy připsáno a Fáze 5 je zpětně nepřipisuje (testovací data → předstartovní reset).
+`notify_referral_reward_multi` (mimo rozsah) oznamuje hrubou částku odměny i tehdy, když ji celou
+spotřebovalo umoření pohledávky.
 
 ---
 

@@ -196,6 +196,60 @@ test.describe('192 osobní doporučení — souběh a idempotence (staging DB)',
     expect(await consistencyIssuesFor(db, [referrer, referred])).toBe(0);
   });
 
+  test('192f: souběh nové odměny a refundace u téhož doporučujícího → žádná ztráta ani dvojí pohyb', async () => {
+    skipIfNotStaging();
+    const db = admin();
+
+    for (let round = 0; round < 3; round++) {
+      const referrer = await createUser(db);
+      const first = await createUser(db);
+      const second = await createUser(db);
+      await link(db, referrer, first);
+      await link(db, referrer, second);
+
+      const { data: pay, error } = await insertTopUp(first, session(), 300, 10);
+      if (error || !pay) throw new Error(`topUp failed: ${error?.message}`);
+      expect(await balance(db, referrer)).toBe(30);
+
+      // Doporučující utratí 25 z 30 → storno vytvoří pohledávku.
+      const spent = await admin().rpc('wallet_debit_fefo', {
+        p_user_id: referrer, p_amount: 25, p_reason: 'spec192_spend',
+        p_reference_id: null, p_metadata: {}, p_allow_partial: false,
+      });
+      expect(spent.error).toBeNull();
+
+      // Refundace prvního doporučeného a nové dobití druhého současně.
+      const [refund, topUp] = await Promise.all([
+        admin().rpc('prepare_stripe_refund', { p_payment_id: pay.id }),
+        insertTopUp(second, session(), 300, 0),
+      ]);
+      expect(refund.error).toBeNull();
+      expect(topUp.error).toBeNull();
+
+      const bal = await balance(db, referrer);
+      expect(bal).toBeGreaterThanOrEqual(0);
+
+      const { data: sfs } = await db
+        .from('referral_shortfalls')
+        .select('amount_mc, repaid_mc, cancelled_mc')
+        .eq('referrer_user_id', referrer);
+      const outstanding = (sfs ?? []).reduce(
+        (s, x) => s + Number(x.amount_mc) - Number(x.repaid_mc) - Number(x.cancelled_mc), 0);
+
+      const { data: rw } = await db
+        .from('referral_rewards')
+        .select('reward_mc, reversal_target_mc')
+        .eq('referrer_user_id', referrer);
+      const entitlement = (rw ?? []).reduce((s, x) => s + Number(x.reward_mc) - Number(x.reversal_target_mc), 0);
+
+      // Nárok (30 za druhého doporučeného) − utraceno (25) = zůstatek − otevřená pohledávka,
+      // v obou možných pořadích souběhu.
+      expect(entitlement).toBe(30);
+      expect(Math.round((bal - outstanding) * 10) / 10).toBe(5);
+      expect(await consistencyIssuesFor(db, [referrer, first, second])).toBe(0);
+    }
+  });
+
   test('192e: celkový staging bez odchylek sad a zůstatků', async () => {
     skipIfNotStaging();
     const { data, error } = await admin().rpc('wallet_lot_consistency_issues');

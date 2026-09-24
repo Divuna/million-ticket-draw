@@ -22,6 +22,7 @@ import { format } from 'date-fns';
 import { cs } from 'date-fns/locale';
 import { QRCodeSVG } from 'qrcode.react';
 import { supabase } from '@/integrations/supabase/client';
+import { sumNetReferralRewards } from '@/lib/referralRewards';
 import { useAuth } from '@/hooks/useAuth';
 import { toast } from '@/hooks/use-toast';
 import { buildPublicUrl } from '@/lib/publicAppUrl';
@@ -141,10 +142,8 @@ const ReferralSection: React.FC<{ isLoaded: boolean }> = ({ isLoaded }) => {
       }
 
       setRewards(data || []);
-      const totalEarned = (data || [])
-        .filter((r) => r.status !== 'reversed')
-        // Částečně stornovaná odměna se počítá jen v části, která zůstala připsaná.
-        .reduce((sum, r) => sum + Number(r.reward_mc || 0) - Number(r.reversal_target_mc || 0), 0);
+      // Čistá odměna: částečně stornovaná jen v části, která zůstala.
+      const totalEarned = sumNetReferralRewards(data || []);
       setSummary((prev) => ({ ...prev, totalEarned }));
     } catch (err) {
       console.error('Error:', err);

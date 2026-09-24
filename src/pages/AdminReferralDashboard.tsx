@@ -16,6 +16,7 @@ import { useAuth } from '@/hooks/useAuth';
 import { useUserRole } from '@/hooks/useUserRole';
 import { format } from 'date-fns';
 import { cs } from 'date-fns/locale';
+import { isCountedReferralReward, netReferralReward, referralKpis } from '@/lib/referralRewards';
 import {
   Coins,
   Users,
@@ -54,6 +55,7 @@ interface ReferralRewardRow {
   referred_user_id: string | null;
   paid_amount_mc: number;
   reward_mc: number;
+  reversal_target_mc: number | null;
   status: string;
   created_at: string;
   payment_id: string | null;
@@ -122,7 +124,7 @@ const AdminReferralDashboard: React.FC = () => {
         const [rewardsRes, blockedRes, referralsRes] = await Promise.all([
           supabase
             .from('referral_rewards')
-            .select('id, referrer_user_id, referred_user_id, paid_amount_mc, reward_mc, status, created_at, payment_id, commission_rate')
+            .select('id, referrer_user_id, referred_user_id, paid_amount_mc, reward_mc, reversal_target_mc, status, created_at, payment_id, commission_rate')
             .order('created_at', { ascending: false }),
           supabase
             .from('referral_blocked_users')
@@ -156,34 +158,17 @@ const AdminReferralDashboard: React.FC = () => {
 
   /* ──────────── KPI computations ──────────── */
 
-  const kpis = useMemo(() => {
-    const earned = rewards.filter((r) => r.status === 'earned');
-    const totalMC = earned.reduce((s, r) => s + Number(r.reward_mc || 0), 0);
-    const referrerSet = new Set<string>();
-    const payingReferredSet = new Set<string>();
-    for (const r of earned) {
-      if (r.referrer_user_id) referrerSet.add(r.referrer_user_id);
-      if (r.referred_user_id) payingReferredSet.add(r.referred_user_id);
-    }
-    const payingReferred = payingReferredSet.size;
-    const avgMC = referrerSet.size > 0 ? totalMC / referrerSet.size : 0;
-
-    return {
-      totalMC,
-      referrerCount: referrerSet.size,
-      payingReferred,
-      avgMC,
-    };
-  }, [rewards]);
+  // Čisté částky: připsané i částečně stornované odměny po odečtení storna.
+  const kpis = useMemo(() => referralKpis(rewards), [rewards]);
 
   /* ──────────── Chart data: daily MC ──────────── */
 
   const dailyData = useMemo(() => {
-    const earned = rewards.filter((r) => r.status === 'earned');
+    const earned = rewards.filter(isCountedReferralReward);
     const map = new Map<string, number>();
     for (const r of earned) {
       const day = format(new Date(r.created_at), 'yyyy-MM-dd');
-      map.set(day, (map.get(day) || 0) + Number(r.reward_mc || 0));
+      map.set(day, (map.get(day) || 0) + netReferralReward(r));
     }
     return Array.from(map.entries())
       .sort(([a], [b]) => a.localeCompare(b))
@@ -196,12 +181,12 @@ const AdminReferralDashboard: React.FC = () => {
   /* ──────────── Chart data: top referrers ──────────── */
 
   const topReferrersData = useMemo(() => {
-    const earned = rewards.filter((r) => r.status === 'earned');
+    const earned = rewards.filter(isCountedReferralReward);
     const map = new Map<string, number>();
     for (const r of earned) {
       const rid = r.referrer_user_id;
       if (rid == null || rid === '') continue;
-      map.set(rid, (map.get(rid) || 0) + Number(r.reward_mc || 0));
+      map.set(rid, (map.get(rid) || 0) + netReferralReward(r));
     }
     return Array.from(map.entries())
       .sort(([, a], [, b]) => b - a)

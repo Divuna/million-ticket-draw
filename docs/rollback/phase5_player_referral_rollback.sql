@@ -1,11 +1,14 @@
 -- ROLLBACK Fáze 5 (migrace 20260925100000_phase5_player_referral_rewards.sql)
 -- Vrací funkce PŘESNĚ do produkční podoby zachycené read-only z xkzhjldrojjlrkezorey
--- (2026-09-23T20:38:19.415Z) před nasazením Fáze 5. Spouštět jen po rozhodnutí Pavla.
+-- před nasazením Fáze 5 (md5 v komentáři u každé funkce). Spouštět jen po rozhodnutí Pavla.
 --
 -- Co zůstane: již připsané referral MIO v sadách doporučujících (legitimní MIO,
 -- neodebírají se), nové sloupce referral_rewards, rozšířené CHECK seznamy sad
--- a pohybů, index (payment_id, reward_type) a index jednoho bonusu na doporučeného.
--- Po rollbacku se nové odměny opět jen evidují a nepřipisují (stav před Fází 5).
+-- a pohybů, tabulky referral_reward_adjustments / referral_shortfalls /
+-- referral_shortfall_repayments jako historie (otevřené pohledávky se po
+-- rollbacku dál neumořují), index (payment_id, reward_type) a index jednoho
+-- bonusu na doporučeného. Po rollbacku se nové odměny opět jen evidují a
+-- nepřipisují (stav před Fází 5).
 
 begin;
 
@@ -15,7 +18,16 @@ begin;
 update public.referral_rewards set payment_id = null where reward_type = 'first_topup_bonus' and payment_id is not null;
 create unique index if not exists uq_referral_rewards_payment on public.referral_rewards using btree (payment_id);
 
--- 2) Původní definice funkcí (5).
+-- 2) Původní název triggeru (Fáze 5 ho přejmenovala kvůli pořadí zámků).
+do $$
+begin
+  if exists (select 1 from pg_trigger where tgname = 'trg_wallet_referral_reward_after_topup'
+             and tgrelid = 'public.payments'::regclass) then
+    alter trigger trg_wallet_referral_reward_after_topup on public.payments rename to trg_payments_referral_reward;
+  end if;
+end $$;
+
+-- 3) Původní definice funkcí (5).
 
 -- create_referral_reward_from_payment()   md5 095738c5aca6895eb9ce568971cb539e   ACL: {=X/postgres,postgres=X/postgres,anon=X/postgres,authenticated=X/postgres,service_role=X/postgres}
 CREATE OR REPLACE FUNCTION public.create_referral_reward_from_payment()
@@ -575,13 +587,15 @@ begin
 end;
 $function$;
 
--- 3) Nové objekty Fáze 5 (po obnově výše už je nic nevolá).
+-- 4) Nové funkce Fáze 5 (po obnově výše už je nic nevolá).
 drop function if exists public.referral_award_for_payment(uuid);
 drop function if exists public._referral_credit_reward(uuid);
-drop function if exists public._referral_reverse_for_payment(uuid, numeric, text);
-drop function if exists public._referral_restore_for_payment(uuid);
+drop function if exists public._referral_reverse_for_payment(uuid, numeric, text, text);
+drop function if exists public._referral_restore_for_payment(uuid, text);
+drop function if exists public._referral_reward_recompute(uuid);
+drop function if exists public._referral_lock_wallet(uuid);
 
 commit;
 
--- Frontend: vrátit popisky v ReferralSection/Admin* a miocoinHistory na stav z main před Fází 5
--- (nejsou nutné — neznámý stav/typ se jen zobrazí obecně).
+-- Frontend: vrátit src/lib/referralRewards.ts a úpravy ReferralSection/Admin*/miocoinHistory
+-- na stav main před Fází 5 (není nutné — neznámý stav/typ se zobrazí obecně).

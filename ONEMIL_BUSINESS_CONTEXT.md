@@ -468,6 +468,16 @@ Current player reward system:
 - therefore neither the 5 % wallet credit nor the 15 MIO first-top-up bonus may be represented as fully live/working until the technical flow is completed and verified,
 - any change to wallet credit/referral payout logic is a money-related production change and requires Pavel's explicit approval before implementation.
 
+**Personal referral reward rules — confirmed by Pavel 2026-09-24 (final):**
+- The referrer receives **5 % in MIO of the actually paid CZK** of every completed paid top-up of the referred user, and **one-time 15 MIO** after the referred user's **first** successful paid top-up. Nothing is paid for registration alone.
+- Both rewards are non-monetary MIO, cannot be withdrawn as money, have their own wallet lot and expire **12 months** after being credited.
+- **Refund of the referred user's top-up:** both the 5 % reward **and** the 15 MIO bonus are reversed **proportionally** to the refunded part of the actually paid CZK (full refund = full reversal). MIO values keep max. 1 decimal place. Example: first top-up 300 CZK → 15 + 15 MIO; refund of 100 CZK (1/3) → 5 MIO reversed from the 5 % reward and 5 MIO reversed from the 15 MIO bonus.
+- A refund of the first top-up never re-opens the possibility of getting the one-time 15 MIO again.
+- **If the referrer already spent the reward:** MIO are never taken from the referrer's other lots and the wallet never goes negative. The unpaid part of the reversal is recorded as a **referral shortfall** that is automatically settled from the referrer's **future** referral rewards — a new reward first pays the outstanding shortfall and only the rest is credited as new MIO. Example: shortfall 25 → new reward 15 → 0 MIO credited, shortfall 10 → next reward 15 → 10 settled, 5 MIO credited. Every settlement is audited (how much of a reward went to the shortfall and how much was credited).
+- **Failed Stripe refund:** exactly the referral MIO deducted by that refund are returned and exactly the shortfall created by that refund is cancelled; no other shortfall or reward changes.
+- Historical referral records created before this system (never credited, test data) are not credited retroactively; they are removed by the approved pre-launch reset.
+- Technical state: implemented and verified on **staging only** (Phase 5, 2026-09-24); **not yet deployed to production** — production deployment requires Pavel's explicit approval.
+
 **Permanent player referral link — confirmed 2026-09-23:**
 - The link between the referring user and the referred user is **permanent**.
 - It must **not** be deactivated automatically because the referred user is inactive (for example after a year without playing). Inactivity alone never ends the link.

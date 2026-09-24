@@ -1,6 +1,8 @@
 # 23. 09. 2026 — Fáze 5: osobní doporučení hráčů (JEN STAGING)
 
-Odměny za doporučení se poprvé skutečně připisují: 5 % ze zaplacených Kč každého placeného dobití a jednorázových 15 MIO po prvním dobití, obojí jako samostatné 12měsíční sady MIO přes centrální lot cestu. Opravena chyba, kdy vznikal jen záznam bez MIO, a chyba, kdy storno odečítalo nikdy nepřipsanou odměnu. Refundace vrací 5 % poměrně k refundovaným Kč, 15 MIO jen při plné refundaci, neúspěšná refundace přesně obnovuje. Ověřeno na stagingu (33/33 scénářů, souběh 5/5, regrese refund bloku 35/35), produkce nedotčena.
+Odměny za doporučení se poprvé skutečně připisují: 5 % ze zaplacených Kč každého placeného dobití a jednorázových 15 MIO po prvním dobití, obojí jako samostatné 12měsíční sady MIO přes centrální lot cestu. Opravena chyba, kdy vznikal jen záznam bez MIO, a chyba, kdy storno odečítalo nikdy nepřipsanou odměnu.
+
+24. 9. 2026 Pavel potvrdil finální pravidla a první stagingová verze byla opravena: refundace stornuje poměrně obě odměny (5 % i 15 MIO) podle refundovaných Kč (dřívější „15 MIO jen při plné refundaci" nebylo schválené). Utracenou část storna nelze brát z jiných sad — vzniká pohledávka, kterou umořují budoucí odměny téhož doporučujícího, s auditní stopou. Neúspěšná Stripe refundace vrátí přesně odečtené MIO a zruší přesně pohledávku z dané refundace. Admin KPI počítají čistou odměnu. Ověřeno na stagingu (43/43 scénářů, souběh včetně odměny s refundací, regrese refund bloku 35/35), produkce nedotčena.
 
 ---
 

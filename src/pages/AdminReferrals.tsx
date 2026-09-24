@@ -35,6 +35,7 @@ import {
   ClipboardCheck,
 } from 'lucide-react';
 import AdminReferralAudit from '@/components/AdminReferralAudit';
+import { netReferralReward, sumNetReferralRewards } from '@/lib/referralRewards';
 
 /* ──────────────────────── Types ──────────────────────── */
 
@@ -51,6 +52,7 @@ interface TopReferrer {
 interface ReferralReward {
   id: string;
   reward_mc: number;
+  reversal_target_mc: number | null;
   status: string;
   created_at: string;
 }
@@ -95,7 +97,7 @@ const AdminReferrals: React.FC = () => {
       // Get rewards aggregated
       const { data: rewards, error: rwErr } = await supabase
         .from('referral_rewards')
-        .select('referrer_user_id, reward_mc, status, created_at');
+        .select('referrer_user_id, reward_mc, reversal_target_mc, status, created_at');
 
       if (rwErr) throw rwErr;
 
@@ -148,9 +150,8 @@ const AdminReferrals: React.FC = () => {
           });
         }
         const entry = map.get(rid)!;
-        if (rw.status === 'earned') {
-          entry.total_earned += Number(rw.reward_mc || 0);
-        }
+        // Čistá odměna po případném stornu (plně stornovaná = 0).
+        entry.total_earned += netReferralReward(rw);
         if (
           !entry.last_reward_date ||
           new Date(rw.created_at) > new Date(entry.last_reward_date)
@@ -189,7 +190,7 @@ const AdminReferrals: React.FC = () => {
       const [rewardsRes, referralsRes, blockedRes] = await Promise.all([
         supabase
           .from('referral_rewards')
-          .select('id, reward_mc, status, created_at')
+          .select('id, reward_mc, reversal_target_mc, status, created_at')
           .eq('referrer_user_id', referrerId)
           .order('created_at', { ascending: false }),
         supabase
@@ -402,10 +403,7 @@ const AdminReferrals: React.FC = () => {
                     <div className="p-4 rounded-xl bg-gradient-to-br from-yellow-500/10 to-yellow-500/5 border border-yellow-500/20 text-center">
                       <Coins className="h-4 w-4 text-yellow-500 mx-auto mb-1" />
                       <p className="text-lg font-bold text-yellow-500 tabular-nums">
-                        {detailRewards
-                          .filter((r) => r.status === 'earned')
-                          .reduce((s, r) => s + Number(r.reward_mc), 0)
-                          .toLocaleString('cs-CZ')}
+                        {sumNetReferralRewards(detailRewards).toLocaleString('cs-CZ')}
                       </p>
                       <p className="text-[10px] text-muted-foreground uppercase tracking-wider">
                         Celkem MC

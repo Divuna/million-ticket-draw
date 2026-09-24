@@ -29,6 +29,7 @@ export const MIOCOIN_HISTORY_ENTRY_LABELS: Record<string, string> = {
   referral_first_topup_bonus: 'Bonus za první dobití doporučeného hráče',
   referral_reversal: 'Vrácení odměny za doporučení',
   referral_restore: 'Obnovení odměny za doporučení',
+  referral_shortfall_release: 'Vrácení MIO použitých na vyrovnání storna',
 };
 
 export function getMioCoinHistoryLabel(entry: Pick<MioCoinHistoryEntry, 'entry_type' | 'partner_name'>): string {

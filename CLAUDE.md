@@ -69,10 +69,27 @@ Rollback: `docs/rollback/phase5_player_referral_rollback.sql`.
   `uq_referral_first_topup_bonus_per_referred`. Nerušit; refundace ho nesmí „uvolnit".
 - Připsání jde výhradně přes `wallet_credit_lot` do vlastní sady (`referral_reward`,
   `referral_first_topup_bonus`). **Nikdy přes `try_credit_wallet_mc` ani přímou změnu zůstatku.**
-- Reverze při refundaci běží v `prepare_stripe_refund` poměrně k refundovaným Kč (15 MIO jen při
-  plné refundaci), obnova v `reverse_failed_stripe_refund`. Odečítá se **jen ze sady odměny**;
-  nedoplatek se eviduje, z jiných sad doporučujícího se nevymáhá.
-- Odměna bez `lot_id` nebyla nikdy připsána — její storno smí měnit jen stav, nikdy peněženku.
+- **Storno při refundaci je poměrné pro OBĚ odměny** (5 % i 15 MIO) podle refundované části
+  skutečně zaplacených Kč; plná refundace = celé. Počítá se **kumulativně**
+  (`round(odměna × celkový refundovaný podíl, 1)` minus už stornované), aby postupné částečné
+  refundace nesčítaly chyby zaokrouhlení. Běží v `prepare_stripe_refund`, obnova v
+  `reverse_failed_stripe_refund`; každá událost má záznam v `referral_reward_adjustments`
+  s unikátním `(reward_id, event_key)` → idempotence. **Nevracet variantu „15 MIO jen při plné
+  refundaci"** — nebyla schválena.
+- Storno se odečítá **jen ze sady dané odměny**, nikdy z jiných sad; peněženka nesmí do mínusu.
+  Nezaplacená část = pohledávka `referral_shortfalls`, kterou **umořují budoucí odměny téhož
+  doporučujícího** (nejstarší první, `referral_shortfall_repayments` je neměnná auditní stopa,
+  u odměny `shortfall_offset_mc` / `credited_mc`). Zbytek odměny se připíše jako nová sada.
+- Neúspěšná Stripe refundace vrátí přesně MIO odečtená touto událostí a zruší přesně pohledávku
+  z této události; její už umořenou část vrátí jako sadu `referral_shortfall_release`. Jiné
+  pohledávky ani odměny se nemění.
+- Připsání, storno i umoření serializuje zámek peněženky doporučujícího (`_referral_lock_wallet`).
+  Referral trigger na `payments` se jmenuje `trg_wallet_referral_reward_after_topup`, aby běžel
+  až po připsání dobití (pořadí zámků doporučený → doporučující jako v refundaci) — nepřejmenovávat.
+- Odměna s `credited_at IS NULL` nebyla nikdy zpracována (historická) — její storno smí měnit jen
+  stav, nikdy peněženku. 17 historických produkčních odměn se zpětně nepřipisuje.
+- Admin KPI a přehledy počítají **čistou** odměnu (`src/lib/referralRewards.ts`:
+  `reward_mc − reversal_target_mc` pro `earned` a `partially_reversed`), nikdy hrubou částku.
 
 ## REFUND BLOK F2 + F3 + F4 — MIO SADY, FEFO, REFUNDACE V2 (23. 09. 2026, PRODUKCE) — TRVALÉ INVARIANTY
 
