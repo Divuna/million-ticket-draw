@@ -72,8 +72,11 @@ Rollback: `docs/rollback/phase6_affiliate_commissions_rollback.sql`.
   `unapplied_refund_czk` + audit. Žádné strhávání, záporná provize ani zápočet bez rozhodnutí Pavla.
 - Firemní větev měsíčního výpočtu je doslova beze změny (5 % ze zaplacené faktury bez DPH,
   jedna provize na fakturu) — needitovat v rámci zákaznických úprav.
-- Měsíční výpočet a přepočet po refundaci se serializují advisory lockem
-  `onemil_affiliate_customer_commissions` — nerušit.
+- Měsíční výpočet a přepočet po refundaci se serializují **zámkem řádku platby** (výpočet si platby
+  měsíce nejdřív zamkne `FOR SHARE`, refundace je má `FOR UPDATE`), pořadí vždy platba → provize.
+  **Do `affiliate_commission_sync_payment` nepřidávat advisory lock** — běží uvnitř refundace, která
+  už drží zámek platby, a proti výpočtu by uvázl (ověřeno specem 194a). Advisory lock
+  `onemil_affiliate_customer_commissions` smí brát jen samotný měsíční výpočet (výpočet × výpočet).
 
 ## FÁZE 5 — OSOBNÍ DOPORUČENÍ HRÁČŮ (24. 09. 2026, PRODUKCE)
 

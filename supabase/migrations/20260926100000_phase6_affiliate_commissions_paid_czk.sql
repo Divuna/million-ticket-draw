@@ -17,7 +17,8 @@
 --   2) `calculate_affiliate_commissions_for_month`: zákaznická větev počítá
 --      z čistých zaplacených Kč a zapisuje vazby; firemní větev doslova beze změny.
 --   3) Trigger na `payments` (změna stavu / refundované částky) přepočte provizi,
---      do které platba patří:
+--      do které platba patří (serializace se měsíčním výpočtem přes zámek řádku
+--      platby, pořadí zámků platba → provize):
 --        - `calculated` a `approved` BEZ výplatního dokladu → částka se upraví,
 --        - s vystaveným dokladem (`ready_to_pay`, `in_payment_batch`) nebo
 --          `paid` → částka se NEMĚNÍ (doklad je odeslaný, u plátce DPH daňový);
@@ -134,7 +135,8 @@ declare
   v_target  numeric;
   v_res     jsonb;
 begin
-  select * into v_pay from public.payments where id = p_payment_id;
+  -- Zámek platby (v triggeru už ho refundace drží) → pořadí platba → provize.
+  select * into v_pay from public.payments where id = p_payment_id for update;
   if not found or v_pay.paid_amount_czk is null then
     return jsonb_build_object('status', 'not_applicable');
   end if;
@@ -144,9 +146,10 @@ begin
     return jsonb_build_object('status', 'no_affiliate');
   end if;
 
-  -- Serializace s měsíčním výpočtem: přepočet nesmí proběhnout „mezi" smazáním
-  -- a novým vložením měsíčních řádků.
-  perform pg_advisory_xact_lock(hashtext('onemil_affiliate_customer_commissions'));
+  -- Serializace s měsíčním výpočtem drží zámek řádku platby: refundace ho má
+  -- (FOR UPDATE / UPDATE) a měsíční výpočet si platby nejdřív zamkne FOR SHARE.
+  -- Oba tak zamykají ve stejném pořadí platba → provize (žádný advisory lock
+  -- zde — vedl by k uváznutí proti výpočtu, který čeká na zámek platby).
 
   select * into v_line from public.affiliate_commission_payments where payment_id = p_payment_id;
   if not found then
@@ -246,8 +249,17 @@ BEGIN
   END IF;
   IF p_month IS NULL THEN RETURN jsonb_build_object('status', 'invalid_month'); END IF;
 
-  -- FÁZE 6: serializace s přepočtem po refundaci (affiliate_commission_sync_payment).
+  -- FÁZE 6: souběžné výpočty jeden po druhém; a nejdřív zamknout platby měsíce
+  -- (FOR SHARE), aby běžící refundace doběhla dřív, než se z nich spočítá částka,
+  -- a refundace začatá později počkala na dokončení výpočtu (pořadí platba → provize).
   PERFORM pg_advisory_xact_lock(hashtext('onemil_affiliate_customer_commissions'));
+  PERFORM 1
+  FROM public.payments pay
+  JOIN public.affiliate_customer_refs cr ON cr.user_id = pay.user_id
+  WHERE pay.paid_amount_czk IS NOT NULL
+    AND date_trunc('month', pay.created_at)::date = v_month
+  ORDER BY pay.id
+  FOR SHARE OF pay;
 
   -- Vazby na mazané řádky zmizí kaskádou.
   DELETE FROM public.affiliate_commissions
