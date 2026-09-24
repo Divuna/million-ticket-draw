@@ -31,9 +31,13 @@
 --      hrubá − umoření + vrácený nárok = částka k výplatě (nikdy záporná).
 --   5) `calculate_affiliate_commissions_for_month`: zákaznická větev z čistých
 --      zaplacených Kč, vazby + umoření; firemní větev doslova beze změny.
---   6) Trigger na `payments` (změna stavu / refundované částky):
+--   6) Výplatní doklad: prepare_affiliate_payout_document pod zámkem provize
+--      zapíše neměnný snapshot (affiliate_payout_document_snapshots) a uzamkne
+--      provizi (payout_locked_at); PDF i finalize_affiliate_payout_document
+--      pracují výhradně se snapshotem. Částku uzamčené provize nejde změnit.
+--   7) Trigger na `payments` (změna stavu / refundované částky):
 --        - `calculated` a `approved` BEZ výplatního dokladu → částka se upraví,
---        - s výplatním dokladem / `ready_to_pay` / `in_payment_batch` / `paid`
+--        - se snapshotem / výplatním dokladem / `ready_to_pay` / `in_payment_batch` / `paid`
 --          → provize ani doklad se nemění, vznikne/změní se recovery.
 --      Pořadí zámků: platba → affiliate (advisory) → provize.
 --
@@ -44,7 +48,7 @@
 -- Historické platby bez `paid_amount_czk` se nepřepočítávají (testovací data →
 -- předstartovní reset). Nevytváří se druhý provizní systém.
 --
--- ZÁMĚRNĚ NEDOTČENO: firemní větev, payout doklady/dávky/export, Fáze 5
+-- ZÁMĚRNĚ NEDOTČENO: firemní větev, payout dávky/export, Edge Function dokladu, Fáze 5
 -- (osobní doporučení), peněženky MIO, Stripe, prepare/finalize/reverse refundace.
 
 begin;
@@ -141,6 +145,103 @@ revoke insert, update, delete, truncate on public.affiliate_commission_recoverie
 revoke insert, update, delete, truncate on public.affiliate_commission_recovery_allocations from anon, authenticated;
 
 -- ===========================================================================
+-- Výplatní doklad: neměnný snapshot částky + uzamčení provize (souběh s refundací)
+--
+-- Tok dokladu: prepare_affiliate_payout_document (DB) → PDF v Edge Function
+-- create-affiliate-payout-document (čte VÝHRADNĚ výstup prepare) → upload →
+-- finalize_affiliate_payout_document (DB). prepare pod zámkem řádku provize
+-- zapíše snapshot a nastaví payout_locked_at: od té chvíle je provize uzamčená
+-- stejně jako s vystaveným dokladem (refundace → recovery). finalize vloží doklad
+-- výhradně ze snapshotu. Částku uzamčené provize nelze změnit žádnou cestou.
+-- ===========================================================================
+alter table public.affiliate_commissions
+  add column if not exists payout_locked_at timestamptz;
+comment on column public.affiliate_commissions.payout_locked_at is
+  'Fáze 6: okamžik, kdy prepare_affiliate_payout_document zafixoval částku pro výplatní doklad (snapshot). Od té chvíle se provize nemění; refundace vytváří recovery.';
+
+create table if not exists public.affiliate_payout_document_snapshots (
+  commission_id    uuid primary key references public.affiliate_commissions(id) on delete cascade,
+  affiliate_id     uuid not null references public.affiliate_accounts(id) on delete restrict,
+  document_number  text not null unique,
+  amount_base_czk  numeric(12,2) not null,
+  vat_rate         numeric not null,
+  amount_total_czk numeric(12,2) not null,
+  payload          jsonb not null,
+  created_at       timestamptz not null default clock_timestamp(),
+  document_id      uuid references public.affiliate_payout_documents(id) on delete set null,
+  finalized_at     timestamptz
+);
+comment on table public.affiliate_payout_document_snapshots is
+  'Fáze 6: neměnný finanční snapshot výplatního dokladu zapsaný pod zámkem provize v prepare_affiliate_payout_document. PDF i affiliate_payout_documents vznikají výhradně z něj.';
+
+alter table public.affiliate_payout_document_snapshots enable row level security;
+drop policy if exists apds_select on public.affiliate_payout_document_snapshots;
+create policy apds_select on public.affiliate_payout_document_snapshots
+  for select to authenticated using (public.is_superadmin());
+revoke insert, update, delete, truncate on public.affiliate_payout_document_snapshots from anon, authenticated;
+
+-- Snapshot je neměnný: smí se jen jednou doplnit vazba na vzniklý doklad. Zmizet
+-- smí jen spolu se svou provizí (kaskáda) a vazba na doklad jen se smazaným dokladem.
+create or replace function public.trg_fn_affiliate_payout_snapshot_immutable()
+ returns trigger
+ language plpgsql
+ set search_path to ''
+as $function$
+begin
+  if tg_op = 'DELETE' then
+    if not exists (select 1 from public.affiliate_commissions where id = old.commission_id) then
+      return old;
+    end if;
+    raise exception 'affiliate_payout_snapshot_immutable' using errcode = '42501';
+  end if;
+  if new.commission_id is distinct from old.commission_id
+     or new.affiliate_id is distinct from old.affiliate_id
+     or new.document_number is distinct from old.document_number
+     or new.amount_base_czk is distinct from old.amount_base_czk
+     or new.vat_rate is distinct from old.vat_rate
+     or new.amount_total_czk is distinct from old.amount_total_czk
+     or new.payload is distinct from old.payload
+     or new.created_at is distinct from old.created_at
+     or (old.document_id is not null and new.document_id is distinct from old.document_id
+         and exists (select 1 from public.affiliate_payout_documents where id = old.document_id))
+     or (old.finalized_at is not null and new.finalized_at is distinct from old.finalized_at) then
+    raise exception 'affiliate_payout_snapshot_immutable' using errcode = '42501';
+  end if;
+  return new;
+end;
+$function$;
+
+drop trigger if exists trg_affiliate_payout_snapshot_immutable on public.affiliate_payout_document_snapshots;
+create trigger trg_affiliate_payout_snapshot_immutable
+  before update or delete on public.affiliate_payout_document_snapshots
+  for each row execute function public.trg_fn_affiliate_payout_snapshot_immutable();
+
+-- Částka uzamčené provize (snapshot nebo doklad) se nesmí změnit žádnou cestou.
+create or replace function public.trg_fn_affiliate_commission_amount_frozen()
+ returns trigger
+ language plpgsql
+ set search_path to ''
+as $function$
+begin
+  if (old.payout_locked_at is not null or old.payout_document_id is not null)
+     and (new.amount_base_czk is distinct from old.amount_base_czk
+          or new.amount_total_czk is distinct from old.amount_total_czk
+          or new.vat_rate is distinct from old.vat_rate) then
+    raise exception 'affiliate_commission_amount_frozen' using errcode = '42501';
+  end if;
+  if old.payout_locked_at is not null and new.payout_locked_at is distinct from old.payout_locked_at then
+    raise exception 'affiliate_commission_amount_frozen' using errcode = '42501';
+  end if;
+  return new;
+end;
+$function$;
+
+drop trigger if exists trg_affiliate_commission_amount_frozen on public.affiliate_commissions;
+create trigger trg_affiliate_commission_amount_frozen
+  before update of amount_base_czk, amount_total_czk, vat_rate, payout_locked_at on public.affiliate_commissions
+  for each row execute function public.trg_fn_affiliate_commission_amount_frozen();
+
+-- ===========================================================================
 -- Čistá zaplacená částka platby pro provizi (interní)
 --   completed → celá; refund_pending/refunded → minus refundované Kč;
 --   jiný stav (storno, selhání) → 0.
@@ -205,6 +306,7 @@ begin
         and exists (select 1 from public.affiliate_commissions c
                     where c.id = al.commission_id
                       and (c.payout_document_id is not null
+                           or c.payout_locked_at is not null
                            or c.status in ('ready_to_pay', 'in_payment_batch', 'paid')))
   where r.affiliate_id = p_affiliate_id
   group by r.id, r.created_at, r.amount_czk;
@@ -214,7 +316,8 @@ begin
     from public.affiliate_commissions c
     where c.affiliate_id = p_affiliate_id
       and c.commission_type = 'customer_payments'
-      and (c.status = 'calculated' or (c.status = 'approved' and c.payout_document_id is null))
+      and (c.status = 'calculated'
+           or (c.status = 'approved' and c.payout_document_id is null and c.payout_locked_at is null))
       and exists (select 1 from public.affiliate_commission_payments l where l.commission_id = c.id)
     order by c.period_month, c.created_at, c.id
     for update of c
@@ -352,7 +455,8 @@ begin
 
   v_target := public._affiliate_payment_refunded_czk(v_pay.status, v_pay.paid_amount_czk, v_pay.refund_amount_czk);
 
-  if v_c.status = 'calculated' or (v_c.status = 'approved' and v_c.payout_document_id is null) then
+  if v_c.status = 'calculated'
+     or (v_c.status = 'approved' and v_c.payout_document_id is null and v_c.payout_locked_at is null) then
     -- Provizi lze ještě změnit. Idempotentní: nastaví se stav, ne přírůstek.
     if v_line.refunded_czk = v_target and v_line.unapplied_refund_czk = 0 then
       return jsonb_build_object('status', 'unchanged', 'commission_id', v_c.id);
@@ -378,7 +482,7 @@ begin
                               'amount_base_czk', v_new_base, 'previous_base_czk', v_c.amount_base_czk) || v_res;
   end if;
 
-  -- Výplatní doklad je vystavený nebo je provize vyplacená: provize ani doklad se
+  -- Výplatní doklad je vystavený / připravený (snapshot) nebo je provize vyplacená: provize ani doklad se
   -- nemění. Kumulativní recovery = rozdíl provize této platby z nezapočtených Kč
   -- (vždy z celkových částek → žádná chyba zaokrouhlení). Záporná = nárok affiliate.
   v_unapplied := v_target - v_line.refunded_czk;
@@ -601,6 +705,415 @@ END;
 $function$;
 
 -- ===========================================================================
+-- Výplatní doklad — prepare: pod zámkem provize zapíše neměnný snapshot a
+-- provizi uzamkne (payout_locked_at). Opakované volání vrátí týž snapshot
+-- (stejné číslo dokladu i částky). Edge Function staví PDF jen z tohoto výstupu.
+-- ===========================================================================
+CREATE OR REPLACE FUNCTION public.prepare_affiliate_payout_document(p_commission_id uuid)
+ RETURNS jsonb
+ LANGUAGE plpgsql
+ SECURITY DEFINER
+ SET search_path TO ''
+AS $function$
+DECLARE
+  v_row record;
+  v_accounting_email text;
+  v_document_number text;
+  v_recipient_billing_address text;
+  v_document_type text;
+  v_snap public.affiliate_payout_document_snapshots%ROWTYPE;
+  v_payload jsonb;
+BEGIN
+  IF p_commission_id IS NULL THEN
+    RETURN jsonb_build_object('success', false, 'status', 'missing_commission_id');
+  END IF;
+
+  SELECT btrim(value)
+  INTO v_accounting_email
+  FROM public.settings
+  WHERE key = 'accounting_email'
+  LIMIT 1;
+
+  IF v_accounting_email IS NULL OR v_accounting_email = '' THEN
+    RETURN jsonb_build_object('success', false, 'status', 'missing_accounting_email');
+  END IF;
+
+  -- FÁZE 6: zámek řádku provize drží celé rozhodnutí o částce; refundace čeká
+  -- (pořadí platba → affiliate → provize) a po uvolnění už vidí uzamčenou provizi.
+  SELECT
+    c.id,
+    c.affiliate_id,
+    c.status,
+    c.amount_base_czk,
+    c.vat_rate,
+    c.amount_total_czk,
+    c.payout_document_id,
+    c.payout_locked_at,
+    a.name AS recipient_name,
+    a.email AS recipient_email,
+    a.ico AS recipient_ico,
+    a.vat_id AS recipient_vat_id,
+    a.is_vat_payer AS recipient_is_vat_payer,
+    a.billing_street,
+    a.billing_city,
+    a.billing_zip,
+    a.billing_country
+  INTO v_row
+  FROM public.affiliate_commissions c
+  JOIN public.affiliate_accounts a ON a.id = c.affiliate_id
+  WHERE c.id = p_commission_id
+  FOR UPDATE OF c;
+
+  IF NOT FOUND THEN
+    RETURN jsonb_build_object('success', false, 'status', 'commission_not_found');
+  END IF;
+
+  IF v_row.status <> 'approved' THEN
+    RETURN jsonb_build_object(
+      'success', false,
+      'status', 'invalid_commission_status',
+      'current_status', v_row.status
+    );
+  END IF;
+
+  IF v_row.payout_document_id IS NOT NULL
+     OR EXISTS (
+       SELECT 1
+       FROM public.affiliate_payout_documents d
+       WHERE d.commission_id = p_commission_id
+     ) THEN
+    RETURN jsonb_build_object('success', false, 'status', 'document_already_exists');
+  END IF;
+
+  -- FÁZE 6: snapshot už existuje (předchozí pokus nedoběhl) → vrátit přesně jej.
+  SELECT * INTO v_snap
+  FROM public.affiliate_payout_document_snapshots
+  WHERE commission_id = p_commission_id;
+  IF FOUND THEN
+    RETURN v_snap.payload || jsonb_build_object('snapshot_reused', true);
+  END IF;
+
+  IF v_row.recipient_name IS NULL OR btrim(v_row.recipient_name) = '' THEN
+    RETURN jsonb_build_object('success', false, 'status', 'missing_recipient_name');
+  END IF;
+
+  IF v_row.recipient_email IS NULL OR btrim(v_row.recipient_email) = '' THEN
+    RETURN jsonb_build_object('success', false, 'status', 'missing_recipient_email');
+  END IF;
+
+  IF v_row.amount_total_czk IS NULL OR v_row.amount_total_czk <= 0 THEN
+    RETURN jsonb_build_object('success', false, 'status', 'invalid_amount');
+  END IF;
+
+  IF coalesce(v_row.recipient_is_vat_payer, false)
+     AND (v_row.recipient_vat_id IS NULL OR btrim(v_row.recipient_vat_id) = '') THEN
+    RETURN jsonb_build_object('success', false, 'status', 'missing_recipient_vat_id');
+  END IF;
+
+  v_document_type := CASE
+    WHEN coalesce(v_row.recipient_is_vat_payer, false) THEN 'self_billed_tax_invoice'
+    ELSE 'commission_statement'
+  END;
+
+  v_recipient_billing_address := nullif(
+    concat_ws(
+      ', ',
+      nullif(btrim(coalesce(v_row.billing_street, '')), ''),
+      nullif(btrim(concat_ws(' ', v_row.billing_zip, v_row.billing_city)), ''),
+      nullif(btrim(coalesce(v_row.billing_country, '')), '')
+    ),
+    ''
+  );
+
+  v_document_number := public.next_affiliate_payout_document_number();
+
+  v_payload := jsonb_build_object(
+    'success', true,
+    'status', 'prepared',
+    'commission_id', v_row.id,
+    'affiliate_id', v_row.affiliate_id,
+    'document_number', v_document_number,
+    'document_type', v_document_type,
+    'recipient_name', btrim(v_row.recipient_name),
+    'recipient_email', btrim(v_row.recipient_email),
+    'recipient_ico', v_row.recipient_ico,
+    'recipient_vat_id', v_row.recipient_vat_id,
+    'recipient_billing_address', v_recipient_billing_address,
+    'recipient_is_vat_payer', coalesce(v_row.recipient_is_vat_payer, false),
+    'recipient_subject_type', CASE
+      WHEN coalesce(v_row.recipient_is_vat_payer, false) THEN 'vat_payer'
+      ELSE 'non_vat_payer'
+    END,
+    'amount_base_czk', v_row.amount_base_czk,
+    'vat_rate', coalesce(v_row.vat_rate, 0),
+    'amount_total_czk', v_row.amount_total_czk,
+    'accounting_email', v_accounting_email
+  );
+
+  INSERT INTO public.affiliate_payout_document_snapshots
+    (commission_id, affiliate_id, document_number, amount_base_czk, vat_rate, amount_total_czk, payload)
+  VALUES
+    (v_row.id, v_row.affiliate_id, v_document_number, v_row.amount_base_czk,
+     coalesce(v_row.vat_rate, 0), v_row.amount_total_czk, v_payload);
+
+  UPDATE public.affiliate_commissions
+  SET payout_locked_at = clock_timestamp(), updated_at = now()
+  WHERE id = p_commission_id;
+
+  RETURN v_payload;
+END;
+$function$;
+
+-- ===========================================================================
+-- Výplatní doklad — finalize: doklad vzniká VÝHRADNĚ ze snapshotu; živá částka
+-- provize se musí se snapshotem shodovat (jinak se nic nezapíše).
+-- ===========================================================================
+CREATE OR REPLACE FUNCTION public.finalize_affiliate_payout_document(p_commission_id uuid, p_document_number text, p_pdf_storage_path text, p_pdf_sha256 text, p_affiliate_email_subject text, p_affiliate_email_body text, p_accounting_email_subject text, p_accounting_email_body text)
+ RETURNS jsonb
+ LANGUAGE plpgsql
+ SECURITY DEFINER
+ SET search_path TO ''
+AS $function$
+DECLARE
+  v_row record;
+  v_snap public.affiliate_payout_document_snapshots%ROWTYPE;
+  v_accounting_email text;
+  v_document_id uuid;
+  v_affiliate_email_queue_id uuid;
+  v_accounting_email_queue_id uuid;
+  v_updated_count integer;
+BEGIN
+  BEGIN
+    IF p_commission_id IS NULL THEN
+      RETURN jsonb_build_object('success', false, 'status', 'missing_commission_id');
+    END IF;
+
+    IF p_document_number IS NULL OR p_document_number !~ '^APD-[0-9]{4}-[0-9]{6}$' THEN
+      RETURN jsonb_build_object('success', false, 'status', 'invalid_document_number');
+    END IF;
+
+    IF p_pdf_storage_path IS NULL OR btrim(p_pdf_storage_path) = '' THEN
+      RETURN jsonb_build_object('success', false, 'status', 'missing_pdf_storage_path');
+    END IF;
+
+    IF p_pdf_sha256 IS NULL OR p_pdf_sha256 !~ '^[a-f0-9]{64}$' THEN
+      RETURN jsonb_build_object('success', false, 'status', 'invalid_pdf_sha256');
+    END IF;
+
+    SELECT btrim(value)
+    INTO v_accounting_email
+    FROM public.settings
+    WHERE key = 'accounting_email'
+    LIMIT 1;
+
+    IF v_accounting_email IS NULL OR v_accounting_email = '' THEN
+      RETURN jsonb_build_object('success', false, 'status', 'missing_accounting_email');
+    END IF;
+
+    SELECT
+      c.id,
+      c.affiliate_id,
+      c.status,
+      c.amount_base_czk,
+      c.vat_rate,
+      c.amount_total_czk,
+      c.payout_document_id,
+      c.payout_locked_at
+    INTO v_row
+    FROM public.affiliate_commissions c
+    WHERE c.id = p_commission_id
+    FOR UPDATE OF c;
+
+    IF NOT FOUND THEN
+      RETURN jsonb_build_object('success', false, 'status', 'commission_not_found');
+    END IF;
+
+    IF v_row.status <> 'approved' THEN
+      RETURN jsonb_build_object(
+        'success', false,
+        'status', 'invalid_commission_status',
+        'current_status', v_row.status
+      );
+    END IF;
+
+    IF v_row.payout_document_id IS NOT NULL
+       OR EXISTS (
+         SELECT 1
+         FROM public.affiliate_payout_documents d
+         WHERE d.commission_id = p_commission_id
+       ) THEN
+      RETURN jsonb_build_object('success', false, 'status', 'document_already_exists');
+    END IF;
+
+    -- FÁZE 6: doklad jen ze snapshotu z prepare (stejné číslo i částky jako PDF).
+    SELECT * INTO v_snap
+    FROM public.affiliate_payout_document_snapshots
+    WHERE commission_id = p_commission_id
+    FOR UPDATE;
+
+    IF NOT FOUND OR v_row.payout_locked_at IS NULL THEN
+      RETURN jsonb_build_object('success', false, 'status', 'missing_payout_snapshot');
+    END IF;
+
+    IF v_snap.document_number <> p_document_number THEN
+      RETURN jsonb_build_object('success', false, 'status', 'payout_snapshot_mismatch');
+    END IF;
+
+    IF v_row.amount_base_czk IS DISTINCT FROM v_snap.amount_base_czk
+       OR v_row.amount_total_czk IS DISTINCT FROM v_snap.amount_total_czk
+       OR coalesce(v_row.vat_rate, 0) IS DISTINCT FROM v_snap.vat_rate THEN
+      RETURN jsonb_build_object('success', false, 'status', 'payout_snapshot_amount_mismatch');
+    END IF;
+
+    IF v_snap.amount_total_czk IS NULL OR v_snap.amount_total_czk <= 0 THEN
+      RETURN jsonb_build_object('success', false, 'status', 'invalid_amount');
+    END IF;
+
+    IF coalesce(btrim(v_snap.payload->>'recipient_name'), '') = '' THEN
+      RETURN jsonb_build_object('success', false, 'status', 'missing_recipient_name');
+    END IF;
+
+    IF coalesce(btrim(v_snap.payload->>'recipient_email'), '') = '' THEN
+      RETURN jsonb_build_object('success', false, 'status', 'missing_recipient_email');
+    END IF;
+
+    INSERT INTO public.affiliate_payout_documents (
+      commission_id,
+      affiliate_id,
+      document_number,
+      document_type,
+      recipient_name,
+      recipient_email,
+      recipient_ico,
+      recipient_vat_id,
+      recipient_billing_address,
+      recipient_is_vat_payer,
+      recipient_subject_type,
+      amount_base_czk,
+      vat_rate,
+      amount_total_czk,
+      pdf_url,
+      pdf_storage_path,
+      pdf_generated_at,
+      pdf_sha256,
+      email_status,
+      affiliate_email,
+      accounting_email
+    )
+    VALUES (
+      v_row.id,
+      v_row.affiliate_id,
+      v_snap.document_number,
+      v_snap.payload->>'document_type',
+      v_snap.payload->>'recipient_name',
+      v_snap.payload->>'recipient_email',
+      v_snap.payload->>'recipient_ico',
+      v_snap.payload->>'recipient_vat_id',
+      v_snap.payload->>'recipient_billing_address',
+      coalesce((v_snap.payload->>'recipient_is_vat_payer')::boolean, false),
+      v_snap.payload->>'recipient_subject_type',
+      v_snap.amount_base_czk,
+      v_snap.vat_rate,
+      v_snap.amount_total_czk,
+      null,
+      p_pdf_storage_path,
+      now(),
+      p_pdf_sha256,
+      'pending',
+      v_snap.payload->>'recipient_email',
+      v_accounting_email
+    )
+    RETURNING id INTO v_document_id;
+
+    INSERT INTO public.email_queue (
+      email,
+      subject,
+      body,
+      attachment_storage_bucket,
+      attachment_storage_path,
+      attachment_filename,
+      attachment_content_type,
+      attachment_required
+    )
+    VALUES (
+      v_snap.payload->>'recipient_email',
+      p_affiliate_email_subject,
+      p_affiliate_email_body,
+      'affiliate-payout-docs',
+      p_pdf_storage_path,
+      p_document_number || '.pdf',
+      'application/pdf',
+      true
+    )
+    RETURNING id INTO v_affiliate_email_queue_id;
+
+    INSERT INTO public.email_queue (
+      email,
+      subject,
+      body,
+      attachment_storage_bucket,
+      attachment_storage_path,
+      attachment_filename,
+      attachment_content_type,
+      attachment_required
+    )
+    VALUES (
+      v_accounting_email,
+      p_accounting_email_subject,
+      p_accounting_email_body,
+      'affiliate-payout-docs',
+      p_pdf_storage_path,
+      p_document_number || '.pdf',
+      'application/pdf',
+      true
+    )
+    RETURNING id INTO v_accounting_email_queue_id;
+
+    UPDATE public.affiliate_payout_documents
+    SET email_queue_id = v_affiliate_email_queue_id,
+        accounting_email_queue_id = v_accounting_email_queue_id
+    WHERE id = v_document_id;
+
+    UPDATE public.affiliate_payout_document_snapshots
+    SET document_id = v_document_id, finalized_at = clock_timestamp()
+    WHERE commission_id = p_commission_id;
+
+    UPDATE public.affiliate_commissions
+    SET status = 'ready_to_pay',
+        payout_document_id = v_document_id,
+        updated_at = now()
+    WHERE id = p_commission_id
+      AND status = 'approved'
+      AND payout_document_id IS NULL;
+
+    GET DIAGNOSTICS v_updated_count = ROW_COUNT;
+    IF v_updated_count <> 1 THEN
+      RAISE EXCEPTION 'commission_update_failed';
+    END IF;
+
+    RETURN jsonb_build_object(
+      'success', true,
+      'status', 'created',
+      'document_id', v_document_id,
+      'document_number', p_document_number,
+      'pdf_storage_path', p_pdf_storage_path,
+      'email_queue_id', v_affiliate_email_queue_id,
+      'accounting_email_queue_id', v_accounting_email_queue_id,
+      'commission_status', 'ready_to_pay'
+    );
+  EXCEPTION
+    WHEN unique_violation THEN
+      RETURN jsonb_build_object('success', false, 'status', 'document_already_exists');
+    WHEN raise_exception THEN
+      IF SQLERRM = 'commission_update_failed' THEN
+        RETURN jsonb_build_object('success', false, 'status', 'commission_update_failed');
+      END IF;
+      RAISE;
+  END;
+END;
+$function$;
+
+-- ===========================================================================
 -- Oprávnění (měsíční výpočet ponechává dnešní granty: authenticated s admin
 -- guardem uvnitř + service_role pro cron)
 -- ===========================================================================
@@ -610,6 +1123,10 @@ revoke all on function public._affiliate_recovery_reallocate(uuid) from public, 
 revoke all on function public.affiliate_commission_sync_payment(uuid) from public, anon, authenticated;
 grant execute on function public.affiliate_commission_sync_payment(uuid) to service_role;
 revoke all on function public.trg_fn_affiliate_commission_payment_sync() from public, anon, authenticated;
+revoke all on function public.trg_fn_affiliate_payout_snapshot_immutable() from public, anon, authenticated;
+revoke all on function public.trg_fn_affiliate_commission_amount_frozen() from public, anon, authenticated;
+revoke all on function public.prepare_affiliate_payout_document(uuid) from public, anon, authenticated;
+revoke all on function public.finalize_affiliate_payout_document(uuid, text, text, text, text, text, text, text) from public, anon, authenticated;
 revoke all on function public.calculate_affiliate_commissions_for_month(date) from public, anon;
 grant execute on function public.calculate_affiliate_commissions_for_month(date) to authenticated, service_role;
 

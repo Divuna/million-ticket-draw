@@ -1,3 +1,9 @@
+# 24. 09. 2026 — Fáze 6: atomický výplatní doklad × refundace (JEN STAGING)
+
+Opraven souběh refundace s vystavením výplatního dokladu: dřív `prepare` četl živou částku pro PDF a `finalize` ji do dokladu zapsal znovu, takže refundace mezi nimi mohla vytvořit PDF s jinou částkou než databáze. Nově `prepare_affiliate_payout_document` pod zámkem provize zapíše neměnný snapshot a provizi uzamkne, `finalize_affiliate_payout_document` vkládá doklad jen ze snapshotu; Edge Function se neměnila. Souběh vždy skončí jako „refundace vyhrála“ (doklad 10 Kč, bez recovery) nebo „doklad vyhrál“ (doklad 15 Kč, recovery 5 Kč); částka na PDF ověřena čtením PDF. Nalezena nesouvisející chyba zobrazení sazby DPH na PDF (OPEN ISSUE). Rollback s původními produkčními prepare/finalize znovu ověřen. Produkce nedotčena.
+
+---
+
 # 24. 09. 2026 — Fáze 6: recovery u uzamčené affiliate provize (JEN STAGING)
 
 Pavel potvrdil pravidlo pro refundaci po vystavení výplatního dokladu nebo po výplatě: provize ani doklad se nemění, vznikne recovery téhož affiliate a automaticky se umoří z jeho budoucích zákaznických provizí (nejstarší první, nikdy záporná provize, jiný affiliate nedotčen). Příklad recovery 25 → provize 15 (k výplatě 0, zbývá 10) → provize 20 (k výplatě 10) ověřen. Selhaná Stripe refundace zruší přesně svou recovery a už umořenou část vrátí jako nárok do další provize. Firemní provize beze změny; zjištěno, že systém opravu/storno zaplacené partnerské faktury nepodporuje. Rollback znovu ověřen po poslední změně (staging po rollbacku = produkce). Ověřeno na stagingu: recovery 27/27, Fáze 6 28/28, Fáze 5 48/48, refund blok 35/35. Produkce nedotčena.

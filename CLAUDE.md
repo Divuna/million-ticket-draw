@@ -78,6 +78,13 @@ Rollback: `docs/rollback/phase6_affiliate_commissions_rollback.sql`.
   vrací konečně umořenou část jako `release` do další provize. Opravný daňový doklad se nevystavuje.
 - Firemní větev měsíčního výpočtu je doslova beze změny (5 % ze zaplacené faktury bez DPH,
   jedna provize na fakturu) — needitovat v rámci zákaznických úprav.
+- **Výplatní doklad vzniká jen ze snapshotu.** `prepare_affiliate_payout_document` pod `FOR UPDATE`
+  provize zapíše `affiliate_payout_document_snapshots` a nastaví `payout_locked_at`; od té chvíle je
+  provize „uzamčená“ (refundace → recovery, žádná změna částky). `finalize_affiliate_payout_document`
+  vkládá doklad výhradně ze snapshotu a při neshodě čísla/částky nic nezapíše. Edge Function smí PDF
+  stavět **jen z výstupu prepare** — nikdy znovu nečíst `affiliate_commissions`. Nerušit triggery
+  `trg_affiliate_commission_amount_frozen` a `trg_affiliate_payout_snapshot_immutable`. Podmínka
+  „měnitelná provize“ = `calculated` nebo `approved` bez `payout_document_id` **a bez `payout_locked_at`**.
 - Pořadí zámků je vždy **platba → affiliate → provize**: výpočet zamkne platby měsíce `FOR SHARE`,
   pak `_affiliate_recovery_lock` pro všechny dotčené affiliate, teprve pak maže/vkládá provize;
   refundace drží platbu `FOR UPDATE`, pak `_affiliate_recovery_lock`, pak provize. Globální advisory

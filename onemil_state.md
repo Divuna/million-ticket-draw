@@ -41,16 +41,26 @@ provizí stejného affiliate. Jiné provize se nemění a nevzniká záporná pr
 - Neúspěšná Stripe refundace: u měnitelné provize se částka vrátí; u uzamčené se recovery vrátí na 0,
   předběžné umoření zmizí a už konečně umořená část se vrátí jako nárok (`release`) do další
   zákaznické provize téhož affiliate. Jiné recovery ani provize se nemění.
+- Výplatní doklad × refundace: `prepare_affiliate_payout_document` pod zámkem řádku provize zapíše
+  neměnný snapshot (`affiliate_payout_document_snapshots`: číslo dokladu, částky, údaje příjemce) a
+  nastaví `affiliate_commissions.payout_locked_at`. Od té chvíle je provize uzamčená stejně jako s
+  dokladem (refundace → recovery). Edge Function `create-affiliate-payout-document` (beze změny) staví
+  PDF jen z výstupu prepare; `finalize_affiliate_payout_document` vloží doklad výhradně ze snapshotu a
+  bez shody čísla/částky nezapíše nic. Opakované prepare vrátí týž snapshot. DB pojistky: částku
+  uzamčené provize ani snapshot nejde změnit (`trg_affiliate_commission_amount_frozen`,
+  `trg_affiliate_payout_snapshot_immutable`). Výsledek souběhu je vždy „refundace vyhrála“ (doklad
+  z nižší částky, bez recovery) nebo „doklad vyhrál“ (doklad z původní částky, recovery).
 - Souběh: měsíční výpočet si nejdřív zamkne platby měsíce (`FOR SHARE`), pak affiliate (advisory
   zámek per affiliate), pak provize; refundace drží platbu, pak affiliate, pak provize → pořadí vždy
   platba → affiliate → provize (spec 194a/194d).
 - Staging CI: přípravný krok `playwright-staging.yml` hledá admin/superadmin E2E účet po stránkách
   (staging má přes 200 uživatelů kvůli nesmazatelným testovacím účtům).
 - Ověření: SQL scénáře `supabase/tests/phase6_affiliate_commissions_scenarios.sql` 28/28 a
-  `supabase/tests/phase6_affiliate_recovery_scenarios.sql` 27/27, regrese Fáze 5 48/48, refund blok
-  35/35, spec 194 (souběh výpočtu s refundací i s recovery). Rollback
+  `supabase/tests/phase6_affiliate_recovery_scenarios.sql` 35/35 (vč. D1–D8 doklad × refundace), regrese
+  Fáze 5 48/48, refund blok 35/35, spec 194 (souběh výpočtu s refundací, s recovery, s vystavením dokladu
+  přes DB i skutečnou Edge Function včetně čtení částky z PDF), payout specy 39–42. Rollback
   `docs/rollback/phase6_affiliate_commissions_rollback.sql` znovu ověřen po poslední změně: staging po
-  rollbacku = produkce (md5 výpočtu, ACL, trigger, funkce, tabulky, sloupce `affiliate_commissions`),
+  rollbacku = produkce (md5 výpočtu i prepare/finalize, ACL, triggery, funkce, tabulky, sloupce `affiliate_commissions`),
   pak Fáze 6 znovu aplikována a testy zelené.
 
 **C) OPEN ISSUE (nerozhodnuto, nic nevymyšleno):**
@@ -61,10 +71,13 @@ provizí stejného affiliate. Jiné provize se nemění a nevzniká záporná pr
   zákaznickou provizi. Samostatná výplata nároku / umoření z firemní provize = nové rozhodnutí.
 - **Oprava/storno zaplacené partnerské faktury** systém nepodporuje (stav `void` existuje, ale nic do
   něj zaplacenou fakturu nepřevádí, dobropis neexistuje) → firemní provize na opravu faktury nereaguje.
-- **Souběh výplatního dokladu:** `prepare_affiliate_payout_document` staví PDF z aktuální částky,
-  `finalize_affiliate_payout_document` zapíše částku v okamžiku dokončení. Přijde-li mezi nimi
-  refundace/umoření (provize je ještě `approved`), PDF a záznam se mohou lišit. Existovalo už před
-  recovery (refundace u `approved`); oprava = kontrola částky ve finalize (změna payout funkcí).
+- ~~Souběh výplatního dokladu (PDF × DB)~~ → vyřešeno snapshotem v prepare (24. 09. 2026).
+- **PDF výplatního dokladu ukazuje špatnou sazbu DPH:** Edge Function `create-affiliate-payout-document`
+  vypisuje `Math.round(vatRate * 100) %`, ale `vat_rate` je v procentech (21) → u plátce DPH „2100 %“
+  (u neplátce „0 %“). Částky na PDF jsou správně. Oprava = `Math.round(vatRate)` v EF (redeploy EF);
+  vědomě neopraveno v rámci Fáze 6.
+- **Snapshot bez dokončení:** když Edge Function po prepare selže a nikdo doklad znovu nevystaví,
+  provize zůstane uzamčená ve stavu `approved` se snapshotem (další pokus vrátí týž snapshot).
 
 **Zjištění (neměněno):** zákazník s affiliate atribucí i osobním doporučením vytvoří ze stejné platby
 5 % affiliate provizi v Kč i 5 % odměnu v MIO; žádná priorita ani blokace neexistuje.

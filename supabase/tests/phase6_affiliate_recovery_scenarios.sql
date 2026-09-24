@@ -1,4 +1,5 @@
--- Scénářové testy Fáze 6 — recovery a umoření z budoucích affiliate provizí. STAGING ONLY.
+-- Scénářové testy Fáze 6 — recovery, umoření z budoucích affiliate provizí a souběh
+-- refundace × výplatní doklad (snapshot). STAGING ONLY.
 --
 -- Pravidlo (Pavel): provize, kterou už kvůli výplatnímu dokladu / dávce / výplatě
 -- nelze zpětně snížit, se při refundaci nemění; vznikne recovery téhož affiliate,
@@ -305,6 +306,111 @@ begin
   perform pg_temp.p6r_pay(cu, 300, m1); perform pg_temp.p6r_calc(m1); cm := pg_temp.p6r_c(a, m1);
   r := array_append(r, case when cm.amount_base_czk = 10 and cm.amount_total_czk = 12.10 and cm.recovery_offset_czk = 5 then 'PASS' else 'FAIL' end
                       || ' V16 plátce DPH: hrubá 15 − umořeno 5 = 10 + 21 % = 12,10');
+
+  -- ===========================================================================
+  -- D: souběh REFUNDACE × VYSTAVENÍ VÝPLATNÍHO DOKLADU (obě pořadí, deterministicky)
+  -- ===========================================================================
+  -- D1 doklad vyhraje: prepare (snapshot 15) → refundace 100 → finalize
+  a := pg_temp.p6r_aff(); cu := pg_temp.p6r_cust(a); p := pg_temp.p6r_pay(cu, 300, m0);
+  perform pg_temp.p6r_calc(m0); perform pg_temp.p6r_lock(a, m0, 'approved');
+  cm := pg_temp.p6r_c(a, m0);
+  res := public.prepare_affiliate_payout_document(cm.id);
+  perform pg_temp.p6r_refund(p, 100);
+  cm2 := pg_temp.p6r_c(a, m0);
+  st := public.finalize_affiliate_payout_document(cm.id, res->>'document_number', 'test/' || cm.id || '.pdf', repeat('a', 64), 's', 'b', 's', 'b');
+  select amount_base_czk, amount_total_czk into n, n2 from public.affiliate_payout_documents where commission_id = cm.id;
+  r := array_append(r, case when (res->>'amount_base_czk')::numeric = 15 and cm2.amount_base_czk = 15 and cm2.status = 'approved'
+                              and pg_temp.p6r_rec(p) = 5 and (st->>'success')::boolean
+                              and n = 15 and n2 = 15 and (pg_temp.p6r_c(a, m0)).amount_base_czk = 15
+                              and (pg_temp.p6r_c(a, m0)).status = 'ready_to_pay'
+                         then 'PASS' else 'FAIL' end
+                      || ' D1 doklad vyhrál: snapshot 15 → refundace 100 = recovery 5, provize 15, doklad 15, ready_to_pay (' || coalesce(st->>'status', '?') || ')');
+
+  -- D2 refundace vyhraje: refundace 100 → prepare (10) → finalize
+  a := pg_temp.p6r_aff(); cu := pg_temp.p6r_cust(a); p := pg_temp.p6r_pay(cu, 300, m0);
+  perform pg_temp.p6r_calc(m0); perform pg_temp.p6r_lock(a, m0, 'approved');
+  cm := pg_temp.p6r_c(a, m0);
+  perform pg_temp.p6r_refund(p, 100);
+  res := public.prepare_affiliate_payout_document(cm.id);
+  st := public.finalize_affiliate_payout_document(cm.id, res->>'document_number', 'test/' || cm.id || '.pdf', repeat('b', 64), 's', 'b', 's', 'b');
+  select amount_base_czk into n from public.affiliate_payout_documents where commission_id = cm.id;
+  r := array_append(r, case when (res->>'amount_base_czk')::numeric = 10 and n = 10 and (pg_temp.p6r_c(a, m0)).amount_base_czk = 10
+                              and pg_temp.p6r_rec(p) is null and (st->>'success')::boolean
+                         then 'PASS' else 'FAIL' end
+                      || ' D2 refundace vyhrála: provize 10 → doklad 10, recovery žádná');
+
+  -- D3 opakované prepare vrátí týž snapshot; D4 částku uzamčené provize nejde změnit;
+  -- D5 finalize s jiným číslem dokladu nic nezapíše
+  a := pg_temp.p6r_aff(); cu := pg_temp.p6r_cust(a); p := pg_temp.p6r_pay(cu, 300, m0);
+  perform pg_temp.p6r_calc(m0); perform pg_temp.p6r_lock(a, m0, 'approved');
+  cm := pg_temp.p6r_c(a, m0);
+  res := public.prepare_affiliate_payout_document(cm.id);
+  st := public.prepare_affiliate_payout_document(cm.id);
+  r := array_append(r, case when res->>'document_number' = st->>'document_number' and (st->>'snapshot_reused')::boolean
+                              and res->>'amount_total_czk' = st->>'amount_total_czk'
+                              and (select count(*) from public.affiliate_payout_document_snapshots where commission_id = cm.id) = 1
+                         then 'PASS' else 'FAIL' end
+                      || ' D3 opakované prepare → stejné číslo dokladu i částka, jeden snapshot');
+  c := 0;
+  begin
+    update public.affiliate_commissions set amount_base_czk = 1, amount_total_czk = 1 where id = cm.id;
+  exception when others then
+    c := case when sqlerrm = 'affiliate_commission_amount_frozen' then 1 else 0 end;
+  end;
+  c2 := 0;
+  begin
+    update public.affiliate_payout_document_snapshots set amount_total_czk = 1 where commission_id = cm.id;
+  exception when others then
+    c2 := case when sqlerrm = 'affiliate_payout_snapshot_immutable' then 1 else 0 end;
+  end;
+  r := array_append(r, case when c = 1 and c2 = 1 and (pg_temp.p6r_c(a, m0)).amount_base_czk = 15 then 'PASS' else 'FAIL' end
+                      || ' D4 uzamčená provize i snapshot jsou neměnné (DB pojistka)');
+  st := public.finalize_affiliate_payout_document(cm.id, 'APD-2099-999999', 'test/x.pdf', repeat('c', 64), 's', 'b', 's', 'b');
+  r := array_append(r, case when st->>'status' = 'payout_snapshot_mismatch'
+                              and not exists (select 1 from public.affiliate_payout_documents where commission_id = cm.id)
+                              and (pg_temp.p6r_c(a, m0)).status = 'approved'
+                         then 'PASS' else 'FAIL' end
+                      || ' D5 finalize s jiným číslem než snapshot → nic nevznikne (' || (st->>'status') || ')');
+
+  -- D6 selhání refundace, doklad vyhrál: snapshot 15 → refundace (recovery 5) → selhání → recovery 0 → doklad 15
+  a := pg_temp.p6r_aff(); cu := pg_temp.p6r_cust(a); p := pg_temp.p6r_pay(cu, 300, m0);
+  perform pg_temp.p6r_calc(m0); perform pg_temp.p6r_lock(a, m0, 'approved');
+  cm := pg_temp.p6r_c(a, m0);
+  res := public.prepare_affiliate_payout_document(cm.id);
+  perform pg_temp.p6r_refund(p, 100); n := pg_temp.p6r_rec(p);
+  perform pg_temp.p6r_refund(p, 0);
+  st := public.finalize_affiliate_payout_document(cm.id, res->>'document_number', 'test/' || cm.id || '.pdf', repeat('d', 64), 's', 'b', 's', 'b');
+  r := array_append(r, case when n = 5 and pg_temp.p6r_rec(p) = 0 and (st->>'success')::boolean
+                              and (select amount_base_czk from public.affiliate_payout_documents where commission_id = cm.id) = 15
+                              and (pg_temp.p6r_state(a)->>'open_recovery_czk')::numeric = 0
+                              and (pg_temp.p6r_state(a)->>'pending_credit_czk')::numeric = 0
+                         then 'PASS' else 'FAIL' end
+                      || ' D6 selhání po snapshotu: recovery 5 → 0, doklad 15, nic otevřeného');
+
+  -- D7 selhání refundace, refundace vyhrála: provize 10 → snapshot 10 → selhání → nárok 5, doklad 10
+  a := pg_temp.p6r_aff(); cu := pg_temp.p6r_cust(a); p := pg_temp.p6r_pay(cu, 300, m0);
+  perform pg_temp.p6r_calc(m0); perform pg_temp.p6r_lock(a, m0, 'approved');
+  cm := pg_temp.p6r_c(a, m0);
+  perform pg_temp.p6r_refund(p, 100);
+  res := public.prepare_affiliate_payout_document(cm.id);
+  perform pg_temp.p6r_refund(p, 0);
+  st := public.finalize_affiliate_payout_document(cm.id, res->>'document_number', 'test/' || cm.id || '.pdf', repeat('e', 64), 's', 'b', 's', 'b');
+  r := array_append(r, case when (res->>'amount_base_czk')::numeric = 10 and pg_temp.p6r_rec(p) = -5
+                              and (select amount_base_czk from public.affiliate_payout_documents where commission_id = cm.id) = 10
+                              and (pg_temp.p6r_c(a, m0)).amount_base_czk = 10
+                              and (pg_temp.p6r_state(a)->>'pending_credit_czk')::numeric = 5
+                         then 'PASS' else 'FAIL' end
+                      || ' D7 selhání po snížení a snapshotu: doklad 10 = provize 10, affiliate nárok 5 do další provize');
+
+  -- D8 každý doklad = jeho snapshot = částka provize
+  select count(*) into c
+  from public.affiliate_payout_documents d
+  join public.affiliate_payout_document_snapshots s on s.commission_id = d.commission_id
+  join public.affiliate_commissions c0 on c0.id = d.commission_id
+  where d.amount_base_czk <> s.amount_base_czk or d.amount_total_czk <> s.amount_total_czk
+     or d.vat_rate <> s.vat_rate or d.document_number <> s.document_number
+     or c0.amount_base_czk <> d.amount_base_czk or c0.amount_total_czk <> d.amount_total_czk;
+  r := array_append(r, case when c = 0 then 'PASS' else 'FAIL' end || ' D8 doklad = snapshot = provize u všech dokladů (rozdílů: ' || c || ')');
 
   -- ===========================================================================
   -- K konzistence
