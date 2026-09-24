@@ -58,6 +58,23 @@ prvních skutečných zákazníků musí proběhnout **jeden řízený kompletn�
 ale to **není důvod je mazat, měnit ani „uklízet" mimochodem**. Jediná povolená cesta k jejich
 odstranění je ten jeden schválený reset.
 
+## FÁZE 6 — AFFILIATE PROVIZE V Kč (24. 09. 2026, JEN STAGING — do produkce NENASAZENO)
+
+Migrace `20260926100000_phase6_affiliate_commissions_paid_czk.sql`. Detail: `onemil_state.md` § -9.
+Rollback: `docs/rollback/phase6_affiliate_commissions_rollback.sql`.
+
+- Zákaznická provize se počítá **jen z `payments.paid_amount_czk`** (po refundacích), nikdy ze
+  `SUM(payments.amount)` — to jsou připsaná MIO včetně bonusu. Nevracet.
+- Každá platba je nejvýše v jedné provizi (`affiliate_commission_payments.payment_id` unique);
+  částka provize = `round(Σ(zaplaceno − započtená refundace) × sazba / 100, 2)`.
+- Refundace upravuje částku **jen** u `calculated` a `approved` bez `payout_document_id`.
+  Po vystavení výplatního dokladu a u `paid` se částka nesmí automaticky měnit — jen
+  `unapplied_refund_czk` + audit. Žádné strhávání, záporná provize ani zápočet bez rozhodnutí Pavla.
+- Firemní větev měsíčního výpočtu je doslova beze změny (5 % ze zaplacené faktury bez DPH,
+  jedna provize na fakturu) — needitovat v rámci zákaznických úprav.
+- Měsíční výpočet a přepočet po refundaci se serializují advisory lockem
+  `onemil_affiliate_customer_commissions` — nerušit.
+
 ## FÁZE 5 — OSOBNÍ DOPORUČENÍ HRÁČŮ (24. 09. 2026, PRODUKCE)
 
 Migrace `20260925100000_phase5_player_referral_rewards.sql`. Detail: `onemil_state.md` § -8.

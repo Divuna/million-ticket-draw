@@ -1,3 +1,9 @@
+# 24. 09. 2026 — Fáze 6: affiliate provize v Kč (JEN STAGING)
+
+Zákaznická affiliate provize se nově počítá z 5 % skutečně zaplacených Kč místo připsaných MIO (300 Kč / 310 MIO → 15 Kč místo 15,50 Kč). Každá platba má vazbu na svou měsíční provizi, takže refundace provizi poměrně sníží (300 → 15 Kč, refundace 100 Kč → 10 Kč), dokud k ní není vystavený výplatní doklad; u dokladované nebo vyplacené provize se refundace jen eviduje a čeká na rozhodnutí Pavla. Firemní provize, cron a payout workflow beze změny. Ověřeno na stagingu (28/28 scénářů, regrese Fáze 5 48/48 a refund bloku 35/35, souběh výpočtu s refundací), produkce nedotčena.
+
+---
+
 # 23.–24. 09. 2026 — Fáze 5: osobní doporučení hráčů (STAGING → PRODUKCE)
 
 Odměny za doporučení se poprvé skutečně připisují: 5 % ze zaplacených Kč každého placeného dobití a jednorázových 15 MIO po prvním dobití, obojí jako samostatné 12měsíční sady MIO přes centrální lot cestu. Opravena chyba, kdy vznikal jen záznam bez MIO, a chyba, kdy storno odečítalo nikdy nepřipsanou odměnu.

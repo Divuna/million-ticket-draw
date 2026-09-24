@@ -575,6 +575,22 @@ The intended model is long-term. If the brought e-shop continues using OneMil an
 An agency can also bring end users through its tracking link or code. Paid top-ups of these customers can create a separate customer commission.
 
 **Current technical gap — verified 2026-09-23:** the affiliate customer-commission calculator currently sums `payments.amount`. The live Stripe webhook writes the **credited MIO amount** into that field, not the actual CZK amount paid. Because bonus bundles can credit more MIO than the customer paid in CZK, this field is not a reliable monetary base for a CZK percentage commission. Before live affiliate customer commissions are paid, the commission base must be explicitly defined and the technical calculation aligned with the actual paid CZK amount. This is a money-related change and requires Pavel's explicit approval before production implementation.
+*(Superseded 2026-09-24 by Phase 6 below — the base is now defined and implemented on staging.)*
+
+**A) Confirmed business rules — affiliate commissions in CZK (Pavel, 2026-09-24):**
+- **Customer affiliate commission = 5 % of the CZK actually paid by the customer** (`payments.paid_amount_czk`). It is never calculated from credited MIO (`payments.amount`); **bonus MIO are not part of the commission base**. Example: the customer pays 300 CZK and receives 310 MIO → commission 15 CZK (not 15.50 CZK).
+- It arises only from a real completed paid Stripe top-up. Customer attribution stays first-touch and permanent.
+- **Refund before payout:** a partial refund reduces the commission in the same ratio as the refunded CZK, a full refund cancels it (example: payment 300 CZK → commission 15 CZK; refund 100 CZK → net commission 10 CZK). The calculation is cumulative and idempotent.
+- **Company affiliate commission stays unchanged:** 5 % of the partner invoice amount **excluding VAT**, created only after the invoice is actually paid; first-touch company attribution stays.
+- **Affiliate VAT stays unchanged:** the commission base is without VAT; if the affiliate is a VAT payer, 21 % VAT is added on top, otherwise only the net amount is paid.
+- Historical test payments without `paid_amount_czk` are not recalculated; they are removed by the pre-launch reset.
+
+**B) Technical state (Phase 6, 2026-09-24): implemented and verified on staging only — not deployed to production.**
+- The monthly calculation stays one row per affiliate and month (payout workflow unchanged), but each payment is now linked to its commission (`affiliate_commission_payments`), so a later refund is matched to the exact payment.
+- A refund adjusts the commission automatically while it is `calculated` or `approved` without a payout document. Once a payout document exists (`ready_to_pay`, `in_payment_batch`) or the commission is `paid`, the amount is **not** changed (the document — for VAT payers a self-billed tax invoice — was already issued and sent); the refund is only recorded as unapplied and audited.
+- A customer can currently generate both a 5 % affiliate commission in CZK and a 5 % personal referral reward in MIO from the same payment; no priority or blocking exists. This is recorded, not changed — it needs a separate decision if it should be restricted.
+
+**C) Open point — refund of an already issued / paid commission (decision needed from Pavel):** when a refund arrives after the payout document was issued or the commission was paid, the system today keeps the commission unchanged and only records the unapplied refunded CZK for admin review. No automatic deduction, negative commission, claim against the affiliate or offset against future commissions exists. Pavel must decide how such cases are handled (e.g. accept the loss, issue a corrective document and request repayment, or settle it against a future commission).
 
 For this customer commission, the agency can determine who receives it:
 

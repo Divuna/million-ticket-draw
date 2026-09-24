@@ -3,6 +3,46 @@
 > **Autoritativní aktuální stav. Poslední aktualizace 24. 9. 2026 — Fáze 5 (osobní doporučení hráčů) nasazena do produkce `xkzhjldrojjlrkezorey` se schválením Pavla. Předtím 23. 9. 2026 refund blok F2 + F3 + F4 a Fáze 1.**
 
 
+## -9. Fáze 6 — affiliate provize v Kč — JEN STAGING, do produkce NENASAZENO (24. 09. 2026)
+
+Větev `claude/phase6-affiliate-czk`, migrace
+`supabase/migrations/20260926100000_phase6_affiliate_commissions_paid_czk.sql`. Aplikováno **pouze
+na staging `dxmowysntemfqfnanxua`**. Produkce `xkzhjldrojjlrkezorey` beze změny (má 1 firemní
+provizi `paid`, žádnou zákaznickou).
+
+**A) Potvrzené obchodní pravidlo (Pavel):** zákaznická provize = 5 % ze skutečně zaplacených Kč
+(`payments.paid_amount_czk`), bonusová MIO se nepočítají (300 Kč / 310 MIO → 15 Kč). Refundace před
+výplatou provizi poměrně sníží, úplná ji stornuje (300 → 15 Kč, refundace 100 Kč → 10 Kč).
+Firemní provize beze změny (5 % ze zaplacené faktury bez DPH). DPH affiliate beze změny.
+
+**B) Technický stav (staging):**
+- Nová tabulka `affiliate_commission_payments` = vazba platba → měsíční provize (snapshot Kč a
+  sazby, započtená a nezapočtená refundace). Měsíční provize dál jeden řádek za affiliate a měsíc.
+- `calculate_affiliate_commissions_for_month`: zákaznická větev z čistých zaplacených Kč (jen
+  Stripe dobití s `paid_amount_czk`, bez bonus/partner/api), zapisuje vazby; firemní větev doslova
+  beze změny. Cron `affiliate_company_commissions_monthly` beze změny.
+- Trigger `trg_affiliate_commission_payment_sync` na `payments` přepočte provizi při změně stavu /
+  refundované částky, kumulativně a idempotentně. Serializace s měsíčním výpočtem přes advisory lock.
+- Chování podle stavu provize při refundaci:
+  - `calculated` → částka se sníží (a měsíční přepočet drží čistou částku),
+  - `approved` bez výplatního dokladu → částka se sníží, stav zůstane; při nule doklad nevznikne,
+  - `ready_to_pay` / `in_payment_batch` (doklad vystaven) → částka beze změny, refundace jen
+    evidována (`unapplied_refund_czk`) + audit `affiliate_commission_refund_after_document`,
+  - `paid` → totéž, nic se automaticky nemění.
+- Neúspěšná Stripe refundace vrátí provizi i evidenci zpět.
+- Ověření: SQL scénáře `supabase/tests/phase6_affiliate_commissions_scenarios.sql` 28/28, regrese
+  Fáze 5 48/48, refund blok 35/35, spec 194 (souběh výpočtu s refundací), rollback
+  `docs/rollback/phase6_affiliate_commissions_rollback.sql` ověřen (funkce = produkce md5).
+
+**C) OPEN ISSUE — refundace už dokladované / vyplacené provize:** systém provizi nemění a jen eviduje
+nezapočtenou refundaci. Žádné strhávání, záporná provize, pohledávka ani zápočet z budoucích provizí
+neexistuje. Potřebné rozhodnutí Pavla: jak s takovým případem naložit.
+
+**Zjištění (neměněno):** zákazník s affiliate atribucí i osobním doporučením vytvoří ze stejné platby
+5 % affiliate provizi v Kč i 5 % odměnu v MIO; žádná priorita ani blokace neexistuje.
+
+---
+
 ## -8. Fáze 5 — osobní doporučení hráčů — NASAZENO DO PRODUKCE (24. 09. 2026, schválení Pavla)
 
 Větev `claude/phase5-player-referral` (fast-forward do `main`), migrace
