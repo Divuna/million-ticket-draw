@@ -27,7 +27,7 @@ begin
   end if;
 end $$;
 
--- 3) Původní definice funkcí (5).
+-- 3) Původní definice funkcí (6) a trigger oznámení.
 
 -- create_referral_reward_from_payment()   md5 095738c5aca6895eb9ce568971cb539e   ACL: {=X/postgres,postgres=X/postgres,anon=X/postgres,authenticated=X/postgres,service_role=X/postgres}
 CREATE OR REPLACE FUNCTION public.create_referral_reward_from_payment()
@@ -587,6 +587,78 @@ begin
 end;
 $function$;
 
+-- notify_referral_reward_multi()   md5 19f94484daaca5860f9579e891b97626   ACL: {=X/postgres,postgres=X/postgres,anon=X/postgres,authenticated=X/postgres,service_role=X/postgres}
+CREATE OR REPLACE FUNCTION public.notify_referral_reward_multi()
+ RETURNS trigger
+ LANGUAGE plpgsql
+ SECURITY DEFINER
+AS $function$
+DECLARE
+  v_email text;
+BEGIN
+  IF NEW.status = 'earned' AND NEW.reward_mc > 0 THEN
+
+    -- zjisti email referrera
+    SELECT email INTO v_email
+    FROM auth.users
+    WHERE id = NEW.referrer_user_id;
+
+    -- 1) EMAIL (Resend / email_queue)
+    IF v_email IS NOT NULL AND EXISTS (
+      SELECT 1 FROM information_schema.tables
+      WHERE table_schema = 'public' AND table_name = 'email_queue'
+    ) THEN
+      INSERT INTO public.email_queue (
+        email,
+        subject,
+        body,
+        status,
+        created_at
+      )
+      VALUES (
+        v_email,
+        '🎉 Získali jste MioCoiny za doporučení',
+        'Získali jste +' || NEW.reward_mc || ' MioCoinů za doporučení. Děkujeme, že pomáháte OneMil růst.',
+        'pending',
+        now()
+      );
+    END IF;
+
+    -- 2) ZPRÁVA DO ZPRÁV (Inbox)
+    IF EXISTS (
+      SELECT 1 FROM information_schema.tables
+      WHERE table_schema = 'public' AND table_name = 'messages'
+    ) THEN
+      INSERT INTO public.messages (
+        user_id,
+        sender,
+        content,
+        topic,
+        event,
+        private,
+        created_at
+      )
+      VALUES (
+        NEW.referrer_user_id,
+        'system',
+        'Získali jste +' || NEW.reward_mc || ' MioCoinů za doporučení 🎉',
+        'referral',
+        'referral_reward_earned',
+        true,
+        now()
+      );
+    END IF;
+
+  END IF;
+
+  RETURN NEW;
+END;
+$function$;
+
+-- Původní trigger oznámení (při vložení řádku).
+drop trigger if exists trg_notify_referral_reward_multi on public.referral_rewards;
+CREATE TRIGGER trg_notify_referral_reward_multi AFTER INSERT ON public.referral_rewards FOR EACH ROW EXECUTE FUNCTION notify_referral_reward_multi();
+
 -- 4) Nové funkce Fáze 5 (po obnově výše už je nic nevolá).
 drop function if exists public.referral_award_for_payment(uuid);
 drop function if exists public._referral_credit_reward(uuid);
@@ -594,6 +666,7 @@ drop function if exists public._referral_reverse_for_payment(uuid, numeric, text
 drop function if exists public._referral_restore_for_payment(uuid, text);
 drop function if exists public._referral_reward_recompute(uuid);
 drop function if exists public._referral_lock_wallet(uuid);
+drop function if exists public._referral_fmt_mio(numeric);
 
 commit;
 

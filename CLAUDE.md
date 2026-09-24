@@ -88,6 +88,9 @@ Rollback: `docs/rollback/phase5_player_referral_rollback.sql`.
   až po připsání dobití (pořadí zámků doporučený → doporučující jako v refundaci) — nepřejmenovávat.
 - Odměna s `credited_at IS NULL` nebyla nikdy zpracována (historická) — její storno smí měnit jen
   stav, nikdy peněženku. 17 historických produkčních odměn se zpětně nepřipisuje.
+- **Oznámení doporučujícímu** smí hlásit jen skutečně připsaná MIO: `notify_referral_reward_multi`
+  běží na `AFTER UPDATE OF credited_at` (NULL → vyplněno, tedy jednou), ne na INSERT — při vložení
+  ještě není známé umoření pohledávky. Celá umořená odměna nesmí tvrdit „získali jste".
 - Admin KPI a přehledy počítají **čistou** odměnu (`src/lib/referralRewards.ts`:
   `reward_mc − reversal_target_mc` pro `earned` a `partially_reversed`), nikdy hrubou částku.
 

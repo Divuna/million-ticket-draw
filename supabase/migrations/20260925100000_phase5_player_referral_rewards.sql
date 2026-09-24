@@ -1274,8 +1274,115 @@ end;
 $function$;
 
 -- ===========================================================================
+-- Oznámení doporučujícímu podle SKUTEČNÉHO výsledku odměny
+-- Dřív se oznamovalo při vložení řádku (hrubá částka, ještě před umořením
+-- pohledávky). Nově se oznamuje jednou, ve chvíli zpracování odměny
+-- (credited_at NULL → vyplněno), kdy je známé: hrubá odměna, umoření
+-- pohledávky a skutečně připsaná MIO. Ekonomika se tím nemění.
+-- ===========================================================================
+create or replace function public._referral_fmt_mio(p_value numeric)
+ returns text
+ language sql
+ immutable
+ set search_path to 'public'
+as $function$
+  -- 15.00 → „15", 7.50 → „7,5"
+  select replace(rtrim(rtrim(round(coalesce(p_value, 0), 1)::text, '0'), '.'), '.', ',');
+$function$;
+
+create or replace function public.notify_referral_reward_multi()
+ returns trigger
+ language plpgsql
+ security definer
+ set search_path to 'public'
+as $function$
+declare
+  v_email    text;
+  v_gross    numeric := coalesce(new.reward_mc, 0);
+  v_offset   numeric := coalesce(new.shortfall_offset_mc, 0);
+  v_credited numeric := coalesce(new.credited_mc, new.reward_mc - coalesce(new.shortfall_offset_mc, 0));
+  v_what     text;
+  v_subject  text;
+  v_body     text;
+  v_message  text;
+  v_event    text;
+begin
+  -- Jen jednou: při zpracování odměny (idempotentní připsání nastaví credited_at jednou).
+  if tg_op <> 'UPDATE' or old.credited_at is not null or new.credited_at is null then
+    return new;
+  end if;
+  if v_gross <= 0 then
+    return new;
+  end if;
+
+  v_what := case new.reward_type when 'first_topup_bonus'
+                 then 'jednorázový bonus za první dobití doporučeného hráče'
+                 else 'odměnu za doporučení' end;
+
+  if v_credited <= 0 then
+    -- Nic nepřipsáno: netvrdit, že uživatel MIO získal.
+    v_event   := 'referral_reward_offset';
+    v_subject := 'Odměna za doporučení byla použita na vyrovnání';
+    v_body    := 'Získali jste ' || v_what || ' ' || public._referral_fmt_mio(v_gross)
+                 || ' MIO. Celá byla použita na vyrovnání dřívějšího storna odměny za doporučení, '
+                 || 'do peněženky se tentokrát nic nepřipsalo.';
+    v_message := 'Odměna ' || public._referral_fmt_mio(v_gross)
+                 || ' MIO za doporučení byla celá použita na vyrovnání dřívějšího storna. Do peněženky se nic nepřipsalo.';
+  elsif v_offset > 0 then
+    -- Část na vyrovnání: oznámit jen skutečně připsanou částku.
+    v_event   := 'referral_reward_earned';
+    v_subject := '🎉 Připsali jsme vám MIO za doporučení';
+    v_body    := 'Do peněženky jsme vám připsali +' || public._referral_fmt_mio(v_credited)
+                 || ' MIO za doporučení. Zbývajících ' || public._referral_fmt_mio(v_offset)
+                 || ' MIO z odměny ' || public._referral_fmt_mio(v_gross)
+                 || ' MIO pokrylo dřívější storno odměny.';
+    v_message := 'Připsali jsme vám +' || public._referral_fmt_mio(v_credited)
+                 || ' MIO za doporučení 🎉 Zbývajících ' || public._referral_fmt_mio(v_offset)
+                 || ' MIO pokrylo dřívější storno odměny.';
+  else
+    v_event   := 'referral_reward_earned';
+    v_subject := '🎉 Získali jste MIO za doporučení';
+    v_body    := 'Získali jste +' || public._referral_fmt_mio(v_credited)
+                 || ' MIO za doporučení. Děkujeme, že pomáháte OneMil růst.';
+    v_message := 'Získali jste +' || public._referral_fmt_mio(v_credited) || ' MIO za doporučení 🎉';
+  end if;
+
+  select email into v_email from auth.users where id = new.referrer_user_id;
+
+  -- 1) E-MAIL (email_queue)
+  if v_email is not null and exists (
+    select 1 from information_schema.tables
+    where table_schema = 'public' and table_name = 'email_queue'
+  ) then
+    insert into public.email_queue (email, subject, body, status, created_at)
+    values (v_email, v_subject, v_body, 'pending', now());
+  end if;
+
+  -- 2) ZPRÁVA DO ZPRÁV (Inbox)
+  if exists (
+    select 1 from information_schema.tables
+    where table_schema = 'public' and table_name = 'messages'
+  ) then
+    insert into public.messages (user_id, sender, content, topic, event, private, created_at)
+    values (new.referrer_user_id, 'system', v_message, 'referral', v_event, true, now());
+  end if;
+
+  return new;
+end;
+$function$;
+
+drop trigger if exists trg_notify_referral_reward_multi on public.referral_rewards;
+create trigger trg_notify_referral_reward_multi
+  after update of credited_at on public.referral_rewards
+  for each row
+  when (old.credited_at is null and new.credited_at is not null)
+  execute function public.notify_referral_reward_multi();
+
+-- ===========================================================================
 -- Oprávnění
 -- ===========================================================================
+revoke all on function public._referral_fmt_mio(numeric) from public, anon;
+revoke all on function public.notify_referral_reward_multi() from public, anon, authenticated;
 revoke all on function public._referral_lock_wallet(uuid) from public, anon, authenticated;
 revoke all on function public._referral_credit_reward(uuid) from public, anon, authenticated;
 revoke all on function public._referral_reward_recompute(uuid) from public, anon, authenticated;

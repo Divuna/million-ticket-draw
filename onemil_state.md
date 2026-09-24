@@ -35,17 +35,19 @@ staging `dxmowysntemfqfnanxua`**. Produkce `xkzhjldrojjlrkezorey` beze změny.
 - Referral trigger přejmenován na `trg_wallet_referral_reward_after_topup` (běží po připsání dobití,
   konzistentní pořadí zámků se refundací).
 - Ruční změna stavu již připsané odměny adminem je zablokovaná (`referral_reward_credited_locked`).
-- **Admin přehledy** (`AdminReferralDashboard`, `AdminReferrals`) i zákaznický `ReferralSection`
+- **Oznámení doporučujícímu** (`notify_referral_reward_multi`) se posílá jednou až při zpracování
+  odměny (trigger `AFTER UPDATE OF credited_at`, dřív `AFTER INSERT`) podle skutečného výsledku:
+  celá připsaná → „Získali jste +X MIO", částečně umořená → jen skutečně připsaná částka + zmínka,
+  že zbytek pokryl dřívější storno, celá umořená → žádné „získali jste", jen vyrovnání storna
+  (`event='referral_reward_offset'`). Zpráva do Zpráv i e-mail. (`AdminReferralDashboard`, `AdminReferrals`) i zákaznický `ReferralSection`
   počítají čistou odměnu po stornech přes `src/lib/referralRewards.ts`.
-- **Ověření:** SQL scénáře `supabase/tests/phase5_player_referral_scenarios.sql` 43/43, regrese
+- **Ověření:** SQL scénáře `supabase/tests/phase5_player_referral_scenarios.sql` 48/48 (vč. oznámení), regrese
   refund bloku 35/35, spec 192 (souběh vč. souběhu odměny s refundací), spec 193 (čisté KPI).
   Rollback `docs/rollback/phase5_player_referral_rollback.sql` ověřen na stagingu (funkce = produkce
   md5, trigger vrácen) a migrace znovu nasazena.
 
 **OPEN ISSUE:** 17 historických produkčních `referral_rewards` (16 `earned`, 1 `blocked`) nebylo
 nikdy připsáno a Fáze 5 je zpětně nepřipisuje (testovací data → předstartovní reset).
-`notify_referral_reward_multi` (mimo rozsah) oznamuje hrubou částku odměny i tehdy, když ji celou
-spotřebovalo umoření pohledávky.
 
 ---
 

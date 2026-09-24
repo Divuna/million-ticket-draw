@@ -90,6 +90,18 @@ async function rewards(db: SupabaseClient, referred: string) {
   return data ?? [];
 }
 
+/** Oznámení odměn za doporučení (zpráva do Zpráv) pro daného doporučujícího. */
+async function referralNotices(db: SupabaseClient, referrer: string): Promise<number> {
+  const { count, error } = await db
+    .from('messages')
+    .select('id', { count: 'exact', head: true })
+    .eq('user_id', referrer)
+    .eq('topic', 'referral')
+    .in('event', ['referral_reward_earned', 'referral_reward_offset']);
+  if (error) throw new Error(error.message);
+  return count ?? 0;
+}
+
 async function consistencyIssuesFor(db: SupabaseClient, userIds: string[]): Promise<number> {
   const { data, error } = await db.rpc('wallet_lot_consistency_issues');
   if (error) throw new Error(error.message);
@@ -127,6 +139,8 @@ test.describe('192 osobní doporučení — souběh a idempotence (staging DB)',
     const rw = await rewards(db, referred);
     expect(rw).toHaveLength(2);
     expect(rw.every((r) => r.lot_id !== null && r.status === 'earned')).toBe(true);
+    // Jedno oznámení na každou odměnu, i když webhook přišel 6× současně.
+    expect(await referralNotices(db, referrer)).toBe(2);
     expect(await consistencyIssuesFor(db, [referrer, referred])).toBe(0);
   });
 
@@ -166,6 +180,8 @@ test.describe('192 osobní doporučení — souběh a idempotence (staging DB)',
     expect(results.every((r) => (r.data as { awarded: boolean }).awarded === false)).toBe(true);
     expect(await balance(db, referrer)).toBe(before);
     expect(await rewards(db, referred)).toHaveLength(2);
+    // Opakované vyhodnocení neposílá další oznámení.
+    expect(await referralNotices(db, referrer)).toBe(2);
   });
 
   test('192d: souběžná příprava refundace → odměna za doporučení odečtena jednou', async () => {

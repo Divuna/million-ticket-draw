@@ -73,6 +73,14 @@ begin
     and type in ('referral_reward', 'referral_first_topup_bonus') and amount = 15;
   r := array_append(r, case when c = 2 then 'PASS' else 'FAIL' end || ' T1 historie MIO: 2× +15');
 
+  -- NT1: odměna 15, bez pohledávky → oznámeno 15 MIO (zpráva i e-mail)
+  select count(*) into c from public.messages where user_id = ua and topic = 'referral'
+    and event = 'referral_reward_earned' and content like 'Získali jste +15 MIO za doporučení%';
+  select count(*) into c2 from public.email_queue e join auth.users au on au.email = e.email
+    where au.id = ua and e.subject = '🎉 Získali jste MIO za doporučení' and e.body like 'Získali jste +15 MIO%';
+  r := array_append(r, case when c = 2 and c2 = 2 then 'PASS' else 'FAIL' end
+                      || ' NT1 odměna 15 bez pohledávky → oznámeno +15 MIO (zprávy ' || c || ', e-maily ' || c2 || ')');
+
   -- T10: samostatné sady, nepeněžní, 12 měsíců
   select count(*) into c from public.wallet_lots l join public.referral_rewards rr on rr.lot_id = l.id
   where rr.payment_id = pb1 and l.user_id = ua and l.payment_id is null
@@ -277,6 +285,29 @@ begin
   select balance_coins into base from public.wallets where user_id = uh;
   r := array_append(r, case when n = 5 and n2 = 10 and n3 = 0 and base = 5 then 'PASS' else 'FAIL' end
                       || ' SF3 další odměna 15 → splaceno 10, připsáno 5, pohledávka 0, zůstatek ' || base);
+
+  -- NT3: odměna 15, pohledávka 25 → nic nepřipsáno, oznámeno vyrovnání (ne „získali jste +15")
+  select count(*) into c from public.messages where user_id = uh and topic = 'referral'
+    and event = 'referral_reward_offset'
+    and content = 'Odměna 15 MIO za doporučení byla celá použita na vyrovnání dřívějšího storna. Do peněženky se nic nepřipsalo.';
+  select count(*) into c2 from public.email_queue e join auth.users au on au.email = e.email
+    where au.id = uh and e.subject = 'Odměna za doporučení byla použita na vyrovnání'
+      and e.body like '%do peněženky se tentokrát nic nepřipsalo.';
+  r := array_append(r, case when c = 1 and c2 = 1 then 'PASS' else 'FAIL' end
+                      || ' NT3 odměna 15 celá na pohledávku → oznámeno 0 připsáno + vyrovnání storna');
+  -- NT2: odměna 15, zbývající pohledávka 10 → oznámeno jen skutečně připsaných 5 MIO
+  select count(*) into c from public.messages where user_id = uh and topic = 'referral'
+    and event = 'referral_reward_earned'
+    and content = 'Připsali jsme vám +5 MIO za doporučení 🎉 Zbývajících 10 MIO pokrylo dřívější storno odměny.';
+  select count(*) into c2 from public.email_queue e join auth.users au on au.email = e.email
+    where au.id = uh and e.body = 'Do peněženky jsme vám připsali +5 MIO za doporučení. Zbývajících 10 MIO z odměny 15 MIO pokrylo dřívější storno odměny.';
+  r := array_append(r, case when c = 1 and c2 = 1 then 'PASS' else 'FAIL' end
+                      || ' NT2 odměna 15 s pohledávkou 10 → oznámeno +5 MIO a krytí storna');
+  -- H má „+15" jen ze dvou plně připsaných odměn od ui; umořené odměny od ui2 hrubou +15 neoznamují.
+  select count(*) into c from public.messages where user_id = uh and topic = 'referral' and content like '%+15 MIO%';
+  select count(*) into c2 from public.messages where user_id = uh and topic = 'referral';
+  r := array_append(r, case when c = 2 and c2 = 4 then 'PASS' else 'FAIL' end
+                      || ' NT2/NT3 hrubá částka +15 se u umořených odměn neoznamuje (+15: ' || c || ', celkem ' || c2 || ')');
   select count(*), coalesce(sum(amount_mc), 0) into c, n from public.referral_shortfall_repayments where referrer_user_id = uh;
   r := array_append(r, case when n = 25 and c >= 2 then 'PASS' else 'FAIL' end
                       || ' SF4 auditní stopa umoření: ' || c || ' řádků, celkem ' || n);
@@ -378,6 +409,19 @@ begin
   -- ===========================================================================
   -- T11: konzistence sad a zůstatků; žádná přímá změna mimo lot cestu
   -- ===========================================================================
+  -- NT4: žádná duplicitní oznámení — přesně jedno oznámení (zpráva + e-mail)
+  --      na každou zpracovanou odměnu, i po opakovaném vyhodnocení, stornu a obnově;
+  --      nezpracovaná historická odměna nic neoznamuje.
+  perform public._referral_credit_reward(id) from public.referral_rewards where referrer_user_id in (ua, uh, uk);
+  select count(*) into c from public.referral_rewards
+    where referrer_user_id in (ua, uh, uk) and credited_at is not null and reward_mc > 0;
+  select count(*) into c2 from public.messages
+    where user_id in (ua, uh, uk) and topic = 'referral' and event in ('referral_reward_earned', 'referral_reward_offset');
+  select count(*) into i from public.email_queue e join auth.users au on au.email = e.email
+    where au.id in (ua, uh, uk);
+  r := array_append(r, case when c = c2 and c = i and c > 0 then 'PASS' else 'FAIL' end
+                      || ' NT4 bez duplicit: zpracované odměny ' || c || ' = zprávy ' || c2 || ' = e-maily ' || i);
+
   select count(*) into c from public.wallet_lot_consistency_issues() i where i.user_id = any(u);
   r := array_append(r, case when c = 0 then 'PASS' else 'FAIL' end || ' T11 testovací uživatelé konzistentní: ' || c);
   select count(*) into c from public.wallet_lot_consistency_issues();
