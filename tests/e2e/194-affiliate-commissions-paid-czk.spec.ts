@@ -48,12 +48,13 @@ async function createUser(db: SupabaseClient): Promise<string> {
   return data.user.id;
 }
 
-async function createAffiliateWithCustomer(db: SupabaseClient) {
+async function createAffiliateWithCustomer(db: SupabaseClient, vatPayer = false) {
   const { data: aff, error } = await db
     .from('affiliate_accounts')
     .insert({
       name: `Spec194 ${rand()}`, email: `spec194-aff-${rand()}@onemil.test`, ref_code: `S194${rand()}`,
       modes: ['influencer'], status: 'approved', commission_rate_customer: 5, commission_rate_company: 5,
+      ...(vatPayer ? { is_vat_payer: true, vat_id: 'CZ12345678' } : {}),
     })
     .select('id')
     .single();
@@ -224,6 +225,14 @@ function pdfTextCandidates(buf: Buffer): string[] {
     }
   }
   return out;
+}
+
+function pdfVatRate(lines: string[]): string | null {
+  for (const l of lines) {
+    const mm = l.match(/Sazba DPH:\s*([0-9]+)\s*%/);
+    if (mm) return `${mm[1]} %`;
+  }
+  return null;
 }
 
 function pdfAmount(lines: string[], label: string): number | null {
@@ -427,6 +436,50 @@ test.describe('194 affiliate provize v Kč (staging DB + kontrakt)', () => {
     console.log('194f outcomes:', outcomes.join(','));
   });
 
+  test('194g: skutečně vytvořené PDF ukazuje sazbu DPH v procentech (21 % / 0 %), částky beze změny', async () => {
+    test.setTimeout(240_000);
+    skipIfNotStaging();
+    test.skip(!PAYOUTS_ENABLED || !SUPABASE_ANON || !ADMIN_EMAIL || !ADMIN_PASSWORD, 'vyžaduje E2E_AFFILIATE_PAYOUTS=1 a admin účet');
+    const db = admin();
+    const adminUser = await adminUserClient();
+
+    const cases = [
+      { vatPayer: true, rate: '21 %', base: 100, total: 121, vat: 21 },
+      { vatPayer: false, rate: '0 %', base: 100, total: 100, vat: 0 },
+    ];
+    for (const cs of cases) {
+      const { affiliateId, customer } = await createAffiliateWithCustomer(db, cs.vatPayer);
+      await topUp(db, customer, 2000, 0); // 5 % z 2 000 Kč = 100 Kč
+      expect((await admin().rpc('calculate_affiliate_commissions_for_month', { p_month: month() })).error).toBeNull();
+      const [row] = await commission(db, affiliateId);
+      expect(Number(row.amount_base_czk)).toBe(cs.base);
+      expect(Number(row.amount_total_czk)).toBe(cs.total);
+      expect((await db.from('affiliate_commissions').update({ status: 'approved' }).eq('id', row.id)).error).toBeNull();
+
+      const res = await adminUser.functions.invoke('create-affiliate-payout-document', { body: { commission_id: row.id } });
+      expect(res.error).toBeFalsy();
+      expect(res.data?.success).toBe(true);
+      const { data: doc } = await db.from('affiliate_payout_documents')
+        .select('amount_base_czk, amount_total_czk, vat_rate, pdf_storage_path, pdf_sha256, email_queue_id, accounting_email_queue_id')
+        .eq('commission_id', row.id).single();
+      expect(Number(doc!.vat_rate)).toBe(cs.vat);
+      expect(Number(doc!.amount_base_czk)).toBe(cs.base);
+      expect(Number(doc!.amount_total_czk)).toBe(cs.total);
+
+      const { data: blob, error: dlErr } = await db.storage.from('affiliate-payout-docs').download(doc!.pdf_storage_path);
+      expect(dlErr).toBeFalsy();
+      const buf = Buffer.from(await blob!.arrayBuffer());
+      expect(createHash('sha256').update(buf).digest('hex')).toBe(doc!.pdf_sha256);
+      const lines = pdfTextCandidates(buf);
+      expect(pdfVatRate(lines)).toBe(cs.rate);
+      expect(pdfAmount(lines, 'Zaklad')).toBe(cs.base);
+      expect(pdfAmount(lines, 'Celkem k vyplate')).toBe(cs.total);
+
+      await db.from('email_queue').delete().in('id', [doc!.email_queue_id, doc!.accounting_email_queue_id]);
+      await db.storage.from('affiliate-payout-docs').remove([doc!.pdf_storage_path]);
+    }
+  });
+
   test('194c: kontrakt — zákaznický základ ze zaplacených Kč, firemní větev beze změny', () => {
     const sql = readFileSync(MIGRATION, 'utf8');
     expect(sql).toContain('pay.paid_amount_czk IS NOT NULL');
@@ -450,6 +503,9 @@ test.describe('194 affiliate provize v Kč (staging DB + kontrakt)', () => {
     const ef = readFileSync('supabase/functions/create-affiliate-payout-document/index.ts', 'utf8');
     expect(ef).not.toMatch(/from\(["']affiliate_commissions["']\)/);
     expect(ef).toContain('amountTotal: Number(prepared.amount_total_czk)');
+    // Sazba DPH je uložená v procentech (21) — PDF ji nesmí násobit stem.
+    expect(ef).toContain('Sazba DPH: ${Math.round(input.vatRate)} %');
+    expect(ef).not.toContain('input.vatRate * 100');
     // Fáze 6 nesahá na peněženky MIO ani na refundační funkce.
     expect(sql).not.toMatch(/update public\.wallets/i);
     expect(sql).not.toMatch(/create or replace function public\.(prepare_stripe_refund|reverse_failed_stripe_refund|finalize_stripe_refund)/i);

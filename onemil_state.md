@@ -72,10 +72,9 @@ provizí stejného affiliate. Jiné provize se nemění a nevzniká záporná pr
 - **Oprava/storno zaplacené partnerské faktury** systém nepodporuje (stav `void` existuje, ale nic do
   něj zaplacenou fakturu nepřevádí, dobropis neexistuje) → firemní provize na opravu faktury nereaguje.
 - ~~Souběh výplatního dokladu (PDF × DB)~~ → vyřešeno snapshotem v prepare (24. 09. 2026).
-- **PDF výplatního dokladu ukazuje špatnou sazbu DPH:** Edge Function `create-affiliate-payout-document`
-  vypisuje `Math.round(vatRate * 100) %`, ale `vat_rate` je v procentech (21) → u plátce DPH „2100 %“
-  (u neplátce „0 %“). Částky na PDF jsou správně. Oprava = `Math.round(vatRate)` v EF (redeploy EF);
-  vědomě neopraveno v rámci Fáze 6.
+- ~~PDF výplatního dokladu ukazuje špatnou sazbu DPH (2100 %)~~ → opraveno (24. 09. 2026): EF
+  `create-affiliate-payout-document` vypisuje `Math.round(vatRate) %`; nasazeno JEN na staging (v37),
+  produkční EF zatím beze změny. Ověřeno testem 194g na skutečně vytvořeném PDF (21 % / 0 %).
 - **Snapshot bez dokončení:** když Edge Function po prepare selže a nikdo doklad znovu nevystaví,
   provize zůstane uzamčená ve stavu `approved` se snapshotem (další pokus vrátí týž snapshot).
 

@@ -187,7 +187,7 @@ async function createPdf(input: {
   draw("Polozka", 48, 12, true);
   draw("Affiliate / obchodni provize OneMil", 48);
   draw(`Zaklad: ${formatCzk(input.amountBase)}`, 48);
-  draw(`Sazba DPH: ${Math.round(input.vatRate * 100)} %`, 48);
+  draw(`Sazba DPH: ${Math.round(input.vatRate)} %`, 48); // vat_rate je uložená v procentech (21 = 21 %)
   draw(`Celkem k vyplate: ${formatCzk(input.amountTotal)}`, 48, 12, true);
   y -= 12;
 
