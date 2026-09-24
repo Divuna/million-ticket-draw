@@ -30,6 +30,10 @@ Firemní provize beze změny (5 % ze zaplacené faktury bez DPH). DPH affiliate 
     evidována (`unapplied_refund_czk`) + audit `affiliate_commission_refund_after_document`,
   - `paid` → totéž, nic se automaticky nemění.
 - Neúspěšná Stripe refundace vrátí provizi i evidenci zpět.
+- Souběh: měsíční výpočet si nejdřív zamkne platby měsíce (`FOR SHARE`), přepočet po refundaci
+  běží pod zámkem platby → pořadí platba → provize (spec 194a odhalil a ověřil opravu uváznutí).
+- Staging CI: přípravný krok `playwright-staging.yml` hledá admin/superadmin E2E účet po stránkách
+  (staging má přes 200 uživatelů kvůli nesmazatelným testovacím účtům).
 - Ověření: SQL scénáře `supabase/tests/phase6_affiliate_commissions_scenarios.sql` 28/28, regrese
   Fáze 5 48/48, refund blok 35/35, spec 194 (souběh výpočtu s refundací), rollback
   `docs/rollback/phase6_affiliate_commissions_rollback.sql` ověřen (funkce = produkce md5).
