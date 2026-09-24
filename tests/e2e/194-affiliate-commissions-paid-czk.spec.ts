@@ -375,20 +375,24 @@ test.describe('194 affiliate provize v Kč (staging DB + kontrakt)', () => {
   });
 
   test('194f: skutečná Edge Function × refundace → PDF = snapshot = DB, selhání Stripe v obou pořadích', async () => {
-    test.setTimeout(300_000);
+    test.setTimeout(420_000);
     skipIfNotStaging();
     test.skip(!PAYOUTS_ENABLED || !SUPABASE_ANON || !ADMIN_EMAIL || !ADMIN_PASSWORD, 'vyžaduje E2E_AFFILIATE_PAYOUTS=1 a admin účet');
     const db = admin();
     const adminUser = await adminUserClient();
     const outcomes: string[] = [];
 
-    for (let round = 0; round < 4; round++) {
+    for (let round = 0; round < 6; round++) {
       const s = await approvedCommissionWithRefundablePayment(db);
       const ef = () => adminUser.functions.invoke('create-affiliate-payout-document', { body: { commission_id: s.commissionId } });
-      const refund = () => admin().rpc('prepare_stripe_refund', { p_payment_id: s.paymentId });
-      const [efRes, refRes] = round % 2 === 0
-        ? await Promise.all([ef(), refund()])
-        : (await Promise.all([refund(), ef()])).reverse() as [Awaited<ReturnType<typeof ef>>, Awaited<ReturnType<typeof refund>>];
+      // kola 0–1: refundace startuje zároveň s dokladem; kola 2–5: refundace přijde až
+      // během generování PDF (po snapshotu v prepare) → nejrizikovější okno přes skutečnou EF
+      const delays = [0, 0, 1200, 2000, 2800, 3500];
+      const refund = async () => {
+        await new Promise((r) => setTimeout(r, delays[round]));
+        return admin().rpc('prepare_stripe_refund', { p_payment_id: s.paymentId });
+      };
+      const [efRes, refRes] = await Promise.all([ef(), refund()]);
       expect(efRes.error).toBeFalsy();
       expect(efRes.data?.success).toBe(true);
       expect(refRes.error).toBeNull();
