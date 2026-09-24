@@ -1,3 +1,9 @@
+# 24. 09. 2026 — Fáze 6 nasazena do produkce
+
+Po schválení Pavla aplikována migrace `20260926100000` na produkci, Edge Function `create-affiliate-payout-document` nasazena (v67, oprava zobrazení sazby DPH, `verify_jwt` ponecháno `false` jako dosud) a `main` posunut na `d2d74c58`. Postcheck i produkční smoke 5/5 v pořádku; firemní provize, cron a MIO beze změny.
+
+---
+
 # 24. 09. 2026 — Fáze 6: atomický výplatní doklad × refundace (JEN STAGING)
 
 Opraven souběh refundace s vystavením výplatního dokladu: dřív `prepare` četl živou částku pro PDF a `finalize` ji do dokladu zapsal znovu, takže refundace mezi nimi mohla vytvořit PDF s jinou částkou než databáze. Nově `prepare_affiliate_payout_document` pod zámkem provize zapíše neměnný snapshot a provizi uzamkne, `finalize_affiliate_payout_document` vkládá doklad jen ze snapshotu; Edge Function se neměnila. Souběh vždy skončí jako „refundace vyhrála“ (doklad 10 Kč, bez recovery) nebo „doklad vyhrál“ (doklad 15 Kč, recovery 5 Kč); částka na PDF ověřena čtením PDF. Nalezena nesouvisející chyba zobrazení sazby DPH na PDF (OPEN ISSUE). Rollback s původními produkčními prepare/finalize znovu ověřen. Produkce nedotčena.

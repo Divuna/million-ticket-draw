@@ -58,7 +58,7 @@ prvních skutečných zákazníků musí proběhnout **jeden řízený kompletn�
 ale to **není důvod je mazat, měnit ani „uklízet" mimochodem**. Jediná povolená cesta k jejich
 odstranění je ten jeden schválený reset.
 
-## FÁZE 6 — AFFILIATE PROVIZE V Kč (24. 09. 2026, JEN STAGING — do produkce NENASAZENO)
+## FÁZE 6 — AFFILIATE PROVIZE V Kč (24. 09. 2026, PRODUKCE)
 
 Migrace `20260926100000_phase6_affiliate_commissions_paid_czk.sql`. Detail: `onemil_state.md` § -9.
 Rollback: `docs/rollback/phase6_affiliate_commissions_rollback.sql`.
@@ -85,6 +85,9 @@ Rollback: `docs/rollback/phase6_affiliate_commissions_rollback.sql`.
   stavět **jen z výstupu prepare** — nikdy znovu nečíst `affiliate_commissions`. Nerušit triggery
   `trg_affiliate_commission_amount_frozen` a `trg_affiliate_payout_snapshot_immutable`. Podmínka
   „měnitelná provize“ = `calculated` nebo `approved` bez `payout_document_id` **a bez `payout_locked_at`**.
+- **`create-affiliate-payout-document` nasazovat do produkce s `--no-verify-jwt`** (produkce má
+  `verify_jwt=false`, autorizaci řeší funkce: JWT + `user_roles.role='superadmin'`). Repo nemá pro
+  funkci záznam v `config.toml`, takže bez přepínače by nasazení tiše přepnulo bránu na `true`.
 - Pořadí zámků je vždy **platba → affiliate → provize**: výpočet zamkne platby měsíce `FOR SHARE`,
   pak `_affiliate_recovery_lock` pro všechny dotčené affiliate, teprve pak maže/vkládá provize;
   refundace drží platbu `FOR UPDATE`, pak `_affiliate_recovery_lock`, pak provize. Globální advisory

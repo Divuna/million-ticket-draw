@@ -6,6 +6,12 @@
 -- Po rollbacku se zákaznická provize opět počítá z payments.amount (MIO vč. bonusu),
 -- refundace provizi neupravují a recovery / umoření z budoucích provizí neexistuje.
 -- Rollback odstraní i tabulky a sloupce Fáze 6 (viz krok 4 — před tím exportovat).
+--
+-- Edge Function create-affiliate-payout-document (není součástí SQL): produkční v65
+-- před Fází 6 = soubor z commitu ef1276b3. Rollback EF:
+--   git show ef1276b3:supabase/functions/create-affiliate-payout-document/index.ts > <soubor>
+--   supabase functions deploy create-affiliate-payout-document --project-ref xkzhjldrojjlrkezorey --no-verify-jwt
+-- (Nová EF funguje i se starými prepare/finalize — liší se jen výpisem sazby DPH.)
 
 begin;
 

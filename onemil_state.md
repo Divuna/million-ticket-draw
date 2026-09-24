@@ -3,12 +3,16 @@
 > **Autoritativní aktuální stav. Poslední aktualizace 24. 9. 2026 — Fáze 5 (osobní doporučení hráčů) nasazena do produkce `xkzhjldrojjlrkezorey` se schválením Pavla. Předtím 23. 9. 2026 refund blok F2 + F3 + F4 a Fáze 1.**
 
 
-## -9. Fáze 6 — affiliate provize v Kč — JEN STAGING, do produkce NENASAZENO (24. 09. 2026)
+## -9. Fáze 6 — affiliate provize v Kč — NASAZENO DO PRODUKCE (24. 09. 2026, schválení Pavla)
 
-Větev `claude/phase6-affiliate-czk`, migrace
-`supabase/migrations/20260926100000_phase6_affiliate_commissions_paid_czk.sql`. Aplikováno **pouze
-na staging `dxmowysntemfqfnanxua`**. Produkce `xkzhjldrojjlrkezorey` beze změny (má 1 firemní
-provizi `paid`, žádnou zákaznickou).
+Migrace `supabase/migrations/20260926100000_phase6_affiliate_commissions_paid_czk.sql` aplikována
+na staging i **produkci `xkzhjldrojjlrkezorey`** (zapsána v `schema_migrations`). Edge Function
+`create-affiliate-payout-document` v produkci verze **67** (`verify_jwt=false` jako v65, autorizaci
+dělá funkce sama: JWT + role superadmin); staging v37. `main` = `d2d74c58` (fast-forward).
+Produkční smoke 5/5. Postcheck: 4 nové tabulky s RLS, 3 triggery, interní funkce bez anon/authenticated,
+firemní provize 0,50 Kč `paid` beze změny, cron beze změny, MIO součet 139 417,81 a 0 nekonzistencí,
+0 výplatních dokladů. Rollback: `docs/rollback/phase6_affiliate_commissions_rollback.sql` + EF viz
+hlavička rollbacku.
 
 **A) Potvrzené obchodní pravidlo (Pavel):** zákaznická provize = 5 % ze skutečně zaplacených Kč
 (`payments.paid_amount_czk`), bonusová MIO se nepočítají (300 Kč / 310 MIO → 15 Kč). Refundace před
