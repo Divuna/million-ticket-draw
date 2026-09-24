@@ -1,13 +1,24 @@
 # OneMil – aktuální stav projektu
 
-> **Autoritativní aktuální stav. Poslední aktualizace 23. 9. 2026 — refund blok F2 + F3 + F4 (MIO sady, FEFO, 12měsíční expirace, refundace v2) nasazen do produkce `xkzhjldrojjlrkezorey` se schválením Pavla. Předchozí: Fáze 1 (integrita soutěží), commit `69990255`.**
+> **Autoritativní aktuální stav. Poslední aktualizace 24. 9. 2026 — Fáze 5 (osobní doporučení hráčů) nasazena do produkce `xkzhjldrojjlrkezorey` se schválením Pavla. Předtím 23. 9. 2026 refund blok F2 + F3 + F4 a Fáze 1.**
 
 
-## -8. Fáze 5 — osobní doporučení hráčů — JEN STAGING, do produkce NENASAZENO (23. 09. 2026)
+## -8. Fáze 5 — osobní doporučení hráčů — NASAZENO DO PRODUKCE (24. 09. 2026, schválení Pavla)
 
-Větev `claude/phase5-player-referral`, migrace
-`supabase/migrations/20260925100000_phase5_player_referral_rewards.sql`. Aplikováno **pouze na
-staging `dxmowysntemfqfnanxua`**. Produkce `xkzhjldrojjlrkezorey` beze změny.
+Větev `claude/phase5-player-referral` (fast-forward do `main`), migrace
+`supabase/migrations/20260925100000_phase5_player_referral_rewards.sql`.
+
+**Produkce `xkzhjldrojjlrkezorey` (24. 9. 2026):** před nasazením ověřeno, že všech 6 měněných
+funkcí má md5 shodné s rollback skriptem a nejsou rozpracované refundace. Migrace aplikována a
+zapsaná jako `20260925100000`. Postcheck: 3 nové tabulky s RLS, 9 nových sloupců, trigger
+`trg_wallet_referral_reward_after_topup`, oznámení na `AFTER UPDATE OF credited_at`, unikátní
+indexy, žádná nová funkce není spustitelná pro `anon`/`authenticated`, všech 13 funkcí md5 shodných
+se stagingem, 17 historických odměn beze změny (checksum stejný, žádná zpětně nepřipsaná), součet
+zůstatků beze změny (139 417,81), nesrovnalosti 0, záporné peněženky 0. Ruční `pg_dump` k dispozici
+nebyl (chybí heslo k DB); migrace nemění existující řádky, návrat přes ověřený rollback. Edge
+Functions se neměnily. Frontend přes merge do `main` a Vercel.
+
+Předtím ověřeno na stagingu `dxmowysntemfqfnanxua`:
 
 - **Opravena chyba:** `create_referral_reward_from_payment` zakládal `referral_rewards`, ale MIO
   nepřipsal (a počítal 5 % z MIO včetně balíčkového bonusu). Produkční reverzní trigger navíc při

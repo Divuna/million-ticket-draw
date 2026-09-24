@@ -467,6 +467,7 @@ Current player reward system:
 - the intended one-time **15 MIO** bonus after the referred user's first paid top-up is **not yet implemented**,
 - therefore neither the 5 % wallet credit nor the 15 MIO first-top-up bonus may be represented as fully live/working until the technical flow is completed and verified,
 - any change to wallet credit/referral payout logic is a money-related production change and requires Pavel's explicit approval before implementation.
+- **Superseded 2026-09-24:** Phase 5 is deployed to production — the 5 % reward and the one-time 15 MIO are now actually credited to the referrer's wallet (see the final rules below).
 
 **Personal referral reward rules — confirmed by Pavel 2026-09-24 (final):**
 - The referrer receives **5 % in MIO of the actually paid CZK** of every completed paid top-up of the referred user, and **one-time 15 MIO** after the referred user's **first** successful paid top-up. Nothing is paid for registration alone.
@@ -477,7 +478,7 @@ Current player reward system:
 - **Notification to the referrer** reports only the MIO actually credited: full reward → „Získali jste +X MIO"; partly used for a shortfall → only the credited amount plus a note that the rest covered an earlier reversal; fully used → no „you received" wording, only that the reward settled an earlier reversal.
 - **Failed Stripe refund:** exactly the referral MIO deducted by that refund are returned and exactly the shortfall created by that refund is cancelled; no other shortfall or reward changes.
 - Historical referral records created before this system (never credited, test data) are not credited retroactively; they are removed by the approved pre-launch reset.
-- Technical state: implemented and verified on **staging only** (Phase 5, 2026-09-24); **not yet deployed to production** — production deployment requires Pavel's explicit approval.
+- Technical state: implemented, verified on staging and **deployed to production on 2026-09-24** with Pavel's approval (Phase 5). Production still runs Stripe in TEST mode.
 
 **Permanent player referral link — confirmed 2026-09-23:**
 - The link between the referring user and the referred user is **permanent**.

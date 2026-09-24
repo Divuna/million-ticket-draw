@@ -1,8 +1,10 @@
-# 23. 09. 2026 — Fáze 5: osobní doporučení hráčů (JEN STAGING)
+# 23.–24. 09. 2026 — Fáze 5: osobní doporučení hráčů (STAGING → PRODUKCE)
 
 Odměny za doporučení se poprvé skutečně připisují: 5 % ze zaplacených Kč každého placeného dobití a jednorázových 15 MIO po prvním dobití, obojí jako samostatné 12měsíční sady MIO přes centrální lot cestu. Opravena chyba, kdy vznikal jen záznam bez MIO, a chyba, kdy storno odečítalo nikdy nepřipsanou odměnu.
 
-24. 9. 2026 Pavel potvrdil finální pravidla a první stagingová verze byla opravena: refundace stornuje poměrně obě odměny (5 % i 15 MIO) podle refundovaných Kč (dřívější „15 MIO jen při plné refundaci" nebylo schválené). Utracenou část storna nelze brát z jiných sad — vzniká pohledávka, kterou umořují budoucí odměny téhož doporučujícího, s auditní stopou. Neúspěšná Stripe refundace vrátí přesně odečtené MIO a zruší přesně pohledávku z dané refundace. Admin KPI počítají čistou odměnu. Oznámení doporučujícímu nově odchází až po zpracování odměny a hlásí jen skutečně připsané MIO (celé umoření = žádné „získali jste", jen vyrovnání storna). Ověřeno na stagingu (48/48 scénářů, souběh včetně odměny s refundací, regrese refund bloku 35/35), produkce nedotčena.
+24. 9. 2026 Pavel potvrdil finální pravidla a první stagingová verze byla opravena: refundace stornuje poměrně obě odměny (5 % i 15 MIO) podle refundovaných Kč (dřívější „15 MIO jen při plné refundaci" nebylo schválené). Utracenou část storna nelze brát z jiných sad — vzniká pohledávka, kterou umořují budoucí odměny téhož doporučujícího, s auditní stopou. Neúspěšná Stripe refundace vrátí přesně odečtené MIO a zruší přesně pohledávku z dané refundace. Admin KPI počítají čistou odměnu. Oznámení doporučujícímu nově odchází až po zpracování odměny a hlásí jen skutečně připsané MIO (celé umoření = žádné „získali jste", jen vyrovnání storna). Ověřeno na stagingu (48/48 scénářů, souběh včetně odměny s refundací, regrese refund bloku 35/35).
+
+24. 9. 2026 po výslovném schválení Pavla nasazeno do produkce: migrace, frontend přes merge do `main`. 17 historických odměn zůstalo nepřipsaných a beze změny, zůstatky se nezměnily, nesrovnalosti 0.
 
 ---
 

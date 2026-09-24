@@ -58,7 +58,7 @@ prvních skutečných zákazníků musí proběhnout **jeden řízený kompletn�
 ale to **není důvod je mazat, měnit ani „uklízet" mimochodem**. Jediná povolená cesta k jejich
 odstranění je ten jeden schválený reset.
 
-## FÁZE 5 — OSOBNÍ DOPORUČENÍ HRÁČŮ (23. 09. 2026, JEN STAGING — do produkce NENASAZENO)
+## FÁZE 5 — OSOBNÍ DOPORUČENÍ HRÁČŮ (24. 09. 2026, PRODUKCE)
 
 Migrace `20260925100000_phase5_player_referral_rewards.sql`. Detail: `onemil_state.md` § -8.
 Rollback: `docs/rollback/phase5_player_referral_rollback.sql`.
