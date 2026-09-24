@@ -264,19 +264,28 @@ begin
   r := array_append(r, case when c = 0 then 'PASS' else 'FAIL' end || ' F2 firemní provize nemá platební vazby (beze změny modelu)');
 
   -- ===========================================================================
-  -- X — křížový případ: stejná platba → affiliate provize v Kč i odměna za doporučení v MIO
+  -- X — křížový případ: hráč s affiliate zdrojem nemůže dostat i hráčské doporučení
+  --     (pravidlo „jeden odměňovaný zdroj přivedení“, migrace 20260927100000) →
+  --     stejná platba vytvoří jen affiliate provizi v Kč, žádnou odměnu v MIO.
   -- ===========================================================================
-  insert into public.referrals (referred_user_id, referrer_user_id, code_used, source, status)
-  values (c10, cref, 'P6REF', 'test', 'active');
+  c := 0;
+  begin
+    insert into public.referrals (referred_user_id, referrer_user_id, code_used, source, status)
+    values (c10, cref, 'P6REF', 'test', 'active');
+  exception when others then
+    c := case when sqlerrm = 'already_attributed_to_other_source' then 1 else 0 end;
+  end;
+  r := array_append(r, case when c = 1 and not exists (select 1 from public.referrals where referred_user_id = c10)
+                         then 'PASS' else 'FAIL' end || ' X0 affiliate zákazník → hráčské doporučení se nepřidá');
   insert into public.payments (user_id, amount, method, status, stripe_session_id, paid_amount_czk, base_mio, bonus_mio, currency, stripe_livemode)
   values (c10, 300, 'stripe', 'completed', 'cs_test_p6_' || gen_random_uuid(), 300, 300, 0, 'czk', false) returning id into pr;
   select count(*) into c from public.referral_rewards where payment_id = pr;
   update public.affiliate_commissions set status = 'calculated' where affiliate_id = a10 and period_month = v_month and commission_type = 'customer_payments';
   res := public.calculate_affiliate_commissions_for_month(v_month);
   select count(*) into cc from public.affiliate_commission_payments where payment_id = pr;
-  r := array_append(r, case when c >= 1 and cc = 1 then 'INFO' else 'INFO' end
+  r := array_append(r, case when c = 0 and cc = 1 then 'PASS' else 'FAIL' end
                       || ' X stejná platba 300 Kč: odměn za doporučení ' || c || ', affiliate vazeb ' || cc
-                      || ' (oba systémy platí současně, žádná priorita — rozhodnutí Pavla)');
+                      || ' (jen vítězný zdroj — affiliate)');
 
   -- ===========================================================================
   -- K — konzistence a bezpečnost

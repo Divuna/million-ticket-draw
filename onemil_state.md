@@ -3,6 +3,43 @@
 > **Autoritativní aktuální stav. Poslední aktualizace 24. 9. 2026 — Fáze 5 (osobní doporučení hráčů) nasazena do produkce `xkzhjldrojjlrkezorey` se schválením Pavla. Předtím 23. 9. 2026 refund blok F2 + F3 + F4 a Fáze 1.**
 
 
+## -10. Jeden odměňovaný zdroj přivedení hráče (24. 09. 2026, JEN STAGING — do produkce NENASAZENO)
+
+**Potvrzené pravidlo (Pavel):** „U hráče může existovat pouze jeden odměňovaný zdroj přivedení:
+affiliate nebo hráčské doporučení. Platí permanentní first-touch — první úspěšně zapsaný zdroj
+zůstává a druhý se už nepřidá.“ Affiliate účet není zdroj přivedení — tentýž člověk může být hráč
+i mít schválený affiliate účet; zákaz affiliate self-referral zůstává.
+
+**Zápisové cesty (zmapováno v produkci i v repu):** `public.referrals` ← jen
+`set_my_referrer_by_code` (`ReferralSection.tsx` ruční kód, `Register.tsx` po registraci,
+`useApplyPendingReferral`); `public.affiliate_customer_refs` ← jen `record_affiliate_customer_ref`
+(`useApplyPendingAffiliateRef`). Přímý zápis: service_role, u affiliate vazeb i admin
+(RLS `aff_customer_refs_admin_write`). Žádná jiná DB funkce ani trigger do tabulek nezapisuje.
+`Register.tsx` ukládá stejné `?ref=` do OBOU pending klíčů, takže obě RPC běží po přihlášení souběžně.
+
+**Technicky (migrace `20260927100000_single_player_acquisition_source.sql`, aplikována jen na
+staging `dxmowysntemfqfnanxua`):**
+- `_acquisition_source_lock(uuid)` — transakční advisory lock na hráče, bez klientských grantů.
+- `set_my_referrer_by_code` (produkční definice + zámek + kontrola affiliate vazby →
+  `rejected:already_attributed_to_other_source`, zapíše `referral_attempts`).
+- `record_affiliate_customer_ref` (produkční definice + zámek + kontrola doporučení →
+  `{status: already_attributed_to_other_source}`).
+- Pojistné triggery `trg_referrals_single_acquisition_source` a
+  `trg_affiliate_customer_refs_single_acquisition_source` (BEFORE INSERT / UPDATE klíče) —
+  zastaví i přímý admin/service_role zápis výjimkou `already_attributed_to_other_source`.
+- Frontend: `ReferralSection.tsx` ukáže srozumitelný toast; registrace a pending hooky nové stavy
+  tiše přijmou (žádná technická chyba).
+
+**Ověřeno na stagingu:** scénáře `supabase/tests/single_acquisition_source_scenarios.sql` 12/12
+(A–D, F–H, přímý zápis, I1/I2 odměna jen podle vítězného zdroje, zámek bez grantů, 0 překryvů);
+regrese Fáze 5 48/48, Fáze 6 29/29 (scénář X přepsán na nové pravidlo), recovery 35/35,
+refund blok 35/35. Rollback `docs/rollback/single_player_acquisition_source_rollback.sql`
+vyzkoušen: po něm staging = produkce (těla funkcí shodná, triggery i pomocné funkce pryč), po
+znovuaplikaci bajtově shodný stav a znovu 159/159. Souběh ověřuje spec 195.
+
+**Produkce před změnou:** `referrals` 2, `affiliate_customer_refs` 0, hráčů s oběma zdroji 0 —
+není co opravovat, nic se nemazalo. **Nasazení vyžaduje schválení Pavla.**
+
 ## -9. Fáze 6 — affiliate provize v Kč — NASAZENO DO PRODUKCE (24. 09. 2026, schválení Pavla)
 
 Migrace `supabase/migrations/20260926100000_phase6_affiliate_commissions_paid_czk.sql` aplikována

@@ -438,6 +438,15 @@ Use instead:
 
 ## 11. User rewards and personal codes
 
+### 11.1 One rewarded acquisition source per player — confirmed 2026-09-24
+
+Confirmed by Pavel: „U hráče může existovat pouze jeden odměňovaný zdroj přivedení: affiliate nebo hráčské doporučení. Platí permanentní first-touch — první úspěšně zapsaný zdroj zůstává a druhý se už nepřidá.“
+
+- A player is brought either by an affiliate (the affiliate earns a CZK commission from the player's paid top-ups) **or** by another player's personal code (the referrer earns the MIO reward) — never both.
+- Whichever source is written first stays permanently; a later code of the other kind is not added and nothing is overwritten. The player sees a plain message, never a technical error.
+- An affiliate account is not an acquisition source. The same person may be a player and also have an approved affiliate account; an affiliate still cannot bring themselves.
+- Technical state: implemented and verified on staging only — **not deployed to production** (production had no player with both sources when checked).
+
 Users are not only passive contestants.
 
 Every user can have a personal OneMil code, public wording should avoid the English word referral.
@@ -591,7 +600,7 @@ An agency can also bring end users through its tracking link or code. Paid top-u
 - A refund adjusts the commission automatically while it is `calculated` or `approved` without a payout document. Once a payout document exists (`ready_to_pay`, `in_payment_batch`) or the commission is `paid`, neither the commission nor the document is changed; a recovery is recorded for that affiliate instead (`affiliate_commission_recoveries`).
 - Every new **customer** commission of the same affiliate first repays open recoveries (oldest first) and only the rest becomes payable; the commission row keeps the gross amount, the repaid part, any returned claim and the net payable amount, and each allocation is kept as an audit trail (`affiliate_commission_recovery_allocations`, `audit_logs`). The net amount never goes below zero and another affiliate is never touched.
 - Recoveries are repaid only from future customer commissions, not from company (invoice) commissions — the company commission stays exactly as before.
-- A customer can currently generate both a 5 % affiliate commission in CZK and a 5 % personal referral reward in MIO from the same payment; no priority or blocking exists. This is recorded, not changed — it needs a separate decision if it should be restricted.
+- *(Superseded 2026-09-24 — see §11.1.)* Earlier note that one payment could generate both an affiliate commission in CZK and a personal referral reward in MIO. A player now has only one rewarded acquisition source.
 
 **C) Open points (not decided, nothing invented):**
 - *(Resolved 2026-09-24 — see the rule above.)* Earlier open point “refund of an already issued / paid commission”.

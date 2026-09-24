@@ -47,8 +47,9 @@ export function useApplyPendingAffiliateRef(userId: string | undefined) {
         }
 
         // The RPC always returns a definitive jsonb status (recorded /
-        // already_attributed / invalid_code / not_eligible / self_referral /
-        // unauthenticated) once it actually runs — any of those means the
+        // already_attributed / already_attributed_to_other_source /
+        // invalid_code / not_eligible / self_referral / unauthenticated)
+        // once it actually runs — any of those means the
         // server made its decision, so the pending code is cleared either way.
         sessionStorage.removeItem(PENDING_AFFILIATE_REF_STORAGE_KEY);
       } catch {

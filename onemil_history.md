@@ -1,3 +1,9 @@
+# 24. 09. 2026 — Jeden odměňovaný zdroj přivedení hráče (JEN STAGING)
+
+Pavel potvrdil: hráč má jen jeden odměňovaný zdroj přivedení — affiliate, nebo hráčské doporučení; platí permanentní first-touch. Zmapovány zápisové cesty (jen `set_my_referrer_by_code` a `record_affiliate_customer_ref`; Register ukládá stejné `?ref=` do obou pending klíčů, takže obě volání běží souběžně). Migrace `20260927100000` přidává zámek hráče, kontrolu druhého systému v obou funkcích a pojistné triggery na obou tabulkách; zákaznický toast místo technické chyby. Staging: scénáře 12/12, regrese 147/147, rollback vyzkoušen. Produkce bez překryvů (2 doporučení, 0 affiliate vazeb) — nic se nemazalo, nic nenasazeno.
+
+---
+
 # 24. 09. 2026 — Fáze 6 nasazena do produkce
 
 Po schválení Pavla aplikována migrace `20260926100000` na produkci, Edge Function `create-affiliate-payout-document` nasazena (v67, oprava zobrazení sazby DPH, `verify_jwt` ponecháno `false` jako dosud) a `main` posunut na `d2d74c58`. Postcheck i produkční smoke 5/5 v pořádku; firemní provize, cron a MIO beze změny.

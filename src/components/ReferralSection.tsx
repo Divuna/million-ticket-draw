@@ -234,6 +234,10 @@ const ReferralSection: React.FC<{ isLoaded: boolean }> = ({ isLoaded }) => {
       } else if (result === 'rejected:already_has_referrer') {
         toast({ title: 'Upozornění', description: 'Již máte přiřazeného doporučitele.', variant: 'destructive' });
         setAlreadyHasReferrer(true);
+      } else if (result === 'rejected:already_attributed_to_other_source') {
+        // Hráč už má jiný odměňovaný zdroj přivedení (affiliate) — platí first-touch.
+        toast({ title: 'Upozornění', description: 'Váš účet už je přiřazen k jinému doporučení. Další kód už nelze přidat.' });
+        setAlreadyHasReferrer(true);
       } else if (result === 'rejected:invalid_code') {
         toast({ title: 'Chyba', description: 'Neplatný doporučovací kód.', variant: 'destructive' });
       } else if (result === 'rejected:self_referral') {

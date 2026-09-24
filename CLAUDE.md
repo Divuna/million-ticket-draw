@@ -58,6 +58,26 @@ prvních skutečných zákazníků musí proběhnout **jeden řízený kompletn�
 ale to **není důvod je mazat, měnit ani „uklízet" mimochodem**. Jediná povolená cesta k jejich
 odstranění je ten jeden schválený reset.
 
+## JEDEN ODMĚŇOVANÝ ZDROJ PŘIVEDENÍ HRÁČE (24. 09. 2026, JEN STAGING — do produkce NENASAZENO)
+
+Migrace `20260927100000_single_player_acquisition_source.sql`. Detail: `onemil_state.md` § -10.
+Rollback: `docs/rollback/single_player_acquisition_source_rollback.sql`.
+
+- Pravidlo Pavla: „U hráče může existovat pouze jeden odměňovaný zdroj přivedení: affiliate nebo
+  hráčské doporučení. Platí permanentní first-touch — první úspěšně zapsaný zdroj zůstává a druhý
+  se už nepřidá.“ Nic se nepřepisuje ani nemaže; historický překryv řeší jen Pavel.
+- Affiliate účet ≠ zdroj přivedení. Neblokovat hráče jen proto, že má affiliate účet; zákaz
+  affiliate self-referral a hráčského self-referral zůstává beze změny.
+- `set_my_referrer_by_code` a `record_affiliate_customer_ref` berou zámek
+  `_acquisition_source_lock(user)` a kontrolují druhý systém (stav
+  `already_attributed_to_other_source`). **Pojistné triggery na `referrals` a
+  `affiliate_customer_refs` nerušit** — jediné zachytí přímý admin/service_role zápis.
+- Nový zápis do kterékoli z těch dvou tabulek musí jít přes tyto funkce, nebo projde triggerem.
+- Register.tsx ukládá stejné `?ref=` do obou pending klíčů — obě RPC běží souběžně; o vítězi
+  rozhoduje zámek. Spec 195 to hlídá.
+- Pozn.: `set_my_referrer_by_code` volá `upsert_user_security_signals` (ne naopak) a stále nesmí
+  dostat `SET search_path`.
+
 ## FÁZE 6 — AFFILIATE PROVIZE V Kč (24. 09. 2026, PRODUKCE)
 
 Migrace `20260926100000_phase6_affiliate_commissions_paid_czk.sql`. Detail: `onemil_state.md` § -9.
