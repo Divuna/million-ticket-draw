@@ -47,6 +47,7 @@ soutěže s MIO bonusy, `/profile` (peněženka, historie, kód, doporučení, h
 viditelné „MioCoin“ v textu ani alt/aria. Stripe TEST: „OneMil MIO“, „525 MIO pro OneMil“. Spec 196 7/7,
 lokální specy 95/95, build OK, refund F2–F4 35/35, `immediate_use_consent_required=false`.
 Dočasné testovací účty po ověření smazány.
+Staging CI: běh `36127406859` (15 specových souborů) 135 passed / 4 failed; po opravě parserů cen (09, 10) a názvu tlačítka (100) běh `36128186775`: 10 a 100 prošly, zbývají jen 05 a 09 — ty selhávají identicky i na `main` (`36128197947`: výsledkový dialog po nákupu tiketu se neobjeví), viz OPEN ISSUE u § -11.
 
 **OPEN ISSUE (vědomě neřešeno, vyžaduje rozhodnutí Pavla):**
 1. **Grafika mince** `src/assets/miocoin.png` (a `public/miocoin-icon.png` ve widgetu) má nápis „MioCoin“ —
@@ -115,7 +116,7 @@ stránky `jak-to-funguje`, `miocoin-–-jak-funguje`, `o-nás`, FAQ a `pravidla-
 (hlídané specy 03/04/05/06/09/17). VOP mají dál jen 10 holých bodů
 (chybí identifikace provozovatele, reklamační řád, ADR/ČOI…) — viz README složky VOP.
 
-**OPEN ISSUE (předexistující, nesouvisí):** staging spec `09-wallet-balance` („balance decreases by
+**OPEN ISSUE (předexistující, nesouvisí):** staging specy `05-win-flow` (dialog „Vyhrál“) a `09-wallet-balance` („balance decreases by
 ticket price after a single ticket purchase“) selhává i na `main` `de592ff7` bez této změny (run
 `36104591335`): po nákupu tiketu se neobjeví `TicketResultModal` a nepřijde GET `/rest/v1/wallets`.
 Pravděpodobně spec neodpovídá současnému nákupu přes kupon (jiný výsledkový dialog); oprava = přepsat
