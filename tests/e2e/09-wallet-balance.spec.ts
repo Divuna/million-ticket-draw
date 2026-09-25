@@ -121,7 +121,7 @@ test.describe('Wallet Balance — Post-Purchase Decrease', () => {
 
     // Parse ticket price from button label: "Uplatnit 10 MioCoinů" → 10
     const buttonText = (await buyButton.textContent()) ?? '';
-    const priceMatch = buttonText.match(/Uplatnit\s+([\d\s  ]+)\s+MioCoin/i);
+    const priceMatch = buttonText.match(/Uplatnit\s+([\d\s  ]+)\s+MIO/i);
     if (!priceMatch) {
       throw new Error(`Could not parse ticket price from buy button text: "${buttonText}"`);
     }

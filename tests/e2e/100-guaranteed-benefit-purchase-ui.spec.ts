@@ -105,7 +105,7 @@ const ORDER_QUANTITY = 1_000_000;
 const TICKET_COUNT   = 1_000_000;
 
 /** Text tlačítka na detailu soutěže — jediný vstup do obou toků. */
-const BUY_BUTTON = `Uplatnit ${TICKET_PRICE} MioCoin`;
+const BUY_BUTTON = `Uplatnit ${TICKET_PRICE} MIO`;
 
 const FLAG_KEY      = 'guaranteed_benefit_purchase_enabled';
 const ALLOWLIST_KEY = 'guaranteed_benefit_purchase_contest_allowlist';

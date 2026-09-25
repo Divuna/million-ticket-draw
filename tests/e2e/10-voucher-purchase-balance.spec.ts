@@ -98,7 +98,7 @@ test.describe('Voucher Purchase — Wallet Balance Decrease', () => {
     await expect(buyButton).toBeVisible({ timeout: 5_000 });
 
     const buttonText = (await buyButton.textContent()) ?? '';
-    const priceMatch = buttonText.match(/Koupit za\s+([\d\s  ]+)\s*(?:MioCoinů|MC)/i);
+    const priceMatch = buttonText.match(/Koupit za\s+([\d\s  ]+)\s*(?:MIO|MC)/i);
     if (!priceMatch) {
       throw new Error(`Could not parse voucher price from buy button text: "${buttonText}"`);
     }
