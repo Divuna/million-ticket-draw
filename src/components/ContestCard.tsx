@@ -79,7 +79,7 @@ export const ContestCard: React.FC<ContestCardProps> = ({
     if (isProcessing) return 'Zpracování...';
     if (contest.status === 'pending') return 'Připravuje se...';
     if (contest.status === 'closed') return 'Ukončena';
-    return `Uplatnit ${contest.ticket_price} MioCoinů`;
+    return `Uplatnit ${contest.ticket_price} MIO`;
   };
 
   const handlePlayClick = (e: React.MouseEvent) => {
@@ -267,7 +267,7 @@ export const ContestCard: React.FC<ContestCardProps> = ({
             <div className="flex flex-col gap-1.5">
               {insufficientFunds && (
                 <p className="contest-card-shortage text-[11px] md:text-xs text-amber-300/95 drop-shadow-md leading-tight px-0.5">
-                  Chybí ti {shortageCoins.toLocaleString('cs-CZ')} MioCoinů
+                  Chybí ti {shortageCoins.toLocaleString('cs-CZ')} MIO
                 </p>
               )}
               <div className="flex items-stretch gap-2">
@@ -305,7 +305,7 @@ export const ContestCard: React.FC<ContestCardProps> = ({
                 disabled={contest.status !== 'active' || (!insufficientFunds && isProcessing) || (insufficientFunds && isNativeApp())}
               >
                 {insufficientFunds ? (
-                  <>{isNativeApp() ? 'Nedostatek MioCoinů' : 'Dobít MioCoiny'}</>
+                  <>{isNativeApp() ? 'Nedostatek MIO' : 'Dobít MIO'}</>
                 ) : (
                   <><OneMilTrophyIcon size={16} className="w-4 h-4 shrink-0" />{getPlayButtonText()}</>
                 )}

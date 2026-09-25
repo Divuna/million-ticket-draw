@@ -61,7 +61,7 @@ test.describe('Voucher Purchase — Wallet Balance Decrease', () => {
     await page.goto(`/contest/${TEST_CONTEST_ID}`);
     await beforeWalletResponse;
 
-    const balanceLabel = page.getByText('Tvůj stav MioCoinů', { exact: true });
+    const balanceLabel = page.getByText('Tvůj stav MIO', { exact: true });
     await expect(balanceLabel).toBeVisible({ timeout: 10_000 });
 
     const balanceParagraph = balanceLabel.locator('xpath=following-sibling::p[1]');
@@ -115,7 +115,7 @@ test.describe('Voucher Purchase — Wallet Balance Decrease', () => {
 
     const successToast = page.locator('[data-sonner-toast]').filter({ hasText: /úspěšně zakoupen/i });
     const errorToast   = page.locator('[data-sonner-toast]').filter({
-      hasText: /Nepodařilo se zakoupit|již zakoupen|Nedostatek MioCoin|není dostupný|žádný kód/i,
+      hasText: /Nepodařilo se zakoupit|již zakoupen|Nedostatek MIO|není dostupný|žádný kód/i,
     });
 
     await expect(
@@ -167,7 +167,7 @@ test.describe('Voucher Purchase — Wallet Balance Decrease', () => {
     await page.goto(`/contest/${TEST_CONTEST_ID}`);
     await walletRefreshResponse;
 
-    const balanceLabelAfter = page.getByText('Tvůj stav MioCoinů', { exact: true });
+    const balanceLabelAfter = page.getByText('Tvůj stav MIO', { exact: true });
     await expect(balanceLabelAfter).toBeVisible({ timeout: 15_000 });
     const balanceParagraphAfter = balanceLabelAfter.locator('xpath=following-sibling::p[1]');
 

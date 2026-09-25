@@ -227,7 +227,7 @@ const PartnerRegister = () => {
               <Building2 className="h-7 w-7 text-[#C96A00]" />
             </div>
             <h2 className="font-heading text-xl font-bold text-[#1A1A1A]">Registrace e-shopu</h2>
-            <p className="mt-1 text-sm text-[#8A8A8A]">Staňte se partnerem OneMil a nabízejte MioCoiny</p>
+            <p className="mt-1 text-sm text-[#8A8A8A]">Staňte se partnerem OneMil a nabízejte MIO</p>
           </div>
 
           <form onSubmit={handleSubmit} className="space-y-4">

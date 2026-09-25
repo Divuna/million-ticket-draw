@@ -117,7 +117,7 @@ test.describe('126 — widget sends order_total_czk', () => {
     ]);
 
     // Cart wording stays an estimate — shipping/discounts can still move the final order.
-    await expect(page.locator('.onemil-mc-widget')).toContainText('Dárek od nás: 24 MioCoinů do soutěží OneMil');
+    await expect(page.locator('.onemil-mc-widget')).toContainText('Dárek od nás: 24 MIO do soutěží OneMil');
   });
 
   test('126b) whole_shop PRODUCT badge: sends unit price as order_total_czk and renders', async ({ page }) => {
@@ -135,7 +135,7 @@ test.describe('126 — widget sends order_total_czk', () => {
     // Without this the badge never appeared for a default-mode partner.
     expect(productCall!.order_total_czk, 'product badge must send the product price').toBe(249);
 
-    await expect(page.locator('.onemil-mc-widget')).toContainText('Za tento produkt získáte 12 MioCoinů');
+    await expect(page.locator('.onemil-mc-widget')).toContainText('Za tento produkt získáte 12 MIO');
   });
 
   test('126c) selected_products badge still uses the per-SKU figure from the engine', async ({ page }) => {
@@ -147,7 +147,7 @@ test.describe('126 — widget sends order_total_czk', () => {
 
     await mountWidget(page, PRODUCT_DOM);
 
-    await expect(page.locator('.onemil-mc-widget')).toContainText('Za tento produkt získáte 10 MioCoinů');
+    await expect(page.locator('.onemil-mc-widget')).toContainText('Za tento produkt získáte 10 MIO');
   });
 
   test('126d) quantity change re-sends an updated order_total_czk', async ({ page }) => {
@@ -187,7 +187,7 @@ test.describe('126 — widget sends order_total_czk', () => {
 
     // Cart: the summary is NOT toggleable and must still render.
     await mountWidget(page, CART_DOM);
-    await expect(page.locator('.onemil-mc-widget')).toContainText('Dárek od nás: 24 MioCoinů do soutěží OneMil');
+    await expect(page.locator('.onemil-mc-widget')).toContainText('Dárek od nás: 24 MIO do soutěží OneMil');
   });
 
   test('126f) widget renders the engine figure verbatim — no reward maths in JS', async ({ page }) => {
@@ -199,7 +199,7 @@ test.describe('126 — widget sends order_total_czk', () => {
     });
 
     await mountWidget(page, CART_DOM);
-    await expect(page.locator('.onemil-mc-widget')).toContainText('4242 MioCoinů');
+    await expect(page.locator('.onemil-mc-widget')).toContainText('4242 MIO');
 
     // Static guard: the only arithmetic allowed is assembling the order value.
     const src = readFileSync(resolve(process.cwd(), 'public/shoptet-widget.js'), 'utf8')

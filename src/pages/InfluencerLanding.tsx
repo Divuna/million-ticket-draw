@@ -122,7 +122,7 @@ const InfluencerLanding = () => {
             <p className="mt-1 text-sm text-[#5B6572]">Přivádíte firmy a e-shopy</p>
             <p className="mt-4 text-sm leading-relaxed text-[#3A3A3A]">
               Doporučujete OneMil firmám a e-shopům. Jakmile je přivedená firma
-              schválena, OneMil jí fakturuje aktivované MioCoiny a vy získáváte
+              schválena, OneMil jí fakturuje aktivovaná MIO a vy získáváte
               provizi z každé faktury, kterou firma skutečně zaplatí.
             </p>
             <p className="mt-4 text-sm font-semibold text-[#1A1A1A]">

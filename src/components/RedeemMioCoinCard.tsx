@@ -29,9 +29,9 @@ export const RedeemMioCoinCard = ({ onRedeemed }: RedeemMioCoinCardProps) => {
   const showResult = useCallback((result: RedeemResult, automatic: boolean) => {
     if (result?.success) {
       toast({
-        title: automatic ? 'MioCoiny uplatněny' : 'Kód uplatněn',
+        title: automatic ? 'MIO uplatněna' : 'Kód uplatněn',
         description: automatic
-          ? `MioCoiny z e-mailového odkazu byly úspěšně uplatněny. Připsáno ${formatMioCoin(Number(result.coins ?? 0))}.`
+          ? `MIO z e-mailového odkazu byla úspěšně uplatněna. Připsáno ${formatMioCoin(Number(result.coins ?? 0))}.`
           : `Kód byl úspěšně uplatněn. Připsáno ${formatMioCoin(Number(result.coins ?? 0))}.`,
       });
       setCode('');
@@ -40,13 +40,13 @@ export const RedeemMioCoinCard = ({ onRedeemed }: RedeemMioCoinCardProps) => {
     }
 
     const msg = MIOCOIN_REDEEM_ERROR_MESSAGES[result?.error ?? ''] ?? 'Nepodařilo se uplatnit kód. Zkuste to znovu.';
-    toast({ title: automatic ? 'MioCoiny nebyly uplatněny' : 'Chyba', description: msg, variant: 'destructive' });
+    toast({ title: automatic ? 'MIO nebyla uplatněna' : 'Chyba', description: msg, variant: 'destructive' });
   }, [onRedeemed]);
 
   const handleRedeem = async () => {
     const trimmed = code.trim();
     if (!trimmed) {
-      toast({ title: 'Chyba', description: 'Zadejte MioCoin kód.', variant: 'destructive' });
+      toast({ title: 'Chyba', description: 'Zadejte MIO kód.', variant: 'destructive' });
       return;
     }
 
@@ -82,7 +82,7 @@ export const RedeemMioCoinCard = ({ onRedeemed }: RedeemMioCoinCardProps) => {
       } catch (err: unknown) {
         console.error('Error automatically redeeming MioCoin code:', err);
         toast({
-          title: 'MioCoiny nebyly uplatněny',
+          title: 'MIO nebyla uplatněna',
           description: err instanceof Error ? err.message : 'Nepodařilo se uplatnit kód z e-mailového odkazu. Zkuste to znovu ručně.',
           variant: 'destructive',
         });
@@ -113,8 +113,8 @@ export const RedeemMioCoinCard = ({ onRedeemed }: RedeemMioCoinCardProps) => {
             <OneMilGiftIcon size={24} className="w-6 h-6 text-black" />
           </div>
           <div>
-            <h2 className="text-xl font-bold text-foreground">Uplatnit MioCoin kód</h2>
-            <p className="text-sm text-muted-foreground">Zadejte MioCoin kód z partnerské akce, kartičky nebo e-mailu a připíšeme vám odměnu do peněženky.</p>
+            <h2 className="text-xl font-bold text-foreground">Uplatnit MIO kód</h2>
+            <p className="text-sm text-muted-foreground">Zadejte MIO kód z partnerské akce, kartičky nebo e-mailu a připíšeme vám odměnu do peněženky.</p>
           </div>
         </div>
 

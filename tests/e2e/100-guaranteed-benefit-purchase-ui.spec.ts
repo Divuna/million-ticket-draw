@@ -576,7 +576,7 @@ test.describe.serial('Spec 100 — mystery kupon (UI)', () => {
 
     // Cena zůstává contests.ticket_price — žádná zvláštní benefitní cena.
     await expect(page.getByRole('button', { name: BUY_BUTTON })).toBeVisible();
-    await expect(page.getByRole('button', { name: /Uplatnit 20 MioCoin/ })).toHaveCount(0);
+    await expect(page.getByRole('button', { name: /Uplatnit 20 MIO/ })).toHaveCount(0);
 
     // Žádná samostatná karta ani identita kuponu před nákupem.
     await expect(page.getByTestId('mystery-result-dialog')).toHaveCount(0);
@@ -1005,7 +1005,7 @@ test.describe.serial('Spec 100 — mystery kupon (UI)', () => {
       await expect(panel).toBeVisible();
       // 2 tahy — ne „2 tahů", ne „2 tah".
       await expect(panel).toContainText('za 2 tahy');
-      await expect(panel).toContainText('Může obsahovat MioCoiny, bonusovou cenu nebo hlavní výhru.');
+      await expect(panel).toContainText('Může obsahovat MIO, bonusovou cenu nebo hlavní výhru.');
 
       // Schválený návrh má panel postupu pod kuponem a obsahuje pětikrokovou osu.
       const distance = page.getByTestId('mystery-result-next-win-distance');

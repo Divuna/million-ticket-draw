@@ -251,16 +251,11 @@
   }
 
   function czPlural(n) {
-    // 1 MioCoin / 2–4 MioCoiny / 5+ MioCoinů / any decimal → MioCoinu
-    var v = czRound1(n);
-    if (Math.round(v * 10) % 10 !== 0) return 'MioCoinu';
-    var whole = Math.abs(Math.round(v));
-    if (whole === 1) return 'MioCoin';
-    if (whole >= 2 && whole <= 4) return 'MioCoiny';
-    return 'MioCoinů';
+    // Veřejný název je nesklonné „MIO“ (stejně jako src/lib/miocoin.ts).
+    return 'MIO';
   }
 
-  // "0,6 MioCoinu" / "1 MioCoin" / "3 MioCoiny" / "5 MioCoinů"
+  // "0,6 MIO" / "1 MIO" / "5 MIO"
   function czCoins(n) {
     return czNumber(n) + ' ' + czPlural(n);
   }

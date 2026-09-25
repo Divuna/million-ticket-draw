@@ -45,8 +45,8 @@ test.describe('Contest Ticket Purchase', () => {
     await page.goto(contestPath);
 
     // Either the "Uplatnit" buy button or the top-up redirect button must appear
-    const buyButton = page.getByRole('button', { name: /Uplatnit.*MioCoin/i });
-    const topUpButton = page.getByRole('button', { name: /Dobít MioCoiny/i });
+    const buyButton = page.getByRole('button', { name: /Uplatnit.*MIO/i });
+    const topUpButton = page.getByRole('button', { name: /Dobít MIO/i });
 
     await expect(buyButton.or(topUpButton).first()).toBeVisible({ timeout: 15_000 });
   });
@@ -58,8 +58,8 @@ test.describe('Contest Ticket Purchase', () => {
 
     await page.goto(`/contest/${TEST_CONTEST_ID}`);
 
-    const buyButton = page.getByRole('button', { name: /Uplatnit.*MioCoin/i });
-    const topUpButton = page.getByRole('button', { name: /Dobít MioCoiny/i });
+    const buyButton = page.getByRole('button', { name: /Uplatnit.*MIO/i });
+    const topUpButton = page.getByRole('button', { name: /Dobít MIO/i });
 
     await expect(buyButton.or(topUpButton).first()).toBeVisible({ timeout: 15_000 });
 

@@ -128,7 +128,7 @@ test.describe('129 — checkout placement never touches the shop CTA', () => {
   test('129a) basket: renders outside the CTA, above the button block', async ({ page }) => {
     await stubPreview(page);
     await mount(page, BASKET_DOM);
-    await expect(page.locator('.onemil-mc-widget')).toContainText('Dárek od nás: 2 MioCoiny do soutěží OneMil');
+    await expect(page.locator('.onemil-mc-widget')).toContainText('Dárek od nás: 2 MIO do soutěží OneMil');
 
     await assertOutsideCta(page);
 
@@ -143,7 +143,7 @@ test.describe('129 — checkout placement never touches the shop CTA', () => {
   test('129b) checkout step: the exact case that used to land inside the button', async ({ page }) => {
     await stubPreview(page);
     await mount(page, CHECKOUT_DOM);
-    await expect(page.locator('.onemil-mc-widget')).toContainText('Dárek od nás: 2 MioCoiny do soutěží OneMil');
+    await expect(page.locator('.onemil-mc-widget')).toContainText('Dárek od nás: 2 MIO do soutěží OneMil');
 
     await assertOutsideCta(page);
 
@@ -173,7 +173,7 @@ test.describe('129 — checkout placement never touches the shop CTA', () => {
   test('129c) even with no .next-step wrapper it stays out of the bare CTA', async ({ page }) => {
     await stubPreview(page);
     await mount(page, BARE_CTA_DOM);
-    await expect(page.locator('.onemil-mc-widget')).toContainText('Dárek od nás: 2 MioCoiny do soutěží OneMil');
+    await expect(page.locator('.onemil-mc-widget')).toContainText('Dárek od nás: 2 MIO do soutěží OneMil');
 
     await assertOutsideCta(page);
     const inBtn = await page.$eval('#orderFormButton', (el) => !!el.querySelector('.onemil-mc-widget'));
@@ -202,7 +202,7 @@ test.describe('129 — checkout placement never touches the shop CTA', () => {
       text: el.textContent!.trim(),
     }));
     expect(val.color, 'the amount is the only highlighted part').toBe('rgb(189, 100, 0)');
-    expect(val.text).toBe('2 MioCoiny');
+    expect(val.text).toBe('2 MIO');
 
     // Outline gift glyph: thin dark stroke, no fill, no background of its own.
     const gift = await page.$eval('.onemil-mc-widget-gift', (el) => {
@@ -261,7 +261,7 @@ test.describe('129 — checkout placement never touches the shop CTA', () => {
 
     // The word "přibližně" was deliberately dropped from this copy.
     const full = await page.$eval('.onemil-mc-widget', (el) => el.textContent!.trim());
-    expect(full).toBe('Dárek od nás: 2 MioCoiny do soutěží OneMil');
+    expect(full).toBe('Dárek od nás: 2 MIO do soutěží OneMil');
     expect(full).not.toContain('přibližně');
   });
 

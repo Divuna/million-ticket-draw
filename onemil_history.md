@@ -1,3 +1,9 @@
+# 25. 09. 2026 — Veřejný název MIO v celé zákaznické aplikaci (JEN STAGING)
+
+Viditelné texty MioCoin → MIO v zákaznické aplikaci, Shoptet widgetu, zákaznických DB textech (e-mail s kódem, notifikace, výherci, voucher, formátovač) a 8 nepravních CMS stránkách na stagingu; technické názvy beze změny. Migrace nahrazuje jen vyjmenované literály v živé definici kvůli driftu staging × produkce. Schválená grafika MIO neexistuje → 4 bannery balíčků na stagingu jen deaktivovány. Zastaveno u 3 právních stránek (pravidla soutěže, GDPR, autorská práva), Boba a grafiky mince — čeká na Pavla. Produkce nedotčena.
+
+---
+
 # 25. 09. 2026 — Veřejný název MIO v nákupní cestě (JEN STAGING)
 
 Pavel potvrdil bod 8 a přejmenování bodu 4 VOP. Dobíjecí panel, rychlé dobití v hlavičce, toast a stránka po zaplacení používají MIO; Stripe produkt „OneMil MIO“ / „N MIO pro OneMil“ (`create-stripe-checkout` staging v30, `verify_jwt` beze změny). Ověřeno reálným Stripe TEST checkoutem. Zjištěno: obrázky bannerů balíčků a CMS stránky dál obsahují „MioCoin“ (OPEN ISSUE); produkční funkce má `verify_jwt=false`. Produkce nedotčena.

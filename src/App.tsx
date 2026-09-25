@@ -217,7 +217,7 @@ function GlobalWinnersRealtimeFeed() {
           const label = winType === 'main'
             ? `${prefix} hlavní výhra`
             : winType === 'miocoin'
-            ? `${prefix} MioCoin výhra`
+            ? `${prefix} MIO výhra`
             : `${prefix} bonusová výhra`;
 
           toast(label, {

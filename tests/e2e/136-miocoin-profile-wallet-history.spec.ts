@@ -49,7 +49,7 @@ test.describe('136 — MioCoin code from an e-mail link', () => {
     expect(redeemClient).toContain('supabase.rpc.bind(supabase)');
     expect(redeemCard).toContain('automaticallyAttemptedCode.current === codeFromUrl');
     expect(redeemCard).toContain('withoutMioCoinCode(location.search)');
-    expect(redeemCard).toContain("title: automatic ? 'MioCoiny uplatněny' : 'Kód uplatněn'");
+    expect(redeemCard).toContain("title: automatic ? 'MIO uplatněna' : 'Kód uplatněn'");
   });
 
   test('an unauthenticated visitor continues from login back to the same profile URL', () => {
@@ -117,8 +117,8 @@ test.describe('136 — customer MioCoin history', () => {
     ]) {
       expect(historyHelpers).toContain(`${entryType}:`);
     }
-    expect(formatSignedMioCoin(31.3)).toBe('+31,3 MioCoinu');
-    expect(formatSignedMioCoin(-20)).toBe('−20 MioCoinů');
+    expect(formatSignedMioCoin(31.3)).toBe('+31,3 MIO');
+    expect(formatSignedMioCoin(-20)).toBe('−20 MIO');
     expect(getMioCoinHistoryLabel({ entry_type: 'miocoin_code_credit', partner_name: 'vereonika sro' }))
       .toBe('Získáno od vereonika sro');
     expect(getMioCoinHistoryLabel({ entry_type: 'ticket_purchase', partner_name: null }))

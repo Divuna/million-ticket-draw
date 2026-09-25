@@ -22,7 +22,7 @@ test.describe('Win Flow', () => {
     await loginViaUI(page, TEST_EMAIL, TEST_PASSWORD);
     await page.goto(`/contest/${WIN_CONTEST_ID}`);
 
-    const buyButton = page.getByRole('button', { name: /Uplatnit.*MioCoin/i });
+    const buyButton = page.getByRole('button', { name: /Uplatnit.*MIO/i });
     await expect(buyButton).toBeVisible({ timeout: 15_000 });
 
     // Every customer purchase now goes exclusively through

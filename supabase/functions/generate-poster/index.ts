@@ -79,7 +79,7 @@ serve(async (req) => {
 - Main Prize: "${contest.main_prize}"
 ${contest.description ? `- Description: "${contest.description}"` : ''}
 ${contest.ticket_count ? `- Total tickets: ${contest.ticket_count.toLocaleString()}` : ''}
-${contest.ticket_price ? `- Ticket price: ${contest.ticket_price} MioCoins` : ''}
+${contest.ticket_price ? `- Ticket price: ${contest.ticket_price} MIO` : ''}
 ${bonusSummary ? `- Bonus prizes: ${bonusSummary}` : ''}
 
 Style requirements:

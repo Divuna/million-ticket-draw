@@ -57,8 +57,8 @@ export function MioCoinHistory({ refreshKey = 0 }: MioCoinHistoryProps) {
     <div className="pt-5 border-t border-[rgba(255,138,0,0.12)]">
       <div className="flex items-center justify-between gap-3 mb-3">
         <div>
-          <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider">Historie MioCoinů</h3>
-          <p className="text-xs text-muted-foreground mt-1">Přehled získaných a použitých MioCoinů</p>
+          <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider">Historie MIO</h3>
+          <p className="text-xs text-muted-foreground mt-1">Přehled získaných a použitých MIO</p>
         </div>
         {entries.length > 3 && (
           <Button
@@ -76,10 +76,10 @@ export function MioCoinHistory({ refreshKey = 0 }: MioCoinHistoryProps) {
       {loading ? (
         <div className="flex items-center gap-2 text-sm text-muted-foreground">
           <Loader2 className="h-4 w-4 animate-spin" />
-          Načítám historii MioCoinů...
+          Načítám historii MIO...
         </div>
       ) : entries.length === 0 ? (
-        <p className="text-sm text-muted-foreground italic">Zatím nemáte žádné pohyby MioCoinů.</p>
+        <p className="text-sm text-muted-foreground italic">Zatím nemáte žádné pohyby MIO.</p>
       ) : (
         <div className={`space-y-2 pr-1 ${expanded ? 'max-h-80 overflow-y-auto' : 'overflow-hidden'}`}>
           {visibleEntries.map((entry, index) => {

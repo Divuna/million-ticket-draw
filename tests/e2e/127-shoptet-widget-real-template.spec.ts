@@ -154,7 +154,7 @@ test.describe('127 — widget matches the real Shoptet template', () => {
     expect(call.items).toEqual([{ code: '49396/ZEL', quantity: 1, unit_price_czk: 50 }]);
     expect(call.order_total_czk).toBe(50);
 
-    await expect(page.locator('.onemil-mc-widget')).toContainText('Za tento produkt získáte 2 MioCoiny');
+    await expect(page.locator('.onemil-mc-widget')).toContainText('Za tento produkt získáte 2 MIO');
   });
 
   test('127a2) Tango product detail: uses the .p-detail-inner fallback without entering the CTA', async ({ page }) => {
@@ -165,7 +165,7 @@ test.describe('127 — widget matches the real Shoptet template', () => {
     expect(captured[0].items).toEqual([{ code: '525/38', quantity: 1, unit_price_czk: 3190 }]);
     expect(captured[0].order_total_czk).toBe(3190);
 
-    await expect(page.locator('.onemil-mc-widget')).toContainText('Za tento produkt získáte 4 MioCoiny');
+    await expect(page.locator('.onemil-mc-widget')).toContainText('Za tento produkt získáte 4 MIO');
     await expect(page.locator('.p-detail-inner > .onemil-mc-widget')).toHaveCount(1);
     await expect(page.locator('.add-to-cart-button .onemil-mc-widget')).toHaveCount(0);
   });
@@ -181,7 +181,7 @@ test.describe('127 — widget matches the real Shoptet template', () => {
     expect(call.order_total_czk).toBe(50);
     expect(call.items?.[0].unit_price_czk, 'must be the after-discount price, not 60').not.toBe(60);
 
-    await expect(page.locator('.onemil-mc-widget')).toContainText('Dárek od nás: 2 MioCoiny do soutěží OneMil');
+    await expect(page.locator('.onemil-mc-widget')).toContainText('Dárek od nás: 2 MIO do soutěží OneMil');
   });
 
   test('127c) cart quantity 3 gives order_total 150', async ({ page }) => {
@@ -191,7 +191,7 @@ test.describe('127 — widget matches the real Shoptet template', () => {
     await expect.poll(() => captured.length, { timeout: 10_000 }).toBeGreaterThan(0);
     expect(captured[0].items).toEqual([{ code: '49396/ZEL', quantity: 3, unit_price_czk: 50 }]);
     expect(captured[0].order_total_czk).toBe(150);
-    await expect(page.locator('.onemil-mc-widget')).toContainText('7 MioCoinů');
+    await expect(page.locator('.onemil-mc-widget')).toContainText('7 MIO');
   });
 
   test('127d) DOM fallback works when the dataLayer is absent', async ({ page }) => {

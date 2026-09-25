@@ -14,17 +14,17 @@ export type MioCoinHistoryEntry = {
 
 export const MIOCOIN_HISTORY_ENTRY_LABELS: Record<string, string> = {
   miocoin_code_credit: 'Získáno z partnerského nákupu',
-  payment_credit: 'Dobití MioCoinů',
-  top_up: 'Dobití MioCoinů',
+  payment_credit: 'Dobití MIO',
+  top_up: 'Dobití MIO',
   ticket_purchase: 'Použito v soutěži',
   benefit_purchase: 'Použito na nákup benefitu',
   voucher_purchase: 'Použito na voucher',
-  refund_debit: 'Vrácení platby MioCoinů',
-  refund_reversal: 'Vrácení MioCoinů po neúspěšné refundaci',
+  refund_debit: 'Vrácení platby za MIO',
+  refund_reversal: 'Vrácení MIO po neúspěšné refundaci',
   bonus_credit: 'Získáno jako bonus',
-  bonus_transfer_to_main: 'Převod bonusových MioCoinů',
-  admin_adjustment: 'Úprava zůstatku MioCoinů',
-  mio_expiry: 'Vypršení platnosti MioCoinů',
+  bonus_transfer_to_main: 'Převod bonusových MIO',
+  admin_adjustment: 'Úprava zůstatku MIO',
+  mio_expiry: 'Vypršení platnosti MIO',
   referral_reward: 'Odměna za doporučení',
   referral_first_topup_bonus: 'Bonus za první dobití doporučeného hráče',
   referral_reversal: 'Vrácení odměny za doporučení',
@@ -37,7 +37,7 @@ export function getMioCoinHistoryLabel(entry: Pick<MioCoinHistoryEntry, 'entry_t
     return `Získáno od ${entry.partner_name}`;
   }
 
-  return MIOCOIN_HISTORY_ENTRY_LABELS[entry.entry_type] ?? 'Pohyb MioCoinů';
+  return MIOCOIN_HISTORY_ENTRY_LABELS[entry.entry_type] ?? 'Pohyb MIO';
 }
 
 export function formatSignedMioCoin(amount: number): string {

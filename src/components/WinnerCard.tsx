@@ -122,7 +122,7 @@ export const WinnerCard = ({
           {prizeImageUrl ? (
             <img src={prizeImageUrl} alt={prizeName} className={`w-full h-full object-contain ${compact ? 'p-1' : 'p-1.5'}`} />
           ) : (
-            <img src={miocoinImage} alt="MioCoin" className={`${compact ? 'w-8 h-8' : 'w-12 h-12'} object-contain animate-coin-pulse`} />
+            <img src={miocoinImage} alt="MIO" className={`${compact ? 'w-8 h-8' : 'w-12 h-12'} object-contain animate-coin-pulse`} />
           )}
         </div>
 

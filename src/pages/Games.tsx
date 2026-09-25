@@ -296,7 +296,7 @@ const Index = () => {
     }
     if (effectiveBalance < contest.ticket_price) {
       const shortage = Math.max(0, Math.ceil(contest.ticket_price - effectiveBalance));
-      toast.error(`Chybí ti ${shortage.toLocaleString('cs-CZ')} MioCoinů`);
+      toast.error(`Chybí ti ${shortage.toLocaleString('cs-CZ')} MIO`);
       purchaseInFlightRef.current = false;
       return;
     }

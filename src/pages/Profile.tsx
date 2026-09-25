@@ -455,13 +455,13 @@ const Profile: React.FC = () => {
 
       toast({
         title: "Úspěch",
-        description: `Převedeno ${bonusBefore.toLocaleString('cs-CZ', { minimumFractionDigits: 0, maximumFractionDigits: 1 })} MioCoinů do hlavní peněženky.`
+        description: `Převedeno ${bonusBefore.toLocaleString('cs-CZ', { minimumFractionDigits: 0, maximumFractionDigits: 1 })} MIO do hlavní peněženky.`
       });
     } catch (error) {
       console.error('Error transferring bonus:', error);
       toast({
         title: "Chyba",
-        description: "Nepodařilo se převést bonusové MioCoiny.",
+        description: "Nepodařilo se převést bonusová MIO.",
         variant: "destructive"
       });
     } finally {
@@ -706,7 +706,7 @@ const Profile: React.FC = () => {
                   <SectionTile icon={<OneMilWalletIcon size={24} className="w-6 h-6 text-black" />} />
                   <div>
                     <h2 className="text-xl font-bold text-foreground">Peněženka</h2>
-                    <p className="text-sm text-muted-foreground">Váš MioCoin účet</p>
+                    <p className="text-sm text-muted-foreground">Váš MIO účet</p>
                   </div>
                 </div>
                 <Button variant="ghost" size="sm" onClick={handleRefreshBalance} disabled={refreshing}
@@ -725,7 +725,7 @@ const Profile: React.FC = () => {
                       <OneMilCoinsIcon size={32} className="h-8 w-8 text-black" />
                     </div>
                     <div className="min-w-0">
-                      <p className="text-xs text-[#c2570a] uppercase tracking-wider mb-0.5">MioCoiny</p>
+                      <p className="text-xs text-[#c2570a] uppercase tracking-wider mb-0.5">MIO</p>
                       <p className="text-4xl lg:text-5xl font-black text-[#FFB547] tabular-nums tracking-tight truncate">
                         {animatedBalance.toLocaleString('cs-CZ', { minimumFractionDigits: 0, maximumFractionDigits: 1 })}
                       </p>
@@ -747,7 +747,7 @@ const Profile: React.FC = () => {
                                 <OneMilInfoIcon size={14} className="h-3.5 w-3.5 text-muted-foreground hover:text-green-500 cursor-help transition-colors" />
                               </TooltipTrigger>
                               <TooltipContent side="top" className="max-w-xs bg-card/95 backdrop-blur-xl border-border/50">
-                                <p className="text-sm">Bonusové MioCoiny získáváte jako odměnu při hraní soutěží. Můžete je převést do hlavní peněženky a použít na otevření tiketů.</p>
+                                <p className="text-sm">Bonusová MIO získáváte jako odměnu při hraní soutěží. Můžete je převést do hlavní peněženky a použít na otevření tiketů.</p>
                               </TooltipContent>
                             </Tooltip>
                           </TooltipProvider>
@@ -761,7 +761,7 @@ const Profile: React.FC = () => {
                       disabled={transferring || (wallet?.bonus_balance_coins ?? 0) === 0}
                       className="w-full bg-green-600 hover:bg-green-500 text-white font-semibold shadow-lg shadow-green-500/15 transition-all duration-200">
                       {transferring ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <OneMilDiamondIcon size={16} className="h-4 w-4 mr-2" />}
-                      Převést bonusové MioCoiny
+                      Převést bonusová MIO
                     </Button>
                   </div>
                 </div>
@@ -774,7 +774,7 @@ const Profile: React.FC = () => {
                     className="flex-1 bg-gradient-to-r from-[#FF8A00] to-[#FFB547] hover:from-[#FFB547] hover:to-[#FF8A00] text-black font-bold shadow-lg shadow-[rgba(255,138,0,0.2)] transition-all duration-200"
                     size="lg">
                     <OneMilCoinsIcon size={20} className="h-5 w-5 mr-2" />
-                    Dobít MioCoiny
+                    Dobít MIO
                   </Button>
                 )}
                 <Button onClick={() => navigate('/my-contests')} variant="outline"
@@ -1305,7 +1305,7 @@ const Profile: React.FC = () => {
               <div className="p-2 rounded-xl bg-[rgba(255,138,0,0.15)]">
                 <OneMilCoinsIcon size={20} className="h-5 w-5 text-[#FF8A00]" />
               </div>
-              Dobít MioCoiny
+              Dobít MIO
             </DialogTitle>
             <DialogDescription>Vyberte balíček nebo zadejte vlastní částku.</DialogDescription>
           </DialogHeader>
@@ -1329,7 +1329,7 @@ const Profile: React.FC = () => {
                       </div>
                       <div>
                         <p className="font-bold text-lg">
-                          {pkg.coins.toLocaleString('cs-CZ')} MioCoinů
+                          {pkg.coins.toLocaleString('cs-CZ')} MIO
                           {pkg.bonus > 0 && (
                             <span className="text-green-500 ml-2 font-semibold">+{pkg.bonus} Bonus</span>
                           )}
@@ -1358,7 +1358,7 @@ const Profile: React.FC = () => {
               />
               {customAmount && parseInt(customAmount) > 0 && (
                 <p className="text-sm text-muted-foreground mt-2">
-                  Obdržíte <span className="text-[#FFB547] font-semibold">{parseInt(customAmount).toLocaleString('cs-CZ')} MioCoinů</span> (bez bonusu)
+                  Obdržíte <span className="text-[#FFB547] font-semibold">{parseInt(customAmount).toLocaleString('cs-CZ')} MIO</span> (bez bonusu)
                 </p>
               )}
             </div>

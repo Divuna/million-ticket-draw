@@ -16,6 +16,7 @@ import { useQueryClient } from '@tanstack/react-query';
 import { Facebook, Download, Share2, X, ChevronRight } from 'lucide-react';
 import logoOnemil from '@/assets/logo-onemil.png';
 import miocoinLogo from '@/assets/miocoin.png';
+import { bonusPrizeDisplayName } from '@/lib/miocoin';
 import auroraIdle from '@/assets/aurora-idle.jpg';
 import auroraWinVideo from '@/assets/aurora-win.mp4';
 import auroraWinPoster from '@/assets/aurora-win-poster.jpg';
@@ -106,7 +107,7 @@ const nextWinTicketText = (n: number): string => {
   return `Další výherní ticket čeká už za ${n.toLocaleString('cs-CZ')} ${tahPlural(n)}.`;
 };
 
-const NEXT_WIN_EXPLAINER = 'Může obsahovat MioCoiny, bonusovou cenu nebo hlavní výhru.';
+const NEXT_WIN_EXPLAINER = 'Může obsahovat MIO, bonusovou cenu nebo hlavní výhru.';
 
 type ShareKind = 'bonus_physical' | 'miocoin' | 'partner_offer' | 'main_prize';
 
@@ -241,7 +242,7 @@ const generatePremiumShareCard = async (opts: ShareCardOptions): Promise<Blob> =
     cursorY += 14;
     ctx.fillStyle = '#FFB547';
     ctx.font = 'bold 38px Poppins, system-ui, -apple-system, sans-serif';
-    ctx.fillText(`+${opts.bonusAmount.toLocaleString('cs-CZ')} MioCoin`, textX, cursorY);
+    ctx.fillText(`+${opts.bonusAmount.toLocaleString('cs-CZ')} MIO`, textX, cursorY);
   }
 
   // Footer CTA (centered bottom)
@@ -381,7 +382,7 @@ export const TicketResultModal: React.FC<TicketResultModalProps> = ({
         imageUrl = miocoinLogo;
         bonusAmount = bonusPrize.amount ?? null;
       }
-      prizeTitle = bonusPrize.title?.trim() || bonusPrize.description || 'Bonusová výhra';
+      prizeTitle = bonusPrizeDisplayName(bonusPrize, 'Bonusová výhra');
     } else {
       return;
     }
@@ -506,7 +507,7 @@ export const TicketResultModal: React.FC<TicketResultModalProps> = ({
 
       toast({
         title: 'Výhra uplatněna!',
-        description: 'MioCoiny byly připsány na tvůj účet.'
+        description: 'MIO byla připsána na tvůj účet.'
       });
 
       queryClient.invalidateQueries({ queryKey: ['wallet'] });
@@ -577,7 +578,7 @@ export const TicketResultModal: React.FC<TicketResultModalProps> = ({
 
   const prizeValueLine =
     !isMainPrize && bonusPrize?.amount != null && bonusPrize.amount > 0
-      ? `${bonusPrize.amount.toLocaleString('cs-CZ')} MioCoinů`
+      ? `${bonusPrize.amount.toLocaleString('cs-CZ')} MIO`
       : null;
 
   // Dominant win-ticket content — same source data the old per-branch blocks used
@@ -597,7 +598,7 @@ export const TicketResultModal: React.FC<TicketResultModalProps> = ({
     winKind === 'main'
       ? 'Hlavní výhra ze soutěže'
       : winKind === 'bonus'
-        ? ((bonusPrize?.amount && bonusPrize.amount > 0) ? 'MioCoiny' : 'Bonusová výhra ze soutěže')
+        ? ((bonusPrize?.amount && bonusPrize.amount > 0) ? 'MIO' : 'Bonusová výhra ze soutěže')
         : winKind === 'partner'
           ? 'Speciální nabídka od partnera'
           : '';
@@ -606,7 +607,7 @@ export const TicketResultModal: React.FC<TicketResultModalProps> = ({
     winKind === 'main'
       ? (result?.won_prize?.trim() || 'Hlavní výhra')
       : winKind === 'bonus'
-        ? (bonusPrize?.title?.trim() || bonusPrize?.description || 'Bonusová výhra')
+        ? bonusPrizeDisplayName(bonusPrize, 'Bonusová výhra')
         : winKind === 'partner'
           ? (result?.partner_offer?.title || result?.partner_offer?.partner_name || 'Speciální nabídka')
           : '';
@@ -615,7 +616,9 @@ export const TicketResultModal: React.FC<TicketResultModalProps> = ({
   // winName výše (bez title fallback na description by se stejný text
   // zobrazil dvakrát pod sebou).
   const bonusDescriptionText: string | null =
-    bonusPrize?.detailed_description || bonusPrize?.description || null;
+    bonusPrize?.detailed_description ||
+    (bonusPrize?.amount && bonusPrize.amount > 0 ? null : bonusPrize?.description) ||
+    null;
 
   // Distance to the nearest real contest prize (bonus or main), excluding partner offers.
   // distance_to_next_bonus = next pending bonus_prizes position minus purchased ticket number (from RPC).
@@ -650,12 +653,9 @@ export const TicketResultModal: React.FC<TicketResultModalProps> = ({
       return `🔥 Vyhrál jsem „${prize}“ na OneMil! Zkus štěstí taky → onemil.cz · ticket #${ticket}`;
     }
     if (bonusPrize) {
-      const name = bonusPrize.title?.trim() || bonusPrize.description || 'bonus';
-      const coins =
-        bonusPrize.amount && bonusPrize.amount > 0
-          ? ` +${bonusPrize.amount.toLocaleString('cs-CZ')} MC`
-          : '';
-      return `🎯 Trefa na OneMil: ${name}${coins}! Hraj i ty → onemil.cz · #${ticket}`;
+      // U MIO výhry už název nese částku („500 MIO“).
+      const name = bonusPrizeDisplayName(bonusPrize, 'bonus');
+      return `🎯 Trefa na OneMil: ${name}! Hraj i ty → onemil.cz · #${ticket}`;
     }
     return getShareText();
   };

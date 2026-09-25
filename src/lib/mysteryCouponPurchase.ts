@@ -123,7 +123,7 @@ export async function purchaseMysteryCoupon(
 export function mysteryErrorMessage(code: string | undefined): string {
   switch (code) {
     case "insufficient_miocoins":
-      return "Nemáš dost MioCoinů.";
+      return "Nemáš dost MIO.";
     case "no_benefit_available":
       return "Kupony jsou právě rozebrané. Zkus to prosím znovu za chvíli.";
     case "contest_not_active":

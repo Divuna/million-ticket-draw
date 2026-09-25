@@ -65,7 +65,7 @@ export const CustomerContestView: React.FC<CustomerContestViewProps> = ({
     if (userWallet.balance_coins < contest.ticket_price) {
       toast({
         title: "Nedostatečný zůstatek",
-        description: "Nemáš dostatek MioCoinů pro nákup ticketu.",
+        description: "Nemáš dostatek MIO pro nákup ticketu.",
         variant: "destructive",
       });
       return;
@@ -149,7 +149,7 @@ export const CustomerContestView: React.FC<CustomerContestViewProps> = ({
                   <span>
                     Cena ticketu:{" "}
                     <span className="font-semibold">
-                      {contest.ticket_price} MioCoin
+                      {contest.ticket_price} MIO
                       {contest.ticket_price === 1 ? "" : "ů"}
                     </span>
                   </span>
@@ -196,19 +196,19 @@ export const CustomerContestView: React.FC<CustomerContestViewProps> = ({
                 >
                   {purchasing
                     ? "Probíhá nákup ticketu…"
-                    : `Uplatnit ${contest.ticket_price} MioCoin${contest.ticket_price === 1 ? "" : "ů"}`}
+                    : `Uplatnit ${contest.ticket_price} MIO`}
                 </Button>
                 <Button
                   variant="outline"
                   className="w-full sm:w-auto border-border/70 bg-background/60"
                   onClick={() => navigate("/wallet")}
                 >
-                  Dobít MioCoiny
+                  Dobít MIO
                 </Button>
                 <span className="text-[11px] text-muted-foreground/80 mt-1 text-center sm:text-right">
                   Zůstatek:{" "}
                   <span className="font-semibold text-foreground">
-                    {userWallet.balance_coins} MioCoin
+                    {userWallet.balance_coins} MIO
                     {userWallet.balance_coins === 1 ? "" : "ů"}
                   </span>
                 </span>
@@ -222,7 +222,7 @@ export const CustomerContestView: React.FC<CustomerContestViewProps> = ({
                 <span>
                   Cena ticketu:{" "}
                   <span className="font-semibold">
-                    {contest.ticket_price} MioCoin
+                    {contest.ticket_price} MIO
                     {contest.ticket_price === 1 ? "" : "ů"}
                   </span>
                 </span>
@@ -288,7 +288,7 @@ export const CustomerContestView: React.FC<CustomerContestViewProps> = ({
           </CardHeader>
           <CardContent className="space-y-4">
             <div className="flex items-center justify-between">
-              <span className="text-sm text-muted-foreground">Zůstatek MioCoinů</span>
+              <span className="text-sm text-muted-foreground">Zůstatek MIO</span>
               <span className="text-lg font-semibold flex items-center gap-2">
                 <Coins className="w-4 h-4 text-[#FFB547]" />
                 {userWallet.balance_coins}
@@ -302,11 +302,11 @@ export const CustomerContestView: React.FC<CustomerContestViewProps> = ({
               onClick={handleBuyTicket}
               disabled={purchasing || contest.status !== "active"}
             >
-              {purchasing ? "Probíhá nákup ticketu…" : "Uplatnit 1 MioCoin"}
+              {purchasing ? "Probíhá nákup ticketu…" : "Uplatnit 1 MIO"}
             </Button>
 
             <Button variant="outline" className="w-full" onClick={() => navigate("/wallet")}>
-              Dobít MioCoiny
+              Dobít MIO
             </Button>
           </CardContent>
         </Card>

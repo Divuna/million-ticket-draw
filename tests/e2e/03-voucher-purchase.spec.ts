@@ -57,7 +57,7 @@ test.describe('Voucher Purchase', () => {
     const dialog = page.getByRole('dialog', { name: 'E2E Spec03 Voucher' });
     await expect(dialog).toBeVisible({ timeout: 10_000 });
 
-    const buyButton = dialog.getByRole('button', { name: /Koupit za\s+5\s+MioCoin/i });
+    const buyButton = dialog.getByRole('button', { name: /Koupit za\s+5\s+MIO/i });
     await expect(buyButton).toBeVisible({ timeout: 10_000 });
     await buyButton.click();
 

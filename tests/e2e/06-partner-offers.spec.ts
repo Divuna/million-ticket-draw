@@ -22,7 +22,7 @@ test.describe('Partner Offer Assignment', () => {
     await detailBtn.click();
     await page.waitForURL(/\/contest\//, { timeout: 10_000 });
 
-    const buyButton = page.getByRole('button', { name: /Uplatnit.*MioCoin/i });
+    const buyButton = page.getByRole('button', { name: /Uplatnit.*MIO/i });
     await expect(buyButton).toBeVisible({ timeout: 15_000 });
 
     // Capture won_type from buy_ticket_atomic RPC response.

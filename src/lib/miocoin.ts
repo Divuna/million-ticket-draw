@@ -54,13 +54,13 @@ export function hasAtMostOneDecimal(value: number): boolean {
  */
 export function validateManualRewardMc(value: number): string | null {
   if (!Number.isFinite(value)) {
-    return 'Zadejte platný počet MioCoinů.';
+    return 'Zadejte platný počet MIO.';
   }
   if (value < MIN_PARTNER_REWARD_MC) {
-    return `Minimální odměna je ${formatMioCoinNumber(MIN_PARTNER_REWARD_MC)} MioCoinu.`;
+    return `Minimální odměna je ${formatMioCoinNumber(MIN_PARTNER_REWARD_MC)} MIO.`;
   }
   if (!hasAtMostOneDecimal(value)) {
-    return 'MioCoiny mohou mít nejvýše jedno desetinné místo (např. 0,5 nebo 1,2).';
+    return 'MIO mohou mít nejvýše jedno desetinné místo (např. 0,5 nebo 1,2).';
   }
   return null;
 }
@@ -84,19 +84,27 @@ export function formatMioCoinNumber(value: number): string {
 }
 
 /**
- * Czech declension of "MioCoin".
- *   1 → MioCoin · 2–4 → MioCoiny · 0 and 5+ → MioCoinů · any decimal → MioCoinu
+ * Veřejný název kreditu je nesklonné „MIO“ (potvrzeno 23. 9. 2026) — pro každé
+ * množství stejný tvar. Název funkce zůstává kvůli volajícím.
  */
-export function mioCoinPlural(value: number): string {
-  const rounded = roundMioCoin(value);
-  if (!Number.isInteger(rounded)) return 'MioCoinu';
-  const n = Math.abs(rounded);
-  if (n === 1) return 'MioCoin';
-  if (n >= 2 && n <= 4) return 'MioCoiny';
-  return 'MioCoinů';
+export function mioCoinPlural(_value: number): string {
+  return 'MIO';
 }
 
-/** Full display string: "0,6 MioCoinu", "1 MioCoin", "3 MioCoiny", "5 MioCoinů". */
+/**
+ * Zobrazovaný název bonusové výhry. MIO výhra (s částkou) se vždy ukáže jako
+ * „N MIO“ — uložený popis v DB nese starý název („N MioCoin“) a nepřepisuje se.
+ */
+export function bonusPrizeDisplayName(
+  prize: { amount?: number | null; title?: string | null; description?: string | null } | null | undefined,
+  fallback: string,
+): string {
+  const amount = Number(prize?.amount ?? 0);
+  if (amount > 0) return formatMioCoin(amount);
+  return prize?.title?.trim() || prize?.description || fallback;
+}
+
+/** Full display string: "0,6 MIO", "1 MIO", "5 MIO". */
 export function formatMioCoin(value: number): string {
   return `${formatMioCoinNumber(value)} ${mioCoinPlural(value)}`;
 }

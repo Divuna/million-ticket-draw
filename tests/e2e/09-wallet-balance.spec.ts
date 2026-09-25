@@ -79,7 +79,7 @@ test.describe('Wallet Balance — Post-Purchase Decrease', () => {
     // ── 1. Wait for wallet section to fully render ────────────────────────────
     // ContestDetail renders: <p class="text-xs text-gray-400">Tvůj stav MioCoinů</p>
     //                        <p class="text-4xl ...">5 000</p>   ← balance number
-    const balanceLabel = page.getByText('Tvůj stav MioCoinů', { exact: true });
+    const balanceLabel = page.getByText('Tvůj stav MIO', { exact: true });
     await expect(balanceLabel).toBeVisible({ timeout: 15_000 });
 
     // ── 2. Read balance before purchase ───────────────────────────────────────
@@ -87,7 +87,7 @@ test.describe('Wallet Balance — Post-Purchase Decrease', () => {
     // XPath following-sibling is the most precise selector here — avoids
     // fragile class names and does not require data-testid.
     const balanceParagraph = page
-      .getByText('Tvůj stav MioCoinů', { exact: true })
+      .getByText('Tvůj stav MIO', { exact: true })
       .locator('xpath=following-sibling::p[1]');
     await expect(balanceParagraph).toBeVisible({ timeout: 5_000 });
 
@@ -95,8 +95,8 @@ test.describe('Wallet Balance — Post-Purchase Decrease', () => {
     const balanceBefore = parseCzechInt(balanceBeforeRaw);
 
     // ── 3. Locate buy button and read ticket price ────────────────────────────
-    const buyButton = page.getByRole('button', { name: /Uplatnit.*MioCoin/i });
-    const topUpButton = page.getByRole('button', { name: /Dobít MioCoiny/i });
+    const buyButton = page.getByRole('button', { name: /Uplatnit.*MIO/i });
+    const topUpButton = page.getByRole('button', { name: /Dobít MIO/i });
 
     // If only top-up button appears, staging wallet balance is insufficient.
     // The staging workflow resets wallet to 5 000 MC before every run — if we

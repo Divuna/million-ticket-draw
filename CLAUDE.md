@@ -180,6 +180,12 @@ Rollback: `docs/rollback/refund_block_rollback.sql`.
 - **Před checkoutem MIO musí být vidět informace `MioPurchaseInfo`** (přesný text schválený Pavlem,
   bez checkboxu) v obou vstupech do checkoutu — dobíjecí panel i rychlé dobití v hlavičce. Hlídá spec 196.
   Znění musí odpovídat bodu 8 VOP; nikde netvrdit, že okamžitým připsáním MIO zaniká právo na odstoupení.
+- **Veřejný název je MIO (nesklonné).** Zákaznické texty píšou „N MIO“; technické názvy (`miocoin`,
+  `MioCoin*` komponenty, RPC, sloupce, slugy, placement klíče `MioCoin balíček – N`) se NEPŘEJMENOVÁVAJÍ.
+  Popis MIO výhry zobrazovat přes `bonusPrizeDisplayName` (z částky), ne z uloženého `description`.
+  DB texty se mění migrací, která nahrazuje jen vyjmenované literály v živé definici (staging × produkce
+  mají drift) — nikdy přepisem celé funkce ze stagingu. Hlídá spec 196g. Grafiku mince s nápisem
+  „MioCoin“ nenahrazovat vlastní tvorbou — jen schváleným originálem.
 - **`create-stripe-checkout` má v produkci `verify_jwt=false`, na stagingu `true`.** Produkční deploy vždy
   s `--no-verify-jwt` (funkce ověřuje JWT sama přes `auth.getUser`). Stripe produkt je „OneMil MIO“.
 - Interní a peněženkové funkce smí volat jen `service_role`; nevracet `anon`/`authenticated`.

@@ -97,7 +97,7 @@ const DeleteAccount: React.FC = () => {
                     Smazání účtu je nevratné. Po smazání ztratíte přístup ke všem vašim datům, včetně:
                   </p>
                   <ul className="list-disc list-inside mt-2 text-sm text-muted-foreground space-y-1">
-                    <li>Zůstatku MioCoinů a bonusů</li>
+                    <li>Zůstatku MIO a bonusů</li>
                     <li>Zakoupených tiketů a historie soutěží</li>
                     <li>Voucherů a výher</li>
                     <li>Historie zpráv a oznámení</li>

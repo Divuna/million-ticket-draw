@@ -142,13 +142,13 @@ test.describe('130 — automatic calculation rounds once, to one decimal', () =>
 
 test.describe('130 — Czech MioCoin formatting', () => {
   test('decimal comma and correct declension', () => {
-    expect(formatMioCoin(0.6)).toBe('0,6 MioCoinu');
-    expect(formatMioCoin(1.2)).toBe('1,2 MioCoinu');
-    expect(formatMioCoin(4.9)).toBe('4,9 MioCoinu');
-    expect(formatMioCoin(1)).toBe('1 MioCoin');
-    expect(formatMioCoin(3)).toBe('3 MioCoiny');
-    expect(formatMioCoin(5)).toBe('5 MioCoinů');
-    expect(formatMioCoin(24.4)).toBe('24,4 MioCoinu');
+    expect(formatMioCoin(0.6)).toBe('0,6 MIO');
+    expect(formatMioCoin(1.2)).toBe('1,2 MIO');
+    expect(formatMioCoin(4.9)).toBe('4,9 MIO');
+    expect(formatMioCoin(1)).toBe('1 MIO');
+    expect(formatMioCoin(3)).toBe('3 MIO');
+    expect(formatMioCoin(5)).toBe('5 MIO');
+    expect(formatMioCoin(24.4)).toBe('24,4 MIO');
   });
 
   test('a whole number keeps no pointless trailing decimal', () => {
@@ -158,10 +158,10 @@ test.describe('130 — Czech MioCoin formatting', () => {
   });
 
   test('plural rules', () => {
-    expect(mioCoinPlural(1)).toBe('MioCoin');
-    expect(mioCoinPlural(2)).toBe('MioCoiny');
-    expect(mioCoinPlural(5)).toBe('MioCoinů');
-    expect(mioCoinPlural(0.6)).toBe('MioCoinu');
+    expect(mioCoinPlural(1)).toBe('MIO');
+    expect(mioCoinPlural(2)).toBe('MIO');
+    expect(mioCoinPlural(5)).toBe('MIO');
+    expect(mioCoinPlural(0.6)).toBe('MIO');
   });
 });
 
@@ -319,7 +319,7 @@ test.describe('130 — the storefront shows the decimal it was given', () => {
     expect(widget).toContain("textNode.textContent = 'Získáte ' + czCoins(coins);");
     expect(widget).toContain('valEl.textContent = czCoins(coins);');
     // Decimal comma + genitive singular, mirroring src/lib/miocoin.ts.
-    expect(widget).toContain("return 'MioCoinu';");
+    expect(widget).toContain("return 'MIO';");
     expect(widget).toContain("replace('.', ',')");
   });
 });

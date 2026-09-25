@@ -1,7 +1,72 @@
 # OneMil – aktuální stav projektu
 
-> **Autoritativní aktuální stav. Poslední aktualizace 25. 9. 2026 — spotřebitelské informace k nákupu MIO (jen staging); jeden odměňovaný zdroj přivedení hráče nasazen do produkce. Předtím 24. 9. 2026 — Fáze 5 (osobní doporučení hráčů) nasazena do produkce `xkzhjldrojjlrkezorey` se schválením Pavla. Předtím 23. 9. 2026 refund blok F2 + F3 + F4 a Fáze 1.**
+> **Autoritativní aktuální stav. Poslední aktualizace 25. 9. 2026 — veřejný název MIO v celé zákaznické aplikaci a spotřebitelské informace k nákupu MIO (jen staging); jeden odměňovaný zdroj přivedení hráče nasazen do produkce. Předtím 24. 9. 2026 — Fáze 5 (osobní doporučení hráčů) nasazena do produkce `xkzhjldrojjlrkezorey` se schválením Pavla. Předtím 23. 9. 2026 refund blok F2 + F3 + F4 a Fáze 1.**
 
+
+## -12. Veřejný název MIO v celé zákaznické aplikaci (25. 09. 2026, JEN STAGING — do produkce NENASAZENO)
+
+Větev `claude/mio-consumer-withdrawal-info` (navazuje na § -11). Viditelné texty „MioCoin/MioCoiny/MioCoinů“
+převedeny na nesklonné „MIO“; technické názvy (komponenty, proměnné, DB sloupce, RPC, URL, slugy,
+analytické eventy, placement klíče `MioCoin balíček – N`) beze změny. `.claude/launch.json` = `main`.
+
+**Kód (zákaznická aplikace):** `src/lib/miocoin.ts` (`mioCoinPlural` → vždy „MIO“, nový
+`bonusPrizeDisplayName` — MIO výhra se zobrazí „N MIO“ z částky, uložený popis „N MioCoin“ v datech se
+nepřepisuje), `miocoinHistory` štítky, ContestCard, ContestDetail (vč. meta popisu a alt textů),
+Games, FavoriteGames, CustomerContestView, MioCoin, MioCoinHistory, MysteryPurchaseResultDialog,
+TicketResultModal (vč. sdílecího textu), MyContestDetail, RedeemMioCoinCard, ReferralSection,
+RecommendShopMailtoCard, VoucherShowcase, Vouchers, Homepage, Profile, DeleteAccount, WinnerCard,
+useRetentionTriggers, mysteryCouponPurchase, App (toast výhry) + veřejné `/influencer` a
+`/partner/register`; Shoptet widget `public/shoptet-widget.js` („Dárek od nás: N MIO…“);
+generátory `generate-contest-description` a `generate-poster` (jen zdroj — na stagingu tyto funkce
+nejsou nasazené, nic se nenasazovalo).
+
+**DB (migrace `20260928100000_public_name_mio_customer_texts.sql`, aplikována JEN na staging):**
+bere živou definici v daném prostředí a nahradí jen vyjmenované literály s kontrolou počtu (staging ×
+produkce mají u 4 funkcí drift, proto žádný přepis celé definice). Funkce: `buy_voucher_atomic`
+(„Nedostatek MIO“), `enqueue_notifications_from_event_logs` („MIO uplatněna“), `format_miocoin_cz`
+(„N MIO“, text e-mailů), `get_latest_winners`/`_public` („N MIO“), `update_partner_order_reward_status`
+(e-mail zákazníkovi s kódem). Ověřeno: po zpětné náhradě md5 = původní definice (změnily se jen texty),
+vlastník, SECURITY DEFINER i ACL beze změny. `process_event_queue_miocoin` záměrně ne (`title='MioCoin'` je
+technická hodnota). Rollback: `docs/rollback/public_name_mio_customer_texts_rollback.sql`.
+
+**CMS (jen staging):** 8 nepravních stránek (info/support) převedeno, patička „MIO – jak funguje“ (slug
+beze změny). Původní obsah: `docs/rollback/public_name_mio_staging_cms_rollback.sql`. Produkční CMS
+se od stagingu u 7 z těchto stránek liší (drift) — produkční publikace se musí připravit z produkčního
+obsahu, ne ze stagingu.
+
+**Obrázky balíčků:** schválená grafika s nápisem MIO v projektu NEEXISTUJE (`src/assets/miocoin.png` i
+`public/miocoin-icon.png` mají v grafice „MioCoin“, brand kit nic jiného nemá). Na STAGINGU proto 4
+bannery jen deaktivovány (`active=false`, obrázky nesmazány) — zobrazí se textový fallback „N MIO“:
+`9cc21e95-93c9-47e5-943b-dedee43f832b` (50), `e470ac31-9d73-4cf6-9acc-288c676c7174` (310),
+`43c1f1b5-9a98-4bc4-bf5b-b2cb4cac341a` (525), `810130e1-6969-458e-a045-ce7b780dbea9` (1280); původně
+všechny `active=true`, bez dat platnosti. Vrácení je v rollback souboru výše.
+
+**Ověřeno na stagingu v prohlížeči:** `/`, `/top-up` (dlaždice „50 MIO / 50 Kč“…), `/games`, detail
+soutěže s MIO bonusy, `/profile` (peněženka, historie, kód, doporučení, hlavička „0 MIO“), `/vouchers`,
+`/wins`, `/winners` („25 MIO“), CMS „MIO – jak funguje“ a FAQ, `/vop` (bod 8 beze změny) — nikde
+viditelné „MioCoin“ v textu ani alt/aria. Stripe TEST: „OneMil MIO“, „525 MIO pro OneMil“. Spec 196 7/7,
+lokální specy 95/95, build OK, refund F2–F4 35/35, `immediate_use_consent_required=false`.
+Dočasné testovací účty po ověření smazány.
+
+**OPEN ISSUE (vědomě neřešeno, vyžaduje rozhodnutí Pavla):**
+1. **Grafika mince** `src/assets/miocoin.png` (a `public/miocoin-icon.png` ve widgetu) má nápis „MioCoin“ —
+   zobrazuje se u výher, na detailu soutěže a ve widgetu. Nutná schválená originální grafika MIO; do té
+   doby zůstává. Obrázky balíčků v produkci totéž.
+2. **Právní CMS stránky** `pravidla-souteze` (staging CMS ≠ zdroj v repu → STOP podle pravidla),
+   `ochrana-osobnich-udaju` (GDPR čeká na schválení sjednoceného dokumentu) a `autorska-prava` (bez zdroje v
+   repu, tvrdí „název interní měny MioCoin“ jako obchodní značku) dál obsahují „MioCoin“.
+3. **Bob (`ai-chat`)** odpovídá s „MioCoin“ — prompt se podle trvalého pravidla nesmí měnit bez
+   samostatného schválení.
+4. **Data:** 288 794 popisů MIO výher v `bonus_prizes` a 727 popisů/pravidel soutěží obsahuje „MioCoin“;
+   UI MIO výhry zobrazuje z částky, popisy soutěží (vč. per-soutěžních pravidel) se nepřepisovaly —
+   vyřeší předstartovní reset / nové soutěže. `distribute-bonus-prizes` a `generate_miocoin_bonus` dál
+   ukládají popisy „N MioCoin“ (UI je nezobrazuje).
+5. **Mimo rozsah:** přihlášený partnerský portál, affiliate dashboard (vč. promo textů), admin,
+   partnerské e-maily/faktury a nepoužívaná `redeem_miocoin`, `AdminContestView`, `CustomerContestView`.
+
+**Nasazení do produkce (po schválení):** merge do `main` (frontend + widget přes Vercel), migrace
+`20260928100000` (bezpečná vůči driftu), produkční CMS podle produkčního obsahu, bannery balíčků
+(deaktivovat nebo nová grafika), případně `generate-contest-description`/`generate-poster`.
 
 ## -11. Spotřebitelské informace k nákupu MIO (25. 09. 2026, JEN STAGING — do produkce NENASAZENO)
 

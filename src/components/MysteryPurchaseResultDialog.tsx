@@ -153,14 +153,14 @@ export function MysteryPurchaseResultDialog({
   const isMioCoinWin = miocoinAmount !== null;
 
   const prizeLabel = isMioCoinWin
-    ? "Získané MioCoiny"
+    ? "Získaná MIO"
     : wonType === "main"
       ? "Hlavní výhra ze soutěže"
       : "Bonusová výhra ze soutěže";
 
   const prizeTitle =
     isMioCoinWin
-      ? `${miocoinAmount.toLocaleString("cs-CZ")} MioCoinů`
+      ? `${miocoinAmount.toLocaleString("cs-CZ")} MIO`
       : wonType === "main"
         ? (contestPrize?.main_prize ?? ticket?.won_prize ?? "Hlavní výhra")
         : (bonusPrize?.title ?? bonusPrize?.description ?? ticket?.won_prize ?? "Bonusová výhra");
@@ -459,7 +459,7 @@ export function MysteryPurchaseResultDialog({
                     .
                   </p>
                   <p className="text-[10px] sm:text-[11px] text-[#94A3B8] mt-1 break-words">
-                    Může obsahovat MioCoiny, bonusovou cenu nebo hlavní výhru.
+                    Může obsahovat MIO, bonusovou cenu nebo hlavní výhru.
                   </p>
                 </div>
                 <p className="hidden sm:block rotate-[-8deg] text-center text-[11px] italic font-bold leading-tight text-[#F97316]">

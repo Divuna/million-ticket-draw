@@ -353,7 +353,7 @@ const ReferralSection: React.FC<{ isLoaded: boolean }> = ({ isLoaded }) => {
           <ul className="space-y-1 text-sm text-muted-foreground">
             <li className="flex items-start gap-2">
               <span className="text-primary mt-0.5">•</span>
-              <span>Za každé <strong className="text-foreground">placené dobití</strong> pozvaného uživatele získáte <strong className="text-primary">5 % v MioCoinech</strong>.</span>
+              <span>Za každé <strong className="text-foreground">placené dobití</strong> pozvaného uživatele získáte <strong className="text-primary">5 % v MIO</strong>.</span>
             </li>
             <li className="flex items-start gap-2">
               <span className="text-primary mt-0.5">•</span>
@@ -365,7 +365,7 @@ const ReferralSection: React.FC<{ isLoaded: boolean }> = ({ isLoaded }) => {
             </li>
             <li className="flex items-start gap-2">
               <span className="text-muted-foreground mt-0.5">•</span>
-              <span>MioCoiny nelze vybrat ani směnit za peníze.</span>
+              <span>MIO nelze vybrat ani směnit za peníze.</span>
             </li>
           </ul>
         </div>

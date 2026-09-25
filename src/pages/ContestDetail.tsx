@@ -363,13 +363,13 @@ export default function ContestDetail() {
       // platit, nesmí nám tu uváznout zámek — tlačítko by zůstalo mrtvé
       // až do znovunačtení stránky.
       console.error('[DEBUG ContestDetail] loadUserBalance failed:', err);
-      toast.error("Nepodařilo se načíst zůstatek MioCoinů.");
+      toast.error("Nepodařilo se načíst zůstatek MIO.");
       requestInFlightRef.current = false;
       return;
     }
     if (contest.status === 'active' && effectiveBalance < contest.ticket_price) {
       const shortage = Math.max(0, Math.ceil(contest.ticket_price - effectiveBalance));
-      toast.error(`Chybí ti ${shortage.toLocaleString('cs-CZ')} MioCoinů`);
+      toast.error(`Chybí ti ${shortage.toLocaleString('cs-CZ')} MIO`);
       requestInFlightRef.current = false;
       return;
     }
@@ -689,7 +689,7 @@ export default function ContestDetail() {
   const PRIMARY_DOMAIN = "https://onemil.cz";
   const canonicalUrl = `${PRIMARY_DOMAIN}/contest/${contest.id}`;
   const fallbackDescription =
-    "OneMil je prémiová platforma spotřebitelských soutěží o exkluzivní a luxusní věcné ceny. Pro využití voucherů a účast ve spotřebitelských soutěžích slouží MioCoin jako interní kredit OneMil.";
+    "OneMil je prémiová platforma spotřebitelských soutěží o exkluzivní a luxusní věcné ceny. Pro využití voucherů a účast ve spotřebitelských soutěžích slouží MIO jako interní kredit OneMil.";
   const cleanDescription = (contest.description ?? "").replace(/\s+/g, " ").trim();
   const metaDescription =
     cleanDescription.length > 0 ? (cleanDescription.length > 170 ? `${cleanDescription.slice(0, 167)}…` : cleanDescription) : fallbackDescription;
@@ -834,10 +834,10 @@ export default function ContestDetail() {
             <img
               src={MIOCOIN_IMAGE_URL}
               className="h-[70%] max-h-20 md:max-h-24 w-auto object-contain flex-shrink-0 drop-shadow-[0_0_16px_rgba(255,138,0,0.25)]"
-              alt="MioCoin"
+              alt="MIO"
             />
             <div className="flex-1 flex flex-col justify-center">
-              <p className="text-xs text-gray-400">Tvůj stav MioCoinů</p>
+              <p className="text-xs text-gray-400">Tvůj stav MIO</p>
               <p className="text-4xl md:text-5xl font-extrabold text-white leading-none mt-1">{balance.toLocaleString("cs-CZ", { minimumFractionDigits: 0, maximumFractionDigits: 1 })}</p>
             </div>
           </div>
@@ -881,14 +881,14 @@ export default function ContestDetail() {
           <style>{`@keyframes liveShimmer { 0%,100% { background-position: -200% center; } 50% { background-position: 200% center; } }`}</style>
           {insufficientFunds && (
             <p className="text-xs text-amber-300/95 font-medium">
-              Chybí ti {shortageCoins.toLocaleString('cs-CZ')} MioCoinů
+              Chybí ti {shortageCoins.toLocaleString('cs-CZ')} MIO
             </p>
           )}
           <div className="flex flex-col sm:flex-row items-stretch gap-3 mt-auto">
             {insufficientFunds ? (
               isNativeApp() ? (
                 <div className="flex-1 h-11 flex items-center justify-center text-sm font-semibold text-amber-300/95">
-                  Nedostatek MioCoinů
+                  Nedostatek MIO
                 </div>
               ) : (
               <Button
@@ -900,7 +900,7 @@ export default function ContestDetail() {
                 variant="premium"
                 className="flex-1 h-11 font-semibold px-5 rounded-full whitespace-nowrap"
               >
-                Dobít MioCoiny
+                Dobít MIO
               </Button>
               )
             ) : (
@@ -916,7 +916,7 @@ export default function ContestDetail() {
                       <span className="h-4 w-4 rounded-full border-2 border-current border-t-transparent animate-spin" />
                       Otevírám…
                     </span>
-                  ) : `Uplatnit ${contest.ticket_price} MioCoin`}
+                  ) : `Uplatnit ${contest.ticket_price} MIO`}
                 </Button>
                 {!isNativeApp() && (
                 <Button
@@ -928,7 +928,7 @@ export default function ContestDetail() {
                   variant="outline"
                   className="flex-1 h-11 bg-[rgba(255,138,0,0.08)] hover:bg-[rgba(255,138,0,0.15)] text-[#FF8A00] border-[rgba(255,138,0,0.3)] font-semibold px-5 rounded-full transition-colors"
                 >
-                  Dobít MioCoiny
+                  Dobít MIO
                 </Button>
                 )}
               </>
@@ -947,7 +947,7 @@ export default function ContestDetail() {
               dalších výher.
             </p>
             <p className="text-xs text-gray-400 leading-relaxed">
-              Z toho <span className="text-[#FFB547] font-semibold">{miocoinBonusPoolTotal.toLocaleString("cs-CZ")} MioCoinů</span>,
+              Z toho <span className="text-[#FFB547] font-semibold">{miocoinBonusPoolTotal.toLocaleString("cs-CZ")} MIO</span>,
               které vám mohou otevřít cestu k dalším soutěžím nebo k nákupu voucherů na krásné slevy u našich partnerů.
             </p>
           </div>
@@ -957,11 +957,11 @@ export default function ContestDetail() {
                 <img
                   src={MIOCOIN_IMAGE_URL}
                   className="h-[70%] max-h-20 md:max-h-24 w-auto object-contain flex-shrink-0 hover:scale-110 transition-transform cursor-pointer drop-shadow-[0_0_24px_rgba(255,138,0,0.3)]"
-                  alt="MioCoin"
+                  alt="MIO"
                 />
               </TooltipTrigger>
               <TooltipContent>
-                <p>MioCoiny můžeš získat otevřením výherního tiketu</p>
+                <p>MIO můžeš získat otevřením výherního tiketu</p>
               </TooltipContent>
             </Tooltip>
           </TooltipProvider>

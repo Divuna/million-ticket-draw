@@ -212,7 +212,7 @@ export const VoucherDetailDialog: React.FC<VoucherDetailDialogProps> = ({
   onPurchase,
   purchaseDisabled = false,
   purchaseLoading = false,
-  purchaseLabel = 'Koupit za 5 MioCoinů',
+  purchaseLabel = 'Koupit za 5 MIO',
 }) => {
   const detailText = voucher ? buildVoucherDetailText(voucher) : null;
   const galleryImages = voucher

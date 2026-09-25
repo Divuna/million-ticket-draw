@@ -312,7 +312,7 @@ const Homepage = () => {
       if (selectedVoucher?.id === voucherId) {
         setSelectedVoucher(null);
       }
-      toast.success("Voucher úspěšně zakoupen za 5 MioCoinů!");
+      toast.success("Voucher úspěšně zakoupen za 5 MIO!");
     } catch (error) {
       console.error("Error purchasing voucher:", error);
       toast.error("Nepodařilo se zakoupit voucher");
@@ -534,11 +534,11 @@ const Homepage = () => {
                 className="customer-premium-orange-heading text-base md:text-lg font-bold tracking-tight"
                 style={{ fontFamily: 'var(--om-font-heading)' }}
               >
-                MioCoiny jako odměna za nákupy
+                MIO jako odměna za nákupy
               </h3>
             </div>
             <p className="text-sm leading-relaxed max-w-[600px] mx-auto mt-2" style={{ color: '#8E98A6' }}>
-              Největší radost máme, když MioCoiny získáváte jako odměnu za nákupy u našich partnerů. Právě na tom je OneMil postavený. Dobití berte jen jako další možnost, když se chcete do soutěže zapojit hned a nechcete čekat na další odměnu z nákupu.
+              Největší radost máme, když MIO získáváte jako odměnu za nákupy u našich partnerů. Právě na tom je OneMil postavený. Dobití berte jen jako další možnost, když se chcete do soutěže zapojit hned a nechcete čekat na další odměnu z nákupu.
             </p>
           </div>
         </section>
@@ -819,7 +819,7 @@ const Homepage = () => {
           <div className="flex items-center justify-between">
             <h3 className="customer-premium-orange-heading text-2xl font-bold text-heading-gold flex items-center gap-2">
               <Handshake className="w-6 h-6" />
-              Naši partneři, kde můžete získat MioCoiny za nákup
+              Naši partneři, kde můžete získat MIO za nákup
             </h3>
           </div>
 
@@ -1055,15 +1055,15 @@ const Homepage = () => {
                 <div className="space-y-4 max-w-2xl mx-auto text-left">
                   <div className="text-base leading-relaxed">
                     <p className="text-foreground font-medium">Nakupujete u partnerských e-shopů</p>
-                    <p className="text-muted-foreground mt-1">Za nákup u zapojených e-shopů můžete získat digitální kredity MioCoiny jako marketingovou odměnu.</p>
+                    <p className="text-muted-foreground mt-1">Za nákup u zapojených e-shopů můžete získat digitální kredity MIO jako marketingovou odměnu.</p>
                   </div>
                   <div className="text-base leading-relaxed">
-                    <p className="text-foreground font-medium">Získáváte MioCoiny za nákup</p>
-                    <p className="text-muted-foreground mt-1">Počet MioCoinů se odvíjí od hodnoty nákupu nebo konkrétních produktů – vždy podle pravidel daného e-shopu.</p>
+                    <p className="text-foreground font-medium">Získáváte MIO za nákup</p>
+                    <p className="text-muted-foreground mt-1">Počet MIO se odvíjí od hodnoty nákupu nebo konkrétních produktů – vždy podle pravidel daného e-shopu.</p>
                   </div>
                   <div className="text-base leading-relaxed">
-                    <p className="text-foreground font-medium">MioCoiny využijete k účasti v soutěžích</p>
-                    <p className="text-muted-foreground mt-1">MioCoiny slouží výhradně k účasti ve spotřebitelských soutěžích o věcné ceny v aplikaci OneMil.</p>
+                    <p className="text-foreground font-medium">MIO využijete k účasti v soutěžích</p>
+                    <p className="text-muted-foreground mt-1">MIO slouží výhradně k účasti ve spotřebitelských soutěžích o věcné ceny v aplikaci OneMil.</p>
                   </div>
                   <div className="text-base leading-relaxed">
                     <p className="text-foreground font-medium">Hrajete o luxusní věcné ceny</p>
@@ -1071,7 +1071,7 @@ const Homepage = () => {
                   </div>
                 </div>
                 <div className="text-xs text-muted-foreground/70 max-w-2xl mx-auto pt-2 space-y-0.5">
-                  <p>MioCoiny nejsou peníze a nelze je vybrat.</p>
+                  <p>MIO nejsou peníze a nelze je vybrat.</p>
                   <p>Soutěže mají předem určené výherní pozice.</p>
                   <p>Výhry jsou výhradně věcné.</p>
                 </div>

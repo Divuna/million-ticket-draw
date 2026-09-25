@@ -326,7 +326,7 @@ const Vouchers: React.FC = () => {
       // Optimistically remove from favorites list immediately (covers oblíbené tab)
       optimisticRemoveByVoucherId(voucherId);
 
-      toast.success(`Voucher úspěšně zakoupen za 5 MioCoinů!`);
+      toast.success(`Voucher úspěšně zakoupen za 5 MIO!`);
       if (selectedVoucher?.id === voucherId) {
         setSelectedVoucher(null);
       }
@@ -660,7 +660,7 @@ const Vouchers: React.FC = () => {
         onPurchase={handleVoucherPurchase}
         purchaseDisabled={isAdmin || selectedVoucherIsPurchased}
         purchaseLoading={purchasingId !== null}
-        purchaseLabel={selectedVoucherIsPurchased ? 'Zakoupeno' : 'Koupit za 5 MioCoinů'}
+        purchaseLabel={selectedVoucherIsPurchased ? 'Zakoupeno' : 'Koupit za 5 MIO'}
       />
 
     </div>

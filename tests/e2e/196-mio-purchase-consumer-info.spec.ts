@@ -8,7 +8,7 @@
  * - refundační logika se nemění (tok prepare → Stripe → record → finalize/reverse).
  */
 import { expect, test } from '@playwright/test';
-import { readFileSync } from 'node:fs';
+import { readFileSync, readdirSync } from 'node:fs';
 
 const read = (p: string) => readFileSync(p, 'utf8').replace(/\r\n/g, '\n');
 
@@ -73,6 +73,41 @@ test.describe('196 spotřebitelská informace k nákupu MIO (kontrakt)', () => {
     // cena a bonusy beze změny
     expect(ef).toContain('50: 50,\n  300: 310,\n  500: 525,\n  1200: 1280,');
     expect(ef).toContain('const unitAmountHalere = priceInCzk * 100');
+  });
+
+  test('196g: zákaznická aplikace, widget a zákaznické DB texty nepoužívají veřejně „MioCoin“', () => {
+    // Zákaznické soubory (admin, partnerský portál, affiliate a testy jsou mimo rozsah).
+    // Mimo rozsah: admin, partnerský portál, affiliate, interní testy, technické mapy a nepoužívané AdminContestView.
+    const EXCLUDED = /\/Admin|\/admin\/|\/partner\/|\/tests\/|ContestDetailAdmin|useAdminPermissions|Partner(?!Register)|Affiliate|InfluencerPromo|paymentReporting|usePlacementBanners|shoptetGuide|partnerRewardCodeStats/;
+    const walk = (dir: string): string[] =>
+      readdirSync(dir, { withFileTypes: true }).flatMap((e) =>
+        e.isDirectory() ? walk(`${dir}/${e.name}`) : /\.(tsx?|js)$/.test(e.name) ? [`${dir}/${e.name}`] : []);
+    const offenders: string[] = [];
+    for (const f of walk('src').filter((f) => !EXCLUDED.test(f))) {
+      const code = read(f).replace(/\/\*[\s\S]*?\*\//g, '');
+      code.split('\n').forEach((raw, i) => {
+        const line = raw.replace(/(^|\s)\/\/.*$/, '');
+        if (/^\s*import\s|console\.|from ['"]/.test(line)) return;
+        // „MioCoin“ jako samostatné slovo (ne součást identifikátoru jako useMioCoinCheckout, <MioCoin, @/components/MioCoin)
+        for (const m of line.matchAll(/(?<![A-Za-z_./<@])MioCoin(?![A-Z_(])([a-zěščřžýáíéůú]*)(.?)/g)) {
+          if (m[1] === '' && /[:;]/.test(m[2])) continue; // const MioCoin: … / export default MioCoin;
+          offenders.push(`${f}:${i + 1}: ${line.trim().slice(0, 90)}`);
+        }
+      });
+    }
+    expect(offenders).toEqual([]);
+
+    const widget = read('public/shoptet-widget.js');
+    expect(widget).toContain("return 'MIO';");
+    expect(widget.replace(/\/\*[\s\S]*?\*\//g, '').replace(/^\s*\/\/.*$/gm, '')).not.toMatch(/'[^']*MioCoin[^']*'/);
+
+    const mig = read('supabase/migrations/20260928100000_public_name_mio_customer_texts.sql');
+    for (const s of ["'''Nedostatek MIO'''", "'''MIO uplatněna'''", "''' MIO'''", "'Máte připravené MIO</h1>'", "'Váš MIO kód'", "'Uplatnit MIO</a>'", "'''Máte připravené MIO od OneMil'''"]) {
+      expect(mig).toContain(s);
+    }
+    expect(mig).not.toContain('process_event_queue_miocoin(');
+    expect(read('supabase/functions/generate-contest-description/index.ts')).toContain('`- Cena tiketu: ${ticket_price} MIO`');
+    expect(read('supabase/functions/generate-poster/index.ts')).toContain('`- Ticket price: ${contest.ticket_price} MIO`');
   });
 
   test('196e: aktivní nákupní cesta netvrdí ztrátu práva na odstoupení', () => {

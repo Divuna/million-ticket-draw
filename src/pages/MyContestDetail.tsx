@@ -1,3 +1,4 @@
+import { bonusPrizeDisplayName } from "@/lib/miocoin";
 import React, { useEffect, useState } from 'react';
 import { useParams, Navigate, useNavigate } from 'react-router-dom';
 import { useAuth } from '@/hooks/useAuth';
@@ -159,7 +160,7 @@ const MyContestDetail: React.FC = () => {
         } else if (win.type === 'bonus') {
           // Resolve bonus prize by winner.prize_id instead of bonus_prizes.status
           const bonusPrize = bonusPrizes.find(bp => bp.id === win.prize_id);
-          description = bonusPrize?.description || 'Bonusová cena';
+          description = bonusPrizeDisplayName(bonusPrize, 'Bonusová cena');
         }
 
         wins.push({
