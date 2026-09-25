@@ -174,8 +174,12 @@ Rollback: `docs/rollback/refund_block_rollback.sql`.
   `prepare → Stripe → record → finalize/reverse` zachovat.
 - **Webhook musí zapisovat `paid_amount_czk`, `base_mio`, `bonus_mio`, `stripe_livemode`.**
   `payments.amount` zůstává = celkem připsaná MIO (referral/affiliate beze změny).
-- **Souhlas s okamžitým použitím MIO zůstává vypnutý**, dokud Pavel/právník nedodá schválené znění.
-  Text nevymýšlet.
+- **Souhlas s okamžitým použitím MIO se NEZAPÍNÁ** (`immediate_use_consent_required=false`, rozhodnutí
+  Pavla 25. 9. 2026 podle stanoviska CPC 2025: u nevyužité virtuální měny nelze plošně vyloučit
+  14denní odstoupení). Infrastrukturu nemazat, jen nechat vypnutou; nevyžadovat vzdání se práva.
+- **Před checkoutem MIO musí být vidět informace `MioPurchaseInfo`** (přesný text schválený Pavlem,
+  bez checkboxu) v obou vstupech do checkoutu — dobíjecí panel i rychlé dobití v hlavičce. Hlídá spec 196.
+  Znění musí odpovídat bodu 8 VOP; nikde netvrdit, že okamžitým připsáním MIO zaniká právo na odstoupení.
 - Interní a peněženkové funkce smí volat jen `service_role`; nevracet `anon`/`authenticated`.
 
 ## FÁZE 1 — INTEGRITA SOUTĚŽÍ (23. 09. 2026, PRODUKCE) — TRVALÉ INVARIANTY

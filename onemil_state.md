@@ -1,7 +1,38 @@
 # OneMil – aktuální stav projektu
 
-> **Autoritativní aktuální stav. Poslední aktualizace 25. 9. 2026 — jeden odměňovaný zdroj přivedení hráče nasazen do produkce. Předtím 24. 9. 2026 — Fáze 5 (osobní doporučení hráčů) nasazena do produkce `xkzhjldrojjlrkezorey` se schválením Pavla. Předtím 23. 9. 2026 refund blok F2 + F3 + F4 a Fáze 1.**
+> **Autoritativní aktuální stav. Poslední aktualizace 25. 9. 2026 — spotřebitelské informace k nákupu MIO (jen staging); jeden odměňovaný zdroj přivedení hráče nasazen do produkce. Předtím 24. 9. 2026 — Fáze 5 (osobní doporučení hráčů) nasazena do produkce `xkzhjldrojjlrkezorey` se schválením Pavla. Předtím 23. 9. 2026 refund blok F2 + F3 + F4 a Fáze 1.**
 
+
+## -11. Spotřebitelské informace k nákupu MIO (25. 09. 2026, JEN STAGING — do produkce NENASAZENO)
+
+**Rozhodnutí Pavla:** podle stanoviska sítě CPC (2025) k virtuálním měnám nelze u nevyužité
+virtuální měny plošně vyloučit 14denní odstoupení. `immediate_use_consent_required` zůstává `false`,
+dialog souhlasu se nezapíná (infrastruktura zůstává, nic se nemazalo).
+
+**Změněno (větev `claude/mio-consumer-withdrawal-info`):**
+- `src/components/MioPurchaseInfo.tsx` — informace před checkoutem (přesný text, odkaz na `/vop`,
+  bez checkboxu), vložená do dobíjecího panelu (`MioCoinTopUpSection`) i do rychlého dobití
+  v hlavičce (`Header`, dropdown rozšířen na `w-72`).
+- VOP: zdroj `docs/pravni-dokumenty/VSEOBECNE_OBCHODNI_PODMINKY/VSEOBECNE_OBCHODNI_PODMINKY.md` —
+  bod 8 „Zakoupený kredit nelze vrátit.“ nahrazen novým zněním (nadpis „Vrácení platby za MIO“),
+  bod 4 přejmenován z „MioCoin“ na „MIO“. Stejný text publikován JEN do stagingového
+  `content_pages` (`legal`/`vop`, md5 `5b42b21c…`, 1206 znaků; UPDATE hlídaný md5 původního textu).
+- Spec `tests/e2e/196-mio-purchase-consumer-info.spec.ts` (5 kontraktních testů).
+
+**Ověřeno na stagingu:** text viditelný na `/top-up` pod balíčky (0 checkboxů, odkaz `/vop`), `/vop`
+zobrazuje nový bod 8 a už ne „nelze vrátit“, žádná jiná aktivní CMS stránka netvrdí nevratnost,
+`immediate_use_consent_required=false`, refund scénáře F2–F4 35/35, build OK, spec 196 5/5.
+Refundační logika (DB funkce, Edge Functions, migrace) beze změny.
+
+**Produkce beze změny:** VOP md5 `ba3f4b02…` (starý bod 8), souhlas `false`.
+
+**Nasazení do produkce (po schválení):** merge větve do `main` (frontend přes Vercel) + stejný
+UPDATE produkčního `content_pages` hlídaný md5 `ba3f4b02…`. Žádná migrace ani Edge Function.
+
+**OPEN ISSUE (vědomě neřešeno):** Stripe produkt v `create-stripe-checkout` se dál jmenuje
+„OneMil MioCoiny“ / „N MioCoinů pro OneMil“ a dobíjecí panel říká „MioCoiny“ — veřejný název je MIO;
+změna vyžaduje redeploy Edge Function a úpravu UI textů. VOP mají dál jen 10 holých bodů
+(chybí identifikace provozovatele, reklamační řád, ADR/ČOI…) — viz README složky VOP.
 
 ## -10. Jeden odměňovaný zdroj přivedení hráče — NASAZENO DO PRODUKCE (25. 09. 2026, schválení Pavla)
 

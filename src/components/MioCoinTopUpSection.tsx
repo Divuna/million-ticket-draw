@@ -3,6 +3,7 @@ import { Button } from "@/components/ui/button";
 import { isNativeApp } from "@/lib/nativeApp";
 import { useMioCoinCheckout } from "@/hooks/useMioCoinCheckout";
 import { ImmediateUseConsentDialog } from "@/components/ImmediateUseConsentDialog";
+import { MioPurchaseInfo } from "@/components/MioPurchaseInfo";
 import { OneMilMioCoinIcon } from "@/components/icons/OneMilIcons";
 
 /**
@@ -178,6 +179,7 @@ export const MioCoinTopUpSection = ({ placementBanners }: MioCoinTopUpSectionPro
                     </div>
                   </div>
                 </div>
+      <MioPurchaseInfo className="mt-3" />
       <ImmediateUseConsentDialog {...consentDialogProps} />
     </>
   );

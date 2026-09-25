@@ -2,7 +2,12 @@
 
 ## Aktuální znění
 
-**Jednoznačné, bez konfliktu.** Existuje jediná verze.
+**Jednoznačné, bez konfliktu.** Zdrojem je `VSEOBECNE_OBCHODNI_PODMINKY.md` v této složce.
+
+**25. 9. 2026 (schváleno Pavlem):** bod 8 „Zakoupený kredit nelze vrátit.“ nahrazen zněním o vrácení
+nevyužité placené části MIO do 14 dnů (nadpis „Vrácení platby za MIO“), bod 4 přejmenován na „MIO“.
+Publikováno **jen na staging**; produkční `content_pages` drží do schválení nasazení původní znění
+(md5 `ba3f4b02…`, 712 znaků) — rozdíl GitHub × produkční CMS je tedy záměrný a známý.
 
 | | |
 |---|---|
@@ -21,14 +26,14 @@ Text má 712 znaků a deset holých vět. Pro spotřebitelské podmínky to nest
 
 - **identifikace provozovatele** — firma, IČO, sídlo, zápis v OR. Údaje jsou v `COMPANY_CONTEXT.md`
   a na `/kontakt`, ale ve VOP samotných ne.
-- **odstoupení od smlouvy** u digitálního obsahu (MIO),
+- ~~odstoupení od smlouvy u MIO~~ — řešeno bodem 8 (25. 9. 2026, staging),
 - **reklamační řád**,
 - **řešení sporů** — mimosoudní řešení, ČOI,
 - **změna podmínek** — jak a s jakým předstihem,
 - **aktuální produktový model** — staré VOP nepopisují garantovaný nákupní benefit pořizovaný za MIO + 1 soutěžní tiket zdarma,
 - **platnost placeného MIO** — potvrzený produktový záměr 12 měsíců od konkrétního dobití vyžaduje právní schválení a před zveřejněním také technickou implementaci.
 
-### ⚠️ Věcný rozpor s tím, co aplikace umí
+### ✅ (vyřešeno 25. 9. 2026 na stagingu) Dřívější věcný rozpor s tím, co aplikace umí
 
 Bod 8 zní: *„Zakoupený kredit nelze vrátit."*
 

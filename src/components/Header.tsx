@@ -15,6 +15,7 @@ import { useUserRole } from '@/hooks/useUserRole';
 import { isNativeApp } from '@/lib/nativeApp';
 import { MIOCOIN_PACKAGES, useMioCoinCheckout } from '@/hooks/useMioCoinCheckout';
 import { ImmediateUseConsentDialog } from '@/components/ImmediateUseConsentDialog';
+import { MioPurchaseInfo } from '@/components/MioPurchaseInfo';
 import { useAdminRealtimeContext } from '@/components/AdminRealtimeProvider';
 import { AdminSoundIndicator } from '@/components/AdminSoundIndicator';
 import { OneMilMioCoinIcon } from '@/components/icons/OneMilIcons';
@@ -198,7 +199,7 @@ export const Header: React.FC = () => {
                       </button>
                     </DropdownMenuTrigger>
 
-                    <DropdownMenuContent align="end" className="w-64 bg-popover">
+                    <DropdownMenuContent align="end" className="w-72 bg-popover">
                       <DropdownMenuLabel className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
                         Rychlé dobití
                       </DropdownMenuLabel>
@@ -233,6 +234,7 @@ export const Header: React.FC = () => {
                           Otevírám platební bránu…
                         </div>
                       )}
+                      <MioPurchaseInfo className="px-2 py-1.5 text-[11px]" />
                       <DropdownMenuSeparator />
                       <DropdownMenuItem onSelect={() => navigate('/top-up')}>
                         Všechny možnosti dobíjení

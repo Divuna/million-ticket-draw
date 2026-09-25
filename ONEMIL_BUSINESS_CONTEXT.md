@@ -311,6 +311,16 @@ MIO cannot be withdrawn or exchanged back for money.
 
 MIO must never be publicly described as a gambling token, betting token, casino chip, or money-equivalent withdrawal product.
 
+### 8.2 Consumer withdrawal for purchased MIO — confirmed by Pavel (25. 09. 2026)
+
+- Legal basis given by Pavel: the 2025 position of the EU CPC network on in-game virtual currencies says virtual currency is **not digital content** and the 14-day consumer right of withdrawal for **unused** virtual currency cannot be excluded across the board. Purchased MIO work as an internal digital credit bought for real money and used inside OneMil.
+- Therefore OneMil **does not** ask the consumer to waive the right of withdrawal: `immediate_use_consent_required` stays `false` and the existing consent dialog stays switched off (infrastructure kept, not deleted).
+- A consumer may ask within **14 days of the purchase** for a refund of the **unused paid part** of MIO; if part of the paid MIO was already used, only the remaining unused paid part is refunded. Bonus, partner and other free MIO are not a paid part and are never paid out in money. Requests go to podpora@onemil.cz. "MIO cannot be withdrawn as money" still means no cash-out of MIO — it does not exclude this consumer refund of the paid amount.
+- The existing refund logic already matches this (unused paid part of the given payment, its bonus cancelled by current rules, other wallet lots untouched, money back through Stripe) and is **not changed**.
+- Before the Stripe checkout the customer sees: „Zakoupené MIO můžete používat ihned. U nevyužité placené části MIO můžete do 14 dnů od nákupu požádat o vrácení odpovídající zaplacené částky. Bonusová MIO se peněžně neproplácejí. Podrobnosti najdete ve Všeobecných obchodních podmínkách.“ — no mandatory checkbox.
+- VOP point 8 „Zakoupený kredit nelze vrátit.“ is replaced by: „MIO je interní digitální kredit platformy OneMil a není možné jej vyplatit v hotovosti ani převést mimo OneMil. U nevyužité placené části MIO může spotřebitel do 14 dnů od nákupu požádat o vrácení odpovídající zaplacené částky. Pokud byla část placených MIO již použita, OneMil vrátí pouze částku odpovídající zbývající nevyužité placené části. Bonusová, partnerská a jiná bezplatně získaná MIO nejsou placenou částí a samostatně se peněžně neproplácejí. Žádost lze uplatnit na podpora@onemil.cz. Tím nejsou dotčena další zákonná práva spotřebitele.“
+- State: **staging only — not deployed to production** (production VOP still contain the old point 8).
+
 ### 8.1 MIO decimal rule — confirmed (16. 08. 2026)
 
 **MIO mají maximálně 1 desetinné místo.**

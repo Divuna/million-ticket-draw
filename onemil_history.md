@@ -1,3 +1,9 @@
+# 25. 09. 2026 — Spotřebitelské informace k nákupu MIO (JEN STAGING)
+
+Pavel rozhodl podle stanoviska sítě CPC (2025): u nevyužité virtuální měny nelze plošně vyloučit 14denní odstoupení, proto se souhlas s okamžitým použitím nezapíná. Před checkoutem MIO přibyla informace o možnosti vrácení nevyužité placené části do 14 dnů (panel dobíjení i hlavička, bez checkboxu); z VOP odstraněn bod „Zakoupený kredit nelze vrátit.“ a nahrazen novým zněním — v repu a na stagingu. Refundační logika beze změny, refund scénáře 35/35. Produkce nedotčena.
+
+---
+
 # 25. 09. 2026 — Jeden zdroj přivedení hráče nasazen do produkce
 
 Po schválení Pavla aplikována migrace `20260927100000` na produkci (zapsána v `schema_migrations`); funkce bajtově shodné se stagingem, oba pojistné triggery aktivní, data beze změny (2 doporučení, 0 affiliate vazeb, 0 překryvů). `main` fast-forward na `9f52bf55`, frontend přes Vercel.
