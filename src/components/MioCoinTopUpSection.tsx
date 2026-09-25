@@ -39,9 +39,9 @@ export const MioCoinTopUpSection = ({ placementBanners }: MioCoinTopUpSectionPro
                 <div className="space-y-2 homepage-miocoin-header">
                   <h2 className="homepage-premium-orange-heading text-xl md:text-2xl font-bold text-heading-gold flex items-center gap-2">
                     <OneMilMioCoinIcon size={24} className="w-6 h-6 md:w-7 md:h-7" />
-                    Dobijte si MioCoiny
+                    Dobijte si MIO
                   </h2>
-                  <p className="text-sm text-text-silver">Dobíjejte si MioCoiny pro otevření voucherů nebo účasti ve hře.</p>
+                  <p className="text-sm text-text-silver">Dobíjejte si MIO pro otevření voucherů nebo účasti ve hře.</p>
                 </div>
 
                 {/* Coin Packages Grid */}
@@ -53,13 +53,13 @@ export const MioCoinTopUpSection = ({ placementBanners }: MioCoinTopUpSectionPro
                       {placementBanners.miocoin_50?.image_url ? (
                         <img
                           src={placementBanners.miocoin_50.image_url}
-                          alt="MioCoin 50"
+                          alt="MIO 50"
                           className="w-full h-full object-cover object-center"
                         />
                       ) : (
                         <div className="text-center py-3">
                           <div className="text-3xl font-bold text-package-blue drop-shadow-[0_2px_4px_rgba(0,0,0,0.8)]">50</div>
-                          <div className="text-sm text-muted-foreground drop-shadow-[0_1px_2px_rgba(0,0,0,0.8)]">MioCoinů</div>
+                          <div className="text-sm text-muted-foreground drop-shadow-[0_1px_2px_rgba(0,0,0,0.8)]">MIO</div>
                           <div className="text-xs text-muted-foreground/70 drop-shadow-[0_1px_2px_rgba(0,0,0,0.8)]">50 Kč</div>
                         </div>
                       )}
@@ -86,13 +86,13 @@ export const MioCoinTopUpSection = ({ placementBanners }: MioCoinTopUpSectionPro
                         {placementBanners.miocoin_310?.image_url ? (
                           <img
                             src={placementBanners.miocoin_310.image_url}
-                            alt="MioCoin 310"
+                            alt="MIO 310"
                             className="w-full h-full object-cover object-center"
                           />
                         ) : (
                           <div className="text-center py-3">
                             <div className="text-3xl font-bold text-package-gold drop-shadow-[0_2px_4px_rgba(0,0,0,0.8)]">310</div>
-                            <div className="text-sm text-muted-foreground drop-shadow-[0_1px_2px_rgba(0,0,0,0.8)]">MioCoinů</div>
+                            <div className="text-sm text-muted-foreground drop-shadow-[0_1px_2px_rgba(0,0,0,0.8)]">MIO</div>
                             <div className="text-xs text-muted-foreground/70 drop-shadow-[0_1px_2px_rgba(0,0,0,0.8)]">300 Kč</div>
                           </div>
                         )}
@@ -120,13 +120,13 @@ export const MioCoinTopUpSection = ({ placementBanners }: MioCoinTopUpSectionPro
                         {placementBanners.miocoin_525?.image_url ? (
                           <img
                             src={placementBanners.miocoin_525.image_url}
-                            alt="MioCoin 525"
+                            alt="MIO 525"
                             className="w-full h-full object-cover object-center"
                           />
                         ) : (
                           <div className="text-center py-3">
                             <div className="text-3xl font-bold text-package-purple drop-shadow-[0_2px_4px_rgba(0,0,0,0.8)]">525</div>
-                            <div className="text-sm text-muted-foreground drop-shadow-[0_1px_2px_rgba(0,0,0,0.8)]">MioCoinů</div>
+                            <div className="text-sm text-muted-foreground drop-shadow-[0_1px_2px_rgba(0,0,0,0.8)]">MIO</div>
                             <div className="text-xs text-muted-foreground/70 drop-shadow-[0_1px_2px_rgba(0,0,0,0.8)]">500 Kč</div>
                           </div>
                         )}
@@ -154,13 +154,13 @@ export const MioCoinTopUpSection = ({ placementBanners }: MioCoinTopUpSectionPro
                         {placementBanners.miocoin_1280?.image_url ? (
                           <img
                             src={placementBanners.miocoin_1280.image_url}
-                            alt="MioCoin 1280"
+                            alt="MIO 1280"
                             className="w-full h-full object-cover object-center"
                           />
                         ) : (
                           <div className="text-center py-3">
                             <div className="text-3xl font-bold text-package-green drop-shadow-[0_2px_4px_rgba(0,0,0,0.8)]">1280</div>
-                            <div className="text-sm text-muted-foreground drop-shadow-[0_1px_2px_rgba(0,0,0,0.8)]">MioCoinů</div>
+                            <div className="text-sm text-muted-foreground drop-shadow-[0_1px_2px_rgba(0,0,0,0.8)]">MIO</div>
                             <div className="text-xs text-muted-foreground/70 drop-shadow-[0_1px_2px_rgba(0,0,0,0.8)]">1200 Kč</div>
                           </div>
                         )}

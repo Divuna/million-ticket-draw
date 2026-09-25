@@ -27,7 +27,7 @@ const PaymentSuccess: React.FC = () => {
   const successLine =
     kind === 'voucher'
       ? 'Voucher byl přidán do tvého účtu'
-      : 'MioCoiny byly připsány na tvůj účet';
+      : 'MIO kredity byly připsány na tvůj účet';
 
   const handleBackToContests = () => {
     navigate(returnTo ?? '/games');
@@ -42,7 +42,7 @@ const PaymentSuccess: React.FC = () => {
     const line =
       kind === 'voucher'
         ? 'Voucher byl přidán do tvého účtu'
-        : 'MioCoiny byly připsány na tvůj účet';
+        : 'MIO kredity byly připsány na tvůj účet';
     toast({
       title: line,
     });

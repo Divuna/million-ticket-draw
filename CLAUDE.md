@@ -180,6 +180,8 @@ Rollback: `docs/rollback/refund_block_rollback.sql`.
 - **Před checkoutem MIO musí být vidět informace `MioPurchaseInfo`** (přesný text schválený Pavlem,
   bez checkboxu) v obou vstupech do checkoutu — dobíjecí panel i rychlé dobití v hlavičce. Hlídá spec 196.
   Znění musí odpovídat bodu 8 VOP; nikde netvrdit, že okamžitým připsáním MIO zaniká právo na odstoupení.
+- **`create-stripe-checkout` má v produkci `verify_jwt=false`, na stagingu `true`.** Produkční deploy vždy
+  s `--no-verify-jwt` (funkce ověřuje JWT sama přes `auth.getUser`). Stripe produkt je „OneMil MIO“.
 - Interní a peněženkové funkce smí volat jen `service_role`; nevracet `anon`/`authenticated`.
 
 ## FÁZE 1 — INTEGRITA SOUTĚŽÍ (23. 09. 2026, PRODUKCE) — TRVALÉ INVARIANTY

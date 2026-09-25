@@ -1,3 +1,9 @@
+# 25. 09. 2026 — Veřejný název MIO v nákupní cestě (JEN STAGING)
+
+Pavel potvrdil bod 8 a přejmenování bodu 4 VOP. Dobíjecí panel, rychlé dobití v hlavičce, toast a stránka po zaplacení používají MIO; Stripe produkt „OneMil MIO“ / „N MIO pro OneMil“ (`create-stripe-checkout` staging v30, `verify_jwt` beze změny). Ověřeno reálným Stripe TEST checkoutem. Zjištěno: obrázky bannerů balíčků a CMS stránky dál obsahují „MioCoin“ (OPEN ISSUE); produkční funkce má `verify_jwt=false`. Produkce nedotčena.
+
+---
+
 # 25. 09. 2026 — Spotřebitelské informace k nákupu MIO (JEN STAGING)
 
 Pavel rozhodl podle stanoviska sítě CPC (2025): u nevyužité virtuální měny nelze plošně vyloučit 14denní odstoupení, proto se souhlas s okamžitým použitím nezapíná. Před checkoutem MIO přibyla informace o možnosti vrácení nevyužité placené části do 14 dnů (panel dobíjení i hlavička, bez checkboxu); z VOP odstraněn bod „Zakoupený kredit nelze vrátit.“ a nahrazen novým zněním — v repu a na stagingu. Refundační logika beze změny, refund scénáře 35/35. Produkce nedotčena.

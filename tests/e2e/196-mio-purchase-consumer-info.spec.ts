@@ -53,6 +53,28 @@ test.describe('196 spotřebitelská informace k nákupu MIO (kontrakt)', () => {
     expect(body).toContain(`8. Vrácení platby za MIO\n${VOP_SECTION_8}`);
   });
 
+  test('196f: viditelné texty nákupní cesty používají veřejný název MIO', () => {
+    // Jen viditelné řetězce v JSX/toastech/aria — technické identifikátory (MioCoin*, miocoin_*) zůstávají.
+    const visible = (src: string) =>
+      [...src.matchAll(/>([^<>{}]*)</g), ...src.matchAll(/(?:alt|aria-label)="([^"]*)"/g), ...src.matchAll(/toast\.[a-z]+\("([^"]*)"/g)]
+        .map((m) => m[1])
+        .join(' ');
+    for (const f of ['src/components/MioCoinTopUpSection.tsx', 'src/components/Header.tsx', 'src/hooks/useMioCoinCheckout.ts']) {
+      expect(visible(read(f)), f).not.toMatch(/MioCoin/);
+    }
+    const panel = read('src/components/MioCoinTopUpSection.tsx');
+    expect(panel).toContain('Dobijte si MIO');
+    expect(panel).toContain('Dobíjejte si MIO pro');
+    expect(read('src/components/Header.tsx')).toContain('aria-label="Rychlé dobití MIO"');
+    expect(read('src/pages/PaymentSuccess.tsx')).not.toContain('MioCoiny byly připsány');
+    const ef = read('supabase/functions/create-stripe-checkout/index.ts');
+    expect(ef).toContain("name: 'OneMil MIO',");
+    expect(ef).toContain('description: `${totalCoins} MIO pro OneMil`,');
+    // cena a bonusy beze změny
+    expect(ef).toContain('50: 50,\n  300: 310,\n  500: 525,\n  1200: 1280,');
+    expect(ef).toContain('const unitAmountHalere = priceInCzk * 100');
+  });
+
   test('196e: aktivní nákupní cesta netvrdí ztrátu práva na odstoupení', () => {
     for (const f of [
       'src/hooks/useMioCoinCheckout.ts',

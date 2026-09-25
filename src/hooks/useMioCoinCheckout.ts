@@ -142,7 +142,7 @@ export const useMioCoinCheckout = () => {
       // Nativní aplikace nesmí spustit Stripe checkout (Apple/Google pravidla).
       if (isNativeApp()) return;
       if (!user) {
-        toast.error("Pro nákup MioCoinů se musíte přihlásit");
+        toast.error("Pro nákup MIO se musíte přihlásit");
         navigate(buildLoginRedirectUrl(location.pathname + location.search));
         return;
       }

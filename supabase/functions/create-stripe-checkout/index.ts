@@ -227,8 +227,8 @@ serve(async (req) => {
           price_data: {
             currency: 'czk',
             product_data: {
-              name: 'OneMil MioCoiny',
-              description: `${totalCoins} MioCoinů pro OneMil`,
+              name: 'OneMil MIO',
+              description: `${totalCoins} MIO pro OneMil`,
             },
             unit_amount: unitAmountHalere,
           },

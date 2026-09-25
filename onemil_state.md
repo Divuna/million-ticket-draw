@@ -17,7 +17,15 @@ dialog souhlasu se nezapíná (infrastruktura zůstává, nic se nemazalo).
   bod 8 „Zakoupený kredit nelze vrátit.“ nahrazen novým zněním (nadpis „Vrácení platby za MIO“),
   bod 4 přejmenován z „MioCoin“ na „MIO“. Stejný text publikován JEN do stagingového
   `content_pages` (`legal`/`vop`, md5 `5b42b21c…`, 1206 znaků; UPDATE hlídaný md5 původního textu).
-- Spec `tests/e2e/196-mio-purchase-consumer-info.spec.ts` (5 kontraktních testů).
+- Spec `tests/e2e/196-mio-purchase-consumer-info.spec.ts` (6 kontraktních testů).
+- Veřejné názvosloví v nákupní cestě (Pavel potvrdil bod 8 i bod 4 VOP): dobíjecí panel „Dobijte si MIO“,
+  „Dobíjejte si MIO…“, záložní popisy balíčků „MIO“, alt texty „MIO 50…“; hlavička: štítek zůstatku „MIO“,
+  aria „Rychlé dobití MIO“; toast hooku „Pro nákup MIO…“; `PaymentSuccess` „MIO kredity byly připsány…“.
+  Interní identifikátory (`MioCoinTopUpSection`, `useMioCoinCheckout`, `miocoin_*`) beze změny.
+- `create-stripe-checkout`: jen Stripe `product_data` → `OneMil MIO` / `${totalCoins} MIO pro OneMil`.
+  Nasazeno JEN na staging: **v30**, `verify_jwt=true` (stejné jako v29). Ověřeno reálným Stripe TEST
+  (Sandbox) checkoutem: „OneMil MIO“, 300,00 Kč, „310 MIO pro OneMil“ (dočasný stagingový účet, po testu
+  smazán včetně session).
 
 **Ověřeno na stagingu:** text viditelný na `/top-up` pod balíčky (0 checkboxů, odkaz `/vop`), `/vop`
 zobrazuje nový bod 8 a už ne „nelze vrátit“, žádná jiná aktivní CMS stránka netvrdí nevratnost,
@@ -27,11 +35,19 @@ Refundační logika (DB funkce, Edge Functions, migrace) beze změny.
 **Produkce beze změny:** VOP md5 `ba3f4b02…` (starý bod 8), souhlas `false`.
 
 **Nasazení do produkce (po schválení):** merge větve do `main` (frontend přes Vercel) + stejný
-UPDATE produkčního `content_pages` hlídaný md5 `ba3f4b02…`. Žádná migrace ani Edge Function.
+UPDATE produkčního `content_pages` hlídaný md5 `ba3f4b02…` + deploy `create-stripe-checkout`.
+⚠️ Produkční `create-stripe-checkout` (v368) má **`verify_jwt=false`** (staging `true`) — produkční
+deploy MUSÍ mít `--no-verify-jwt`, jinak se brána tiše přepne (repo nemá záznam v `config.toml`).
+Žádná migrace.
 
-**OPEN ISSUE (vědomě neřešeno):** Stripe produkt v `create-stripe-checkout` se dál jmenuje
-„OneMil MioCoiny“ / „N MioCoinů pro OneMil“ a dobíjecí panel říká „MioCoiny“ — veřejný název je MIO;
-změna vyžaduje redeploy Edge Function a úpravu UI textů. VOP mají dál jen 10 holých bodů
+**OPEN ISSUE (vědomě neřešeno):** (1) Dlaždice balíčků na `/top-up` zobrazují nahrané obrázky
+bannerů (`miocoin_50/310/525/1280` z administrace), které mají „MioCoinů“ a minci „MioCoin“ přímo
+v grafice — kódem neopravitelné, je potřeba nahrát nové obrázky s „MIO“ (nebo bannery vypnout a
+zobrazit textový popis). (2) Globální patička ukazuje název CMS stránky „MioCoin – jak funguje“ a CMS
+stránky `jak-to-funguje`, `miocoin-–-jak-funguje`, `o-nás`, FAQ a `pravidla-souteze` dál používají
+„MioCoin“ — samostatný obsahový krok přes `docs/pravni-dokumenty`/CMS. (3) Mimo nákupní cestu dál
+„MioCoiny“ např. tlačítka „Dobít MioCoiny“ / „Uplatnit … MioCoin“ na detailu soutěže a profil
+(hlídané specy 03/04/05/06/09/17). VOP mají dál jen 10 holých bodů
 (chybí identifikace provozovatele, reklamační řád, ADR/ČOI…) — viz README složky VOP.
 
 **OPEN ISSUE (předexistující, nesouvisí):** staging spec `09-wallet-balance` („balance decreases by

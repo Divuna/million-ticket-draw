@@ -151,7 +151,7 @@ export const Header: React.FC = () => {
     <>
       <OneMilMioCoinIcon size={18} className="h-[18px] w-[18px] shrink-0" />
       <span className="text-sm font-bold tabular-nums text-foreground">{formattedBalance}</span>
-      <span className="hidden text-xs font-medium text-muted-foreground sm:inline">MioCoinů</span>
+      <span className="hidden text-xs font-medium text-muted-foreground sm:inline">MIO</span>
     </>
   );
 
@@ -191,7 +191,7 @@ export const Header: React.FC = () => {
                     <DropdownMenuTrigger asChild>
                       <button
                         type="button"
-                        aria-label="Rychlé dobití MioCoinů"
+                        aria-label="Rychlé dobití MIO"
                         disabled={checkoutLoading}
                         className={`${balanceChipClass} transition-colors hover:border-[rgba(255,138,0,0.5)] hover:bg-[rgba(255,138,0,0.14)] disabled:cursor-wait disabled:opacity-70`}
                       >
