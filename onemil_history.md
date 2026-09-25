@@ -1,3 +1,9 @@
+# 25. 09. 2026 — Jeden zdroj přivedení hráče nasazen do produkce
+
+Po schválení Pavla aplikována migrace `20260927100000` na produkci (zapsána v `schema_migrations`); funkce bajtově shodné se stagingem, oba pojistné triggery aktivní, data beze změny (2 doporučení, 0 affiliate vazeb, 0 překryvů). `main` fast-forward na `9f52bf55`, frontend přes Vercel.
+
+---
+
 # 24. 09. 2026 — Jeden odměňovaný zdroj přivedení hráče (JEN STAGING)
 
 Pavel potvrdil: hráč má jen jeden odměňovaný zdroj přivedení — affiliate, nebo hráčské doporučení; platí permanentní first-touch. Zmapovány zápisové cesty (jen `set_my_referrer_by_code` a `record_affiliate_customer_ref`; Register ukládá stejné `?ref=` do obou pending klíčů, takže obě volání běží souběžně). Migrace `20260927100000` přidává zámek hráče, kontrolu druhého systému v obou funkcích a pojistné triggery na obou tabulkách; zákaznický toast místo technické chyby. Staging: scénáře 12/12, regrese 147/147, rollback vyzkoušen. Produkce bez překryvů (2 doporučení, 0 affiliate vazeb) — nic se nemazalo, nic nenasazeno.

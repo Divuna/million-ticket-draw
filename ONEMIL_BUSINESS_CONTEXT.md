@@ -445,7 +445,7 @@ Confirmed by Pavel: „U hráče může existovat pouze jeden odměňovaný zdro
 - A player is brought either by an affiliate (the affiliate earns a CZK commission from the player's paid top-ups) **or** by another player's personal code (the referrer earns the MIO reward) — never both.
 - Whichever source is written first stays permanently; a later code of the other kind is not added and nothing is overwritten. The player sees a plain message, never a technical error.
 - An affiliate account is not an acquisition source. The same person may be a player and also have an approved affiliate account; an affiliate still cannot bring themselves.
-- Technical state: implemented and verified on staging only — **not deployed to production** (production had no player with both sources when checked).
+- Technical state: deployed to production on 2026-09-25 after Pavel's approval (production had no player with both sources before or after the change).
 
 Users are not only passive contestants.
 

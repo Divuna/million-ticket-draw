@@ -1,9 +1,18 @@
 # OneMil – aktuální stav projektu
 
-> **Autoritativní aktuální stav. Poslední aktualizace 24. 9. 2026 — Fáze 5 (osobní doporučení hráčů) nasazena do produkce `xkzhjldrojjlrkezorey` se schválením Pavla. Předtím 23. 9. 2026 refund blok F2 + F3 + F4 a Fáze 1.**
+> **Autoritativní aktuální stav. Poslední aktualizace 25. 9. 2026 — jeden odměňovaný zdroj přivedení hráče nasazen do produkce. Předtím 24. 9. 2026 — Fáze 5 (osobní doporučení hráčů) nasazena do produkce `xkzhjldrojjlrkezorey` se schválením Pavla. Předtím 23. 9. 2026 refund blok F2 + F3 + F4 a Fáze 1.**
 
 
-## -10. Jeden odměňovaný zdroj přivedení hráče (24. 09. 2026, JEN STAGING — do produkce NENASAZENO)
+## -10. Jeden odměňovaný zdroj přivedení hráče — NASAZENO DO PRODUKCE (25. 09. 2026, schválení Pavla)
+
+**Produkce `xkzhjldrojjlrkezorey`:** migrace `20260927100000` aplikována v jedné transakci a zapsána
+v `schema_migrations` (`single_player_acquisition_source`). Předkontrola: funkce shodné s výchozím
+stavem, žádné triggery, `referrals` 2 / `affiliate_customer_refs` 0 / překryvy 0. Postcheck: všech 5
+funkcí bajtově shodných se stagingem, oba triggery aktivní, `_acquisition_source_lock` bez
+`anon`/`authenticated`, klientské RPC dál volatelné `authenticated`, `set_my_referrer_by_code` bez
+`search_path`, data beze změny (2/0, překryvy 0). `main` = `9f52bf55` (fast-forward), frontend
+(hláška v `ReferralSection`) jde přes Vercel. Rollback: `docs/rollback/single_player_acquisition_source_rollback.sql`
+(vyzkoušen na stagingu).
 
 **Potvrzené pravidlo (Pavel):** „U hráče může existovat pouze jeden odměňovaný zdroj přivedení:
 affiliate nebo hráčské doporučení. Platí permanentní first-touch — první úspěšně zapsaný zdroj
@@ -38,7 +47,7 @@ vyzkoušen: po něm staging = produkce (těla funkcí shodná, triggery i pomocn
 znovuaplikaci bajtově shodný stav a znovu 159/159. Souběh ověřuje spec 195.
 
 **Produkce před změnou:** `referrals` 2, `affiliate_customer_refs` 0, hráčů s oběma zdroji 0 —
-není co opravovat, nic se nemazalo. **Nasazení vyžaduje schválení Pavla.**
+není co opravovat, nic se nemazalo.
 
 ## -9. Fáze 6 — affiliate provize v Kč — NASAZENO DO PRODUKCE (24. 09. 2026, schválení Pavla)
 

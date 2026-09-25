@@ -58,7 +58,7 @@ prvních skutečných zákazníků musí proběhnout **jeden řízený kompletn�
 ale to **není důvod je mazat, měnit ani „uklízet" mimochodem**. Jediná povolená cesta k jejich
 odstranění je ten jeden schválený reset.
 
-## JEDEN ODMĚŇOVANÝ ZDROJ PŘIVEDENÍ HRÁČE (24. 09. 2026, JEN STAGING — do produkce NENASAZENO)
+## JEDEN ODMĚŇOVANÝ ZDROJ PŘIVEDENÍ HRÁČE (25. 09. 2026, PRODUKCE)
 
 Migrace `20260927100000_single_player_acquisition_source.sql`. Detail: `onemil_state.md` § -10.
 Rollback: `docs/rollback/single_player_acquisition_source_rollback.sql`.
