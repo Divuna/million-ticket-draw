@@ -34,6 +34,12 @@ UPDATE produkčního `content_pages` hlídaný md5 `ba3f4b02…`. Žádná migra
 změna vyžaduje redeploy Edge Function a úpravu UI textů. VOP mají dál jen 10 holých bodů
 (chybí identifikace provozovatele, reklamační řád, ADR/ČOI…) — viz README složky VOP.
 
+**OPEN ISSUE (předexistující, nesouvisí):** staging spec `09-wallet-balance` („balance decreases by
+ticket price after a single ticket purchase“) selhává i na `main` `de592ff7` bez této změny (run
+`36104591335`): po nákupu tiketu se neobjeví `TicketResultModal` a nepřijde GET `/rest/v1/wallets`.
+Pravděpodobně spec neodpovídá současnému nákupu přes kupon (jiný výsledkový dialog); oprava = přepsat
+spec na aktuální tok. Cílený běh této větve (`36104198488`): 29 passed / 1 failed (jen spec 09).
+
 ## -10. Jeden odměňovaný zdroj přivedení hráče — NASAZENO DO PRODUKCE (25. 09. 2026, schválení Pavla)
 
 **Produkce `xkzhjldrojjlrkezorey`:** migrace `20260927100000` aplikována v jedné transakci a zapsána
