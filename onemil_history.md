@@ -1,3 +1,9 @@
+# 29. 09. 2026 — MIO a spotřebitelské informace nasazeny do produkce
+
+Se schválením Pavla: migrace 20260928100000 (jen texty, ověřeno zpětnou náhradou), VOP s bodem 8 „Vrácení platby za MIO“ publikováno ze zdroje v GitHubu, 8 nepravních CMS stránek převedeno z produkčního obsahu, create-stripe-checkout v369 (verify_jwt=false), main fast-forward na ffdb6f6e, Vercel a produkční smoke zelené. Na stagingu doplněn chybějící záznam migrace. Vypnutí 4 bannerů balíčků neprovedeno — čeká na rozhodnutí; generátory popisu/plakátu záměrně nenasazeny.
+
+---
+
 # 25. 09. 2026 — Veřejný název MIO v celé zákaznické aplikaci (JEN STAGING)
 
 Viditelné texty MioCoin → MIO v zákaznické aplikaci, Shoptet widgetu, zákaznických DB textech (e-mail s kódem, notifikace, výherci, voucher, formátovač) a 8 nepravních CMS stránkách na stagingu; technické názvy beze změny. Migrace nahrazuje jen vyjmenované literály v živé definici kvůli driftu staging × produkce. Schválená grafika MIO neexistuje → 4 bannery balíčků na stagingu jen deaktivovány. Zastaveno u 3 právních stránek (pravidla soutěže, GDPR, autorská práva), Boba a grafiky mince — čeká na Pavla. Produkce nedotčena.

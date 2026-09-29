@@ -180,6 +180,8 @@ Rollback: `docs/rollback/refund_block_rollback.sql`.
 - **Před checkoutem MIO musí být vidět informace `MioPurchaseInfo`** (přesný text schválený Pavlem,
   bez checkboxu) v obou vstupech do checkoutu — dobíjecí panel i rychlé dobití v hlavičce. Hlídá spec 196.
   Znění musí odpovídat bodu 8 VOP; nikde netvrdit, že okamžitým připsáním MIO zaniká právo na odstoupení.
+- **MIO + bod 8 VOP jsou v produkci od 29. 9. 2026** (§ -13 v `onemil_state.md`). Produkční VOP = zdroj v GitHubu
+  (md5 `5b42b21c…`); výchozí stav a rollbacky v `docs/rollback/public_name_mio_production_*`.
 - **Veřejný název je MIO (nesklonné).** Zákaznické texty píšou „N MIO“; technické názvy (`miocoin`,
   `MioCoin*` komponenty, RPC, sloupce, slugy, placement klíče `MioCoin balíček – N`) se NEPŘEJMENOVÁVAJÍ.
   Popis MIO výhry zobrazovat přes `bonusPrizeDisplayName` (z částky), ne z uloženého `description`.

@@ -1,9 +1,38 @@
 # OneMil – aktuální stav projektu
 
-> **Autoritativní aktuální stav. Poslední aktualizace 25. 9. 2026 — veřejný název MIO v celé zákaznické aplikaci a spotřebitelské informace k nákupu MIO (jen staging); jeden odměňovaný zdroj přivedení hráče nasazen do produkce. Předtím 24. 9. 2026 — Fáze 5 (osobní doporučení hráčů) nasazena do produkce `xkzhjldrojjlrkezorey` se schválením Pavla. Předtím 23. 9. 2026 refund blok F2 + F3 + F4 a Fáze 1.**
+> **Autoritativní aktuální stav. Poslední aktualizace 29. 9. 2026 — veřejný název MIO a spotřebitelské informace k nákupu MIO (bod 8 VOP) nasazeny do produkce; bannery balíčků čekají na rozhodnutí. Předtím 25. 9. 2026 — jeden odměňovaný zdroj přivedení hráče nasazen do produkce. Předtím 24. 9. 2026 — Fáze 5 (osobní doporučení hráčů) nasazena do produkce `xkzhjldrojjlrkezorey` se schválením Pavla. Předtím 23. 9. 2026 refund blok F2 + F3 + F4 a Fáze 1.**
 
 
-## -12. Veřejný název MIO v celé zákaznické aplikaci (25. 09. 2026, JEN STAGING — do produkce NENASAZENO)
+## -13. MIO a spotřebitelské informace — NASAZENO DO PRODUKCE (29. 09. 2026, schválení Pavla)
+
+Pavel: „Schvaluji nasazení MIO změn do produkce.“ Nasazeno na `xkzhjldrojjlrkezorey` obsah § -11 a § -12.
+Výchozí stav produkce před zásahem (definice 6 funkcí, 12 CMS stránek, 4 bannery):
+`docs/rollback/public_name_mio_production_prestate.json`.
+
+- **Migrace `20260928100000`** aplikována a zapsaná v `schema_migrations` (i na stagingu doplněn chybějící
+  záznam). Ověřeno: po zpětné náhradě textů mají všechny funkce přesně původní otisky
+  (`buy_voucher_atomic` 60e9a845, `enqueue_notifications_from_event_logs` 447f81d4, `get_latest_winners`
+  ccbe90ae, `get_latest_winners_public` 52fd055d, `update_partner_order_reward_status` 53842df0,
+  `format_miocoin_cz` 9f8b6d58 → ace23496); vlastník, SECURITY DEFINER a ACL beze změny.
+- **CMS:** VOP publikováno ze schváleného zdroje v GitHubu (bod 8 „Vrácení platby za MIO“, md5 `5b42b21c…`,
+  dříve `ba3f4b02…` = původní zdroj). 8 nepravních stránek (info/support) převedeno na MIO z produkčního
+  obsahu, patička „MIO – jak funguje“ (slug beze změny). Rollback:
+  `docs/rollback/public_name_mio_production_cms_rollback.sql`.
+- **`create-stripe-checkout` v369** (`--no-verify-jwt`, `verify_jwt=false` zachováno), bez přihlášení 401.
+- **Frontend:** `main` fast-forward `de592ff7 → ffdb6f6e`, Vercel success, produkční smoke `36538960140` ✅.
+  Živě ověřeno: `/top-up` jen MIO + informace před checkoutem, `/vop` bod 8, `/winners` „N MIO“, patička.
+- `immediate_use_consent_required=false` beze změny; finanční logika (ceny, bonusy, platby, refundace) beze změny.
+
+**OPEN ISSUE (po nasazení):**
+- **4 bannery balíčků v produkci zůstaly AKTIVNÍ** (obrázky s nápisem „MioCoin“ na `/top-up`). Jejich vypnutí
+  (`active=false` pro `9cc21e95…`, `e470ac31…`, `43c1f1b5…`, `810130e1…`) nebylo provedeno — čeká na
+  rozhodnutí Pavla (vypnout jako na stagingu, nebo dodat schválenou grafiku MIO).
+- **Nenasazeno záměrně:** `generate-contest-description` a `generate-poster` (admin nástroje; redeploy z repa by
+  mohl přenést i jiný rozdíl proti produkční verzi — nejdřív porovnat zdroj).
+- Právní stránky `pravidla-souteze`, `ochrana-osobnich-udaju`, `autorska-prava`, Bob, grafika mince a uložená
+  data — beze změny, viz § -12.
+
+## -12. Veřejný název MIO v celé zákaznické aplikaci (25. 09. 2026; do produkce nasazeno 29. 09. 2026 — viz § -13)
 
 Větev `claude/mio-consumer-withdrawal-info` (navazuje na § -11). Viditelné texty „MioCoin/MioCoiny/MioCoinů“
 převedeny na nesklonné „MIO“; technické názvy (komponenty, proměnné, DB sloupce, RPC, URL, slugy,
@@ -69,7 +98,7 @@ Staging CI: běh `36127406859` (15 specových souborů) 135 passed / 4 failed; p
 `20260928100000` (bezpečná vůči driftu), produkční CMS podle produkčního obsahu, bannery balíčků
 (deaktivovat nebo nová grafika), případně `generate-contest-description`/`generate-poster`.
 
-## -11. Spotřebitelské informace k nákupu MIO (25. 09. 2026, JEN STAGING — do produkce NENASAZENO)
+## -11. Spotřebitelské informace k nákupu MIO (25. 09. 2026; do produkce nasazeno 29. 09. 2026 — viz § -13)
 
 **Rozhodnutí Pavla:** podle stanoviska sítě CPC (2025) k virtuálním měnám nelze u nevyužité
 virtuální měny plošně vyloučit 14denní odstoupení. `immediate_use_consent_required` zůstává `false`,
