@@ -3,6 +3,7 @@ import { Badge } from '@/components/ui/badge';
 import { CheckCircle, Clock, Package } from 'lucide-react';
 import { OneMilTrophyIcon, OneMilGiftIcon } from '@/components/icons/OneMilIcons';
 import { MIOCOIN_IMAGE_URL } from '@/components/MioCoin';
+import { bonusPrizeDisplayName } from '@/lib/miocoin';
 import { supabaseUrl } from '@/integrations/supabase/client';
 
 const getStorageUrl = (path: string | null | undefined): string | null => {
@@ -30,6 +31,8 @@ interface Win {
   bonus_prize: {
     id: string;
     title: string | null;
+    description?: string | null;
+    amount?: number | null;
     image_url: string | null;
   } | null;
 }
@@ -186,7 +189,7 @@ export const WinCard: React.FC<WinCardProps> = ({ win, onClick, className = '', 
 
         {/* Prize name */}
         <p className="text-sm text-muted-foreground line-clamp-1">
-          {isMainPrize ? win.contest?.main_prize : (win.notes || win.bonus_prize?.title || 'Bonusová cena')}
+          {isMainPrize ? win.contest?.main_prize : (win.notes || bonusPrizeDisplayName(win.bonus_prize, 'Bonusová cena'))}
         </p>
 
         {/* Date */}

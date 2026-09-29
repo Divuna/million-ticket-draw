@@ -37,6 +37,8 @@ interface Win {
   bonus_prize: {
     id: string;
     title: string | null;
+    description: string | null;
+    amount: number | null;
     image_url: string | null;
     guardian_required: boolean | null;
   } | null;
@@ -269,7 +271,7 @@ const Wins: React.FC = () => {
       if (prizeIds.length > 0) {
         const { data: prizesData } = await supabase
           .from('bonus_prizes')
-          .select('id, title, image_url, guardian_required')
+          .select('id, title, description, amount, image_url, guardian_required')
           .in('id', prizeIds);
 
         if (prizesData) {

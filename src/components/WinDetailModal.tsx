@@ -4,6 +4,7 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Trophy, Gift, CheckCircle, Clock, Package, Calendar, Share2, Copy, Check } from 'lucide-react';
 import { MIOCOIN_IMAGE_URL } from '@/components/MioCoin';
+import { bonusPrizeDisplayName } from '@/lib/miocoin';
 import { toast } from '@/hooks/use-toast';
 import Confetti from 'react-confetti';
 import { supabaseUrl } from '@/integrations/supabase/client';
@@ -33,6 +34,8 @@ interface Win {
   bonus_prize: {
     id: string;
     title: string | null;
+    description?: string | null;
+    amount?: number | null;
     image_url: string | null;
     guardian_required: boolean | null;
   } | null;
@@ -142,7 +145,7 @@ export const WinDetailModal: React.FC<WinDetailModalProps> = ({ win, open, onClo
 
   const prizeName = win.type === 'main' 
     ? win.contest?.main_prize 
-    : (win.notes || win.bonus_prize?.title || 'Bonusová cena');
+    : (win.notes || bonusPrizeDisplayName(win.bonus_prize, 'Bonusová cena'));
 
   const shareText = `Vyhrál jsem ${prizeName} v soutěži ${win.contest?.title || 'OneMil'}! 🎉🏆`;
   const shareUrl = typeof window !== 'undefined' ? `${window.location.origin}/contest/${win.contest_id}` : '';
