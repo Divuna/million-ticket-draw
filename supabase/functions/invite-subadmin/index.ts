@@ -2,6 +2,7 @@ import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.57.4";
 import { renderOneMilEmail } from "../_shared/oneMilEmailTemplate.ts";
 import { getSupabaseSecretKey } from "../_shared/supabaseSecretKey.ts";
+import { findAuthUserIdByEmail, type AuthAdminListClient } from "../_shared/authUserLookup.ts";
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 
@@ -57,14 +58,8 @@ async function findAuthUserByEmail(
   supabaseAdmin: ReturnType<typeof createClient>,
   email: string,
 ): Promise<string | null> {
-  // listUsers paginates up to 1000; sufficient for current scale.
-  const { data, error } = await supabaseAdmin.auth.admin.listUsers({
-    page: 1,
-    perPage: 1000,
-  });
-  if (error) throw new Error(`listUsers failed: ${error.message}`);
-  const found = (data?.users ?? []).find((u: { email?: string }) => u.email === email);
-  return found ? (found as { id: string }).id : null;
+  // Prochází všechny stránky (nad 1000 účtů by první stránka nestačila).
+  return await findAuthUserIdByEmail(supabaseAdmin as unknown as AuthAdminListClient, email);
 }
 
 /**
