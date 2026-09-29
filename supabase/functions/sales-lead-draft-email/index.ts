@@ -213,11 +213,21 @@ Vrať JSON {"subject","body"} dle pravidel.`;
         }),
       });
       if (!aiRes.ok) {
+        // Jen diagnostika: HTTP status + typ/kód chyby OpenAI. Nikdy klíč ani prompt.
+        let errType = "";
+        let errCode = "";
+        try {
+          const errJson = await aiRes.json();
+          errType = String(errJson?.error?.type ?? "");
+          errCode = String(errJson?.error?.code ?? "");
+        } catch { /* nečitelné tělo */ }
+        console.error("[sales-lead-draft-email] openai_error", { status: aiRes.status, type: errType, code: errCode, model: AI_MODEL });
         return jsonResponse({ success: false, error: "ai_request_failed" }, 502);
       }
       const aiJson = await aiRes.json();
       raw = (aiJson?.choices?.[0]?.message?.content ?? "").trim();
-    } catch {
+    } catch (aiErr) {
+      console.error("[sales-lead-draft-email] openai_fetch_failed", { name: aiErr instanceof Error ? aiErr.name : "unknown", model: AI_MODEL });
       return jsonResponse({ success: false, error: "ai_request_failed" }, 502);
     } finally {
       clearTimeout(timer);
