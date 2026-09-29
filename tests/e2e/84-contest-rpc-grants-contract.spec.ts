@@ -86,6 +86,9 @@ test.describe('contest and MioCoin RPC grant contract', () => {
     const directApplicationCallers = listFiles('.').filter((file) => {
       if (
         file === 'tests/e2e/84-contest-rpc-grants-contract.spec.ts'
+        // Jiné kontraktní testy (např. spec 179) tyto názvy jen uvádějí v
+        // assertionech — nic nevolají. Hlídá se aplikační kód.
+        || file.startsWith('tests/')
         || file === migrationPath
         || file.startsWith('supabase/migrations/')
         || file.startsWith('supabase/sql/')

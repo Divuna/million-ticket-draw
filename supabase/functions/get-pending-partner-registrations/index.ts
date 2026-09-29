@@ -55,13 +55,22 @@ serve(async (req) => {
       throw new Error('Přístup odepřen - pouze pro administrátory')
     }
 
-    // Fetch all auth users
-    const { data: authUsers, error: listError } = await supabaseAdmin.auth.admin.listUsers()
-    
-    if (listError) {
-      console.error('Error listing users:', listError)
-      throw listError
+    // Fetch all auth users. listUsers() bez parametrů vrací jen první stránku
+    // (50 účtů) — čekající registrace mimo ni by se adminovi vůbec nezobrazila.
+    const PER_PAGE = 1000
+    const MAX_PAGES = 50
+    // deno-lint-ignore no-explicit-any
+    const allUsers: any[] = []
+    for (let page = 1; page <= MAX_PAGES; page++) {
+      const { data: pageData, error: listError } = await supabaseAdmin.auth.admin.listUsers({ page, perPage: PER_PAGE })
+      if (listError) {
+        console.error('Error listing users:', listError)
+        throw listError
+      }
+      allUsers.push(...pageData.users)
+      if (pageData.users.length < PER_PAGE) break
     }
+    const authUsers = { users: allUsers }
 
     console.log(`Total auth users: ${authUsers.users.length}`)
 
