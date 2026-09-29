@@ -39,7 +39,9 @@ jobs:
   e2e:
     name: Full E2E (Chromium) — Staging
     runs-on: ubuntu-latest
-    timeout-minutes: 30
+    # Celý suite (209 speců, workers=1) trvá ~50 min; při 30 min se každý
+    # naplánovaný běh zrušil dřív, než doběhl (od 25. 9. 2026 žádný dokončený).
+    timeout-minutes: 90
 
     steps:
       - name: Checkout

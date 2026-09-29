@@ -52,6 +52,7 @@ jobs:
               "status": "active",
               "next_ticket_number": 100,
               "fast_game": false,
+              "rules_pdf_url": "https://example.com/e2e-test-rules.pdf",
               "created_at": "2020-01-01T00:00:00Z"
             }')
           echo "PostgREST response: $RESPONSE"
