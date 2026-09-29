@@ -1,3 +1,9 @@
+# 29. 09. 2026 — Předstartovní blokátory, 2. kolo (staging + větev, produkce beze změny)
+
+Na stagingu odstraněna legacy varianta admin_manage_contest (specy 18/19/20/52 zelené); příčina 502 v sales-lead-draft-email = vyčerpaný kredit OpenAI (přidán log); stránkování auth účtů v get-pending-partner-registrations, invite-subadmin a approve-affiliate-company-lead (staging jen stránkovací změna nad stagingovými verzemi); generate-ticket-image a sofinity-agent-dispatcher vyřazeny (410) v repu a na stagingu; _affiliate_recovery_reallocate bez dočasných tabulek (reprodukováno přetečení zámků při 250 affiliate × 12 měsíců, po opravě OK, diferenční test 0 rozdílů). Sofinity napojení zmapováno (cílový projekt neexistuje). Detail § -15 onemil_state.md.
+
+---
+
 # 29. 09. 2026 — Předstartovní audit před prvním resetem (produkce beze změny)
 
 Kompletní audit: build, kontraktní testy, celý staging E2E ve třech dávkách, SQL scénáře (refund/FEFO 34, doporučení 48, jeden zdroj 12, affiliate provize 29, recovery 35 — vše zelené), reálná Stripe TEST platba a průchod soutěží až po hlavní výhru na stagingu, read-only kontrola produkce. Na stagingu zapnut nákupní flag a doplněna get_admin_top_bar_stats; ve větvi claude/pre-reset-audit-fixes oprava zobrazení bonusových výher na /wins a sladění speců 09/45/128/152/157 + CI timeout. Nalezeno: stagingové přetížení admin_manage_contest (PGRST203, oprava zamítnuta klasifikátorem), mrtvá Sofinity doména, neautorizovaná generate-ticket-image a sofinity-agent-dispatcher, zámkový limit měsíčních affiliate provizí. Detail: onemil_state.md § -14 a docs/reports/PRE_RESET_AUDIT_2026-09-29.md.

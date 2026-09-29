@@ -1,7 +1,41 @@
 # OneMil – aktuální stav projektu
 
-> **Autoritativní aktuální stav. Poslední aktualizace 29. 9. 2026 — předstartovní audit před prvním resetem (§ -14, produkce beze změny). Předtím 29. 9. 2026 — veřejný název MIO a spotřebitelské informace k nákupu MIO (bod 8 VOP) nasazeny do produkce; bannery balíčků čekají na rozhodnutí. Předtím 25. 9. 2026 — jeden odměňovaný zdroj přivedení hráče nasazen do produkce. Předtím 24. 9. 2026 — Fáze 5 (osobní doporučení hráčů) nasazena do produkce `xkzhjldrojjlrkezorey` se schválením Pavla. Předtím 23. 9. 2026 refund blok F2 + F3 + F4 a Fáze 1.**
+> **Autoritativní aktuální stav. Poslední aktualizace 29. 9. 2026 — 2. kolo předstartovních oprav (§ -15, staging + větev, produkce beze změny). Předtím předstartovní audit (§ -14). Předtím 29. 9. 2026 — veřejný název MIO a spotřebitelské informace k nákupu MIO (bod 8 VOP) nasazeny do produkce; bannery balíčků čekají na rozhodnutí. Předtím 25. 9. 2026 — jeden odměňovaný zdroj přivedení hráče nasazen do produkce. Předtím 24. 9. 2026 — Fáze 5 (osobní doporučení hráčů) nasazena do produkce `xkzhjldrojjlrkezorey` se schválením Pavla. Předtím 23. 9. 2026 refund blok F2 + F3 + F4 a Fáze 1.**
 
+
+## -15. Předstartovní blokátory — 2. kolo oprav (29. 09. 2026) — produkce beze změny, jen staging + větev
+
+Větev `claude/pre-reset-audit-fixes` (nemergnuto). Aktualizuje OPEN ISSUE z § -14:
+
+- **Staging `admin_manage_contest`:** se schválením Pavla odstraněna jen legacy varianta
+  `(text, uuid, …)` (md5 `d60be435…`, `anon` EXECUTE). Zachovaná signatura je po odstranění komentářů
+  shodná s produkcí (norm. md5 `eef4f457…`). Rollback `docs/rollback/staging_admin_manage_contest_legacy_overload_rollback.sql`.
+  Editace soutěže z admin UI funguje; specy 18, 19, 20, 52a–d 7/7.
+- **Spec 72 / `sales-lead-draft-email` (502):** skutečná příčina = OpenAI `429 insufficient_quota /
+  credit_balance_exhausted` (vyčerpaný kredit OpenAI účtu stagingu). Kód není chybný; do repa i na
+  staging (v25, jinak shodná s v24) přidán bezpečný log stavu/typu/kódu chyby OpenAI (bez klíče a
+  promptu). **OPEN ISSUE:** dobít kredit / vyměnit klíč — rozhodnutí o platbě.
+- **Čekající registrace partnerů:** staging v39 = stagingová v38 + jen stránkování (diffem ověřeno);
+  vidí 978 účtů místo 50. Repo (= produkce + stránkování) nenasazeno do produkce.
+- **Hledání účtu podle e-mailu:** `invite-subadmin`, `approve-affiliate-company-lead` — nový sdílený
+  `_shared/authUserLookup.ts` (stránkuje, bez ohledu na velikost písmen); staging v29 / v36 = jejich
+  stagingové verze + jen stránkování. Spec 198 (bez nových účtů).
+- **`generate-ticket-image`, `sofinity-agent-dispatcher`:** žádný volající v aplikaci, DB, triggerech
+  ani cronech; dispatcher navíc zapisuje do tabulek `AIRequests`/`Campaigns`/`EventLogs`/`Projects`,
+  které v OneMil neexistují (funkce Sofinity projektu). V repu vyřazeny (410 `endpoint_retired`, bez
+  DB/storage/OpenAI), na staging nasazeny v1 a ověřeny (410). Spec 197. **Produkce stále původní verze.**
+- **Affiliate měsíční výpočet:** reprodukováno — 250 affiliate s recovery × 12 měsíců nevyplacených
+  provizí → `out of shared memory (53200)`. Migrace `20260929120000` přepisuje
+  `_affiliate_recovery_reallocate` bez dočasných tabulek (pole PL/pgSQL). Staging: stejný scénář OK
+  (674 zámků, 0,8 s, 250 provizí, recovery umořena z nejstarší provize); diferenční test stará × nová
+  funkce na 80 náhodných affiliate 0 rozdílů. Rollback `docs/rollback/affiliate_recovery_reallocate_no_temp_tables_rollback.sql`.
+  Produkce: md5 `54a79cc0…` (původní).
+- **Sofinity (jen zmapováno):** cron 11 volá přímo EF na Sofinity projektu (`rrmvxsldrjgbdxluklka`),
+  trigger `users.trg_sync_player_to_sofinity` → `call_sync_player_to_sofinity` na stejný host,
+  event pipeline (`notify_sofinity_event` → `event_queue`, worker cron 23 vypnutý). Cílový projekt
+  neexistuje → nic se nedoručuje. Cron se nevypínal.
+- **Znovu ověřeno po opravách:** SQL refund 34/34, doporučení 48/48, jeden zdroj 12/12, affiliate
+  provize 29/29, recovery 35/35; build OK, kontrakty 81/81.
 
 ## -14. Předstartovní audit před prvním resetem (29. 09. 2026) — produkce beze změny
 
