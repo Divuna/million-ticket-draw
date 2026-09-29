@@ -228,6 +228,10 @@ jobs:
           E2E_AFFILIATE_PASSWORD: ${{ secrets.STAGING_E2E_AFFILIATE_PASSWORD }}
           E2E_ADMIN_EMAIL: ${{ secrets.STAGING_E2E_ADMIN_EMAIL }}
           E2E_ADMIN_PASSWORD: ${{ secrets.STAGING_E2E_ADMIN_PASSWORD }}
+          # Admin zprávy (specy 29/31/32) jsou od Phase 3 superadmin-only — stejně
+          # jako plný staging workflow.
+          E2E_SUPERADMIN_EMAIL: ${{ secrets.STAGING_E2E_SUPERADMIN_EMAIL || 'superadmin-e2e@onemil.cz' }}
+          E2E_SUPERADMIN_PASSWORD: ${{ secrets.STAGING_E2E_SUPERADMIN_PASSWORD || secrets.STAGING_E2E_ADMIN_PASSWORD }}
 
       - name: P0 status — OK
         if: success()
