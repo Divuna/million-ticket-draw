@@ -127,9 +127,9 @@ test.describe('128 — MioCoin badge on listing cards', () => {
 
     // 50 -> 2, 125 -> 6, 225 -> 11 at 100 Kc = 5 MC.
     expect(await badgeTexts(page)).toEqual([
-      'Získáte 2 MioCoiny',
-      'Získáte 6 MioCoinů',
-      'Získáte 11 MioCoinů',
+      'Získáte 2 MIO',
+      'Získáte 6 MIO',
+      'Získáte 11 MIO',
     ]);
 
     // Real SKU and the clean data-micro-price must be what was sent.
@@ -196,7 +196,7 @@ test.describe('128 — MioCoin badge on listing cards', () => {
     }, `${card('49396/FIA', '50.00')}${card('NEW-SKU', '775.00')}`);
 
     await expect.poll(() => badgeTexts(page).then((b) => b.length), { timeout: 10_000 }).toBe(2);
-    expect(await badgeTexts(page)).toEqual(['Získáte 2 MioCoiny', 'Získáte 38 MioCoinů']);
+    expect(await badgeTexts(page)).toEqual(['Získáte 2 MIO', 'Získáte 38 MIO']);
 
     // The already-known product is repainted from cache; only the new one is fetched.
     const newCalls = captured.slice(before).map((c) => c.items?.[0].code);

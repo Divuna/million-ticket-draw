@@ -1769,6 +1769,9 @@ const ContestModal: React.FC<ContestModalProps> = ({ open, onClose, onSaved, edi
             const { error: activateError } = await supabase.rpc("admin_manage_contest", {
               p_contest_id: contestId,
               p_status: "active",
+              // Explicitní NULL = „neměnit“ (nespoléhat na DEFAULT funkce).
+              p_ticket_count: null,
+              p_ticket_price: null,
               p_operation: "update",
             } as any);
 

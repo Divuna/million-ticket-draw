@@ -149,12 +149,14 @@ test.describe('Wallet Balance — Post-Purchase Decrease', () => {
     // ── 5. Purchase one ticket ────────────────────────────────────────────────
     await buyButton.click();
 
-    // ── 6. Wait for result modal (TicketResultModal) ──────────────────────────
-    // Scoped to the dialog that contains the "Zavřít" close button, which is
-    // unique to TicketResultModal — avoids strict-mode conflict with the
-    // CookieConsentBanner (also role="dialog").
-    const resultDialog = page.locator('[role="dialog"]:has(button[aria-label="Zavřít"])');
-    await expect(resultDialog, 'TicketResultModal must appear after ticket purchase').toBeVisible({
+    // ── 6. Wait for the purchase result dialog ───────────────────────────────
+    // Every customer purchase goes through purchase_guaranteed_benefit_bundle_atomic
+    // and shows MysteryPurchaseResultDialog (the old TicketResultModal with the
+    // "Zavřít" button is no longer used on ContestDetail). Scoped by the dialog's
+    // accessible name (sr-only DialogTitle) to avoid a strict-mode conflict with
+    // the CookieConsentBanner, which also renders role="dialog".
+    const resultDialog = page.getByRole('dialog', { name: /Tentokrát bez výhry|Vyhrál jsi/i });
+    await expect(resultDialog, 'Purchase result dialog must appear after ticket purchase').toBeVisible({
       timeout: 20_000,
     });
 

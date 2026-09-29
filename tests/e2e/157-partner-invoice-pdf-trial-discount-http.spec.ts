@@ -184,9 +184,16 @@ test.describe.serial('157 — generate-partner-invoice-pdf trial discount (real 
     // connection's own lookup of the superadmin test account's id — it
     // already exists and logging in as it is exercised anyway in 157b/157c,
     // so no new account is created for this either.
-    const { data: saUser, error: saLookupErr } = await (admin as any).auth.admin.listUsers();
-    if (saLookupErr) throw new Error(`listUsers: ${saLookupErr.message}`);
-    const activationUserId = saUser.users.find((u: any) => u.email === SUPERADMIN_EMAIL)?.id;
+    // Staging has well over the default 50-per-page auth users, so page through.
+    let activationUserId: string | undefined;
+    for (let page = 1; page <= 20 && !activationUserId; page += 1) {
+      const { data: saUser, error: saLookupErr } = await (admin as any).auth.admin.listUsers({ page, perPage: 1000 });
+      if (saLookupErr) throw new Error(`listUsers: ${saLookupErr.message}`);
+      activationUserId = saUser.users.find(
+        (u: any) => u.email?.toLowerCase() === SUPERADMIN_EMAIL.toLowerCase(),
+      )?.id;
+      if (saUser.users.length < 1000) break;
+    }
     if (!activationUserId) throw new Error('E2E_SUPERADMIN_EMAIL account not found on staging');
 
     // Two reward codes + activations inside the trial window:
