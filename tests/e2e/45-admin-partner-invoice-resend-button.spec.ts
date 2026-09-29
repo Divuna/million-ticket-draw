@@ -76,7 +76,9 @@ test.describe('45 - admin partner invoice resend button', () => {
         vat_amount: 1.05,
         amount_gross: 6.05,
         invoice_number: INVOICE_NUMBER,
-        variable_symbol: '45000001',
+        // Unikátní VS pro každý běh — pevná hodnota kolidovala s řádkem, který
+        // po přerušeném běhu zůstal na stagingu (partner_invoices_variable_symbol_uniq).
+        variable_symbol: `45${String(RUN_ID).slice(-8)}`,
         status: 'issued',
       })
       .select('id')
