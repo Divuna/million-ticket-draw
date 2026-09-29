@@ -1,7 +1,62 @@
 # OneMil – aktuální stav projektu
 
-> **Autoritativní aktuální stav. Poslední aktualizace 29. 9. 2026 — veřejný název MIO a spotřebitelské informace k nákupu MIO (bod 8 VOP) nasazeny do produkce; bannery balíčků čekají na rozhodnutí. Předtím 25. 9. 2026 — jeden odměňovaný zdroj přivedení hráče nasazen do produkce. Předtím 24. 9. 2026 — Fáze 5 (osobní doporučení hráčů) nasazena do produkce `xkzhjldrojjlrkezorey` se schválením Pavla. Předtím 23. 9. 2026 refund blok F2 + F3 + F4 a Fáze 1.**
+> **Autoritativní aktuální stav. Poslední aktualizace 29. 9. 2026 — předstartovní audit před prvním resetem (§ -14, produkce beze změny). Předtím 29. 9. 2026 — veřejný název MIO a spotřebitelské informace k nákupu MIO (bod 8 VOP) nasazeny do produkce; bannery balíčků čekají na rozhodnutí. Předtím 25. 9. 2026 — jeden odměňovaný zdroj přivedení hráče nasazen do produkce. Předtím 24. 9. 2026 — Fáze 5 (osobní doporučení hráčů) nasazena do produkce `xkzhjldrojjlrkezorey` se schválením Pavla. Předtím 23. 9. 2026 refund blok F2 + F3 + F4 a Fáze 1.**
 
+
+## -14. Předstartovní audit před prvním resetem (29. 09. 2026) — produkce beze změny
+
+Kompletní audit a regrese na `main` `58409753`. **V produkci se nic neměnilo** (jen read-only dotazy
+a veřejné GET). Opravy jsou ve větvi `claude/pre-reset-audit-fixes` (NEmergnuto — merge do `main`
+= Vercel deploy, vyžaduje schválení) a na stagingu. Detailní report:
+`docs/reports/PRE_RESET_AUDIT_2026-09-29.md`.
+
+**Staging změny (provedeno):** `settings.guaranteed_benefit_purchase_enabled` `false → true` (jako
+produkce; allowlist `[]`) — tím prošel spec 05; doplněna chybějící `get_admin_top_bar_stats`
+(produkční definice, md5 `99fd624b…`, bez `anon`). Testovací data: účty
+`audit-stripe-20260929@onemil.test` (zákazník, 1 Stripe TEST platba 300 Kč) a
+`audit-admin-20260929@onemil.test` (admin + `contests.create`, `vouchers.manage`), soutěž
+`6a8fc6f4-57b4-4010-ac6c-3ed816098ac6` „AUDIT 29.9.“ (10 tiketů, uzavřená). Nic nesmazáno.
+
+**Opravy ve větvi (nenasazeno):** výpis výher `/wins` ukazoval u bonusových výher jen
+„Bonusová cena“ (produkce: 42 ze 43 vyhraných věcných výher nemá `title`) → `bonusPrizeDisplayName`
+(„25 MIO“ / název výhry); explicitní NULL v aktivačním volání `admin_manage_contest` (spec 152,
+chování beze změny); `get-pending-partner-registrations` stránkuje všechny účty; testy 09 (nový výsledkový dialog), 45 (unikátní VS), 84 (kontrakt jen nad aplikačním kódem), 128 (MIO), 157
+(stránkování uživatelů); CI: plný staging běh `timeout-minutes` 30 → 90, P0 seed s `rules_pdf_url`.
+
+**OPEN ISSUE — staging (neopraveno, zablokováno bezpečnostním klasifikátorem, čeká na Pavla):**
+staging má navíc legacy přetížení `admin_manage_contest(text, uuid, …)` s `anon` EXECUTE → PostgREST
+`PGRST203` (nelze vybrat funkci) → na stagingu nejde z UI vytvořit ani upravit soutěž (specy 18, 19,
+20, 52c). Produkce má jen jednu signaturu. Návrh: `ALTER FUNCTION … RENAME TO
+admin_manage_contest_legacy_staging_20260929` + `REVOKE … FROM PUBLIC, anon, authenticated` +
+`NOTIFY pgrst, 'reload schema'`.
+
+**OPEN ISSUE — produkční rizika (nic neopraveno, vyžaduje schválení):**
+1. Sofinity projekt `rrmvxsldrjgbdxluklka.supabase.co` už neexistuje (NXDOMAIN); cron
+   `forward_messages_to_sofinity` každou minutu selže („Couldn't resolve host name“),
+   `event_queue` 9 712 failed / 139 pending. Zákaznické toky to neblokuje.
+2. `generate-ticket-image` (verify_jwt=false, bez autorizace, service role, `upsert:true`, klíč
+   `<ticketId>.png` shodný s `upload-ticket-share`) — kdokoli může přepsat sdílecí obrázek
+   cizího tiketu. V aplikaci bez volajícího → navrženo vyřadit (410).
+3. `sofinity-agent-dispatcher` (osiřelá, bez zdroje v GitHubu, verify_jwt=false, bez autorizace)
+   volá OpenAI gpt-4o s libovolným promptem — otevřená proxy, pokud je v produkci ještě secret
+   `SUPABASE_SERVICE_ROLE_KEY`. Navrženo smazat spolu s ostatními osiřelými funkcemi.
+4. `calculate_affiliate_commissions_for_month` drží ~20 zámků na affiliate (dočasná tabulka v
+   `_affiliate_recovery_reallocate` v cyklu). Limit 64 × 60 spojení ≈ 3 840 → při ~190 affiliate
+   s platbou v měsíci měsíční cron selže (`out of shared memory`). Produkce má dnes 2 affiliate.
+5. Od nasazení MIO sad (23. 9.) neproběhlo v produkci žádné dobití (jen 73 sad `legacy_opening`)
+   — nová platební cesta je v produkci ověřena jen smoke testem. Po resetu udělat 1 TEST platbu.
+6. PostgREST agregace (`amount.sum()`) je v produkci i na stagingu vypnutá (PGRST123) → admin
+   seznam soutěží ukazuje jen uložený `contests.total_miocoin_bonus` (chyba tiše odchycena).
+7. Automaticky připsaná MIO výhra má u hráče v „Moje výhry“ trvale stav „Čeká“.
+8. `get-pending-partner-registrations` volá `listUsers()` bez stránkování → vidí jen 50
+   nejnovějších účtů; starší čekající registrace partnera zmizí adminovi z fronty i badge
+   (produkce 777 účtů). Opraveno ve větvi (stránkování), nenasazeno. `invite-subadmin` a
+   `approve-affiliate-company-lead` hledají účet jen v 1. stránce po 1 000 (limit se blíží).
+
+**OPEN ISSUE — staging drift:** staging `get-pending-partner-registrations` je v38 starší než repo
+i produkce (jiná autorizace, legacy `SUPABASE_SERVICE_ROLE_KEY`) — proto se na staging nenasazovalo.
+Spec 72 (sales lead šablony) na stagingu padá na 502 z `sales-lead-draft-email` (AI asistence
+konceptu; mimo zákaznické toky, příčina v EF neurčena z logů).
 
 ## -13. MIO a spotřebitelské informace — NASAZENO DO PRODUKCE (29. 09. 2026, schválení Pavla)
 

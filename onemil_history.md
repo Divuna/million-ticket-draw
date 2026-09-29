@@ -1,3 +1,9 @@
+# 29. 09. 2026 — Předstartovní audit před prvním resetem (produkce beze změny)
+
+Kompletní audit: build, kontraktní testy, celý staging E2E ve třech dávkách, SQL scénáře (refund/FEFO 34, doporučení 48, jeden zdroj 12, affiliate provize 29, recovery 35 — vše zelené), reálná Stripe TEST platba a průchod soutěží až po hlavní výhru na stagingu, read-only kontrola produkce. Na stagingu zapnut nákupní flag a doplněna get_admin_top_bar_stats; ve větvi claude/pre-reset-audit-fixes oprava zobrazení bonusových výher na /wins a sladění speců 09/45/128/152/157 + CI timeout. Nalezeno: stagingové přetížení admin_manage_contest (PGRST203, oprava zamítnuta klasifikátorem), mrtvá Sofinity doména, neautorizovaná generate-ticket-image a sofinity-agent-dispatcher, zámkový limit měsíčních affiliate provizí. Detail: onemil_state.md § -14 a docs/reports/PRE_RESET_AUDIT_2026-09-29.md.
+
+---
+
 # 29. 09. 2026 — MIO a spotřebitelské informace nasazeny do produkce
 
 Se schválením Pavla: migrace 20260928100000 (jen texty, ověřeno zpětnou náhradou), VOP s bodem 8 „Vrácení platby za MIO“ publikováno ze zdroje v GitHubu, 8 nepravních CMS stránek převedeno z produkčního obsahu, create-stripe-checkout v369 (verify_jwt=false), main fast-forward na ffdb6f6e, Vercel a produkční smoke zelené. Na stagingu doplněn chybějící záznam migrace. Vypnutí 4 bannerů balíčků neprovedeno — čeká na rozhodnutí; generátory popisu/plakátu záměrně nenasazeny.
