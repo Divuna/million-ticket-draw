@@ -21,7 +21,7 @@ produkce; allowlist `[]`) — tím prošel spec 05; doplněna chybějící `get_
 „Bonusová cena“ (produkce: 42 ze 43 vyhraných věcných výher nemá `title`) → `bonusPrizeDisplayName`
 („25 MIO“ / název výhry); explicitní NULL v aktivačním volání `admin_manage_contest` (spec 152,
 chování beze změny); `get-pending-partner-registrations` stránkuje všechny účty; testy 09 (nový výsledkový dialog), 45 (unikátní VS), 84 (kontrakt jen nad aplikačním kódem), 128 (MIO), 157
-(stránkování uživatelů); CI: plný staging běh `timeout-minutes` 30 → 90, P0 seed s `rules_pdf_url`.
+(stránkování uživatelů); CI: plný staging běh `timeout-minutes` 30 → 90; P0 workflow (seed s `rules_pdf_url`, superadmin env, reset voucherů jako plný workflow) → P0 smoke `36571332968` zelený.
 
 **OPEN ISSUE — staging (neopraveno, zablokováno bezpečnostním klasifikátorem, čeká na Pavla):**
 staging má navíc legacy přetížení `admin_manage_contest(text, uuid, …)` s `anon` EXECUTE → PostgREST

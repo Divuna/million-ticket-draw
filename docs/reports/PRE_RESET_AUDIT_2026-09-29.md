@@ -13,6 +13,7 @@ Opravy kódu: větev `claude/pre-reset-audit-fixes` (nemergnuto).
 | Staging E2E dávka 1 (01–37, 100–199) | naplánovaný běh `36540169899` (zrušen po 30 min) | 966 testů prošlo, 10 selhalo (viz níže) |
 | Staging E2E dávka 2 (37–69 + phase2) | `36545901026` | 147 passed / 2 failed / 27 skipped |
 | Staging E2E dávka 3 (70–99 + opravené 05/09/45/128/152/157) | `36568763341` | 321 passed / 2 failed (72 = 502 z EF na stagingu, 84 = chyba kontraktu → opraveno) / 21 skipped; všechny opravené specy zelené |
+| Staging P0 smoke (větev) | `36571332968` | ✅ success (po opravách seedu, superadmin env a resetu voucherů) |
 | Cílené přeběhnutí selhaných | `36543440935` | 05 ✅ po zapnutí flagu, 194a ✅ |
 | Refund / MIO sady / FEFO / expirace | `supabase/tests/refund_block_wallet_lots_scenarios.sql` | 34/34 |
 | Hráčské doporučení 5 % + 15 MIO | `phase5_player_referral_scenarios.sql` | 48/48 |
@@ -55,7 +56,7 @@ Viz `onemil_state.md` § -14 (OPEN ISSUE staging + produkční rizika 1–7).
 | `guaranteed_benefit_purchase_enabled` staging | opraveno |
 | `get_admin_top_bar_stats` staging | opraveno |
 | specy 18/19/20 | příčina = stagingové legacy přetížení `admin_manage_contest` (PGRST203) — čeká na schválení |
-| P0 workflow seed | opraveno ve větvi |
+| P0 workflow | seed bez `rules_pdf_url`, chybějící superadmin env (specy 29/31/32) a vadný reset voucherů (spec 03) — opraveno ve větvi, P0 zelený |
 | plný staging E2E „cancelled“ | timeout 30 min < délka suite → opraveno ve větvi |
 | 142 osiřelých bonusových výher | aktuálně 0 v produkci (dokumentace neaktuální) |
 | staging 975 auth účtů | specy čtoucí jen 1. stránku `listUsers` (37, 56) začnou padat nad 1 000 |
