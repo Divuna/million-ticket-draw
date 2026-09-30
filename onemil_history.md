@@ -1,3 +1,9 @@
+# 30. 09. 2026 — Příprava prvního resetu (nespuštěno)
+
+Read-only mapa produkce (136 tabulek zařazeno), identifikace superadmina, reset skript v jedné transakci s kontrolami před/po a otiskem účtu superadmina (docs/reset/first-reset/). Suchý běh na stagingu v obou režimech CRM prošel a vrátil se; odhalil osiřelé auth záznamy a past v úklidu Vaultu (opraveno). Záloha nevytvořena — chybí heslo k DB, připraven skript pro Pavla. Zjištěno, že obchodní CRM obsahuje reálné oslovené firmy — rozhodnutí D1 čeká na Pavla. Detail § -17 onemil_state.md.
+
+---
+
 # 30. 09. 2026 — Předstartovní opravy nasazeny do produkce (reset neproběhl)
 
 Se schválením Pavla: migrace _affiliate_recovery_reallocate bez dočasných tabulek (produkce 20260930140558, 0 recovery → žádná data dotčena), generate-ticket-image v151 a sofinity-agent-dispatcher v40 vyřazeny (410), stránkování auth uživatelů v get-pending-partner-registrations v200 / invite-subadmin v64 / approve-affiliate-company-lead v69, log chyby OpenAI v sales-lead-draft-email v49 — vše verify_jwt=false jako dřív. PR #422, main fast-forward na b8d26d75, Vercel Production success (oprava /wins živě), smoke v PR i z main zelené. Peněženky a platby beze změny. Detail § -16 onemil_state.md.

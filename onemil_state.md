@@ -1,7 +1,32 @@
 # OneMil – aktuální stav projektu
 
-> **Autoritativní aktuální stav. Poslední aktualizace 30. 9. 2026 — předstartovní opravy nasazeny do produkce (§ -16), reset NEPROBĚHL. Předtím 29. 9. 2026 — 2. kolo předstartovních oprav (§ -15, staging + větev). Předtím předstartovní audit (§ -14). Předtím 29. 9. 2026 — veřejný název MIO a spotřebitelské informace k nákupu MIO (bod 8 VOP) nasazeny do produkce; bannery balíčků čekají na rozhodnutí. Předtím 25. 9. 2026 — jeden odměňovaný zdroj přivedení hráče nasazen do produkce. Předtím 24. 9. 2026 — Fáze 5 (osobní doporučení hráčů) nasazena do produkce `xkzhjldrojjlrkezorey` se schválením Pavla. Předtím 23. 9. 2026 refund blok F2 + F3 + F4 a Fáze 1.**
+> **Autoritativní aktuální stav. Poslední aktualizace 30. 9. 2026 — příprava prvního resetu (§ -17: mapa, skript, suchý běh na stagingu), reset NEPROBĚHL, záloha zatím NEVYTVOŘENA. Předtím předstartovní opravy nasazeny do produkce (§ -16). Předtím 29. 9. 2026 — 2. kolo předstartovních oprav (§ -15, staging + větev). Předtím předstartovní audit (§ -14). Předtím 29. 9. 2026 — veřejný název MIO a spotřebitelské informace k nákupu MIO (bod 8 VOP) nasazeny do produkce; bannery balíčků čekají na rozhodnutí. Předtím 25. 9. 2026 — jeden odměňovaný zdroj přivedení hráče nasazen do produkce. Předtím 24. 9. 2026 — Fáze 5 (osobní doporučení hráčů) nasazena do produkce `xkzhjldrojjlrkezorey` se schválením Pavla. Předtím 23. 9. 2026 refund blok F2 + F3 + F4 a Fáze 1.**
 
+
+## -17. Příprava prvního předstartovního resetu (30. 09. 2026) — NESPUŠTĚNO
+
+Vše v `docs/reset/first-reset/` (README = mapa dat, pořadí, očekávané počty, rozhodnutí, rizika).
+Produkce: jen read-only dotazy, nic nezměněno.
+
+- **Mapa (read-only produkce):** 136 tabulek v `public`, každá zařazena právě jednou — 9 zůstává,
+  7 částečně (jen superadmin), 2 `DELETE` (partners, affiliate_accounts), 16 obchodní CRM, 102
+  `TRUNCATE`. Všechny vlastní `postgres`; žádná nemá TRUNCATE trigger.
+- **Superadmin:** `divispavel2@gmail.com`, `60f5837e-a280-4ddd-b0dd-f94cc844bb3b`, jediný
+  superadmin; má testovací peněženku 10 077,91 MIO, 17 tiketů, 13 plateb (reset je smaže,
+  peněženku vynuluje, účet/identity/profil/roli nezmění — hlídá otisk md5).
+- **`03_reset.sql`:** jedna transakce, povinné `c_crm_mode` + `c_backup_file`, `c_dry_run`
+  (výchozí true = rollback). Suchý běh na stagingu (kopie s ID stagingového superadmina):
+  `keep_reassign` OK (1 143 účtů, 104 tabulek), `delete` OK (1 143 účtů, 119 tabulek), staging
+  beze změny. Opraveno během suchého běhu: osiřelé auth relace/identity, kontrola role → otisk.
+- **`05_vault_cleanup.sql`:** opravena past — nekvalifikované `name` v poddotazu se vázalo na
+  `partners.name` a smazalo by i Shoptet odkazy živých partnerů.
+- **Záloha NEVYTVOŘENA:** na stroji není heslo k produkční DB (a nesmí přijít do chatu).
+  `01_backup_production.ps1` spustí Pavel (skrytý vstup, `pg_dump` 17 → `pg_restore -l` ověření).
+- **OPEN ISSUE / rozhodnutí před spuštěním:** D1 obchodní CRM (reálné oslovené firmy; 425 záznamů
+  založil `pepca@onemil.cz` s RESTRICT) — doporučeno `keep_reassign`; D2 smazání adminů
+  `jan.bulir@`, `pepca@`; D3 po resetu chybí neomezený fallback benefit → nelze aktivovat soutěž,
+  allowlist obsahuje ID smazaných soutěží; D4 5 080 souborů ve Storage (jen přes Storage API);
+  D5 číslování faktur po resetu začne od `OMA-20260001`.
 
 ## -16. Předstartovní opravy — NASAZENO DO PRODUKCE (30. 09. 2026, schválení Pavla) — reset NEPROBĚHL
 

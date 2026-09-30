@@ -485,6 +485,14 @@ musí vzniknout v obou (a `select id from user_roles` vrací `user_roles.id`, **
 Souběh se proto ověřuje staticky (přítomnost `for update of vc skip locked`) plus funkčním
 důsledkem (sekvenční nákupy: právě jeden dostane omezený kód, ostatní neomezený).
 
+## Připravený skript prvního resetu (30. 09. 2026, NESPUŠTĚNO)
+
+`docs/reset/first-reset/` — mapa, pořadí, rozhodnutí a rizika v README. Jediná povolená cesta je
+`03_reset.sql` (jedna transakce, fail-closed parametry, kontrola úplné klasifikace tabulek,
+otisk účtu superadmina). **Obchodní CRM nejsou testovací data** (reálně oslovené firmy, seznam
+„nekontaktovat") — neumazat je bez rozhodnutí Pavla. V SQL nad `vault.secrets` vždy kvalifikovat
+`s.name`: `partners` má vlastní sloupec `name`.
+
 ## Co reset odstraní (provozní testovací data)
 
 - zákaznické a testovací účty — **kromě zachovaného superadmina**,
