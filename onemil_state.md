@@ -1,11 +1,41 @@
 # OneMil – aktuální stav projektu
 
-> **Autoritativní aktuální stav. Poslední aktualizace 29. 9. 2026 — 2. kolo předstartovních oprav (§ -15, staging + větev, produkce beze změny). Předtím předstartovní audit (§ -14). Předtím 29. 9. 2026 — veřejný název MIO a spotřebitelské informace k nákupu MIO (bod 8 VOP) nasazeny do produkce; bannery balíčků čekají na rozhodnutí. Předtím 25. 9. 2026 — jeden odměňovaný zdroj přivedení hráče nasazen do produkce. Předtím 24. 9. 2026 — Fáze 5 (osobní doporučení hráčů) nasazena do produkce `xkzhjldrojjlrkezorey` se schválením Pavla. Předtím 23. 9. 2026 refund blok F2 + F3 + F4 a Fáze 1.**
+> **Autoritativní aktuální stav. Poslední aktualizace 30. 9. 2026 — předstartovní opravy nasazeny do produkce (§ -16), reset NEPROBĚHL. Předtím 29. 9. 2026 — 2. kolo předstartovních oprav (§ -15, staging + větev). Předtím předstartovní audit (§ -14). Předtím 29. 9. 2026 — veřejný název MIO a spotřebitelské informace k nákupu MIO (bod 8 VOP) nasazeny do produkce; bannery balíčků čekají na rozhodnutí. Předtím 25. 9. 2026 — jeden odměňovaný zdroj přivedení hráče nasazen do produkce. Předtím 24. 9. 2026 — Fáze 5 (osobní doporučení hráčů) nasazena do produkce `xkzhjldrojjlrkezorey` se schválením Pavla. Předtím 23. 9. 2026 refund blok F2 + F3 + F4 a Fáze 1.**
 
 
-## -15. Předstartovní blokátory — 2. kolo oprav (29. 09. 2026) — produkce beze změny, jen staging + větev
+## -16. Předstartovní opravy — NASAZENO DO PRODUKCE (30. 09. 2026, schválení Pavla) — reset NEPROBĚHL
 
-Větev `claude/pre-reset-audit-fixes` (nemergnuto). Aktualizuje OPEN ISSUE z § -14:
+Před každým krokem znovu ověřen skutečný stav produkce `xkzhjldrojjlrkezorey`; nic se nelišilo od očekávání.
+
+- **Migrace** `20260929120000_affiliate_recovery_reallocate_no_temp_tables` → v produkci zapsána jako
+  `20260930140558`. Před nasazením produkční definice = rollback soubor (`pg_get_functiondef` md5 `54a79cc0…`).
+  Po nasazení zdroj funkce shodný se stagingem (`prosrc` md5 `5dd7cede…`), signatura, `SECURITY DEFINER`,
+  `search_path=''` i ACL (`postgres`, `service_role`) beze změny. Produkce měla 0 recovery → změna
+  nesáhla na žádná data; kontrolní volání v rollbacknuté transakci `status=ok, changed_commissions=0`.
+- **Edge Functions (vše `verify_jwt=false` zachováno):**
+  - `generate-ticket-image` v150 → **v151** (410 `endpoint_retired`); rollback = zdroj z historie `main` před `97d87135`.
+  - `sofinity-agent-dispatcher` v39 → **v40** (410); rollback `docs/rollback/sofinity_agent_dispatcher_prod_v39_source.ts.txt`.
+  - `get-pending-partner-registrations` v199 → **v200**, `invite-subadmin` v63 → **v64**,
+    `approve-affiliate-company-lead` v68 → **v69** — stránkování auth uživatelů (`_shared/authUserLookup.ts`).
+  - `sales-lead-draft-email` v48 → **v49** — jen bezpečný log chyby OpenAI.
+  - Před nasazením ověřeno, že produkční verze odpovídaly `main` (poslední hromadné nasazení 24. 9.,
+    v `main` bez změn těchto funkcí od 20. 9.); nasazeno přes CLI s výslovným `--project-ref`.
+  - Ověřeno: obě vyřazené funkce vrací 410 (GET i POST); `invite-subadmin`, `approve-affiliate-company-lead`,
+    `sales-lead-draft-email` bez přihlášení 401; `get-pending-partner-registrations` 400 „Chybí autorizační
+    hlavička“ (dosavadní chování).
+- **Frontend:** PR #422 → `main` fast-forward `58409753` → `b8d26d75`. Vercel Production deployment
+  `success`, `www.onemil.cz` servíruje `index-3EzAOv2P.js` s opravou `/wins` (dotaz na bonusovou výhru
+  s `description, amount`); apex `onemil.cz` 308 → `www`, `X-Frame-Options: DENY`.
+- **Smoke:** PR (push + pull_request) 2× success, produkční smoke z `main` run `36727361330` success.
+- **Beze změny:** součet peněženek 139 417,81, platby 139, `admin_manage_contest` 1 varianta,
+  nákupní flag `true`. Žádná produkční data ani účty smazány, cron Sofinity nevypnut.
+- **Zbývá před resetem (§ -2):** read-only datová mapa aktuální produkce, ověřená záloha (`pg_dump` +
+  `pg_restore -l`), výslovné schválení spuštění resetu Pavlem. OPEN ISSUE: vyčerpaný kredit OpenAI na
+  stagingu (produkční klíč neověřen), rozhodnutí o mrtvém Sofinity napojení (cron 11, trigger na `users`).
+
+## -15. Předstartovní blokátory — 2. kolo oprav (29. 09. 2026) — do produkce nasazeno 30. 09. 2026 (§ -16)
+
+Větev `claude/pre-reset-audit-fixes` (mergnuto 30. 9. 2026, viz § -16). Aktualizuje OPEN ISSUE z § -14:
 
 - **Staging `admin_manage_contest`:** se schválením Pavla odstraněna jen legacy varianta
   `(text, uuid, …)` (md5 `d60be435…`, `anon` EXECUTE). Zachovaná signatura je po odstranění komentářů

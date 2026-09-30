@@ -58,6 +58,21 @@ prvních skutečných zákazníků musí proběhnout **jeden řízený kompletn�
 ale to **není důvod je mazat, měnit ani „uklízet" mimochodem**. Jediná povolená cesta k jejich
 odstranění je ten jeden schválený reset.
 
+## PŘEDSTARTOVNÍ OPRAVY — TRVALÉ INVARIANTY (30. 09. 2026, PRODUKCE)
+
+Detail: `onemil_state.md` § -16. Reset tím NEPROBĚHL.
+
+- **`generate-ticket-image` a `sofinity-agent-dispatcher` jsou vyřazené** (410 `endpoint_retired`, bez DB,
+  storage i OpenAI). Neobnovovat — obě byly veřejné bez autorizace. Hlídá spec 197. Původní dispatcher
+  je jen v `docs/rollback/sofinity_agent_dispatcher_prod_v39_source.ts.txt`.
+- **Hledání auth uživatele podle e-mailu vždy přes `_shared/authUserLookup.ts`** (`findAuthUserIdByEmail`,
+  stránkuje). `auth.admin.listUsers()` bez stránkování vrací jen 50 (max 1000) účtů — nepoužívat
+  jednostránkové hledání. Hlídá spec 198.
+- **`_affiliate_recovery_reallocate` nesmí používat dočasné tabulky** — v jedné transakci měsíčního výpočtu
+  vyčerpají lock table (`53200`). Pracovat s poli PL/pgSQL.
+- Edge Functions bez záznamu v `config.toml` nasazovat přes CLI vždy s `--project-ref` a `--no-verify-jwt`,
+  pokud mají v produkci `verify_jwt=false`.
+
 ## JEDEN ODMĚŇOVANÝ ZDROJ PŘIVEDENÍ HRÁČE (25. 09. 2026, PRODUKCE)
 
 Migrace `20260927100000_single_player_acquisition_source.sql`. Detail: `onemil_state.md` § -10.

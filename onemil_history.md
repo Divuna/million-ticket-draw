@@ -1,3 +1,9 @@
+# 30. 09. 2026 — Předstartovní opravy nasazeny do produkce (reset neproběhl)
+
+Se schválením Pavla: migrace _affiliate_recovery_reallocate bez dočasných tabulek (produkce 20260930140558, 0 recovery → žádná data dotčena), generate-ticket-image v151 a sofinity-agent-dispatcher v40 vyřazeny (410), stránkování auth uživatelů v get-pending-partner-registrations v200 / invite-subadmin v64 / approve-affiliate-company-lead v69, log chyby OpenAI v sales-lead-draft-email v49 — vše verify_jwt=false jako dřív. PR #422, main fast-forward na b8d26d75, Vercel Production success (oprava /wins živě), smoke v PR i z main zelené. Peněženky a platby beze změny. Detail § -16 onemil_state.md.
+
+---
+
 # 29. 09. 2026 — Předstartovní blokátory, 2. kolo (staging + větev, produkce beze změny)
 
 Na stagingu odstraněna legacy varianta admin_manage_contest (specy 18/19/20/52 zelené); příčina 502 v sales-lead-draft-email = vyčerpaný kredit OpenAI (přidán log); stránkování auth účtů v get-pending-partner-registrations, invite-subadmin a approve-affiliate-company-lead (staging jen stránkovací změna nad stagingovými verzemi); generate-ticket-image a sofinity-agent-dispatcher vyřazeny (410) v repu a na stagingu; _affiliate_recovery_reallocate bez dočasných tabulek (reprodukováno přetečení zámků při 250 affiliate × 12 měsíců, po opravě OK, diferenční test 0 rozdílů). Sofinity napojení zmapováno (cílový projekt neexistuje). Detail § -15 onemil_state.md.
