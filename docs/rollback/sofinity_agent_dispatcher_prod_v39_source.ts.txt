@@ -1,0 +1,275 @@
+// ROLLBACK SOURCE — produkční Edge Function `sofinity-agent-dispatcher`, verze 39
+// (xkzhjldrojjlrkezorey, verify_jwt=false, ezbr_sha256 209627ef41f230f609a85587aa6bcb9a6a6bfa8edb3ee893b264d423d84acc50).
+// Staženo 30. 9. 2026 těsně před nahrazením stubem 410 `endpoint_retired`.
+// Funkce nikdy neměla zdroj v GitHubu (patřila projektu Sofinity). Obnova = nasadit tento
+// soubor jako index.ts se stejným verify_jwt=false. Pozor: čte legacy SUPABASE_SERVICE_ROLE_KEY
+// a volá OpenAI bez autorizace volajícího — obnovovat jen s výslovným schválením Pavla.
+// Soubor má příponu .txt záměrně, aby ho nebralo tsc/lint ani kontraktní testy Edge Functions.
+
+import "https://deno.land/x/xhr@0.1.0/mod.ts";
+import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
+import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.39.3';
+
+const corsHeaders = {
+  'Access-Control-Allow-Origin': '*',
+  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
+};
+
+serve(async (req) => {
+  // Handle CORS preflight requests
+  if (req.method === 'OPTIONS') {
+    return new Response(null, { headers: corsHeaders });
+  }
+
+  try {
+    const requestBody = await req.json();
+    const { id, user_id, type, prompt, project_id: requestProjectId } = requestBody;
+
+    // Log full request payload for debugging
+    console.log('🔍 Sofinity Agent Dispatcher - Full request:', JSON.stringify({
+      id,
+      user_id,
+      type,
+      prompt: prompt ? `${prompt.substring(0, 100)}...` : null,
+      promptLength: prompt?.length,
+    }));
+
+    // Validate required parameters
+    if (!id || !type) {
+      console.error('❌ Missing required parameters:', { id: !!id, type: !!type, prompt: !!prompt });
+      return new Response(
+        JSON.stringify({
+          success: false,
+          error: 'Missing required parameters: id and type are required',
+          id,
+          type,
+        }),
+        { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
+    // Validate prompt - must be a non-empty string
+    if (!prompt || typeof prompt !== 'string' || prompt.trim().length === 0) {
+      console.error('❌ Invalid or empty prompt:', { id, type, promptProvided: !!prompt, promptType: typeof prompt });
+      return new Response(
+        JSON.stringify({
+          success: false,
+          error: 'Invalid prompt: must be a non-empty string',
+          id,
+          type,
+        }),
+        { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
+    const openAIApiKey = Deno.env.get('OPENAI_API_KEY');
+    const supabaseUrl = Deno.env.get('SUPABASE_URL');
+    const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
+
+    if (!openAIApiKey || !supabaseUrl || !supabaseServiceKey) {
+      throw new Error('Missing required environment variables');
+    }
+
+    const supabase = createClient(supabaseUrl, supabaseServiceKey);
+
+    // Define system prompts based on request type
+    // For campaign_generator, fetch recent OneMil stats from EventLogs
+    let oneMilContext = '';
+    if (type === 'campaign_generator') {
+      try {
+        const since = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString();
+        const [regResult, voucherResult, contestResult] = await Promise.all([
+          supabase.from('EventLogs').select('id', { count: 'exact', head: true })
+            .eq('event_name', 'user_registered').gte('created_at', since),
+          supabase.from('EventLogs').select('id', { count: 'exact', head: true })
+            .eq('event_name', 'voucher_purchased').gte('created_at', since),
+          supabase.from('EventLogs').select('id', { count: 'exact', head: true })
+            .eq('event_name', 'coin_redeemed').gte('created_at', since),
+        ]);
+        const reg = regResult.count ?? 0;
+        const vouchers = voucherResult.count ?? 0;
+        const contests = contestResult.count ?? 0;
+        oneMilContext = `Aktuální data z OneMil: ${reg} nových registrací, ${vouchers} nákupů voucherů, ${contests} vstupů do soutěží za posledních 30 dní. Navrhni kampaň která reaguje na tato data.`;
+        console.log('📊 OneMil context fetched:', { reg, vouchers, contests });
+      } catch (err) {
+        console.error('⚠️ Failed to fetch OneMil context:', err);
+      }
+    }
+
+    const systemPrompts: Record<string, string> = {
+      campaign_generator: `You are a creative marketing campaign generator. Create compelling campaign content in Czech language that engages the target audience and drives action. Focus on clear messaging and strong calls-to-action.${oneMilContext ? '\n\n' + oneMilContext : ''}`,
+      email_assistant: `You are an email content specialist. Generate professional, engaging email content in Czech language that is clear, concise, and effective for business communication.`,
+      video_script: `You are a video script writer. Create engaging video scripts in Czech language with clear structure, compelling narrative, and strong visual descriptions.`,
+      evaluator: `You are an AI evaluator analyzing marketing campaign performance. Provide objective analysis with actionable insights and recommendations in Czech language.`,
+      default: `You are a helpful AI assistant. Provide clear, accurate, and useful responses in Czech language.`
+    };
+
+    const systemPrompt = systemPrompts[type] || systemPrompts.default;
+
+    console.log('Calling OpenAI API with model gpt-4o for type:', type);
+
+    // Call OpenAI API
+    const openAIResponse = await fetch('https://api.openai.com/v1/chat/completions', {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${openAIApiKey}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        model: 'gpt-4o',
+        messages: [
+          { role: 'system', content: systemPrompt },
+          { role: 'user', content: prompt }
+        ],
+        temperature: 0.7,
+        max_tokens: 2000,
+      }),
+    });
+
+    if (!openAIResponse.ok) {
+      const errorText = await openAIResponse.text();
+      console.error('❌ OpenAI API error:', {
+        status: openAIResponse.status,
+        statusText: openAIResponse.statusText,
+        error: errorText,
+        requestId: id,
+      });
+
+      // Return 200 with error details instead of throwing
+      return new Response(
+        JSON.stringify({
+          success: false,
+          error: `OpenAI API error: ${openAIResponse.status}`,
+          details: errorText,
+          id,
+          type,
+        }),
+        { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
+    const openAIData = await openAIResponse.json();
+    const generatedText = openAIData.choices?.[0]?.message?.content;
+
+    if (!generatedText) {
+      console.error('❌ No content generated by OpenAI:', { id, type, openAIData });
+      return new Response(
+        JSON.stringify({
+          success: false,
+          error: 'No content generated by AI',
+          id,
+          type,
+        }),
+        { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
+    console.log('✅ Generated response:', {
+      id,
+      type,
+      responseLength: generatedText.length,
+      preview: generatedText.substring(0, 100) + '...',
+    });
+
+    // Update AIRequests record
+    const { error: updateError } = await supabase
+      .from('AIRequests')
+      .update({
+        response: generatedText,
+        status: 'completed',
+        updated_at: new Date().toISOString(),
+      })
+      .eq('id', id);
+
+    if (updateError) {
+      console.error('❌ Error updating AIRequests:', {
+        error: updateError,
+        code: updateError.code,
+        message: updateError.message,
+        details: updateError.details,
+        hint: updateError.hint,
+        id,
+      });
+
+      // Return 200 with error details instead of throwing
+      return new Response(
+        JSON.stringify({
+          success: false,
+          error: 'Failed to update AI request in database',
+          details: updateError.message,
+          id,
+          type,
+          // Still include the generated text so it's not lost
+          generatedText,
+        }),
+        { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
+    // For campaign_generator, insert a draft Campaign row
+    if (type === 'campaign_generator') {
+      try {
+        // Resolve project_id: use from request, or fall back to OneMil project lookup
+        let resolvedProjectId: string | null = requestProjectId ?? null;
+        if (!resolvedProjectId) {
+          const { data: oneMilProject } = await supabase
+            .from('Projects')
+            .select('id')
+            .or('name.ilike.%onemil%,name.ilike.%one mil%')
+            .limit(1)
+            .single();
+          resolvedProjectId = oneMilProject?.id ?? null;
+          console.log('📁 Resolved OneMil project_id:', resolvedProjectId);
+        }
+
+        const campaignName = prompt.substring(0, 80);
+        const { data: campaignData, error: campaignError } = await supabase
+          .from('Campaigns')
+          .insert({
+            name: campaignName,
+            post: generatedText,
+            status: 'draft',
+            project_id: resolvedProjectId,
+            user_id: user_id ?? null,
+          })
+          .select('id')
+          .single();
+
+        if (campaignError) {
+          console.error('⚠️ Failed to insert Campaign:', campaignError.message);
+        } else {
+          console.log('✅ Campaign draft created:', campaignData?.id);
+        }
+      } catch (err) {
+        console.error('⚠️ Exception creating Campaign:', err);
+      }
+    }
+
+    console.log('✅ Successfully processed request:', { id, type, user_id });
+
+    return new Response(
+      JSON.stringify({
+        success: true,
+        id,
+        response: generatedText,
+        type,
+      }),
+      { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+    );
+
+  } catch (error) {
+    console.error('❌ Unhandled error in sofinity-agent-dispatcher:', {
+      error: error instanceof Error ? error.message : 'Unknown error',
+      stack: error instanceof Error ? error.stack : undefined,
+    });
+
+    // Always return 200 with error details
+    return new Response(
+      JSON.stringify({
+        success: false,
+        error: error instanceof Error ? error.message : 'Unknown error',
+      }),
+      { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+    );
+  }
+});
