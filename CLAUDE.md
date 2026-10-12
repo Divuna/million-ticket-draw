@@ -58,6 +58,11 @@ prvních skutečných zákazníků musí proběhnout **jeden řízený kompletn�
 ale to **není důvod je mazat, měnit ani „uklízet" mimochodem**. Jediná povolená cesta k jejich
 odstranění je ten jeden schválený reset.
 
+**➡️ Reset PROBĚHL 12. 10. 2026** (schválení Pavla; ověřená záloha
+`onemil-production-pre-first-reset-20261012-150802.dump`; detail `onemil_state.md` § -18). Odstavec
+výše je historický záznam. Data vzniklá po resetu se nesmí hromadně mazat ani „uklízet" — každé další
+hromadné mazání produkčních dat vyžaduje nové výslovné schválení Pavla.
+
 ## PŘEDSTARTOVNÍ OPRAVY — TRVALÉ INVARIANTY (30. 09. 2026, PRODUKCE)
 
 Detail: `onemil_state.md` § -16. Reset tím NEPROBĚHL.
@@ -485,7 +490,11 @@ musí vzniknout v obou (a `select id from user_roles` vrací `user_roles.id`, **
 Souběh se proto ověřuje staticky (přítomnost `for update of vc skip locked`) plus funkčním
 důsledkem (sekvenční nákupy: právě jeden dostane omezený kód, ostatní neomezený).
 
-## Připravený skript prvního resetu (30. 09. 2026, NESPUŠTĚNO)
+## Připravený skript prvního resetu (30. 09. 2026; PROVEDEN 12. 10. 2026 — § -18)
+
+Záloha přes `01_backup_production.ps1`: na Windows PowerShell 5.1 nesměrovat stderr `pg_dump` přes
+`2>` — PowerShell ho přestane odebírat, `pg_dump` se zablokuje a v DB zůstane `idle in transaction`
+(stalo se 24. 6. i 12. 10. 2026). Skript proto používá `Start-Process -RedirectStandardError`.
 
 `docs/reset/first-reset/` — mapa, pořadí, rozhodnutí a rizika v README. Jediná povolená cesta je
 `03_reset.sql` (jedna transakce, fail-closed parametry, kontrola úplné klasifikace tabulek,

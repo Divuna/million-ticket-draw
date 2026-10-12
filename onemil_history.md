@@ -1,3 +1,9 @@
+# 12. 10. 2026 — První předstartovní reset produkce PROVEDEN
+
+Se schválením Pavla. Ověřená záloha pg_dump 501 MB (SHA-256 91D66912…, pg_restore -l OK; první pokus se zasekl na PS 5.1 stderr redirect → skript opraven na Start-Process). Precheck shodný s mapou, suchý běh na produkci OK a vrácen, ostrý běh v režimu keep_reassign: smazáno 776 účtů, vyprázdněno 102 tabulek + partneři a affiliate účty, autorství 425 CRM záznamů přepsáno na superadmina. Zachován superadmin (otisk beze změny, peněženka 0), settings, právní texty, obchodní CRM včetně „nekontaktovat", cron, Vault, struktura. Úklid Vaultu, Storage, nový fallback benefit, pozvání adminů a obnova produkčního smoke účtu zbývají. Detail § -18 onemil_state.md.
+
+---
+
 # 30. 09. 2026 — Příprava prvního resetu (nespuštěno)
 
 Read-only mapa produkce (136 tabulek zařazeno), identifikace superadmina, reset skript v jedné transakci s kontrolami před/po a otiskem účtu superadmina (docs/reset/first-reset/). Suchý běh na stagingu v obou režimech CRM prošel a vrátil se; odhalil osiřelé auth záznamy a past v úklidu Vaultu (opraveno). Záloha nevytvořena — chybí heslo k DB, připraven skript pro Pavla. Zjištěno, že obchodní CRM obsahuje reálné oslovené firmy — rozhodnutí D1 čeká na Pavla. Detail § -17 onemil_state.md.

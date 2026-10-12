@@ -22,8 +22,10 @@ declare
   -- ---------------- PARAMETRY ----------------
   c_superadmin_email constant text := 'divispavel2@gmail.com';
   c_superadmin_id    constant uuid := '60f5837e-a280-4ddd-b0dd-f94cc844bb3b';
-  c_crm_mode         constant text := null;      -- 'keep_reassign' | 'delete'  (POVINNÉ)
-  c_backup_file      constant text := null;      -- např. 'onemil-production-pre-first-reset-20261001-080000.dump' (POVINNÉ)
+  c_crm_mode         constant text := 'keep_reassign';  -- rozhodnutí Pavla 12. 10. 2026
+  -- ověřená záloha 12. 10. 2026 15:10, 525 386 890 B,
+  -- SHA-256 91D6691209A5D1B54188474328EE56E25A5A8AEE2C30662BF0C23269DB66615D
+  c_backup_file      constant text := 'onemil-production-pre-first-reset-20261012-150802.dump';
   c_dry_run          constant boolean := true;   -- ostrý běh jen po schválení: false
 
   -- ---------------- KLASIFIKACE TABULEK public ----------------

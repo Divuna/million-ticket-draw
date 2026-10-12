@@ -1,7 +1,40 @@
 # OneMil – aktuální stav projektu
 
-> **Autoritativní aktuální stav. Poslední aktualizace 30. 9. 2026 — příprava prvního resetu (§ -17: mapa, skript, suchý běh na stagingu), reset NEPROBĚHL, záloha zatím NEVYTVOŘENA. Předtím předstartovní opravy nasazeny do produkce (§ -16). Předtím 29. 9. 2026 — 2. kolo předstartovních oprav (§ -15, staging + větev). Předtím předstartovní audit (§ -14). Předtím 29. 9. 2026 — veřejný název MIO a spotřebitelské informace k nákupu MIO (bod 8 VOP) nasazeny do produkce; bannery balíčků čekají na rozhodnutí. Předtím 25. 9. 2026 — jeden odměňovaný zdroj přivedení hráče nasazen do produkce. Předtím 24. 9. 2026 — Fáze 5 (osobní doporučení hráčů) nasazena do produkce `xkzhjldrojjlrkezorey` se schválením Pavla. Předtím 23. 9. 2026 refund blok F2 + F3 + F4 a Fáze 1.**
+> **Autoritativní aktuální stav. Poslední aktualizace 12. 10. 2026 — PRVNÍ PŘEDSTARTOVNÍ RESET PRODUKCE PROVEDEN (§ -18) se schválením Pavla; záloha ověřena, CRM zachováno, kroky 05 (Vault) a úklid Storage zatím neprovedeny. Předtím 30. 9. 2026 — příprava prvního resetu (§ -17: mapa, skript, suchý běh na stagingu), reset NEPROBĚHL, záloha zatím NEVYTVOŘENA. Předtím předstartovní opravy nasazeny do produkce (§ -16). Předtím 29. 9. 2026 — 2. kolo předstartovních oprav (§ -15, staging + větev). Předtím předstartovní audit (§ -14). Předtím 29. 9. 2026 — veřejný název MIO a spotřebitelské informace k nákupu MIO (bod 8 VOP) nasazeny do produkce; bannery balíčků čekají na rozhodnutí. Předtím 25. 9. 2026 — jeden odměňovaný zdroj přivedení hráče nasazen do produkce. Předtím 24. 9. 2026 — Fáze 5 (osobní doporučení hráčů) nasazena do produkce `xkzhjldrojjlrkezorey` se schválením Pavla. Předtím 23. 9. 2026 refund blok F2 + F3 + F4 a Fáze 1.**
 
+
+## -18. První předstartovní reset produkce — PROVEDENO (12. 10. 2026, schválení Pavla)
+
+Produkce `xkzhjldrojjlrkezorey`. Postup `docs/reset/first-reset/`: záloha → precheck → suchý běh →
+ostrý běh → postcheck. Staging `dxmowysntemfqfnanxua` nedotčen.
+
+- **Záloha (ověřená):** `backups/onemil-production-pre-first-reset-20261012-150802.dump`
+  (lokálně u Pavla, gitignored), 525 386 890 B, 12. 10. 2026 15:10–15:20 +02:00, SHA-256
+  `91D6691209A5D1B54188474328EE56E25A5A8AEE2C30662BF0C23269DB66615D`. `pg_dump` exit 0, 0 chyb;
+  `pg_restore -l` exit 0, 3 517 položek, data 136/136 tabulek `public` + 27 `auth` + storage/vault/cron,
+  459/459 vlastních funkcí, 265 policy. Restore neprováděn. První pokus (14:37) se zasekl — PS 5.1
+  `2>` přestal odebírat stderr → přejmenován na `INCOMPLETE-…143732.dump`, nepoužívat; skript opraven
+  (commit `67313f14`, stderr přes `Start-Process -RedirectStandardError`).
+- **Precheck:** shodný s mapou z 30. 9. (136 tabulek, 777 účtů, superadmin OK, 0 rozeslaných dávek
+  ve stavu `processing`).
+- **Suchý běh na produkci:** OK, vše vráceno (ověřeno: 777 účtů, 45 soutěží, peněženka beze změny).
+- **Ostrý běh (`c_crm_mode = keep_reassign`):** smazáno 776 auth účtů, `TRUNCATE` 102 tabulek,
+  `DELETE` partneři (14) a affiliate účty (3). Autorství 425 CRM záznamů přepsáno na superadmina
+  (`sales_leads.created_by` 275, `sales_lead_email_batches.created_by` 3,
+  `sales_lead_work_intake_runs.created_by` 15, `sales_lead_email_deliveries.performed_by` 132).
+  Jediný záznam `audit_logs` `first_prelaunch_reset`.
+- **Postcheck:** auth 1 účet (`divispavel2@gmail.com`, 2 identity, otisk beze změny), users/profiles/
+  user_roles/wallets 1/1/1 superadmin/1 (0/0 MIO), admin_permissions 0, zařízení 3, cookie souhlasy 12,
+  `wallet_lot_consistency_issues()` 0; soutěže, tikety, bonusy, platby, partneři, zprávy, e-mailová
+  fronta 0. Zachováno: settings 22, content_pages 18, CRM (503 leadů, 1 304 aktivit, 244 doručení,
+  suppression 9, šablony 7), 136 tabulek, policy 264, cron 13 (12 aktivních), Vault 11.
+- **OPEN ISSUE (neprovedeno, samostatné kroky):** `05_vault_cleanup.sql` (2 Shoptet odkazy smazaných
+  partnerů); úklid Storage (5 080 souborů, jen přes Storage API); `settings.
+  guaranteed_benefit_purchase_contest_allowlist` obsahuje 4 ID smazaných soutěží a chybí neomezený
+  fallback benefit → nelze aktivovat soutěž, dokud se nezaloží; znovu pozvat adminy (jan.bulir@,
+  pepca@) přes `/admin/admins`; produkční smoke (`playwright.yml`) — jeho testovací účet byl smazán,
+  login test bude padat do jeho znovuzaložení; partneři se musí znovu registrovat a napojit Shoptet;
+  MIO widget u smazaných partnerů nic nezobrazí; faktury začnou od `OMA-20260001`.
 
 ## -17. Příprava prvního předstartovního resetu (30. 09. 2026) — NESPUŠTĚNO
 

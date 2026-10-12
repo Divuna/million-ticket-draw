@@ -55,6 +55,11 @@ prvních skutečných zákazníků musí proběhnout **jeden řízený kompletn�
 ale to **není důvod je mazat, měnit ani „uklízet" mimochodem**. Jediná povolená cesta k jejich
 odstranění je ten jeden schválený reset.
 
+**➡️ Reset PROBĚHL 12. 10. 2026** (schválení Pavla; ověřená záloha
+`onemil-production-pre-first-reset-20261012-150802.dump`; detail `onemil_state.md` § -18). Odstavec
+výše je historický záznam. Data vzniklá po resetu se nesmí hromadně mazat ani „uklízet" — každé další
+hromadné mazání produkčních dat vyžaduje nové výslovné schválení Pavla.
+
 **Reset odstraní provozní testovací data:** zákaznické a testovací účty (kromě zachovaného
 superadmina), profily, MioCoin peněženky a jejich pohyby, soutěže, tikety, výhry a testovací ceny,
 vouchery a jejich testovací použití, zprávy a notifikace, testovací platby, testovací partnery
