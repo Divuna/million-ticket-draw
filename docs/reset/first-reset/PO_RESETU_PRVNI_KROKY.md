@@ -8,9 +8,9 @@ Pořadí níže je doporučené. Odškrtávej `[x]`.
 
 ## A. Hned (provoz a kontrola)
 
-- [ ] **Produkční smoke test.** GitHub secret `E2E_TEST_EMAIL` patřil účtu, který reset smazal →
-      `playwright.yml` (3× denně) bude hlásit chybu přihlášení. Účet znovu zaregistrovat na
-      `onemil.cz/register` se stejným e-mailem a heslem jako v secretech (nebo secrety změnit).
+- [x] **Produkční smoke test** — HOTOVO 12. 10. 2026: Pavel znovu zaregistroval `e2e@onemil.cz`
+      a nastavil secrety `E2E_TEST_EMAIL` / `E2E_TEST_PASSWORD`; `playwright.yml` run `38260103406`
+      zelený (5/5 vč. přihlášení).
 - [ ] **Kontrola webu:** přihlášení superadmina, `/admin` se načte, titulní stránka bez chyb.
 - [ ] **Pozvat adminy** přes `/admin/admins` (`jan.bulir@onemil.cz`, případně `pepca@onemil.cz`)
       a dát jim oprávnění (např. `sales_leads.manage` pro obchod).

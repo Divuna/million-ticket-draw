@@ -14,6 +14,8 @@ ostrý běh → postcheck. Staging `dxmowysntemfqfnanxua` nedotčen.
   partnerů, zůstává 9 systémových secretů.
 - **Úklid Storage:** `06_storage_cleanup.ps1` (Storage API, klíč zadává Pavel skrytě) — 5 079 souborů
   ve 12 bucketech; buckety zůstávají, `assets` (obrázek MIO) se nemaže. Stav viz níže.
+- **Produkční smoke obnoven 12. 10. 2026:** nový účet `e2e@onemil.cz` (zaregistroval Pavel, bez role),
+  secrety `E2E_TEST_EMAIL`/`E2E_TEST_PASSWORD` aktualizovány, `playwright.yml` run `38260103406` 5/5.
 
 - **Záloha (ověřená):** `backups/onemil-production-pre-first-reset-20261012-150802.dump`
   (lokálně u Pavla, gitignored), 525 386 890 B, 12. 10. 2026 15:10–15:20 +02:00, SHA-256
