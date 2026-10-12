@@ -12,8 +12,9 @@ ostrý běh → postcheck. Staging `dxmowysntemfqfnanxua` nedotčen.
 
 - **Úklid Vaultu (krok 05) PROVEDEN 12. 10. 2026:** smazány 2 Shoptet exportní odkazy smazaných
   partnerů, zůstává 9 systémových secretů.
-- **Úklid Storage:** `06_storage_cleanup.ps1` (Storage API, klíč zadává Pavel skrytě) — 5 079 souborů
-  ve 12 bucketech; buckety zůstávají, `assets` (obrázek MIO) se nemaže. Stav viz níže.
+- **Úklid Storage PROVEDEN 12. 10. 2026:** `06_storage_cleanup.ps1` (Storage API, klíč zadal Pavel
+  skrytě) smazal 5 079 souborů ve 12 bucketech, 0 chyb. Zůstává všech 14 bucketů a jediný soubor
+  `assets/…18_44_44.png` (obrázek MIO — `settings.miocoin_image_url`, `MioCoin.tsx`).
 - **Produkční smoke obnoven 12. 10. 2026:** nový účet `e2e@onemil.cz` (zaregistroval Pavel, bez role),
   secrety `E2E_TEST_EMAIL`/`E2E_TEST_PASSWORD` aktualizovány, `playwright.yml` run `38260103406` 5/5.
 
@@ -37,8 +38,7 @@ ostrý běh → postcheck. Staging `dxmowysntemfqfnanxua` nedotčen.
   `wallet_lot_consistency_issues()` 0; soutěže, tikety, bonusy, platby, partneři, zprávy, e-mailová
   fronta 0. Zachováno: settings 22, content_pages 18, CRM (503 leadů, 1 304 aktivit, 244 doručení,
   suppression 9, šablony 7), 136 tabulek, policy 264, cron 13 (12 aktivních), Vault 11.
-- **OPEN ISSUE (neprovedeno, samostatné kroky):** `05_vault_cleanup.sql` (2 Shoptet odkazy smazaných
-  partnerů); úklid Storage (5 080 souborů, jen přes Storage API); `settings.
+- **OPEN ISSUE (zbývá; Vault, Storage a smoke účet už vyřešeny výše):** `settings.
   guaranteed_benefit_purchase_contest_allowlist` obsahuje 4 ID smazaných soutěží a chybí neomezený
   fallback benefit → nelze aktivovat soutěž, dokud se nezaloží; znovu pozvat adminy (jan.bulir@,
   pepca@) přes `/admin/admins`; produkční smoke (`playwright.yml`) — jeho testovací účet byl smazán,

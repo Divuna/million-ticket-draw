@@ -2,7 +2,9 @@
 
 Reset produkce proběhl **12. 10. 2026** (detail `onemil_state.md` § -18). Systém běží, ale je prázdný:
 v produkci je jen účet `divispavel2@gmail.com`, žádné soutěže, partneři, vouchery ani bannery.
-Obchodní CRM, nastavení a právní texty zůstaly.
+Obchodní CRM, nastavení a právní texty zůstaly. Úklid Vaultu (2 Shoptet odkazy) a Storage
+(5 079 souborů, zůstal jen obrázek MIO v `assets`) je hotový — při zakládání soutěží, voucherů
+a bannerů je potřeba nahrát nové obrázky.
 
 Pořadí níže je doporučené. Odškrtávej `[x]`.
 
