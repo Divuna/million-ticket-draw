@@ -8,6 +8,13 @@
 Produkce `xkzhjldrojjlrkezorey`. Postup `docs/reset/first-reset/`: záloha → precheck → suchý běh →
 ostrý běh → postcheck. Staging `dxmowysntemfqfnanxua` nedotčen.
 
+**➡️ Co udělat jako první po resetu: `docs/reset/first-reset/PO_RESETU_PRVNI_KROKY.md`.**
+
+- **Úklid Vaultu (krok 05) PROVEDEN 12. 10. 2026:** smazány 2 Shoptet exportní odkazy smazaných
+  partnerů, zůstává 9 systémových secretů.
+- **Úklid Storage:** `06_storage_cleanup.ps1` (Storage API, klíč zadává Pavel skrytě) — 5 079 souborů
+  ve 12 bucketech; buckety zůstávají, `assets` (obrázek MIO) se nemaže. Stav viz níže.
+
 - **Záloha (ověřená):** `backups/onemil-production-pre-first-reset-20261012-150802.dump`
   (lokálně u Pavla, gitignored), 525 386 890 B, 12. 10. 2026 15:10–15:20 +02:00, SHA-256
   `91D6691209A5D1B54188474328EE56E25A5A8AEE2C30662BF0C23269DB66615D`. `pg_dump` exit 0, 0 chyb;
