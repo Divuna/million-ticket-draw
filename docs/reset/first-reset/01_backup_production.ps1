@@ -48,8 +48,14 @@ try {
   $env:PGSSLMODE = 'require'
   $started = Get-Date
   Write-Host "pg_dump -> $file (může trvat několik minut)…"
-  & $pgDump --format=custom --no-password --verbose --file "$file" --dbname "$conn" 2> "$log"
-  $dumpExit = $LASTEXITCODE
+  # stderr jde přímo do souboru (Start-Process), ne přes PowerShell 5.1 `2>`: ten přestal výstup
+  # odebírat, pg_dump se zablokoval na zápisu průběhu a v DB zůstal `idle in transaction`
+  # (12. 10. 2026 a dřív 24. 06. 2026).
+  $dumpArgs = @('--format=custom', '--no-password', '--verbose', "--file=`"$file`"", "--dbname=`"$conn`"")
+  $proc = Start-Process -FilePath $pgDump -ArgumentList $dumpArgs -NoNewWindow -Wait -PassThru `
+            -RedirectStandardError "$log"
+  $dumpExit = $proc.ExitCode
+  Remove-Variable dumpArgs, proc -ErrorAction SilentlyContinue
 } finally {
   [Runtime.InteropServices.Marshal]::ZeroFreeBSTR($bstr)
   Remove-Variable conn -ErrorAction SilentlyContinue
@@ -85,7 +91,7 @@ $missing = @()
 foreach ($r in $required) {
   if (-not ($tocLines | Where-Object { $_ -like "*$r*" })) { $missing += $r.Trim() }
 }
-$warnings = (Select-String -Path "$log" -Pattern 'warning|error' -CaseSensitive:$false).Count
+$warnings = (Select-String -Path "$log" -Pattern 'warning|error|varování|chyba' -CaseSensitive:$false).Count
 $item = Get-Item "$file"
 $hash = (Get-FileHash "$file" -Algorithm SHA256).Hash
 
