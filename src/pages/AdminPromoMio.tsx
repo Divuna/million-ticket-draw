@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useState, type FormEvent } from 'react';
 import { QRCodeSVG } from 'qrcode.react';
 import { Copy, Download, Gift, Loader2, Plus, RefreshCw } from 'lucide-react';
 import { toast } from 'sonner';
@@ -78,7 +78,7 @@ export default function AdminPromoMio() {
 
   useEffect(() => { void reload(); }, [reload]);
 
-  const create = async (event: React.FormEvent) => {
+  const create = async (event: FormEvent) => {
     event.preventDefault();
     const mio = Number(form.mio);
     const max = form.max.trim() === '' ? null : Number(form.max);
