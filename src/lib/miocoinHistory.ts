@@ -14,6 +14,7 @@ export type MioCoinHistoryEntry = {
 
 export const MIOCOIN_HISTORY_ENTRY_LABELS: Record<string, string> = {
   miocoin_code_credit: 'Získáno z partnerského nákupu',
+  promo_mio_credit: 'Bonus z promo akce',
   payment_credit: 'Dobití MIO',
   top_up: 'Dobití MIO',
   ticket_purchase: 'Použito v soutěži',
