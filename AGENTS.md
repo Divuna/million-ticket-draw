@@ -9,6 +9,16 @@ existující zdroje pravdy. Nezakládej další kontextové, stavové ani busine
 
 ---
 
+## Rozpoznání jiného projektu v chatu OneMil (potvrzeno 13. 10. 2026)
+
+- Tento chat a související projektové instrukce jsou určené **výhradně pro OneMil**. Před řešením nové otázky zvaž, zda nejde o jiný samostatný projekt (např. Ťukanec, IQOUN, Sofinity jako samostatný produkt, Opravo); běžné napojení jiné služby na OneMil samozřejmě není změna projektu.
+- Pokud dotaz **zjevně** směřuje k jinému projektu, upozorni **ještě před jakoukoli úpravou, generováním grafiky nebo spuštěním nástroje**: „Pozor, toto je chat projektu OneMil. Zdá se, že řešíme [název jiného projektu]. Chceš přejít do jeho chatu?“
+- Dokud Pavel výslovně nepotvrdí, že se má pokračovat zde, **neprováděj změny v cizím projektu, nemíchej jeho dokumentaci, loga, grafické podklady ani databázi s OneMil**. Neodhaduj ani nenahrazuj originální loga jiných projektů.
+- Pokud je téma neurčité, polož jednu krátkou ověřovací otázku; upozornění neposílej mechanicky při každé zmínce jiného projektu v legitimní souvislosti s OneMil.
+- Toto je **pravidlo vedení konverzace a ochrany hranic projektů**, nikoli nové produktové chování OneMil ani povolení zasahovat do cizích repozitářů.
+
+---
+
 ## 1. Co si načíst PŘED zahájením práce (povinné)
 
 Vždy, ještě před první změnou:
