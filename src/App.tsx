@@ -41,6 +41,7 @@ import AdminUsers from "@/pages/AdminUsers";
 import AdminAdmins from "@/pages/AdminAdmins";
 import AdminBanners from "@/pages/AdminBanners";
 import AdminVouchers from "@/pages/AdminVouchers";
+import AdminPromoMio from "@/pages/AdminPromoMio";
 import AdminPrizeDeliveryPage from "@/pages/AdminPrizeDeliveryPage";
 import AdminPayments from "@/pages/AdminPayments";
 import AdminStatistics from "@/pages/AdminStatistics";
@@ -527,6 +528,7 @@ function AppContent() {
               <Route path="/admin/admins" element={<RequireSuperadmin><AdminAdmins /></RequireSuperadmin>} />
               <Route path="/admin/banners" element={<RequirePermission permission="banners.manage"><AdminBanners /></RequirePermission>} />
               <Route path="/admin/vouchers" element={<RequirePermission permission="vouchers.manage"><AdminVouchers /></RequirePermission>} />
+              <Route path="/admin/promo-mio" element={<RequireSuperadmin><AdminPromoMio /></RequireSuperadmin>} />
               <Route path="/admin/payments" element={<RequireSuperadmin><AdminPayments /></RequireSuperadmin>} />
               <Route path="/admin/statistics" element={<RequireSuperadminOrRedirect><AdminStatistics /></RequireSuperadminOrRedirect>} />
               <Route path="/admin/notifications" element={<RequirePermission permission="notifications.manage"><AdminNotifications /></RequirePermission>} />

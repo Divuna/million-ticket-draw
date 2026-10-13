@@ -232,6 +232,7 @@ export const ADMIN_NAV_SECTIONS: readonly AdminNavSectionDefinition[] = [
       { kind: "link", item: { path: "/admin/vouchers", label: "Vouchery", icon: Gift } },
       { kind: "link", item: { path: "/admin/guaranteed-benefits", label: "Garantované benefity", icon: ShieldCheck } },
       { kind: "link", item: { path: "/admin/referrals", label: "Doporučení hráčů", icon: Link2 } },
+      { kind: "link", item: { path: "/admin/promo-mio", label: "Bonusové MIO kódy", icon: Gift } },
       { kind: "link", item: { path: "/admin/referral-dashboard", label: "Přehled doporučení", icon: BarChart3 } },
     ],
   },
@@ -353,7 +354,8 @@ export function getAdminSectionFromPath(pathname: string, search: string = ""): 
     path.startsWith("/admin/vouchers") ||
     path.startsWith("/admin/guaranteed-benefits") ||
     path.startsWith("/admin/referrals") ||
-    path.startsWith("/admin/referral-dashboard")
+    path.startsWith("/admin/referral-dashboard") ||
+    path.startsWith("/admin/promo-mio")
   ) {
     return "vouchers";
   }
