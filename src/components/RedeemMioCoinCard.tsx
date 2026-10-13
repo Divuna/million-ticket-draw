@@ -31,7 +31,7 @@ export const RedeemMioCoinCard = ({ onRedeemed }: RedeemMioCoinCardProps) => {
       toast({
         title: automatic ? 'MIO uplatněna' : 'Kód uplatněn',
         description: automatic
-          ? `MIO z e-mailového odkazu byla úspěšně uplatněna. Připsáno ${formatMioCoin(Number(result.coins ?? 0))}.`
+          ? `MIO z odkazu byla úspěšně uplatněna. Připsáno ${formatMioCoin(Number(result.coins ?? 0))}.`
           : `Kód byl úspěšně uplatněn. Připsáno ${formatMioCoin(Number(result.coins ?? 0))}.`,
       });
       setCode('');
