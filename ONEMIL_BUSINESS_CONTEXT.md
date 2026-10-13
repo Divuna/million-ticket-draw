@@ -1137,3 +1137,14 @@ Partner Offers, vouchers, coupons, contests, MIO, and social campaigns are diffe
 - brand rules for business documents
 
 Do not invent these details. Ask Pavel Diviš or mark them as TODO until confirmed.
+
+---
+
+## Sdílené marketingové MIO kódy (potvrzený požadavek 13. 10. 2026)
+
+- Pro kartičky projektu Tukanec a další kampaně může OneMil vytvořit **jeden společný kód / QR odkaz**, který uplatní více lidí.
+- Kód lze uplatnit **jen jednou na účet hráče**. Každé další použití týmž hráčem musí být odmítnuto.
+- Kód je oddělený od jednorázových partnerských kódů, od doporučovacích/affiliate kódů a od voucherů.
+- Superadmin nastaví MIO na osobu (pilot: **25 MIO**), limit uplatnění (např. 100, 1 000 nebo bez limitu), platnost a případně omezení pouze na nové registrace. Výchozí volba povolí nové i stávající hráče.
+- Superadmin vidí počet uplatnění a může kampaň pozastavit. QR odkaz umožní přihlášení/registraci a následné uplatnění.
+- **Stav nasazení:** připraveno ve vývojové větvi `feature/bulk-promo-mio-codes`; dokud nebude zvlášť schválená a nasazená produkční migrace a frontend, není funkce na onemil.cz k dispozici.
