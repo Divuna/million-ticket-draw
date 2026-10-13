@@ -1,7 +1,21 @@
 # OneMil – aktuální stav projektu
 
-> **Autoritativní aktuální stav. Poslední aktualizace 12. 10. 2026 — PRVNÍ PŘEDSTARTOVNÍ RESET PRODUKCE PROVEDEN (§ -18) se schválením Pavla; záloha ověřena, CRM zachováno, kroky 05 (Vault) a úklid Storage zatím neprovedeny. Předtím 30. 9. 2026 — příprava prvního resetu (§ -17: mapa, skript, suchý běh na stagingu), reset NEPROBĚHL, záloha zatím NEVYTVOŘENA. Předtím předstartovní opravy nasazeny do produkce (§ -16). Předtím 29. 9. 2026 — 2. kolo předstartovních oprav (§ -15, staging + větev). Předtím předstartovní audit (§ -14). Předtím 29. 9. 2026 — veřejný název MIO a spotřebitelské informace k nákupu MIO (bod 8 VOP) nasazeny do produkce; bannery balíčků čekají na rozhodnutí. Předtím 25. 9. 2026 — jeden odměňovaný zdroj přivedení hráče nasazen do produkce. Předtím 24. 9. 2026 — Fáze 5 (osobní doporučení hráčů) nasazena do produkce `xkzhjldrojjlrkezorey` se schválením Pavla. Předtím 23. 9. 2026 refund blok F2 + F3 + F4 a Fáze 1.**
+> **Autoritativní aktuální stav. Poslední aktualizace 13. 10. 2026 — sdílené MIO promo kódy nasazeny (§ -19, PR #423). Předtím 12. 10. 2026 — PRVNÍ PŘEDSTARTOVNÍ RESET PRODUKCE PROVEDEN (§ -18) se schválením Pavla; záloha ověřena, CRM zachováno, kroky 05 (Vault) a úklid Storage zatím neprovedeny. Předtím 30. 9. 2026 — příprava prvního resetu (§ -17: mapa, skript, suchý běh na stagingu), reset NEPROBĚHL, záloha zatím NEVYTVOŘENA. Předtím předstartovní opravy nasazeny do produkce (§ -16). Předtím 29. 9. 2026 — 2. kolo předstartovních oprav (§ -15, staging + větev). Předtím předstartovní audit (§ -14). Předtím 29. 9. 2026 — veřejný název MIO a spotřebitelské informace k nákupu MIO (bod 8 VOP) nasazeny do produkce; bannery balíčků čekají na rozhodnutí. Předtím 25. 9. 2026 — jeden odměňovaný zdroj přivedení hráče nasazen do produkce. Předtím 24. 9. 2026 — Fáze 5 (osobní doporučení hráčů) nasazena do produkce `xkzhjldrojjlrkezorey` se schválením Pavla. Předtím 23. 9. 2026 refund blok F2 + F3 + F4 a Fáze 1.**
 
+
+## -19. Sdílené bonusové MIO kódy — NASAZENO (13. 10. 2026, schválil Pavel)
+
+PR **#423**, merge `dac13c443dd4c67908e2ac167866b721dcd03225` do `main`; Vercel Production `dpl_B4QCFjQwcPosGvrwqsBnWsMsJXDs` READY a aliasy `onemil.cz` a `www.onemil.cz` přiřazeny.
+
+Supabase produkce `xkzhjldrojjlrkezorey`: migrace `promo_mio_campaigns_20261013` (záznam verze `20261013065013`) úspěšně aplikována. Nové tabulky `promo_mio_campaigns` a `promo_mio_redemptions` mají RLS; pouze autentizovaný uživatel smí volat uplatnění, superadmin má funkce správy. `wallet_lots_source_check` nově umožňuje pouze navíc `promo_campaign`; ostatní typy nezměněné. Připsání provádí `wallet_credit_lot` společně se záznamem `wallet_transactions` a unikátním (kampaň, uživatel). Řádkový zámek hlídá limit i při souběhu.
+
+Admin `/admin/promo-mio` je pouze pro superadmina; lze vytvořit jeden společný kód (výchozí návrh `TUKANEC25` — **není vytvořený**), upravit volby při založení (MIO na osobu, počet uplatnění, datum, stávající/noví hráči), exportovat QR pro tisk, pozastavit nebo znovu aktivovat a sledovat počet využití. Hráč uplatní kód v existující části profilu; QR vede na `/profile?miocoin_code=...`. Systém nezasahuje do partnerských jednorázových kódů, referral/affiliate, Stripe ani soutěžní logiky.
+
+Ověření před produkcí: staging transakční test (+25 MIO, opakované použití blokováno, limit blokován, automatický rollback), Playwright Smoke Tests success, Vercel preview success. Ověření produkce: migrace success, 2 tabulky existují, RLS aktivní, bez práva anon na uplatnění, 0 kampaní a 0 uplatnění — **dosud nedošlo k žádnému rozdělení MIO z nové funkce**.
+
+Otevřené: reálný test přihlášeného hráče s promo kódem až po založení skutečné kampaně; staging a produkce mají odlišná interní ID provedení migrace (`20261013062714` vs. `20261013065013`), proto při budoucím `supabase db push` ověřit historii migrací a předejít opakovanému aplikování.
+
+---
 
 ## -18. První předstartovní reset produkce — PROVEDENO (12. 10. 2026, schválení Pavla)
 
@@ -2188,11 +2202,3 @@ Při pokračování:
 - **PR #236 (`buy_ticket_atomic` vždy `auth.uid()` + zápis `wallet_transactions`) a PR #238 (`user_vouchers` INSERT jen pro oblíbené):** mergnuté do `main`, **ověřené na stagingu**; produkční apply migrací v tomto dokumentačním auditu nepotvrzen (zaznamenat jako otevřené před produkčním nasazením).
 
 ---
-
-## OPEN ISSUE — Hromadné promo MIO kódy (13. 10. 2026)
-
-Na vývojové větvi `feature/bulk-promo-mio-codes` je připravena administrace `/admin/promo-mio`, sdílené kódy, export tiskového QR, logika jeden hráč = jedno uplatnění, limit uplatnění a připsání přes `wallet_credit_lot`. Rozšíření není nasazené do produkce.
-
-Staging Supabase: migrace `promo_mio_campaigns_20261013` aplikována; transakční test na stagingu (vytvoření, první připsání, opakování, vyčerpání limitu, stav) proběhl s úplným rollbackem; kampaně a uplatnění zůstaly na 0. Produkce: žádná migrace / peněženka / platba / soutěž nebyla změněna.
-
-**Další krok:** kontrola CI a peer review větve, poté výslovné schválení Pavla pro produkční migraci, změnu povolených zdrojů peněženek a nasazení webu.

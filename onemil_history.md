@@ -1,3 +1,9 @@
+# 13. 10. 2026 — Sdílené bonusové MIO kódy nasazeny na produkci
+
+Pavel schválil produkční migraci a nasazení nové funkce. PR #423 mergnut `dac13c443dd4c67908e2ac167866b721dcd03225`, Vercel nasazení `dpl_B4QCFjQwcPosGvrwqsBnWsMsJXDs` READY. Supabase produkce `xkzhjldrojjlrkezorey` — migrace `promo_mio_campaigns_20261013` (verze `20261013065013`) úspěšná, RLS a zákaz anonymního uplatnění ověřeny. Nová stránka `/admin/promo-mio`: sdílený kód pro hráče, výše MIO, limit použití, platnost, volba noví / stávající hráči, tiskový QR, pozastavení, přehled počtu. Každý účet může kód použít jednou, kredit přes `wallet_credit_lot` v jedné transakci s evidencí uplatnění. Staging test + CI úspěšné. Zatím žádný kód vytvořen, žádná MIO nepřipsána; dosavadní platby, soutěže, affiliate a partner kódy nedotčeny. Detail `onemil_state.md` § -19.
+
+---
+
 # 12. 10. 2026 — První předstartovní reset produkce PROVEDEN
 
 Se schválením Pavla. Ověřená záloha pg_dump 501 MB (SHA-256 91D66912…, pg_restore -l OK; první pokus se zasekl na PS 5.1 stderr redirect → skript opraven na Start-Process). Precheck shodný s mapou, suchý běh na produkci OK a vrácen, ostrý běh v režimu keep_reassign: smazáno 776 účtů, vyprázdněno 102 tabulek + partneři a affiliate účty, autorství 425 CRM záznamů přepsáno na superadmina. Zachován superadmin (otisk beze změny, peněženka 0), settings, právní texty, obchodní CRM včetně „nekontaktovat", cron, Vault, struktura. Úklid Vaultu, Storage, nový fallback benefit, pozvání adminů a obnova produkčního smoke účtu zbývají. Detail § -18 onemil_state.md.
