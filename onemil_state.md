@@ -2187,3 +2187,12 @@ Při pokračování:
 - **PR #237 — soukromí výherců + vlastní tikety: DB část LIVE na produkci.** Na produkci: `get_latest_winners(integer)` odebrán anon/authenticated EXECUTE; nový `get_latest_winners_public(integer)` (anon-callable, sanitizovaný — bez interních UUID, e-mailu, telefonu, poznámek a avatarové cesty s UUID); `tickets`/`winners` mají partner/own-row RLS. Frontend (přepnutí na `get_latest_winners_public`) vyžaduje ruční Lovable Publish; do publishe volá live bundle ještě starou funkci → veřejný feed výherců je do publishe prázdný (viz onemil_history).
 - **PR #236 (`buy_ticket_atomic` vždy `auth.uid()` + zápis `wallet_transactions`) a PR #238 (`user_vouchers` INSERT jen pro oblíbené):** mergnuté do `main`, **ověřené na stagingu**; produkční apply migrací v tomto dokumentačním auditu nepotvrzen (zaznamenat jako otevřené před produkčním nasazením).
 
+---
+
+## OPEN ISSUE — Hromadné promo MIO kódy (13. 10. 2026)
+
+Na vývojové větvi `feature/bulk-promo-mio-codes` je připravena administrace `/admin/promo-mio`, sdílené kódy, export tiskového QR, logika jeden hráč = jedno uplatnění, limit uplatnění a připsání přes `wallet_credit_lot`. Rozšíření není nasazené do produkce.
+
+Staging Supabase: migrace `promo_mio_campaigns_20261013` aplikována; transakční test na stagingu (vytvoření, první připsání, opakování, vyčerpání limitu, stav) proběhl s úplným rollbackem; kampaně a uplatnění zůstaly na 0. Produkce: žádná migrace / peněženka / platba / soutěž nebyla změněna.
+
+**Další krok:** kontrola CI a peer review větve, poté výslovné schválení Pavla pro produkční migraci, změnu povolených zdrojů peněženek a nasazení webu.
