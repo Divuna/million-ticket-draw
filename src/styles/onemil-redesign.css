@@ -552,3 +552,106 @@ body:has(.om-redesign) {
 @media (prefers-reduced-motion: reduce) {
   .om-auth-hero-sweep { animation: none; }
 }
+
+/* ───────── Patička (deska Patička) ───────── */
+.om-redesign .om-footer {
+  overflow: hidden;
+  background: radial-gradient(70% 90% at 0% 0%, #3A0A14 0%, #121215 45%, #0B0B0D 100%) !important;
+  border-top: 0;
+  box-shadow: none;
+  color: #C9CAD1;
+  font-family: var(--om2-font-body, 'Manrope', system-ui, sans-serif);
+}
+.om-redesign footer.om-footer .text-muted-foreground,
+.om-redesign footer.om-footer a.text-muted-foreground,
+.om-redesign footer.om-footer div.text-muted-foreground { color: #C9CAD1; }
+.om-redesign footer.om-footer a:hover,
+.om-redesign footer.om-footer button:hover { color: #F6D77A; }
+.om-redesign .om-footer .text-heading-gold { color: #F2C55C; }
+.om-redesign footer.om-footer .border-border\/40 { border-color: rgba(255, 255, 255, 0.08); }
+.om-redesign footer.om-footer .text-foreground { color: #ECEDEF; }
+.om-redesign .om-ft-topline {
+  display: block;
+  position: absolute; left: 0; right: 0; top: 0; height: 2px; overflow: hidden;
+  background: linear-gradient(90deg, transparent, #E9B949 20%, #B5122B 50%, #E9B949 80%, transparent);
+}
+.om-redesign .om-ft-topline > i {
+  position: absolute; top: -2px; bottom: -2px; width: 20%;
+  background: linear-gradient(90deg, transparent, #FFF3C8, transparent);
+  animation: om2-ft-line 4s linear infinite;
+}
+@keyframes om2-ft-line { 0% { left: -25%; } 100% { left: 100%; } }
+.om-redesign .om-ft-brand { display: none; }
+.om-redesign .om-ft-logo { display: block; }
+.om-redesign footer.om-footer .om-ft-col h4,
+.om-redesign .om-ft-toggle {
+  font-family: 'Barlow Condensed', sans-serif;
+  font-weight: 800; font-style: italic; text-transform: uppercase;
+  font-size: 17px; letter-spacing: 0.04em; color: #F2C55C;
+}
+.om-redesign .om-ft-soc {
+  width: 40px; height: 40px; border-radius: 12px;
+  background: rgba(255, 255, 255, 0.06);
+  border: 0; box-shadow: inset 0 0 0 1px rgba(233, 185, 73, 0.4);
+}
+.om-redesign .om-ft-soc svg { color: #F2C55C; }
+
+/* mobil: sloupce jako rozbalovací řádky (✦ NAVÍC) */
+@media (max-width: 639px) {
+  .om-redesign .om-ft-grid { gap: 0; }
+  .om-redesign .om-ft-about { margin-bottom: 18px; }
+  .om-redesign .om-ft-col { border-top: 1px solid rgba(255, 255, 255, 0.08); padding: 14px 0; }
+  .om-redesign .om-ft-col > * + * { margin-top: 0; }
+  .om-redesign .om-ft-toggle { display: flex; justify-content: space-between; align-items: center; cursor: pointer; }
+  .om-redesign .om-ft-sign { display: inline; font-style: normal; }
+  .om-redesign .om-ft-col[data-open="false"] .om-ft-links { display: none; }
+  .om-redesign .om-ft-col[data-open="true"] .om-ft-links { margin-top: 12px; }
+}
+
+/* desktop: avatar vykukuje zpoza okraje + „Dostupné pro" */
+@media (min-width: 1024px) {
+  .om-redesign .om-ft-peek {
+    display: block; position: absolute; right: -10px; top: 26px; height: 170px; width: auto;
+    pointer-events: none; filter: drop-shadow(0 12px 18px rgba(0, 0, 0, 0.5));
+    animation: om2-ft-peek 6s cubic-bezier(0.2, 0.8, 0.2, 1) infinite;
+  }
+}
+@keyframes om2-ft-peek {
+  0%, 35%, 100% { transform: translateX(70px); }
+  50%, 85% { transform: translateX(0); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .om-redesign .om-ft-topline > i, .om-redesign .om-ft-peek { animation: none; }
+}
+
+/* ───────── Stránka nenalezena (deska Načítání a 404) ───────── */
+.om-notfound { font-family: 'Manrope', system-ui, sans-serif; color: #17171B; }
+.om-notfound-code {
+  position: absolute; top: 0; left: 0; right: 0;
+  font-family: 'Exo 2', sans-serif; font-weight: 900; font-style: italic;
+  font-size: 150px; line-height: 1; letter-spacing: -0.02em;
+  background: linear-gradient(180deg, #FFF1C2, #E9B949 50%, #A8741F);
+  -webkit-background-clip: text; background-clip: text; color: transparent;
+  filter: drop-shadow(0 6px 0 #17171B) drop-shadow(0 16px 24px rgba(60, 40, 10, 0.25));
+}
+.om-notfound-avatar {
+  filter: drop-shadow(0 14px 22px rgba(60, 40, 10, 0.3));
+  animation: om2-bob 3.6s ease-in-out infinite;
+}
+@keyframes om2-bob { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-6px); } }
+.om-notfound-title {
+  margin: 0; font-family: 'Exo 2', sans-serif; font-weight: 900; font-style: italic;
+  font-size: 28px; line-height: 1.05; text-transform: uppercase; color: #17171B;
+}
+.om-notfound-btn {
+  align-self: stretch; min-height: 52px; border-radius: 14px;
+  display: flex; align-items: center; justify-content: center;
+  font-weight: 800; font-size: 16px; color: #1A1205;
+  background: linear-gradient(180deg, #FFE29A, #E9B949 55%, #C2902F);
+  box-shadow: 0 8px 18px rgba(194, 144, 47, 0.35);
+  transition: filter 0.2s, transform 0.2s;
+}
+.om-notfound-btn:hover { filter: brightness(1.05); transform: translateY(-1px); }
+@media (prefers-reduced-motion: reduce) {
+  .om-notfound-avatar, .om-notfound-code { animation: none; }
+}
