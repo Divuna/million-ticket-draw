@@ -311,3 +311,113 @@ body:has(.public-customer-theme) {
   -webkit-text-fill-color: currentColor;
   background: none;
 }
+
+/* ---------- Karta soutěže (Domů, Soutěže, Oblíbené) – vždy tmavá se zlatým rámečkem ---------- */
+.public-customer-theme .customer-contest-card.contest-card-glow,
+.public-customer-theme .customer-games-contest-card.customer-contest-card.contest-card-glow {
+  background: #17171B;
+  border: 1.5px solid rgba(233, 185, 73, 0.55);
+  box-shadow: 0 14px 30px rgba(23, 23, 27, 0.22), 0 0 0 1px rgba(23, 23, 27, 0.04);
+}
+
+.public-customer-theme .customer-contest-card .contest-card-readability-overlay,
+.public-customer-theme .customer-games-contest-card.customer-contest-card .contest-card-readability-overlay {
+  background: linear-gradient(180deg, rgba(23, 23, 27, 0) 30%, rgba(23, 23, 27, 0.55) 62%, rgba(23, 23, 27, 0.96) 100%) !important;
+}
+
+.public-customer-theme .customer-contest-card .contest-card-image-fallback,
+.public-customer-theme .customer-games-contest-card.customer-contest-card .contest-card-image-fallback {
+  background: radial-gradient(120% 120% at 80% 0%, #3A1118, #17171B 60%);
+}
+
+.public-customer-theme .customer-contest-card .contest-card-title,
+.public-customer-theme .customer-games-contest-card.customer-contest-card .contest-card-title {
+  color: #FFFFFF;
+  font-style: italic;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0;
+  text-shadow: 0 2px 8px rgba(0, 0, 0, 0.6);
+}
+
+.public-customer-theme .customer-contest-card .contest-card-meta,
+.public-customer-theme .customer-games-contest-card.customer-contest-card .contest-card-meta {
+  color: #C9CDD4;
+}
+
+.public-customer-theme .customer-contest-card .contest-card-shortage,
+.public-customer-theme .customer-games-contest-card.customer-contest-card .contest-card-shortage {
+  color: #F2C55C;
+}
+
+.public-customer-theme .customer-contest-card .contest-card-favorite-button,
+.public-customer-theme .customer-contest-card .contest-card-secondary-cta,
+.public-customer-theme .customer-contest-card .contest-card-login-cta,
+.public-customer-theme .customer-games-contest-card.customer-contest-card .contest-card-favorite-button,
+.public-customer-theme .customer-games-contest-card.customer-contest-card .contest-card-secondary-cta,
+.public-customer-theme .customer-games-contest-card.customer-contest-card .contest-card-login-cta {
+  color: #F6D77A;
+  background: linear-gradient(180deg, rgba(38, 38, 44, 0.92), rgba(18, 18, 21, 0.92));
+  border: 1px solid rgba(233, 185, 73, 0.5);
+  box-shadow: none;
+}
+
+.public-customer-theme .customer-games-contest-card.customer-contest-card .contest-card-favorite-button svg {
+  color: #F6D77A;
+}
+
+.public-customer-theme .customer-contest-card .contest-card-primary-cta {
+  color: #1A1205;
+  font-weight: 800;
+  background-image: linear-gradient(180deg, #FFF0B8, #E9B949 55%, #C2902F);
+  box-shadow: 0 8px 18px rgba(194, 144, 47, 0.35);
+}
+
+.public-customer-theme .customer-contest-card .contest-card-status-badge,
+.public-customer-theme .customer-games-contest-card.customer-contest-card .contest-card-status-badge {
+  color: #ECEDEF;
+  background: rgba(23, 23, 27, 0.85);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+.public-customer-theme .om-contest-fast {
+  background: linear-gradient(180deg, #FFE29A, #E9B949);
+  color: #1A1205;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  border: 0;
+}
+
+/* Štítek ŽIVĚ u běžící soutěže (schválený prvek ✦ NAVÍC, jen zobrazení stavu). */
+.om-live-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 3px 9px;
+  border-radius: 999px;
+  background: #B5122B;
+  color: #fff;
+  font-family: var(--om2-font-body);
+  font-size: 10.5px;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  box-shadow: 0 4px 10px rgba(181, 18, 43, 0.35);
+}
+
+.om-live-badge i {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: #fff;
+  animation: om2-blink 1.2s ease-in-out infinite;
+}
+
+@keyframes om2-blink {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.25; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .om-live-badge i { animation: none; }
+}

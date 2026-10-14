@@ -208,10 +208,17 @@ export const ContestCard: React.FC<ContestCardProps> = ({
             <div />
           )}
           
-          {/* Fast game badge */}
-          {contest.fast_game && (
-            <Badge className="bg-amber-500/80 text-white text-[10px] px-2 py-0.5">Fast game</Badge>
-          )}
+          {/* Štítky vpravo nahoře: Fast game + ŽIVĚ (běžící soutěž – jen zobrazení stavu) */}
+          <div className="flex items-center gap-1.5">
+            {contest.fast_game && (
+              <Badge className="om-contest-fast bg-amber-500/80 text-white text-[10px] px-2 py-0.5">Fast game</Badge>
+            )}
+            {contest.status === 'active' && (
+              <span className="om-live-badge" aria-label="Soutěž právě běží">
+                <i aria-hidden="true" />ŽIVĚ
+              </span>
+            )}
+          </div>
 
           {/* Status badge - only show for non-active states */}
           {contest.status !== 'active' && (
@@ -235,7 +242,7 @@ export const ContestCard: React.FC<ContestCardProps> = ({
           {!hideTitleAndCount && (
             <h3
               className="contest-card-title font-bold text-xl text-[#E7EBF0] drop-shadow-md line-clamp-2 tracking-[-0.02em]"
-              style={{ fontFamily: 'var(--om-font-heading)' }}
+              style={{ fontFamily: 'var(--om2-font-section, var(--om-font-heading))' }}
             >
               {contest.title}
             </h3>
