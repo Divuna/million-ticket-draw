@@ -128,7 +128,7 @@ const GalleryThumbnails = memo(({ items, activeIndex, onSelect, getYouTubeId, ge
           onClick={() => onSelect(idx)}
           className={`flex-shrink-0 w-16 h-12 rounded-lg overflow-hidden border-2 transition-all duration-300 ${
             idx === activeIndex
-              ? 'border-[hsl(32_100%_50%/0.6)] scale-110 shadow-[0_0_14px_rgba(255,138,0,0.35)]'
+              ? 'border-[hsl(32_100%_50%/0.6)] scale-110 shadow-[0_0_14px_rgba(194,144,47,0.35)]'
               : 'border-white/10 opacity-60 hover:opacity-90 hover:scale-105'
           }`}
         >
@@ -743,7 +743,7 @@ export default function ContestDetail() {
 
 
       {/* 1. HERO SECTION */}
-      <section className="contest-card-glow w-full rounded-[20px] relative overflow-hidden bg-gradient-to-br from-[hsl(220_25%_8%)] to-[hsl(220_20%_12%)] border-[3px] border-[rgba(255,138,0,0.45)]">
+      <section className="contest-card-glow w-full rounded-[20px] relative overflow-hidden bg-gradient-to-br from-[hsl(220_25%_8%)] to-[hsl(220_20%_12%)] border-[3px] border-[rgba(194,144,47,0.45)]">
         {/* Fast game badge - corner placement */}
         {contest.fast_game && (
           <Badge className="absolute top-3 left-3 z-20 bg-amber-500/90 text-white text-xs md:text-sm px-3 py-1 shadow-lg">
@@ -774,7 +774,7 @@ export default function ContestDetail() {
                   <button
                     type="button"
                     onClick={() => setDescExpanded((v) => !v)}
-                    className="text-xs md:text-sm font-medium text-[#FF8A00] hover:text-[#FFB547] transition-colors"
+                    className="text-xs md:text-sm font-medium text-[#C2902F] hover:text-[#E9B949] transition-colors"
                   >
                     {descExpanded ? 'Zobrazit méně' : 'Zobrazit více'}
                   </button>
@@ -785,7 +785,7 @@ export default function ContestDetail() {
 
           {/* Media: main image/video + secondary thumbnails — merged into hero */}
           <div className="md:w-[360px] md:flex-none w-full flex flex-col gap-3">
-            <div className="relative w-full aspect-video rounded-xl overflow-hidden bg-black/40 border border-[rgba(255,138,0,0.2)]">
+            <div className="relative w-full aspect-video rounded-xl overflow-hidden bg-black/40 border border-[rgba(194,144,47,0.2)]">
               {activeMedia ? (
                 activeMedia.type === 'video' ? (
                   <div
@@ -829,11 +829,11 @@ export default function ContestDetail() {
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         {/* Box 1: Stav MioCoinů + akce */}
-        <section className="voucher-card-glow bg-[hsl(220_25%_8%)]/80 backdrop-blur rounded-[20px] p-5 border-[2px] border-[rgba(255,138,0,0.35)] flex flex-col gap-4 animate-fade-in" style={{ animationDelay: '0.1s' }}>
+        <section className="voucher-card-glow bg-[hsl(220_25%_8%)]/80 backdrop-blur rounded-[20px] p-5 border-[2px] border-[rgba(194,144,47,0.35)] flex flex-col gap-4 animate-fade-in" style={{ animationDelay: '0.1s' }}>
           <div className="flex items-center h-full gap-4">
             <img
               src={MIOCOIN_IMAGE_URL}
-              className="h-[70%] max-h-20 md:max-h-24 w-auto object-contain flex-shrink-0 drop-shadow-[0_0_16px_rgba(255,138,0,0.25)]"
+              className="h-[70%] max-h-20 md:max-h-24 w-auto object-contain flex-shrink-0 drop-shadow-[0_0_16px_rgba(194,144,47,0.25)]"
               alt="MIO"
             />
             <div className="flex-1 flex flex-col justify-center">
@@ -861,7 +861,7 @@ export default function ContestDetail() {
               <span
                 className="h-[1px] w-full mt-0.5"
                 style={{
-                  background: 'linear-gradient(90deg, transparent 0%, rgba(255,181,71,0.9) 50%, transparent 100%)',
+                  background: 'linear-gradient(90deg, transparent 0%, rgba(233,185,73,0.9) 50%, transparent 100%)',
                   backgroundSize: '200% 100%',
                   animation: 'liveShimmer 8s ease-in-out infinite',
                 }}
@@ -926,7 +926,7 @@ export default function ContestDetail() {
                     })
                   }
                   variant="outline"
-                  className="flex-1 h-11 bg-[rgba(255,138,0,0.08)] hover:bg-[rgba(255,138,0,0.15)] text-[#FF8A00] border-[rgba(255,138,0,0.3)] font-semibold px-5 rounded-full transition-colors"
+                  className="flex-1 h-11 bg-[rgba(194,144,47,0.08)] hover:bg-[rgba(194,144,47,0.15)] text-[#C2902F] border-[rgba(194,144,47,0.3)] font-semibold px-5 rounded-full transition-colors"
                 >
                   Dobít MIO
                 </Button>
@@ -937,17 +937,17 @@ export default function ContestDetail() {
         </section>
 
         {/* Box 2: Bonusové MioCoiny v soutěži */}
-        <section className="voucher-card-glow bg-gradient-to-br from-[rgba(255,138,0,0.08)] to-[rgba(255,181,71,0.04)] rounded-[20px] p-5 border-[2px] border-[rgba(255,138,0,0.25)] flex items-center gap-4 animate-fade-in" style={{ animationDelay: '0.2s' }}>
+        <section className="voucher-card-glow bg-gradient-to-br from-[rgba(194,144,47,0.08)] to-[rgba(233,185,73,0.04)] rounded-[20px] p-5 border-[2px] border-[rgba(194,144,47,0.25)] flex items-center gap-4 animate-fade-in" style={{ animationDelay: '0.2s' }}>
           <div className="flex-1 flex flex-col justify-center gap-1.5">
             <p className="text-sm md:text-base text-gray-200 leading-relaxed">
               V této soutěži je celkem{" "}
-              <span className="text-[#FFB547] font-bold text-2xl md:text-3xl">
+              <span className="text-[#E9B949] font-bold text-2xl md:text-3xl">
                 {(miocoinBonusPositions + physicalBonusCount).toLocaleString("cs-CZ")}
               </span>{" "}
               dalších výher.
             </p>
             <p className="text-xs text-gray-400 leading-relaxed">
-              Z toho <span className="text-[#FFB547] font-semibold">{miocoinBonusPoolTotal.toLocaleString("cs-CZ")} MIO</span>,
+              Z toho <span className="text-[#E9B949] font-semibold">{miocoinBonusPoolTotal.toLocaleString("cs-CZ")} MIO</span>,
               které vám mohou otevřít cestu k dalším soutěžím nebo k nákupu voucherů na krásné slevy u našich partnerů.
             </p>
           </div>
@@ -956,7 +956,7 @@ export default function ContestDetail() {
               <TooltipTrigger asChild>
                 <img
                   src={MIOCOIN_IMAGE_URL}
-                  className="h-[70%] max-h-20 md:max-h-24 w-auto object-contain flex-shrink-0 hover:scale-110 transition-transform cursor-pointer drop-shadow-[0_0_24px_rgba(255,138,0,0.3)]"
+                  className="h-[70%] max-h-20 md:max-h-24 w-auto object-contain flex-shrink-0 hover:scale-110 transition-transform cursor-pointer drop-shadow-[0_0_24px_rgba(194,144,47,0.3)]"
                   alt="MIO"
                 />
               </TooltipTrigger>
@@ -969,10 +969,10 @@ export default function ContestDetail() {
       </div>
 
       {/* 4. CESTA K VÝHERNÍMU TICKETU */}
-      <section className="relative overflow-hidden rounded-[20px] p-5 md:p-7 border border-[rgba(255,138,0,0.2)] bg-gradient-to-br from-[hsl(220_30%_7%)]/95 via-[hsl(220_28%_9%)]/85 to-[hsl(220_25%_6%)]/95 shadow-[0_18px_50px_rgba(0,0,0,0.45)]">
+      <section className="relative overflow-hidden rounded-[20px] p-5 md:p-7 border border-[rgba(194,144,47,0.2)] bg-gradient-to-br from-[hsl(220_30%_7%)]/95 via-[hsl(220_28%_9%)]/85 to-[hsl(220_25%_6%)]/95 shadow-[0_18px_50px_rgba(0,0,0,0.45)]">
         {/* Ambient glow */}
-        <div aria-hidden className="pointer-events-none absolute -top-24 -right-16 w-72 h-72 rounded-full blur-3xl opacity-30" style={{ background: 'radial-gradient(circle, #FF8A00 0%, transparent 70%)' }} />
-        <div aria-hidden className="pointer-events-none absolute -bottom-24 -left-16 w-72 h-72 rounded-full blur-3xl opacity-20" style={{ background: 'radial-gradient(circle, #FFB547 0%, transparent 70%)' }} />
+        <div aria-hidden className="pointer-events-none absolute -top-24 -right-16 w-72 h-72 rounded-full blur-3xl opacity-30" style={{ background: 'radial-gradient(circle, #C2902F 0%, transparent 70%)' }} />
+        <div aria-hidden className="pointer-events-none absolute -bottom-24 -left-16 w-72 h-72 rounded-full blur-3xl opacity-20" style={{ background: 'radial-gradient(circle, #E9B949 0%, transparent 70%)' }} />
 
         <div className="relative">
           <h2 className="font-heading text-white font-semibold text-lg md:text-xl tracking-tight mb-2">
@@ -980,21 +980,21 @@ export default function ContestDetail() {
           </h2>
           <p className="text-[hsl(0_0%_85%)]/80 text-sm md:text-[15px] leading-relaxed mb-6 max-w-2xl">
             V této soutěži je připraveno celkem{' '}
-            <span className="text-[#FFB547] font-semibold">{progressTicketsTotal.toLocaleString('cs-CZ')}</span>{' '}
+            <span className="text-[#E9B949] font-semibold">{progressTicketsTotal.toLocaleString('cs-CZ')}</span>{' '}
             tiketů. Tikety se otevírají postupně v pořadí 1, 2, 3 a dále.
           </p>
 
           {/* Premium animated path */}
           <div className="relative pt-2 pb-1">
             {/* Track */}
-            <div className="relative h-3 rounded-full bg-white/[0.06] border border-white/[0.08] overflow-hidden" style={{ boxShadow: 'inset 0 1px 2px rgba(0,0,0,0.5), 0 0 24px rgba(255,138,0,0.08)' }}>
+            <div className="relative h-3 rounded-full bg-white/[0.06] border border-white/[0.08] overflow-hidden" style={{ boxShadow: 'inset 0 1px 2px rgba(0,0,0,0.5), 0 0 24px rgba(194,144,47,0.08)' }}>
               {/* Animated fill */}
               <div
                 className="absolute inset-y-0 left-0 rounded-full"
                 style={{
                   width: '100%',
-                  background: 'linear-gradient(90deg, rgba(255,138,0,0.0) 0%, #FF8A00 35%, #FFB547 70%, #FFD68A 100%)',
-                  boxShadow: '0 0 24px rgba(255,138,0,0.55), 0 0 48px rgba(255,181,71,0.25)',
+                  background: 'linear-gradient(90deg, rgba(194,144,47,0.0) 0%, #C2902F 35%, #E9B949 70%, #FFE29A 100%)',
+                  boxShadow: '0 0 24px rgba(194,144,47,0.55), 0 0 48px rgba(233,185,73,0.25)',
                 }}
               />
               {/* Moving shimmer */}
@@ -1009,13 +1009,13 @@ export default function ContestDetail() {
             </div>
 
             {/* Endpoint markers */}
-            <div className="absolute left-0 top-1/2 -translate-y-1/2 w-3 h-3 rounded-full bg-[#FF8A00] shadow-[0_0_12px_#FF8A00]" />
+            <div className="absolute left-0 top-1/2 -translate-y-1/2 w-3 h-3 rounded-full bg-[#C2902F] shadow-[0_0_12px_#C2902F]" />
             <div className="absolute right-0 top-1/2 -translate-y-1/2 flex items-center gap-2">
               <div
                 className="relative w-7 h-7 rounded-full flex items-center justify-center text-[13px]"
                 style={{
-                  background: 'linear-gradient(135deg, #FFB547, #FF8A00)',
-                  boxShadow: '0 0 18px rgba(255,138,0,0.7), 0 0 36px rgba(255,181,71,0.4)',
+                  background: 'linear-gradient(135deg, #E9B949, #C2902F)',
+                  boxShadow: '0 0 18px rgba(194,144,47,0.7), 0 0 36px rgba(233,185,73,0.4)',
                   border: '1.5px solid rgba(255,214,138,0.8)',
                 }}
                 aria-label="Hlavní výhra"
@@ -1027,13 +1027,13 @@ export default function ContestDetail() {
 
           <div className="flex items-center justify-between mt-4 text-[11px] md:text-xs uppercase tracking-[0.14em]">
             <span className="text-[hsl(0_0%_70%)]/70">Start</span>
-            <span className="text-[#FFB547] font-semibold">Hlavní výhra</span>
+            <span className="text-[#E9B949] font-semibold">Hlavní výhra</span>
           </div>
         </div>
       </section>
 
       {/* 5. BONUSOVÉ VĚCNÉ VÝHRY */}
-      <section className="voucher-card-glow bg-[hsl(220_25%_8%)]/60 rounded-[20px] p-4 md:p-5 border-[2px] border-[rgba(255,138,0,0.25)]">
+      <section className="voucher-card-glow bg-[hsl(220_25%_8%)]/60 rounded-[20px] p-4 md:p-5 border-[2px] border-[rgba(194,144,47,0.25)]">
         <h2 className="text-white font-semibold text-sm md:text-base mb-4">Bonusové věcné výhry</h2>
 
         {groupedBonusPrizes.length === 0 ? (
@@ -1049,7 +1049,7 @@ export default function ContestDetail() {
                     console.log('[DEBUG ContestDetail] setSelectedBonusPrize:', b.id);
                     setSelectedBonusPrize({ ...b, image_url: bonusImageUrl });
                   }}
-                  className="p-3 rounded-xl border border-white/5 hover:border-[rgba(255,138,0,0.35)] transition-colors text-left cursor-pointer relative"
+                  className="p-3 rounded-xl border border-white/5 hover:border-[rgba(194,144,47,0.35)] transition-colors text-left cursor-pointer relative"
                   style={{
                     backgroundImage: starryBackgroundUrl ? `url(${starryBackgroundUrl})` : undefined,
                     backgroundSize: 'cover',
@@ -1059,8 +1059,8 @@ export default function ContestDetail() {
                 >
                   {count > 1 && (
                     <span
-                      className="absolute -top-2.5 -right-2.5 z-10 inline-flex items-center text-[11px] md:text-xs font-bold whitespace-nowrap text-[hsl(220,30%,10%)] px-2.5 py-1 rounded-full ring-1 ring-white/40 shadow-[0_4px_14px_rgba(255,138,0,0.45)]"
-                      style={{ backgroundImage: 'linear-gradient(135deg, #FF8A00 0%, #FFB547 100%)' }}
+                      className="absolute -top-2.5 -right-2.5 z-10 inline-flex items-center text-[11px] md:text-xs font-bold whitespace-nowrap text-[hsl(220,30%,10%)] px-2.5 py-1 rounded-full ring-1 ring-white/40 shadow-[0_4px_14px_rgba(194,144,47,0.45)]"
+                      style={{ backgroundImage: 'linear-gradient(135deg, #C2902F 0%, #E9B949 100%)' }}
                     >
                       {count}× v soutěži
                     </span>
@@ -1100,7 +1100,7 @@ export default function ContestDetail() {
                 href={contest.rules_pdf_url}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="inline-flex items-center gap-2 rounded-full bg-gradient-to-r from-[#FF8A00] to-[#FFB547] px-5 py-2.5 text-sm font-semibold text-[#111] shadow-lg hover:brightness-105 transition mb-4"
+                className="inline-flex items-center gap-2 rounded-full bg-gradient-to-r from-[#C2902F] to-[#E9B949] px-5 py-2.5 text-sm font-semibold text-[#111] shadow-lg hover:brightness-105 transition mb-4"
               >
                 📄 Zobrazit pravidla soutěže
               </a>

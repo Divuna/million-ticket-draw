@@ -119,7 +119,7 @@ export const CookieConsentBanner: React.FC = () => {
                   Používáme cookies pro fungování aplikace, analýzu návštěvnosti a personalizaci reklam (Google, Meta).{' '}
                   <Link
                     to="/legal/cookies"
-                    className="text-[#F97316] hover:underline"
+                    className="text-[#8A5A10] hover:underline"
                   >
                     Zásady použití cookies
                   </Link>
@@ -142,7 +142,7 @@ export const CookieConsentBanner: React.FC = () => {
                 </Button>
                 <Button
                   onClick={acceptAll}
-                  className="rounded-xl bg-gradient-to-r from-[#FF8A00] to-[#FFB547] text-black shadow-[0_2px_12px_rgba(255,138,0,0.25)] hover:shadow-[0_4px_16px_rgba(255,138,0,0.35)] hover:brightness-110 transition-all"
+                  className="rounded-xl bg-gradient-to-r from-[#C2902F] to-[#E9B949] text-black shadow-[0_2px_12px_rgba(194,144,47,0.25)] hover:shadow-[0_4px_16px_rgba(194,144,47,0.35)] hover:brightness-110 transition-all"
                 >
                   Souhlasím
                 </Button>
@@ -158,7 +158,7 @@ export const CookieConsentBanner: React.FC = () => {
             <DialogTitle className="text-[#111827]">Nastavení cookies</DialogTitle>
             <DialogDescription className="text-[#4B5563]">
               Vyberte, které kategorie cookies chcete povolit.{' '}
-              <Link to="/legal/cookies" className="text-[#F97316] hover:underline">
+              <Link to="/legal/cookies" className="text-[#8A5A10] hover:underline">
                 Zásady použití cookies
               </Link>
             </DialogDescription>
@@ -195,7 +195,7 @@ export const CookieConsentBanner: React.FC = () => {
             <Button variant="outline" onClick={saveCustom} className="border-[#F4D6AD] bg-white text-[#111827] hover:bg-[#FFF4E8]">Uložit výběr</Button>
             <Button
               onClick={acceptAll}
-              className="rounded-xl bg-gradient-to-r from-[#FF8A00] to-[#FFB547] text-black hover:brightness-110"
+              className="rounded-xl bg-gradient-to-r from-[#C2902F] to-[#E9B949] text-black hover:brightness-110"
             >
               Souhlasím se vším
             </Button>

@@ -7,8 +7,8 @@ type OneMilIconProps = SVGProps<SVGSVGElement> & {
 
 const SILVER = '#BFC6CF';
 const PLATINUM = '#E7EBF0';
-const ORANGE = '#FF8A00';
-const AMBER = '#FFB547';
+const ORANGE = '#C2902F';
+const AMBER = '#E9B949';
 
 function iconColor(active?: boolean, color?: string) {
   return color ?? (active ? ORANGE : SILVER);

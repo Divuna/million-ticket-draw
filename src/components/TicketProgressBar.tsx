@@ -65,7 +65,7 @@ export const TicketProgressBar: React.FC<TicketProgressBarProps> = ({
 
         {/* Layer 1 – sold portion (blue fill) */}
         <div
-          className="absolute inset-y-0 left-0 bg-gradient-to-r from-[#FF8A00] to-[#FFB547] transition-[width] duration-500 ease-out"
+          className="absolute inset-y-0 left-0 bg-gradient-to-r from-[#C2902F] to-[#E9B949] transition-[width] duration-500 ease-out"
           style={{ width: `${filledPct}%` }}
         />
 
@@ -77,7 +77,7 @@ export const TicketProgressBar: React.FC<TicketProgressBarProps> = ({
                 <div
                   key={i}
                   className="h-full flex-1"
-                  style={{ backgroundColor: `rgba(249,115,22,${Math.min(opacity * 0.8, 0.9)})` }}
+                  style={{ backgroundColor: `rgba(194,144,47,${Math.min(opacity * 0.8, 0.9)})` }}
                 />
               ) : (
                 <div key={i} className="h-full flex-1" />
@@ -97,7 +97,7 @@ export const TicketProgressBar: React.FC<TicketProgressBarProps> = ({
                 <Tooltip key={i}>
                   <TooltipTrigger asChild>
                     <div
-                      className="absolute top-0 bottom-0 w-px bg-orange-300/90 hover:bg-white cursor-default z-20"
+                      className="absolute top-0 bottom-0 w-px bg-[#F2C55C]/90 hover:bg-white cursor-default z-20"
                       style={{ left: `${leftPct}%` }}
                     />
                   </TooltipTrigger>
@@ -155,7 +155,7 @@ export const TicketProgressBar: React.FC<TicketProgressBarProps> = ({
       {/* ── Legend / stat chips ───────────────────────────────── */}
       <div className="flex flex-wrap gap-x-5 gap-y-1.5 text-xs text-muted-foreground pt-0.5">
         <span className="flex items-center gap-1.5">
-          <span className="inline-block w-2.5 h-2.5 rounded-sm bg-[#FF8A00] shrink-0" />
+          <span className="inline-block w-2.5 h-2.5 rounded-sm bg-[#C2902F] shrink-0" />
           Prodáno:&nbsp;
           <span className="font-medium text-foreground tabular-nums">
             {ticketsSold.toLocaleString('cs-CZ')}
@@ -172,7 +172,7 @@ export const TicketProgressBar: React.FC<TicketProgressBarProps> = ({
 
         {bonusPositions.length > 0 && (
           <span className="flex items-center gap-1.5">
-            <OneMilGiftIcon size={12} className="w-3 h-3 text-orange-400 shrink-0" />
+            <OneMilGiftIcon size={12} className="w-3 h-3 text-[#E9B949] shrink-0" />
             Bonus pozic:&nbsp;
             <span className="font-medium text-foreground tabular-nums">
               {bonusPositions.length.toLocaleString('cs-CZ')}
@@ -182,7 +182,7 @@ export const TicketProgressBar: React.FC<TicketProgressBarProps> = ({
 
         {ticketsLast24h > 0 && (
           <span className="flex items-center gap-1.5">
-            <Clock className="w-3 h-3 text-[#FFB547] shrink-0" />
+            <Clock className="w-3 h-3 text-[#E9B949] shrink-0" />
             Za 24h:&nbsp;
             <span className="font-medium text-foreground tabular-nums">
               +{ticketsLast24h.toLocaleString('cs-CZ')}
@@ -192,7 +192,7 @@ export const TicketProgressBar: React.FC<TicketProgressBarProps> = ({
 
         {estimatedRevenue > 0 && (
           <span className="flex items-center gap-1.5">
-            <TrendingUp className="w-3 h-3 text-[#FFB547] shrink-0" />
+            <TrendingUp className="w-3 h-3 text-[#E9B949] shrink-0" />
             Výnos:&nbsp;
             <span className="font-medium text-foreground tabular-nums">
               {estimatedRevenue.toLocaleString('cs-CZ')} MC

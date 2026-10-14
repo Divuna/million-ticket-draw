@@ -54,7 +54,7 @@ export function MioCoinHistory({ refreshKey = 0 }: MioCoinHistoryProps) {
   const visibleEntries = expanded ? entries : entries.slice(0, 3);
 
   return (
-    <div className="pt-5 border-t border-[rgba(255,138,0,0.12)]">
+    <div className="pt-5 border-t border-[rgba(194,144,47,0.12)]">
       <div className="flex items-center justify-between gap-3 mb-3">
         <div>
           <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider">Historie MIO</h3>
@@ -65,7 +65,7 @@ export function MioCoinHistory({ refreshKey = 0 }: MioCoinHistoryProps) {
             variant="ghost"
             size="sm"
             onClick={() => setExpanded((current) => !current)}
-            className="text-xs text-muted-foreground hover:text-[#FF8A00] shrink-0 flex items-center gap-1"
+            className="text-xs text-muted-foreground hover:text-[#C2902F] shrink-0 flex items-center gap-1"
           >
             {expanded ? 'Skrýt historii' : 'Zobrazit celou historii'}
             <ChevronDown className={`h-4 w-4 transition-transform duration-200 ${expanded ? 'rotate-180' : ''}`} />

@@ -193,7 +193,7 @@ export const Header: React.FC = () => {
                         type="button"
                         aria-label="Rychlé dobití MIO"
                         disabled={checkoutLoading}
-                        className={`${balanceChipClass} transition-colors hover:border-[rgba(255,138,0,0.5)] hover:bg-[rgba(255,138,0,0.14)] disabled:cursor-wait disabled:opacity-70`}
+                        className={`${balanceChipClass} transition-colors hover:border-[rgba(194,144,47,0.5)] hover:bg-[rgba(194,144,47,0.14)] disabled:cursor-wait disabled:opacity-70`}
                       >
                         {balanceChipContent}
                       </button>
@@ -248,9 +248,9 @@ export const Header: React.FC = () => {
                   <button
                     type="button"
                     aria-label="Menu účtu"
-                    className="public-customer-header-account flex max-w-[11rem] items-center gap-2 rounded-full border border-[rgba(15,23,42,0.12)] bg-white/70 py-1 pl-1 pr-2 transition-colors hover:border-[rgba(255,138,0,0.4)] sm:max-w-[16rem] sm:pr-3"
+                    className="public-customer-header-account flex max-w-[11rem] items-center gap-2 rounded-full border border-[rgba(15,23,42,0.12)] bg-white/70 py-1 pl-1 pr-2 transition-colors hover:border-[rgba(194,144,47,0.4)] sm:max-w-[16rem] sm:pr-3"
                   >
-                    <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-[#FFB547] to-[#FF8A00] text-sm font-extrabold text-black">
+                    <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-[#E9B949] to-[#C2902F] text-sm font-extrabold text-black">
                       {initial}
                     </span>
                     {account.displayName && (

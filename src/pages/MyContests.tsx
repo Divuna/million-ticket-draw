@@ -104,14 +104,14 @@ const MyContests: React.FC = () => {
             className="relative overflow-hidden rounded-2xl p-6 mb-8"
             style={{
               background: 'linear-gradient(135deg, hsl(220, 25%, 8%) 0%, hsl(220, 30%, 12%) 50%, hsl(220, 25%, 8%) 100%)',
-              border: '1px solid rgba(255,138,0,0.2)',
-              boxShadow: '0 8px 32px rgba(0,0,0,0.4), inset 0 1px 0 rgba(255,138,0,0.1)',
+              border: '1px solid rgba(194,144,47,0.2)',
+              boxShadow: '0 8px 32px rgba(0,0,0,0.4), inset 0 1px 0 rgba(194,144,47,0.1)',
             }}
           >
             <div
               className="absolute inset-0 opacity-10 pointer-events-none"
               style={{
-                background: 'linear-gradient(90deg, transparent 0%, rgba(255,181,71,1) 50%, transparent 100%)',
+                background: 'linear-gradient(90deg, transparent 0%, rgba(233,185,73,1) 50%, transparent 100%)',
                 backgroundSize: '200% 100%',
                 animation: 'shimmer 4s ease-in-out infinite',
               }}
@@ -120,8 +120,8 @@ const MyContests: React.FC = () => {
               <div
                 className="w-14 h-14 md:w-16 md:h-16 rounded-xl flex items-center justify-center shrink-0"
                 style={{
-                  background: 'linear-gradient(135deg, #FF8A00 0%, #c86000 100%)',
-                  boxShadow: '0 4px 20px rgba(255,138,0,0.3)',
+                  background: 'linear-gradient(135deg, #C2902F 0%, #8A5A10 100%)',
+                  boxShadow: '0 4px 20px rgba(194,144,47,0.3)',
                 }}
               >
                 <OneMilTicketIcon size={36} className="w-7 h-7 md:w-9 md:h-9 text-black" />

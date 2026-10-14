@@ -64,7 +64,7 @@ export const LoggedOutScreen = () => {
         className="absolute inset-0 pointer-events-none"
         style={{
           background:
-            'radial-gradient(ellipse 70% 45% at 50% 12%, rgba(255,181,71,0.10) 0%, transparent 70%), radial-gradient(ellipse 60% 40% at 50% 95%, rgba(200,155,80,0.10) 0%, transparent 70%)',
+            'radial-gradient(ellipse 70% 45% at 50% 12%, rgba(233,185,73,0.10) 0%, transparent 70%), radial-gradient(ellipse 60% 40% at 50% 95%, rgba(200,155,80,0.10) 0%, transparent 70%)',
         }}
       />
 
@@ -117,18 +117,18 @@ export const LoggedOutScreen = () => {
           className="w-full max-w-md flex flex-col items-center gap-8 rounded-2xl p-8 md:p-10"
           style={{
             background: 'hsl(220 40% 7%)',
-            border: '1px solid rgba(255,138,0,0.15)',
+            border: '1px solid rgba(194,144,47,0.15)',
             boxShadow:
-              '0 4px 32px rgba(0,0,0,0.5), inset 0 1px 0 rgba(255,181,71,0.06)',
+              '0 4px 32px rgba(0,0,0,0.5), inset 0 1px 0 rgba(233,185,73,0.06)',
           }}
         >
           {/* Logo — dark pill backdrop + layered amber glow for contrast */}
           <div
             className="flex items-center justify-center rounded-2xl px-8 py-5"
             style={{
-              background: 'radial-gradient(ellipse 90% 80% at 50% 50%, rgba(255,138,0,0.07) 0%, rgba(10,11,15,0.55) 60%, rgba(10,11,15,0.80) 100%)',
+              background: 'radial-gradient(ellipse 90% 80% at 50% 50%, rgba(194,144,47,0.07) 0%, rgba(10,11,15,0.55) 60%, rgba(10,11,15,0.80) 100%)',
               boxShadow:
-                '0 0 0 1px rgba(255,138,0,0.10), 0 0 24px 4px rgba(255,138,0,0.08), inset 0 1px 0 rgba(255,181,71,0.08)',
+                '0 0 0 1px rgba(194,144,47,0.10), 0 0 24px 4px rgba(194,144,47,0.08), inset 0 1px 0 rgba(233,185,73,0.08)',
             }}
           >
             <img
@@ -137,7 +137,7 @@ export const LoggedOutScreen = () => {
               className="h-20 md:h-24 w-auto object-contain"
               style={{
                 filter:
-                  'drop-shadow(0 0 8px rgba(255,138,0,0.55)) drop-shadow(0 0 22px rgba(255,181,71,0.30)) drop-shadow(0 2px 4px rgba(0,0,0,0.60))',
+                  'drop-shadow(0 0 8px rgba(194,144,47,0.55)) drop-shadow(0 0 22px rgba(233,185,73,0.30)) drop-shadow(0 2px 4px rgba(0,0,0,0.60))',
               }}
             />
           </div>
@@ -147,7 +147,7 @@ export const LoggedOutScreen = () => {
             className="w-16 h-px"
             style={{
               background:
-                'linear-gradient(90deg, transparent, rgba(255,138,0,0.5), transparent)',
+                'linear-gradient(90deg, transparent, rgba(194,144,47,0.5), transparent)',
             }}
           />
 
@@ -174,13 +174,13 @@ export const LoggedOutScreen = () => {
           {/* CTA button */}
           <Button
             onClick={handleLogin}
-            className="w-full h-12 text-base font-semibold rounded-xl transition-all duration-200 hover:brightness-110 hover:-translate-y-0.5 hover:shadow-[0_4px_20px_rgba(255,138,0,0.4)]"
+            className="w-full h-12 text-base font-semibold rounded-xl transition-all duration-200 hover:brightness-110 hover:-translate-y-0.5 hover:shadow-[0_4px_20px_rgba(194,144,47,0.4)]"
             style={{
               fontFamily: "'Poppins', system-ui, sans-serif",
-              background: 'linear-gradient(90deg, #FF8A00 0%, #FFB547 100%)',
+              background: 'linear-gradient(90deg, #C2902F 0%, #E9B949 100%)',
               color: '#0A0B0F',
               border: 'none',
-              boxShadow: '0 2px 12px rgba(255,138,0,0.25)',
+              boxShadow: '0 2px 12px rgba(194,144,47,0.25)',
             }}
           >
             Přihlásit se

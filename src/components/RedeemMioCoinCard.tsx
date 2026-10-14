@@ -100,14 +100,14 @@ export const RedeemMioCoinCard = ({ onRedeemed }: RedeemMioCoinCardProps) => {
   }, [location.pathname, location.search, navigate, showResult]);
 
   return (
-    <div className="homepage-light-panel relative overflow-hidden rounded-2xl border border-[rgba(255,138,0,0.18)] bg-white">
+    <div className="homepage-light-panel relative overflow-hidden rounded-2xl border border-[rgba(194,144,47,0.18)] bg-white">
       <div className="p-6">
         <div className="flex items-center gap-4 mb-4">
           <div
             className="w-12 h-12 rounded-xl flex items-center justify-center shrink-0"
             style={{
-              background: 'linear-gradient(135deg, #FF8A00 0%, #c86000 100%)',
-              boxShadow: '0 4px 20px rgba(255,138,0,0.25)',
+              background: 'linear-gradient(135deg, #C2902F 0%, #8A5A10 100%)',
+              boxShadow: '0 4px 20px rgba(194,144,47,0.25)',
             }}
           >
             <OneMilGiftIcon size={24} className="w-6 h-6 text-black" />
@@ -124,13 +124,13 @@ export const RedeemMioCoinCard = ({ onRedeemed }: RedeemMioCoinCardProps) => {
             onChange={(event) => setCode(event.target.value.toUpperCase())}
             placeholder="ZADEJTE MIOCOIN KÓD…"
             disabled={submitting}
-            className="flex-1 bg-[rgba(255,138,0,0.05)] border-[rgba(255,138,0,0.2)] focus:border-[rgba(255,138,0,0.4)] focus:bg-[rgba(255,138,0,0.1)] transition-all duration-200 uppercase tracking-wider"
+            className="flex-1 bg-[rgba(194,144,47,0.05)] border-[rgba(194,144,47,0.2)] focus:border-[rgba(194,144,47,0.4)] focus:bg-[rgba(194,144,47,0.1)] transition-all duration-200 uppercase tracking-wider"
             onKeyDown={(event) => event.key === 'Enter' && !submitting && handleRedeem()}
           />
           <Button
             onClick={handleRedeem}
             disabled={submitting || !code.trim()}
-            className="bg-gradient-to-r from-[#FF8A00] to-[#FFB547] hover:from-[#FFB547] hover:to-[#FF8A00] text-black font-bold transition-all duration-200 shrink-0"
+            className="bg-gradient-to-r from-[#C2902F] to-[#E9B949] hover:from-[#E9B949] hover:to-[#C2902F] text-black font-bold transition-all duration-200 shrink-0"
           >
             {submitting ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : null}
             Uplatnit kód

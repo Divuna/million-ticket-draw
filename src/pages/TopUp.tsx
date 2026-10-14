@@ -50,7 +50,7 @@ const TopUp = () => {
 
       <div className="homepage-light-content container mx-auto px-4 py-8 space-y-8">
         <section className="w-full overflow-x-hidden">
-          <Card className="homepage-light-panel homepage-miocoin-panel rounded-xl overflow-hidden bg-[hsl(220_45%_6%)] border border-[rgba(255,138,0,0.2)] shadow-[0_4px_16px_hsl(222_50%_3%/0.5)] h-full">
+          <Card className="homepage-light-panel homepage-miocoin-panel rounded-xl overflow-hidden bg-[hsl(220_45%_6%)] border border-[rgba(194,144,47,0.2)] shadow-[0_4px_16px_hsl(222_50%_3%/0.5)] h-full">
             <CardContent className="p-5 md:p-6 h-full flex flex-col">
               <div className="space-y-4 flex-1 flex flex-col">
                 <MioCoinTopUpSection placementBanners={placementBanners} />

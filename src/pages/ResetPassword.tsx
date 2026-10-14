@@ -155,7 +155,7 @@ export default function ResetPassword() {
           />
         </Link>
 
-        <Card className="w-full voucher-card-glow rounded-[20px] bg-gradient-to-b from-[hsl(220_30%_12%)] via-[hsl(220_28%_9%)] to-[hsl(222_35%_7%)] border-[2px] border-[rgba(255,138,0,0.15)] shadow-[0_4px_24px_hsl(222_50%_3%/0.6)]">
+        <Card className="w-full voucher-card-glow rounded-[20px] bg-gradient-to-b from-[hsl(220_30%_12%)] via-[hsl(220_28%_9%)] to-[hsl(222_35%_7%)] border-[2px] border-[rgba(194,144,47,0.15)] shadow-[0_4px_24px_hsl(222_50%_3%/0.6)]">
           {mode === "request" && (
             <form onSubmit={handleRequestReset}>
               <CardHeader>
@@ -193,7 +193,7 @@ export default function ResetPassword() {
                 <Button
                   type="submit"
                   data-testid="reset-request-submit"
-                  className="w-full rounded-xl bg-gradient-to-r from-[#FF8A00] to-[#FFB547] text-black"
+                  className="w-full rounded-xl bg-gradient-to-r from-[#C2902F] to-[#E9B949] text-black"
                   disabled={loading}
                 >
                   {loading && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
@@ -275,7 +275,7 @@ export default function ResetPassword() {
                 <Button
                   type="submit"
                   data-testid="reset-update-submit"
-                  className="w-full rounded-xl bg-gradient-to-r from-[#FF8A00] to-[#FFB547] text-black"
+                  className="w-full rounded-xl bg-gradient-to-r from-[#C2902F] to-[#E9B949] text-black"
                   disabled={loading}
                 >
                   {loading && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}

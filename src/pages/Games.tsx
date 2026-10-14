@@ -352,7 +352,7 @@ const Index = () => {
           <div
             className="absolute inset-0 opacity-10 pointer-events-none"
             style={{
-              background: 'linear-gradient(90deg, transparent 0%, rgba(255,181,71,1) 50%, transparent 100%)',
+              background: 'linear-gradient(90deg, transparent 0%, rgba(233,185,73,1) 50%, transparent 100%)',
               backgroundSize: '200% 100%',
               animation: 'shimmer 4s ease-in-out infinite',
             }}
@@ -362,8 +362,8 @@ const Index = () => {
               <div
                 className="w-14 h-14 md:w-16 md:h-16 rounded-xl flex items-center justify-center shrink-0"
                 style={{
-                  background: 'linear-gradient(135deg, #FF8A00 0%, #c86000 100%)',
-                  boxShadow: '0 4px 20px rgba(255,138,0,0.3)',
+                  background: 'linear-gradient(135deg, #C2902F 0%, #8A5A10 100%)',
+                  boxShadow: '0 4px 20px rgba(194,144,47,0.3)',
                 }}
               >
                 <OneMilTrophyIcon size={36} className="w-7 h-7 md:w-9 md:h-9 text-black" />
@@ -385,7 +385,7 @@ const Index = () => {
               );
               return (
                 <Button
-                  className="bg-primary hover:brightness-110 text-primary-foreground font-bold px-4 py-2 md:px-6 md:py-3 rounded-xl shadow-[0_8px_20px_rgba(255,138,0,0.18)] transition-all duration-200 shrink-0"
+                  className="bg-primary hover:brightness-110 text-primary-foreground font-bold px-4 py-2 md:px-6 md:py-3 rounded-xl shadow-[0_8px_20px_rgba(194,144,47,0.18)] transition-all duration-200 shrink-0"
                   onClick={() => navigate('/favorite-games')}
                 >
                   <OneMilHeartIcon size={20} className="w-5 h-5 mr-2" />
@@ -430,7 +430,7 @@ const Index = () => {
 
         {contests.length === 0 && (
           <div className="rounded-2xl border border-slate-200 bg-white py-16 text-center shadow-[0_14px_38px_rgba(15,23,42,0.06)] space-y-4">
-            <OneMilTrophyIcon size={64} className="w-16 h-16 mx-auto text-[rgba(255,138,0,0.45)]" />
+            <OneMilTrophyIcon size={64} className="w-16 h-16 mx-auto text-[rgba(194,144,47,0.45)]" />
             <h3 className="text-xl font-bold text-slate-900" style={{ fontFamily: 'var(--om-font-heading)' }}>Žádné soutěže</h3>
             <p className="text-sm text-muted-foreground">Momentálně nejsou dostupné žádné soutěže.</p>
           </div>

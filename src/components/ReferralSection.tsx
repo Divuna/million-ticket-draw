@@ -289,7 +289,7 @@ const ReferralSection: React.FC<{ isLoaded: boolean }> = ({ isLoaded }) => {
 
   return (
     <div
-      className={`relative overflow-hidden rounded-2xl border backdrop-blur-xl border-primary/25 bg-gradient-to-br from-primary/5 via-card/95 to-primary/3 shadow-[0_0_40px_-8px_rgba(255,138,0,0.15)] hover:border-opacity-60 hover:shadow-xl transition-all duration-700 ease-out ${
+      className={`relative overflow-hidden rounded-2xl border backdrop-blur-xl border-primary/25 bg-gradient-to-br from-primary/5 via-card/95 to-primary/3 shadow-[0_0_40px_-8px_rgba(194,144,47,0.15)] hover:border-opacity-60 hover:shadow-xl transition-all duration-700 ease-out ${
         isLoaded ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-6'
       }`}
       style={{ transitionDelay: '650ms' }}
@@ -299,7 +299,7 @@ const ReferralSection: React.FC<{ isLoaded: boolean }> = ({ isLoaded }) => {
         className="absolute inset-0 opacity-0 hover:opacity-100 transition-opacity duration-500 pointer-events-none"
         style={{
           background:
-            'linear-gradient(105deg, transparent 40%, rgba(255,138,0,0.03) 45%, rgba(255,138,0,0.05) 50%, rgba(255,138,0,0.03) 55%, transparent 60%)',
+            'linear-gradient(105deg, transparent 40%, rgba(194,144,47,0.03) 45%, rgba(194,144,47,0.05) 50%, rgba(194,144,47,0.03) 55%, transparent 60%)',
           backgroundSize: '200% 100%',
           animation: 'shimmer 3s ease-in-out infinite',
         }}
@@ -421,11 +421,11 @@ const ReferralSection: React.FC<{ isLoaded: boolean }> = ({ isLoaded }) => {
 
         {/* Summary Stats */}
         <div className="grid grid-cols-3 gap-3 mb-6">
-          <div className="p-4 rounded-xl bg-gradient-to-br from-[rgba(255,138,0,0.1)] to-[rgba(255,138,0,0.05)] border border-[rgba(255,138,0,0.2)] text-center">
+          <div className="p-4 rounded-xl bg-gradient-to-br from-[rgba(194,144,47,0.1)] to-[rgba(194,144,47,0.05)] border border-[rgba(194,144,47,0.2)] text-center">
             <div className="flex items-center justify-center mb-1">
-              <Coins className="h-4 w-4 text-[#FFB547]" />
+              <Coins className="h-4 w-4 text-[#E9B949]" />
             </div>
-            <p className="text-xl font-bold text-[#FFB547] tabular-nums">{summary.totalEarned}</p>
+            <p className="text-xl font-bold text-[#E9B949] tabular-nums">{summary.totalEarned}</p>
             <p className="text-[10px] text-muted-foreground/60 uppercase tracking-wider mt-1">Celkem MC</p>
           </div>
           <div className="p-4 rounded-xl bg-gradient-to-br from-green-500/10 to-green-500/5 border border-green-500/20 text-center">
@@ -459,7 +459,7 @@ const ReferralSection: React.FC<{ isLoaded: boolean }> = ({ isLoaded }) => {
 
         {/* Action: Enter referral code */}
         {!alreadyHasReferrer && (
-          <div className="mb-6 p-5 rounded-2xl bg-gradient-to-br from-[rgba(255,138,0,0.08)] via-transparent to-[rgba(255,138,0,0.05)] border border-[rgba(255,138,0,0.15)]">
+          <div className="mb-6 p-5 rounded-2xl bg-gradient-to-br from-[rgba(194,144,47,0.08)] via-transparent to-[rgba(194,144,47,0.05)] border border-[rgba(194,144,47,0.15)]">
             <p className="text-xs font-semibold text-muted-foreground/60 uppercase tracking-wider mb-3">
               Mám doporučovací kód
             </p>
@@ -468,13 +468,13 @@ const ReferralSection: React.FC<{ isLoaded: boolean }> = ({ isLoaded }) => {
                 value={inputCode}
                 onChange={(e) => setInputCode(e.target.value.toUpperCase())}
                 placeholder="Zadejte kód..."
-                className="premium-input flex-1 bg-[rgba(255,138,0,0.05)] border-[rgba(255,138,0,0.2)] focus:border-[rgba(255,138,0,0.4)] focus:bg-[rgba(255,138,0,0.1)] transition-all duration-300 uppercase tracking-wider"
+                className="premium-input flex-1 bg-[rgba(194,144,47,0.05)] border-[rgba(194,144,47,0.2)] focus:border-[rgba(194,144,47,0.4)] focus:bg-[rgba(194,144,47,0.1)] transition-all duration-300 uppercase tracking-wider"
                 onKeyDown={(e) => e.key === 'Enter' && handleSubmitCode()}
               />
               <Button
                 onClick={handleSubmitCode}
                 disabled={submitting || !inputCode.trim()}
-                className="vip-button bg-gradient-to-r from-[#FF8A00] to-[#FFB547] hover:from-[#FFB547] hover:to-[#FF8A00] text-black font-bold transition-all duration-300 hover:scale-[1.02]"
+                className="vip-button bg-gradient-to-r from-[#C2902F] to-[#E9B949] hover:from-[#E9B949] hover:to-[#C2902F] text-black font-bold transition-all duration-300 hover:scale-[1.02]"
               >
                 {submitting ? <Loader2 className="h-4 w-4 animate-spin" /> : <Gift className="h-4 w-4" />}
               </Button>

@@ -239,7 +239,7 @@ export function MysteryPurchaseResultDialog({
 
         <span
           aria-hidden="true"
-          className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_82%_10%,rgba(255,181,71,0.18),transparent_23%),radial-gradient(circle_at_10%_88%,rgba(255,138,0,0.11),transparent_26%)]"
+          className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_82%_10%,rgba(233,185,73,0.18),transparent_23%),radial-gradient(circle_at_10%_88%,rgba(194,144,47,0.11),transparent_26%)]"
         />
 
         <div className="relative flex flex-col gap-4 min-w-0">
@@ -251,7 +251,7 @@ export function MysteryPurchaseResultDialog({
             <div className="text-left min-w-0">
               {isWin ? (
                 <>
-                  <p className="text-xl sm:text-2xl font-extrabold tracking-wide bg-gradient-to-r from-[#FF8A00] to-[#FFB547] bg-clip-text text-transparent">
+                  <p className="text-xl sm:text-2xl font-extrabold tracking-wide bg-gradient-to-r from-[#C2902F] to-[#E9B949] bg-clip-text text-transparent">
                     🎉 GRATULUJEME!
                   </p>
                   <p className="text-3xl sm:text-5xl font-black text-[#111827] leading-none mt-1">
@@ -266,7 +266,7 @@ export function MysteryPurchaseResultDialog({
                 // se dozví, co se stalo, a rovnou i to, co si odnáší.
                 <div data-testid="mystery-result-noprize">
                   <p className="font-heading text-[clamp(1.15rem,4.3vw,2.1rem)] font-black text-[#111827] leading-[1.08] tracking-tight min-[480px]:whitespace-nowrap">
-                    TENTOKRÁT <span className="text-[#F97316]">BEZ VÝHRY</span>
+                    TENTOKRÁT <span className="text-[#8A5A10]">BEZ VÝHRY</span>
                   </p>
                   <p className="font-heading text-base sm:text-lg font-black text-[#111827] mt-1 break-words">
                     Ale jsi stále ve hře!
@@ -281,7 +281,7 @@ export function MysteryPurchaseResultDialog({
                 <>
                   <p
                     data-testid={isMioCoinWin ? "mystery-result-miocoin-amount" : "mystery-result-prize-title"}
-                    className="text-2xl sm:text-3xl font-extrabold text-[#F97316] mt-2 break-words"
+                    className="text-2xl sm:text-3xl font-extrabold text-[#8A5A10] mt-2 break-words"
                   >
                     {prizeTitle}
                   </p>
@@ -299,7 +299,7 @@ export function MysteryPurchaseResultDialog({
                 data-testid="mystery-result-prize-image"
                 className={
                   isMioCoinWin
-                    ? "order-1 md:order-2 h-28 w-28 mx-auto object-contain drop-shadow-[0_12px_22px_rgba(249,115,22,0.28)]"
+                    ? "order-1 md:order-2 h-28 w-28 mx-auto object-contain drop-shadow-[0_12px_22px_rgba(194,144,47,0.28)]"
                     : "order-1 md:order-2 h-40 w-40 sm:h-48 sm:w-48 mx-auto object-contain drop-shadow-[0_16px_26px_rgba(91,57,16,0.2)]"
                 }
               />
@@ -314,18 +314,18 @@ export function MysteryPurchaseResultDialog({
                 className="relative h-[94px] sm:h-[108px] w-full"
               >
                 <span className="absolute left-1 sm:left-3 top-4 sm:top-5 h-[70px] w-[68px] sm:h-[80px] sm:w-[78px] rotate-[8deg] rounded-md border border-[#F0C58D] bg-gradient-to-br from-white via-[#FFF9F0] to-[#FFE8C6] shadow-[0_12px_24px_rgba(180,94,8,0.22)]">
-                  <span className="absolute inset-x-0 top-0 h-3 rounded-t-md bg-gradient-to-r from-[#FFB547] via-[#F97316] to-[#FFB547]" />
-                  <span className="absolute left-1/2 top-0 h-full w-2 -translate-x-1/2 bg-gradient-to-b from-[#FFB547] to-[#F97316]" />
-                  <span className="absolute -top-4 left-1/2 h-7 w-9 -translate-x-1/2 rounded-[50%] border-[5px] border-[#F97316]" />
+                  <span className="absolute inset-x-0 top-0 h-3 rounded-t-md bg-gradient-to-r from-[#E9B949] via-[#8A5A10] to-[#E9B949]" />
+                  <span className="absolute left-1/2 top-0 h-full w-2 -translate-x-1/2 bg-gradient-to-b from-[#E9B949] to-[#8A5A10]" />
+                  <span className="absolute -top-4 left-1/2 h-7 w-9 -translate-x-1/2 rounded-[50%] border-[5px] border-[#8A5A10]" />
                   <span className="absolute left-1/2 top-7 flex h-8 w-8 -translate-x-1/2 items-center justify-center rounded-full bg-white/95 shadow-sm">
                     <img src={couponImage ?? "/apple-touch-icon.png"} alt="" className="h-7 w-7 rounded-full object-contain" />
                   </span>
                 </span>
-                <span className="absolute right-0 sm:right-1 top-10 sm:top-12 rotate-[-8deg] text-[9px] sm:text-[11px] italic font-bold leading-tight text-[#F97316]">
+                <span className="absolute right-0 sm:right-1 top-10 sm:top-12 rotate-[-8deg] text-[9px] sm:text-[11px] italic font-bold leading-tight text-[#8A5A10]">
                   Více zážitků<br />z každého<br />nákupu
                 </span>
-                <span className="absolute left-0 top-2 text-[#F97316] text-xs">✦</span>
-                <span className="absolute right-4 top-1 text-[#FFB547] text-sm">✦</span>
+                <span className="absolute left-0 top-2 text-[#8A5A10] text-xs">✦</span>
+                <span className="absolute right-4 top-1 text-[#E9B949] text-sm">✦</span>
               </div>
             )}
           </section>
@@ -333,7 +333,7 @@ export function MysteryPurchaseResultDialog({
           {/* ── Druhý, garantovaný bonus: kupon — má vlastní, opožděný reveal,
                 aby to působilo jako druhá odměna odhalená až po hlavním výsledku ── */}
           <div className="flex items-center justify-center gap-2 animate-in fade-in slide-in-from-bottom-2 duration-700 [animation-delay:450ms] fill-mode-both">
-            <Gift className="h-4 w-4 shrink-0 text-[#F97316]" />
+            <Gift className="h-4 w-4 shrink-0 text-[#8A5A10]" />
             <p className="text-[11px] sm:text-xs uppercase tracking-[0.18em] font-bold text-[#334155]">
               A navíc získáváš voucher
             </p>
@@ -441,7 +441,7 @@ export function MysteryPurchaseResultDialog({
           {showNextWin && (
             <section
               data-testid="mystery-result-next-win"
-              className="rounded-2xl border border-[#FFD69E] bg-white/75 px-3 py-3 sm:px-4 sm:py-3 shadow-[0_12px_30px_rgba(249,115,22,0.12)] min-w-0 animate-in fade-in slide-in-from-bottom-2 duration-700 [animation-delay:650ms] fill-mode-both"
+              className="rounded-2xl border border-[#FFD69E] bg-white/75 px-3 py-3 sm:px-4 sm:py-3 shadow-[0_12px_30px_rgba(194,144,47,0.12)] min-w-0 animate-in fade-in slide-in-from-bottom-2 duration-700 [animation-delay:650ms] fill-mode-both"
             >
               <div className="grid grid-cols-[3rem_minmax(0,1fr)] sm:grid-cols-[3.25rem_minmax(0,1fr)_5.5rem] items-center gap-3 min-w-0">
                 <span className="h-12 w-12 sm:h-[52px] sm:w-[52px] rounded-full bg-gradient-to-br from-[#FF9B22] to-[#C85D00] flex items-center justify-center shadow-[0_9px_22px_rgba(201,93,0,0.34)]">
@@ -452,7 +452,7 @@ export function MysteryPurchaseResultDialog({
                     Další výherní ticket čeká už za{" "}
                     <span
                       data-testid="mystery-result-next-win-distance"
-                      className="text-[#F97316]"
+                      className="text-[#8A5A10]"
                     >
                       {distance.toLocaleString("cs-CZ")} {tahPlural(distance)}
                     </span>
@@ -462,7 +462,7 @@ export function MysteryPurchaseResultDialog({
                     Může obsahovat MIO, bonusovou cenu nebo hlavní výhru.
                   </p>
                 </div>
-                <p className="hidden sm:block rotate-[-8deg] text-center text-[11px] italic font-bold leading-tight text-[#F97316]">
+                <p className="hidden sm:block rotate-[-8deg] text-center text-[11px] italic font-bold leading-tight text-[#8A5A10]">
                   Jsi blíž<br />než si myslíš!
                 </p>
               </div>
@@ -475,7 +475,7 @@ export function MysteryPurchaseResultDialog({
                 >
                   <span className="absolute left-[10%] right-[10%] top-1/2 h-[2px] -translate-y-1/2 bg-[#F1E3D2]" />
                   <span
-                    className="absolute left-[10%] top-1/2 h-[2px] -translate-y-1/2 bg-[#FF8A00]"
+                    className="absolute left-[10%] top-1/2 h-[2px] -translate-y-1/2 bg-[#C2902F]"
                     style={{ width: `${completedPreviewSteps * 20}%` }}
                   />
                   {Array.from({ length: 5 }, (_, index) => {
@@ -487,9 +487,9 @@ export function MysteryPurchaseResultDialog({
                         key={step}
                         className={`relative z-10 mx-auto flex h-5 w-5 items-center justify-center rounded-full text-[10px] font-bold ${
                           completed
-                            ? "bg-[#FF8A00] text-white shadow-[0_4px_10px_rgba(249,115,22,0.25)]"
+                            ? "bg-[#C2902F] text-white shadow-[0_4px_10px_rgba(194,144,47,0.25)]"
                             : current
-                              ? "border border-[#FFB35C] bg-white text-[#F97316]"
+                              ? "border border-[#FFB35C] bg-white text-[#8A5A10]"
                               : "border border-[#E8DED2] bg-[#FAF8F5] text-[#C9C0B7]"
                         }`}
                       >

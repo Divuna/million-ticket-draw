@@ -108,7 +108,7 @@ export const VoucherShowcaseCard: React.FC<VoucherShowcaseCardProps> = ({
   return (
     <Card
       className={cn(
-        'voucher-card-glow relative overflow-hidden rounded-[20px] border-[3px] border-[rgba(255,138,0,0.35)] shadow-[0_4px_20px_hsl(220_50%_3%/0.6)] transition-all duration-300 hover:border-[rgba(255,138,0,0.55)] hover:shadow-[0_0_16px_rgba(255,138,0,0.2)] hover:scale-[1.02]',
+        'voucher-card-glow relative overflow-hidden rounded-[20px] border-[3px] border-[rgba(194,144,47,0.35)] shadow-[0_4px_20px_hsl(220_50%_3%/0.6)] transition-all duration-300 hover:border-[rgba(194,144,47,0.55)] hover:shadow-[0_0_16px_rgba(194,144,47,0.2)] hover:scale-[1.02]',
         'aspect-[16/9] min-h-0 cursor-pointer',
         className,
       )}
@@ -131,7 +131,7 @@ export const VoucherShowcaseCard: React.FC<VoucherShowcaseCardProps> = ({
         />
       ) : (
         <div className="absolute inset-0 z-[1] flex items-center justify-center bg-[hsl(220_30%_10%)]">
-          <OneMilVoucherIcon size={56} className="h-14 w-14 text-[rgba(255,138,0,0.45)]" />
+          <OneMilVoucherIcon size={56} className="h-14 w-14 text-[rgba(194,144,47,0.45)]" />
         </div>
       )}
 
@@ -184,7 +184,7 @@ export const VoucherShowcaseCard: React.FC<VoucherShowcaseCardProps> = ({
               event.stopPropagation();
               onDetail();
             }}
-            className="h-11 rounded-xl border-0 bg-gradient-to-r from-[#FF8A00] to-[#FFB547] px-4 text-sm font-bold text-[#111] shadow-[0_2px_8px_rgba(255,138,0,0.25)] transition-all duration-200 hover:brightness-105"
+            className="h-11 rounded-xl border-0 bg-gradient-to-r from-[#C2902F] to-[#E9B949] px-4 text-sm font-bold text-[#111] shadow-[0_2px_8px_rgba(194,144,47,0.25)] transition-all duration-200 hover:brightness-105"
           >
             Detail
             <ChevronRight className="ml-1 h-4 w-4" />
@@ -231,7 +231,7 @@ export const VoucherDetailDialog: React.FC<VoucherDetailDialogProps> = ({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="voucher-detail-light-dialog max-w-5xl max-h-[92vh] overflow-y-auto border-[rgba(255,138,0,0.35)] bg-gradient-to-b from-[hsl(220_30%_8%)] to-[hsl(220_35%_5%)] p-0">
+      <DialogContent className="voucher-detail-light-dialog max-w-5xl max-h-[92vh] overflow-y-auto border-[rgba(194,144,47,0.35)] bg-gradient-to-b from-[hsl(220_30%_8%)] to-[hsl(220_35%_5%)] p-0">
         {voucher && (
           <div className="block w-full min-w-0">
             <div className="relative aspect-[16/9] w-full max-h-[480px] overflow-hidden rounded-t-[20px] bg-[hsl(220_30%_10%)]">
@@ -243,7 +243,7 @@ export const VoucherDetailDialog: React.FC<VoucherDetailDialogProps> = ({
                 />
               ) : (
                 <div className="flex h-full items-center justify-center">
-                  <ImageIcon className="h-16 w-16 text-[rgba(255,138,0,0.45)]" />
+                  <ImageIcon className="h-16 w-16 text-[rgba(194,144,47,0.45)]" />
                 </div>
               )}
               <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-[rgba(0,0,0,0.38)] via-transparent to-transparent" />
@@ -286,7 +286,7 @@ export const VoucherDetailDialog: React.FC<VoucherDetailDialogProps> = ({
             <div className="space-y-5 p-6">
               <DialogHeader className="space-y-2 text-left">
                 <div>
-                  <Badge className="mb-3 border border-[#FF9D24]/35 bg-[#FF9D24]/12 text-[#FFB547]">
+                  <Badge className="mb-3 border border-[#FF9D24]/35 bg-[#FF9D24]/12 text-[#E9B949]">
                     Váš garantovaný benefit
                   </Badge>
                   <DialogTitle className="text-2xl font-bold text-white sm:text-3xl">{voucher.name}</DialogTitle>
@@ -299,7 +299,7 @@ export const VoucherDetailDialog: React.FC<VoucherDetailDialogProps> = ({
               <div className="grid gap-4 md:grid-cols-2">
                 <section className="rounded-2xl border border-white/10 bg-white/[0.03] p-4">
                   <div className="mb-2 flex items-center gap-2 text-sm font-semibold text-white">
-                    <Ticket className="h-4 w-4 text-[#FFB547]" />
+                    <Ticket className="h-4 w-4 text-[#E9B949]" />
                     Krátký popis
                   </div>
                   <p className="whitespace-pre-line text-sm leading-6 text-white/75">{detailText?.shortDescription}</p>
@@ -307,7 +307,7 @@ export const VoucherDetailDialog: React.FC<VoucherDetailDialogProps> = ({
 
                 <section className="rounded-2xl border border-white/10 bg-white/[0.03] p-4">
                   <div className="mb-2 flex items-center gap-2 text-sm font-semibold text-white">
-                    <Ticket className="h-4 w-4 text-[#FFB547]" />
+                    <Ticket className="h-4 w-4 text-[#E9B949]" />
                     Popis použití
                   </div>
                   <p className="whitespace-pre-line text-sm leading-6 text-white/75">{detailText?.usageDescription}</p>
@@ -315,7 +315,7 @@ export const VoucherDetailDialog: React.FC<VoucherDetailDialogProps> = ({
 
                 <section className="rounded-2xl border border-white/10 bg-white/[0.03] p-4">
                   <div className="mb-2 flex items-center gap-2 text-sm font-semibold text-white">
-                    <Ticket className="h-4 w-4 text-[#FFB547]" />
+                    <Ticket className="h-4 w-4 text-[#E9B949]" />
                     Podmínky použití
                   </div>
                   <p className="whitespace-pre-line text-sm leading-6 text-white/75">{detailText?.termsText}</p>
@@ -323,7 +323,7 @@ export const VoucherDetailDialog: React.FC<VoucherDetailDialogProps> = ({
 
                 <section className="rounded-2xl border border-white/10 bg-white/[0.03] p-4">
                   <div className="mb-2 flex items-center gap-2 text-sm font-semibold text-white">
-                    <ChevronRight className="h-4 w-4 text-[#FFB547]" />
+                    <ChevronRight className="h-4 w-4 text-[#E9B949]" />
                     Návod k použití
                   </div>
                   <p className="whitespace-pre-line text-sm leading-6 text-white/75">{detailText?.howToUseText}</p>
@@ -337,7 +337,7 @@ export const VoucherDetailDialog: React.FC<VoucherDetailDialogProps> = ({
                 <Button
                   onClick={() => voucher && onPurchase(voucher.id)}
                   disabled={purchaseDisabled || purchaseLoading}
-                  className="h-11 rounded-xl border-0 bg-gradient-to-r from-[#FF8A00] to-[#FFB547] px-5 text-sm font-bold text-[#111] shadow-[0_2px_8px_rgba(255,138,0,0.25)] hover:brightness-105"
+                  className="h-11 rounded-xl border-0 bg-gradient-to-r from-[#C2902F] to-[#E9B949] px-5 text-sm font-bold text-[#111] shadow-[0_2px_8px_rgba(194,144,47,0.25)] hover:brightness-105"
                 >
                   {purchaseLoading ? 'Probíhá nákup...' : purchaseLabel}
                 </Button>

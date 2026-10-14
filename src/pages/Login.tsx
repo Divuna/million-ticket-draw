@@ -121,11 +121,11 @@ const Login: React.FC = () => {
       {/* Ambient decorative glow — purely visual, does not affect layout flow */}
       <div
         aria-hidden="true"
-        className="om-auth-blob-a pointer-events-none absolute -top-20 -right-14 h-64 w-64 rounded-full bg-[#FF8A00]/25 blur-[90px] sm:h-80 sm:w-80"
+        className="om-auth-blob-a pointer-events-none absolute -top-20 -right-14 h-64 w-64 rounded-full bg-[#C2902F]/25 blur-[90px] sm:h-80 sm:w-80"
       />
       <div
         aria-hidden="true"
-        className="om-auth-blob-b pointer-events-none absolute -bottom-24 -left-16 h-64 w-64 rounded-full bg-[#FFB547]/30 blur-[90px] sm:h-80 sm:w-80"
+        className="om-auth-blob-b pointer-events-none absolute -bottom-24 -left-16 h-64 w-64 rounded-full bg-[#E9B949]/30 blur-[90px] sm:h-80 sm:w-80"
       />
       <div
         aria-hidden="true"
@@ -137,7 +137,7 @@ const Login: React.FC = () => {
         <Link
           to="/"
           aria-label="Zpět na OneMil"
-          className="om-auth-medallion om-auth-rise mb-5 block overflow-hidden rounded-[26px] shadow-[0_18px_40px_-14px_rgba(255,138,0,0.4)]"
+          className="om-auth-medallion om-auth-rise mb-5 block overflow-hidden rounded-[26px] shadow-[0_18px_40px_-14px_rgba(194,144,47,0.4)]"
         >
           <img
             src={logo}
@@ -158,15 +158,15 @@ const Login: React.FC = () => {
 
         {/* Benefit chips */}
         <div className="om-auth-rise om-auth-rise-2 mb-6 grid w-full grid-cols-3 gap-2">
-          <div className="om-auth-chip flex flex-col items-center gap-1.5 rounded-2xl border border-[#FFE3C2] bg-white/80 px-2 py-3 text-center shadow-[0_2px_10px_rgba(255,138,0,0.08)]">
+          <div className="om-auth-chip flex flex-col items-center gap-1.5 rounded-2xl border border-[#FFE3C2] bg-white/80 px-2 py-3 text-center shadow-[0_2px_10px_rgba(194,144,47,0.08)]">
             <OneMilTrophyIcon active size={20} />
             <span className="text-[11px] font-medium text-[#4A4A4A]">Soutěže</span>
           </div>
-          <div className="om-auth-chip flex flex-col items-center gap-1.5 rounded-2xl border border-[#FFE3C2] bg-white/80 px-2 py-3 text-center shadow-[0_2px_10px_rgba(255,138,0,0.08)]">
+          <div className="om-auth-chip flex flex-col items-center gap-1.5 rounded-2xl border border-[#FFE3C2] bg-white/80 px-2 py-3 text-center shadow-[0_2px_10px_rgba(194,144,47,0.08)]">
             <OneMilWinIcon active size={20} />
             <span className="text-[11px] font-medium text-[#4A4A4A]">Výhry</span>
           </div>
-          <div className="om-auth-chip flex flex-col items-center gap-1.5 rounded-2xl border border-[#FFE3C2] bg-white/80 px-2 py-3 text-center shadow-[0_2px_10px_rgba(255,138,0,0.08)]">
+          <div className="om-auth-chip flex flex-col items-center gap-1.5 rounded-2xl border border-[#FFE3C2] bg-white/80 px-2 py-3 text-center shadow-[0_2px_10px_rgba(194,144,47,0.08)]">
             <OneMilVoucherIcon active size={20} />
             <span className="text-[11px] font-medium text-[#4A4A4A]">Vouchery</span>
           </div>
@@ -195,7 +195,7 @@ const Login: React.FC = () => {
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                   required
-                  className="h-11 rounded-xl border-[#E7E1D8] bg-[#FCFAF7] pl-10 text-[#1A1A1A] placeholder:text-[#B4ACA0] focus-visible:border-[#FF8A00] focus-visible:ring-[#FF8A00]/25 focus-visible:ring-offset-white"
+                  className="h-11 rounded-xl border-[#E7E1D8] bg-[#FCFAF7] pl-10 text-[#1A1A1A] placeholder:text-[#B4ACA0] focus-visible:border-[#C2902F] focus-visible:ring-[#C2902F]/25 focus-visible:ring-offset-white"
                 />
               </div>
             </div>
@@ -218,7 +218,7 @@ const Login: React.FC = () => {
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   required
-                  className="h-11 rounded-xl border-[#E7E1D8] bg-[#FCFAF7] pl-10 text-[#1A1A1A] placeholder:text-[#B4ACA0] focus-visible:border-[#FF8A00] focus-visible:ring-[#FF8A00]/25 focus-visible:ring-offset-white"
+                  className="h-11 rounded-xl border-[#E7E1D8] bg-[#FCFAF7] pl-10 text-[#1A1A1A] placeholder:text-[#B4ACA0] focus-visible:border-[#C2902F] focus-visible:ring-[#C2902F]/25 focus-visible:ring-offset-white"
                 />
               </div>
             </div>
@@ -226,7 +226,7 @@ const Login: React.FC = () => {
             <Button
               type="submit"
               disabled={loading}
-              className="om-auth-cta h-12 w-full rounded-xl bg-gradient-to-r from-[#FF8A00] to-[#FFB547] text-base font-semibold text-[#1A1200] shadow-[0_10px_30px_-8px_rgba(255,138,0,0.55)] transition-all hover:shadow-[0_14px_36px_-6px_rgba(255,138,0,0.65)] hover:brightness-105 active:scale-[0.99]"
+              className="om-auth-cta h-12 w-full rounded-xl bg-gradient-to-r from-[#C2902F] to-[#E9B949] text-base font-semibold text-[#1A1200] shadow-[0_10px_30px_-8px_rgba(194,144,47,0.55)] transition-all hover:shadow-[0_14px_36px_-6px_rgba(194,144,47,0.65)] hover:brightness-105 active:scale-[0.99]"
             >
               {loading ? (
                 <>
@@ -252,7 +252,7 @@ const Login: React.FC = () => {
                     <Button
                       type="button"
                       variant="outline"
-                      className="relative h-11 w-full justify-center border-[#E7E1D8] bg-white text-[#2B2B2B] hover:border-[#FF8A00]/50 hover:bg-[#FFF7EC] hover:text-[#2B2B2B]"
+                      className="relative h-11 w-full justify-center border-[#E7E1D8] bg-white text-[#2B2B2B] hover:border-[#C2902F]/50 hover:bg-[#FFF7EC] hover:text-[#2B2B2B]"
                       onClick={() => handleOAuthSignIn("google")}
                     >
                       <span className="absolute left-4 top-1/2 -translate-y-1/2"><GoogleIcon /></span>
@@ -264,7 +264,7 @@ const Login: React.FC = () => {
                     <Button
                       type="button"
                       variant="outline"
-                      className="h-11 w-full justify-center border-[#E7E1D8] bg-white text-[#2B2B2B] hover:border-[#FF8A00]/50 hover:bg-[#FFF7EC] hover:text-[#2B2B2B]"
+                      className="h-11 w-full justify-center border-[#E7E1D8] bg-white text-[#2B2B2B] hover:border-[#C2902F]/50 hover:bg-[#FFF7EC] hover:text-[#2B2B2B]"
                       onClick={() => handleOAuthSignIn("apple")}
                     >
                       Přihlásit se přes Apple
@@ -275,7 +275,7 @@ const Login: React.FC = () => {
                     <Button
                       type="button"
                       variant="outline"
-                      className="relative h-11 w-full justify-center border-[#E7E1D8] bg-white text-[#2B2B2B] hover:border-[#FF8A00]/50 hover:bg-[#FFF7EC] hover:text-[#2B2B2B]"
+                      className="relative h-11 w-full justify-center border-[#E7E1D8] bg-white text-[#2B2B2B] hover:border-[#C2902F]/50 hover:bg-[#FFF7EC] hover:text-[#2B2B2B]"
                       onClick={() => handleOAuthSignIn("facebook")}
                     >
                       <span className="absolute left-4 top-1/2 -translate-y-1/2"><FacebookIcon /></span>

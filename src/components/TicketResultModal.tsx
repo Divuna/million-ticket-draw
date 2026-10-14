@@ -141,8 +141,8 @@ const generatePremiumShareCard = async (opts: ShareCardOptions): Promise<Blob> =
 
   // Subtle radial gold glow behind product
   const glow = ctx.createRadialGradient(W * 0.32, H * 0.55, 20, W * 0.32, H * 0.55, 380);
-  glow.addColorStop(0, 'rgba(255, 138, 0, 0.18)');
-  glow.addColorStop(1, 'rgba(255, 138, 0, 0)');
+  glow.addColorStop(0, 'rgba(194,144,47, 0.18)');
+  glow.addColorStop(1, 'rgba(194,144,47, 0)');
   ctx.fillStyle = glow;
   ctx.fillRect(0, 0, W, H);
 
@@ -204,7 +204,7 @@ const generatePremiumShareCard = async (opts: ShareCardOptions): Promise<Blob> =
 
   // Headline (Czech)
   ctx.textAlign = 'left';
-  ctx.fillStyle = '#FF8A00';
+  ctx.fillStyle = '#C2902F';
   ctx.font = 'bold 46px Poppins, system-ui, -apple-system, sans-serif';
   // wrap headline
   const wrap = (text: string, maxWidth: number, lineHeight: number, startY: number): number => {
@@ -240,7 +240,7 @@ const generatePremiumShareCard = async (opts: ShareCardOptions): Promise<Blob> =
   // MioCoin amount (if applicable)
   if (opts.kind === 'miocoin' && opts.bonusAmount && opts.bonusAmount > 0) {
     cursorY += 14;
-    ctx.fillStyle = '#FFB547';
+    ctx.fillStyle = '#E9B949';
     ctx.font = 'bold 38px Poppins, system-ui, -apple-system, sans-serif';
     ctx.fillText(`+${opts.bonusAmount.toLocaleString('cs-CZ')} MIO`, textX, cursorY);
   }
@@ -812,7 +812,7 @@ export const TicketResultModal: React.FC<TicketResultModalProps> = ({
                 ? ['#FFD700', '#FFA500', '#FF4500', '#DC143C', '#8A2BE2', '#FFF8DC']
                 : (isPartnerOffer && !isBonusWin)
                   ? ['#60A5FA', '#818CF8', '#A78BFA', '#34D399', '#F472B6']
-                  : ['#FDE047', '#A78BFA', '#38BDF8', '#FB923C', '#F472B6']
+                  : ['#FDE047', '#A78BFA', '#38BDF8', '#F2C55C', '#F472B6']
             }
             style={{ zIndex: 120, pointerEvents: 'none' }}
           />
@@ -823,7 +823,7 @@ export const TicketResultModal: React.FC<TicketResultModalProps> = ({
           type="button"
           aria-label="Zavřít"
           onClick={() => onClose()}
-          className="absolute right-4 top-4 z-[200] flex h-9 w-9 items-center justify-center rounded-full bg-white/80 text-[#7A5230] ring-1 ring-[#F4D6AD] backdrop-blur transition hover:bg-white hover:text-[#111827] focus:outline-none focus:ring-2 focus:ring-[#F97316]/60"
+          className="absolute right-4 top-4 z-[200] flex h-9 w-9 items-center justify-center rounded-full bg-white/80 text-[#7A5230] ring-1 ring-[#F4D6AD] backdrop-blur transition hover:bg-white hover:text-[#111827] focus:outline-none focus:ring-2 focus:ring-[#8A5A10]/60"
         >
           <X className="h-5 w-5" />
         </button>
@@ -865,7 +865,7 @@ export const TicketResultModal: React.FC<TicketResultModalProps> = ({
           >
             {isWinner ? (
               <>
-                <p className="win-moment-win-headline text-base font-extrabold tracking-wide text-transparent bg-clip-text bg-gradient-to-r from-[#FF8A00] to-[#FFB547] sm:text-lg">
+                <p className="win-moment-win-headline text-base font-extrabold tracking-wide text-transparent bg-clip-text bg-gradient-to-r from-[#C2902F] to-[#E9B949] sm:text-lg">
                   {winKind === 'partner' ? '🎁 SPECIÁLNÍ NABÍDKA!' : '🎉 GRATULUJEME!'}
                 </p>
                 {winKind !== 'partner' && (
@@ -877,7 +877,7 @@ export const TicketResultModal: React.FC<TicketResultModalProps> = ({
             ) : (
               <>
                 <p className="font-heading text-xl font-black leading-tight tracking-tight text-[#111827] sm:text-2xl">
-                  TENTOKRÁT <span className="text-[#F97316]">BEZ VÝHRY</span>
+                  TENTOKRÁT <span className="text-[#8A5A10]">BEZ VÝHRY</span>
                 </p>
                 <p className="font-heading text-sm font-black text-[#111827] sm:text-base">
                   Ale jsi stále ve hře!
@@ -936,7 +936,7 @@ export const TicketResultModal: React.FC<TicketResultModalProps> = ({
                   )}
                   <p className="mt-2 text-[11px] font-semibold uppercase text-[#9A6B2E]">
                     Nabídka je uložena v tvých{' '}
-                    <span className="text-[#F97316]">výhrách → Nabídky</span>
+                    <span className="text-[#8A5A10]">výhrách → Nabídky</span>
                   </p>
                 </div>
               )}
@@ -950,14 +950,14 @@ export const TicketResultModal: React.FC<TicketResultModalProps> = ({
                     : result.distance_to_next_bonus
                 );
                 return (
-                  <div className="mt-3 animate-in fade-in slide-in-from-bottom-3 duration-700 [animation-delay:300ms] fill-mode-both rounded-2xl border border-[#FFD69E] bg-white/75 px-5 py-3 text-center shadow-[0_12px_30px_rgba(249,115,22,0.12)]">
+                  <div className="mt-3 animate-in fade-in slide-in-from-bottom-3 duration-700 [animation-delay:300ms] fill-mode-both rounded-2xl border border-[#FFD69E] bg-white/75 px-5 py-3 text-center shadow-[0_12px_30px_rgba(194,144,47,0.12)]">
                     <p className="text-sm text-[#111827]">
                       {nextN === 1 ? (
                         <>Další výherní ticket čeká už při dalším tahu.</>
                       ) : (
                         <>
                           Další výherní ticket čeká už za{' '}
-                          <span className="font-bold text-[#F97316]">
+                          <span className="font-bold text-[#8A5A10]">
                             {nextN.toLocaleString('cs-CZ')}
                           </span>
                           {' '}{tahPlural(nextN)}.
@@ -975,7 +975,7 @@ export const TicketResultModal: React.FC<TicketResultModalProps> = ({
                   <Button
                     type="button"
                     onClick={handlePlayAgain}
-                    className="win-moment-cta-play-again w-full border-0 font-bold shadow-lg bg-gradient-to-r from-[#FF8A00] via-[#FFB547] to-[#FF8A00] text-black hover:brightness-110"
+                    className="win-moment-cta-play-again w-full border-0 font-bold shadow-lg bg-gradient-to-r from-[#C2902F] via-[#E9B949] to-[#C2902F] text-black hover:brightness-110"
                   >
                     Hrát znovu
                   </Button>
@@ -1007,7 +1007,7 @@ export const TicketResultModal: React.FC<TicketResultModalProps> = ({
                     variant="ghost"
                     size="sm"
                     onClick={handleCopyWinShare}
-                    className="h-9 gap-1.5 text-[#C26A00] hover:bg-[#FFF4E8] hover:text-[#F97316]"
+                    className="h-9 gap-1.5 text-[#C26A00] hover:bg-[#FFF4E8] hover:text-[#8A5A10]"
                   >
                     <Share2 className="h-4 w-4 shrink-0 opacity-90" aria-hidden />
                     Sdílet výhru
@@ -1136,7 +1136,7 @@ export const TicketResultModal: React.FC<TicketResultModalProps> = ({
                     <div aria-hidden="true" className="relative mt-4 grid grid-cols-5 items-center px-2">
                       <span className="absolute left-[10%] right-[10%] top-1/2 h-[2px] -translate-y-1/2 bg-[#F1E3D2]" />
                       <span
-                        className="absolute left-[10%] top-1/2 h-[2px] -translate-y-1/2 bg-[#FF8A00]"
+                        className="absolute left-[10%] top-1/2 h-[2px] -translate-y-1/2 bg-[#C2902F]"
                         style={{ width: `${completedSteps * 20}%` }}
                       />
                       {Array.from({ length: 5 }, (_, index) => {
@@ -1148,9 +1148,9 @@ export const TicketResultModal: React.FC<TicketResultModalProps> = ({
                             className={cn(
                               'relative z-10 mx-auto flex h-5 w-5 items-center justify-center rounded-full text-[10px] font-bold',
                               isDone
-                                ? 'bg-[#FF8A00] text-white shadow-[0_4px_10px_rgba(249,115,22,0.25)]'
+                                ? 'bg-[#C2902F] text-white shadow-[0_4px_10px_rgba(194,144,47,0.25)]'
                                 : isCurrent
-                                  ? 'border border-[#FFB35C] bg-white text-[#F97316]'
+                                  ? 'border border-[#FFB35C] bg-white text-[#8A5A10]'
                                   : 'border border-[#E8DED2] bg-[#FAF8F5] text-[#C9C0B7]'
                             )}
                           >

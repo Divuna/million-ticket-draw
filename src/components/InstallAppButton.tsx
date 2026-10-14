@@ -93,7 +93,7 @@ export const InstallAppButton: React.FC = () => {
                   type="button"
                   onClick={handleInstall}
                   disabled={installing}
-                  className={`${platformBadgeBase} border-neon-gold/50 bg-neon-gold/15 shadow-[inset_0_1px_10px_rgba(255,181,71,0.08)] hover:border-neon-gold/75 hover:bg-neon-gold/25 disabled:cursor-wait disabled:opacity-70`}
+                  className={`${platformBadgeBase} border-neon-gold/50 bg-neon-gold/15 shadow-[inset_0_1px_10px_rgba(233,185,73,0.08)] hover:border-neon-gold/75 hover:bg-neon-gold/25 disabled:cursor-wait disabled:opacity-70`}
                   aria-label="Stáhnout do počítače"
                   title={
                     canShowDesktopInstall
@@ -134,7 +134,7 @@ export const InstallAppButton: React.FC = () => {
             type="button"
             onClick={handleInstall}
             disabled={installing}
-            className="mt-3 inline-flex h-9 items-center gap-2 rounded-full border border-neon-gold/50 bg-neon-gold/15 px-4 shadow-[inset_0_1px_10px_rgba(255,181,71,0.08)] transition-colors hover:border-neon-gold/75 hover:bg-neon-gold/25 disabled:cursor-wait disabled:opacity-70"
+            className="mt-3 inline-flex h-9 items-center gap-2 rounded-full border border-neon-gold/50 bg-neon-gold/15 px-4 shadow-[inset_0_1px_10px_rgba(233,185,73,0.08)] transition-colors hover:border-neon-gold/75 hover:bg-neon-gold/25 disabled:cursor-wait disabled:opacity-70"
             aria-label="Stáhnout aplikaci"
           >
             <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-neon-gold text-[hsl(220_50%_5%)]">
@@ -146,10 +146,10 @@ export const InstallAppButton: React.FC = () => {
       </div>
 
       <Dialog open={instructionsOpen} onOpenChange={setInstructionsOpen}>
-        <DialogContent className="max-w-sm rounded-2xl border-[rgba(255,138,0,0.3)] bg-[hsl(220_45%_6%)] text-foreground shadow-[0_16px_48px_rgba(0,0,0,0.55)]">
+        <DialogContent className="max-w-sm rounded-2xl border-[rgba(194,144,47,0.3)] bg-[hsl(220_45%_6%)] text-foreground shadow-[0_16px_48px_rgba(0,0,0,0.55)]">
           <DialogHeader className="space-y-2 pr-6">
             <DialogTitle className="text-heading-gold flex items-center gap-2">
-              <Download className="w-5 h-5 text-[#FF8A00]" />
+              <Download className="w-5 h-5 text-[#C2902F]" />
               Nainstalovat aplikaci
             </DialogTitle>
             <DialogDescription>
@@ -158,39 +158,39 @@ export const InstallAppButton: React.FC = () => {
           </DialogHeader>
 
           <div className="space-y-3 text-sm">
-            <div className="flex items-start gap-3 rounded-lg border border-[rgba(255,138,0,0.18)] bg-black/20 p-3">
-              <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-[#FF8A00] text-xs font-bold text-black">
+            <div className="flex items-start gap-3 rounded-lg border border-[rgba(194,144,47,0.18)] bg-black/20 p-3">
+              <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-[#C2902F] text-xs font-bold text-black">
                 1
               </span>
               <span>Otevři OneMil v Safari.</span>
             </div>
-            <div className="flex items-start gap-3 rounded-lg border border-[rgba(255,138,0,0.18)] bg-black/20 p-3">
-              <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-[#FF8A00] text-xs font-bold text-black">
+            <div className="flex items-start gap-3 rounded-lg border border-[rgba(194,144,47,0.18)] bg-black/20 p-3">
+              <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-[#C2902F] text-xs font-bold text-black">
                 2
               </span>
               <span className="flex items-center gap-2">
                 Klepni na Sdílet.
-                <Share2 className="h-4 w-4 text-[#FFB547]" />
+                <Share2 className="h-4 w-4 text-[#E9B949]" />
               </span>
             </div>
-            <div className="flex items-start gap-3 rounded-lg border border-[rgba(255,138,0,0.18)] bg-black/20 p-3">
-              <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-[#FF8A00] text-xs font-bold text-black">
+            <div className="flex items-start gap-3 rounded-lg border border-[rgba(194,144,47,0.18)] bg-black/20 p-3">
+              <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-[#C2902F] text-xs font-bold text-black">
                 3
               </span>
               <span className="flex items-center gap-2">
                 Zvol „Přidat na plochu“.
-                <Plus className="h-4 w-4 text-[#FFB547]" />
+                <Plus className="h-4 w-4 text-[#E9B949]" />
               </span>
             </div>
-            <div className="flex items-start gap-3 rounded-lg border border-[rgba(255,138,0,0.18)] bg-black/20 p-3">
-              <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-[#FF8A00] text-xs font-bold text-black">
+            <div className="flex items-start gap-3 rounded-lg border border-[rgba(194,144,47,0.18)] bg-black/20 p-3">
+              <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-[#C2902F] text-xs font-bold text-black">
                 4
               </span>
               <span>Potvrď „Přidat“.</span>
             </div>
           </div>
 
-          <p className="rounded-lg border border-[rgba(255,181,71,0.2)] bg-[rgba(255,138,0,0.08)] p-3 text-xs leading-relaxed text-muted-foreground">
+          <p className="rounded-lg border border-[rgba(233,185,73,0.2)] bg-[rgba(194,144,47,0.08)] p-3 text-xs leading-relaxed text-muted-foreground">
             Na iPhonu instalaci potvrzuješ ručně přes Safari.
           </p>
 

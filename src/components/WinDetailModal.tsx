@@ -224,8 +224,8 @@ export const WinDetailModal: React.FC<WinDetailModalProps> = ({ win, open, onClo
   // Confetti v OneMil paletě a jemnější než dřív — hlavní výhra má výraznější
   // oranžovo-amber detail, bonus drží stejný systém v tišší variantě.
   const confettiConfig = win.type === 'main'
-    ? { pieces: 180, gravity: 0.22, colors: ['#FF8A00', '#FFB547', '#FFD9A0', '#FFF1DF', '#FFFFFF'] }
-    : { pieces: 70, gravity: 0.3, colors: ['#FFB547', '#FFD9A0', '#FFF1DF', '#FFFFFF'] };
+    ? { pieces: 180, gravity: 0.22, colors: ['#C2902F', '#E9B949', '#FFD9A0', '#FFF1DF', '#FFFFFF'] }
+    : { pieces: 70, gravity: 0.3, colors: ['#E9B949', '#FFD9A0', '#FFF1DF', '#FFFFFF'] };
 
   return (
     <Dialog open={open} onOpenChange={(isOpen) => !isOpen && onClose()}>
@@ -262,12 +262,12 @@ export const WinDetailModal: React.FC<WinDetailModalProps> = ({ win, open, onClo
 
               <div className="absolute left-3 top-3 sm:left-4 sm:top-4">
                 {win.type === 'main' ? (
-                  <Badge className="gap-1 rounded-full border-0 bg-gradient-to-r from-[#FF8A00] to-[#FFB547] px-3 py-1 font-sans text-[11px] font-bold tracking-[0.02em] text-white shadow-[0_4px_12px_rgba(249,115,22,0.30)] hover:brightness-105">
+                  <Badge className="gap-1 rounded-full border-0 bg-gradient-to-r from-[#C2902F] to-[#E9B949] px-3 py-1 font-sans text-[11px] font-bold tracking-[0.02em] text-white shadow-[0_4px_12px_rgba(194,144,47,0.30)] hover:brightness-105">
                     <Trophy className="h-3.5 w-3.5" /> Hlavní výhra
                   </Badge>
                 ) : (
                   <Badge className="gap-1 rounded-full border border-[#F4D6AD] bg-white/90 px-3 py-1 font-sans text-[11px] font-semibold tracking-[0.02em] text-[#B4600B] backdrop-blur-sm hover:bg-white">
-                    <Gift className="h-3.5 w-3.5 text-[#FF8A00]" /> Bonusová výhra
+                    <Gift className="h-3.5 w-3.5 text-[#C2902F]" /> Bonusová výhra
                   </Badge>
                 )}
               </div>
@@ -399,7 +399,7 @@ export const WinDetailModal: React.FC<WinDetailModalProps> = ({ win, open, onClo
               }}
               className={
                 win.type === 'main'
-                  ? 'w-full border-0 bg-gradient-to-r from-[#FF8A00] via-[#FFB547] to-[#FF8A00] font-sans font-bold text-white shadow-[0_6px_18px_rgba(249,115,22,0.28)] hover:brightness-110'
+                  ? 'w-full border-0 bg-gradient-to-r from-[#C2902F] via-[#E9B949] to-[#C2902F] font-sans font-bold text-white shadow-[0_6px_18px_rgba(194,144,47,0.28)] hover:brightness-110'
                   : 'w-full border border-[#F4D6AD] bg-white font-sans font-semibold text-[#111827] hover:bg-[#FFF4E8]'
               }
               variant={win.type === 'main' ? 'default' : 'outline'}

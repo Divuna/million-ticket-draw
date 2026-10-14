@@ -196,7 +196,7 @@ function MessageThreadItem({
       : isSystemSender || isSystemMessage
         ? {
             background: "linear-gradient(135deg, hsl(220, 25%, 12%) 0%, hsl(220, 25%, 10%) 100%)",
-            border: "1px solid rgba(255, 138, 0, 0.2)",
+            border: "1px solid rgba(194,144,47, 0.2)",
             boxShadow: "0 4px 16px hsl(0, 0%, 0%, 0.3)",
           }
         : {
@@ -246,11 +246,11 @@ function MessageThreadItem({
 
         {(isSystemSender || (isSystemMessage && !isUserMessage)) && (
           <div className="flex items-center gap-2 mb-2">
-            <OneMilDiamondIcon size={16} className="w-4 h-4 text-[#FF8A00]" />
+            <OneMilDiamondIcon size={16} className="w-4 h-4 text-[#C2902F]" />
             <span
               className="text-xs font-semibold"
               style={{
-                background: "linear-gradient(90deg, #FF8A00 0%, #FFB547 100%)",
+                background: "linear-gradient(90deg, #C2902F 0%, #E9B949 100%)",
                 WebkitBackgroundClip: "text",
                 WebkitTextFillColor: "transparent",
               }}
@@ -310,10 +310,10 @@ function MessageThreadItem({
             }}
             className="relative z-10 mt-3 px-4 py-2 rounded-lg text-sm font-semibold transition-all duration-200 hover:scale-[1.03] active:scale-[0.98]"
             style={{
-              background: "linear-gradient(135deg, #FF8A00 0%, #c86000 100%)",
+              background: "linear-gradient(135deg, #C2902F 0%, #8A5A10 100%)",
               color: "hsl(220, 20%, 8%)",
-              boxShadow: "0 4px 12px rgba(255, 138, 0, 0.3)",
-              border: "1px solid rgba(255, 138, 0, 0.4)",
+              boxShadow: "0 4px 12px rgba(194,144,47, 0.3)",
+              border: "1px solid rgba(194,144,47, 0.4)",
               pointerEvents: "auto",
               position: "relative",
               zIndex: 50,
@@ -935,9 +935,9 @@ export default function MessagesPage() {
     () =>
       hasDraft
         ? {
-            background: "linear-gradient(135deg, #FF8A00 0%, #c86000 100%)",
-            boxShadow: "0 4px 20px rgba(255, 138, 0, 0.4)",
-            border: "1px solid rgba(255, 138, 0, 0.3)",
+            background: "linear-gradient(135deg, #C2902F 0%, #8A5A10 100%)",
+            boxShadow: "0 4px 20px rgba(194,144,47, 0.4)",
+            border: "1px solid rgba(194,144,47, 0.3)",
           }
         : {
             background: "linear-gradient(135deg, hsl(220, 25%, 15%) 0%, hsl(220, 30%, 20%) 100%)",
@@ -960,7 +960,7 @@ export default function MessagesPage() {
             key={p.id}
             className="absolute w-1 h-1 rounded-full opacity-20"
             style={{
-              background: `radial-gradient(circle, rgba(255, 181, 71, ${0.5 + p.hueBoost / 200}) 0%, transparent 70%)`,
+              background: `radial-gradient(circle, rgba(233,185,73, ${0.5 + p.hueBoost / 200}) 0%, transparent 70%)`,
               left: `${p.leftPct}%`,
               top: `${p.topPct}%`,
               animation: `float ${p.durationS}s ease-in-out infinite`,
@@ -974,7 +974,7 @@ export default function MessagesPage() {
       <div 
         className="absolute inset-0 pointer-events-none opacity-[0.02]"
         style={{
-          background: 'linear-gradient(45deg, transparent 30%, rgba(255, 181, 71, 1) 50%, transparent 70%)',
+          background: 'linear-gradient(45deg, transparent 30%, rgba(233,185,73, 1) 50%, transparent 70%)',
           backgroundSize: '200% 200%',
           animation: 'shimmer 8s ease-in-out infinite',
         }}
@@ -987,15 +987,15 @@ export default function MessagesPage() {
             className="relative overflow-hidden rounded-2xl p-6"
             style={{
               background: 'linear-gradient(135deg, hsl(220, 25%, 8%) 0%, hsl(220, 30%, 12%) 50%, hsl(220, 25%, 8%) 100%)',
-              border: '1px solid rgba(255, 138, 0, 0.2)',
-              boxShadow: '0 8px 32px hsl(0, 0%, 0%, 0.4), inset 0 1px 0 rgba(255, 138, 0, 0.1)',
+              border: '1px solid rgba(194,144,47, 0.2)',
+              boxShadow: '0 8px 32px hsl(0, 0%, 0%, 0.4), inset 0 1px 0 rgba(194,144,47, 0.1)',
             }}
           >
             {/* Header shimmer */}
             <div 
               className="absolute inset-0 opacity-10"
               style={{
-                background: 'linear-gradient(90deg, transparent 0%, rgba(255, 181, 71, 1) 50%, transparent 100%)',
+                background: 'linear-gradient(90deg, transparent 0%, rgba(233,185,73, 1) 50%, transparent 100%)',
                 backgroundSize: '200% 100%',
                 animation: 'shimmer 4s ease-in-out infinite',
               }}
@@ -1005,8 +1005,8 @@ export default function MessagesPage() {
               <div
                 className="w-14 h-14 md:w-16 md:h-16 rounded-xl flex items-center justify-center shrink-0"
                 style={{
-                  background: 'linear-gradient(135deg, #FF8A00 0%, #c86000 100%)',
-                  boxShadow: '0 4px 20px rgba(255,138,0,0.3)',
+                  background: 'linear-gradient(135deg, #C2902F 0%, #8A5A10 100%)',
+                  boxShadow: '0 4px 20px rgba(194,144,47,0.3)',
                 }}
               >
                 <OneMilMessageIcon size={36} className="w-7 h-7 md:w-9 md:h-9 text-black" />
@@ -1021,9 +1021,9 @@ export default function MessagesPage() {
                 </p>
               </div>
 
-              <div className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-[rgba(255,138,0,0.1)] border border-[rgba(255,138,0,0.2)]">
-                <OneMilDiamondIcon size={16} className="w-4 h-4 text-[#FF8A00]" />
-                <span className="text-xs font-medium text-[#FFB547]">
+              <div className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-[rgba(194,144,47,0.1)] border border-[rgba(194,144,47,0.2)]">
+                <OneMilDiamondIcon size={16} className="w-4 h-4 text-[#C2902F]" />
+                <span className="text-xs font-medium text-[#E9B949]">
                   {messages.length} zpráv
                 </span>
               </div>
@@ -1039,7 +1039,7 @@ export default function MessagesPage() {
             className="absolute inset-0 overflow-y-auto px-6 pb-4 space-y-4"
             style={{
               scrollbarWidth: 'thin',
-              scrollbarColor: 'rgba(255, 138, 0, 0.3) transparent',
+              scrollbarColor: 'rgba(194,144,47, 0.3) transparent',
             }}
           >
           {visibleMessages.length === 0 && !loading && (
@@ -1051,10 +1051,10 @@ export default function MessagesPage() {
                 className="w-20 h-20 rounded-2xl flex items-center justify-center mb-6"
                 style={{
                   background: 'linear-gradient(135deg, hsl(220, 25%, 12%) 0%, hsl(220, 30%, 16%) 100%)',
-                  border: '1px solid rgba(255, 138, 0, 0.15)',
+                  border: '1px solid rgba(194,144,47, 0.15)',
                 }}
               >
-                <OneMilMessageIcon size={40} className="w-10 h-10 text-[#FF8A00]/40" />
+                <OneMilMessageIcon size={40} className="w-10 h-10 text-[#C2902F]/40" />
               </div>
               <p className="text-gray-400 text-lg font-medium">Zatím žádné zprávy</p>
               <p className="text-gray-500 text-sm mt-2">Napište nám vaši první zprávu</p>
@@ -1104,9 +1104,9 @@ export default function MessagesPage() {
               aria-label={showNewMessagesBelow ? "Nové zprávy" : "Na konec konverzace"}
               className="absolute bottom-4 left-1/2 z-20 flex min-w-[220px] -translate-x-1/2 items-center justify-center rounded-full px-4 py-2 text-sm font-medium text-black shadow-lg transition-[transform,opacity] hover:scale-[1.02] active:scale-[0.98]"
               style={{
-                background: 'linear-gradient(135deg, #FF8A00 0%, #c86000 100%)',
-                boxShadow: '0 4px 24px rgba(255, 138, 0, 0.45)',
-                border: '1px solid rgba(255, 138, 0, 0.5)',
+                background: 'linear-gradient(135deg, #C2902F 0%, #8A5A10 100%)',
+                boxShadow: '0 4px 24px rgba(194,144,47, 0.45)',
+                border: '1px solid rgba(194,144,47, 0.5)',
               }}
             >
               <span className="inline-block min-h-[1.25rem] text-center leading-tight">
@@ -1122,15 +1122,15 @@ export default function MessagesPage() {
             className="relative overflow-hidden rounded-2xl p-4"
             style={{
               background: 'linear-gradient(135deg, hsl(220, 25%, 8%) 0%, hsl(220, 30%, 12%) 50%, hsl(220, 25%, 8%) 100%)',
-              border: '1px solid rgba(255, 138, 0, 0.2)',
-              boxShadow: '0 -8px 32px hsl(0, 0%, 0%, 0.3), inset 0 1px 0 rgba(255, 138, 0, 0.1)',
+              border: '1px solid rgba(194,144,47, 0.2)',
+              boxShadow: '0 -8px 32px hsl(0, 0%, 0%, 0.3), inset 0 1px 0 rgba(194,144,47, 0.1)',
             }}
           >
             {/* Input shimmer */}
             <div 
               className="absolute inset-0 opacity-5"
               style={{
-                background: 'linear-gradient(90deg, transparent 0%, rgba(255, 181, 71, 1) 50%, transparent 100%)',
+                background: 'linear-gradient(90deg, transparent 0%, rgba(233,185,73, 1) 50%, transparent 100%)',
                 backgroundSize: '200% 100%',
                 animation: 'shimmer 6s ease-in-out infinite',
               }}
@@ -1146,8 +1146,8 @@ export default function MessagesPage() {
                   <div 
                     className="max-w-[200px] px-4 py-2 rounded-xl text-sm font-medium text-black truncate"
                     style={{
-                      background: 'linear-gradient(135deg, #FF8A00 0%, #c86000 100%)',
-                      boxShadow: '0 4px 20px rgba(255, 138, 0, 0.5)',
+                      background: 'linear-gradient(135deg, #C2902F 0%, #8A5A10 100%)',
+                      boxShadow: '0 4px 20px rgba(194,144,47, 0.5)',
                     }}
                   >
                     {flyingMessage.content.length > 30 
@@ -1171,7 +1171,7 @@ export default function MessagesPage() {
                     >
                       <OneMilDiamondIcon
                         className="w-full h-full"
-                        color="#FFB547"
+                        color="#E9B949"
                       />
                     </div>
                   ))}
@@ -1187,7 +1187,7 @@ export default function MessagesPage() {
                 }}
                 onKeyDown={handleKeyDown}
                 placeholder="Napište zprávu..."
-                className="flex-1 bg-[hsl(220,25%,10%)] text-gray-100 p-4 rounded-xl border border-[hsl(220,20%,20%)] focus:border-[rgba(255,138,0,0.5)] focus:ring-2 focus:ring-[rgba(255,138,0,0.2)] transition-all duration-300 placeholder:text-gray-500 text-[15px] disabled:opacity-50"
+                className="flex-1 bg-[hsl(220,25%,10%)] text-gray-100 p-4 rounded-xl border border-[hsl(220,20%,20%)] focus:border-[rgba(194,144,47,0.5)] focus:ring-2 focus:ring-[rgba(194,144,47,0.2)] transition-all duration-300 placeholder:text-gray-500 text-[15px] disabled:opacity-50"
                 style={{
                   boxShadow: 'inset 0 2px 4px hsl(0, 0%, 0%, 0.2)',
                 }}
@@ -1205,7 +1205,7 @@ export default function MessagesPage() {
                   <div 
                     className="absolute inset-0 opacity-30"
                     style={{
-                      background: 'linear-gradient(90deg, transparent 0%, rgba(255, 181, 71, 1) 50%, transparent 100%)',
+                      background: 'linear-gradient(90deg, transparent 0%, rgba(233,185,73, 1) 50%, transparent 100%)',
                       backgroundSize: '200% 100%',
                       animation: 'shimmer 2s ease-in-out infinite',
                     }}
