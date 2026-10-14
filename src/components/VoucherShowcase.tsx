@@ -108,7 +108,7 @@ export const VoucherShowcaseCard: React.FC<VoucherShowcaseCardProps> = ({
   return (
     <Card
       className={cn(
-        'voucher-card-glow relative overflow-hidden rounded-[20px] border-[3px] border-[rgba(194,144,47,0.35)] shadow-[0_4px_20px_hsl(220_50%_3%/0.6)] transition-all duration-300 hover:border-[rgba(194,144,47,0.55)] hover:shadow-[0_0_16px_rgba(194,144,47,0.2)] hover:scale-[1.02]',
+        'om-voucher-ticket voucher-card-glow relative overflow-hidden rounded-[20px] border-[3px] border-[rgba(194,144,47,0.35)] shadow-[0_4px_20px_hsl(220_50%_3%/0.6)] transition-all duration-300 hover:border-[rgba(194,144,47,0.55)] hover:shadow-[0_0_16px_rgba(194,144,47,0.2)] hover:scale-[1.02]',
         'aspect-[16/9] min-h-0 cursor-pointer',
         className,
       )}
@@ -263,7 +263,7 @@ export const VoucherDetailDialog: React.FC<VoucherDetailDialogProps> = ({
                       className={cn(
                         'relative h-20 w-28 shrink-0 overflow-hidden rounded-xl border bg-black/20 transition-all sm:h-24 sm:w-36',
                         activeImage === url
-                          ? 'border-[#FF9D24] ring-2 ring-[#FF9D24]/35'
+                          ? 'border-[#E9B949] ring-2 ring-[#E9B949]/35'
                           : 'border-white/10 hover:border-white/30',
                       )}
                       aria-label={`Zobrazit fotografii ${index + 1}`}
@@ -286,7 +286,7 @@ export const VoucherDetailDialog: React.FC<VoucherDetailDialogProps> = ({
             <div className="space-y-5 p-6">
               <DialogHeader className="space-y-2 text-left">
                 <div>
-                  <Badge className="mb-3 border border-[#FF9D24]/35 bg-[#FF9D24]/12 text-[#E9B949]">
+                  <Badge className="mb-3 border border-[#E9B949]/35 bg-[#E9B949]/12 text-[#E9B949]">
                     Váš garantovaný benefit
                   </Badge>
                   <DialogTitle className="text-2xl font-bold text-white sm:text-3xl">{voucher.name}</DialogTitle>

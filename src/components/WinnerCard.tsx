@@ -3,7 +3,7 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { formatDistanceToNow } from 'date-fns';
 import { cs } from 'date-fns/locale';
-import miocoinImage from '@/assets/miocoin.png';
+import { MioBadge } from '@/components/brand/MioBadge';
 
 interface WinnerCardProps {
   userName: string;
@@ -43,6 +43,8 @@ export const WinnerCard = ({
     .toUpperCase()
     .slice(0, 2);
 
+  // „PRÁVĚ TEĎ“ = výhra z poslední hodiny (nový vizuál, jen zobrazení data výhry).
+  const isJustNow = Date.now() - new Date(createdAt).getTime() < 60 * 60 * 1000;
   const timeAgo = formatDistanceToNow(new Date(createdAt), {
     addSuffix: true,
     locale: cs,
@@ -54,11 +56,11 @@ export const WinnerCard = ({
       style={{
         background: isChampagne
           ? 'linear-gradient(135deg, rgba(255,255,255,0.96) 0%, rgba(255,249,239,0.94) 100%)'
-          : 'hsl(220 45% 6%)',
-        border: isChampagne ? '1px solid rgba(190,132,58,0.18)' : '1px solid rgba(194,144,47,0.22)',
+          : 'radial-gradient(120% 120% at 85% 0%, #3A1118, #17171B 60%)',
+        border: isChampagne ? '1px solid rgba(190,132,58,0.18)' : '1.5px solid rgba(233,185,73,0.5)',
         boxShadow: isChampagne
           ? '0 12px 30px rgba(120,73,24,0.10), inset 0 1px 0 rgba(255,255,255,0.9)'
-          : '0 2px 12px hsl(222 50% 3% / 0.6), inset 0 1px 0 rgba(233,185,73,0.06)',
+          : '0 14px 28px rgba(23,23,27,0.22)',
       }}
     >
       {/* Very subtle star background — reduced to not compete with text */}
@@ -110,6 +112,9 @@ export const WinnerCard = ({
         </>
       )}
 
+      {isJustNow && (
+        <span className="om-just-now-badge" aria-label="Výhra právě teď">PRÁVĚ TEĎ</span>
+      )}
       <div className={`flex relative z-[2] ${compact ? 'h-[72px]' : 'h-[112px]'}`}>
         {/* Prize image — left strip */}
         <div
@@ -122,7 +127,7 @@ export const WinnerCard = ({
           {prizeImageUrl ? (
             <img src={prizeImageUrl} alt={prizeName} className={`w-full h-full object-contain ${compact ? 'p-1' : 'p-1.5'}`} />
           ) : (
-            <img src={miocoinImage} alt="MIO" className={`${compact ? 'w-8 h-8' : 'w-12 h-12'} object-contain animate-coin-pulse`} />
+            <MioBadge width={compact ? 44 : 64} title="MIO" />
           )}
         </div>
 
@@ -148,7 +153,8 @@ export const WinnerCard = ({
                 <span
                   className={`font-bold tracking-wide truncate ${compact ? 'text-xs' : 'text-sm'}`}
                   style={{
-                    fontFamily: "'Poppins', system-ui, sans-serif",
+                    fontFamily: "'Manrope', system-ui, sans-serif",
+                    fontWeight: 800,
                     background: 'linear-gradient(90deg, #E9B949 0%, #C2902F 100%)',
                     WebkitBackgroundClip: 'text',
                     WebkitTextFillColor: 'transparent',

@@ -1150,7 +1150,7 @@ export const TicketResultModal: React.FC<TicketResultModalProps> = ({
                               isDone
                                 ? 'bg-[#C2902F] text-white shadow-[0_4px_10px_rgba(194,144,47,0.25)]'
                                 : isCurrent
-                                  ? 'border border-[#FFB35C] bg-white text-[#8A5A10]'
+                                  ? 'border border-[#E9B949] bg-white text-[#8A5A10]'
                                   : 'border border-[#E8DED2] bg-[#FAF8F5] text-[#C9C0B7]'
                             )}
                           >

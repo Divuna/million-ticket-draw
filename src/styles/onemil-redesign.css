@@ -421,3 +421,50 @@ body:has(.public-customer-theme) {
 @media (prefers-reduced-motion: reduce) {
   .om-live-badge i { animation: none; }
 }
+
+/* Štítek „PRÁVĚ TEĎ“ u výherce z poslední hodiny (schválený prvek ✦ NAVÍC, jen zobrazení data). */
+.om-just-now-badge {
+  position: absolute;
+  top: 6px;
+  right: 8px;
+  z-index: 3;
+  padding: 2px 8px;
+  border-radius: 999px;
+  background: linear-gradient(180deg, #FFE29A, #E9B949);
+  color: #1A1205;
+  font-family: var(--om2-font-body);
+  font-size: 9.5px;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+  box-shadow: 0 4px 10px rgba(233, 185, 73, 0.4);
+}
+
+/* ---------- Voucher jako vstupenka (výřezy po stranách, zlatý rámeček, perforace) ---------- */
+.public-customer-theme .om-voucher-ticket {
+  border-width: 1.5px !important;
+  border-color: rgba(233, 185, 73, 0.6) !important;
+  -webkit-mask:
+    radial-gradient(circle at 0 72%, transparent 11px, #000 12px) left / 51% 100% no-repeat,
+    radial-gradient(circle at 100% 72%, transparent 11px, #000 12px) right / 51% 100% no-repeat;
+  mask:
+    radial-gradient(circle at 0 72%, transparent 11px, #000 12px) left / 51% 100% no-repeat,
+    radial-gradient(circle at 100% 72%, transparent 11px, #000 12px) right / 51% 100% no-repeat;
+}
+
+/* Perforace vstupenky – nahrazuje animovaný pruh rámečku (voucher-card-glow::before). */
+.public-customer-theme .om-voucher-ticket::before {
+  content: "";
+  position: absolute;
+  inset: auto 16px auto 16px;
+  top: 72%;
+  height: 0;
+  padding: 0;
+  border-radius: 0;
+  background: none;
+  animation: none;
+  -webkit-mask: none;
+  mask: none;
+  z-index: 3;
+  border-top: 2px dashed rgba(233, 185, 73, 0.55);
+  pointer-events: none;
+}
