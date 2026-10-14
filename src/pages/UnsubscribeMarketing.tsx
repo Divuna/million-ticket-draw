@@ -19,7 +19,7 @@ const UnsubscribeMarketing: React.FC = () => {
     if (!user) {
       toast({
         title: "Chyba",
-        description: "Pro odhlášení z marketingových sdělení musíte být přihlášeni.",
+        description: "Pro odhlášení z marketingových sdělení musíš být přihlášený.",
         variant: "destructive"
       });
       navigate(buildLoginRedirectUrl(location.pathname + location.search));
@@ -87,7 +87,7 @@ const UnsubscribeMarketing: React.FC = () => {
             <CardTitle>Odhlášení dokončeno</CardTitle>
             <CardDescription>
               Byli jste úspěšně odhlášeni z marketingových sdělení. 
-              Již vám nebudeme zasílat žádné propagační e-maily.
+              Už ti nebudeme posílat žádné propagační e-maily.
             </CardDescription>
           </CardHeader>
           <CardFooter className="justify-center">
@@ -107,8 +107,8 @@ const UnsubscribeMarketing: React.FC = () => {
           <Mail className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
           <CardTitle>Odhlášení z marketingových sdělení</CardTitle>
           <CardDescription>
-            Opravdu si přejete odhlásit se z odběru marketingových sdělení?
-            Po odhlášení vám již nebudeme zasílat propagační e-maily.
+            Opravdu se chceš odhlásit z odběru marketingových sdělení?
+            Po odhlášení ti už nebudeme posílat propagační e-maily.
           </CardDescription>
         </CardHeader>
         <CardContent>

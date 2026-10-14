@@ -79,7 +79,7 @@ export function MioCoinHistory({ refreshKey = 0 }: MioCoinHistoryProps) {
           Načítám historii MIO...
         </div>
       ) : entries.length === 0 ? (
-        <p className="text-sm text-muted-foreground italic">Zatím nemáte žádné pohyby MIO.</p>
+        <p className="text-sm text-muted-foreground italic">Zatím nemáš žádné pohyby MIO.</p>
       ) : (
         <div className={`space-y-2 pr-1 ${expanded ? 'max-h-80 overflow-y-auto' : 'overflow-hidden'}`}>
           {visibleEntries.map((entry, index) => {

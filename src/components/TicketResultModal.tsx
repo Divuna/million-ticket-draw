@@ -684,7 +684,7 @@ export const TicketResultModal: React.FC<TicketResultModalProps> = ({
     // For FB/X, we need the public share URL
     if ((platform === 'facebook' || platform === 'x') && !publicShareUrl) {
       toast({
-        title: 'Čekejte',
+        title: 'Počkej',
         description: 'Obrázek se nahrává...',
       });
       return;

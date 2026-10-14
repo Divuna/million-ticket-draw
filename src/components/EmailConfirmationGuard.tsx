@@ -63,8 +63,8 @@ const EmailNotConfirmed: React.FC<{ email: string | undefined }> = ({ email }) =
         </div>
         <h1 className="text-xl font-semibold">Potvrďte svůj e-mail</h1>
         <p className="text-sm text-muted-foreground">
-          Na adresu <strong>{email}</strong> jsme vám zaslali potvrzovací odkaz.
-          Klikněte na něj a pokračujte do aplikace.
+          Na adresu <strong>{email}</strong> jsme ti poslali potvrzovací odkaz.
+          Klikni na něj a pokračuj do aplikace.
         </p>
         <Button
           variant="outline"

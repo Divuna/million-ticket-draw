@@ -948,7 +948,7 @@ export default function ContestDetail() {
             </p>
             <p className="text-xs text-gray-400 leading-relaxed">
               Z toho <span className="text-[#E9B949] font-semibold">{miocoinBonusPoolTotal.toLocaleString("cs-CZ")} MIO</span>,
-              které vám mohou otevřít cestu k dalším soutěžím nebo k nákupu voucherů na krásné slevy u našich partnerů.
+              které ti mohou otevřít cestu k dalším soutěžím nebo k nákupu voucherů na krásné slevy u našich partnerů.
             </p>
           </div>
           <TooltipProvider>

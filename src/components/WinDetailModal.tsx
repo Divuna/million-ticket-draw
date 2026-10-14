@@ -311,7 +311,7 @@ export const WinDetailModal: React.FC<WinDetailModalProps> = ({ win, open, onClo
             {needsGuardian && (
               <div className="rounded-xl border border-[#F4D6AD] bg-[#FFF4E4] p-3.5">
                 <p className="font-sans text-sm font-medium leading-relaxed text-[#B4600B]">
-                  ⚠ Pro převzetí této výhry je nutný doprovod zákonného zástupce. Kontaktujte nás přes chat.
+                  ⚠ Pro převzetí této výhry je nutný doprovod zákonného zástupce. Kontaktuj nás přes chat.
                 </p>
               </div>
             )}
@@ -320,13 +320,13 @@ export const WinDetailModal: React.FC<WinDetailModalProps> = ({ win, open, onClo
             <div className="rounded-xl border border-[#F0DFC4] bg-[#FFF9F0] p-3.5">
               <p className="font-sans text-sm leading-relaxed text-[#4B5563]">
                 {win.delivered || win.status === 'delivered' ? (
-                  'Vaše výhra byla úspěšně předána.'
+                  'Tvoje výhra byla úspěšně předána.'
                 ) : win.status === 'shipped' ? (
-                  'Vaše výhra byla odeslána a brzy dorazí.'
+                  'Tvoje výhra byla odeslána a brzy dorazí.'
                 ) : win.status === 'připraveno k odeslání' ? (
-                  'Vaše výhra je připravena k odeslání.'
+                  'Tvoje výhra je připravena k odeslání.'
                 ) : (
-                  'Vaše výhra čeká na zpracování. Brzy vás budeme kontaktovat.'
+                  'Tvoje výhra čeká na zpracování. Brzy tě budeme kontaktovat.'
                 )}
               </p>
             </div>

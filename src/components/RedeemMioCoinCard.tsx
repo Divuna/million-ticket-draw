@@ -46,7 +46,7 @@ export const RedeemMioCoinCard = ({ onRedeemed }: RedeemMioCoinCardProps) => {
   const handleRedeem = async () => {
     const trimmed = code.trim();
     if (!trimmed) {
-      toast({ title: 'Chyba', description: 'Zadejte MIO kód.', variant: 'destructive' });
+      toast({ title: 'Chyba', description: 'Zadej MIO kód.', variant: 'destructive' });
       return;
     }
 
@@ -114,7 +114,7 @@ export const RedeemMioCoinCard = ({ onRedeemed }: RedeemMioCoinCardProps) => {
           </div>
           <div>
             <h2 className="text-xl font-bold text-foreground">Uplatnit MIO kód</h2>
-            <p className="text-sm text-muted-foreground">Zadejte MIO kód z partnerské akce, kartičky nebo e-mailu a připíšeme vám odměnu do peněženky.</p>
+            <p className="text-sm text-muted-foreground">Zadej MIO kód z partnerské akce, kartičky nebo e-mailu a připíšeme ti odměnu do peněženky.</p>
           </div>
         </div>
 

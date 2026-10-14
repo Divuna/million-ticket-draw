@@ -45,7 +45,7 @@ test.describe('Profile Smoke', () => {
 
     await expect(page.getByText('Peněženka', { exact: true })).toBeVisible();
     await expect(page.getByText('MIO', { exact: true }).first()).toBeVisible();
-    await expect(page.getByText(/Váš MIO účet/i)).toBeVisible();
+    await expect(page.getByText(/Tvůj MIO účet/i)).toBeVisible();
 
     await expect(page.getByRole('heading', { name: 'Účet' })).toBeVisible();
     await expect(page.getByText(/Přihlašovací údaje/i)).toBeVisible();

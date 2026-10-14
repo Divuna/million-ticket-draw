@@ -158,7 +158,7 @@ const Vouchers: React.FC = () => {
     e.stopPropagation();
     
     if (!user) {
-      toast.error("Pro přidání do oblíbených se musíte přihlásit");
+      toast.error("Pro přidání do oblíbených se musíš přihlásit");
       return;
     }
 
@@ -264,7 +264,7 @@ const Vouchers: React.FC = () => {
       
       // Check if any row was actually deleted
       if (!data || data.length === 0) {
-        throw new Error('Voucher nebyl nalezen nebo nemáte oprávnění k jeho odebrání');
+        throw new Error('Voucher nebyl nalezen nebo nemáš oprávnění k jeho odebrání');
       }
       
       toast.success("Voucher odebrán z oblíbených");
@@ -282,7 +282,7 @@ const Vouchers: React.FC = () => {
 
   const handleVoucherPurchase = async (voucherId: string) => {
     if (!user) {
-      toast.error("Pro koupi voucheru se musíte přihlásit");
+      toast.error("Pro koupi voucheru se musíš přihlásit");
       return;
     }
 
@@ -382,7 +382,7 @@ const Vouchers: React.FC = () => {
               <h1 className="customer-premium-orange-heading text-2xl md:text-3xl font-bold tracking-tight">
                 Vouchery
               </h1>
-              <p className="text-sm text-gray-400 mt-1">Sbírejte a uplatňujte exkluzivní vouchery</p>
+              <p className="text-sm text-gray-400 mt-1">Sbírej a uplatňuj exkluzivní vouchery</p>
             </div>
           </div>
         </div>
@@ -465,9 +465,9 @@ const Vouchers: React.FC = () => {
               <Card className="voucher-card-glow relative overflow-hidden rounded-[20px] bg-gradient-to-b from-[hsl(220_35%_8%)] via-[hsl(220_30%_6%)] to-[hsl(220_25%_4%)] border-[3px] border-[rgba(194,144,47,0.3)]">
                 <CardContent className="p-8 space-y-3 text-center">
                   <OneMilHeartIcon size={48} className="w-12 h-12 mx-auto text-secondary/50" />
-                  <h3 className="customer-premium-orange-heading text-xl font-bold text-heading-gold">Zatím nemáte žádné oblíbené vouchery</h3>
+                  <h3 className="customer-premium-orange-heading text-xl font-bold text-heading-gold">Zatím nemáš žádné oblíbené vouchery</h3>
                   <p className="text-sm text-muted-foreground">
-                    Kliknutím na srdíčko přidáte voucher do oblíbených
+                    Kliknutím na srdíčko přidáš voucher do oblíbených
                   </p>
                 </CardContent>
               </Card>
@@ -514,7 +514,7 @@ const Vouchers: React.FC = () => {
               <Card className="voucher-card-glow relative overflow-hidden rounded-[20px] bg-gradient-to-b from-[hsl(220_35%_8%)] via-[hsl(220_30%_6%)] to-[hsl(220_25%_4%)] border-[3px] border-[rgba(194,144,47,0.3)]">
                 <CardContent className="p-8 space-y-3 text-center">
                   <OneMilCartIcon size={48} className="w-12 h-12 mx-auto text-secondary/50" />
-                  <h3 className="customer-premium-orange-heading text-xl font-bold text-heading-gold">Zatím nemáte žádné zakoupené vouchery</h3>
+                  <h3 className="customer-premium-orange-heading text-xl font-bold text-heading-gold">Zatím nemáš žádné zakoupené vouchery</h3>
                   <p className="text-sm text-muted-foreground">
                     Zakupte si voucher v sekci "Dostupné" nebo "Oblíbené"
                   </p>
@@ -598,7 +598,7 @@ const Vouchers: React.FC = () => {
           <AlertDialogHeader>
             <AlertDialogTitle>Odebrat z oblíbených?</AlertDialogTitle>
             <AlertDialogDescription>
-              Opravdu chcete odebrat tento voucher z oblíbených?
+              Opravdu chceš odebrat tento voucher z oblíbených?
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
@@ -621,7 +621,7 @@ const Vouchers: React.FC = () => {
           </DialogHeader>
           <div className="space-y-4 py-2">
             <p className="text-sm text-muted-foreground">
-              Kód můžete zkopírovat, opsat nebo ukázat partnerovi.
+              Kód můžeš zkopírovat, opsat nebo ukázat partnerovi.
             </p>
             <div className="rounded-xl bg-[hsl(220_30%_10%)] border border-[rgba(194,144,47,0.3)] p-4 text-center">
               {codeModalVoucher?.code ? (

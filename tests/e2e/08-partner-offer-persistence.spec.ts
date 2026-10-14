@@ -20,7 +20,7 @@ test.describe('Partner Offer Persistence', () => {
     // The previous pattern (waitForTimeout(2_000) + immediate isVisible())
     // was fragile — on slower staging loads the empty-state text hadn't
     // painted yet, so isVisible() returned false and the test ran without data.
-    const emptyState = page.getByText('Zatím nemáte žádné nabídky');
+    const emptyState = page.getByText('Zatím nemáš žádné nabídky');
     const firstCard = page.locator('div.group.cursor-pointer').first();
 
     await Promise.race([

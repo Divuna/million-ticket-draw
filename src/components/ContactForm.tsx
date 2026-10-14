@@ -36,7 +36,7 @@ const ContactForm: React.FC = () => {
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     if (!emailRegex.test(email.trim())) {
       setSubmitStatus('error');
-      setStatusMessage('Zadejte platnou e-mailovou adresu.');
+      setStatusMessage('Zadej platnou e-mailovou adresu.');
       return;
     }
 
@@ -56,7 +56,7 @@ const ContactForm: React.FC = () => {
       if (error) throw error;
 
       setSubmitStatus('success');
-      setStatusMessage('Vaše zpráva byla úspěšně odeslána. Brzy se vám ozveme.');
+      setStatusMessage('Tvoje zpráva byla úspěšně odeslána. Brzy se ti ozveme.');
       
       // Reset form
       setName('');
@@ -77,7 +77,7 @@ const ContactForm: React.FC = () => {
       {/* Intro Text */}
       <div className="space-y-4">
         <p className="text-muted-foreground leading-[1.85] text-[15px] md:text-base">
-          Máte dotaz, připomínku nebo potřebujete pomoc? Napište nám pomocí formuláře níže a my se vám co nejdříve ozveme.
+          Máš dotaz, připomínku nebo potřebuješ pomoc? Napiš nám pomocí formuláře níže a my se ti co nejdříve ozveme.
         </p>
       </div>
 
@@ -152,7 +152,7 @@ const ContactForm: React.FC = () => {
             <Input
               id="contact-name"
               type="text"
-              placeholder="Vaše jméno"
+              placeholder="Tvoje jméno"
               value={name}
               onChange={(e) => setName(e.target.value)}
               className="h-11 bg-muted/30 border-border/50 rounded-md focus:border-primary/50 focus:ring-primary/20 transition-colors"
@@ -205,7 +205,7 @@ const ContactForm: React.FC = () => {
             </Label>
             <Textarea
               id="contact-message"
-              placeholder="Vaše zpráva..."
+              placeholder="Tvoje zpráva..."
               rows={5}
               value={message}
               onChange={(e) => setMessage(e.target.value)}

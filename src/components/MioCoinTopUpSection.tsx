@@ -41,7 +41,7 @@ export const MioCoinTopUpSection = ({ placementBanners }: MioCoinTopUpSectionPro
                     <OneMilMioCoinIcon size={24} className="w-6 h-6 md:w-7 md:h-7" />
                     Dobijte si MIO
                   </h2>
-                  <p className="text-sm text-text-silver">Dobíjejte si MIO pro otevření voucherů nebo účasti ve hře.</p>
+                  <p className="text-sm text-text-silver">Dobij si MIO na otevření voucherů nebo účast ve hře.</p>
                 </div>
 
                 {/* Coin Packages Grid */}

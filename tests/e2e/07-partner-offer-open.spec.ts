@@ -18,7 +18,7 @@ test.describe('Partner Offer Open', () => {
 
     // Wait for tab content: either an offer card or the empty-state text must
     // appear before we decide whether to skip or proceed.
-    const emptyState = page.getByText('Zatím nemáte žádné nabídky');
+    const emptyState = page.getByText('Zatím nemáš žádné nabídky');
     // OfferCard renders as <div class="group ... cursor-pointer ...">
     const firstCard = page.locator('div.group.cursor-pointer').first();
 

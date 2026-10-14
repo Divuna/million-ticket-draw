@@ -162,7 +162,7 @@ const Index = () => {
     e.stopPropagation();
     
     if (!user) {
-      toast.error('Pro uložení oblíbených se musíte přihlásit');
+      toast.error('Pro uložení oblíbených se musíš přihlásit');
       return;
     }
 
@@ -279,7 +279,7 @@ const Index = () => {
     purchaseInFlightRef.current = true;
 
     if (!user) {
-      toast.error('Pro koupi tiketu se musíte přihlásit');
+      toast.error('Pro koupi tiketu se musíš přihlásit');
       purchaseInFlightRef.current = false;
       return;
     }
@@ -375,7 +375,7 @@ const Index = () => {
                 >
                   Soutěže
                 </h1>
-                <p className="text-sm text-slate-600 mt-1">Vyberte si soutěž a otevřete další tiket v pořadí.</p>
+                <p className="text-sm text-slate-600 mt-1">Vyber si soutěž a otevři další tiket v pořadí.</p>
               </div>
             </div>
             {(() => {
@@ -403,7 +403,7 @@ const Index = () => {
               <h2 className="text-xl font-bold text-slate-950 md:text-2xl" style={{ fontFamily: 'var(--om-font-heading)' }}>
                 Dostupné soutěže
               </h2>
-              <p className="text-sm text-slate-600">Vyberte soutěž a pokračujte tlačítkem na kartě.</p>
+              <p className="text-sm text-slate-600">Vyber soutěž a pokračuj tlačítkem na kartě.</p>
             </div>
           </div>
           <div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3">

@@ -30,7 +30,7 @@ const RecommendShopMailtoCard: React.FC = () => {
     if (!EMAIL_PATTERN.test(trimmedEmail)) {
       toast({
         title: 'Chyba',
-        description: 'Zadejte platný e-mail obchodu nebo prodejce.',
+        description: 'Zadej platný e-mail obchodu nebo prodejce.',
         variant: 'destructive',
       });
       return;
@@ -41,7 +41,7 @@ const RecommendShopMailtoCard: React.FC = () => {
 
     toast({
       title: 'E-mail připraven',
-      description: 'E-mail jsme připravili ve vaší e-mailové aplikaci. Odeslání je jen na vás.',
+      description: 'E-mail jsme připravili v tvé e-mailové aplikaci. Odeslání je jen na tobě.',
     });
   };
 
@@ -57,7 +57,7 @@ const RecommendShopMailtoCard: React.FC = () => {
           <div className="min-w-0">
             <h2 className="text-lg font-bold text-foreground">Doporučit OneMil oblíbenému obchodu</h2>
             <p className="mt-1 text-sm leading-relaxed text-muted-foreground/80">
-              Pošlete e-mail svému oblíbenému e-shopu nebo prodejci a dejte jim vědět, že byste u nich rádi získávali MIO za nákupy.
+              Pošli e-mail svému oblíbenému e-shopu nebo prodejci a dej jim vědět, že bys u nich rád získával MIO za nákupy.
             </p>
           </div>
         </div>

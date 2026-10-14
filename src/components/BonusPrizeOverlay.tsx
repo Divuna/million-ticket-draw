@@ -114,7 +114,7 @@ export const BonusPrizeOverlay: React.FC<BonusPrizeOverlayProps> = ({
   const handleClaimBonus = async (bonusId: string, bonusDescription: string) => {
     // Non-logged-in users get login prompt
     if (!user) {
-      toast.error('Pro uplatnění bonusu se musíte přihlásit');
+      toast.error('Pro uplatnění bonusu se musíš přihlásit');
       navigate(buildLoginRedirectUrl(location.pathname + location.search));
       return;
     }
@@ -319,7 +319,7 @@ export const BonusPrizeOverlay: React.FC<BonusPrizeOverlayProps> = ({
             <Card className="bg-muted/50">
               <CardContent className="pt-4">
                 <div className="text-sm text-muted-foreground text-center">
-                  💡 Klikněte na dostupný bonus pro jeho uplatnění
+                  💡 Klikni na dostupný bonus a uplatni ho
                 </div>
               </CardContent>
             </Card>

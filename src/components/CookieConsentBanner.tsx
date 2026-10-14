@@ -157,7 +157,7 @@ export const CookieConsentBanner: React.FC = () => {
           <DialogHeader>
             <DialogTitle className="text-[#111827]">Nastavení cookies</DialogTitle>
             <DialogDescription className="text-[#4B5563]">
-              Vyberte, které kategorie cookies chcete povolit.{' '}
+              Vyber, které kategorie cookies chceš povolit.{' '}
               <Link to="/legal/cookies" className="text-[#8A5A10] hover:underline">
                 Zásady použití cookies
               </Link>

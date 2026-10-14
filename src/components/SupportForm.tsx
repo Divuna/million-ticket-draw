@@ -38,7 +38,7 @@ const SupportForm: React.FC = () => {
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     if (!emailRegex.test(email.trim())) {
       setSubmitStatus('error');
-      setStatusMessage('Zadejte platnou e-mailovou adresu.');
+      setStatusMessage('Zadej platnou e-mailovou adresu.');
       return;
     }
 
@@ -58,7 +58,7 @@ const SupportForm: React.FC = () => {
       if (error) throw error;
 
       setSubmitStatus('success');
-      setStatusMessage('Vaše zpráva byla úspěšně odeslána. Brzy se vám ozveme.');
+      setStatusMessage('Tvoje zpráva byla úspěšně odeslána. Brzy se ti ozveme.');
       
       // Reset form
       setName('');
@@ -112,7 +112,7 @@ const SupportForm: React.FC = () => {
           <Input
             id="support-name"
             type="text"
-            placeholder="Vaše jméno"
+            placeholder="Tvoje jméno"
             value={name}
             onChange={(e) => setName(e.target.value)}
             className="h-11 bg-muted/30 border-border/50 rounded-md focus:border-primary/50 focus:ring-primary/20 transition-colors"
@@ -164,7 +164,7 @@ const SupportForm: React.FC = () => {
           </Label>
           <Textarea
             id="support-message"
-            placeholder="Popište váš problém..."
+            placeholder="Popiš svůj problém..."
             rows={5}
             value={message}
             onChange={(e) => setMessage(e.target.value)}

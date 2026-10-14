@@ -499,7 +499,7 @@ const Profile: React.FC = () => {
       }
       toast({
         title: "Notifikace odeslána",
-        description: "Testovací notifikace byla úspěšně odeslána. Zkontrolujte svá zařízení.",
+        description: "Testovací notifikace byla úspěšně odeslána. Zkontroluj svá zařízení.",
       });
     } catch (error: any) {
       console.error('Error sending test notification:', error);
@@ -528,7 +528,7 @@ const Profile: React.FC = () => {
       if (!amount || amount < 1) {
         toast({
           title: "Chyba",
-          description: "Zadejte platnou částku.",
+          description: "Zadej platnou částku.",
           variant: "destructive"
         });
         return;
@@ -538,7 +538,7 @@ const Profile: React.FC = () => {
     } else {
       toast({
         title: "Chyba",
-        description: "Vyberte balíček nebo zadejte vlastní částku.",
+        description: "Vyber balíček nebo zadej vlastní částku.",
         variant: "destructive"
       });
       return;
@@ -686,7 +686,7 @@ const Profile: React.FC = () => {
               >
                 {profile.nickname || profile.first_name || 'Můj profil'}
               </h1>
-              <p className="text-sm text-muted-foreground mt-1">Kliknutím na avatar změníte obrázek</p>
+              <p className="text-sm text-muted-foreground mt-1">Kliknutím na avatar změníš obrázek</p>
             </div>
           </div>
         </div>
@@ -706,7 +706,7 @@ const Profile: React.FC = () => {
                   <SectionTile icon={<OneMilWalletIcon size={24} className="w-6 h-6 text-black" />} />
                   <div>
                     <h2 className="text-xl font-bold text-foreground">Peněženka</h2>
-                    <p className="text-sm text-muted-foreground">Váš MIO účet</p>
+                    <p className="text-sm text-muted-foreground">Tvůj MIO účet</p>
                   </div>
                 </div>
                 <Button variant="ghost" size="sm" onClick={handleRefreshBalance} disabled={refreshing}
@@ -747,7 +747,7 @@ const Profile: React.FC = () => {
                                 <OneMilInfoIcon size={14} className="h-3.5 w-3.5 text-muted-foreground hover:text-green-500 cursor-help transition-colors" />
                               </TooltipTrigger>
                               <TooltipContent side="top" className="max-w-xs bg-card/95 backdrop-blur-xl border-border/50">
-                                <p className="text-sm">Bonusová MIO získáváte jako odměnu při hraní soutěží. Můžete je převést do hlavní peněženky a použít na otevření tiketů.</p>
+                                <p className="text-sm">Bonusová MIO získáváš jako odměnu při hraní soutěží. Můžeš je převést do hlavní peněženky a použít na otevření tiketů.</p>
                               </TooltipContent>
                             </Tooltip>
                           </TooltipProvider>
@@ -809,7 +809,7 @@ const Profile: React.FC = () => {
                     <h2 className="text-xl font-bold text-foreground">Zprávy</h2>
                     <p className="text-sm text-muted-foreground">
                       {unreadCount > 0
-                        ? `Máte ${unreadCount} nepřečtených zpráv`
+                        ? `Máš ${unreadCount} nepřečtených zpráv`
                         : 'Konverzace s podporou OneMil'}
                     </p>
                   </div>
@@ -883,7 +883,7 @@ const Profile: React.FC = () => {
                           ...prev,
                           nickname: e.target.value
                         }))} 
-                        placeholder="Zadejte přezdívku"
+                        placeholder="Zadej přezdívku"
                         className="premium-input pointer-events-auto h-14 px-5 rounded-xl bg-[rgba(194,144,47,0.04)] border-[rgba(194,144,47,0.15)] focus:border-[rgba(194,144,47,0.35)] focus:bg-[rgba(194,144,47,0.08)] transition-all duration-300 placeholder:text-muted-foreground/30 text-lg"
                       />
                     </div>
@@ -902,7 +902,7 @@ const Profile: React.FC = () => {
                           ...prev,
                           phone: e.target.value
                         }))} 
-                        placeholder="Zadejte telefon"
+                        placeholder="Zadej telefon"
                         className="premium-input pointer-events-auto h-14 px-5 rounded-xl bg-[rgba(194,144,47,0.04)] border-[rgba(194,144,47,0.15)] focus:border-[rgba(194,144,47,0.35)] focus:bg-[rgba(194,144,47,0.08)] transition-all duration-300 placeholder:text-muted-foreground/30 text-lg"
                       />
                     </div>
@@ -921,7 +921,7 @@ const Profile: React.FC = () => {
                           ...prev,
                           first_name: e.target.value
                         }))} 
-                        placeholder="Zadejte křestní jméno"
+                        placeholder="Zadej křestní jméno"
                         className="premium-input pointer-events-auto h-14 px-5 rounded-xl bg-[rgba(194,144,47,0.04)] border-[rgba(194,144,47,0.15)] focus:border-[rgba(194,144,47,0.35)] focus:bg-[rgba(194,144,47,0.08)] transition-all duration-300 placeholder:text-muted-foreground/30 text-lg"
                       />
                     </div>
@@ -940,7 +940,7 @@ const Profile: React.FC = () => {
                           ...prev,
                           last_name: e.target.value
                         }))} 
-                        placeholder="Zadejte příjmení"
+                        placeholder="Zadej příjmení"
                         className="premium-input pointer-events-auto h-14 px-5 rounded-xl bg-[rgba(194,144,47,0.04)] border-[rgba(194,144,47,0.15)] focus:border-[rgba(194,144,47,0.35)] focus:bg-[rgba(194,144,47,0.08)] transition-all duration-300 placeholder:text-muted-foreground/30 text-lg"
                       />
                     </div>
@@ -958,7 +958,7 @@ const Profile: React.FC = () => {
                           ...prev,
                           address: e.target.value
                         }))} 
-                        placeholder="Zadejte doručovací adresu pro výhry" 
+                        placeholder="Zadej doručovací adresu pro výhry" 
                         rows={3}
                         className="premium-input pointer-events-auto px-5 py-4 rounded-xl bg-[rgba(194,144,47,0.04)] border-[rgba(194,144,47,0.15)] focus:border-[rgba(194,144,47,0.35)] focus:bg-[rgba(194,144,47,0.08)] transition-all duration-300 placeholder:text-muted-foreground/30 resize-none text-lg"
                       />
@@ -1057,8 +1057,8 @@ const Profile: React.FC = () => {
                           <OneMilProfileIcon size={48} className="w-12 h-12 text-[rgba(194,144,47,0.4)]" />
                         </div>
                       </div>
-                      <p className="text-xl text-foreground font-semibold mb-2">Zatím nemáte vyplněny osobní údaje</p>
-                      <p className="text-sm text-muted-foreground/60">Klikněte na „Upravit" pro jejich zadání</p>
+                      <p className="text-xl text-foreground font-semibold mb-2">Zatím nemáš vyplněné osobní údaje</p>
+                      <p className="text-sm text-muted-foreground/60">Klikni na „Upravit" a doplň je</p>
                     </div>
                   )}
                 </div>
@@ -1174,7 +1174,7 @@ const Profile: React.FC = () => {
 
               {/* Test notification section */}
               <div className="pt-4 border-t border-[rgba(194,144,47,0.12)]">
-                <p className="text-sm text-muted-foreground mb-3">Otestujte si funkčnost push notifikací na vašem zařízení.</p>
+                <p className="text-sm text-muted-foreground mb-3">Otestuj si funkčnost push notifikací na svém zařízení.</p>
                 <Button onClick={handleTestNotification} variant="outline" disabled={testingNotification}
                   className="w-full sm:w-auto border-[rgba(194,144,47,0.3)] hover:border-[rgba(194,144,47,0.5)] hover:bg-[rgba(194,144,47,0.06)] text-foreground font-semibold transition-all duration-200">
                   <OneMilBellIcon size={16} className={`h-4 w-4 mr-2 ${testingNotification ? 'animate-pulse' : ''}`} />
@@ -1212,7 +1212,7 @@ const Profile: React.FC = () => {
                       </div>
                       <div>
                         <span className="font-bold text-foreground text-lg block">Marketing: Aktivní</span>
-                        <span className="text-sm text-green-500/70">Dostáváte novinky e-mailem</span>
+                        <span className="text-sm text-green-500/70">Dostáváš novinky e-mailem</span>
                       </div>
                     </>
                   ) : marketingStatus === 'revoked' ? (
@@ -1222,7 +1222,7 @@ const Profile: React.FC = () => {
                       </div>
                       <div>
                         <span className="font-bold text-foreground text-lg block">Marketing: Odhlášeno</span>
-                        <span className="text-sm text-muted-foreground/60">Nepřijímáte marketingové e-maily</span>
+                        <span className="text-sm text-muted-foreground/60">Nepřijímáš marketingové e-maily</span>
                       </div>
                     </>
                   ) : marketingStatus === 'none' ? (
@@ -1232,7 +1232,7 @@ const Profile: React.FC = () => {
                       </div>
                       <div>
                         <span className="font-bold text-foreground text-lg block">Marketing: Nepřihlášeno</span>
-                        <span className="text-sm text-muted-foreground/60">Nejste přihlášeni k odběru</span>
+                        <span className="text-sm text-muted-foreground/60">Nejsi přihlášený k odběru</span>
                       </div>
                     </>
                   ) : (
@@ -1244,12 +1244,12 @@ const Profile: React.FC = () => {
                 </div>
 
                 <p className="text-sm text-muted-foreground/70 leading-relaxed">
-                  V rámci vašeho účtu můžete dostávat informace o nových soutěžích, speciálních akcích a dalších novinkách prostřednictvím e-mailu.
+                  V rámci svého účtu můžeš dostávat informace o nových soutěžích, speciálních akcích a dalších novinkách prostřednictvím e-mailu.
                 </p>
                 
                 {marketingStatus === 'active' && (
                   <div className="pt-4 border-t border-[rgba(194,144,47,0.08)]">
-                    <p className="text-sm text-muted-foreground/60 mb-4">Pokud si již nepřejete dostávat marketingová sdělení, můžete se odhlásit.</p>
+                    <p className="text-sm text-muted-foreground/60 mb-4">Pokud už nechceš dostávat marketingová sdělení, můžeš se odhlásit.</p>
                     <Button 
                       variant="outline" 
                       className="w-full sm:w-auto border-destructive/35 bg-destructive/5 hover:border-destructive/55 hover:bg-destructive/15 transition-all duration-300 hover:scale-[1.02] hover:shadow-lg hover:shadow-destructive/10 font-semibold"
@@ -1266,7 +1266,7 @@ const Profile: React.FC = () => {
 
                 {(marketingStatus === 'revoked' || marketingStatus === 'none') && (
                   <div className="pt-4 border-t border-[rgba(194,144,47,0.08)]">
-                    <p className="text-sm text-muted-foreground/60 mb-4">Chcete-li dostávat marketingová sdělení, můžete se přihlásit.</p>
+                    <p className="text-sm text-muted-foreground/60 mb-4">Pokud chceš dostávat marketingová sdělení, můžeš se přihlásit.</p>
                     <Button 
                       className="w-full sm:w-auto bg-gradient-to-r from-[#C2902F] via-[#E9B949] to-[#C2902F] hover:from-[#E9B949] hover:via-[#C2902F] hover:to-[#E9B949] text-black font-bold transition-all duration-300 hover:scale-[1.02] shadow-lg shadow-[rgba(194,144,47,0.2)] hover:shadow-[rgba(194,144,47,0.35)]"
                       onClick={() => {
@@ -1307,7 +1307,7 @@ const Profile: React.FC = () => {
               </div>
               Dobít MIO
             </DialogTitle>
-            <DialogDescription>Vyberte balíček nebo zadejte vlastní částku.</DialogDescription>
+            <DialogDescription>Vyber balíček nebo zadej vlastní částku.</DialogDescription>
           </DialogHeader>
           
           <div className="space-y-4">
@@ -1350,7 +1350,7 @@ const Profile: React.FC = () => {
               <Input
                 id="customAmount"
                 type="number"
-                placeholder="Zadejte částku..."
+                placeholder="Zadej částku..."
                 min="1"
                 value={customAmount}
                 onChange={(e) => handleCustomAmountChange(e.target.value)}
@@ -1358,7 +1358,7 @@ const Profile: React.FC = () => {
               />
               {customAmount && parseInt(customAmount) > 0 && (
                 <p className="text-sm text-muted-foreground mt-2">
-                  Obdržíte <span className="text-[#E9B949] font-semibold">{parseInt(customAmount).toLocaleString('cs-CZ')} MIO</span> (bez bonusu)
+                  Dostaneš <span className="text-[#E9B949] font-semibold">{parseInt(customAmount).toLocaleString('cs-CZ')} MIO</span> (bez bonusu)
                 </p>
               )}
             </div>
@@ -1399,7 +1399,7 @@ const Profile: React.FC = () => {
           <AlertDialogHeader>
             <AlertDialogTitle className="text-xl font-bold">Potvrzení změny</AlertDialogTitle>
             <AlertDialogDescription>
-              Opravdu chcete změnit nastavení marketingových sdělení? Tuto volbu můžete kdykoliv změnit.
+              Opravdu chceš změnit nastavení marketingových sdělení? Tuto volbu můžeš kdykoliv změnit.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>

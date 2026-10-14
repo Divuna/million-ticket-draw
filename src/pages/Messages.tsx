@@ -85,7 +85,7 @@ interface Message {
 
 const OPTIMISTIC_MESSAGE_ID_PREFIX = "optimistic-";
 const SUPPORT_CHAT_ENDED_MESSAGE =
-  "Chat s podporou byl ukončen. Nyní můžete opět využívat Boba.";
+  "Chat s podporou byl ukončen. Teď můžeš zase využívat Boba.";
 
 function sortMessagesByCreatedAtAsc<T extends { created_at: string; id: string }>(messages: T[]): T[] {
   return [...messages].sort((a, b) => {
@@ -1057,7 +1057,7 @@ export default function MessagesPage() {
                 <OneMilMessageIcon size={40} className="w-10 h-10 text-[#C2902F]/40" />
               </div>
               <p className="text-gray-400 text-lg font-medium">Zatím žádné zprávy</p>
-              <p className="text-gray-500 text-sm mt-2">Napište nám vaši první zprávu</p>
+              <p className="text-gray-500 text-sm mt-2">Napiš nám svou první zprávu</p>
             </div>
           )}
 

@@ -409,7 +409,7 @@ const Wins: React.FC = () => {
                 <h1 className="customer-premium-orange-heading text-3xl font-bold tracking-tight">
                   Moje výhry
                 </h1>
-                <p className="text-gray-400 mt-1">Přehled všech vašich výher</p>
+                <p className="text-gray-400 mt-1">Přehled všech tvých výher</p>
               </div>
             </div>
 
@@ -605,7 +605,7 @@ const Wins: React.FC = () => {
                   <OneMilWinIcon size={48} className="w-12 h-12 text-[#C2902F]/30" />
                 </div>
                 <h3 className="customer-premium-orange-heading text-2xl font-bold mb-3">
-                  Zatím nemáte žádné výhry
+                  Zatím nemáš žádné výhry
                 </h3>
                 <p className="text-gray-400 text-lg">Kupte si tikety v soutěžích a vyhrajte skvělé ceny!</p>
               </div>
@@ -692,10 +692,10 @@ const Wins: React.FC = () => {
                   <Tag className="w-12 h-12 text-[rgba(194,144,47,0.3)]" />
                 </div>
                 <h3 className="text-2xl font-bold mb-3 text-gray-200">
-                  Zatím nemáte žádné nabídky
+                  Zatím nemáš žádné nabídky
                 </h3>
                 <p className="text-gray-400 text-lg">
-                  Nabídky partnerů se přidělují automaticky k vašim tiketům v soutěžích.
+                  Nabídky partnerů se přidělují automaticky k tvým tiketům v soutěžích.
                 </p>
               </div>
             ) : (

@@ -29,13 +29,13 @@ const FLOAT_ANIMS = [
 
 const ROUTE_MESSAGES: Record<string, string> = {
   '/vouchers':
-    'Děkujeme, že používáte OneMil. Těšíme se, až se vrátíte. Připravujeme nové vouchery a partnerské nabídky, které vás potěší.',
+    'Děkujeme, že používáš OneMil. Těšíme se, až se vrátíš. Připravujeme nové vouchery a partnerské nabídky, které tě potěší.',
   '/messages':
-    'Děkujeme, že jste byli s námi. Vaše zprávy na vás budou čekat, až se znovu přihlásíte.',
+    'Děkujeme, že jsi byl s námi. Tvoje zprávy na tebe budou čekat, až se znovu přihlásíš.',
   '/wins':
-    'Děkujeme, že hrajete s OneMil. Vaše výhry a odměny budou dostupné po přihlášení.',
+    'Děkujeme, že hraješ s OneMil. Tvoje výhry a odměny budou dostupné po přihlášení.',
   '/games':
-    'Děkujeme, že používáte OneMil. Až se vrátíte, budou na vás čekat nové soutěže a další šance na zajímavé výhry.',
+    'Děkujeme, že používáš OneMil. Až se vrátíš, budou na tebe čekat nové soutěže a další šance na zajímavé výhry.',
 };
 
 export const LoggedOutScreen = () => {
@@ -45,7 +45,7 @@ export const LoggedOutScreen = () => {
 
   const message =
     ROUTE_MESSAGES[pathname] ??
-    'Děkujeme, že používáte OneMil. Pro pokračování se prosím přihlaste.';
+    'Děkujeme, že používáš OneMil. Pro pokračování se prosím přihlas.';
 
   const handleLogin = () => {
     navigate(buildLoginRedirectUrl(pathname));

@@ -212,7 +212,7 @@ const ReferralSection: React.FC<{ isLoaded: boolean }> = ({ isLoaded }) => {
   const handleSubmitCode = async () => {
     const code = inputCode.trim();
     if (!code) {
-      toast({ title: 'Chyba', description: 'Zadejte doporučovací kód.', variant: 'destructive' });
+      toast({ title: 'Chyba', description: 'Zadej doporučovací kód.', variant: 'destructive' });
       return;
     }
 
@@ -232,16 +232,16 @@ const ReferralSection: React.FC<{ isLoaded: boolean }> = ({ isLoaded }) => {
         setInputCode('');
         setAlreadyHasReferrer(true);
       } else if (result === 'rejected:already_has_referrer') {
-        toast({ title: 'Upozornění', description: 'Již máte přiřazeného doporučitele.', variant: 'destructive' });
+        toast({ title: 'Upozornění', description: 'Už máš přiřazeného doporučitele.', variant: 'destructive' });
         setAlreadyHasReferrer(true);
       } else if (result === 'rejected:already_attributed_to_other_source') {
         // Hráč už má jiný odměňovaný zdroj přivedení (affiliate) — platí first-touch.
-        toast({ title: 'Upozornění', description: 'Váš účet už je přiřazen k jinému doporučení. Další kód už nelze přidat.' });
+        toast({ title: 'Upozornění', description: 'Tvůj účet už je přiřazen k jinému doporučení. Další kód už nelze přidat.' });
         setAlreadyHasReferrer(true);
       } else if (result === 'rejected:invalid_code') {
         toast({ title: 'Chyba', description: 'Neplatný doporučovací kód.', variant: 'destructive' });
       } else if (result === 'rejected:self_referral') {
-        toast({ title: 'Chyba', description: 'Nemůžete použít vlastní kód.', variant: 'destructive' });
+        toast({ title: 'Chyba', description: 'Nemůžeš použít vlastní kód.', variant: 'destructive' });
       } else if (result === 'rejected:email_not_verified') {
         toast({ title: 'Chyba', description: 'Nejprve ověřte svůj e-mail.', variant: 'destructive' });
       } else if (result === 'rejected:referrer_blocked') {
@@ -342,7 +342,7 @@ const ReferralSection: React.FC<{ isLoaded: boolean }> = ({ isLoaded }) => {
               Pozvi přátele
             </h2>
             <p className="text-sm text-muted-foreground/70 mt-0.5">
-              Získejte <span className="text-primary font-semibold">5 %</span> z každého dobití pozvaného uživatele + <span className="text-primary font-semibold">15 MC bonus</span> za jeho první dobití
+              Získej <span className="text-primary font-semibold">5 %</span> z každého dobití pozvaného uživatele + <span className="text-primary font-semibold">15 MC bonus</span> za jeho první dobití
             </p>
           </div>
         </div>
@@ -353,7 +353,7 @@ const ReferralSection: React.FC<{ isLoaded: boolean }> = ({ isLoaded }) => {
           <ul className="space-y-1 text-sm text-muted-foreground">
             <li className="flex items-start gap-2">
               <span className="text-primary mt-0.5">•</span>
-              <span>Za každé <strong className="text-foreground">placené dobití</strong> pozvaného uživatele získáte <strong className="text-primary">5 % v MIO</strong>.</span>
+              <span>Za každé <strong className="text-foreground">placené dobití</strong> pozvaného uživatele získáš <strong className="text-primary">5 % v MIO</strong>.</span>
             </li>
             <li className="flex items-start gap-2">
               <span className="text-primary mt-0.5">•</span>
@@ -374,7 +374,7 @@ const ReferralSection: React.FC<{ isLoaded: boolean }> = ({ isLoaded }) => {
         <div className="space-y-4 mb-6">
           {/* Code */}
           <div className="p-5 rounded-2xl bg-gradient-to-br from-primary/8 via-transparent to-primary/5 border border-primary/15 hover:border-primary/30 transition-all duration-500 hover:shadow-lg hover:shadow-primary/5">
-            <p className="text-xs font-semibold text-muted-foreground/60 uppercase tracking-wider mb-2">Váš doporučovací kód</p>
+            <p className="text-xs font-semibold text-muted-foreground/60 uppercase tracking-wider mb-2">Tvůj doporučovací kód</p>
             <div className="flex items-center gap-3">
               <code className="flex-1 text-xl font-bold text-foreground tracking-widest select-all">
                 {referralCode || '—'}
@@ -412,7 +412,7 @@ const ReferralSection: React.FC<{ isLoaded: boolean }> = ({ isLoaded }) => {
                   <QRCodeSVG value={referralLink} size={112} data-testid="referral-qr-code" />
                 </div>
                 <p className="text-xs text-muted-foreground/70 leading-relaxed">
-                  Naskenováním QR kódu se přátelé dostanou přímo na registraci s vaším doporučovacím kódem.
+                  Naskenováním QR kódu se přátelé dostanou přímo na registraci s tvým doporučovacím kódem.
                 </p>
               </div>
             )}
@@ -467,7 +467,7 @@ const ReferralSection: React.FC<{ isLoaded: boolean }> = ({ isLoaded }) => {
               <Input
                 value={inputCode}
                 onChange={(e) => setInputCode(e.target.value.toUpperCase())}
-                placeholder="Zadejte kód..."
+                placeholder="Zadej kód..."
                 className="premium-input flex-1 bg-[rgba(194,144,47,0.05)] border-[rgba(194,144,47,0.2)] focus:border-[rgba(194,144,47,0.4)] focus:bg-[rgba(194,144,47,0.1)] transition-all duration-300 uppercase tracking-wider"
                 onKeyDown={(e) => e.key === 'Enter' && handleSubmitCode()}
               />
@@ -486,7 +486,7 @@ const ReferralSection: React.FC<{ isLoaded: boolean }> = ({ isLoaded }) => {
           <div className="mb-6 p-4 rounded-xl bg-green-500/10 border border-green-500/20">
             <div className="flex items-center gap-3">
               <Check className="h-5 w-5 text-green-500 shrink-0" />
-              <p className="text-sm text-green-500/80">Váš doporučitel je již přiřazen.</p>
+              <p className="text-sm text-green-500/80">Tvůj doporučitel je už přiřazen.</p>
             </div>
           </div>
         )}

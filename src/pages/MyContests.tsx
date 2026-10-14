@@ -130,7 +130,7 @@ const MyContests: React.FC = () => {
                 <h1 className="customer-premium-orange-heading text-2xl md:text-3xl font-bold tracking-tight">
                   Moje hry
                 </h1>
-                <p className="text-sm text-gray-400 mt-1">Přehled vašich tiketů a soutěží</p>
+                <p className="text-sm text-gray-400 mt-1">Přehled tvých tiketů a soutěží</p>
               </div>
             </div>
           </div>

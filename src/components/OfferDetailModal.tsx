@@ -81,7 +81,7 @@ export const OfferDetailModal: React.FC<OfferDetailModalProps> = ({
       onClose();
       toast({
         title: 'Nabídka skryta',
-        description: 'Nabídka byla odstraněna z vašeho seznamu.',
+        description: 'Nabídka byla odstraněna z tvého seznamu.',
       });
     } catch (err: any) {
       console.error('OfferDetailModal: hide failed:', err.message);
@@ -168,7 +168,7 @@ export const OfferDetailModal: React.FC<OfferDetailModalProps> = ({
           {/* Info note */}
           <div className="bg-primary/5 rounded-lg p-4 border border-primary/20">
             <p className="text-sm text-muted-foreground">
-              Tato nabídka byla přidělena automaticky k vašemu tiketu. Pro uplatnění kontaktujte
+              Tato nabídka byla přidělena automaticky k tvému tiketu. Pro uplatnění kontaktuj
               partnera nebo využijte kód výše.
             </p>
           </div>

@@ -9,7 +9,7 @@ const DeleteAccount: React.FC = () => {
     <div className="min-h-screen bg-background pb-24">
       <Helmet>
         <title>Smazání účtu | OneMil</title>
-        <meta name="description" content="Informace o smazání účtu v aplikaci OneMil. Zjistěte, jak můžete smazat svůj účet a osobní údaje." />
+        <meta name="description" content="Informace o smazání účtu v aplikaci OneMil. Zjisti, jak můžeš smazat svůj účet a osobní údaje." />
       </Helmet>
       
       <Header />
@@ -24,7 +24,7 @@ const DeleteAccount: React.FC = () => {
             </div>
             <CardTitle className="text-2xl">Smazání účtu</CardTitle>
             <p className="text-muted-foreground mt-2">
-              Informace o tom, jak smazat váš účet a osobní údaje
+              Informace o tom, jak smazat tvůj účet a osobní údaje
             </p>
           </CardHeader>
           <CardContent className="space-y-8">
@@ -38,13 +38,13 @@ const DeleteAccount: React.FC = () => {
               </div>
               <div className="ml-13 pl-[52px]">
                 <p className="text-muted-foreground leading-relaxed">
-                  Svůj účet můžete smazat přímo v aplikaci OneMil. Postupujte následovně:
+                  Svůj účet můžeš smazat přímo v aplikaci OneMil. Postupuj následovně:
                 </p>
                 <ol className="list-decimal list-inside mt-3 space-y-2 text-muted-foreground">
                   <li>Přihlaste se do aplikace OneMil</li>
-                  <li>Přejděte do sekce <strong className="text-foreground">Profil</strong></li>
+                  <li>Přejdi do sekce <strong className="text-foreground">Profil</strong></li>
                   <li>Vyberte možnost <strong className="text-foreground">Nastavení účtu</strong></li>
-                  <li>Klikněte na tlačítko <strong className="text-foreground">Smazat účet</strong></li>
+                  <li>Klikni na tlačítko <strong className="text-foreground">Smazat účet</strong></li>
                   <li>Potvrďte smazání účtu</li>
                 </ol>
               </div>
@@ -60,7 +60,7 @@ const DeleteAccount: React.FC = () => {
               </div>
               <div className="ml-13 pl-[52px]">
                 <p className="text-muted-foreground leading-relaxed">
-                  Pokud nemáte přístup k aplikaci nebo preferujete jinou metodu, můžete nám zaslat žádost o smazání účtu na e-mail:
+                  Pokud nemáš přístup k aplikaci nebo preferuješ jinou metodu, můžeš nám zaslat žádost o smazání účtu na e-mail:
                 </p>
                 <div className="mt-3 p-4 bg-muted/50 rounded-lg flex items-center gap-3">
                   <Mail className="w-5 h-5 text-primary flex-shrink-0" />
@@ -72,7 +72,7 @@ const DeleteAccount: React.FC = () => {
                   </a>
                 </div>
                 <p className="text-sm text-muted-foreground mt-3">
-                  V e-mailu prosím uveďte e-mailovou adresu spojenou s vaším účtem.
+                  V e-mailu prosím uveď e-mailovou adresu spojenou s tvým účtem.
                 </p>
               </div>
             </div>
@@ -84,7 +84,7 @@ const DeleteAccount: React.FC = () => {
                 <div>
                   <h4 className="font-semibold text-foreground">Doba zpracování</h4>
                   <p className="text-muted-foreground text-sm mt-1">
-                    Po potvrzení vaší žádosti budou všechny vaše osobní údaje trvale smazány do <strong className="text-foreground">30 dnů</strong>.
+                    Po potvrzení tvé žádosti budou všechny tvoje osobní údaje trvale smazány do <strong className="text-foreground">30 dnů</strong>.
                   </p>
                 </div>
               </div>
@@ -94,7 +94,7 @@ const DeleteAccount: React.FC = () => {
                 <div>
                   <h4 className="font-semibold text-foreground">Upozornění</h4>
                   <p className="text-muted-foreground text-sm mt-1">
-                    Smazání účtu je nevratné. Po smazání ztratíte přístup ke všem vašim datům, včetně:
+                    Smazání účtu je nevratné. Po smazání ztratíš přístup ke všem svým datům, včetně:
                   </p>
                   <ul className="list-disc list-inside mt-2 text-sm text-muted-foreground space-y-1">
                     <li>Zůstatku MIO a bonusů</li>
@@ -109,7 +109,7 @@ const DeleteAccount: React.FC = () => {
             {/* GDPR notice */}
             <div className="bg-muted/30 rounded-lg p-4 text-sm text-muted-foreground">
               <p>
-                Vaše právo na smazání osobních údajů je zaručeno v souladu s nařízením GDPR. 
+                Tvoje právo na smazání osobních údajů je zaručeno v souladu s nařízením GDPR. 
                 Pro více informací o zpracování osobních údajů navštivte naši stránku{' '}
                 <a href="/gdpr" className="text-primary hover:underline">
                   Zásady ochrany osobních údajů

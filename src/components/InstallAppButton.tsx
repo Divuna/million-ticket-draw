@@ -153,7 +153,7 @@ export const InstallAppButton: React.FC = () => {
               Nainstalovat aplikaci
             </DialogTitle>
             <DialogDescription>
-              Přidejte si OneMil na plochu telefonu.
+              Přidej si OneMil na plochu telefonu.
             </DialogDescription>
           </DialogHeader>
 

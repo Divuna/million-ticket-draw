@@ -287,12 +287,12 @@ export const VoucherDetailDialog: React.FC<VoucherDetailDialogProps> = ({
               <DialogHeader className="space-y-2 text-left">
                 <div>
                   <Badge className="mb-3 border border-[#E9B949]/35 bg-[#E9B949]/12 text-[#E9B949]">
-                    Váš garantovaný benefit
+                    Tvůj garantovaný benefit
                   </Badge>
                   <DialogTitle className="text-2xl font-bold text-white sm:text-3xl">{voucher.name}</DialogTitle>
                 </div>
                 <DialogDescription className="text-sm text-white/70">
-                  Podívejte se, co jste získali a jak benefit využít.
+                  Podívej se, co jsi získal a jak benefit využít.
                 </DialogDescription>
               </DialogHeader>
 
