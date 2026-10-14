@@ -2,6 +2,7 @@ import React from "react";
 import { createRoot } from "react-dom/client";
 import App from "./App.tsx";
 import "./index.css";
+import "./styles/onemil-redesign.css";
 import { initB2BAnalytics } from "./lib/b2bAnalytics";
 
 // Global safety net for unhandled promise rejections (prevents blank screens)

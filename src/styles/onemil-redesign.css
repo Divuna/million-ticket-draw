@@ -1,0 +1,225 @@
+/*
+ * OneMil – nový vizuál zákaznické části (návrh „OneMil – nový vizuál“, 10/2026).
+ *
+ * Jen vzhled: barvy, písma, pozadí, spodní lišta. Žádná funkce se tu nemění.
+ * Všechno je omezené na `.public-customer-theme` (zákaznický layout) nebo na
+ * třídy `om-*`, které používají jen zákaznické komponenty – admin a partnerský
+ * portál zůstávají beze změny.
+ *
+ * Písma (pravidla z desky „Písmo a nadpisy“):
+ *  - Exo 2 Black Italic   – název stránky / soutěže, velká čísla, MIO
+ *  - Barlow Condensed      – nadpisy sekcí a karet (velká písmena)
+ *  - Manrope               – text, tlačítka, popisky
+ *  - JetBrains Mono        – kódy voucherů a MIO kódy
+ */
+/* Písma se načítají v index.html (<link>), aby nezáleželo na pořadí CSS souborů. */
+
+:root {
+  --om2-page: #F5EEE3;
+  --om2-ink: #17171B;
+  --om2-muted: #5E5B57;
+  --om2-gold-1: #FFE29A;
+  --om2-gold-2: #E9B949;
+  --om2-gold-3: #C2902F;
+  --om2-gold-text: #8A5A10;
+  --om2-crimson: #B5122B;
+  --om2-dark-card: #17171B;
+  --om2-font-display: 'Exo 2', 'Arial Narrow', system-ui, sans-serif;
+  --om2-font-section: 'Barlow Condensed', 'Arial Narrow', system-ui, sans-serif;
+  --om2-font-body: 'Manrope', system-ui, -apple-system, 'Segoe UI', sans-serif;
+  --om2-font-code: 'JetBrains Mono', ui-monospace, Consolas, monospace;
+  --om2-page-bg:
+    radial-gradient(120% 28rem at 50% 0%, rgba(255, 226, 154, 0.35), rgba(255, 226, 154, 0) 70%),
+    repeating-linear-gradient(135deg, rgba(194, 144, 47, 0.045) 0 1px, transparent 1px 14px),
+    #F5EEE3;
+}
+
+/* ---------- Zákaznický motiv: barvy a písmo ---------- */
+.public-customer-theme {
+  --primary: 42 79% 60%;
+  --primary-foreground: 30 60% 6%;
+  --secondary: 42 79% 60%;
+  --secondary-foreground: 30 60% 6%;
+  --accent: 42 79% 60%;
+  --accent-foreground: 30 60% 6%;
+  --ring: 42 79% 52%;
+  --heading-gold: 36 79% 30%;
+  --muted: 36 38% 92%;
+  --muted-foreground: 30 4% 36%;
+  --border: 38 40% 84%;
+  --input: 38 40% 84%;
+  --background: 36 47% 93%;
+  font-family: var(--om2-font-body);
+  background: var(--om2-page-bg);
+}
+
+.public-customer-theme p {
+  font-family: var(--om2-font-body);
+}
+
+/* Název stránky = písmo loga (Exo 2), nadpisy sekcí = Barlow Condensed. */
+.public-customer-theme h1 {
+  font-family: var(--om2-font-display);
+  font-weight: 900;
+  font-style: italic;
+  letter-spacing: 0;
+}
+
+.public-customer-theme h2,
+.public-customer-theme .customer-premium-orange-heading,
+.public-customer-theme .homepage-premium-orange-heading {
+  font-family: var(--om2-font-section);
+  font-weight: 800;
+  font-style: italic;
+  letter-spacing: 0.01em;
+}
+
+/* Původně oranžové nadpisy sekcí → tmavé písmo s rudozlatou linkou. */
+.public-customer-theme .customer-premium-orange-heading,
+.public-customer-theme .homepage-light-content .homepage-premium-orange-heading,
+.public-customer-theme .homepage-light-content .customer-premium-orange-heading,
+.public-customer-theme .winners-light-content .customer-premium-orange-heading {
+  color: var(--om2-ink);
+  background: none;
+  -webkit-text-fill-color: currentColor;
+  text-transform: uppercase;
+  text-shadow: 0 1px 0 #fff, 0 3px 10px rgba(194, 144, 47, 0.28);
+}
+
+.public-customer-theme .homepage-light-content .text-heading-gold,
+.public-customer-theme .winners-light-content .text-heading-gold {
+  color: var(--om2-gold-text);
+}
+
+/* Kódy voucherů a MIO kódy. */
+.public-customer-theme .font-mono {
+  font-family: var(--om2-font-code);
+}
+
+/* ---------- Pozadí stránek: krémová s jemným zlatým vzorem ---------- */
+body:has(.public-customer-theme) {
+  background: var(--om2-page);
+}
+
+.public-customer-theme.customer-layout,
+.public-customer-theme.customer-layout:has(.games-light-page),
+.public-customer-theme.customer-layout:has(.homepage-light-page),
+.public-customer-theme.customer-layout:has(.vouchers-light-page),
+.public-customer-theme.customer-layout:has(.winners-light-page),
+.public-customer-theme.customer-layout:has(.wins-light-page),
+.public-customer-theme .games-light-page,
+.public-customer-theme .homepage-light-page,
+.public-customer-theme .vouchers-light-page,
+.public-customer-theme .winners-light-page,
+.public-customer-theme .wins-light-page {
+  background: var(--om2-page-bg);
+}
+
+/* ---------- Hlavička ---------- */
+.public-customer-theme .public-customer-header {
+  background: rgba(250, 246, 239, 0.94);
+  border-bottom: 1px solid rgba(194, 144, 47, 0.22);
+  box-shadow: 0 6px 20px rgba(60, 40, 10, 0.1);
+}
+
+.public-customer-theme .public-customer-header-link:hover {
+  color: var(--om2-gold-text);
+  background: rgba(233, 185, 73, 0.12);
+}
+
+.public-customer-theme .public-customer-header-outline:hover {
+  border-color: rgba(194, 144, 47, 0.5);
+  background: rgba(233, 185, 73, 0.12);
+}
+
+.public-customer-theme .public-customer-header-primary {
+  color: #1A1205;
+  background: linear-gradient(180deg, var(--om2-gold-1), var(--om2-gold-2) 55%, var(--om2-gold-3));
+  box-shadow: 0 6px 16px rgba(194, 144, 47, 0.35);
+}
+
+/* ---------- Spodní lišta „Tmavá s korunkou“ ---------- */
+.om-bottom-nav {
+  box-shadow: 0 -10px 24px rgba(23, 23, 27, 0.18);
+  font-family: var(--om2-font-body);
+}
+
+.om-bottom-nav-hairline {
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 0;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, #E9B949 30%, #FFF0B8 42%, #E9B949 55%, transparent);
+  pointer-events: none;
+}
+
+.om-bottom-nav-item {
+  color: #8E8F98;
+  font-weight: 600;
+  background: none;
+  border: 0;
+}
+
+.om-bottom-nav-item:hover {
+  color: #C9CDD4;
+}
+
+.om-bottom-nav-item--active {
+  color: #F2C55C;
+  font-weight: 800;
+}
+
+.om-bottom-nav-item--active svg {
+  filter: drop-shadow(0 0 8px rgba(242, 193, 78, 0.6));
+}
+
+.om-bottom-nav-crown {
+  position: absolute;
+  top: 0;
+  left: 50%;
+  width: 15px;
+  margin-left: -7.5px;
+  filter: drop-shadow(0 2px 3px rgba(0, 0, 0, 0.5));
+  animation: om2-crown 3s ease-in-out infinite;
+  pointer-events: none;
+}
+
+.om-bottom-nav-glow {
+  position: absolute;
+  top: 6px;
+  left: 50%;
+  width: 56px;
+  height: 40px;
+  margin-left: -28px;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(233, 185, 73, 0.28), rgba(233, 185, 73, 0) 70%);
+  pointer-events: none;
+}
+
+.om-bottom-nav-badge {
+  position: absolute;
+  top: -6px;
+  right: -11px;
+  min-width: 17px;
+  height: 17px;
+  padding: 0 4px;
+  box-sizing: border-box;
+  border-radius: 9px;
+  background: var(--om2-crimson);
+  color: #fff;
+  font-size: 10px;
+  font-weight: 800;
+  line-height: 17px;
+  text-align: center;
+  box-shadow: 0 0 0 2px #121216;
+}
+
+@keyframes om2-crown {
+  0%, 100% { transform: translateY(0) rotate(-8deg); }
+  50% { transform: translateY(-2px) rotate(4deg); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .om-bottom-nav-crown { animation: none; }
+}

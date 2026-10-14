@@ -18,10 +18,10 @@ import { ImmediateUseConsentDialog } from '@/components/ImmediateUseConsentDialo
 import { MioPurchaseInfo } from '@/components/MioPurchaseInfo';
 import { useAdminRealtimeContext } from '@/components/AdminRealtimeProvider';
 import { AdminSoundIndicator } from '@/components/AdminSoundIndicator';
-import { OneMilMioCoinIcon } from '@/components/icons/OneMilIcons';
+import { MioBadge } from '@/components/brand/MioBadge';
 import { supabase } from '@/integrations/supabase/client';
 import { ChevronDown } from 'lucide-react';
-import logo from '@/assets/logo-onemil.png';
+import logo from '@/assets/redesign/onemil-logo.png';
 
 /**
  * Veřejná zákaznická hlavička.
@@ -146,12 +146,12 @@ export const Header: React.FC = () => {
     account.balance != null ? account.balance.toLocaleString('cs-CZ', { maximumFractionDigits: 1 }) : null;
 
   const balanceChipClass =
-    'public-customer-header-balance flex items-center gap-1.5 rounded-full border border-[rgba(255,138,0,0.28)] bg-[rgba(255,138,0,0.08)] px-2.5 py-1.5 sm:px-3';
+    'public-customer-header-balance flex items-center gap-1.5 rounded-full bg-[#17171B] py-1 pl-1.5 pr-3 shadow-[inset_0_0_0_1px_rgba(233,185,73,0.55)]';
   const balanceChipContent = (
     <>
-      <OneMilMioCoinIcon size={18} className="h-[18px] w-[18px] shrink-0" />
-      <span className="text-sm font-bold tabular-nums text-foreground">{formattedBalance}</span>
-      <span className="hidden text-xs font-medium text-muted-foreground sm:inline">MIO</span>
+      <MioBadge width={34} />
+      <span className="text-sm font-extrabold tabular-nums text-[#F6D77A]">{formattedBalance}</span>
+      <span className="hidden text-xs font-bold text-[#F6D77A]/80 sm:inline">MIO</span>
     </>
   );
 
@@ -164,7 +164,7 @@ export const Header: React.FC = () => {
             <img
               src={logo}
               alt="OneMil logo"
-              className="h-12 md:h-20 w-auto object-contain"
+              className="h-10 md:h-14 w-auto object-contain"
             />
           </Link>
 
@@ -218,11 +218,11 @@ export const Header: React.FC = () => {
                           </span>
                           <span className="flex items-center gap-1.5">
                             {pkg.bonusLabel && (
-                              <span className="rounded-full bg-[rgba(255,138,0,0.14)] px-1.5 py-0.5 text-[10px] font-bold text-[#e26305]">
+                              <span className="rounded-full bg-[#B5122B] px-1.5 py-0.5 text-[10px] font-bold text-white">
                                 {pkg.bonusLabel}
                               </span>
                             )}
-                            <OneMilMioCoinIcon size={14} className="h-3.5 w-3.5 shrink-0" />
+                            <MioBadge width={26} />
                             <span className="text-sm font-semibold tabular-nums text-foreground">
                               {pkg.totalCoins.toLocaleString('cs-CZ')}
                             </span>
