@@ -62,7 +62,7 @@ test.describe('44 - customer password reset', () => {
     await page.getByTestId('reset-email').fill('reset-smoke@onemil.test');
     await page.getByTestId('reset-request-submit').click();
 
-    await expect(page.getByText('Zkontrolujte e-mail')).toBeVisible({ timeout: 10_000 });
+    await expect(page.getByText('Zkontroluj e-mail')).toBeVisible({ timeout: 10_000 });
     expect(requestBody).toContain('reset-smoke@onemil.test');
     expect(decodeURIComponent(requestUrl)).toContain('/reset-password');
   });

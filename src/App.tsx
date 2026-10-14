@@ -481,10 +481,18 @@ function AppContent() {
     !location.pathname.startsWith('/affiliate') &&
     !location.pathname.startsWith('/influencer');
 
+  // Nový vizuál (om-redesign) jen pro zákaznické stránky; firemní stránky
+  // /pro-eshopy a /partnerstvi zůstávají ve stávajícím vzhledu.
+  const isB2BPublicPage =
+    location.pathname === '/pro-eshopy' || location.pathname === '/partnerstvi';
+
   const layoutClassName = [
     isPartnerAccount ? 'partner-layout' : 'customer-layout',
     !isPartnerAccount && !isAffiliateAccount && isPublicCustomerThemeRoute
       ? 'public-customer-theme'
+      : '',
+    !isPartnerAccount && !isAffiliateAccount && isPublicCustomerThemeRoute && !isB2BPublicPage
+      ? 'om-redesign'
       : '',
   ]
     .filter(Boolean)

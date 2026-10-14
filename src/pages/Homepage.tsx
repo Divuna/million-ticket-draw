@@ -957,7 +957,7 @@ const Homepage = () => {
                         <h4
                           className="font-bold text-center tracking-wide truncate"
                           style={{
-                            fontFamily: "'Poppins', system-ui, sans-serif",
+                            fontFamily: "'Manrope', system-ui, sans-serif",
                             fontSize: '1rem',
                             background: 'linear-gradient(90deg, #E7EBF0 0%, #E9B949 60%, #C2902F 100%)',
                             WebkitBackgroundClip: 'text',
@@ -1015,7 +1015,7 @@ const Homepage = () => {
                 <h3
                   className="font-bold tracking-wide pr-8"
                   style={{
-                    fontFamily: "'Poppins', system-ui, sans-serif",
+                    fontFamily: "'Manrope', system-ui, sans-serif",
                     fontSize: '1.15rem',
                     background: 'linear-gradient(90deg, #E7EBF0 0%, #E9B949 55%, #C2902F 100%)',
                     WebkitBackgroundClip: 'text',
