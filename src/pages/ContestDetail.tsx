@@ -13,17 +13,24 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/comp
 import { toast } from "sonner";
 import { recordLocalTicketPlay } from "@/lib/retentionLocal";
 import {
-  logRpcHttpFailure,
   logTicketPurchaseException,
   logTicketPurchaseRejected,
   logTicketPurchaseSuccess,
-  recordTicketPurchaseAttemptForAbuseCheck,
 } from "@/lib/monitoring";
 import { analytics } from "@/lib/analytics";
-import { buildBuyTicketAtomicRpcPayload } from "@/utils/buyTicketAtomicRpcArgs";
 import { TicketResultModal } from "@/components/TicketResultModal";
+import {
+  MysteryPurchaseResultDialog,
+  type MysteryTicketOutcome,
+} from "@/components/MysteryPurchaseResultDialog";
+import {
+  mysteryErrorMessage,
+  purchaseMysteryCoupon,
+  type MysteryCoupon,
+} from "@/lib/mysteryCouponPurchase";
 import { BonusPrizeDetailModal } from "@/components/BonusPrizeDetailModal";
 import { usePlacementBanners } from "@/hooks/usePlacementBanners";
+import { isNativeApp } from "@/lib/nativeApp";
 import "@/components/ContestCard.css";
 import { Helmet } from "react-helmet-async";
 
@@ -35,6 +42,7 @@ type Contest = {
   rules_pdf_url: string | null;
   main_prize: string | null;
   ticket_price: number;
+  ticket_count: number;
   status: string;
   main_prize_secondary_image: string | null;
   main_image: string | null;
@@ -51,6 +59,20 @@ type BonusPrize = {
   image?: string | null;
   image_url?: string | null;
   ticket_position?: number | null;
+};
+
+/**
+ * Row of get_contest_bonus_catalogue(): the customer-safe view of a contest's
+ * bonus prizes — WHAT can be won and how many of each, never WHERE
+ * (ticket_position is deliberately absent). See migration 20260825120000.
+ */
+type BonusCatalogueRow = {
+  description: string | null;
+  detailed_description: string | null;
+  image_url: string | null;
+  quantity: number;
+  miocoin_positions: number;
+  miocoin_total: number;
 };
 
 type Winner = {
@@ -72,6 +94,8 @@ interface PartnerOfferResult {
 
 interface UnlockTicketResult {
   ticket_number: number;
+  /** UUID řádku v `tickets` z `buy_ticket_atomic` — nutné pro upload sdíleného obrázku. */
+  ticket_row_id?: string | null;
   ticket_price: number;
   next_bonus_position?: number | null;
   distance_to_next_bonus?: number | null;
@@ -125,7 +149,10 @@ export default function ContestDetail() {
   const [contest, setContest] = useState<Contest | null>(null);
   const [loading, setLoading] = useState(true);
 
-  const [bonusPrizes, setBonusPrizes] = useState<BonusPrize[]>([]);
+  const [bonusCatalogue, setBonusCatalogue] = useState<BonusCatalogueRow[]>([]);
+  // Group keys ("description||detailed_description") the current user has won —
+  // resolved from their own winner rows, used only to highlight their win.
+  const [myWonPrizeKeys, setMyWonPrizeKeys] = useState<Set<string>>(new Set());
   /** Sum of `bonus_prizes.amount` for coin rows (amount > 0); physical rows use null/0 amount */
   const [miocoinBonusPoolTotal, setMiocoinBonusPoolTotal] = useState(0);
   /** Count of MioCoin bonus prize positions (bonus_prizes rows with amount > 0) */
@@ -138,6 +165,11 @@ export default function ContestDetail() {
   const [modalResult, setModalResult] = useState<UnlockTicketResult | null>(null);
   const [modalContestId, setModalContestId] = useState<string | null>(null);
   const requestInFlightRef = useRef(false);
+  const [mysteryResult, setMysteryResult] = useState<{
+    contestId: string;
+    ticket: MysteryTicketOutcome;
+    coupon: MysteryCoupon | null;
+  } | null>(null);
   const [selectedBonusPrize, setSelectedBonusPrize] = useState<BonusPrize | null>(null);
   const [galleryMedia, setGalleryMedia] = useState<{ id: string; contest_id: string; type: string; url: string; sort_order: number | null; created_at: string | null }[]>([]);
   const [activeGalleryIndex, setActiveGalleryIndex] = useState(0);
@@ -251,191 +283,108 @@ export default function ContestDetail() {
     }
   }, []);
 
+  /**
+   * Mystery kupon: za contests.ticket_price dostane zákazník náhodný dostupný
+   * kupon a tiket zdarma. Celý nákup je jedna atomická transakce — při chybě
+   * se nestrhnou MioCoiny ani nevznikne tiket.
+   */
+  async function runMysteryPurchase(contestId: string, userId: string) {
+    const outcome = await purchaseMysteryCoupon(userId, contestId);
+
+    if (!outcome.success) {
+      logTicketPurchaseRejected({
+        userId,
+        contestId,
+        errorCode: outcome.error.slice(0, 200),
+      });
+      toast.error(mysteryErrorMessage(outcome.error));
+      return;
+    }
+
+    logTicketPurchaseSuccess({ userId, contestId, ticketNumber: outcome.ticket_number });
+    analytics.ticketPurchase({ contestId, ticketNumber: outcome.ticket_number });
+
+    recordLocalTicketPlay();
+    await loadUserBalance(userId);
+
+    // Jeden společný výsledek: výhra z tiketu nahoře, kupon jako druhý bonus.
+    // Tiket i kupon už jsou uložené — dialog jen ukazuje, co vzniklo.
+    setMysteryResult({
+      contestId,
+      ticket: {
+        ticket_number: outcome.ticket_number,
+        won_type: outcome.won_type,
+        won_prize: outcome.won_prize,
+        distance_to_next_bonus: outcome.distance_to_next_bonus,
+      },
+      coupon: outcome.coupon,
+    });
+  }
+
   async function handleUseMiocoins() {
     console.log('[DEBUG ContestDetail] handleUseMiocoins called, user:', user?.id, 'contest:', contest?.id);
 
-    // Strict single-request guard
+    // Zámek se bere synchronně, ještě před prvním awaitem. Načtení zůstatku
+    // níž je await, takže dva kliky ve stejném ticku by při nenačtené peněžence
+    // jinak prošly oba a koupily dvakrát. Platí pro mystery i klasický nákup.
     if (requestInFlightRef.current) {
       console.log('[DEBUG ContestDetail] Request already in flight, ignoring click');
       return;
     }
+    requestInFlightRef.current = true;
 
     if (!user) {
       toast.error("Pro nákup tiketu se musíš přihlásit.");
+      requestInFlightRef.current = false;
       navigate(buildLoginRedirectUrl(location.pathname + location.search));
       return;
     }
 
-    if (!contest) return;
+    if (!contest) {
+      requestInFlightRef.current = false;
+      return;
+    }
 
     if (contest.status !== 'active') {
       toast.error("Soutěž není aktivní");
+      requestInFlightRef.current = false;
       return;
     }
 
     let effectiveBalance: number;
-    if (!balanceLoaded) {
-      effectiveBalance = await loadUserBalance(user.id);
-    } else {
-      effectiveBalance = balance;
+    try {
+      if (!balanceLoaded) {
+        effectiveBalance = await loadUserBalance(user.id);
+      } else {
+        effectiveBalance = balance;
+      }
+    } catch (err) {
+      // loadUserBalance si dnes chyby řeší sám, ale kdyby to někdy přestalo
+      // platit, nesmí nám tu uváznout zámek — tlačítko by zůstalo mrtvé
+      // až do znovunačtení stránky.
+      console.error('[DEBUG ContestDetail] loadUserBalance failed:', err);
+      toast.error("Nepodařilo se načíst zůstatek MIO.");
+      requestInFlightRef.current = false;
+      return;
     }
     if (contest.status === 'active' && effectiveBalance < contest.ticket_price) {
       const shortage = Math.max(0, Math.ceil(contest.ticket_price - effectiveBalance));
-      toast.error(`Chybí ti ${shortage.toLocaleString('cs-CZ')} MioCoinů`);
+      toast.error(`Chybí ti ${shortage.toLocaleString('cs-CZ')} MIO`);
+      requestInFlightRef.current = false;
       return;
     }
 
-    // Lock immediately
-    requestInFlightRef.current = true;
     console.log('[DEBUG ContestDetail] setProcessingContestId:', contest.id);
     setProcessingContestId(contest.id);
 
     try {
-      const built = buildBuyTicketAtomicRpcPayload(contest.id, user.id);
-      if (!built.ok) {
-        toast.error((built as { ok: false; message: string }).message);
-        requestInFlightRef.current = false;
-        setProcessingContestId(null);
-        return;
-      }
-      const payload = built.payload;
-      console.log("buy_ticket_atomic RPC payload", payload);
-
-      recordTicketPurchaseAttemptForAbuseCheck(user.id);
-      const { data, error } = await supabase.rpc("buy_ticket_atomic", payload);
-
-      if (error) {
-        console.error("[DEBUG ContestDetail] RPC error:", error, JSON.stringify(error));
-        logRpcHttpFailure({
-          userId: user.id,
-          operation: "buy_ticket_atomic",
-          message: error.message,
-          code: error.code,
-          details: (error as { details?: string }).details,
-          hint: (error as { hint?: string }).hint,
-        });
-        if (error.message?.includes("closed") || error.message?.includes("uzavřena")) {
-          toast.error("Soutěž je již uzavřena.");
-        } else if (error.message?.includes("insufficient") || error.message?.includes("nedostatek")) {
-          toast.error("Nedostatek MioCoinů. Dobi si kredit.");
-        } else if (error.message?.includes("full") || error.message?.includes("plná")) {
-          toast.error("Soutěž je již plná.");
-        } else {
-          toast.error("Chyba při nákupu tiketu.");
-        }
-        console.log('[DEBUG ContestDetail] setProcessingContestId: null (error)');
-        setProcessingContestId(null);
-        return;
-      }
-
-      if (data && typeof data === 'object') {
-        const result = data as { success?: boolean; error?: string } & UnlockTicketResult;
-        
-        if (result.success === false || result.error) {
-          const errorMsg = result.error || "Chyba při nákupu tiketu.";
-          console.error('[DEBUG ContestDetail] RPC result error:', errorMsg);
-          if (errorMsg.includes("closed") || errorMsg.includes("uzavřena")) {
-            toast.error("Soutěž je již uzavřena.");
-          } else if (errorMsg.includes("insufficient") || errorMsg.includes("nedostatek")) {
-            toast.error("Nedostatek MioCoinů. Dobi si kredit.");
-          } else if (errorMsg.includes("full") || errorMsg.includes("plná")) {
-            toast.error("Soutěž je již plná.");
-          } else {
-            toast.error(errorMsg);
-          }
-          console.log('[DEBUG ContestDetail] setProcessingContestId: null (result error)');
-          setProcessingContestId(null);
-          return;
-        }
-
-        console.log('🔥 RPC raw response:', JSON.stringify(result, null, 2));
-
-        logTicketPurchaseSuccess({
-          userId: user.id,
-          contestId: contest.id,
-          ticketNumber: result.ticket_number,
-        });
-        analytics.ticketPurchase({ contestId: contest.id, ticketNumber: result.ticket_number });
-        
-        // Refresh balance and progress immediately
-        loadUserBalance(user.id);
-        const { data: prog } = await supabase
-          .from("contest_progress")
-          .select("tickets_total")
-          .eq("contest_id", contest.id)
-          .maybeSingle();
-        if (prog) {
-          setProgressTicketsTotal(prog.tickets_total ?? 1_000_000);
-        }
-
-        // ── Partner Offer lookup ──────────────────────────────────────────────
-        // buy_ticket_atomic returns ticket_row_id (UUID of the new tickets row).
-        // The DB trigger trg_assign_offer_on_ticket_insert runs synchronously in
-        // the same transaction, so the offer (if any) is already committed here.
-        let partnerOffer: PartnerOfferResult | null = null;
-        const ticketRowId = (data as any)?.ticket_row_id as string | undefined;
-        if (ticketRowId && user) {
-          try {
-            const { data: upoRow } = await supabase
-              .from('user_partner_offers')
-              .select(`
-                id,
-                partner_offers (
-                  title, short_text, logo_url, banner_url, link_or_code, valid_to,
-                  partners (company_name, name)
-                )
-              `)
-              .eq('ticket_id', ticketRowId)
-              .eq('user_id', user.id)
-              .maybeSingle();
-            if (upoRow?.partner_offers) {
-              const po = upoRow.partner_offers as any;
-              partnerOffer = {
-                id: upoRow.id,
-                title: po.title ?? '',
-                short_text: po.short_text ?? null,
-                logo_url: po.logo_url ?? null,
-                banner_url: po.banner_url ?? null,
-                link_or_code: po.link_or_code ?? null,
-                valid_to: po.valid_to ?? null,
-                partner_name: po.partners?.company_name || po.partners?.name || '',
-              };
-            }
-          } catch (poErr) {
-            console.warn('[ContestDetail] partner offer lookup skipped:', poErr);
-          }
-        }
-
-        const mappedResult: UnlockTicketResult = {
-          ticket_number: result.ticket_number,
-          ticket_price: result.ticket_price ?? 1,
-          next_bonus_position: result.next_bonus_position ?? null,
-          distance_to_next_bonus: result.distance_to_next_bonus ?? null,
-          won_prize: result.won_prize ?? null,
-          won_type: result.won_type ?? null,
-          bonus_prize_id: result.bonus_prize_id ?? null,
-          remaining_tickets: result.remaining_tickets ?? undefined,
-          partner_offer: partnerOffer,
-        };
-
-        const isWin = result.won_type === 'main' || result.won_type === 'bonus';
-
-        recordLocalTicketPlay();
-
-        // Always show the ticket result modal (win or no-win) — user should
-        // always see a reveal screen. Win celebration triggers inside the modal.
-        setModalResult(mappedResult);
-        setModalContestId(contest.id);
-
-        if (isWin) {
-          console.log('[DEBUG ContestDetail] WIN detected, modal opened');
-          if (result.won_type === 'main') {
-            toast.success("Gratulujeme! Vyhrál jsi hlavní cenu!");
-          } else {
-            toast.success("Gratulujeme! Vyhrál jsi bonusovou cenu!");
-          }
-        }
-      }
+      // Nákup vede vždy přes garantovaný benefit bundle
+      // (purchase_guaranteed_benefit_bundle_atomic — omezený i neomezený
+      // fallback). Klasický holý nákup tiketu (`buy_ticket_atomic`) z téhle
+      // cesty už NENÍ dosažitelný: když benefit není dostupný, je vypnutý
+      // feature flag, nebo soutěž není na allowlistu, RPC to vrátí jako
+      // běžnou chybu — MioCoiny se nestrhnou a tiket nevznikne.
+      await runMysteryPurchase(contest.id, user.id);
     } catch (err) {
       console.error("[DEBUG ContestDetail] handleUseMiocoins CAUGHT:", err, JSON.stringify(err));
       if (user && contest) {
@@ -463,7 +412,7 @@ export default function ContestDetail() {
       try {
         const { data: contestData, error: contestError } = await supabase
           .from("contests")
-          .select("id, title, description, rules, rules_pdf_url, main_prize, ticket_price, status, main_prize_secondary_image, main_image, banner_image, fast_game, total_miocoin_bonus")
+          .select("id, title, description, rules, rules_pdf_url, main_prize, ticket_price, ticket_count, status, main_prize_secondary_image, main_image, banner_image, fast_game, total_miocoin_bonus")
           .eq("id", id)
           .maybeSingle();
 
@@ -484,57 +433,39 @@ export default function ContestDetail() {
 
         console.log('[DEBUG ContestDetail] setContest:', JSON.stringify(contestData));
         setContest(contestData as Contest);
+        setProgressTicketsTotal(contestData.ticket_count ?? 1_000_000);
 
-        // === Bonusové MioCoiny (součet) — přes RPC, obchází 1000-row cap PostgRESTu ===
-        const { data: poolSum, error: poolError } = await supabase
-          .rpc("get_contest_miocoin_bonus", { p_contest_id: id });
-        if (poolError) {
-          console.error('[ContestDetail] miocoin pool RPC error:', poolError);
+        // === Bonusové výhry — POUZE přes position-free katalog ===
+        // bonus_prizes se z klienta nečte přímo: řádky nesou ticket_position,
+        // tedy budoucí výherní pozice. Protože se tikety vydávají sekvenčně,
+        // znalost pozic dělá ze soutěže deterministicky vytěžitelnou hru
+        // (viz migrace 20260825120000). RPC vrací jen KATALOG (co lze vyhrát
+        // a v jakém počtu) + agregáty, nikdy pozice.
+        const { data: catalogue, error: catalogueError } = await supabase
+          .rpc("get_contest_bonus_catalogue", { p_contest_id: id });
+        if (catalogueError) {
+          console.error('[ContestDetail] bonus catalogue RPC error:', catalogueError);
         }
-        // Fall back to the contest's stored total (contests.total_miocoin_bonus,
-        // kept in sync after bulk MioCoin save) when the RPC returns 0/null/errors,
-        // so the box never shows 0 MioCoins when bonuses are actually configured.
-        const rpcMiocoinTotal = Number(poolSum ?? 0);
+        const catalogueRows = (catalogue ?? []) as BonusCatalogueRow[];
+
+        // Agregáty přijdou na každém řádku (i na tom s description = null,
+        // který vznikne u soutěže bez věcných cen).
+        const coinPositions = Number(catalogueRows[0]?.miocoin_positions ?? 0);
+        setMiocoinBonusPositions(coinPositions);
+
+        // Součet MioCoinů bere rovnou z katalogu. Dřív se na to volalo zvlášť
+        // get_contest_miocoin_bonus, jenže ta funkce NENÍ security definer, takže
+        // po zavedení RLS na bonus_prizes (migrace 20260825120000) skenovala
+        // 126 tisíc řádků pod per-row policy a trvala sekundy (u anonyma rovnou
+        // padala na 42501). Katalogové RPC je SECURITY DEFINER a stejnou hodnotu
+        // vrací okamžitě v už provedeném dotazu.
+        // Fallback na contests.total_miocoin_bonus zůstává, aby box nikdy
+        // neukázal 0, když bonusy nastavené jsou.
+        const rpcMiocoinTotal = Number(catalogueRows[0]?.miocoin_total ?? 0);
         const storedMiocoinTotal = Number((contestData as any).total_miocoin_bonus ?? 0);
         setMiocoinBonusPoolTotal(rpcMiocoinTotal > 0 ? rpcMiocoinTotal : storedMiocoinTotal);
 
-        // Count of MioCoin bonus positions (amount > 0). head:true count is exact,
-        // not capped by the 1000-row PostgREST limit. Partner Offers are NOT in
-        // bonus_prizes, so this never includes them.
-        const { count: coinCount, error: coinCountError } = await supabase
-          .from("bonus_prizes")
-          .select("id", { count: "exact", head: true })
-          .eq("contest_id", id)
-          .gt("amount", 0);
-        if (coinCountError) {
-          console.error('[ContestDetail] miocoin positions count error:', coinCountError);
-        }
-        setMiocoinBonusPositions(coinCount ?? 0);
-
-        // === Fyzické bonusové ceny — stránkované načtení VŠECH řádků, BEZ stropu ===
-        // Může jich být klidně 10 000 nebo 50 000; načítáme po stránkách dokud chodí data.
-        const PHYS_PAGE = 1000;
-        let physFrom = 0;
-        const physical: BonusPrize[] = [];
-        // Hard safety cap proti nekonečné smyčce (1M řádků = 1000 stránek).
-        for (let guard = 0; guard < 1000; guard++) {
-          const { data: pageData, error: pageError } = await supabase
-            .from("bonus_prizes")
-            .select("id, contest_id, description, detailed_description, amount, image_url, ticket_position")
-            .eq("contest_id", id)
-            .or("amount.is.null,amount.eq.0")
-            .order("ticket_position", { ascending: true })
-            .range(physFrom, physFrom + PHYS_PAGE - 1);
-          if (pageError) {
-            console.error('[ContestDetail] physical bonus fetch error:', pageError);
-            break;
-          }
-          if (!pageData || pageData.length === 0) break;
-          physical.push(...(pageData as BonusPrize[]));
-          if (pageData.length < PHYS_PAGE) break;
-          physFrom += PHYS_PAGE;
-        }
-        setBonusPrizes(physical);
+        setBonusCatalogue(catalogueRows.filter((r) => r.description !== null));
 
         const { data: auth } = await supabase.auth.getUser();
         const uid = auth?.user?.id ?? null;
@@ -556,6 +487,32 @@ export default function ContestDetail() {
             prize: "",
             bonus_prize_id: w.prize_id ?? null,
           }));
+
+          // Resolve WHICH catalogue entries this user won. Reading these rows is
+          // allowed by RLS because a won prize is no longer 'pending' — it leaks
+          // nothing about future positions.
+          const wonPrizeIds = nextMyWins
+            .map((w) => w.bonus_prize_id)
+            .filter((x): x is string => !!x);
+
+          if (wonPrizeIds.length > 0) {
+            const { data: wonPrizes, error: wonPrizesError } = await supabase
+              .from("bonus_prizes")
+              .select("description, detailed_description")
+              .in("id", wonPrizeIds);
+            if (wonPrizesError) {
+              console.error('[ContestDetail] won prizes fetch error:', wonPrizesError);
+            }
+            setMyWonPrizeKeys(
+              new Set(
+                (wonPrizes ?? []).map(
+                  (p) => `${p.description ?? ''}||${p.detailed_description ?? ''}`,
+                ),
+              ),
+            );
+          } else {
+            setMyWonPrizeKeys(new Set());
+          }
         }
 
         console.log('[DEBUG ContestDetail] setMyWins:', nextMyWins.length, 'items');
@@ -579,12 +536,6 @@ export default function ContestDetail() {
         console.log('[DEBUG ContestDetail] setGalleryMedia:', mediaData?.length, 'items');
         setGalleryMedia(mediaData ?? []);
 
-        const { data: prog } = await supabase
-          .from("contest_progress")
-          .select("tickets_total")
-          .eq("contest_id", id)
-          .maybeSingle();
-        setProgressTicketsTotal(prog?.tickets_total ?? 1_000_000);
         console.log("galleryMedia", mediaData);
 
         console.log('[DEBUG ContestDetail] setLoading: false');
@@ -602,6 +553,7 @@ export default function ContestDetail() {
     if (!modalResult) return undefined;
     return {
       ticket_number: modalResult.ticket_number,
+      ticket_row_id: modalResult.ticket_row_id ?? null,
       next_bonus_position: modalResult.next_bonus_position ?? null,
       distance_to_next_bonus: modalResult.distance_to_next_bonus ?? null,
       won_prize: modalResult.won_prize,
@@ -612,6 +564,7 @@ export default function ContestDetail() {
     };
   }, [
     modalResult?.ticket_number,
+    modalResult?.ticket_row_id,
     modalResult?.next_bonus_position,
     modalResult?.distance_to_next_bonus,
     modalResult?.won_prize,
@@ -640,33 +593,42 @@ export default function ContestDetail() {
   // making their image_url values differ even though they represent the same product.
   // The first row in each group is used as the representative card/image/modal data.
   // MioCoin bonuses (amount > 0) each get their own group key so they remain individual.
-  const groupedBonusPrizes = useMemo(() => {
-    const groups = new Map<string, { prize: BonusPrize; ids: string[]; imageUrl: string | null }>();
-    for (const b of bonusPrizes) {
-      const isMioCoin = (b.amount ?? 0) > 0;
-      // MioCoin entries are unique per ticket position — use id as group key
-      const key = isMioCoin
-        ? b.id
-        : `${b.description ?? ''}||${b.detailed_description ?? ''}`;
+  /** Total number of physical bonus prizes (sum of per-prize quantities). */
+  const physicalBonusCount = useMemo(
+    () => bonusCatalogue.reduce((sum, r) => sum + Number(r.quantity ?? 0), 0),
+    [bonusCatalogue],
+  );
 
-      if (groups.has(key)) {
-        groups.get(key)!.ids.push(b.id);
-      } else {
-        let imgUrl: string | null = null;
-        if (b.image) {
-          imgUrl = b.image.startsWith('http')
-            ? b.image
-            : supabase.storage.from('contest-images').getPublicUrl(b.image).data.publicUrl;
-        } else if (b.image_url) {
-          imgUrl = b.image_url.startsWith('http')
-            ? b.image_url
-            : supabase.storage.from('contest-images').getPublicUrl(b.image_url).data.publicUrl;
-        }
-        groups.set(key, { prize: b, ids: [b.id], imageUrl: imgUrl });
+  /**
+   * The catalogue arrives already grouped from the DB (one row per distinct
+   * physical prize + quantity), so this only resolves the image URL and marks
+   * whether the current user won that prize. No ticket positions involved.
+   */
+  const groupedBonusPrizes = useMemo(() => {
+    return bonusCatalogue.map((row) => {
+      const key = `${row.description ?? ''}||${row.detailed_description ?? ''}`;
+      let imgUrl: string | null = null;
+      if (row.image_url) {
+        imgUrl = row.image_url.startsWith('http')
+          ? row.image_url
+          : supabase.storage.from('contest-images').getPublicUrl(row.image_url).data.publicUrl;
       }
-    }
-    return Array.from(groups.values());
-  }, [bonusPrizes]);
+      return {
+        key,
+        prize: {
+          id: key,
+          contest_id: id ?? '',
+          description: row.description,
+          detailed_description: row.detailed_description,
+          amount: null,
+          image_url: row.image_url,
+        } as BonusPrize,
+        count: Number(row.quantity ?? 0),
+        imageUrl: imgUrl,
+        isMyWin: myWonPrizeKeys.has(key),
+      };
+    });
+  }, [bonusCatalogue, myWonPrizeKeys, id]);
 
   if (loading) {
     return (
@@ -727,7 +689,7 @@ export default function ContestDetail() {
   const PRIMARY_DOMAIN = "https://onemil.cz";
   const canonicalUrl = `${PRIMARY_DOMAIN}/contest/${contest.id}`;
   const fallbackDescription =
-    "OneMil je prémiová platforma spotřebitelských soutěží o exkluzivní a luxusní věcné ceny. Pro využití voucherů a účast ve spotřebitelských soutěžích slouží MioCoin jako interní kredit OneMil.";
+    "OneMil je prémiová platforma spotřebitelských soutěží o exkluzivní a luxusní věcné ceny. Pro využití voucherů a účast ve spotřebitelských soutěžích slouží MIO jako interní kredit OneMil.";
   const cleanDescription = (contest.description ?? "").replace(/\s+/g, " ").trim();
   const metaDescription =
     cleanDescription.length > 0 ? (cleanDescription.length > 170 ? `${cleanDescription.slice(0, 167)}…` : cleanDescription) : fallbackDescription;
@@ -872,10 +834,10 @@ export default function ContestDetail() {
             <img
               src={MIOCOIN_IMAGE_URL}
               className="h-[70%] max-h-20 md:max-h-24 w-auto object-contain flex-shrink-0 drop-shadow-[0_0_16px_rgba(255,138,0,0.25)]"
-              alt="MioCoin"
+              alt="MIO"
             />
             <div className="flex-1 flex flex-col justify-center">
-              <p className="text-xs text-gray-400">Tvůj stav MioCoinů</p>
+              <p className="text-xs text-gray-400">Tvůj stav MIO</p>
               <p className="text-4xl md:text-5xl font-extrabold text-white leading-none mt-1">{balance.toLocaleString("cs-CZ", { minimumFractionDigits: 0, maximumFractionDigits: 1 })}</p>
             </div>
           </div>
@@ -919,11 +881,16 @@ export default function ContestDetail() {
           <style>{`@keyframes liveShimmer { 0%,100% { background-position: -200% center; } 50% { background-position: 200% center; } }`}</style>
           {insufficientFunds && (
             <p className="text-xs text-amber-300/95 font-medium">
-              Chybí ti {shortageCoins.toLocaleString('cs-CZ')} MioCoinů
+              Chybí ti {shortageCoins.toLocaleString('cs-CZ')} MIO
             </p>
           )}
           <div className="flex flex-col sm:flex-row items-stretch gap-3 mt-auto">
             {insufficientFunds ? (
+              isNativeApp() ? (
+                <div className="flex-1 h-11 flex items-center justify-center text-sm font-semibold text-amber-300/95">
+                  Nedostatek MIO
+                </div>
+              ) : (
               <Button
                 onClick={() =>
                   navigate('/profile', {
@@ -933,8 +900,9 @@ export default function ContestDetail() {
                 variant="premium"
                 className="flex-1 h-11 font-semibold px-5 rounded-full whitespace-nowrap"
               >
-                Dobít MioCoiny
+                Dobít MIO
               </Button>
+              )
             ) : (
               <>
                 <Button
@@ -948,8 +916,9 @@ export default function ContestDetail() {
                       <span className="h-4 w-4 rounded-full border-2 border-current border-t-transparent animate-spin" />
                       Otevírám…
                     </span>
-                  ) : `Uplatnit ${contest.ticket_price} MioCoin`}
+                  ) : `Uplatnit ${contest.ticket_price} MIO`}
                 </Button>
+                {!isNativeApp() && (
                 <Button
                   onClick={() =>
                     navigate('/profile', {
@@ -959,8 +928,9 @@ export default function ContestDetail() {
                   variant="outline"
                   className="flex-1 h-11 bg-[rgba(255,138,0,0.08)] hover:bg-[rgba(255,138,0,0.15)] text-[#FF8A00] border-[rgba(255,138,0,0.3)] font-semibold px-5 rounded-full transition-colors"
                 >
-                  Dobít MioCoiny
+                  Dobít MIO
                 </Button>
+                )}
               </>
             )}
           </div>
@@ -972,12 +942,12 @@ export default function ContestDetail() {
             <p className="text-sm md:text-base text-gray-200 leading-relaxed">
               V této soutěži je celkem{" "}
               <span className="text-[#FFB547] font-bold text-2xl md:text-3xl">
-                {(miocoinBonusPositions + bonusPrizes.length).toLocaleString("cs-CZ")}
+                {(miocoinBonusPositions + physicalBonusCount).toLocaleString("cs-CZ")}
               </span>{" "}
               dalších výher.
             </p>
             <p className="text-xs text-gray-400 leading-relaxed">
-              Z toho <span className="text-[#FFB547] font-semibold">{miocoinBonusPoolTotal.toLocaleString("cs-CZ")} MioCoinů</span>,
+              Z toho <span className="text-[#FFB547] font-semibold">{miocoinBonusPoolTotal.toLocaleString("cs-CZ")} MIO</span>,
               které vám mohou otevřít cestu k dalším soutěžím nebo k nákupu voucherů na krásné slevy u našich partnerů.
             </p>
           </div>
@@ -987,11 +957,11 @@ export default function ContestDetail() {
                 <img
                   src={MIOCOIN_IMAGE_URL}
                   className="h-[70%] max-h-20 md:max-h-24 w-auto object-contain flex-shrink-0 hover:scale-110 transition-transform cursor-pointer drop-shadow-[0_0_24px_rgba(255,138,0,0.3)]"
-                  alt="MioCoin"
+                  alt="MIO"
                 />
               </TooltipTrigger>
               <TooltipContent>
-                <p>MioCoiny můžeš získat otevřením výherního tiketu</p>
+                <p>MIO můžeš získat otevřením výherního tiketu</p>
               </TooltipContent>
             </Tooltip>
           </TooltipProvider>
@@ -1070,13 +1040,10 @@ export default function ContestDetail() {
           <p className="text-gray-500 text-sm py-4 text-center">Zatím nebyly přidány žádné věcné bonusové výhry.</p>
         ) : (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
-            {groupedBonusPrizes.map(({ prize: b, ids, imageUrl: bonusImageUrl }) => {
-              const count = ids.length;
-              const isMyWin = myWins.some((w) => ids.includes(w.bonus_prize_id ?? ''));
-
+            {groupedBonusPrizes.map(({ key, prize: b, count, imageUrl: bonusImageUrl, isMyWin }) => {
               return (
                 <button
-                  key={b.id}
+                  key={key}
                   type="button"
                   onClick={() => {
                     console.log('[DEBUG ContestDetail] setSelectedBonusPrize:', b.id);
@@ -1125,7 +1092,7 @@ export default function ContestDetail() {
       {(contest.rules_pdf_url || (contest.rules && contest.rules.trim())) && (
         <section className="relative z-10 px-4 py-12 max-w-4xl mx-auto">
           <div className="rounded-2xl border border-white/10 bg-black/40 backdrop-blur-sm p-6 md:p-8">
-            <h2 className="text-2xl md:text-3xl font-bold mb-4 text-heading-gold">
+            <h2 className="customer-premium-orange-heading text-2xl md:text-3xl font-bold mb-4 text-heading-gold">
               Pravidla soutěže
             </h2>
             {contest.rules_pdf_url && (
@@ -1156,6 +1123,13 @@ export default function ContestDetail() {
         }}
         prize={selectedBonusPrize}
         backgroundImageUrl={starryBackgroundUrl}
+      />
+      <MysteryPurchaseResultDialog
+        open={mysteryResult !== null}
+        contestId={mysteryResult?.contestId ?? null}
+        ticket={mysteryResult?.ticket ?? null}
+        coupon={mysteryResult?.coupon ?? null}
+        onClose={() => setMysteryResult(null)}
       />
       {/* TICKET RESULT MODAL */}
       <TicketResultModal

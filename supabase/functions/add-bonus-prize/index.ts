@@ -1,6 +1,7 @@
 import { serve } from 'https://deno.land/std@0.168.0/http/server.ts'
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
 import type { Database } from '../_shared/database.types.ts'
+import { getSupabaseSecretKey } from "../_shared/supabaseSecretKey.ts";
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -16,7 +17,7 @@ serve(async (req) => {
     // Create admin client for auth verification
     const supabaseAdmin = createClient(
       Deno.env.get('SUPABASE_URL') ?? '',
-      Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '',
+      getSupabaseSecretKey(),
     )
 
     // Create user-scoped client for DB writes (auth.uid propagation)
@@ -41,15 +42,17 @@ serve(async (req) => {
       throw new Error('Unauthorized')
     }
 
-    // Check if user is admin via user_roles (canonical role source)
+    // Check if user is superadmin via user_roles (canonical role source).
+    // Bonus prize management is SUPERADMIN ONLY — matches the bonus_prizes
+    // table RLS write policies (public.is_superadmin(), see PR #414).
     const { data: roleData, error: roleError } = await supabaseAdmin
       .from('user_roles')
       .select('role')
       .eq('user_id', user.id)
       .maybeSingle()
 
-    if (roleError || !roleData || !['admin', 'superadmin'].includes(roleData.role)) {
-      throw new Error('Admin access required')
+    if (roleError || !roleData || roleData.role !== 'superadmin') {
+      throw new Error('Superadmin access required')
     }
 
     const { contest_id, description, ticket_position } = await req.json()

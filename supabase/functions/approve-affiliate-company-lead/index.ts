@@ -1,5 +1,8 @@
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.57.4";
+import { renderOneMilEmail } from "../_shared/oneMilEmailTemplate.ts";
+import { getSupabaseSecretKey } from "../_shared/supabaseSecretKey.ts";
+import { findAuthUserIdByEmail, type AuthAdminListClient } from "../_shared/authUserLookup.ts";
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 
@@ -52,18 +55,11 @@ async function findAuthUserByEmail(
   serviceRoleKey: string,
   email: string,
 ): Promise<string | null> {
-  // listUsers paginates up to 1000; sufficient for current scale.
-  // For larger deployments this should be replaced with a filtered query.
   const supabaseAdmin = createClient(supabaseUrl, serviceRoleKey, {
     auth: { persistSession: false },
   });
-  const { data, error } = await supabaseAdmin.auth.admin.listUsers({
-    page: 1,
-    perPage: 1000,
-  });
-  if (error) throw new Error(`listUsers failed: ${error.message}`);
-  const found = (data?.users ?? []).find((u: { email?: string }) => u.email === email);
-  return found ? (found as { id: string }).id : null;
+  // Prochází všechny stránky (nad 1000 účtů by první stránka nestačila).
+  return await findAuthUserIdByEmail(supabaseAdmin as unknown as AuthAdminListClient, email);
 }
 
 /**
@@ -77,23 +73,21 @@ function buildApprovalEmail(params: {
   const companyName = escapeHtml(params.companyName);
   // setupLink is an opaque URL — no sensitive content is embedded other than
   // the one-time recovery token Supabase generates. It is never logged here.
-  return `
-    <h2>Vas ucet v OneMil byl schvalen</h2>
-    <p>Dobry den,</p>
-    <p>Firma <strong>${companyName}</strong> byla schvalena administratorem OneMil.</p>
-    <p>Pro aktivaci vaseho partnerskeho uctu a nastaveni hesla kliknete na odkaz nize. Odkaz je platny jen jednou a po kratkou dobu.</p>
-    <p>
-      <a href="${params.setupLink}"
-         style="display:inline-block;padding:12px 18px;background:#ff8a00;color:#0a0b0f;text-decoration:none;border-radius:6px;font-weight:700">
-        Nastavit heslo a aktivovat ucet
-      </a>
-    </p>
-    <p>Pokud se vam odkaz neotvira, zkopirujte a vlozte tuto adresu do prohlizece:<br/>
-       <em>(odkaz je skryt z bezpecnostnich duvodu — pouzijte tlacitko vyse)</em>
-    </p>
-    <p>Heslo nikdy nesdilime v e-mailu. Odkaz vyse je jednorazovy a bezpecny.</p>
-    <p>S pozdravem,<br/>Tym OneMil</p>
-  `;
+  return renderOneMilEmail({
+    preheader: `Partnerský účet firmy ${companyName} byl schválen.`,
+    eyebrow: "Partnerský účet",
+    title: "Váš účet byl schválen",
+    bodyHtml: `
+      <p style="margin:0 0 16px;">Dobrý den,</p>
+      <p style="margin:0 0 16px;">Firma <strong>${companyName}</strong> byla schválena administrátorem OneMil.</p>
+      <p style="margin:0;">Pro aktivaci partnerského účtu a bezpečné nastavení hesla použijte jednorázový odkaz níže.</p>
+    `,
+    action: {
+      label: "Nastavit heslo a aktivovat účet",
+      url: escapeHtml(params.setupLink),
+    },
+    footerNote: "Heslo nikdy neposíláme e-mailem. Aktivační odkaz je jednorázový a platný pouze po omezenou dobu.",
+  });
 }
 
 // ─── Main handler ─────────────────────────────────────────────────────────────
@@ -108,7 +102,7 @@ serve(async (req: Request) => {
   }
 
   const supabaseUrl = Deno.env.get("SUPABASE_URL") ?? "";
-  const serviceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "";
+  const serviceRoleKey = getSupabaseSecretKey();
 
   const supabaseAdmin = createClient(supabaseUrl, serviceRoleKey, {
     auth: { persistSession: false },

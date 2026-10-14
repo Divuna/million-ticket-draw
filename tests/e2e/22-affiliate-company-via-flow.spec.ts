@@ -127,7 +127,10 @@ test.describe('Affiliate v2 company via flow', () => {
       expect(insertedAffiliate?.ref_code).toBe(refCode);
       affiliate = insertedAffiliate ?? null;
 
-      await page.goto(`/partner/register?via=${encodeURIComponent(affiliate.ref_code)}`);
+      // Enter through the real short link, not the long-form URL directly —
+      // this exercises AffiliateShortLink.tsx's redirect as part of the flow.
+      await page.goto(`/a/${encodeURIComponent(affiliate.ref_code)}`);
+      await expect(page).toHaveURL(new RegExp(`/partner/register\\?via=${affiliate.ref_code}$`), { timeout: 10_000 });
       await page.fill('#companyName', companyName);
       await page.fill('#websiteUrl', `https://codex-aff-company-${unique}.example.com`);
       await page.fill('#ico', String(unique).slice(-8).padStart(8, '1'));
@@ -183,7 +186,7 @@ test.describe('Affiliate v2 company via flow', () => {
       const pendingResponse = await pendingResponsePromise;
       expect(
         pendingResponse.status(),
-        'get-pending-partner-registrations must accept the staging VITE_INTERNAL_FUNCTION_TOKEN',
+        'get-pending-partner-registrations must accept the staging admin JWT',
       ).toBe(200);
 
       const pendingCard = page.getByText(companyName).locator('xpath=ancestor::div[contains(@class,"rounded")][1]');

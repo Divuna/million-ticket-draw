@@ -9,7 +9,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { supabase, withEdgeInternalToken } from "@/integrations/supabase/client";
+import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import {
   Plus,
@@ -73,6 +73,7 @@ interface PendingRegistration {
   contact_phone: string | null;
   ico: string | null;
   dic: string | null;
+  affiliate_via_code?: string | null;
   created_at: string;
 }
 
@@ -99,6 +100,10 @@ interface ShoptetRequest {
   created_at: string;
   partner_name: string | null;
   partner_email: string | null;
+  // 'initial' = first connection, 'url_change' = swapping the export URL of an
+  // already active connection. The two are approved very differently, so the card
+  // has to say which one the admin is looking at.
+  request_kind: string;
 }
 
 const shoptetTriggerLabels: Record<string, string> = {
@@ -204,7 +209,7 @@ const AdminPartners = () => {
       const { data, error } = await supabase
         .from("shoptet_connection_requests")
         .select(
-          "id, partner_id, shop_name, trigger_status, reward_czk, reward_mc, url_received, status, partner_note, submitted_at, created_at, partners(name, contact_email)"
+          "id, partner_id, shop_name, trigger_status, reward_czk, reward_mc, url_received, status, partner_note, submitted_at, created_at, request_kind, partners(name, contact_email)"
         )
         .eq("status", "submitted")
         .order("submitted_at", { ascending: true });
@@ -227,6 +232,7 @@ const AdminPartners = () => {
           created_at: r.created_at as string,
           partner_name: partner?.name ?? null,
           partner_email: partner?.contact_email ?? null,
+          request_kind: (r.request_kind as string | null) ?? "initial",
         };
       });
       setShoptetRequests(mapped);
@@ -254,6 +260,7 @@ const AdminPartners = () => {
 
       toast.success("Napojení e-shopu schváleno");
       await loadShoptetRequests();
+      window.dispatchEvent(new Event("shoptet-requests-changed"));
     } catch (error) {
       console.error("Error approving Shoptet request");
       toast.error("Nepodařilo se schválit napojení");
@@ -293,6 +300,7 @@ const AdminPartners = () => {
       setRejectTarget(null);
       setRejectReason("");
       await loadShoptetRequests();
+      window.dispatchEvent(new Event("shoptet-requests-changed"));
     } catch (error) {
       console.error("Error rejecting Shoptet request");
       toast.error("Nepodařilo se zamítnout napojení");
@@ -492,9 +500,9 @@ const AdminPartners = () => {
       }
 
       const response = await supabase.functions.invoke("approve-partner-registration", {
-        headers: withEdgeInternalToken({
+        headers: {
           Authorization: `Bearer ${sessionData.session.access_token}`,
-        }),
+        },
         body: {
           auth_user_id: registration.id,
           action: action,
@@ -514,6 +522,26 @@ const AdminPartners = () => {
       toast.success(action === "approve" ? "Partner byl schválen" : "Registrace byla zamítnuta");
 
       if (action === "approve") {
+        // Affiliate v2: if this company arrived via a sales_rep ?via= code, attribute
+        // it (first-touch). Fully non-fatal — must never break partner approval.
+        // Mirrors the same follow-up in AdminPartnersPortal.tsx.
+        if (registration.affiliate_via_code) {
+          try {
+            const { data: createdPartner } = await supabase
+              .from("partners")
+              .select("id")
+              .eq("auth_user_id", registration.id)
+              .maybeSingle();
+            if (createdPartner?.id) {
+              await (supabase as any).rpc("record_affiliate_company_ref", {
+                p_via_code: registration.affiliate_via_code,
+                p_partner_id: createdPartner.id,
+              });
+            }
+          } catch (affErr) {
+            console.warn("Affiliate company attribution skipped:", affErr);
+          }
+        }
         fetchPartners();
       }
     } catch (error) {
@@ -541,6 +569,7 @@ const AdminPartners = () => {
 
       if (error) throw error;
       toast.success(newStatus === "approved" ? "Logo bylo schváleno" : "Logo bylo zamítnuto");
+      window.dispatchEvent(new Event("partner-logo-requests-changed"));
     } catch (error) {
       console.error("Error updating logo status:", error);
       setPartners(previousPartners);
@@ -596,9 +625,9 @@ const AdminPartners = () => {
 
     try {
       const res = await supabase.functions.invoke("rotate-partner-api-key", {
-        headers: withEdgeInternalToken({
+        headers: {
           Authorization: `Bearer ${sessionData.session.access_token}`,
-        }),
+        },
         body: {
           partner_id: selectedPartner.id,
         },
@@ -703,6 +732,11 @@ const AdminPartners = () => {
             <TabsTrigger value="pending" className="flex items-center gap-2">
               <UserPlus className="w-4 h-4" />
               Čekající registrace
+              {pendingRegistrations.length > 0 && (
+                <Badge variant="destructive" className="ml-1 px-1.5 py-0 text-[10px]">
+                  {pendingRegistrations.length}
+                </Badge>
+              )}
             </TabsTrigger>
             <TabsTrigger value="shoptet" className="flex items-center gap-2">
               <Rocket className="w-4 h-4" />
@@ -720,6 +754,11 @@ const AdminPartners = () => {
             <TabsTrigger value="logos" className="flex items-center gap-2">
               <Image className="w-4 h-4" />
               Schválení log
+              {pendingLogoPartners.length > 0 && (
+                <Badge variant="destructive" className="ml-1 px-1.5 py-0 text-[10px]">
+                  {pendingLogoPartners.length}
+                </Badge>
+              )}
             </TabsTrigger>
             <TabsTrigger value="api-docs" className="flex items-center gap-2">
               <BookOpen className="w-4 h-4" />
@@ -851,8 +890,27 @@ const AdminPartners = () => {
                 ) : (
                   <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
                     {shoptetRequests.map((req) => (
-                      <Card key={req.id} className="border-border/50">
+                      <Card
+                        key={req.id}
+                        data-testid={`shoptet-request-${req.request_kind}`}
+                        className={
+                          req.request_kind === "url_change"
+                            ? "border-amber-500/40 bg-amber-500/[0.03]"
+                            : "border-border/50"
+                        }
+                      >
                         <CardHeader className="pb-2">
+                          {/* Approving a change swaps a live partner's export URL, so the
+                              kind is called out before anything else on the card. */}
+                          {req.request_kind === "url_change" ? (
+                            <Badge className="w-fit gap-1 bg-amber-500 text-black hover:bg-amber-500 text-[10px]">
+                              <RefreshCw className="w-3 h-3" /> Změna exportního odkazu
+                            </Badge>
+                          ) : (
+                            <Badge variant="outline" className="w-fit gap-1 text-[10px]">
+                              <Rocket className="w-3 h-3" /> První napojení
+                            </Badge>
+                          )}
                           <CardTitle className="text-base">{req.shop_name}</CardTitle>
                           <CardDescription className="text-xs">
                             {req.partner_name || "Neznámý partner"}
@@ -869,22 +927,32 @@ const AdminPartners = () => {
                                   : "—"}
                               </span>
                             </div>
+                            {/* Only shown for a first connection: these values are what
+                                approval would APPLY. A change request carries copies of
+                                the live settings and applies none of them, so printing
+                                them here would suggest a decision the admin is not making. */}
+                            {req.request_kind !== "url_change" && (
+                              <>
+                                <div className="flex justify-between gap-2">
+                                  <span className="text-muted-foreground">Vydat odměnu:</span>
+                                  <span className="text-right text-xs">
+                                    {shoptetTriggerLabels[req.trigger_status] || req.trigger_status}
+                                  </span>
+                                </div>
+                                <div className="flex justify-between gap-2">
+                                  <span className="text-muted-foreground flex items-center gap-1">
+                                    <Coins className="w-3 h-3" /> Konverze:
+                                  </span>
+                                  <span className="font-medium">
+                                    {req.reward_czk} Kč = {req.reward_mc} MC
+                                  </span>
+                                </div>
+                              </>
+                            )}
                             <div className="flex justify-between gap-2">
-                              <span className="text-muted-foreground">Vydat odměnu:</span>
-                              <span className="text-right text-xs">
-                                {shoptetTriggerLabels[req.trigger_status] || req.trigger_status}
+                              <span className="text-muted-foreground">
+                                {req.request_kind === "url_change" ? "Nová export URL:" : "Export URL:"}
                               </span>
-                            </div>
-                            <div className="flex justify-between gap-2">
-                              <span className="text-muted-foreground flex items-center gap-1">
-                                <Coins className="w-3 h-3" /> Konverze:
-                              </span>
-                              <span className="font-medium">
-                                {req.reward_czk} Kč = {req.reward_mc} MC
-                              </span>
-                            </div>
-                            <div className="flex justify-between gap-2">
-                              <span className="text-muted-foreground">Export URL:</span>
                               {req.url_received ? (
                                 <Badge variant="success" className="text-[10px] gap-1">
                                   <CheckCircle className="w-3 h-3" /> Přijata
@@ -894,6 +962,12 @@ const AdminPartners = () => {
                               )}
                             </div>
                           </div>
+                          {req.request_kind === "url_change" && (
+                            <p className="rounded-md border border-amber-500/30 bg-amber-500/5 p-2 text-xs leading-relaxed text-muted-foreground">
+                              Partner je už napojený. Schválení přepne <strong>pouze exportní odkaz</strong> —
+                              ostatní nastavení zůstávají. Zamítnutí ponechá v provozu původní odkaz.
+                            </p>
+                          )}
                           {req.partner_note && (
                             <div className="rounded-md bg-muted/30 border border-border/50 p-2">
                               <p className="text-xs text-muted-foreground whitespace-pre-wrap">

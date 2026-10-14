@@ -1,8 +1,25 @@
 /**
- * Affiliate v2 — registration profile fields (spec 28)
+ * Affiliate v2 — simplified registration + profile fields (spec 28)
  *
- * Verifies that /affiliate/register stores the public/social registration fields
- * and that the approved affiliate can see them in /affiliate/dashboard -> Profil.
+ * /affiliate/register was simplified to: Jméno / název, E-mail, Heslo, Heslo
+ * znovu, Telefon (volitelný), Režim spolupráce (Influencer / Obchodník).
+ * Social/profile fields (web, Instagram, TikTok, YouTube, Facebook, dosah,
+ * kategorie) and the manual ref_code field were removed from registration —
+ * they now belong exclusively to Affiliate dashboard -> Profil
+ * (AffiliateProfileSection, unchanged). register_affiliate_account is still
+ * called with its full current production signature; the profile/ref_code
+ * params are simply passed as null, and the server derives+dedupes the
+ * ref_code from the name automatically (existing RPC behavior, unchanged).
+ *
+ * This spec verifies:
+ *   1. /affiliate/register no longer renders the social/profile inputs or a
+ *      manual ref_code field.
+ *   2. The short registration still creates a pending affiliate_accounts row.
+ *   3. The server auto-generates a non-empty ref_code (no user input needed).
+ *   4. After approval + login, Affiliate dashboard -> Profil lets the
+ *      affiliate fill in web/Instagram/TikTok/YouTube/Facebook/dosah/kategorie.
+ *   5. Saved values survive a full page reload.
+ *
  * STAGING-ONLY. Skips cleanly when required env vars are missing.
  */
 
@@ -19,7 +36,6 @@ const TEST_EMAIL = `affiliate-reg-fields-${unique.toLowerCase()}@onemil.cz`;
 const TEST_PASSWORD = `AffReg${unique}!`;
 const TEST_NAME = `Spec28 Affiliate ${unique}`;
 const TEST_PHONE = '+420 777 222 333';
-const TEST_REF_CODE = `SPEC28${unique}`.slice(0, 12);
 const TEST_WEBSITE = `https://spec28-${unique.toLowerCase()}.onemil.test`;
 const TEST_INSTAGRAM = `https://instagram.com/spec28_${unique.toLowerCase()}`;
 const TEST_TIKTOK = `https://tiktok.com/@spec28_${unique.toLowerCase()}`;
@@ -28,7 +44,7 @@ const TEST_FACEBOOK = `https://facebook.com/spec28.${unique.toLowerCase()}`;
 const TEST_AUDIENCE = '25 000 sledujících / 100 000 měsíční dosah';
 const TEST_CATEGORIES = 'lifestyle, luxury rewards, e-commerce';
 
-test.describe('Affiliate v2 — registration profile fields (spec 28)', () => {
+test.describe('Affiliate v2 — simplified registration + profile fields (spec 28)', () => {
   test.describe.configure({ retries: 0 });
 
   test.skip(
@@ -45,14 +61,13 @@ test.describe('Affiliate v2 — registration profile fields (spec 28)', () => {
       await (admin as any).from('affiliate_accounts').delete().eq('id', affiliateId);
     } else {
       await (admin as any).from('affiliate_accounts').delete().eq('email', TEST_EMAIL);
-      await (admin as any).from('affiliate_accounts').delete().eq('ref_code', TEST_REF_CODE);
     }
     if (authUserId) {
       await admin.auth.admin.deleteUser(authUserId);
     }
   });
 
-  test('registration stores all public profile fields and dashboard profile shows them', async ({ page }) => {
+  test('registration is short, still creates an account, and profile fields move to the dashboard', async ({ page }) => {
     const admin = createClient(SUPABASE_URL, SERVICE_KEY);
 
     await page.goto('/');
@@ -63,31 +78,43 @@ test.describe('Affiliate v2 — registration profile fields (spec 28)', () => {
       );
     });
 
+    // ── 1. /affiliate/register no longer has social/profile fields or a manual ref_code ──
     await page.goto('/affiliate/register');
+
+    await expect(page.getByLabel('Jméno / název *')).toBeVisible({ timeout: 10_000 });
+    await expect(page.getByLabel('E-mail *')).toBeVisible();
+    await expect(page.getByLabel('Heslo *', { exact: true })).toBeVisible();
+    await expect(page.getByLabel('Heslo znovu *', { exact: true })).toBeVisible();
+    await expect(page.getByLabel('Telefon')).toBeVisible();
+    await expect(page.getByText('Influencer — přivádím zákazníky', { exact: true })).toBeVisible();
+    await expect(page.getByText('Obchodník — přivádím firmy / e-shopy', { exact: true })).toBeVisible();
+
+    await expect(page.getByLabel('Hlavní kanál / web / profil')).toHaveCount(0);
+    await expect(page.getByLabel('Instagram')).toHaveCount(0);
+    await expect(page.getByLabel('TikTok')).toHaveCount(0);
+    await expect(page.getByLabel('YouTube')).toHaveCount(0);
+    await expect(page.getByLabel('Facebook')).toHaveCount(0);
+    await expect(page.getByLabel('Velikost publika / dosah')).toHaveCount(0);
+    await expect(page.getByLabel('Kategorie obsahu')).toHaveCount(0);
+    await expect(page.getByLabel(/Doporučovací kód/)).toHaveCount(0);
+    await expect(page.locator('#refCode')).toHaveCount(0);
+
+    // Fill and confirm the short form actually works end-to-end in the UI
+    // (values round-trip through React state) — matches what handleSubmit sends.
     await page.getByLabel('Jméno / název *').fill(TEST_NAME);
     await page.getByLabel('E-mail *').fill(TEST_EMAIL);
     await page.getByLabel('Heslo *', { exact: true }).fill(TEST_PASSWORD);
     await page.getByLabel('Heslo znovu *', { exact: true }).fill(TEST_PASSWORD);
     await page.getByLabel('Telefon').fill(TEST_PHONE);
-    await page.getByLabel('Hlavní kanál / web / profil').fill(TEST_WEBSITE);
-    await page.getByLabel('Instagram').fill(TEST_INSTAGRAM);
-    await page.getByLabel('TikTok').fill(TEST_TIKTOK);
-    await page.getByLabel('YouTube').fill(TEST_YOUTUBE);
-    await page.getByLabel('Facebook').fill(TEST_FACEBOOK);
-    await page.getByLabel('Velikost publika / dosah').fill(TEST_AUDIENCE);
-    await page.getByLabel('Kategorie obsahu').fill(TEST_CATEGORIES);
     await page.getByText('Obchodník — přivádím firmy / e-shopy', { exact: true }).click();
-    await page.getByLabel('Doporučovací kód (návrh)').fill(TEST_REF_CODE);
 
-    await expect(page.getByLabel('Hlavní kanál / web / profil')).toHaveValue(TEST_WEBSITE);
-    await expect(page.getByLabel('Instagram')).toHaveValue(TEST_INSTAGRAM);
-    await expect(page.getByLabel('TikTok')).toHaveValue(TEST_TIKTOK);
-    await expect(page.getByLabel('YouTube')).toHaveValue(TEST_YOUTUBE);
-    await expect(page.getByLabel('Facebook')).toHaveValue(TEST_FACEBOOK);
-    await expect(page.getByLabel('Velikost publika / dosah')).toHaveValue(TEST_AUDIENCE);
-    await expect(page.getByLabel('Kategorie obsahu')).toHaveValue(TEST_CATEGORIES);
+    await expect(page.getByLabel('Jméno / název *')).toHaveValue(TEST_NAME);
+    await expect(page.getByLabel('Telefon')).toHaveValue(TEST_PHONE);
     await expect(page.locator('body')).not.toContainText(TEST_PASSWORD);
 
+    // ── 2 + 3. Short registration creates the account; server auto-generates ref_code ──
+    // Mirrors exactly what the simplified handleSubmit now sends: p_ref_code
+    // and all profile/social params are null.
     const { data: createdUser, error: createUserError } = await admin.auth.admin.createUser({
       email: TEST_EMAIL,
       password: TEST_PASSWORD,
@@ -110,17 +137,20 @@ test.describe('Affiliate v2 — registration profile fields (spec 28)', () => {
       p_email: TEST_EMAIL,
       p_phone: TEST_PHONE,
       p_modes: ['influencer', 'sales_rep'],
-      p_ref_code: TEST_REF_CODE,
-      p_website_url: TEST_WEBSITE,
-      p_instagram_url: TEST_INSTAGRAM,
-      p_tiktok_url: TEST_TIKTOK,
-      p_youtube_url: TEST_YOUTUBE,
-      p_facebook_url: TEST_FACEBOOK,
-      p_audience_size: TEST_AUDIENCE,
-      p_content_categories: TEST_CATEGORIES,
+      p_ref_code: null,
+      p_website_url: null,
+      p_instagram_url: null,
+      p_tiktok_url: null,
+      p_youtube_url: null,
+      p_facebook_url: null,
+      p_audience_size: null,
+      p_content_categories: null,
     });
-    expect(rpcError, 'register_affiliate_account must store all public profile fields').toBeNull();
+    expect(rpcError, 'register_affiliate_account must still succeed with null profile fields').toBeNull();
     expect((rpcData as any)?.status).toBe('registered');
+    const autoRefCode = (rpcData as any)?.ref_code as string | undefined;
+    expect(autoRefCode, 'server must auto-generate a ref_code when none is supplied').toBeTruthy();
+    expect(autoRefCode!.length).toBeGreaterThan(0);
 
     let saved: any = null;
     for (let i = 0; i < 20; i += 1) {
@@ -136,49 +166,51 @@ test.describe('Affiliate v2 — registration profile fields (spec 28)', () => {
       await page.waitForTimeout(500);
     }
 
-    expect(saved, 'affiliate_accounts row must be created by registration').toBeTruthy();
+    expect(saved, 'affiliate_accounts row must be created by the short registration').toBeTruthy();
     affiliateId = saved.id;
     authUserId = saved.auth_user_id;
     expect(saved.name).toBe(TEST_NAME);
     expect(saved.phone).toBe(TEST_PHONE);
-    expect(saved.ref_code).toBe(TEST_REF_CODE);
     expect(saved.modes).toEqual(expect.arrayContaining(['influencer', 'sales_rep']));
-    expect(saved.website_url).toBe(TEST_WEBSITE);
-    expect(saved.instagram_url).toBe(TEST_INSTAGRAM);
-    expect(saved.tiktok_url).toBe(TEST_TIKTOK);
-    expect(saved.youtube_url).toBe(TEST_YOUTUBE);
-    expect(saved.facebook_url).toBe(TEST_FACEBOOK);
-    expect(saved.audience_size).toBe(TEST_AUDIENCE);
-    expect(saved.content_categories).toBe(TEST_CATEGORIES);
+    // Server-generated ref_code — never supplied by the (now removed) manual field.
+    expect(saved.ref_code).toBe(autoRefCode);
+    expect(saved.ref_code).toBeTruthy();
+    // Profile/social fields must be empty right after registration — they are
+    // filled in later, exclusively in Affiliate dashboard -> Profil.
+    expect(saved.website_url).toBeNull();
+    expect(saved.instagram_url).toBeNull();
+    expect(saved.tiktok_url).toBeNull();
+    expect(saved.youtube_url).toBeNull();
+    expect(saved.facebook_url).toBeNull();
+    expect(saved.audience_size).toBeNull();
+    expect(saved.content_categories).toBeNull();
 
     await (admin as any)
       .from('affiliate_accounts')
       .update({ status: 'approved', approved_at: new Date().toISOString() })
       .eq('id', affiliateId);
 
+    // ── 4. After approval + login, fill the profile fields in the dashboard ──
     await loginAffiliateViaUI(page, TEST_EMAIL, TEST_PASSWORD);
     await page.waitForURL(/\/affiliate\/dashboard/, { timeout: 20_000 });
     await page.getByTestId('mode-btn-profile').click();
 
     await expect(page.getByText('Sociální sítě a dosah', { exact: true })).toBeVisible({ timeout: 10_000 });
-    // Social/registration fields are now editable inputs prefilled with registration values
-    await expect(page.getByTestId('affiliate-profile-website')).toHaveValue(TEST_WEBSITE);
-    await expect(page.getByTestId('affiliate-profile-instagram')).toHaveValue(TEST_INSTAGRAM);
-    await expect(page.getByTestId('affiliate-profile-tiktok')).toHaveValue(TEST_TIKTOK);
-    await expect(page.getByTestId('affiliate-profile-youtube')).toHaveValue(TEST_YOUTUBE);
-    await expect(page.getByTestId('affiliate-profile-facebook')).toHaveValue(TEST_FACEBOOK);
-    await expect(page.getByTestId('affiliate-profile-audience')).toHaveValue(TEST_AUDIENCE);
-    await expect(page.getByTestId('affiliate-profile-categories')).toHaveValue(TEST_CATEGORIES);
+    // Freshly registered — profile inputs start empty.
+    await expect(page.getByTestId('affiliate-profile-website')).toHaveValue('');
+    await expect(page.getByTestId('affiliate-profile-instagram')).toHaveValue('');
     await expect(page.getByTestId('affiliate-profile-modes')).toContainText('Influencer');
     await expect(page.getByTestId('affiliate-profile-modes')).toContainText('Obchodník');
-    await expect(page.getByTestId('affiliate-profile-ref-code')).toContainText(TEST_REF_CODE);
+    await expect(page.getByTestId('affiliate-profile-ref-code')).toContainText(autoRefCode!);
     await expect(page.locator('body')).not.toContainText(TEST_PASSWORD);
 
-    // Edit social fields in the dashboard and save via update_affiliate_own_profile
-    const EDIT_INSTAGRAM = `https://instagram.com/spec28edit_${unique.toLowerCase()}`;
-    const EDIT_AUDIENCE = '50 000 sledujících / 200 000 měsíční dosah';
-    await page.getByTestId('affiliate-profile-instagram').fill(EDIT_INSTAGRAM);
-    await page.getByTestId('affiliate-profile-audience').fill(EDIT_AUDIENCE);
+    await page.getByTestId('affiliate-profile-website').fill(TEST_WEBSITE);
+    await page.getByTestId('affiliate-profile-instagram').fill(TEST_INSTAGRAM);
+    await page.getByTestId('affiliate-profile-tiktok').fill(TEST_TIKTOK);
+    await page.getByTestId('affiliate-profile-youtube').fill(TEST_YOUTUBE);
+    await page.getByTestId('affiliate-profile-facebook').fill(TEST_FACEBOOK);
+    await page.getByTestId('affiliate-profile-audience').fill(TEST_AUDIENCE);
+    await page.getByTestId('affiliate-profile-categories').fill(TEST_CATEGORIES);
 
     const saveBtn = page.getByRole('button', { name: 'Uložit změny' }).first();
     await saveBtn.scrollIntoViewIfNeeded();
@@ -186,39 +218,40 @@ test.describe('Affiliate v2 — registration profile fields (spec 28)', () => {
     await expect(page.locator('[data-sonner-toast]').filter({ hasText: 'úspěšně uložen' }).first())
       .toBeVisible({ timeout: 10_000 });
 
-    // DB readback — confirm edited social fields persisted, others untouched
-    let edited: any = null;
+    // DB readback — confirm the dashboard-entered profile fields persisted.
+    let filled: any = null;
     for (let i = 0; i < 20; i += 1) {
       const { data } = await (admin as any)
         .from('affiliate_accounts')
         .select('instagram_url, audience_size, tiktok_url, youtube_url, facebook_url, website_url, content_categories')
         .eq('id', affiliateId)
         .maybeSingle();
-      if (data?.instagram_url === EDIT_INSTAGRAM) {
-        edited = data;
+      if (data?.instagram_url === TEST_INSTAGRAM) {
+        filled = data;
         break;
       }
       await page.waitForTimeout(500);
     }
-    expect(edited, 'edited social fields must persist via update_affiliate_own_profile').toBeTruthy();
-    expect(edited.instagram_url).toBe(EDIT_INSTAGRAM);
-    expect(edited.audience_size).toBe(EDIT_AUDIENCE);
-    // NULL-preserving / unchanged fields stay intact
-    expect(edited.tiktok_url).toBe(TEST_TIKTOK);
-    expect(edited.youtube_url).toBe(TEST_YOUTUBE);
-    expect(edited.facebook_url).toBe(TEST_FACEBOOK);
-    expect(edited.website_url).toBe(TEST_WEBSITE);
-    expect(edited.content_categories).toBe(TEST_CATEGORIES);
+    expect(filled, 'profile fields filled in the dashboard must persist via update_affiliate_own_profile').toBeTruthy();
+    expect(filled.website_url).toBe(TEST_WEBSITE);
+    expect(filled.instagram_url).toBe(TEST_INSTAGRAM);
+    expect(filled.tiktok_url).toBe(TEST_TIKTOK);
+    expect(filled.youtube_url).toBe(TEST_YOUTUBE);
+    expect(filled.facebook_url).toBe(TEST_FACEBOOK);
+    expect(filled.audience_size).toBe(TEST_AUDIENCE);
+    expect(filled.content_categories).toBe(TEST_CATEGORIES);
 
-    // After a full page reload the Profil inputs must show the saved DB values
-    // (locks the form re-sync from freshly fetched data — not stale state).
+    // ── 5. Saved values survive a full page reload ──
     await page.reload();
     await page.waitForURL(/\/affiliate\/dashboard/, { timeout: 20_000 });
     await page.getByTestId('mode-btn-profile').click();
     await expect(page.getByText('Sociální sítě a dosah', { exact: true })).toBeVisible({ timeout: 10_000 });
-    await expect(page.getByTestId('affiliate-profile-instagram')).toHaveValue(EDIT_INSTAGRAM);
-    await expect(page.getByTestId('affiliate-profile-audience')).toHaveValue(EDIT_AUDIENCE);
-    await expect(page.getByTestId('affiliate-profile-youtube')).toHaveValue(TEST_YOUTUBE);
     await expect(page.getByTestId('affiliate-profile-website')).toHaveValue(TEST_WEBSITE);
+    await expect(page.getByTestId('affiliate-profile-instagram')).toHaveValue(TEST_INSTAGRAM);
+    await expect(page.getByTestId('affiliate-profile-tiktok')).toHaveValue(TEST_TIKTOK);
+    await expect(page.getByTestId('affiliate-profile-youtube')).toHaveValue(TEST_YOUTUBE);
+    await expect(page.getByTestId('affiliate-profile-facebook')).toHaveValue(TEST_FACEBOOK);
+    await expect(page.getByTestId('affiliate-profile-audience')).toHaveValue(TEST_AUDIENCE);
+    await expect(page.getByTestId('affiliate-profile-categories')).toHaveValue(TEST_CATEGORIES);
   });
 });

@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useRef } from 'react';
+import React, { useEffect, useState, useRef, useCallback } from 'react';
 import { useAuth } from '@/hooks/useAuth';
 import { useUserRole } from '@/hooks/useUserRole';
 import { supabase } from '@/integrations/supabase/client';
@@ -45,6 +45,10 @@ interface WinnerData {
   contest_title: string;
   prize_description: string;
   prize_image: string | null;
+  // bonus_prizes.amount for type='bonus' (null for 'main', and null when the
+  // underlying bonus_prizes row no longer exists). This is the sole,
+  // structured signal for "is this a MioCoin bonus" — see isAutoCreditBonus.
+  prize_amount: number | null;
   user_address: UserAddress;
   ticket_number: number | null;
 }
@@ -76,7 +80,7 @@ const AdminWinners: React.FC = () => {
   const [winners, setWinners] = useState<WinnerData[]>([]);
   const [filteredWinners, setFilteredWinners] = useState<WinnerData[]>([]);
   const [loading, setLoading] = useState(true);
-  const [statusFilter, setStatusFilter] = useState<string>('all');
+  const [statusFilter, setStatusFilter] = useState<string>('open_physical');
   const [previewImage, setPreviewImage] = useState<string | null>(null);
   const [historyData, setHistoryData] = useState<Record<string, StatusHistoryEntry[]>>({});
   const [expandedHistory, setExpandedHistory] = useState<string | null>(null);
@@ -107,8 +111,9 @@ const AdminWinners: React.FC = () => {
   }, [expandedHistory]);
 
   const statusOptions = [
-    { value: 'all', label: 'Všechny stavy' },
-    { value: 'auto_credited', label: 'Automaticky připsáno' },
+    { value: 'open_physical', label: 'Nedokončené fyzické výhry (výchozí)' },
+    { value: 'all', label: 'Všechny výhry' },
+    { value: 'auto_credited', label: 'Automaticky připsáno (MioCoin)' },
     { value: 'pending', label: 'Čeká' },
     { value: 'připraveno k odeslání', label: 'Připraveno k odeslání' },
     { value: 'shipped', label: 'Odesláno' },
@@ -143,17 +148,27 @@ const AdminWinners: React.FC = () => {
     }
   };
 
-  // Helper to determine if a winner is an auto-credited MioCoin bonus (no admin actions needed)
+  // Helper to determine if a winner is an auto-credited MioCoin bonus (no
+  // admin actions needed). Uses the structured bonus_prizes.amount field
+  // (amount > 0 = MioCoin, credited automatically by trg_bonus_to_wallet at
+  // the moment of winning) — NOT a text guess on the prize description,
+  // which could misclassify a physical prize whose description happens to
+  // mention "kredit"/"credit". A missing bonus_prizes row (prize_amount
+  // null) is treated as NOT auto-credited, so it stays visible for review
+  // rather than silently disappearing.
   const isAutoCreditBonus = (winner: WinnerData): boolean => {
     if (winner.type !== 'bonus') return false;
-    const desc = (winner.prize_description || '').toLowerCase();
-    // Check for MioCoin/credit indicators in prize description
-    return desc.includes('miocoin') || 
-           desc.includes('mio coin') || 
-           desc.includes('kredit') ||
-           desc.includes('credit') ||
-           /^\d+\s*(mio|mc|coin)/i.test(desc);
+    return (winner.prize_amount ?? 0) > 0;
   };
+
+  // "Pracovní seznam": physical prizes (main always; bonus when not
+  // auto-credited) that are not yet delivered. This is the default view for
+  // Sprava vyher — once admin sets a physical prize to "delivered" it stops
+  // matching this filter and disappears from the work queue automatically.
+  const isOpenPhysicalWinner = useCallback((winner: WinnerData): boolean => {
+    if (isAutoCreditBonus(winner)) return false;
+    return winner.status !== 'delivered';
+  }, []);
 
   // Admin access is checked via useUserRole hook
 
@@ -221,10 +236,17 @@ const AdminWinners: React.FC = () => {
   }, [winners]);
 
   useEffect(() => {
-    if (statusFilter === 'all') {
+    if (statusFilter === 'open_physical') {
+      // Default work queue: physical prizes (main + bonus, MioCoin
+      // excluded) that are not yet delivered. Marking one "delivered" makes
+      // it stop matching this filter, so it disappears automatically —
+      // no manual move/copy involved.
+      setFilteredWinners(winners.filter(winner => isOpenPhysicalWinner(winner)));
+    } else if (statusFilter === 'all') {
       setFilteredWinners(winners);
     } else if (statusFilter === 'auto_credited') {
-      // Show only MioCoin auto-credited rewards
+      // Show only MioCoin auto-credited rewards — kept reachable here so
+      // they remain traceable without cluttering the default work queue.
       const filtered = winners.filter(winner => isAutoCreditBonus(winner));
       setFilteredWinners(filtered);
     } else {
@@ -236,7 +258,7 @@ const AdminWinners: React.FC = () => {
       });
       setFilteredWinners(filtered);
     }
-  }, [winners, statusFilter]);
+  }, [winners, statusFilter, isOpenPhysicalWinner]);
 
   // Fetch export preview count when date filters change
   useEffect(() => {
@@ -439,7 +461,11 @@ const AdminWinners: React.FC = () => {
         let prizeDescription = '';
         let prizeImage: string | null = null;
         let ticketNumber: number | null = null;
-        
+        // null for 'main' (always physical) and for a bonus whose
+        // bonus_prizes row no longer exists (treated as not auto-credited —
+        // see isAutoCreditBonus).
+        let prizeAmount: number | null = null;
+
         if (winner.type === 'main') {
           prizeDescription = (winner.contests as any)?.main_prize || 'Hlavní cena';
           prizeImage = (winner.contests as any)?.main_prize_secondary_image || (winner.contests as any)?.main_image || null;
@@ -447,13 +473,14 @@ const AdminWinners: React.FC = () => {
         } else if (winner.type === 'bonus' && winner.prize_id) {
           const { data: bonusData } = await supabase
             .from('bonus_prizes')
-            .select('description, image_url, ticket_position')
+            .select('description, image_url, ticket_position, amount')
             .eq('id', winner.prize_id)
             .single();
-          
+
           prizeDescription = bonusData?.description || 'Bonusová cena';
           prizeImage = getStorageUrl(bonusData?.image_url);
           ticketNumber = bonusData?.ticket_position || null;
+          prizeAmount = bonusData?.amount != null ? Number(bonusData.amount) : null;
         }
 
         const userData = winner.users as any;
@@ -473,6 +500,7 @@ const AdminWinners: React.FC = () => {
           contest_title: (winner.contests as any)?.title || 'Neznámá soutěž',
           prize_description: prizeDescription,
           prize_image: prizeImage,
+          prize_amount: prizeAmount,
           user_address: {
             first_name: userData?.first_name || null,
             last_name: userData?.last_name || null,
@@ -688,64 +716,25 @@ const AdminWinners: React.FC = () => {
         throw new Error('Winner not found');
       }
 
-      const oldStatus = winner.status || 'pending';
+      // Single atomic RPC: status + history + user message + admin audit +
+      // bonus_prizes sync all commit together, or nothing does. The UI can
+      // therefore trust the result instead of reporting a partial write as success.
+      const { error: rpcError } = await supabase.rpc('admin_update_winner_status', {
+        p_winner_id: winnerId,
+        p_new_status: newStatus,
+        p_message: getStatusMessage(newStatus, winner.prize_description)
+      });
 
-      // First, update the status in the database
-      const { error: updateError } = await supabase
-        .from('winners')
-        .update({ status: newStatus })
-        .eq('id', winnerId);
-
-      if (updateError) {
-        console.error('Error updating winner status in database:', updateError);
+      if (rpcError) {
+        console.error('Error updating winner status:', rpcError);
         toast({
           title: "Chyba",
-          description: "Nepodařilo se aktualizovat stav výhry v databázi.",
+          description: rpcError.message || "Nepodařilo se aktualizovat stav výhry.",
           variant: "destructive"
         });
         return;
       }
 
-      // Log status change to history table
-      const { error: historyError } = await supabase
-        .from('winner_status_history')
-        .insert({
-          winner_id: winnerId,
-          old_status: oldStatus,
-          new_status: newStatus,
-          changed_by: user?.id || null
-        });
-
-      if (historyError) {
-        console.error('Error logging status history:', historyError);
-        // Continue anyway - main update succeeded
-      }
-
-      // Only after successful DB update, send message to user
-      const messageContent = getStatusMessage(newStatus, winner.prize_description);
-      
-      const { error: messageError } = await supabase
-        .from('messages')
-        .insert({
-          user_id: winner.user_id,
-          sender: 'admin',
-          content: messageContent,
-          read: false,
-          topic: 'prize_status',
-          event: 'prize_status_change',
-          payload: {
-            winner_id: winnerId,
-            prize_description: winner.prize_description,
-            new_status: newStatus,
-            contest_title: winner.contest_title
-          }
-        });
-
-      if (messageError) {
-        console.error('Error sending message:', messageError);
-        // Message failed but DB update succeeded - still update UI
-      }
-      
       // Update local state
       setWinners(prev => prev.map(w => 
         w.id === winnerId 
@@ -795,56 +784,30 @@ const AdminWinners: React.FC = () => {
       let successCount = 0;
       let errorCount = 0;
 
+      const succeededIds = new Set<string>();
+
       for (const winner of selectedPhysicalWinners) {
-        const oldStatus = winner.status || 'pending';
+        // Same atomic RPC as the single-row path — a failed history or message
+        // write now rolls the whole row back and is counted as a real failure.
+        const { error: rpcError } = await supabase.rpc('admin_update_winner_status', {
+          p_winner_id: winner.id,
+          p_new_status: newStatus,
+          p_message: getStatusMessage(newStatus, winner.prize_description)
+        });
 
-        // Update status in database
-        const { error: updateError } = await supabase
-          .from('winners')
-          .update({ status: newStatus })
-          .eq('id', winner.id);
-
-        if (updateError) {
-          console.error('Error updating winner:', winner.id, updateError);
+        if (rpcError) {
+          console.error('Error updating winner:', winner.id, rpcError);
           errorCount++;
           continue;
         }
 
-        // Log status change to history
-        await supabase
-          .from('winner_status_history')
-          .insert({
-            winner_id: winner.id,
-            old_status: oldStatus,
-            new_status: newStatus,
-            changed_by: user?.id || null
-          });
-
-        // Send message to user
-        const messageContent = getStatusMessage(newStatus, winner.prize_description);
-        await supabase
-          .from('messages')
-          .insert({
-            user_id: winner.user_id,
-            sender: 'admin',
-            content: messageContent,
-            read: false,
-            topic: 'prize_status',
-            event: 'prize_status_change',
-            payload: {
-              winner_id: winner.id,
-              prize_description: winner.prize_description,
-              new_status: newStatus,
-              contest_title: winner.contest_title
-            }
-          });
-
+        succeededIds.add(winner.id);
         successCount++;
       }
 
-      // Update local state for all successful updates
-      setWinners(prev => prev.map(w => 
-        selectedWinners.has(w.id) && !isAutoCreditBonus(w)
+      // Update local state only for rows that actually committed
+      setWinners(prev => prev.map(w =>
+        succeededIds.has(w.id)
           ? { ...w, status: newStatus, updated_at: new Date().toISOString() }
           : w
       ));

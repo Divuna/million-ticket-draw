@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
-import { Card, CardContent } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
@@ -38,6 +38,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { toast } from "@/hooks/use-toast";
 import { useUserRole } from "@/hooks/useUserRole";
+import { useAdminPermissions } from "@/hooks/useAdminPermissions";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { useNavigate } from "react-router-dom";
@@ -67,6 +68,13 @@ interface ContestViewStats {
   estimated_revenue: number;
   tickets_last_24h: number;
   users_last_24h: number;
+}
+
+interface ContestProgressAdminRow {
+  contest_id: string;
+  tickets_sold: number | null;
+  tickets_remaining: number | null;
+  sold_percent: number | null;
 }
 
 interface ContestFormData {
@@ -126,14 +134,22 @@ interface ContestModalProps {
 }
 
 const STATUS_OPTIONS = [
-  { value: "draft", label: "Archiv test", color: "bg-gray-500/20 text-gray-300 border-gray-500/30" },
-  { value: "pending", label: "Čeká na start", color: "bg-yellow-500/20 text-yellow-300 border-yellow-500/30" },
-  { value: "active", label: "Aktivní", color: "bg-green-500/20 text-green-300 border-green-500/30" },
-  { value: "paused", label: "Pozastaveno", color: "bg-orange-500/20 text-orange-300 border-orange-500/30" },
-  { value: "closed", label: "Ukončeno", color: "bg-red-500/20 text-red-300 border-red-500/30", disabled: true },
+  { value: "draft", label: "Archiv test", color: "bg-gray-100 text-gray-700 border-gray-300" },
+  { value: "pending", label: "Čeká na start", color: "bg-amber-50 text-amber-800 border-amber-300" },
+  { value: "active", label: "Aktivní", color: "bg-emerald-50 text-emerald-800 border-emerald-300" },
+  { value: "paused", label: "Pozastaveno", color: "bg-orange-50 text-orange-800 border-orange-300" },
+  { value: "closed", label: "Ukončeno", color: "bg-red-50 text-red-800 border-red-300", disabled: true },
 ];
 
 const SELECTABLE_STATUS_OPTIONS = STATUS_OPTIONS.filter((opt) => opt.value !== "closed");
+
+// Non-superadmin holders of the `contests.create` permission may only create
+// and prepare a contest before launch — never publish it. DB-layer enforcement
+// lives in admin_manage_contest (guard) and the contests RLS policies; this is
+// UX-only so the dropdown never even offers a status the server would reject.
+const PREPARE_ONLY_STATUS_OPTIONS = SELECTABLE_STATUS_OPTIONS.filter(
+  (opt) => opt.value === "draft" || opt.value === "pending"
+);
 
 const DEFAULT_ECONOMY_ASSUMPTIONS: EconomyAssumptions = {
   mainPrizeRealCost: 0,
@@ -147,7 +163,7 @@ const DEFAULT_ECONOMY_ASSUMPTIONS: EconomyAssumptions = {
 
 const getStatusBadgeClass = (status: string) => {
   const option = STATUS_OPTIONS.find((opt) => opt.value === status);
-  return option?.color || "bg-gray-500/20 text-gray-300 border-gray-500/30";
+  return option?.color || "bg-gray-100 text-gray-700 border-gray-300";
 };
 
 /**
@@ -183,6 +199,11 @@ const ContestModal: React.FC<ContestModalProps> = ({ open, onClose, onSaved, edi
   // Sensitive contest internals (MioCoin/physical bonus positions, economy/profit/margin)
   // are superadmin-only. Scoped subadmins must not see these tabs.
   const { isSuperAdmin } = useUserRole();
+  // Non-superadmin admin holding `contests.create` may create/prepare a
+  // contest (draft/pending) but never publish it or touch bonus prizes.
+  // (Route/permission gate already ensures only superadmin or a `contests.create`
+  // holder can reach this modal at all — here we only need to know which one.)
+  const statusOptionsForRole = isSuperAdmin ? SELECTABLE_STATUS_OPTIONS : PREPARE_ONLY_STATUS_OPTIONS;
   const [form, setForm] = useState<ContestFormData>({
     title: "",
     description: "",
@@ -319,6 +340,44 @@ const ContestModal: React.FC<ContestModalProps> = ({ open, onClose, onSaved, edi
       setAiGeneratedImages({});
     }
     setActiveTab("basic");
+  }, [editingContest, open]);
+
+  // Velikost soutěže určuje pozici hlavní výhry (buy_ticket_atomic uděluje
+  // hlavní výhru na tiketu číslo ticket_count). Jakmile je vydaný první tiket,
+  // nesmí se měnit. Toto je pouze UX zámek — závazné je pravidlo v databázi
+  // (RPC guard + trigger trg_contests_guard_ticket_count), protože
+  // `tickets_sold` se subadminovi nenačítá a přímý UPDATE jde i mimo UI.
+  const [ticketCountLocked, setTicketCountLocked] = useState(false);
+
+  useEffect(() => {
+    if (!open || !editingContest) {
+      setTicketCountLocked(false);
+      return;
+    }
+
+    let cancelled = false;
+
+    (async () => {
+      // Optimistický základ z už načtených statistik (dostupné superadminovi).
+      let locked = (editingContest.tickets_sold ?? 0) > 0;
+
+      const { count, error } = await supabase
+        .from("tickets")
+        .select("id", { count: "exact", head: true })
+        .eq("contest_id", editingContest.contest_id);
+
+      if (!error && typeof count === "number") {
+        locked = locked || count > 0;
+      }
+
+      if (!cancelled) {
+        setTicketCountLocked(locked);
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+    };
   }, [editingContest, open]);
 
   useEffect(() => {
@@ -1549,13 +1608,23 @@ const ContestModal: React.FC<ContestModalProps> = ({ open, onClose, onSaved, edi
         imagePath = await handleImageUpload(form.main_image_file);
       }
 
+      // Soutěž se NIKDY nezakládá rovnou jako `active`, i když to admin zvolil.
+      // PDF s pravidly se nahrává až po vytvoření řádku (cesta v úložišti
+      // potřebuje contest id), takže by mezi vytvořením a nahráním existovalo
+      // okno, ve kterém je soutěž veřejně aktivní bez závazných pravidel.
+      // Vzniká proto jako `pending` a na `active` se přepne teprve po úspěšném
+      // uložení `rules_pdf_url`. Trigger `trg_contest_active_requires_rules_pdf`
+      // vynucuje totéž i pro cesty mimo tohle UI.
+      const wantsActivationAfterRules = !isEditingContest && form.status === "active";
+      const initialStatus = wantsActivationAfterRules ? "pending" : form.status;
+
       const { data: contestResult, error } = await supabase.rpc("admin_manage_contest", {
         p_contest_id: isEditingContest ? editingContest.contest_id : null,
         p_title: form.title,
         p_description: form.description || null,
         p_main_prize: form.main_prize,
         p_main_image: imagePath,
-        p_status: form.status,
+        p_status: initialStatus,
         p_ticket_count: normalizedTicketCount,
         p_ticket_price: form.ticket_price,
         p_operation: isEditingContest ? "update" : "create",
@@ -1694,7 +1763,39 @@ const ContestModal: React.FC<ContestModalProps> = ({ open, onClose, onSaved, edi
             // client UPDATE may be blocked by RLS on the freshly-created row.
             // Fall through to onSaved()/onClose() so the modal closes and the contest
             // appears in the list. Admin can reopen and fix extras.
+          } else if (wantsActivationAfterRules && additionalUpdates.rules_pdf_url) {
+            // Pravidla jsou uložená — teprve teď smí soutěž zveřejnit. Do téhle
+            // chvíle byla `pending`, takže nikdy neexistovala aktivní bez pravidel.
+            const { error: activateError } = await supabase.rpc("admin_manage_contest", {
+              p_contest_id: contestId,
+              p_status: "active",
+              // Explicitní NULL = „neměnit“ (nespoléhat na DEFAULT funkce).
+              p_ticket_count: null,
+              p_ticket_price: null,
+              p_operation: "update",
+            } as any);
+
+            if (activateError) {
+              console.error("Error activating contest after rules upload:", activateError);
+              toast({
+                title: "Soutěž zůstala neaktivní",
+                description:
+                  "Pravidla se uložila, ale aktivace se nezdařila. Soutěž je připravená jako čekající — aktivujte ji prosím ručně.",
+                variant: "destructive",
+              });
+            }
           }
+        }
+
+        // Admin chtěl aktivní soutěž, ale pravidla se neuložila → zůstává `pending`.
+        // Bez tohohle upozornění by si myslel, že soutěž běží.
+        if (wantsActivationAfterRules && !additionalUpdates.rules_pdf_url) {
+          toast({
+            title: "Soutěž zůstala neaktivní",
+            description:
+              "Bez uložených pravidel (PDF) nelze soutěž aktivovat. Doplňte pravidla v editaci a pak ji aktivujte.",
+            variant: "destructive",
+          });
         }
 
         // AUTO-FLUSH: pokud admin vybral soubor nebo URL v "Přidat nové médium" a neklikl
@@ -1849,14 +1950,66 @@ const ContestModal: React.FC<ContestModalProps> = ({ open, onClose, onSaved, edi
       if (contestId) {
         // Delete existing bonuses for this contest.
         // Edit mode keeps already-materialized MioCoin rows immutable.
+        //
+        // False-success fix: PostgREST/RLS report `error: null` on a DELETE
+        // that a policy silently filters down to 0 affected rows — there is
+        // no exception to catch. A missing/mismatched grant (e.g. a
+        // canonical superadmin whose session the RLS check rejects for any
+        // reason) would therefore look identical to "there was nothing to
+        // delete" if we only checked `error`. Zero affected rows is a
+        // legitimate, expected state here (a brand-new contest or a contest
+        // with no bonus_prizes yet), so we can't use "0 rows" as the failure
+        // signal either. Instead: after the DELETE, re-SELECT the exact same
+        // target set. A real success means that set is now empty regardless
+        // of how many rows the DELETE itself reported; anything still
+        // present means the delete didn't actually happen and the save must
+        // stop before any new bonus rows are inserted on top of stale ones.
         if (hasImmutablePersistedMioCoinBonuses) {
-          await supabase
+          const { error: deletePhysicalError } = await supabase
             .from("bonus_prizes")
             .delete()
             .eq("contest_id", contestId)
             .or("amount.is.null,amount.eq.0");
+          if (deletePhysicalError) {
+            throw new Error(`Chyba při mazání starých fyzických bonusových výher: ${deletePhysicalError.message}`);
+          }
+
+          const { count: remainingPhysicalCount, error: verifyPhysicalError } = await supabase
+            .from("bonus_prizes")
+            .select("id", { count: "exact", head: true })
+            .eq("contest_id", contestId)
+            .or("amount.is.null,amount.eq.0");
+          if (verifyPhysicalError) {
+            throw new Error(
+              `Nepodařilo se ověřit smazání starých fyzických bonusových výher: ${verifyPhysicalError.message}`
+            );
+          }
+          if ((remainingPhysicalCount ?? 0) > 0) {
+            throw new Error(
+              "Smazání starých fyzických bonusových výher se nepodařilo dokončit (řádky zůstaly v databázi). Uložení bylo zastaveno."
+            );
+          }
         } else {
-          await supabase.from("bonus_prizes").delete().eq("contest_id", contestId);
+          const { error: deleteAllError } = await supabase
+            .from("bonus_prizes")
+            .delete()
+            .eq("contest_id", contestId);
+          if (deleteAllError) {
+            throw new Error(`Chyba při mazání starých bonusových výher: ${deleteAllError.message}`);
+          }
+
+          const { count: remainingAllCount, error: verifyAllError } = await supabase
+            .from("bonus_prizes")
+            .select("id", { count: "exact", head: true })
+            .eq("contest_id", contestId);
+          if (verifyAllError) {
+            throw new Error(`Nepodařilo se ověřit smazání starých bonusových výher: ${verifyAllError.message}`);
+          }
+          if ((remainingAllCount ?? 0) > 0) {
+            throw new Error(
+              "Smazání starých bonusových výher se nepodařilo dokončit (řádky zůstaly v databázi). Uložení bylo zastaveno."
+            );
+          }
         }
 
         // Insert physical prizes FIRST so MioCoin generation excludes their positions
@@ -1898,9 +2051,14 @@ const ContestModal: React.FC<ContestModalProps> = ({ open, onClose, onSaved, edi
 
           // Persist economy metadata for this physical prize (Phase 4).
           // Non-blocking: a failure is logged but does not abort the save.
+          //
+          // False-success fix: `.select("id")` makes the response report which
+          // row (if any) was actually updated. A silent RLS-filtered UPDATE
+          // returns `error: null` with an empty array, indistinguishable from
+          // success unless we check the returned rows too.
           const savedPrizeId = (insertData as any)?.prize_id as string | undefined;
           if (savedPrizeId) {
-            const { error: econPrizeError } = await supabase
+            const { data: econPrizeData, error: econPrizeError } = await supabase
               .from("bonus_prizes")
               .update({
                 supplier_name: prize.supplier_name ?? null,
@@ -1908,9 +2066,14 @@ const ContestModal: React.FC<ContestModalProps> = ({ open, onClose, onSaved, edi
                 vat_rate_percent: prize.vat_rate ?? null,
                 handling_override_czk: prize.handling_override_czk ?? null,
               })
-              .eq("id", savedPrizeId);
-            if (econPrizeError) {
-              console.error("Error saving physical prize economy data:", econPrizeError);
+              .eq("id", savedPrizeId)
+              .select("id");
+            const econPrizeRowUpdated = (econPrizeData?.length ?? 0) === 1;
+            if (econPrizeError || !econPrizeRowUpdated) {
+              console.error(
+                "Error saving physical prize economy data:",
+                econPrizeError ?? `expected 1 updated row, got ${econPrizeData?.length ?? 0}`
+              );
               toast({
                 title: "Soutěž uložena",
                 description: "Ekonomická data fyzické výhry se nepodařilo uložit. Zkontrolujte konzoli a zkuste znovu.",
@@ -2165,9 +2328,11 @@ const ContestModal: React.FC<ContestModalProps> = ({ open, onClose, onSaved, edi
       "Bod zvratu je vyšší než počet dostupných ticketů.",
   ].filter(Boolean) as string[];
   const hasEconomyWarning = estimatedProfit < 0 || marginPercent < economyAssumptions.targetMarginPercent;
+  // KPI card accent — same hasEconomyWarning flag as before, just a light-card
+  // palette (amber = warning, emerald = healthy) instead of the old dark-tuned wash.
   const economySummaryClass = hasEconomyWarning
-    ? "border-yellow-500/30 bg-yellow-500/10 text-yellow-100"
-    : "border-emerald-500/20 bg-emerald-500/10 text-emerald-50";
+    ? "border-amber-200 bg-amber-50 text-amber-900"
+    : "border-emerald-200 bg-emerald-50 text-emerald-900";
 
   // Validation logic for each tab
   const hasMainImage = !!(form.main_image_file || form.main_image_url || (isEditing && editingContest?.main_image));
@@ -2206,13 +2371,16 @@ const ContestModal: React.FC<ContestModalProps> = ({ open, onClose, onSaved, edi
         onInteractOutside={(e) => e.preventDefault()}
         onEscapeKeyDown={(e) => e.preventDefault()}
       >
-        <DialogHeader className="px-6 pt-6 pb-4 border-b border-white/10 shrink-0">
+        <DialogHeader className="px-6 pt-6 pb-4 border-b border-border shrink-0">
           <DialogTitle>{isEditing ? "Upravit soutěž" : "Vytvořit novou soutěž"}</DialogTitle>
         </DialogHeader>
 
         <Tabs value={activeTab} onValueChange={setActiveTab} className="flex-1 flex flex-col min-h-0 px-6">
-          <div className="shrink-0 py-4 space-y-3">
-            <div className={`grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-2 rounded-lg border p-3 ${economySummaryClass}`}>
+          <div className="shrink-0 py-4 space-y-4">
+            {/* Horní souhrn — 5 samostatných KPI karet. Stejné hodnoty jako dřív
+                (form.ticket_count / totalEstimatedCost / recommendedTicketPrice /
+                estimatedProfit / marginPercent), žádný nový výpočet — jen jiné rozložení. */}
+            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3">
               {[
                 ["Počet ticketů", `${Math.max(0, form.ticket_count || 0).toLocaleString("cs-CZ")}`],
                 ["Celkové odhadované náklady", formatCzk(totalEstimatedCost)],
@@ -2223,25 +2391,28 @@ const ContestModal: React.FC<ContestModalProps> = ({ open, onClose, onSaved, edi
                 ["Odhadovaný čistý zisk", formatCzk(estimatedProfit)],
                 ["Marže", formatPercent(marginPercent)],
               ].map(([label, value]) => (
-                <div key={label}>
-                  <div className="text-[11px] uppercase tracking-wide opacity-70">{label}</div>
-                  <div className="mt-1 text-sm font-semibold text-foreground">{value}</div>
+                <div
+                  key={label}
+                  className={`rounded-xl border p-3.5 shadow-sm ${economySummaryClass}`}
+                >
+                  <div className="text-[10px] font-semibold uppercase tracking-wide opacity-70">{label}</div>
+                  <div className="mt-1.5 text-base font-bold leading-tight">{value}</div>
                 </div>
               ))}
             </div>
-            <TabsList className="flex flex-wrap h-auto w-full gap-1">
-              <TabsTrigger value="basic" className="flex items-center">
+            <TabsList className="flex flex-wrap h-auto w-full gap-1.5 bg-muted/60 p-1.5 rounded-xl">
+              <TabsTrigger value="basic" className="flex items-center rounded-lg">
                 Základní údaje
                 <TabIndicator isValid={validation.basic.isValid} />
               </TabsTrigger>
               {isSuperAdmin && (
                 <>
-                  <TabsTrigger value="bonus-coins">Bonusy – MioCoins</TabsTrigger>
-                  <TabsTrigger value="bonus-physical">Bonusy – věcné</TabsTrigger>
-                  <TabsTrigger value="economy">Ekonomika</TabsTrigger>
+                  <TabsTrigger value="bonus-coins" className="rounded-lg">Bonusy – MioCoins</TabsTrigger>
+                  <TabsTrigger value="bonus-physical" className="rounded-lg">Bonusy – věcné</TabsTrigger>
+                  <TabsTrigger value="economy" className="rounded-lg">Ekonomika</TabsTrigger>
                 </>
               )}
-              <TabsTrigger value="graphics" className="flex items-center">
+              <TabsTrigger value="graphics" className="flex items-center rounded-lg">
                 Grafika
                 <TabIndicator isValid={validation.graphics.isValid} />
               </TabsTrigger>
@@ -2250,130 +2421,166 @@ const ContestModal: React.FC<ContestModalProps> = ({ open, onClose, onSaved, edi
           </div>
 
           <div className="flex-1 overflow-y-auto pr-2 pb-4 min-h-0">
-            {/* Tab 1: Základní údaje */}
+            {/* Tab 1: Základní údaje — stejná pole/hodnoty/handlery jako dřív,
+                jen vizuálně rozdělené do karet podle významu údajů. */}
             <TabsContent value="basic" className="space-y-4 mt-0">
-              <div>
-                <Label>Název soutěže</Label>
-                <Input value={form.title} onChange={handleTitleChange} placeholder="Např. Corvette C8" />
-              </div>
+              <Card>
+                <CardHeader className="pb-3">
+                  <CardTitle className="text-base">Základní informace</CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <div>
+                    <Label>Název soutěže</Label>
+                    <Input value={form.title} onChange={handleTitleChange} placeholder="Např. Corvette C8" />
+                  </div>
 
-              <div>
-                <Label>Hlavní výhra</Label>
-                <Input value={form.main_prize} onChange={handleChange("main_prize")} placeholder="Např. Corvette C8" />
-                <p className="text-xs text-muted-foreground mt-1">Automaticky předvyplněno z názvu soutěže</p>
-              </div>
+                  <div>
+                    <Label>Hlavní výhra</Label>
+                    <Input value={form.main_prize} onChange={handleChange("main_prize")} placeholder="Např. Corvette C8" />
+                    <p className="text-xs text-muted-foreground mt-1">Automaticky předvyplněno z názvu soutěže</p>
+                  </div>
 
-              <div>
-                <Label>Náklad na hlavní výhru v Kč</Label>
-                <Input
-                  type="number"
-                  min={0}
-                  value={economyAssumptions.mainPrizeRealCost}
-                  onChange={updateEconomyAssumption("mainPrizeRealCost")}
-                  onFocus={handleNumericFocus}
-                  placeholder="0"
-                />
-                <p className="text-xs text-muted-foreground mt-1">Pořizovací náklad hlavní výhry — použije se v ekonomické kalkulaci.</p>
-              </div>
-
-              {/* Popis soutěže */}
-              <div className="space-y-3">
-                <div className="flex items-center justify-between">
-                  <Label>Popis soutěže</Label>
-                  <Button
-                    type="button"
-                    variant="outline"
-                    size="sm"
-                    onClick={handleGenerateDescription}
-                    disabled={generatingDescription || (!form.title && !form.main_prize)}
-                    className="text-xs"
-                  >
-                    {generatingDescription ? (
-                      <>
-                        <Loader2 className="mr-1.5 h-3 w-3 animate-spin" />
-                        Generuji…
-                      </>
-                    ) : (
-                      <>
-                        <Sparkles className="mr-1.5 h-3 w-3" />
-                        Vygenerovat AI popis
-                      </>
-                    )}
-                  </Button>
-                </div>
-                <Textarea
-                  value={form.description}
-                  onChange={handleChange("description")}
-                  placeholder="Stručný popis soutěže… Nebo klikni na tlačítko pro AI generování."
-                  rows={4}
-                />
-              </div>
-
-              <div>
-                <Label>Pravidla soutěže (PDF) <span className="text-red-400">*</span></Label>
-                <Input
-                  type="file"
-                  accept="application/pdf,.pdf"
-                  onChange={(e) => {
-                    const file = e.target.files?.[0] || null;
-                    setForm((prev) => ({ ...prev, rules_pdf_file: file }));
-                  }}
-                />
-                {form.rules_pdf_url && !form.rules_pdf_file && (
-                  <p className="text-xs text-muted-foreground mt-1">
-                    Aktuální PDF:{" "}
-                    <a href={form.rules_pdf_url} target="_blank" rel="noopener noreferrer" className="underline text-primary">
-                      Zobrazit
-                    </a>
-                  </p>
-                )}
-                {form.rules_pdf_file && (
-                  <p className="text-xs text-muted-foreground mt-1">
-                    Vybráno: {form.rules_pdf_file.name}
-                  </p>
-                )}
-              </div>
-
-              <div className="flex gap-4">
-                <div className="flex-1">
-                  <Label>Počet tiketů</Label>
-                  <Input type="number" min={1} value={form.ticket_count} onChange={handleChange("ticket_count")} onFocus={handleNumericFocus} />
-                </div>
-                <div className="flex-1">
-                  <Label>Cena tiketu (MioCoins)</Label>
-                  <Input type="number" min={1} value={form.ticket_price} onChange={handleChange("ticket_price")} onFocus={handleNumericFocus} />
-                </div>
-              </div>
-
-              <div>
-                <Label>Status</Label>
-                <Select value={form.status} onValueChange={handleStatusChange}>
-                  <SelectTrigger className="bg-background">
-                    <SelectValue placeholder="Vyber status" />
-                  </SelectTrigger>
-                  <SelectContent className="bg-neutral-800 border-neutral-700 z-50">
-                    {SELECTABLE_STATUS_OPTIONS.map((option) => (
-                      <SelectItem
-                        key={option.value}
-                        value={option.value}
-                        className="text-white hover:bg-neutral-700 focus:bg-neutral-700 focus:text-white cursor-pointer"
+                  {/* Popis soutěže */}
+                  <div className="space-y-3">
+                    <div className="flex items-center justify-between">
+                      <Label>Popis soutěže</Label>
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        onClick={handleGenerateDescription}
+                        disabled={generatingDescription || (!form.title && !form.main_prize)}
+                        className="text-xs"
                       >
-                        {option.label}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
+                        {generatingDescription ? (
+                          <>
+                            <Loader2 className="mr-1.5 h-3 w-3 animate-spin" />
+                            Generuji…
+                          </>
+                        ) : (
+                          <>
+                            <Sparkles className="mr-1.5 h-3 w-3" />
+                            Vygenerovat AI popis
+                          </>
+                        )}
+                      </Button>
+                    </div>
+                    <Textarea
+                      value={form.description}
+                      onChange={handleChange("description")}
+                      placeholder="Stručný popis soutěže… Nebo klikni na tlačítko pro AI generování."
+                      rows={4}
+                    />
+                  </div>
 
-              <div className="flex items-center gap-2 mt-2">
-                <input
-                  type="checkbox"
-                  id="fast_game"
-                  checked={form.fast_game}
-                  onChange={(e) => setForm((f) => ({ ...f, fast_game: e.target.checked }))}
-                />
-                <label htmlFor="fast_game" className="text-sm text-white">Fast game</label>
-              </div>
+                  <div>
+                    <Label>Pravidla soutěže (PDF) <span className="text-destructive">*</span></Label>
+                    <Input
+                      type="file"
+                      accept="application/pdf,.pdf"
+                      onChange={(e) => {
+                        const file = e.target.files?.[0] || null;
+                        setForm((prev) => ({ ...prev, rules_pdf_file: file }));
+                      }}
+                    />
+                    {form.rules_pdf_url && !form.rules_pdf_file && (
+                      <p className="text-xs text-muted-foreground mt-1">
+                        Aktuální PDF:{" "}
+                        <a href={form.rules_pdf_url} target="_blank" rel="noopener noreferrer" className="underline text-primary">
+                          Zobrazit
+                        </a>
+                      </p>
+                    )}
+                    {form.rules_pdf_file && (
+                      <p className="text-xs text-muted-foreground mt-1">
+                        Vybráno: {form.rules_pdf_file.name}
+                      </p>
+                    )}
+                  </div>
+                </CardContent>
+              </Card>
+
+              <Card>
+                <CardHeader className="pb-3">
+                  <CardTitle className="text-base">Ceny a počet tiketů</CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <div>
+                    <Label>Náklad na hlavní výhru v Kč</Label>
+                    <Input
+                      type="number"
+                      min={0}
+                      value={economyAssumptions.mainPrizeRealCost}
+                      onChange={updateEconomyAssumption("mainPrizeRealCost")}
+                      onFocus={handleNumericFocus}
+                      placeholder="0"
+                    />
+                    <p className="text-xs text-muted-foreground mt-1">Pořizovací náklad hlavní výhry — použije se v ekonomické kalkulaci.</p>
+                  </div>
+
+                  <div className="flex gap-4">
+                    <div className="flex-1">
+                      <Label>Počet tiketů</Label>
+                      <Input
+                        type="number"
+                        min={1}
+                        value={form.ticket_count}
+                        onChange={handleChange("ticket_count")}
+                        onFocus={handleNumericFocus}
+                        disabled={ticketCountLocked}
+                      />
+                      {ticketCountLocked && (
+                        <p className="text-xs text-destructive mt-1">
+                          Počet tiketů už nelze změnit — soutěž má vydané tikety a toto číslo
+                          určuje pozici hlavní výhry.
+                        </p>
+                      )}
+                    </div>
+                    <div className="flex-1">
+                      <Label>Cena tiketu (MioCoins)</Label>
+                      <Input type="number" min={1} value={form.ticket_price} onChange={handleChange("ticket_price")} onFocus={handleNumericFocus} />
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+
+              <Card>
+                <CardHeader className="pb-3">
+                  <CardTitle className="text-base">Stav a nastavení</CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <div>
+                    <Label>Status</Label>
+                    <Select value={form.status} onValueChange={handleStatusChange}>
+                      <SelectTrigger className="bg-background">
+                        <SelectValue placeholder="Vyber status" />
+                      </SelectTrigger>
+                      <SelectContent className="z-50">
+                        {statusOptionsForRole.map((option) => (
+                          <SelectItem key={option.value} value={option.value} className="cursor-pointer">
+                            {option.label}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    {!isSuperAdmin && (
+                      <p className="text-xs text-muted-foreground mt-1">
+                        Soutěž můžete pouze vytvořit a připravit. Spuštění (Aktivní) provede superadmin.
+                      </p>
+                    )}
+                  </div>
+
+                  <div className="flex items-center gap-2">
+                    <input
+                      type="checkbox"
+                      id="fast_game"
+                      checked={form.fast_game}
+                      onChange={(e) => setForm((f) => ({ ...f, fast_game: e.target.checked }))}
+                    />
+                    <label htmlFor="fast_game" className="text-sm text-foreground">Fast game</label>
+                  </div>
+                </CardContent>
+              </Card>
             </TabsContent>
 
             {/* Tab 2: Bonusy – MioCoins */}
@@ -3152,6 +3359,16 @@ export const AdminContestManagement: React.FC = () => {
   // Sensitive contest progress/revenue/activity is superadmin-only. Scoped
   // subadmins see only the basic contest list (name, prize, status).
   const { isSuperAdmin } = useUserRole();
+  // Non-superadmin admin holding `contests.create` may create/prepare a
+  // contest (draft/pending) but never publish, close, or open the superadmin
+  // contest detail. DB layer (admin_manage_contest guard + contests RLS)
+  // enforces this independently of these UI restrictions.
+  const { can: hasAdminPermission } = useAdminPermissions();
+  const canPrepareContests = isSuperAdmin || hasAdminPermission("contests.create");
+  const isPrepareOnlyAdmin = canPrepareContests && !isSuperAdmin;
+  const rowStatusOptions = isSuperAdmin ? SELECTABLE_STATUS_OPTIONS : PREPARE_ONLY_STATUS_OPTIONS;
+  const canEditContestRow = (status: string) =>
+    isSuperAdmin || (isPrepareOnlyAdmin && (status === "draft" || status === "pending"));
   const [contests, setContests] = useState<ContestData[]>([]);
   const [statsMap, setStatsMap] = useState<Record<string, ContestViewStats>>({});
   const [loading, setLoading] = useState(true);
@@ -3185,7 +3402,7 @@ export const AdminContestManagement: React.FC = () => {
         // Scoped subadmins must not learn how close a contest is to ending, so
         // these analytics views are not even fetched for them.
         isSuperAdmin
-          ? supabase.from("contest_progress").select("contest_id, tickets_sold, tickets_remaining, sold_percent")
+          ? supabase.rpc("get_contest_progress_admin", { p_contest_ids: null })
           : Promise.resolve({ data: [], error: null }),
         isSuperAdmin
           ? supabase.from("contest_revenue").select("contest_id, estimated_revenue")
@@ -3211,12 +3428,12 @@ export const AdminContestManagement: React.FC = () => {
         console.error("Error fetching contest activity:", activityRes.error);
       }
 
-      const progressRows = progressRes.data || [];
+      const progressRows = (progressRes.data || []) as ContestProgressAdminRow[];
       const revenueRows = revenueRes.data || [];
       const activityRows = activityRes.data || [];
 
       const contestsData: ContestData[] = (contestsRes.data || []).map((contest) => {
-        const progress = progressRows.find((row: any) => row.contest_id === contest.id);
+        const progress = progressRows.find((row) => row.contest_id === contest.id);
 
         return {
           contest_id: contest.id,
@@ -3241,7 +3458,7 @@ export const AdminContestManagement: React.FC = () => {
       // Build per-contest stats map from analytics views
       const newStatsMap: Record<string, ContestViewStats> = {};
       contestsData.forEach((c) => {
-        const progress = progressRows.find((r: any) => r.contest_id === c.contest_id);
+        const progress = progressRows.find((r) => r.contest_id === c.contest_id);
         const revenue = revenueRows.find((r: any) => r.contest_id === c.contest_id);
         const activity = activityRows.find((r: any) => r.contest_id === c.contest_id);
         newStatsMap[c.contest_id] = {
@@ -3358,11 +3575,21 @@ export const AdminContestManagement: React.FC = () => {
     setUpdatingStatus(contestId);
 
     try {
+      // Explicitní NULL u všech ostatních parametrů: vynechaný parametr by
+      // u PostgREST nabral DEFAULT funkce, ne NULL, a změna statusu by tím
+      // soutěži přepsala i velikost a cenu.
       const { error } = await supabase.rpc("admin_manage_contest", {
         p_operation: "update",
         p_contest_id: contestId,
         p_status: newStatus,
-      });
+        p_title: null,
+        p_description: null,
+        p_main_prize: null,
+        p_main_image: null,
+        p_ticket_count: null,
+        p_ticket_price: null,
+        p_fast_game: null,
+      } as any);
 
       if (error) {
         throw error;
@@ -3620,7 +3847,9 @@ export const AdminContestManagement: React.FC = () => {
   });
 
   const movableSelected = filteredContests.filter(
-    (c) => selectedIds.has(c.contest_id) && (c.status === "pending" || c.status === "paused")
+    (c) =>
+      selectedIds.has(c.contest_id) &&
+      (c.status === "pending" || (isSuperAdmin && c.status === "paused"))
   );
 
   const toggleSelect = (id: string) => {
@@ -3834,7 +4063,7 @@ export const AdminContestManagement: React.FC = () => {
                 </div>
               )}
             <div className="rounded-md border border-white/10 max-h-[550px] overflow-auto relative">
-              <div className="min-w-max">
+              <div>
                 <Table>
                   <TableHeader className="sticky top-0 z-10 bg-card">
                   <TableRow className="border-b border-white/10 hover:bg-transparent">
@@ -3901,7 +4130,11 @@ export const AdminContestManagement: React.FC = () => {
                           <Select
                             value={contest.status}
                             onValueChange={(value) => handleStatusChange(contest.contest_id, value)}
-                            disabled={updatingStatus === contest.contest_id || contest.status === "closed"}
+                            disabled={
+                              updatingStatus === contest.contest_id ||
+                              contest.status === "closed" ||
+                              (isPrepareOnlyAdmin && !canEditContestRow(contest.status))
+                            }
                           >
                             <SelectTrigger className="w-8 h-8 p-0 bg-transparent border-white/10 hover:bg-white/10">
                               {updatingStatus === contest.contest_id ? (
@@ -3910,15 +4143,15 @@ export const AdminContestManagement: React.FC = () => {
                                 <Pencil className="h-3 w-3" />
                               )}
                             </SelectTrigger>
-                            <SelectContent className="bg-neutral-800 border-neutral-700 z-50">
-                              {SELECTABLE_STATUS_OPTIONS.map((option) => {
+                            <SelectContent className="z-50">
+                              {rowStatusOptions.map((option) => {
                                 const isBlocked = option.value === "draft" && contest.status === "active";
                                 return (
                                   <SelectItem
                                     key={option.value}
                                     value={option.value}
                                     disabled={isBlocked}
-                                    className={isBlocked ? "text-neutral-500 cursor-not-allowed" : "text-white hover:bg-neutral-700 focus:bg-neutral-700 focus:text-white cursor-pointer"}
+                                    className={isBlocked ? "text-muted-foreground cursor-not-allowed" : "cursor-pointer"}
                                   >
                                     {option.label}
                                   </SelectItem>
@@ -3939,7 +4172,7 @@ export const AdminContestManagement: React.FC = () => {
                                   zbývá {statsMap[contest.contest_id].tickets_remaining.toLocaleString("cs-CZ")}
                                 </span>
                                 {statsMap[contest.contest_id].tickets_last_24h > 0 && (
-                                  <span className="inline-flex items-center gap-0.5 text-[10px] text-blue-400">
+                                  <span className="inline-flex items-center gap-0.5 text-[10px] text-blue-700 font-medium">
                                     <Activity className="h-2.5 w-2.5" />
                                     +{statsMap[contest.contest_id].tickets_last_24h.toLocaleString("cs-CZ")} 24h
                                   </span>
@@ -3951,7 +4184,7 @@ export const AdminContestManagement: React.FC = () => {
                           <TableCell className="text-center">
                             <div>{contest.progress_percentage}%</div>
                             {statsMap[contest.contest_id] && (
-                              <div className="text-[10px] text-yellow-400 mt-1 tabular-nums">
+                              <div className="text-[10px] text-amber-700 font-medium mt-1 tabular-nums">
                                 {statsMap[contest.contest_id].estimated_revenue.toLocaleString("cs-CZ")} MC
                               </div>
                             )}
@@ -3965,18 +4198,40 @@ export const AdminContestManagement: React.FC = () => {
 
                       <TableCell className="text-right">
                         <div className="flex justify-end gap-2">
-                          <Button variant="outline" size="sm" onClick={() => handleEdit(contest)}>
-                            <Pencil className="h-4 w-4 mr-1" />
-                            Upravit
-                          </Button>
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={() => navigate(`/admin/contest/${contest.contest_id}`)}
-                          >
-                            Otevřít
-                          </Button>
-                          {contest.status === "active" && (
+                          <TooltipProvider>
+                            <Tooltip>
+                              <TooltipTrigger asChild>
+                                <span>
+                                  <Button
+                                    variant="outline"
+                                    size="sm"
+                                    onClick={() => handleEdit(contest)}
+                                    disabled={!canEditContestRow(contest.status)}
+                                  >
+                                    <Pencil className="h-4 w-4 mr-1" />
+                                    Upravit
+                                  </Button>
+                                </span>
+                              </TooltipTrigger>
+                              {!canEditContestRow(contest.status) && (
+                                <TooltipContent>
+                                  <p>Bez oprávnění superadmina lze upravovat jen soutěže ve stavu Archiv test nebo Čeká na start.</p>
+                                </TooltipContent>
+                              )}
+                            </Tooltip>
+                          </TooltipProvider>
+                          {/* Detail se soutěžovými interními daty (mapa tiketů, bonusy) je superadmin-only. */}
+                          {isSuperAdmin && (
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => navigate(`/admin/contest/${contest.contest_id}`)}
+                            >
+                              Otevřít
+                            </Button>
+                          )}
+                          {/* Uzavření soutěže je publikační/finální krok — zůstává výhradně superadmin. */}
+                          {isSuperAdmin && contest.status === "active" && (
                             <Button
                               variant="destructive"
                               size="sm"

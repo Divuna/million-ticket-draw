@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React from "react";
 import { Link, NavLink, useLocation } from "react-router-dom";
 import { ChevronDown } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -13,9 +13,9 @@ import {
 import { ShieldCheck } from "lucide-react";
 import { useUnreadMessagesCount } from "@/hooks/useUnreadMessagesCount";
 import { usePendingOffersCount } from "@/hooks/usePendingOffersCount";
+import { useAdminUsersPendingCounts } from "@/hooks/useAdminUsersPendingCounts";
 import { useUserRole } from "@/hooks/useUserRole";
 import { useAdminPermissions } from "@/hooks/useAdminPermissions";
-import { supabase } from "@/integrations/supabase/client";
 import { cn } from "@/lib/utils";
 import {
   ADMIN_PERSISTENT_SUBNAV_SEGMENTS,
@@ -40,6 +40,7 @@ const NAV_PERMISSION_BY_PATH: Record<string, string> = {
   "/admin/content": "content.manage",
   "/admin/banners": "banners.manage",
   "/admin/notifications": "notifications.manage",
+  "/admin/sales-leads": "sales_leads.manage",
 };
 
 /** Non-superadmin: an item is visible only if it maps to a permission they hold. */
@@ -73,8 +74,8 @@ const linkButtonClass = (active: boolean) =>
   inline-flex items-center no-underline relative h-9 shrink-0 rounded-full px-3.5 gap-2 text-[13px] font-semibold tracking-tight transition-all duration-200
   ${
     active
-      ? "bg-primary/18 text-primary border border-primary/35 shadow-[0_0_0_1px_hsl(var(--primary)/0.2),0_4px_14px_hsl(var(--primary)/0.12)] ring-2 ring-primary/25"
-      : "text-muted-foreground/90 border border-transparent hover:bg-muted/60 hover:text-foreground hover:border-border/40"
+      ? "bg-primary/10 text-primary border border-primary/30 shadow-sm"
+      : "text-muted-foreground border border-transparent hover:bg-muted hover:text-foreground"
   }
 `;
 
@@ -83,8 +84,8 @@ const menuTriggerClass = (active: boolean) =>
   relative h-9 shrink-0 rounded-full px-3 gap-1.5 text-[13px] font-semibold tracking-tight transition-all duration-200
   ${
     active
-      ? "bg-primary/18 text-primary border border-primary/35 shadow-[0_0_0_1px_hsl(var(--primary)/0.2),0_4px_14px_hsl(var(--primary)/0.12)] ring-2 ring-primary/25"
-      : "text-muted-foreground/90 border border-transparent hover:bg-muted/60 hover:text-foreground hover:border-border/40"
+      ? "bg-primary/10 text-primary border border-primary/30 shadow-sm"
+      : "text-muted-foreground border border-transparent hover:bg-muted hover:text-foreground"
   }
 `;
 
@@ -105,74 +106,14 @@ export const AdminContextSubNav: React.FC = () => {
   const { can, loading: permLoading } = useAdminPermissions();
   const { unreadCount } = useUnreadMessagesCount();
   const { pendingCount: pendingOffersCount } = usePendingOffersCount();
-  const [pendingPartnerRegistrationsCount, setPendingPartnerRegistrationsCount] = useState(0);
-  const [pendingCompanyLeadsCount, setPendingCompanyLeadsCount] = useState(0);
+  const {
+    pendingCompanyLeadsCount,
+    unreadSalesRepliesCount,
+    partnersTotal: pendingPartnersNavCountFromHook,
+  } = useAdminUsersPendingCounts();
 
   const activeSection = getAdminSectionFromPath(location.pathname, location.search);
   const meta = ADMIN_SECTION_META[activeSection];
-
-  useEffect(() => {
-    let cancelled = false;
-
-    const loadPendingPartnerRegistrationsCount = async () => {
-      try {
-        const { data: sessionData } = await supabase.auth.getSession();
-        if (!sessionData.session) {
-          if (!cancelled) setPendingPartnerRegistrationsCount(0);
-          return;
-        }
-
-        const res = await supabase.functions.invoke("get-pending-partner-registrations", {
-          headers: {
-            Authorization: `Bearer ${sessionData.session.access_token}`,
-          },
-        });
-
-        if (res.error) throw res.error;
-
-        const data = res.data as { success?: boolean; registrations?: unknown[] };
-        if (!cancelled) {
-          setPendingPartnerRegistrationsCount(data.success ? data.registrations?.length ?? 0 : 0);
-        }
-      } catch (error) {
-        console.error("Error loading pending partner registrations count:", error);
-        if (!cancelled) setPendingPartnerRegistrationsCount(0);
-      }
-    };
-
-    loadPendingPartnerRegistrationsCount();
-
-    return () => {
-      cancelled = true;
-    };
-  }, []);
-
-  // Poll pending company leads count every 60 seconds
-  useEffect(() => {
-    let cancelled = false;
-
-    const loadPendingCompanyLeadsCount = async () => {
-      try {
-        const { count, error } = await supabase
-          .from("affiliate_company_leads")
-          .select("id", { count: "exact", head: true })
-          .eq("status", "pending_admin_approval");
-        if (!cancelled && !error) {
-          setPendingCompanyLeadsCount(count ?? 0);
-        }
-      } catch {
-        // best-effort — silent fail
-      }
-    };
-
-    loadPendingCompanyLeadsCount();
-    const interval = setInterval(loadPendingCompanyLeadsCount, 60_000);
-
-    return () => {
-      cancelled = true;
-      clearInterval(interval);
-    };
-  }, []);
 
   const renderMenuSections = (sections: AdminContextMenuSection[], menuKey: string) =>
     sections.map((sec, si) => (
@@ -189,6 +130,7 @@ export const AdminContextSubNav: React.FC = () => {
           const to = subNavItemTo(item);
           const isOfferItem = item.path === "/admin/partner-offers";
           const showOfferDot = isOfferItem && pendingOffersCount > 0;
+          const showUnreadDot = item.path === "/admin/sales-leads" && unreadSalesRepliesCount > 0;
           return (
             <DropdownMenuItem
               key={adminSubNavItemKey(item, ii)}
@@ -201,6 +143,11 @@ export const AdminContextSubNav: React.FC = () => {
                 {showOfferDot && (
                   <span className="ml-2 min-w-[1.25rem] h-5 flex items-center justify-center rounded-full bg-destructive text-[10px] font-bold text-destructive-foreground px-1">
                     {pendingOffersCount > 99 ? "99+" : pendingOffersCount}
+                  </span>
+                )}
+                {showUnreadDot && (
+                  <span className="ml-2 min-w-[1.25rem] h-5 flex items-center justify-center rounded-full bg-destructive text-[10px] font-bold text-destructive-foreground px-1">
+                    {unreadSalesRepliesCount > 99 ? "99+" : unreadSalesRepliesCount}
                   </span>
                 )}
               </Link>
@@ -220,10 +167,14 @@ export const AdminContextSubNav: React.FC = () => {
       const Icon = item.icon;
       const active = isAdminSubNavItemActive(item, location.pathname, location.search);
       const showBadge = item.path === "/admin/messages" && unreadCount > 0;
+      // "Partneři" badge = čekající registrace + Shoptet žádosti + schválení log.
+      const pendingPartnersNavCount = pendingPartnersNavCountFromHook;
       const showPendingPartnerBadge =
-        item.path === "/admin/partners" && pendingPartnerRegistrationsCount > 0;
+        item.path === "/admin/partners" && pendingPartnersNavCount > 0;
       const showPendingCompanyLeadsBadge =
         item.path === "/admin/company-leads" && pendingCompanyLeadsCount > 0;
+      const showUnreadSalesRepliesBadge =
+        item.path === "/admin/sales-leads" && unreadSalesRepliesCount > 0;
       const to = subNavItemTo(item);
       const end = !item.matchPrefix;
       return (
@@ -246,12 +197,17 @@ export const AdminContextSubNav: React.FC = () => {
           )}
           {showPendingPartnerBadge && (
             <span className="absolute -top-1 -right-1 min-w-[1.125rem] h-[1.125rem] flex items-center justify-center rounded-full bg-destructive text-[10px] font-bold text-destructive-foreground px-0.5">
-              {pendingPartnerRegistrationsCount > 99 ? "99+" : pendingPartnerRegistrationsCount}
+              {pendingPartnersNavCount > 99 ? "99+" : pendingPartnersNavCount}
             </span>
           )}
           {showPendingCompanyLeadsBadge && (
             <span className="absolute -top-1 -right-1 min-w-[1.125rem] h-[1.125rem] flex items-center justify-center rounded-full bg-destructive text-[10px] font-bold text-destructive-foreground px-0.5">
               {pendingCompanyLeadsCount > 99 ? "99+" : pendingCompanyLeadsCount}
+            </span>
+          )}
+          {showUnreadSalesRepliesBadge && (
+            <span className="absolute -top-1 -right-1 min-w-[1.125rem] h-[1.125rem] flex items-center justify-center rounded-full bg-destructive text-[10px] font-bold text-destructive-foreground px-0.5">
+              {unreadSalesRepliesCount > 99 ? "99+" : unreadSalesRepliesCount}
             </span>
           )}
         </NavLink>

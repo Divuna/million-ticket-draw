@@ -43,11 +43,15 @@ const PARTNER_EMAIL  = `spec48-partner-${RUN_ID}@onemil.cz`;
 const CUSTOMER_EMAIL = `spec48-customer-${RUN_ID}@onemil.cz`;
 const PASSWORD = `Spec48!${RUN_ID}x`;
 
-// Conversion: 100 Kč = 1 MioCoin. Order 250 Kč → floor(250/100*1) = 2 coins.
+// Conversion: 100 Kč = 1 MioCoin. Order 250 Kč → round(250/100*1, 1) = 2.5 coins.
+// MioCoin má od 18. 08. 2026 nejvýše 1 desetinné místo a `compute_partner_reward`
+// zaokrouhluje právě jednou na součtu objednávky — `floor()` se vědomě nevrací
+// (viz invariant „MIOCOIN — PRAVIDLO 1 DESETINNÉHO MÍSTA"). Původní očekávání 2
+// bylo zděděné z předchozí floor() sémantiky.
 const REWARD_BASE_CZK = 100;
 const REWARD_MC = 1;
 const ORDER_TOTAL = 250;
-const EXPECTED_COINS = 2;
+const EXPECTED_COINS = 2.5;
 
 const ORDER_HAPPY  = `SPEC48-ORDER-HAPPY-${RUN_ID}`;
 const ORDER_CANCEL = `SPEC48-ORDER-CANCEL-${RUN_ID}`;

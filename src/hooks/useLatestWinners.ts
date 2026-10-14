@@ -9,7 +9,6 @@ const getStorageUrl = (path: string | null | undefined): string | null => {
 
 export interface Winner {
   id: string;
-  user_id: string;
   user_name: string;
   user_nickname: string | null;
   prize_name: string;
@@ -25,24 +24,15 @@ export const useLatestWinners = (limit: number = 50) => {
   return useQuery({
     queryKey: ["latest-winners", limit],
     queryFn: async () => {
-      // Use SECURITY DEFINER function that bypasses RLS
-      // Returns consistent data for all users (logged in, logged out, admin)
-      const { data, error } = await supabase.rpc("get_latest_winners", {
+      const { data, error } = await supabase.rpc("get_latest_winners_public", {
         winners_limit: limit,
       });
 
       if (error) throw error;
+      if (!data || data.length === 0) return [];
 
-      if (!data || data.length === 0) {
-        return [];
-      }
-
-      // Map the result to the Winner interface with proper image URLs
       const result: Winner[] = data.map((winner: {
-        id: string;
-        user_id: string;
-        contest_id: string;
-        prize_id: string | null;
+        public_id: string;
         type: string;
         created_at: string;
         user_name: string;
@@ -53,8 +43,7 @@ export const useLatestWinners = (limit: number = 50) => {
         user_avatar_url: string | null;
         ticket_number: number | null;
       }) => ({
-        id: winner.id,
-        user_id: winner.user_id,
+        id: winner.public_id,
         user_name: winner.user_name,
         user_nickname: winner.user_nickname,
         prize_name: winner.prize_name,

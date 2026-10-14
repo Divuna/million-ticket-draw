@@ -1,5 +1,6 @@
 import { serve } from 'https://deno.land/std@0.168.0/http/server.ts'
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
+import { getSupabaseSecretKey } from "../_shared/supabaseSecretKey.ts";
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -197,7 +198,7 @@ serve(async (req) => {
     // Service-role client: used for DB writes to bypass RLS
     const supabaseAdmin = createClient(
       Deno.env.get('SUPABASE_URL') ?? '',
-      Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '',
+      getSupabaseSecretKey(),
     )
 
     // User-scoped client: used only for auth context (no writes)
@@ -231,17 +232,22 @@ serve(async (req) => {
       return jsonFailure('auth_user', 'Unauthorized', null, 0, Date.now() - startTime, undefined)
     }
 
-    // Check if user is admin via user_roles (canonical role source)
+    // Check if user is superadmin via user_roles (canonical role source).
+    // Bonus prize distribution is SUPERADMIN ONLY — matches the bonus_prizes
+    // table RLS write policies (public.is_superadmin(), see PR #414). This
+    // function writes via the service-role client below, which bypasses RLS
+    // entirely, so this explicit check is the only authorization boundary
+    // for the actual DB writes that follow.
     const { data: roleData, error: roleError } = await supabaseAdmin
       .from('user_roles')
       .select('role')
       .eq('user_id', user.id)
       .maybeSingle()
 
-    if (roleError || !roleData || !['admin', 'superadmin'].includes(roleData.role)) {
+    if (roleError || !roleData || roleData.role !== 'superadmin') {
       return jsonFailure(
-        'admin_role',
-        'Admin access required',
+        'superadmin_role',
+        'Superadmin access required',
         { roleError: roleError?.message ?? null, role: roleData?.role ?? null },
         0,
         Date.now() - startTime,
@@ -296,7 +302,7 @@ serve(async (req) => {
 
     const { data: contest, error: contestError } = await supabaseAdmin
       .from('contests')
-      .select('id, ticket_count, title')
+      .select('id, ticket_count, title, next_ticket_number')
       .eq('id', contest_id)
       .single()
 
@@ -310,6 +316,38 @@ serve(async (req) => {
         0,
         Date.now() - startTime,
         undefined,
+      )
+    }
+
+    // Po vydání prvního tiketu se bonusové pozice nesmí měnit. Tato funkce
+    // zapisuje přes service_role, na kterou DB guard
+    // `trg_guard_bonus_prizes_after_contest_start` záměrně nedosáhne — proto
+    // stejné pravidlo vynucujeme tady.
+    const { count: issuedTickets, error: ticketsError } = await supabaseAdmin
+      .from('tickets')
+      .select('id', { count: 'exact', head: true })
+      .eq('contest_id', contest_id)
+
+    if (ticketsError) {
+      return jsonFailure(
+        'check_contest_started',
+        'Nelze ověřit, zda soutěž už má vydané tikety',
+        { message: ticketsError.message, code: ticketsError.code },
+        0,
+        Date.now() - startTime,
+        undefined,
+      )
+    }
+
+    if ((contest.next_ticket_number ?? 1) > 1 || (issuedTickets ?? 0) > 0) {
+      return jsonFailure(
+        'contest_already_started',
+        'Bonusové pozice nelze měnit: soutěž už má vydané tikety.',
+        { contest_id, next_ticket_number: contest.next_ticket_number, issued_tickets: issuedTickets ?? 0 },
+        0,
+        Date.now() - startTime,
+        undefined,
+        409,
       )
     }
 

@@ -1,6 +1,12 @@
 /**
  * Args for PostgREST `public.buy_ticket_atomic(p_contest_id uuid, p_user_id uuid)`.
  * Only UUID strings — never ticket row ids or other types.
+ *
+ * SECURITY CONTRACT (migration 20260717190000): the server ALWAYS purchases
+ * for auth.uid() from the caller's JWT. `p_user_id` is validated only —
+ * a missing JWT returns `{ error: 'Unauthorized' }`, a p_user_id different
+ * from auth.uid() returns `{ error: 'Forbidden' }`. Always pass the currently
+ * signed-in user's id here; never any other user's id.
  */
 const CANONICAL_UUID =
   /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;

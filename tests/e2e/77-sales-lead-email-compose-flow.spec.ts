@@ -1,0 +1,62 @@
+import { expect, test } from '@playwright/test';
+import fs from 'node:fs';
+
+const read = (path: string) => fs.readFileSync(path, 'utf8');
+const detail = read('src/components/admin/sales-leads/SalesLeadDetailSheet.tsx');
+const panel = read('src/components/admin/sales-leads/LeadCrmPanel.tsx');
+
+test.describe('Sales lead e-mail compose flow', () => {
+  test('first e-mail opens the existing editor without requiring a template', () => {
+    expect(detail).toContain('const openInitialEmailComposer = () => {');
+    expect(detail).toContain('lead.draft_email_subject ??');
+    expect(detail).toContain('lead.draft_email_body ??');
+    expect(detail).toContain('setAiWorkspaceOpen(true);');
+    expect(detail).toContain('onClick={openInitialEmailComposer}');
+    expect(detail).toContain('Napsat e-mail');
+  });
+
+  test('first e-mail template is optional and only fills the existing editor', () => {
+    expect(detail).toContain('Použít šablonu');
+    expect(detail).toContain("onClick={() => setTemplatePickerType('initial')}");
+    expect(detail).toContain('setDraftSubject(value.subject);');
+    expect(detail).toContain('setDraftBody(value.body);');
+    expect(detail).toContain('draftTouchedRef.current = true');
+    expect(detail).toContain('type={templatePickerType}');
+  });
+
+  test('follow-up opens a blank editor without requiring a template', () => {
+    expect(panel).toMatch(/\bMail,\s+MessageSquarePlus,/);
+    expect(panel).toContain('<Mail className="mr-1.5 h-3.5 w-3.5" />Napsat follow-up');
+    expect(panel).toContain('const openFollowUpComposer = () => {');
+    expect(panel).toContain("setFuSubject('');");
+    expect(panel).toContain("setFuBody('');");
+    expect(panel).toContain('setFuAttachments([]);');
+    expect(panel).toContain('setFollowUpComposerOpen(true);');
+    expect(panel).toContain('onClick={openFollowUpComposer}');
+    expect(panel).toContain('Napsat follow-up');
+    expect(panel).toContain('{followUpComposerOpen && (');
+  });
+
+  test('follow-up template is optional and fills the same editor', () => {
+    expect(panel).toContain('Použít šablonu');
+    expect(panel).toContain('onClick={() => setFollowUpPickerOpen(true)}');
+    expect(panel).toContain('type="follow_up"');
+    expect(panel).toContain('setFuSubject(value.subject);');
+    expect(panel).toContain('setFuBody(value.body);');
+  });
+
+  test('reply-in-thread flow and sender contract remain unchanged', () => {
+    expect(detail).toContain('const InlineReplyForm = ({');
+    expect(detail).toContain('Odeslat odpověď');
+    expect(detail).toContain("setTemplatePickerType('reply')");
+    expect(detail).toContain("supabase.functions.invoke('send-sales-lead-reply'");
+  });
+
+  test('all lead e-mail composers can pass attachments without duplicating workflow', () => {
+    expect(detail).toContain('attachments: draftAttachments');
+    expect(detail).toContain('attachments: replyAttachments');
+    expect(panel).toContain('attachments: fuAttachments');
+    expect(detail).toContain('SalesLeadEmailAttachmentsField');
+    expect(panel).toContain('SalesLeadEmailAttachmentsField');
+  });
+});

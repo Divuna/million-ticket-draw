@@ -10,20 +10,27 @@ const badgeVariants = cva(
       variant: {
         default: "border-transparent bg-primary text-primary-foreground hover:bg-primary/80",
         secondary: "border-transparent bg-secondary text-secondary-foreground hover:bg-secondary/80",
+        /* The five semantic variants below read CSS custom properties
+           (--badge-<variant>-fg/bg/border/bg-hover) instead of hardcoded
+           Tailwind colors, so they can be re-themed per scope (see
+           .admin-theme in index.css) without touching this file again. The
+           :root defaults reproduce these variants' previous literal colors
+           byte-for-byte, so every non-admin consumer (customer/partner/
+           affiliate) renders unchanged. */
         destructive:
-          "border-red-500/35 bg-red-500/15 text-red-200 hover:bg-red-500/20 dark:border-red-500/40 dark:bg-red-950/50 dark:text-red-100",
+          "border-[var(--badge-destructive-border)] bg-[var(--badge-destructive-bg)] text-[var(--badge-destructive-fg)] hover:bg-[var(--badge-destructive-bg-hover)]",
         outline: "border-border/60 bg-transparent text-foreground hover:bg-muted/40",
         /** Dokončeno / úspěch / aktivní */
         success:
-          "border-emerald-500/40 bg-emerald-500/[0.12] text-emerald-200 hover:bg-emerald-500/[0.18] dark:text-emerald-100",
+          "border-[var(--badge-success-border)] bg-[var(--badge-success-bg)] text-[var(--badge-success-fg)] hover:bg-[var(--badge-success-bg-hover)]",
         /** Varování / zpracování */
         warning:
-          "border-amber-500/40 bg-amber-500/[0.12] text-amber-100 hover:bg-amber-500/[0.18] dark:text-amber-50",
+          "border-[var(--badge-warning-border)] bg-[var(--badge-warning-bg)] text-[var(--badge-warning-fg)] hover:bg-[var(--badge-warning-bg-hover)]",
         /** Čekající / ve frontě / naplánováno */
         pending:
-          "border-sky-500/35 bg-sky-500/[0.1] text-sky-100 hover:bg-sky-500/[0.16] dark:text-sky-50",
+          "border-[var(--badge-pending-border)] bg-[var(--badge-pending-bg)] text-[var(--badge-pending-fg)] hover:bg-[var(--badge-pending-bg-hover)]",
         /** Informační stav */
-        info: "border-[rgba(255,138,0,0.35)] bg-[rgba(255,138,0,0.1)] text-[#FFB547] hover:bg-[rgba(255,138,0,0.16)] dark:text-[#FFB547]",
+        info: "border-[var(--badge-info-border)] bg-[var(--badge-info-bg)] text-[var(--badge-info-fg)] hover:bg-[var(--badge-info-bg-hover)]",
       },
     },
     defaultVariants: {

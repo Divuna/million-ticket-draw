@@ -1,5 +1,22 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+// Single shared CSV parser — also imported directly by the Playwright specs, so
+// the tested parser and the deployed parser are literally the same code.
+import { parseShoptetCsv, shouldIssue, toRpcStatus, type ImportRow } from "./csv.ts";
+// Delta fetch: limits the download to orders created/changed since the last
+// successful live run, so the cron can poll every minute without re-downloading
+// the partner's whole order history. See delta.ts for the timezone reasoning.
+import { computeDeltaFrom, formatShoptetUpdateTime, withUpdateTimeFrom } from "./delta.ts";
+// Shoptet serves some exports as windows-1250. resp.text() would decode those as
+// UTF-8 and mangle every Czech status into mojibake. See encoding.ts.
+import { decodeCsvBody } from "./encoding.ts";
+import { failureMessage } from "./rowLogMessage.ts";
+// Classifies one create_partner_order_reward call. Keeps "order contains no
+// selected product" (a normal order without a MioCoin entitlement) apart from a
+// real failure, so such an order never inflates rows_failed nor flips the run to
+// `partial`. Shared with the Playwright specs — one implementation only.
+import { classifyCreateOutcome } from "./createOutcome.ts";
+import { getSupabaseSecretKey } from "../_shared/supabaseSecretKey.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -7,21 +24,6 @@ const corsHeaders = {
 };
 
 type ImportMode = "dry_run" | "live";
-
-// Five-bucket Shoptet order status taxonomy.
-// completed: fully fulfilled  → issue for all trigger thresholds.
-// shipped:   dispatched       → issue for 'paid' and 'shipped' thresholds.
-// paid:      payment received → issue only for 'paid' threshold.
-// cancelled: stopped/returned → always cancel the reward code.
-// pending:   below threshold  → leave reward code as pending.
-type ShoptetStatus = "paid" | "shipped" | "completed" | "cancelled" | "pending";
-
-type ImportRow = {
-  orderId: string;
-  total: number;
-  customerEmail: string;
-  shoptetStatus: ShoptetStatus;
-};
 
 type RpcResult = {
   success?: boolean;
@@ -46,10 +48,13 @@ function json(body: unknown, status = 200) {
  *
  * Auth: x-internal-token (automation) OR service-role bearer OR superadmin JWT.
  *
- * Reward issuance respects partners.reward_trigger_status:
- *   'paid'      → issue when Shoptet status is paid, shipped, or completed.
- *   'shipped'   → issue when Shoptet status is shipped or completed.
- *   'completed' → issue only when Shoptet status is completed.
+ * Reward eligibility respects partners.reward_trigger_status:
+ *   'paid'      → eligible when Shoptet status is paid, shipped, or completed.
+ *   'shipped'   → eligible when Shoptet status is shipped or completed.
+ *   'completed' → eligible only when Shoptet status is completed.
+ * A qualifying Shoptet order is scheduled through the server-side 15-minute
+ * grace window; this importer never issues MioCoins or queues customer email
+ * directly on the first paid transition.
  */
 async function authorize(req: Request, admin: ReturnType<typeof createClient>) {
   const internalToken = Deno.env.get("INTERNAL_FUNCTION_TOKEN");
@@ -66,7 +71,7 @@ async function authorize(req: Request, admin: ReturnType<typeof createClient>) {
 
   const token = (req.headers.get("authorization") ?? "").replace(/^Bearer\s+/i, "").trim();
   if (!token) return { status: 401, error: "missing_authorization" };
-  const serviceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "";
+  const serviceKey = getSupabaseSecretKey();
   if (serviceKey && token === serviceKey) return null;
 
   const { data: userData, error } = await admin.auth.getUser(token);
@@ -79,85 +84,6 @@ async function authorize(req: Request, admin: ReturnType<typeof createClient>) {
     .maybeSingle();
   if (!roleRow) return { status: 403, error: "access_denied_superadmin_only" };
   return null;
-}
-
-function detectDelimiter(headerLine: string): string {
-  const semi = (headerLine.match(/;/g) || []).length;
-  const comma = (headerLine.match(/,/g) || []).length;
-  return semi >= comma ? ";" : ",";
-}
-
-function parseCsvLine(line: string, delim: string): string[] {
-  const out: string[] = [];
-  let cur = "";
-  let inQuotes = false;
-  for (let i = 0; i < line.length; i++) {
-    const ch = line[i];
-    if (ch === '"') {
-      if (inQuotes && line[i + 1] === '"') {
-        cur += '"';
-        i++;
-      } else {
-        inQuotes = !inQuotes;
-      }
-    } else if (ch === delim && !inQuotes) {
-      out.push(cur);
-      cur = "";
-    } else {
-      cur += ch;
-    }
-  }
-  out.push(cur);
-  return out.map((s) => s.trim());
-}
-
-function norm(s: string): string {
-  return (s ?? "").toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g, "");
-}
-
-const HEADER_CANDIDATES = {
-  order: ["code", "cislo objednavky", "order", "order_number", "objednavka"],
-  total: ["total", "celkem", "cena celkem", "price", "totalprice", "grand total", "amount"],
-  email: ["email", "e-mail", "mail"],
-  status: ["status", "stav"],
-};
-
-function findCol(headers: string[], candidates: string[]): number {
-  const normalized = headers.map((h) => norm(h));
-  for (const c of candidates) {
-    const idx = normalized.findIndex((h) => h.includes(c));
-    if (idx >= 0) return idx;
-  }
-  return -1;
-}
-
-// Maps raw Shoptet status string to 5-bucket taxonomy.
-// completed must be checked BEFORE shipped and paid — Czech "vyřízená" (vyriz)
-// would otherwise match the paid pattern first.
-function mapStatus(raw: string): ShoptetStatus {
-  const s = norm(raw);
-  if (/(completed|dokon|vyriz|dorucen|delivered)/.test(s))                     return "completed";
-  if (/(shipped|odeslan|dispatched)/.test(s))                                   return "shipped";
-  if (/(zaplac|paid|pripravena|processing|vyrizuje)/.test(s))                   return "paid";
-  if (/(storn|zrusen|cancel|vracen|returned|nevyzved|unpaid|nezaplac)/.test(s)) return "cancelled";
-  return "pending";
-}
-
-// Returns true if the reward code should be issued NOW given the partner's threshold.
-function shouldIssue(status: ShoptetStatus, triggerThreshold: string): boolean {
-  if (status === "completed") return true;                              // all thresholds
-  if (status === "shipped")   return triggerThreshold !== "completed";  // 'paid' + 'shipped'
-  if (status === "paid")      return triggerThreshold === "paid";       // 'paid' only
-  return false;                                                         // pending, cancelled
-}
-
-// Maps ShoptetStatus → value accepted by update_partner_order_reward_status.
-// RPC positive set: 'paid', 'delivered', 'completed'. 'shipped' is not accepted → 'delivered'.
-function toRpcStatus(s: ShoptetStatus): string {
-  if (s === "completed") return "completed";
-  if (s === "shipped")   return "delivered";
-  if (s === "paid")      return "paid";
-  return "cancelled";
 }
 
 function asMode(raw: unknown): ImportMode {
@@ -173,7 +99,7 @@ serve(async (req) => {
 
   const admin = createClient(
     Deno.env.get("SUPABASE_URL") ?? "",
-    Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "",
+    getSupabaseSecretKey(),
   );
 
   const authFailure = await authorize(req, admin);
@@ -223,6 +149,30 @@ serve(async (req) => {
     return json({ status: "skipped", reason: "already_running", partner_id: partnerId }, 200);
   }
 
+  // Delta watermark: the started_at of the most recent live run that finished
+  // 'ok'. Only 'ok' advances it — a 'partial'/'failed' run leaves the watermark
+  // where it was, so the next run re-offers everything that run may have dropped.
+  // Only live runs count: a dry run imports nothing, so letting it move the
+  // watermark would silently skip orders.
+  //
+  // Dry runs deliberately keep downloading the FULL export — an admin running a
+  // dry run is inspecting their export configuration and must see all of it, not
+  // just the last few minutes.
+  let deltaFrom: Date | null = null;
+  if (mode === "live") {
+    const { data: lastOkRun } = await admin
+      .from("shoptet_import_runs")
+      .select("started_at")
+      .eq("partner_id", partnerId)
+      .eq("mode", "live")
+      .eq("status", "ok")
+      .order("started_at", { ascending: false })
+      .limit(1)
+      .maybeSingle();
+    // No successful live run yet → null → full export, exactly as before.
+    deltaFrom = computeDeltaFrom(lastOkRun?.started_at as string | undefined);
+  }
+
   const { data: run, error: runErr } = await admin
     .from("shoptet_import_runs")
     .insert({ partner_id: partnerId, trigger, mode, status: "running" })
@@ -242,38 +192,35 @@ serve(async (req) => {
       return json({ status: "error", error: "export_url_unavailable", run_id: runId }, 400);
     }
 
-    const resp = await fetch(url, { redirect: "follow" });
+    // The delta parameter is appended to the raw URL string so the permanent
+    // link's own parameters (patternId, partnerId, hash) stay byte-identical.
+    // Neither `url` nor `fetchUrl` is ever logged, returned, or persisted.
+    const fetchUrl = deltaFrom ? withUpdateTimeFrom(url, deltaFrom) : url;
+    const resp = await fetch(fetchUrl, { redirect: "follow" });
     if (!resp.ok) {
       await finalize({ status: "failed", error_summary: `fetch_failed_http_${resp.status}` });
       return json({ status: "error", error: "fetch_failed", http_status: resp.status, run_id: runId }, 502);
     }
 
-    const text = await resp.text();
-    const lines = text.split(/\r?\n/).filter((l) => l.trim().length > 0);
-    if (lines.length < 1) {
+    // Decode by the charset the server declared, NOT blindly as UTF-8. A
+    // windows-1250 export otherwise arrives as mojibake, every status maps to
+    // `pending`, and the reward is silently never issued.
+    const text = decodeCsvBody(await resp.arrayBuffer(), resp.headers.get("content-type"));
+    const parsed = parseShoptetCsv(text);
+
+    if (parsed.missingHeaders.length === 1 && parsed.missingHeaders[0] === "empty_csv") {
       await finalize({ status: "failed", error_summary: "empty_csv" });
       return json({ status: "error", error: "empty_csv", run_id: runId }, 400);
     }
 
-    const delim = detectDelimiter(lines[0]);
-    const headers = parseCsvLine(lines[0], delim);
-    const colOrder = findCol(headers, HEADER_CANDIDATES.order);
-    const colTotal = findCol(headers, HEADER_CANDIDATES.total);
-    const colEmail = findCol(headers, HEADER_CANDIDATES.email);
-    const colStatus = findCol(headers, HEADER_CANDIDATES.status);
-
-    const missing: string[] = [];
-    if (colOrder < 0) missing.push("order_code");
-    if (colTotal < 0) missing.push("total");
-    if (colEmail < 0) missing.push("email");
-    if (missing.length > 0) {
-      await finalize({ status: "failed", error_summary: `missing_headers:${missing.join(",")}` });
-      return json({ status: "error", error: "missing_required_headers", missing, run_id: runId }, 400);
+    if (parsed.missingHeaders.length > 0) {
+      await finalize({ status: "failed", error_summary: `missing_headers:${parsed.missingHeaders.join(",")}` });
+      return json({ status: "error", error: "missing_required_headers", missing: parsed.missingHeaders, run_id: runId }, 400);
     }
 
-    const dataRows = lines.slice(1);
+    const isItemLevel = parsed.isItemLevel;
     let rowsValid = 0;
-    let rowsInvalid = 0;
+    let rowsInvalid = parsed.invalidRows.length;
     let rowsWouldCreate = 0;
     let rowsWouldStatusUpdate = 0;
     let rowsSkipDup = 0;
@@ -281,6 +228,12 @@ serve(async (req) => {
     let rowsStatusUpdated = 0;
     let rowsEmailEnqueued = 0;
     let rowsFailed = 0;
+    // Orders the partner's selected-products rules do not cover. Reported in the
+    // response only — deliberately NOT part of rows_failed, so the run stays `ok`.
+    let rowsSkippedNoReward = 0;
+    // Objednávky vyřazené baseline (existovaly před aktivací napojení). Také jen
+    // do odpovědi a auditního logu — není to chyba, běh musí zůstat `ok`.
+    let rowsSkippedBaseline = 0;
 
     const { data: existing } = await admin
       .from("partner_reward_codes")
@@ -288,42 +241,83 @@ serve(async (req) => {
       .eq("partner_id", partnerId);
     const existingIds = new Set((existing ?? []).map((r: { external_order_id: string }) => r.external_order_id));
 
-    const validRows: ImportRow[] = [];
-    const logBatch: Array<Record<string, unknown>> = [];
-    for (const line of dataRows) {
-      const cols = parseCsvLine(line, delim);
-      const orderId = (cols[colOrder] ?? "").trim();
-      const totalRaw = (cols[colTotal] ?? "").replace(/\s/g, "").replace(",", ".");
-      const total = Number(totalRaw);
-      const customerEmail = (cols[colEmail] ?? "").trim();
-      const emailPresent = customerEmail.includes("@");
-      const shoptetStatus: ShoptetStatus = colStatus >= 0 ? mapStatus(cols[colStatus] ?? "") : "pending";
+    // Baseline: objednávky, které v exportu existovaly UŽ PŘED aktivací napojení
+    // (#289 část C). Nikdy z nich nesmí vzniknout odměna, kód, zákaznický e-mail
+    // ani fakturační položka — ani když později přejdou na paid/delivered/completed.
+    //
+    // Načítají se jen řádky s vyplněným `activated_at`, tedy schválená napojení.
+    // Partner bez jediného takového řádku (BOHEMIA, vereonika sro a každé jiné
+    // napojení z doby před touto změnou) dostane prázdnou množinu a projde
+    // importem přesně jako dosud — tabulka je tím zároveň vypínačem funkce.
+    const { data: baselineRows, error: baselineErr } = await admin
+      .from("shoptet_connection_baseline_orders")
+      .select("external_order_id")
+      .eq("partner_id", partnerId)
+      .not("activated_at", "is", null);
+    if (baselineErr) {
+      // Fail-closed: bez jistoty, co do baseline patří, se nesmí vydat nic.
+      await finalize({ status: "failed", error_summary: "baseline_unavailable" });
+      return json({ status: "error", error: "baseline_unavailable", run_id: runId }, 500);
+    }
+    const baselineIds = new Set(
+      (baselineRows ?? []).map((r: { external_order_id: string }) => r.external_order_id),
+    );
 
-      if (!orderId || !Number.isFinite(total) || total <= 0 || !emailPresent) {
-        rowsInvalid++;
-        logBatch.push({ run_id: runId, external_order_id: orderId || null, action: "invalid", result: "skipped" });
+    const logBatch: Array<Record<string, unknown>> = [];
+    for (const inv of parsed.invalidRows) {
+      logBatch.push({ run_id: runId, external_order_id: inv.orderId, action: "invalid", result: "skipped" });
+    }
+
+    // Per-order validity, dedup and dry-run projections. parseShoptetCsv already
+    // grouped item-level rows, so one order with N products is ONE entry here.
+    const validRows: ImportRow[] = [];
+    for (const row of parsed.orders) {
+      const orderId = row.orderId;
+      rowsValid++;
+
+      // Baseline vyřazuje objednávku dřív, než se o ní vůbec začne rozhodovat —
+      // nedostane se tedy ani do `validRows`, ani do dry-run projekcí. Platí
+      // v obou režimech: dry run nesmí tvrdit, že by se odměna vydala.
+      if (baselineIds.has(orderId)) {
+        rowsSkippedBaseline++;
+        logBatch.push({
+          run_id: runId,
+          external_order_id: orderId,
+          action: "skip_baseline",
+          result: "pre_activation",
+        });
         continue;
       }
 
-      rowsValid++;
       if (mode === "dry_run" && existingIds.has(orderId)) {
         rowsSkipDup++;
         logBatch.push({ run_id: runId, external_order_id: orderId, action: "skip_dup", result: "exists" });
         continue;
       }
 
-      validRows.push({ orderId, total, customerEmail, shoptetStatus });
+      validRows.push(row);
       if (!existingIds.has(orderId)) {
         rowsWouldCreate++;
-        logBatch.push({ run_id: runId, external_order_id: orderId, action: "would_create", result: shoptetStatus });
-        if (shouldIssue(shoptetStatus, triggerThreshold) || shoptetStatus === "cancelled") {
+        logBatch.push({
+          run_id: runId,
+          external_order_id: orderId,
+          action: "would_create",
+          // Both axes, so a dry run shows why an order did or did not qualify.
+          result: `${row.lifecycle}/${row.payment}`,
+        });
+        if (shouldIssue(row.lifecycle, row.payment, triggerThreshold) || row.lifecycle === "cancelled") {
           rowsWouldStatusUpdate++;
         }
       }
     }
 
     if (mode === "live") {
-      const preLiveLogBatch = logBatch.filter((row) => row.action === "invalid");
+      // `would_create` / `skip_dup` jsou dry-run projekce a v živém běhu by lhaly.
+      // `skip_baseline` se naopak musí udržet — je to auditní důkaz, že se za
+      // historickou objednávku nic nevydalo.
+      const preLiveLogBatch = logBatch.filter(
+        (row) => row.action === "invalid" || row.action === "skip_baseline",
+      );
       logBatch.length = 0;
       logBatch.push(...preLiveLogBatch);
 
@@ -340,15 +334,43 @@ serve(async (req) => {
               source_detail: "shoptet_import",
               shoptet_import_run_id: runId,
             },
+            // Only sent for item-level exports. NULL keeps the legacy whole-shop
+            // calculation, so partners on the old export are unaffected.
+            p_items: row.items.length > 0 ? row.items : null,
           });
 
-          if (createErr || !isSuccessResult(createResult)) {
+          const outcome = classifyCreateOutcome(createErr, createResult);
+
+          if (outcome === "failed") {
             rowsFailed++;
-            logBatch.push({ run_id: runId, external_order_id: row.orderId, action: "error", result: "create_failed" });
+            logBatch.push({
+              run_id: runId,
+              external_order_id: row.orderId,
+              action: "error",
+              result: "create_failed",
+              message: failureMessage(createErr, createResult),
+            });
             continue;
           }
 
-          if (createResult.duplicate === true) {
+          if (outcome === "skipped_no_reward") {
+            // selected_products partner, order contains none of the selected
+            // products. Normal order, no entitlement: no reward code exists, so
+            // there is nothing to move to `issued` and no customer e-mail is
+            // ever enqueued. Logged for the audit trail, counted OUTSIDE
+            // rows_failed so the run stays `ok`.
+            rowsSkippedNoReward++;
+            logBatch.push({
+              run_id: runId,
+              external_order_id: row.orderId,
+              action: "skip_no_reward",
+              result: "no_eligible_products",
+              message: null,
+            });
+            continue;
+          }
+
+          if (outcome === "duplicate") {
             rowsSkipDup++;
             logBatch.push({ run_id: runId, external_order_id: row.orderId, action: "skip_dup", result: "exists" });
           } else {
@@ -356,27 +378,38 @@ serve(async (req) => {
             logBatch.push({ run_id: runId, external_order_id: row.orderId, action: "create", result: "ok" });
           }
 
-          // Apply reward_trigger_status threshold logic.
-          const willIssue  = shouldIssue(row.shoptetStatus, triggerThreshold);
-          const willCancel = row.shoptetStatus === "cancelled";
+          // New qualifying rows start the grace period. Existing Shoptet rows are
+          // always re-synchronised when Shoptet reports a change, so a transition
+          // back below the configured trigger clears an active grace timer and a
+          // later paid transition must survive a fresh full 15 minutes.
+          const willIssue  = shouldIssue(row.lifecycle, row.payment, triggerThreshold);
+          const willCancel = row.lifecycle === "cancelled";
+          const shouldSyncStatus = outcome === "duplicate" || willIssue || willCancel;
 
-          if (!willIssue && !willCancel) continue; // below threshold → leave as pending
+          if (!shouldSyncStatus) continue;
 
-          const { data: statusResult, error: statusErr } = await admin.rpc("update_partner_order_reward_status", {
+          const rpcStatus = toRpcStatus(row.lifecycle, row.payment);
+          const { data: statusResult, error: statusErr } = await admin.rpc("schedule_shoptet_partner_reward_status", {
             p_partner_id: partnerId,
             p_external_order_id: row.orderId,
-            p_order_status: toRpcStatus(row.shoptetStatus),
+            p_order_status: rpcStatus,
           });
 
           if (statusErr || !isSuccessResult(statusResult)) {
             rowsFailed++;
-            logBatch.push({ run_id: runId, external_order_id: row.orderId, action: "error", result: "status_update_failed" });
+            logBatch.push({
+              run_id: runId,
+              external_order_id: row.orderId,
+              action: "error",
+              result: "status_update_failed",
+              message: failureMessage(statusErr, statusResult),
+            });
             continue;
           }
 
           rowsStatusUpdated++;
           if (statusResult.email_enqueued === true) rowsEmailEnqueued++;
-          logBatch.push({ run_id: runId, external_order_id: row.orderId, action: "status_update", result: toRpcStatus(row.shoptetStatus) });
+          logBatch.push({ run_id: runId, external_order_id: row.orderId, action: "status_update", result: rpcStatus });
         }
       }
     }
@@ -388,7 +421,7 @@ serve(async (req) => {
     }
 
     const summary = {
-      rows_total: dataRows.length,
+      rows_total: parsed.dataRowCount,
       rows_valid: rowsValid,
       rows_invalid: rowsInvalid,
       rows_would_create: rowsWouldCreate,
@@ -406,6 +439,9 @@ serve(async (req) => {
         status: summary.status,
         mode,
         run_id: runId,
+        // Cutoff actually sent to Shoptet, or null for a full export. A plain
+        // timestamp — no URL, no hash, nothing secret.
+        delta_from: deltaFrom ? formatShoptetUpdateTime(deltaFrom) : null,
         rows_total: summary.rows_total,
         rows_valid: summary.rows_valid,
         rows_invalid: summary.rows_invalid,
@@ -413,11 +449,23 @@ serve(async (req) => {
         status_updated: rowsStatusUpdated,
         email_enqueued: rowsEmailEnqueued,
         skipped_duplicates: rowsSkipDup,
+        // Orders without any selected product. Not a failure — see createOutcome.ts.
+        skipped_no_reward: rowsSkippedNoReward,
+        // Objednávky z doby před aktivací napojení. Také ne chyba (#289 část C).
+        skipped_baseline: rowsSkippedBaseline,
         failed: rowsFailed,
       }, summary.status === "ok" ? 200 : 500);
     }
 
-    return json({ status: "ok", mode, run_id: runId, ...summary });
+    return json({
+      status: "ok",
+      mode,
+      run_id: runId,
+      item_level_export: isItemLevel,
+      items_total: validRows.reduce((n, r) => n + r.items.length, 0),
+      skipped_baseline: rowsSkippedBaseline,
+      ...summary,
+    });
   } catch (e) {
     await finalize({ status: "failed", error_summary: "unexpected_error" });
     console.error("import-shoptet-orders error:", (e as Error)?.message);

@@ -1,69 +1,64 @@
-import { useState } from 'react';
-import { supabase } from '@/integrations/supabase/client';
+import { useCallback, useEffect, useRef, useState } from 'react';
+import { useLocation, useNavigate } from 'react-router-dom';
+
 import { toast } from '@/hooks/use-toast';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Loader2 } from 'lucide-react';
 import { OneMilGiftIcon } from '@/components/icons/OneMilIcons';
+import { formatMioCoin } from '@/lib/miocoin';
+import { getMioCoinCodeFromSearch, withoutMioCoinCode } from '@/lib/miocoinRedeemUrl';
+import {
+  MIOCOIN_REDEEM_ERROR_MESSAGES,
+  redeemMioCoinCode,
+  type RedeemResult,
+} from '@/lib/miocoinRedeem';
 
 interface RedeemMioCoinCardProps {
-  /** Called after a successful redemption so the parent can refresh wallet balance. */
+  /** Called after a successful redemption so the parent can refresh wallet balance and history. */
   onRedeemed?: () => void;
 }
-
-type RedeemResult = {
-  success: boolean;
-  coins?: number;
-  new_balance?: number;
-  error?: string;
-};
-
-const ERROR_MESSAGES: Record<string, string> = {
-  not_logged_in: 'Pro uplatnění kódu se musíte přihlásit.',
-  invalid_code: 'Neplatný kód. Zkontrolujte zadání a zkuste to znovu.',
-  already_used: 'Tento kód již byl uplatněn.',
-  expired: 'Platnost tohoto kódu vypršela.',
-  cancelled: 'Tento kód byl zrušen.',
-  email_mismatch: 'Tento kód je vázán na jiný e-mail.',
-};
 
 export const RedeemMioCoinCard = ({ onRedeemed }: RedeemMioCoinCardProps) => {
   const [code, setCode] = useState('');
   const [submitting, setSubmitting] = useState(false);
+  const location = useLocation();
+  const navigate = useNavigate();
+  const automaticallyAttemptedCode = useRef<string | null>(null);
+
+  const showResult = useCallback((result: RedeemResult, automatic: boolean) => {
+    if (result?.success) {
+      toast({
+        title: automatic ? 'MIO uplatněna' : 'Kód uplatněn',
+        description: automatic
+          ? `MIO z odkazu byla úspěšně uplatněna. Připsáno ${formatMioCoin(Number(result.coins ?? 0))}.`
+          : `Kód byl úspěšně uplatněn. Připsáno ${formatMioCoin(Number(result.coins ?? 0))}.`,
+      });
+      setCode('');
+      onRedeemed?.();
+      return;
+    }
+
+    const msg = MIOCOIN_REDEEM_ERROR_MESSAGES[result?.error ?? ''] ?? 'Nepodařilo se uplatnit kód. Zkuste to znovu.';
+    toast({ title: automatic ? 'MIO nebyla uplatněna' : 'Chyba', description: msg, variant: 'destructive' });
+  }, [onRedeemed]);
 
   const handleRedeem = async () => {
     const trimmed = code.trim();
     if (!trimmed) {
-      toast({ title: 'Chyba', description: 'Zadejte MioCoin kód.', variant: 'destructive' });
+      toast({ title: 'Chyba', description: 'Zadejte MIO kód.', variant: 'destructive' });
       return;
     }
 
     setSubmitting(true);
     try {
-      const { data, error } = await (supabase.rpc as any)('redeem_miocoin_code', {
-        p_code: trimmed,
-      });
-
-      if (error) throw error;
-
-      const result = data as RedeemResult;
-
-      if (result?.success) {
-        toast({
-          title: 'Kód uplatněn',
-          description: `Kód byl úspěšně uplatněn. Připsáno ${Number(result.coins ?? 0).toLocaleString('cs-CZ')} MioCoinů.`,
-        });
-        setCode('');
-        onRedeemed?.();
-      } else {
-        const msg = ERROR_MESSAGES[result?.error ?? ''] ?? 'Nepodařilo se uplatnit kód. Zkuste to znovu.';
-        toast({ title: 'Chyba', description: msg, variant: 'destructive' });
-      }
-    } catch (err: any) {
+      const result = await redeemMioCoinCode(trimmed);
+      showResult(result, false);
+    } catch (err: unknown) {
       console.error('Error redeeming MioCoin code:', err);
       toast({
         title: 'Chyba',
-        description: err?.message || 'Nepodařilo se uplatnit kód. Zkuste to znovu.',
+        description: err instanceof Error ? err.message : 'Nepodařilo se uplatnit kód. Zkuste to znovu.',
         variant: 'destructive',
       });
     } finally {
@@ -71,15 +66,41 @@ export const RedeemMioCoinCard = ({ onRedeemed }: RedeemMioCoinCardProps) => {
     }
   };
 
+  useEffect(() => {
+    const codeFromUrl = getMioCoinCodeFromSearch(location.search);
+    if (!codeFromUrl || automaticallyAttemptedCode.current === codeFromUrl) return;
+
+    // The code is attempted at most once per mounted profile page. The canonical
+    // RPC row lock and status transition remain the authority against double credit.
+    automaticallyAttemptedCode.current = codeFromUrl;
+
+    const redeemFromEmailLink = async () => {
+      setSubmitting(true);
+      try {
+        const result = await redeemMioCoinCode(codeFromUrl);
+        showResult(result, true);
+      } catch (err: unknown) {
+        console.error('Error automatically redeeming MioCoin code:', err);
+        toast({
+          title: 'MIO nebyla uplatněna',
+          description: err instanceof Error ? err.message : 'Nepodařilo se uplatnit kód z e-mailového odkazu. Zkuste to znovu ručně.',
+          variant: 'destructive',
+        });
+      } finally {
+        setSubmitting(false);
+        // A completed automatic attempt must not run again after a page refresh.
+        navigate(
+          { pathname: location.pathname, search: withoutMioCoinCode(location.search) },
+          { replace: true },
+        );
+      }
+    };
+
+    void redeemFromEmailLink();
+  }, [location.pathname, location.search, navigate, showResult]);
+
   return (
-    <div
-      className="relative overflow-hidden rounded-2xl"
-      style={{
-        background: 'linear-gradient(135deg, hsl(220, 25%, 8%) 0%, hsl(220, 30%, 12%) 50%, hsl(220, 25%, 8%) 100%)',
-        border: '1px solid rgba(255,138,0,0.2)',
-        boxShadow: '0 8px 32px rgba(0,0,0,0.4), inset 0 1px 0 rgba(255,138,0,0.06)',
-      }}
-    >
+    <div className="homepage-light-panel relative overflow-hidden rounded-2xl border border-[rgba(255,138,0,0.18)] bg-white">
       <div className="p-6">
         <div className="flex items-center gap-4 mb-4">
           <div
@@ -92,19 +113,19 @@ export const RedeemMioCoinCard = ({ onRedeemed }: RedeemMioCoinCardProps) => {
             <OneMilGiftIcon size={24} className="w-6 h-6 text-black" />
           </div>
           <div>
-            <h2 className="text-xl font-bold text-[#E7EBF0]">Uplatnit MioCoin kód</h2>
-            <p className="text-sm text-gray-400">Zadejte MioCoin kód z partnerské akce, kartičky nebo e-mailu a připíšeme vám odměnu do peněženky.</p>
+            <h2 className="text-xl font-bold text-foreground">Uplatnit MIO kód</h2>
+            <p className="text-sm text-muted-foreground">Zadejte MIO kód z partnerské akce, kartičky nebo e-mailu a připíšeme vám odměnu do peněženky.</p>
           </div>
         </div>
 
         <div className="flex flex-col sm:flex-row gap-3">
           <Input
             value={code}
-            onChange={(e) => setCode(e.target.value.toUpperCase())}
+            onChange={(event) => setCode(event.target.value.toUpperCase())}
             placeholder="ZADEJTE MIOCOIN KÓD…"
             disabled={submitting}
             className="flex-1 bg-[rgba(255,138,0,0.05)] border-[rgba(255,138,0,0.2)] focus:border-[rgba(255,138,0,0.4)] focus:bg-[rgba(255,138,0,0.1)] transition-all duration-200 uppercase tracking-wider"
-            onKeyDown={(e) => e.key === 'Enter' && !submitting && handleRedeem()}
+            onKeyDown={(event) => event.key === 'Enter' && !submitting && handleRedeem()}
           />
           <Button
             onClick={handleRedeem}

@@ -45,7 +45,7 @@ Tvým úkolem je vytvořit krátký, poutavý a vzrušující popis soutěže, k
 - Název soutěže: ${title || 'Exkluzivní soutěž'}
 - Hlavní výhra: ${main_prize || 'Luxusní cena'}
 ${ticket_count ? `- Celkem tiketů: ${ticket_count.toLocaleString('cs-CZ')}` : ''}
-${ticket_price ? `- Cena tiketu: ${ticket_price} MioCoinů` : ''}
+${ticket_price ? `- Cena tiketu: ${ticket_price} MIO` : ''}
 
 Vrať pouze text popisu, žádné uvozovky ani formátování.`;
 

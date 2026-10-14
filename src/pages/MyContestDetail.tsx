@@ -1,3 +1,4 @@
+import { bonusPrizeDisplayName } from "@/lib/miocoin";
 import React, { useEffect, useState } from 'react';
 import { useParams, Navigate, useNavigate } from 'react-router-dom';
 import { useAuth } from '@/hooks/useAuth';
@@ -6,7 +7,6 @@ import { Header } from '@/components/Header';
 import { useUserRole } from '@/hooks/useUserRole';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { Progress } from '@/components/ui/progress';
 import { ArrowLeft } from 'lucide-react';
 import { OneMilTrophyIcon } from '@/components/icons/OneMilIcons';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -50,13 +50,11 @@ const MyContestDetail: React.FC = () => {
   const [contest, setContest] = useState<Contest | null>(null);
   const [bonusPrizes, setBonusPrizes] = useState<BonusPrize[]>([]);
   const [userWins, setUserWins] = useState<UserWin[]>([]);
-  const [ticketCount, setTicketCount] = useState(0);
   const [userTickets, setUserTickets] = useState(0);
   
   const [loadingContest, setLoadingContest] = useState(true);
   const [loadingBonuses, setLoadingBonuses] = useState(true);
   const [loadingWins, setLoadingWins] = useState(true);
-  const [loadingTickets, setLoadingTickets] = useState(true);
 
   useEffect(() => {
     if (id && user) {
@@ -90,15 +88,39 @@ const MyContestDetail: React.FC = () => {
     }
   };
 
+  /**
+   * Loads ONLY the bonus prizes this user actually won in this contest.
+   *
+   * Previously this pulled every bonus_prizes row of the contest (including
+   * ticket_position of still-pending prizes) even though the data is used for
+   * nothing but naming the user's own wins below. Reading future winning
+   * positions is what made the contest farmable — see migration
+   * 20260825120000. Won rows are no longer 'pending', so RLS allows this.
+   */
   const fetchBonusPrizes = async () => {
     try {
-      if (!id) return;
-      
+      if (!id || !user) return;
+
+      const { data: myWins, error: winsError } = await supabase
+        .from('winners')
+        .select('prize_id')
+        .eq('user_id', user.id)
+        .eq('contest_id', id);
+      if (winsError) throw winsError;
+
+      const prizeIds = (myWins ?? [])
+        .map((w) => w.prize_id)
+        .filter((x): x is string => !!x);
+
+      if (prizeIds.length === 0) {
+        setBonusPrizes([]);
+        return;
+      }
+
       const { data, error } = await supabase
         .from('bonus_prizes')
         .select('id, description, ticket_position, status, amount')
-        .eq('contest_id', id)
-        .order('ticket_position', { ascending: true });
+        .in('id', prizeIds);
 
       if (error) throw error;
       setBonusPrizes(data || []);
@@ -138,7 +160,7 @@ const MyContestDetail: React.FC = () => {
         } else if (win.type === 'bonus') {
           // Resolve bonus prize by winner.prize_id instead of bonus_prizes.status
           const bonusPrize = bonusPrizes.find(bp => bp.id === win.prize_id);
-          description = bonusPrize?.description || 'Bonusová cena';
+          description = bonusPrizeDisplayName(bonusPrize, 'Bonusová cena');
         }
 
         wins.push({
@@ -165,25 +187,15 @@ const MyContestDetail: React.FC = () => {
     try {
       if (!id || !user) return;
 
-      // Aggregate sold/total from view (avoids counting all ticket rows under strict RLS)
-      const { data: prog } = await supabase
-        .from('contest_progress')
-        .select('tickets_sold, tickets_total')
-        .eq('contest_id', id)
-        .maybeSingle();
-
       const { count: userCount } = await supabase
         .from('tickets')
         .select('*', { count: 'exact', head: true })
         .eq('contest_id', id)
         .eq('user_id', user.id);
 
-      setTicketCount(prog?.tickets_sold ?? 0);
       setUserTickets(userCount || 0);
     } catch (error) {
       console.error('Error fetching ticket data:', error);
-    } finally {
-      setLoadingTickets(false);
     }
   };
 
@@ -235,8 +247,6 @@ const MyContestDetail: React.FC = () => {
       </div>
     );
   }
-
-  const progressPercentage = contest.ticket_count > 0 ? (ticketCount / contest.ticket_count) * 100 : 0;
 
   return (
     <div className="min-h-screen bg-background pb-20">

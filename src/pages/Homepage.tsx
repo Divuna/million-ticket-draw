@@ -1,11 +1,12 @@
 import React, { useEffect, useRef, useState } from "react";
 import { useNavigate, Link, useLocation } from "react-router-dom";
 import { buildLoginRedirectUrl } from "@/lib/loginRedirect";
-import { setPendingPaymentSuccessContext } from "@/lib/paymentSuccessContext";
+import { isNativeApp } from "@/lib/nativeApp";
 import { Header } from "@/components/Header";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { PartnerRecruitmentCard } from "@/components/PartnerRecruitmentCard";
+import { VoucherDetailDialog, VoucherShowcaseCard } from "@/components/VoucherShowcase";
 import { supabase } from "@/integrations/supabase/client";
 import { useUserRole } from "@/hooks/useUserRole";
 import { useAuth } from "@/hooks/useAuth";
@@ -16,9 +17,8 @@ import { useMegajackpotBanners } from "@/hooks/useMegajackpotBanners";
 import { useHomepageBanners } from "@/hooks/useHomepageBanners";
 import { usePartners } from "@/hooks/usePartners";
 import { useHomepageVideoSimple } from "@/hooks/useHomepageVideoSimple";
-import { useLatestWinners } from "@/hooks/useLatestWinners";
+import { useHomepageLatestWinners } from "@/hooks/useHomepageLatestWinners";
 import { useComingSoonBanners } from "@/hooks/useComingSoonBanners";
-import { usePlacementBanners, PlacementKey } from "@/hooks/usePlacementBanners";
 import { WinnerCard } from "@/components/WinnerCard";
 import winnerBgTrophy from "@/assets/winner-backgrounds/winner-card-bg-trophy.png";
 import winnerBgCrown from "@/assets/winner-backgrounds/winner-card-bg-crown.png";
@@ -28,10 +28,9 @@ const WINNER_BG_ROTATION = [winnerBgTrophy, winnerBgCrown, winnerBgClean];
 import YouTubeEmbed from "@/components/YouTubeEmbed";
 import { ContestCard } from "@/components/ContestCard";
 import { Trophy, ChevronRight, Ticket, Star, ChevronLeft, Handshake, ExternalLink, X } from "lucide-react";
-import { OneMilMioCoinIcon, OneMilVoucherIcon, OneMilInfoIcon, OneMilTrophyIcon, OneMilGiftIcon } from "@/components/icons/OneMilIcons";
+import { OneMilVoucherIcon, OneMilInfoIcon, OneMilTrophyIcon, OneMilGiftIcon } from "@/components/icons/OneMilIcons";
 import { Footer } from "@/components/Footer";
 import { toast } from "sonner";
-import { logMonitoringEvent, logStripeCheckoutClientFailure } from "@/lib/monitoring";
 import { analytics } from "@/lib/analytics";
 
 interface Contest {
@@ -65,12 +64,9 @@ const Homepage = () => {
   const { voucherBanner, gamesBanner, loading: homepageBannersLoading } = useHomepageBanners();
   const { partners, loading: partnersLoading } = usePartners();
   const { videoUrl, isActive: isVideoActive, loading: videoLoading } = useHomepageVideoSimple();
-  const { data: latestWinners, isLoading: winnersLoading } = useLatestWinners(50);
+  const { data: latestWinners, isLoading: winnersLoading } = useHomepageLatestWinners(50);
   const { banners: comingSoonBanners, loading: comingSoonLoading } = useComingSoonBanners();
-  
-  // Placement banners for MioCoin packages and action boxes
-  const placementKeys: PlacementKey[] = ['miocoin_50', 'miocoin_310', 'miocoin_525', 'miocoin_1280', 'probihajici_souteze', 'koupit_voucher', 'vzhled_karta_vyher'];
-  const { banners: placementBanners } = usePlacementBanners(placementKeys);
+
   const contestsCarouselRef = useRef<HTMLDivElement>(null);
   const vouchersCarouselRef = useRef<HTMLDivElement>(null);
   const megajackpotCarouselRef = useRef<HTMLDivElement>(null);
@@ -79,6 +75,20 @@ const Homepage = () => {
   const [currentBannerIndex, setCurrentBannerIndex] = useState(0);
   const [favorites, setFavorites] = useState<Set<string>>(new Set());
   const [infoPopup, setInfoPopup] = useState<{ title: string | null; description: string } | null>(null);
+  const [selectedVoucher, setSelectedVoucher] = useState<{
+    id: string;
+    name: string;
+    image_url: string | null;
+    banner_url: string | null;
+    max_quantity: number | null;
+    redeemed_count: number;
+    start_date: string | null;
+    end_date: string | null;
+    short_description?: string | null;
+    usage_description?: string | null;
+    terms_text?: string | null;
+    how_to_use_text?: string | null;
+  } | null>(null);
 
   // Fetch contests from database
   const fetchContests = async () => {
@@ -299,93 +309,18 @@ const Homepage = () => {
       }
 
       analytics.voucherRedeem(voucherId, 5);
-      toast.success("Voucher úspěšně zakoupen za 5 MioCoinů!");
+      if (selectedVoucher?.id === voucherId) {
+        setSelectedVoucher(null);
+      }
+      toast.success("Voucher úspěšně zakoupen za 5 MIO!");
     } catch (error) {
       console.error("Error purchasing voucher:", error);
       toast.error("Nepodařilo se zakoupit voucher");
     }
   };
 
-  const [topUpLoading, setTopUpLoading] = useState(false);
-
-  const handleCoinPurchase = async (priceInCzk: number, totalCoins: number) => {
-    if (!user) {
-      toast.error("Pro nákup MioCoinů se musíte přihlásit");
-      navigate(buildLoginRedirectUrl(location.pathname + location.search));
-      return;
-    }
-
-    if (topUpLoading) return; // Prevent double-clicks
-
-    // Ensure clean numbers
-    const cleanPrice = Number(priceInCzk);
-    const cleanCoins = Number(totalCoins);
-
-    if (isNaN(cleanPrice) || cleanPrice < 50) {
-      toast.error("Neplatná částka");
-      return;
-    }
-
-    setTopUpLoading(true);
-
-    try {
-      toast.loading("Otevírám platební bránu...", { id: "topup-loading" });
-      
-      // Wait for session to be ready
-      const { data: sessionData } = await supabase.auth.getSession();
-      if (!sessionData?.session?.user?.id) {
-        logMonitoringEvent("warn", "stripe_checkout_no_session", {
-          user_id: user?.id ?? null,
-          action: "create_stripe_checkout",
-          price_czk: cleanPrice,
-        });
-        toast.dismiss("topup-loading");
-        toast.error("Nepodařilo se ověřit uživatele. Zkuste se znovu přihlásit.");
-        setTopUpLoading(false);
-        return;
-      }
-      
-      console.log("Sending to Stripe:", { priceInCzk: cleanPrice, totalCoins: cleanCoins });
-      
-      const { data, error } = await supabase.functions.invoke("create-stripe-checkout", {
-        body: { 
-          priceInCzk: cleanPrice,
-          totalCoins: cleanCoins
-        },
-      });
-
-      if (error) throw error;
-      
-      if (data?.checkout_url) {
-        setPendingPaymentSuccessContext({ kind: "miocoin" });
-        // Redirect to Stripe - page will unload
-        window.location.href = data.checkout_url;
-        // Don't reset loading state as page is redirecting
-      } else {
-        throw new Error("Nepodařilo se získat platební odkaz");
-      }
-    } catch (error) {
-      console.error("Error creating checkout:", error);
-      if (user) {
-        const phase =
-          error instanceof Error && error.message.includes("platební odkaz")
-            ? "response"
-            : "invoke";
-        logStripeCheckoutClientFailure({
-          userId: user.id,
-          priceInCzk: cleanPrice,
-          error,
-          phase,
-        });
-      }
-      toast.dismiss("topup-loading");
-      toast.error("Nepodařilo se otevřít platební bránu");
-      setTopUpLoading(false);
-    }
-  };
-
   return (
-    <div className="min-h-screen bg-background dark pb-20">
+    <div className="homepage-light-page min-h-screen bg-background pb-20">
       <Header />
 
       {/* Hero banner — full viewport width, outside container */}
@@ -405,12 +340,12 @@ const Homepage = () => {
             </div>
 
             <div className="relative">
-              <div className="w-full h-[240px] sm:h-[360px] md:h-[480px] relative overflow-hidden bg-[hsl(220_30%_6%)]">
-                {/* Banner image — fixed responsive heights; object-cover fills frame */}
+              <div className="w-full relative bg-[hsl(220_30%_6%)]">
+                {/* Banner image — natural image height, never cropped */}
                 <img
                   src={megajackpotBanners[currentBannerIndex]?.image_url}
                   alt={megajackpotBanners[currentBannerIndex]?.title || "Banner"}
-                  className="w-full h-full object-cover object-center"
+                  className="block w-full h-auto object-contain object-center"
                 />
                   
                   {/* Horizontal golden light gradient - centered, fading up and down */}
@@ -498,230 +433,41 @@ const Homepage = () => {
       </section>
 
       {/* Page content — constrained container */}
-      <div className="container mx-auto px-4 py-8 space-y-8">
-        {/* Coin Top-up Section */}
+      <div className="homepage-light-content container mx-auto px-4 py-8 space-y-8">
+        {/* Partner recruitment + Poslední výherci */}
         <section className="w-full overflow-x-hidden grid grid-cols-1 lg:grid-cols-2 gap-4">
-          {/* Left Column - Dobijte si MioCoiny */}
-          <Card className="rounded-xl overflow-hidden bg-[hsl(220_45%_6%)] border border-[rgba(255,138,0,0.2)] shadow-[0_4px_16px_hsl(222_50%_3%/0.5)] h-full">
-            <CardContent className="p-5 h-full flex flex-col">
-              <div className="space-y-4 flex-1 flex flex-col">
-                <div className="space-y-2">
-                  <h2 className="text-xl md:text-2xl font-bold text-heading-gold flex items-center gap-2">
-                    <OneMilMioCoinIcon size={24} className="w-6 h-6 md:w-7 md:h-7" />
-                    Dobijte si MioCoiny
-                  </h2>
-                  <p className="text-sm text-text-silver">Dobíjejte si MioCoiny pro otevření voucherů nebo účasti ve hře.</p>
-                </div>
-
-                {/* Coin Packages Grid */}
-                <div className="grid grid-cols-2 md:grid-cols-4 gap-3 flex-1">
-                  {/* Package 50 Kč → 50 MC */}
-                  <div className="rounded-xl w-full min-h-[160px] bg-[hsl(220_45%_6%)] border-2 border-package-blue/30 flex flex-col shadow-[inset_0_1px_12px_hsl(var(--package-blue)/0.08)] overflow-hidden">
-                    {/* Top area: image or fallback text */}
-                    <div className="flex-1 min-h-0 flex flex-col items-center justify-center overflow-hidden">
-                      {placementBanners.miocoin_50?.image_url ? (
-                        <img
-                          src={placementBanners.miocoin_50.image_url}
-                          alt="MioCoin 50"
-                          className="w-full h-full object-cover object-center"
-                        />
-                      ) : (
-                        <div className="text-center py-3">
-                          <div className="text-3xl font-bold text-package-blue drop-shadow-[0_2px_4px_rgba(0,0,0,0.8)]">50</div>
-                          <div className="text-sm text-muted-foreground drop-shadow-[0_1px_2px_rgba(0,0,0,0.8)]">MioCoinů</div>
-                          <div className="text-xs text-muted-foreground/70 drop-shadow-[0_1px_2px_rgba(0,0,0,0.8)]">50 Kč</div>
-                        </div>
-                      )}
-                    </div>
-                    {/* Button — always at bottom */}
-                    <div className="flex-shrink-0 px-3 pb-3 pt-2">
-                      <Button
-                        size="sm"
-                        className="w-full bg-package-blue text-black font-bold shadow-[0_0_10px_hsl(var(--package-blue)/0.3)] hover:brightness-110 transition-all duration-200"
-                        onClick={() => handleCoinPurchase(50, 50)}
-                        disabled={topUpLoading}
-                      >
-                        {topUpLoading ? "..." : "Dobít"}
-                      </Button>
-                    </div>
-                  </div>
-
-                  {/* Package 300 Kč → 310 MC (+10 Bonus) */}
-                  <div className="relative z-20 overflow-visible h-full">
-                    <Badge className="absolute -top-2 -right-2 bg-package-gold/90 text-black text-xs font-medium z-50 pointer-events-none">+10 Bonus</Badge>
-                    <div className="rounded-xl w-full h-full min-h-[160px] bg-[hsl(220_45%_6%)] border-2 border-package-gold/30 flex flex-col shadow-[inset_0_1px_12px_hsl(var(--package-gold)/0.08)] overflow-hidden">
-                      {/* Top area: image or fallback text */}
-                      <div className="flex-1 min-h-0 flex flex-col items-center justify-center overflow-hidden">
-                        {placementBanners.miocoin_310?.image_url ? (
-                          <img
-                            src={placementBanners.miocoin_310.image_url}
-                            alt="MioCoin 310"
-                            className="w-full h-full object-cover object-center"
-                          />
-                        ) : (
-                          <div className="text-center py-3">
-                            <div className="text-3xl font-bold text-package-gold drop-shadow-[0_2px_4px_rgba(0,0,0,0.8)]">310</div>
-                            <div className="text-sm text-muted-foreground drop-shadow-[0_1px_2px_rgba(0,0,0,0.8)]">MioCoinů</div>
-                            <div className="text-xs text-muted-foreground/70 drop-shadow-[0_1px_2px_rgba(0,0,0,0.8)]">300 Kč</div>
-                          </div>
-                        )}
-                      </div>
-                      {/* Button — always at bottom */}
-                      <div className="flex-shrink-0 px-3 pb-3 pt-2">
-                        <Button
-                          size="sm"
-                          className="w-full bg-package-gold text-black font-bold shadow-[0_0_10px_hsl(var(--package-gold)/0.3)] hover:brightness-110 transition-all duration-200"
-                          onClick={() => handleCoinPurchase(300, 310)}
-                          disabled={topUpLoading}
-                        >
-                          {topUpLoading ? "..." : "Dobít"}
-                        </Button>
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Package 500 Kč → 525 MC (+25 Bonus) */}
-                  <div className="relative z-20 overflow-visible h-full">
-                    <Badge className="absolute -top-2 -right-2 bg-package-purple/90 text-white text-xs font-medium z-50 pointer-events-none">+25 Bonus</Badge>
-                    <div className="rounded-xl w-full h-full min-h-[160px] bg-[hsl(220_45%_6%)] border-2 border-package-purple/30 flex flex-col shadow-[inset_0_1px_12px_hsl(var(--package-purple)/0.08)] overflow-hidden">
-                      {/* Top area: image or fallback text */}
-                      <div className="flex-1 min-h-0 flex flex-col items-center justify-center overflow-hidden">
-                        {placementBanners.miocoin_525?.image_url ? (
-                          <img
-                            src={placementBanners.miocoin_525.image_url}
-                            alt="MioCoin 525"
-                            className="w-full h-full object-cover object-center"
-                          />
-                        ) : (
-                          <div className="text-center py-3">
-                            <div className="text-3xl font-bold text-package-purple drop-shadow-[0_2px_4px_rgba(0,0,0,0.8)]">525</div>
-                            <div className="text-sm text-muted-foreground drop-shadow-[0_1px_2px_rgba(0,0,0,0.8)]">MioCoinů</div>
-                            <div className="text-xs text-muted-foreground/70 drop-shadow-[0_1px_2px_rgba(0,0,0,0.8)]">500 Kč</div>
-                          </div>
-                        )}
-                      </div>
-                      {/* Button — always at bottom */}
-                      <div className="flex-shrink-0 px-3 pb-3 pt-2">
-                        <Button
-                          size="sm"
-                          className="w-full bg-package-purple text-white font-bold shadow-[0_0_10px_hsl(var(--package-purple)/0.3)] hover:brightness-110 transition-all duration-200"
-                          onClick={() => handleCoinPurchase(500, 525)}
-                          disabled={topUpLoading}
-                        >
-                          {topUpLoading ? "..." : "Dobít"}
-                        </Button>
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Package 1200 Kč → 1280 MC (+80 Bonus) */}
-                  <div className="relative z-20 overflow-visible h-full">
-                    <Badge className="absolute -top-2 -right-2 bg-package-green/90 text-white text-xs font-medium z-50 pointer-events-none">+80 Bonus</Badge>
-                    <div className="rounded-xl w-full h-full min-h-[160px] bg-[hsl(220_45%_6%)] border-2 border-package-green/30 flex flex-col shadow-[inset_0_1px_12px_hsl(var(--package-green)/0.08)] overflow-hidden">
-                      {/* Top area: image or fallback text */}
-                      <div className="flex-1 min-h-0 flex flex-col items-center justify-center overflow-hidden">
-                        {placementBanners.miocoin_1280?.image_url ? (
-                          <img
-                            src={placementBanners.miocoin_1280.image_url}
-                            alt="MioCoin 1280"
-                            className="w-full h-full object-cover object-center"
-                          />
-                        ) : (
-                          <div className="text-center py-3">
-                            <div className="text-3xl font-bold text-package-green drop-shadow-[0_2px_4px_rgba(0,0,0,0.8)]">1280</div>
-                            <div className="text-sm text-muted-foreground drop-shadow-[0_1px_2px_rgba(0,0,0,0.8)]">MioCoinů</div>
-                            <div className="text-xs text-muted-foreground/70 drop-shadow-[0_1px_2px_rgba(0,0,0,0.8)]">1200 Kč</div>
-                          </div>
-                        )}
-                      </div>
-                      {/* Button — always at bottom */}
-                      <div className="flex-shrink-0 px-3 pb-3 pt-2">
-                        <Button
-                          size="sm"
-                          className="w-full bg-package-green text-white font-bold shadow-[0_0_10px_hsl(var(--package-green)/0.3)] hover:brightness-110 transition-all duration-200"
-                          onClick={() => handleCoinPurchase(1200, 1280)}
-                          disabled={topUpLoading}
-                        >
-                          {topUpLoading ? "..." : "Dobít"}
-                        </Button>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-
-                {/* Two Boxes Below */}
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mt-3">
-                  {/* Box 1: Probíhající soutěže */}
-                  <div
-                    className="rounded-xl p-4 min-h-[88px] md:min-h-[96px] bg-[hsl(220_45%_6%)] border-2 border-[rgba(255,138,0,0.3)] cursor-pointer hover:border-[rgba(255,138,0,0.5)] transition-all duration-200 flex flex-col items-center justify-center text-center shadow-[inset_0_1px_12px_rgba(255,138,0,0.05)] relative overflow-hidden"
-                    onClick={() => navigate("/games")}
-                  >
-                    {placementBanners.probihajici_souteze?.image_url && (
-                      <img
-                        src={placementBanners.probihajici_souteze.image_url}
-                        alt="Probíhající soutěže"
-                        className="absolute inset-0 w-full h-full object-cover"
-                      />
-                    )}
-                    {!placementBanners.probihajici_souteze?.image_url && (
-                      <>
-                        <OneMilTrophyIcon size={32} className="w-8 h-8 mb-2 relative z-10 text-[#FF8A00]" />
-                        <div className="text-sm font-semibold text-foreground relative z-10">Probíhající soutěže</div>
-                      </>
-                    )}
-                  </div>
-
-                  {/* Box 2: Koupit voucher se slevou */}
-                  <div
-                    className="rounded-xl p-4 min-h-[88px] md:min-h-[96px] bg-[hsl(220_45%_6%)] border-2 border-rose-400/30 cursor-pointer hover:border-rose-400/50 transition-all duration-200 flex flex-col items-center justify-center text-center shadow-[inset_0_1px_12px_hsl(350_60%_50%/0.06)] relative overflow-hidden"
-                    onClick={() => navigate("/vouchers")}
-                  >
-                    {placementBanners.koupit_voucher?.image_url && (
-                      <img
-                        src={placementBanners.koupit_voucher.image_url}
-                        alt="Koupit voucher se slevou"
-                        className="absolute inset-0 w-full h-full object-cover"
-                      />
-                    )}
-                    {!placementBanners.koupit_voucher?.image_url && (
-                      <>
-                        <OneMilVoucherIcon size={32} className="w-8 h-8 text-rose-400 mb-2 relative z-10" />
-                        <div className="text-sm font-semibold text-foreground relative z-10">Koupit voucher se slevou</div>
-                      </>
-                    )}
-                  </div>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
+          {/* Left Column - Staňte se partnerem OneMil */}
+          <PartnerRecruitmentCard />
 
           {/* Right Column - Poslední výherci */}
-          <Card className="rounded-xl overflow-hidden bg-[hsl(220_45%_6%)] border border-[rgba(255,138,0,0.2)] shadow-[0_4px_16px_hsl(222_50%_3%/0.5)] h-full relative">
-            <CardContent className="p-5 h-full flex flex-col relative z-10">
-              <div className="space-y-4 flex-1 flex flex-col">
+          <Card className="homepage-light-panel homepage-latest-winners-panel rounded-xl overflow-hidden bg-[hsl(220_45%_6%)] border border-[rgba(255,138,0,0.2)] shadow-[0_4px_16px_hsl(222_50%_3%/0.5)] h-full relative">
+            <CardContent className="p-4 md:p-5 h-full flex flex-col relative z-10">
+              <div className="space-y-3 flex-1 flex flex-col">
                 <div className="space-y-2">
-                  <h2 className="text-xl md:text-2xl font-bold text-heading-gold flex items-center gap-2">
-                    <OneMilTrophyIcon size={24} className="w-6 h-6 md:w-7 md:h-7" />
+                  <h2 className="homepage-premium-orange-heading text-lg md:text-xl font-bold text-heading-gold flex items-center gap-2">
+                    <OneMilTrophyIcon size={22} className="w-5 h-5 md:w-6 md:h-6" />
                     Poslední výherci
                   </h2>
-                  <p className="text-sm text-text-silver">Nejnovější výhry z našich soutěží</p>
+                  <p className="text-xs text-text-silver">Nejnovější výhry z našich soutěží</p>
                 </div>
 
-                <div className="space-y-4 flex-1 overflow-y-auto">
+                {/* 6 nejnovějších výherců: mobil 1 sloupec, desktop 2 sloupce × 3 řady.
+                    Žádné vnitřní rolování — všech 6 karet musí být vidět. */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 sm:gap-2.5 flex-1">
                   {winnersLoading ? (
                     // Loading placeholders
-                    Array.from({ length: 3 }).map((_, index) => (
-                      <div key={index} className="rounded-xl h-[112px] animate-pulse" style={{ background: 'hsl(220 45% 6%)', border: '1px solid rgba(255,138,0,0.15)' }} />
+                    Array.from({ length: 6 }).map((_, index) => (
+                      <div key={index} className="rounded-xl h-[72px] animate-pulse" style={{ background: '#f1f5f9', border: '1px solid rgba(15,23,42,0.08)' }} />
                     ))
                   ) : !latestWinners || latestWinners.length === 0 ? (
-                    <div className="text-center py-12 space-y-3">
+                    <div className="text-center py-12 space-y-3 sm:col-span-2">
                       <OneMilTrophyIcon size={48} className="w-12 h-12 mx-auto text-muted-foreground/50" />
                       <h3 className="text-lg font-bold text-foreground">Zatím žádní výherci</h3>
                       <p className="text-sm text-muted-foreground">Momentálně nejsou k dispozici žádné výhry</p>
                     </div>
                   ) : (
                     latestWinners
-                      .slice(0, 3)
+                      .slice(0, 6)
                       .map((winner, index) => (
                         <WinnerCard
                           key={winner.id}
@@ -734,13 +480,14 @@ const Homepage = () => {
                           prizeImageUrl={winner.prize_image_url}
                           cardStyleImageUrl={WINNER_BG_ROTATION[index % WINNER_BG_ROTATION.length]}
                           userAvatarUrl={winner.user_avatar_url}
-                          ticketNumber={winner.ticket_number}
+                          variant="champagne"
+                          compact
                         />
                       ))
                   )}
                 </div>
 
-                <Button variant="ghost" size="lg" className="w-full gap-2 mt-2 text-muted-foreground hover:text-foreground hover:bg-muted/30" onClick={() => navigate("/winners")}>
+                <Button variant="ghost" size="sm" className="w-full gap-2 mt-1 text-muted-foreground hover:text-foreground hover:bg-muted/30" onClick={() => navigate("/winners")}>
                   Zobrazit všechny
                   <ChevronRight className="w-4 h-4" />
                 </Button>
@@ -777,29 +524,25 @@ const Homepage = () => {
           </div>
         </div>
 
-        {/* Premium value message — MioCoiny jako odměna */}
+        {/* Premium value message — MioCoiny jako odměna. V nativní aplikaci skryto (zmiňuje dobití). */}
+        {!isNativeApp() && (
         <section className="w-full">
           <div className="max-w-[720px] mx-auto px-4 py-2 text-center">
             <div className="flex items-center justify-center gap-2 mb-2">
               <OneMilGiftIcon size={18} className="w-[18px] h-[18px] shrink-0" color="#FFB547" />
               <h3
-                className="text-base md:text-lg font-bold tracking-tight"
-                style={{
-                  fontFamily: 'var(--om-font-heading)',
-                  background: 'linear-gradient(135deg, #FFB547 0%, #FF8A00 50%, #FFB547 100%)',
-                  WebkitBackgroundClip: 'text',
-                  WebkitTextFillColor: 'transparent',
-                  backgroundClip: 'text',
-                }}
+                className="customer-premium-orange-heading text-base md:text-lg font-bold tracking-tight"
+                style={{ fontFamily: 'var(--om-font-heading)' }}
               >
-                MioCoiny jako odměna za nákupy
+                MIO jako odměna za nákupy
               </h3>
             </div>
             <p className="text-sm leading-relaxed max-w-[600px] mx-auto mt-2" style={{ color: '#8E98A6' }}>
-              Největší radost máme, když MioCoiny získáváte jako odměnu za nákupy u našich partnerů. Právě na tom je OneMil postavený. Dobití berte jen jako další možnost, když se chcete do soutěže zapojit hned a nechcete čekat na další odměnu z nákupu.
+              Největší radost máme, když MIO získáváte jako odměnu za nákupy u našich partnerů. Právě na tom je OneMil postavený. Dobití berte jen jako další možnost, když se chcete do soutěže zapojit hned a nechcete čekat na další odměnu z nákupu.
             </p>
           </div>
         </section>
+        )}
 
         {/* Dynamic Banners */}
         {(voucherBanner || gamesBanner) && (
@@ -859,7 +602,7 @@ const Homepage = () => {
         {/* Ongoing Contests Carousel */}
         <section className="space-y-6">
           <div className="flex items-center justify-between">
-            <h3 className="text-2xl font-bold text-heading-gold flex items-center gap-2">
+            <h3 className="customer-premium-orange-heading text-2xl font-bold text-heading-gold flex items-center gap-2">
               <Ticket className="w-6 h-6" />
               Probíhající Soutěže
             </h3>
@@ -867,14 +610,10 @@ const Homepage = () => {
               <ChevronRight className="w-5 h-5 text-muted-foreground" />
               {/* Role indicator */}
               {isAdmin && (
-                <div className="px-2 py-1 bg-[rgba(255,138,0,0.08)] border border-[rgba(255,138,0,0.3)] rounded text-xs text-[#FF8A00]">
-                  Pouze čtení
-                </div>
+                <div className="px-2 py-1 bg-[rgba(255,138,0,0.08)] border border-[rgba(255,138,0,0.3)] rounded text-xs text-[#FF8A00]">Pouze čtení</div>
               )}
               {!user && (
-                <div className="px-2 py-1 bg-[rgba(255,138,0,0.1)] border border-[rgba(255,138,0,0.3)] rounded text-xs text-[#FFB547]">
-                  Přihlásit pro interakci
-                </div>
+                <div className="px-2 py-1 bg-[rgba(255,138,0,0.1)] border border-[rgba(255,138,0,0.3)] rounded text-xs text-[#FFB547]">Přihlásit pro interakci</div>
               )}
             </div>
           </div>
@@ -922,7 +661,7 @@ const Homepage = () => {
             ) : contests.length === 0 ? (
               // No contests message
               <div className="flex-none w-72">
-                <Card className="coupon-card border-[rgba(255,138,0,0.4)] bg-gradient-to-b from-[hsl(220_35%_8%)] to-[hsl(220_30%_5%)] relative overflow-hidden h-full">
+                <Card className="homepage-light-panel coupon-card border-[rgba(255,138,0,0.4)] bg-gradient-to-b from-[hsl(220_35%_8%)] to-[hsl(220_30%_5%)] relative overflow-hidden h-full">
                   <div className="absolute left-0 top-1/2 transform -translate-y-1/2 w-4 h-4 bg-background rounded-full -translate-x-2" />
                   <div className="absolute right-0 top-1/2 transform -translate-y-1/2 w-4 h-4 bg-background rounded-full translate-x-2" />
                   <CardHeader className="pb-2">
@@ -931,9 +670,7 @@ const Homepage = () => {
                     </CardTitle>
                   </CardHeader>
                   <CardContent>
-                    <div className="text-sm text-muted-foreground">
-                      Momentálně nejsou k dispozici žádné aktivní soutěže
-                    </div>
+                    <div className="text-sm text-muted-foreground">Momentálně nejsou k dispozici žádné aktivní soutěže</div>
                   </CardContent>
                 </Card>
               </div>
@@ -987,7 +724,7 @@ const Homepage = () => {
         {/* Available Vouchers Section - Visible to everyone */}
         <section className="space-y-6">
           <div className="flex items-center justify-between">
-            <h3 className="text-2xl font-bold text-heading-gold flex items-center gap-2">
+            <h3 className="customer-premium-orange-heading text-2xl font-bold text-heading-gold flex items-center gap-2">
               <OneMilVoucherIcon size={24} className="w-6 h-6" />
               Dostupné vouchery
             </h3>
@@ -1014,7 +751,7 @@ const Homepage = () => {
             {vouchersLoading ? (
               // Loading placeholder
               <div className="flex-none w-80">
-                <Card className="relative overflow-hidden rounded-2xl border border-primary/15 bg-card/40 h-full">
+                <Card className="homepage-light-panel relative overflow-hidden rounded-2xl border border-primary/15 bg-card/40 h-full">
                   <CardContent className="p-6 space-y-4">
                     <div className="h-6 bg-muted rounded animate-pulse mb-2" />
                     <div className="h-4 bg-muted/70 rounded animate-pulse w-24" />
@@ -1026,79 +763,23 @@ const Homepage = () => {
             ) : homepageVouchers.length === 0 ? (
               // No vouchers message
               <div className="flex-none w-80">
-                <Card className="relative overflow-hidden rounded-2xl border border-primary/15 bg-card/40 h-full">
+                <Card className="homepage-light-panel relative overflow-hidden rounded-2xl border border-primary/15 bg-card/40 h-full">
                   <CardContent className="p-6 space-y-2 text-center">
                     <h3 className="text-xl font-bold text-primary">Žádné dostupné vouchery</h3>
-                    <div className="text-sm text-muted-foreground">
-                      Momentálně nejsou k dispozici žádné veřejné vouchery.
-                    </div>
+                    <div className="text-sm text-muted-foreground">Momentálně nejsou k dispozici žádné veřejné vouchery.</div>
                   </CardContent>
                 </Card>
               </div>
             ) : (
               homepageVouchers.map((voucher) => (
-                  <div key={voucher.id} className="flex-none w-80 cursor-pointer" onClick={() => navigate("/vouchers?tab=available")}>
-                  <Card className="voucher-card-glow relative overflow-hidden rounded-[20px] bg-gradient-to-b from-[hsl(220_35%_8%)] via-[hsl(220_30%_6%)] to-[hsl(220_25%_4%)] border-[3px] border-[rgba(255,138,0,0.35)] shadow-[0_4px_16px_hsl(222_50%_3%/0.5)] transition-all duration-300 hover:border-[rgba(255,138,0,0.55)] hover:shadow-[0_0_12px_rgba(255,138,0,0.2)] hover:scale-[1.02]">
-                    <div className="flex h-48 relative">
-                      {/* Left side - Content */}
-                      <div className="flex-1 p-5 flex flex-col justify-between">
-                        {/* Header */}
-                        <div>
-                          <h2 className="text-foreground font-bold text-xl tracking-wide mb-1">ONEMIL VOUCHER</h2>
-                          <p className="text-muted-foreground text-sm font-medium">HRAJ O CENY</p>
-                        </div>
-
-                        {/* Voucher name */}
-                        <div className="my-3">
-                          <h3 className="text-foreground font-bold text-lg mb-2">{voucher.name}</h3>
-                          <div className="text-primary font-bold text-2xl">5 MioCoinů</div>
-                        </div>
-
-                        {/* Button */}
-                        <div className="space-y-2">
-                          <Button
-                            className="w-full bg-primary text-primary-foreground font-bold shadow-[0_0_12px_hsl(var(--primary)/0.35)] hover:brightness-110 transition-all duration-200"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              if (!user) {
-                                navigate(buildLoginRedirectUrl(location.pathname + location.search));
-                              } else {
-                                handleVoucherPurchase(voucher.id);
-                              }
-                            }}
-                          >
-                            {!user ? "PŘIHLÁSIT SE" : "KOUPIT ZA 5 MC"}
-                          </Button>
-
-                          {/* Status indicator */}
-                          <div className="text-xs text-muted-foreground">
-                            {user ? "Klikněte pro nákup" : "Přihlaste se pro nákup"}
-                          </div>
-                        </div>
-                      </div>
-
-                      {/* Right side - Image */}
-                      <div className="w-32 relative border-l border-dashed border-border/50">
-                        {voucher.image_url ? (
-                          <img
-                            src={voucher.image_url}
-                            alt={voucher.name}
-                            className="w-full h-full object-cover"
-                            loading="lazy"
-                          />
-                        ) : (
-                          <div className="w-full h-full bg-muted/40 flex items-center justify-center">
-                            <span className="text-muted-foreground text-sm text-center px-2">VOUCHER</span>
-                          </div>
-                        )}
-                      </div>
-
-                      {/* Remaining count indicator */}
-                      <div className="absolute top-3 right-3 bg-background/80 backdrop-blur-sm text-foreground text-xs px-2 py-1 rounded border border-border">
-                        Zbývá: {getRemainingCount(voucher)}
-                      </div>
-                    </div>
-                  </Card>
+                <div key={voucher.id} className="flex-shrink-0 w-80">
+                  <VoucherShowcaseCard
+                    voucher={voucher}
+                    remainingLabel={typeof getRemainingCount(voucher) === 'number' ? `Zbývá: ${getRemainingCount(voucher)}` : null}
+                    onDetail={() => setSelectedVoucher(voucher)}
+                    showInfoBadges={false}
+                    className="h-48 w-full aspect-auto"
+                  />
                 </div>
               ))
             )}
@@ -1136,9 +817,9 @@ const Homepage = () => {
         {/* Partners Section */}
         <section className="space-y-6">
           <div className="flex items-center justify-between">
-            <h3 className="text-2xl font-bold text-heading-gold flex items-center gap-2">
+            <h3 className="customer-premium-orange-heading text-2xl font-bold text-heading-gold flex items-center gap-2">
               <Handshake className="w-6 h-6" />
-              Naši partneři, kde můžete získat MioCoiny za nákup
+              Naši partneři, kde můžete získat MIO za nákup
             </h3>
           </div>
 
@@ -1157,7 +838,7 @@ const Homepage = () => {
               partners.map((partner) => (
                 <div
                   key={partner.id}
-                  className="voucher-card-glow aspect-square bg-gradient-to-b from-[hsl(220_35%_8%)] via-[hsl(220_30%_6%)] to-[hsl(220_25%_4%)] border-[3px] border-[rgba(255,138,0,0.35)] rounded-[20px] overflow-hidden cursor-pointer transition-all duration-300 hover:border-[rgba(255,138,0,0.55)] hover:shadow-[0_0_12px_rgba(255,138,0,0.2)] hover:scale-[1.02] shadow-[0_4px_16px_hsl(222_50%_3%/0.5)] group"
+                  className="homepage-light-logo-card voucher-card-glow aspect-square bg-gradient-to-b from-[hsl(220_35%_8%)] via-[hsl(220_30%_6%)] to-[hsl(220_25%_4%)] border-[3px] border-[rgba(255,138,0,0.35)] rounded-[20px] overflow-hidden cursor-pointer transition-all duration-300 hover:border-[rgba(255,138,0,0.55)] hover:shadow-[0_0_12px_rgba(255,138,0,0.2)] hover:scale-[1.02] shadow-[0_4px_16px_hsl(222_50%_3%/0.5)] group"
                   onClick={() => window.open(partner.website_url, "_blank")}
                 >
                   <div className="w-full h-full p-5 flex items-center justify-center relative">
@@ -1217,7 +898,7 @@ const Homepage = () => {
         {/* Coming Soon Section */}
         <section className="space-y-6">
           <div className="flex items-center justify-between">
-            <h3 className="text-2xl font-bold text-heading-gold flex items-center gap-2">
+            <h3 className="customer-premium-orange-heading text-2xl font-bold text-heading-gold flex items-center gap-2">
               Připravujeme
             </h3>
           </div>
@@ -1226,7 +907,7 @@ const Homepage = () => {
             {comingSoonLoading ? (
               // Loading placeholder
               Array.from({ length: 3 }).map((_, index) => (
-                <Card key={index} className="coming-soon-card-glow relative overflow-hidden rounded-[20px] bg-gradient-to-b from-[hsl(220_35%_8%)] via-[hsl(220_30%_6%)] to-[hsl(220_25%_4%)] border-[2px] border-[rgba(255,138,0,0.4)] shadow-[0_4px_16px_hsl(222_50%_3%/0.5)] transition-transform duration-300 hover:scale-[1.02]">
+                <Card key={index} className="homepage-light-panel coming-soon-card-glow relative overflow-hidden rounded-[20px] bg-gradient-to-b from-[hsl(220_35%_8%)] via-[hsl(220_30%_6%)] to-[hsl(220_25%_4%)] border-[2px] border-[rgba(255,138,0,0.4)] shadow-[0_4px_16px_hsl(222_50%_3%/0.5)] transition-transform duration-300 hover:scale-[1.02]">
                   <CardContent className="p-0">
                     <div className="aspect-video rounded-lg overflow-hidden bg-muted/20 animate-pulse" />
                   </CardContent>
@@ -1235,7 +916,7 @@ const Homepage = () => {
             ) : comingSoonBanners.length === 0 ? (
               // Placeholder cards when empty
               Array.from({ length: 3 }).map((_, index) => (
-                <Card key={index} className="coming-soon-card-glow relative overflow-hidden rounded-[20px] bg-gradient-to-b from-[hsl(220_35%_8%)] via-[hsl(220_30%_6%)] to-[hsl(220_25%_4%)] border-[2px] border-[rgba(255,138,0,0.4)] shadow-[0_4px_16px_hsl(222_50%_3%/0.5)] transition-transform duration-300 hover:scale-[1.02]">
+                <Card key={index} className="homepage-light-panel coming-soon-card-glow relative overflow-hidden rounded-[20px] bg-gradient-to-b from-[hsl(220_35%_8%)] via-[hsl(220_30%_6%)] to-[hsl(220_25%_4%)] border-[2px] border-[rgba(255,138,0,0.4)] shadow-[0_4px_16px_hsl(222_50%_3%/0.5)] transition-transform duration-300 hover:scale-[1.02]">
                   <CardContent className="p-0">
                     <div className="aspect-video rounded-lg overflow-hidden bg-muted/20 flex items-center justify-center">
                       <div className="text-center text-muted-foreground">
@@ -1247,7 +928,7 @@ const Homepage = () => {
               ))
             ) : (
               comingSoonBanners.map((banner) => (
-                <Card key={banner.id} className="coming-soon-card-glow relative overflow-hidden rounded-[20px] bg-gradient-to-b from-[hsl(220_35%_8%)] via-[hsl(220_30%_6%)] to-[hsl(220_25%_4%)] border-[2px] border-[rgba(255,138,0,0.4)] shadow-[0_4px_16px_hsl(222_50%_3%/0.5)] transition-transform duration-300 hover:scale-[1.02]">
+                <Card key={banner.id} className="homepage-light-panel coming-soon-card-glow relative overflow-hidden rounded-[20px] bg-gradient-to-b from-[hsl(220_35%_8%)] via-[hsl(220_30%_6%)] to-[hsl(220_25%_4%)] border-[2px] border-[rgba(255,138,0,0.4)] shadow-[0_4px_16px_hsl(222_50%_3%/0.5)] transition-transform duration-300 hover:scale-[1.02]">
                   <CardContent className="p-0">
                     <div className="relative aspect-video rounded-lg overflow-hidden bg-muted/40">
                       <img
@@ -1296,6 +977,15 @@ const Homepage = () => {
         </section>
 
         {/* Coming Soon Info Modal */}
+      <VoucherDetailDialog
+        voucher={selectedVoucher}
+        open={!!selectedVoucher}
+        onOpenChange={(open) => !open && setSelectedVoucher(null)}
+        onPurchase={handleVoucherPurchase}
+        purchaseDisabled={isAdmin}
+        purchaseLoading={false}
+      />
+
         {infoPopup && (
           <div
             className="fixed inset-0 z-50 flex items-center justify-center p-4"
@@ -1352,7 +1042,7 @@ const Homepage = () => {
         {!videoLoading && videoUrl && isVideoActive && (
           <section className="space-y-6 mt-16">
             <div className="flex items-center justify-between">
-              <h3 className="text-2xl font-bold text-heading-gold flex items-center gap-2">
+              <h3 className="customer-premium-orange-heading text-2xl font-bold text-heading-gold flex items-center gap-2">
                 🎬 Jak to funguje
               </h3>
             </div>
@@ -1361,29 +1051,27 @@ const Homepage = () => {
               <YouTubeEmbed url={videoUrl} className="rounded-xl" />
 
               <div className="text-center space-y-6">
-                <h4 className="text-xl sm:text-2xl font-semibold text-foreground leading-snug">
-                  Jak hra funguje, co se vyhrává a jak probíhá nákup voucherů
-                </h4>
+                <h4 className="text-xl sm:text-2xl font-semibold text-foreground leading-snug">Jak hra funguje, co se vyhrává a jak probíhá nákup voucherů</h4>
                 <div className="space-y-4 max-w-2xl mx-auto text-left">
                   <div className="text-base leading-relaxed">
-                    <p className="text-foreground font-medium">🛒 Nakupujete u partnerských e-shopů</p>
-                    <p className="text-muted-foreground mt-1">Za nákup u zapojených e-shopů můžete získat digitální kredity MioCoiny jako marketingovou odměnu.</p>
+                    <p className="text-foreground font-medium">Nakupujete u partnerských e-shopů</p>
+                    <p className="text-muted-foreground mt-1">Za nákup u zapojených e-shopů můžete získat digitální kredity MIO jako marketingovou odměnu.</p>
                   </div>
                   <div className="text-base leading-relaxed">
-                    <p className="text-foreground font-medium">💎 Získáváte MioCoiny za nákup</p>
-                    <p className="text-muted-foreground mt-1">Počet MioCoinů se odvíjí od hodnoty nákupu nebo konkrétních produktů – vždy podle pravidel daného e-shopu.</p>
+                    <p className="text-foreground font-medium">Získáváte MIO za nákup</p>
+                    <p className="text-muted-foreground mt-1">Počet MIO se odvíjí od hodnoty nákupu nebo konkrétních produktů – vždy podle pravidel daného e-shopu.</p>
                   </div>
                   <div className="text-base leading-relaxed">
-                    <p className="text-foreground font-medium">🎟 MioCoiny využijete k účasti v soutěžích</p>
-                    <p className="text-muted-foreground mt-1">MioCoiny slouží výhradně k účasti ve spotřebitelských soutěžích o věcné ceny v aplikaci OneMil.</p>
+                    <p className="text-foreground font-medium">MIO využijete k účasti v soutěžích</p>
+                    <p className="text-muted-foreground mt-1">MIO slouží výhradně k účasti ve spotřebitelských soutěžích o věcné ceny v aplikaci OneMil.</p>
                   </div>
                   <div className="text-base leading-relaxed">
-                    <p className="text-foreground font-medium">🏆 Hrajete o luxusní věcné ceny</p>
+                    <p className="text-foreground font-medium">Hrajete o luxusní věcné ceny</p>
                     <p className="text-muted-foreground mt-1">Soutěže probíhají o ceny jako auta, dovolené, elektroniku nebo jiné hodnotné věcné výhry.</p>
                   </div>
                 </div>
                 <div className="text-xs text-muted-foreground/70 max-w-2xl mx-auto pt-2 space-y-0.5">
-                  <p>MioCoiny nejsou peníze a nelze je vybrat.</p>
+                  <p>MIO nejsou peníze a nelze je vybrat.</p>
                   <p>Soutěže mají předem určené výherní pozice.</p>
                   <p>Výhry jsou výhradně věcné.</p>
                 </div>

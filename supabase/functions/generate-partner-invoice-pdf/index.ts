@@ -3,6 +3,7 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { PDFDocument, rgb } from "npm:pdf-lib@1.17.1";
 import fontkit from "npm:@pdf-lib/fontkit@1.1.1";
 import QRCode from "https://esm.sh/qrcode@1.5.4";
+import { getSupabaseSecretKey } from "../_shared/supabaseSecretKey.ts";
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -52,6 +53,22 @@ function formatCurrency(amount: number): string {
   return amount.toLocaleString('cs-CZ', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + ' CZK';
 }
 
+/**
+ * MioCoin QUANTITY on an invoice: Czech decimal comma, at most one decimal place.
+ *
+ * This is deliberately different from formatCurrency: MioCoin amounts carry one
+ * decimal (0,6 MC), CZK amounts carry two (0,60 CZK). Mixing the two rules is how
+ * a 0,6 MC activation would silently become 0 or 1 on a partner's invoice.
+ *
+ * The coin columns are `numeric`, so PostgREST delivers them as strings — Number()
+ * is a parse, not a re-computation. Nothing here re-rounds a reward.
+ */
+function formatCoins(value: unknown): string {
+  const n = Number(value ?? 0);
+  if (!Number.isFinite(n)) return '0';
+  return n.toLocaleString('cs-CZ', { minimumFractionDigits: 0, maximumFractionDigits: 1 });
+}
+
 function buildSpayd(invoice: any): string {
   const vs = (invoice.variable_symbol || '').replace(/\D/g, '');
   const amount = Number(invoice.amount_gross ?? invoice.amount_inc_vat ?? 0).toFixed(2);
@@ -89,7 +106,7 @@ async function authorizeRequest(req: Request): Promise<{ status: number; error: 
   const token = authHeader.replace(/^Bearer\s+/i, '').trim();
   if (!token) return { status: 401, error: 'missing_authorization' };
 
-  const serviceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '';
+  const serviceKey = getSupabaseSecretKey();
   if (serviceKey && token === serviceKey) return null;
 
   const admin = createClient(Deno.env.get('SUPABASE_URL') ?? '', serviceKey);
@@ -131,7 +148,7 @@ serve(async (req) => {
     }
 
     const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
-    const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
+    const supabaseServiceKey = getSupabaseSecretKey();
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
     console.log(`Generating PDF for invoice: ${invoice_id}`);
@@ -418,37 +435,84 @@ serve(async (req) => {
     });
     y -= 25;
 
-    // ── Summary box ─────────────────────────────────────────────────
-    currentPage.drawRectangle({
-      x: leftMargin, y: y - 60, width: 495, height: 65,
-      color: rgb(0.95, 0.95, 0.97),
-    });
-    y -= 5;
-
     const amountNet = Number(invoice.amount_net ?? invoice.amount_ex_vat ?? 0);
     const vatAmount = Number(invoice.vat_amount ?? 0);
     const amountGross = Number(invoice.amount_gross ?? invoice.amount_inc_vat ?? 0);
 
-    // First column differs by type: activation count vs coin count
-    const firstLabel = isOfferInvoice ? 'Celkem aktivací:' : 'Celkem coinů:';
-    const firstValue = isOfferInvoice
-      ? String(lines.length)
-      : String(invoice.coins_total ?? invoice.coins_activated ?? 0);
+    const discountNet = Number(invoice.discount_net ?? 0);
+    const coinsFreeTotal = Number(invoice.coins_free_total ?? 0);
+    const amountBefore = Number(invoice.amount_net_before_discount ?? (amountNet + discountNet));
+    const hasDiscount = !isOfferInvoice && (discountNet > 0 || coinsFreeTotal > 0);
+    const discountReason = invoice.discount_reason
+      || 'Zahajovací akce OneMil – první 2 MioCoiny z každé aktivované odměny zdarma';
 
-    const summaryItems = [
-      { label: firstLabel,       value: firstValue },
-      { label: 'Cena bez DPH:', value: formatCurrency(amountNet) },
-      { label: 'DPH 21 %:',     value: formatCurrency(vatAmount) },
-      { label: 'Cena s DPH:',   value: formatCurrency(amountGross) },
-    ];
+    if (!hasDiscount) {
+      currentPage.drawRectangle({
+        x: leftMargin, y: y - 60, width: 495, height: 65,
+        color: rgb(0.95, 0.95, 0.97),
+      });
+      y -= 5;
 
-    let sx = leftMargin + 10;
-    for (const item of summaryItems) {
-      currentPage.drawText(item.label, { x: sx, y: y - 15, size: 9, font, color: rgb(0.4, 0.4, 0.4) });
-      currentPage.drawText(item.value, { x: sx, y: y - 30, size: 12, font: fontBold });
-      sx += 125;
+      const firstLabel = isOfferInvoice ? 'Celkem aktivací:' : 'Celkem coinů:';
+      const firstValue = isOfferInvoice
+        ? String(lines.length)
+        : formatCoins(invoice.coins_total ?? invoice.coins_activated ?? 0);
+
+      const summaryItems = [
+        { label: firstLabel,      value: firstValue },
+        { label: 'Cena bez DPH:', value: formatCurrency(amountNet) },
+        { label: 'DPH 21 %:',     value: formatCurrency(vatAmount) },
+        { label: 'Cena s DPH:',   value: formatCurrency(amountGross) },
+      ];
+
+      let sx = leftMargin + 10;
+      for (const item of summaryItems) {
+        currentPage.drawText(item.label, { x: sx, y: y - 15, size: 9, font, color: rgb(0.4, 0.4, 0.4) });
+        currentPage.drawText(item.value, { x: sx, y: y - 30, size: 12, font: fontBold });
+        sx += 125;
+      }
+      y -= 75;
+    } else {
+      currentPage.drawRectangle({
+        x: leftMargin, y: y - 108, width: 495, height: 113,
+        color: rgb(0.95, 0.95, 0.97),
+      });
+      y -= 5;
+
+      const rowA = [
+        { label: 'Aktivované MioCoiny:', value: formatCoins(invoice.coins_total ?? invoice.coins_activated ?? 0) },
+        { label: 'Standardní hodnota:',  value: formatCurrency(amountBefore) },
+        { label: 'Zdarma (akce):',       value: formatCoins(coinsFreeTotal) + ' MC' },
+        { label: 'Sleva:',               value: '-' + formatCurrency(discountNet) },
+      ];
+      let sx = leftMargin + 10;
+      for (const item of rowA) {
+        currentPage.drawText(item.label, { x: sx, y: y - 15, size: 9, font, color: rgb(0.4, 0.4, 0.4) });
+        currentPage.drawText(item.value, { x: sx, y: y - 30, size: 11, font: fontBold });
+        sx += 125;
+      }
+
+      const rowB = [
+        { label: 'Základ po slevě:', value: formatCurrency(amountNet) },
+        { label: 'DPH 21 %:',        value: formatCurrency(vatAmount) },
+        { label: 'Celkem k úhradě:', value: formatCurrency(amountGross) },
+      ];
+      sx = leftMargin + 10;
+      for (const item of rowB) {
+        currentPage.drawText(item.label, { x: sx, y: y - 55, size: 9, font, color: rgb(0.4, 0.4, 0.4) });
+        currentPage.drawText(item.value, { x: sx, y: y - 70, size: 12, font: fontBold });
+        sx += 125;
+      }
+
+      currentPage.drawText(discountReason, {
+        x: leftMargin + 10, y: y - 90, size: 8, font, color: rgb(0.35, 0.35, 0.35),
+      });
+      currentPage.drawText('Sleva na tuto část: 100 %', {
+        x: leftMargin + 10, y: y - 101, size: 8, font: fontBold, color: rgb(0.35, 0.35, 0.35),
+      });
+
+      y -= 123;
     }
-    y -= 75;
 
     // ── Payment info section ────────────────────────────────────────
     currentPage.drawText('Platební údaje:', { x: leftMargin, y, size: 10, font: fontBold });
@@ -488,12 +552,17 @@ serve(async (req) => {
           y -= 15;
         }
       } else {
-        // Coin lines: # | Datum aktivace | Ext. objednávka | Coiny  (unchanged)
         currentPage.drawRectangle({ x: leftMargin, y: y - 2, width: 495, height: 16, color: rgb(0.9, 0.9, 0.92) });
         currentPage.drawText('#',               { x: leftMargin + 5,   y: y + 2, size: 8, font: fontBold, color: rgb(0.3, 0.3, 0.3) });
         currentPage.drawText('Datum aktivace',  { x: leftMargin + 30,  y: y + 2, size: 8, font: fontBold, color: rgb(0.3, 0.3, 0.3) });
         currentPage.drawText('Ext. objednávka', { x: leftMargin + 180, y: y + 2, size: 8, font: fontBold, color: rgb(0.3, 0.3, 0.3) });
-        currentPage.drawText('Coiny',           { x: leftMargin + 400, y: y + 2, size: 8, font: fontBold, color: rgb(0.3, 0.3, 0.3) });
+        if (hasDiscount) {
+          currentPage.drawText('Coiny',       { x: leftMargin + 330, y: y + 2, size: 8, font: fontBold, color: rgb(0.3, 0.3, 0.3) });
+          currentPage.drawText('Zdarma',      { x: leftMargin + 380, y: y + 2, size: 8, font: fontBold, color: rgb(0.3, 0.3, 0.3) });
+          currentPage.drawText('Fakturováno', { x: leftMargin + 430, y: y + 2, size: 8, font: fontBold, color: rgb(0.3, 0.3, 0.3) });
+        } else {
+          currentPage.drawText('Coiny',       { x: leftMargin + 400, y: y + 2, size: 8, font: fontBold, color: rgb(0.3, 0.3, 0.3) });
+        }
         y -= 18;
 
         for (let i = 0; i < lines.length; i++) {
@@ -504,7 +573,13 @@ serve(async (req) => {
           currentPage.drawText(String(i + 1),               { x: leftMargin + 5,   y: y + 1, size: 8, font });
           currentPage.drawText(formatDate(line.activated_at), { x: leftMargin + 30,  y: y + 1, size: 8, font });
           currentPage.drawText(line.external_order_id || '-', { x: leftMargin + 180, y: y + 1, size: 8, font, color: rgb(0.4, 0.4, 0.4) });
-          currentPage.drawText(String(line.coins),           { x: leftMargin + 400, y: y + 1, size: 8, font: fontBold });
+          if (hasDiscount) {
+            currentPage.drawText(formatCoins(line.coins),          { x: leftMargin + 330, y: y + 1, size: 8, font });
+            currentPage.drawText(formatCoins(line.coins_free),     { x: leftMargin + 380, y: y + 1, size: 8, font, color: rgb(0.2, 0.5, 0.2) });
+            currentPage.drawText(formatCoins(line.coins_billable), { x: leftMargin + 430, y: y + 1, size: 8, font: fontBold });
+          } else {
+            currentPage.drawText(formatCoins(line.coins),          { x: leftMargin + 400, y: y + 1, size: 8, font: fontBold });
+          }
           y -= 15;
         }
       }
@@ -579,7 +654,8 @@ serve(async (req) => {
         for (let i = 0; i < activations.length; i++) {
           if (y < 60) { currentPage = pdfDoc.addPage([595, 842]); y = 842 - 50; }
           const act     = activations[i];
-          totalCoins   += act.coins;
+          // Number(): numeric arrives from PostgREST as a string, so a bare += would concatenate.
+          totalCoins   += Number(act.coins || 0);
           const bgColor = i % 2 === 0 ? rgb(1, 1, 1) : rgb(0.97, 0.97, 0.98);
           currentPage.drawRectangle({ x: leftMargin, y: y - 2, width: 495, height: 14, color: bgColor });
 
@@ -590,7 +666,7 @@ serve(async (req) => {
           currentPage.drawText(email,                        { x: leftMargin + 25,  y: y + 1, size: 7, font });
           currentPage.drawText(formatDate(act.activated_at), { x: leftMargin + 200, y: y + 1, size: 7, font });
           currentPage.drawText(act.code || '-',              { x: leftMargin + 320, y: y + 1, size: 7, font, color: rgb(0.4, 0.4, 0.4) });
-          currentPage.drawText(String(act.coins),            { x: leftMargin + 430, y: y + 1, size: 7, font: fontBold });
+          currentPage.drawText(formatCoins(act.coins),            { x: leftMargin + 430, y: y + 1, size: 7, font: fontBold });
           y -= 14;
         }
 
@@ -598,7 +674,7 @@ serve(async (req) => {
         if (y < 40) { currentPage = pdfDoc.addPage([595, 842]); y = 842 - 50; }
         currentPage.drawRectangle({ x: leftMargin, y: y - 2, width: 495, height: 16, color: rgb(0.92, 0.92, 0.95) });
         currentPage.drawText('Celkem:',          { x: leftMargin + 320, y: y + 2, size: 8, font: fontBold });
-        currentPage.drawText(String(totalCoins), { x: leftMargin + 430, y: y + 2, size: 8, font: fontBold });
+        currentPage.drawText(formatCoins(totalCoins), { x: leftMargin + 430, y: y + 2, size: 8, font: fontBold });
         y -= 25;
       }
     } // end else (coin)
@@ -651,30 +727,28 @@ serve(async (req) => {
     }
 
     // ── 8. Get signed URL (bucket is private — no public access) ───
-    const SIGNED_URL_TTL_SECONDS = 10 * 365 * 24 * 60 * 60; // ~10 years
-    const { data: urlData, error: signError } = await supabase.storage
-      .from('partner-invoices')
-      .createSignedUrl(filename, SIGNED_URL_TTL_SECONDS);
-
-    if (signError || !urlData?.signedUrl) {
-      console.error('Signed URL error:', signError);
-      return new Response(
-        JSON.stringify({ error: 'Nepodařilo se vytvořit odkaz na PDF', details: signError?.message }),
-        { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
-    }
-
-    const fileUrl = urlData.signedUrl;
-    console.log('PDF uploaded, signed URL created');
+    // Persist the private Storage object path; signed URLs are created only
+    // when an authorized user downloads the export.
+    console.log('PDF uploaded to private Storage');
 
     // ── 9. Record export ────────────────────────────────────────────
-    const { error: exportError } = await supabase
+    const { data: exportData, error: exportError } = await supabase
       .from('partner_invoice_exports')
       .insert({
         invoice_id,
         format: 'pdf',
-        file_url: fileUrl,
-      });
+        file_url: null,
+        storage_bucket: 'partner-invoices',
+        storage_path: filename,
+        metadata: {
+          content_type: 'application/pdf',
+          filename,
+          size_bytes: pdfBytes.length,
+          generated_by: 'generate-partner-invoice-pdf',
+        },
+      })
+      .select('id')
+      .single();
 
     if (exportError) {
       console.error('Error recording export:', exportError);
@@ -687,10 +761,13 @@ serve(async (req) => {
     return new Response(
       JSON.stringify({
         success: true,
-        file_url: fileUrl,
+        export_id: exportData?.id ?? null,
+        storage_bucket: 'partner-invoices',
+        storage_path: filename,
         activation_overview_source: isOfferInvoice ? 'partner_offer_activations' : 'partner_invoice_lines',
         activation_overview_total_coins: activationOverviewTotalCoins,
         activation_overview_rows: activations.length,
+        trial_discount_rendered: hasDiscount,
       }),
       { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );

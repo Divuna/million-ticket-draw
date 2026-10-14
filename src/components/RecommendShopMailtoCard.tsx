@@ -4,13 +4,13 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { toast } from '@/hooks/use-toast';
 
-const SUBJECT = 'Zákazník by rád získával MioCoiny za nákupy';
+const SUBJECT = 'Zákazník by rád získával MIO za nákupy';
 
 const BODY = `Dobrý den,
 
-nakupuji u vás a napadlo mě, že by bylo skvělé, kdybych u vás mohl získávat MioCoiny do aplikace OneMil.
+nakupuji u vás a napadlo mě, že by bylo skvělé, kdybych u vás mohl získávat MIO do aplikace OneMil.
 
-OneMil je věrnostní aplikace, kde zákazníci mohou za nákupy získávat MioCoiny a využívat je na soutěže, vouchery a další výhody.
+OneMil je věrnostní aplikace, kde zákazníci mohou za nákupy získávat MIO a využívat je na soutěže, vouchery a další výhody.
 
 Přišlo mi to jako zajímavý nápad, který by mohl být příjemný i pro vaše zákazníky.
 
@@ -57,7 +57,7 @@ const RecommendShopMailtoCard: React.FC = () => {
           <div className="min-w-0">
             <h2 className="text-lg font-bold text-foreground">Doporučit OneMil oblíbenému obchodu</h2>
             <p className="mt-1 text-sm leading-relaxed text-muted-foreground/80">
-              Pošlete e-mail svému oblíbenému e-shopu nebo prodejci a dejte jim vědět, že byste u nich rádi získávali MioCoiny za nákupy.
+              Pošlete e-mail svému oblíbenému e-shopu nebo prodejci a dejte jim vědět, že byste u nich rádi získávali MIO za nákupy.
             </p>
           </div>
         </div>

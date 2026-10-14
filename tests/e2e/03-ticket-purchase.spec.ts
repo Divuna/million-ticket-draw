@@ -23,8 +23,8 @@ test.describe('Ticket Purchase', () => {
     await page.waitForURL(/\/contest\//, { timeout: 10_000 });
 
     // Two valid states: enough balance → buy button; insufficient → top-up button
-    const buyButton = page.getByRole('button', { name: /Uplatnit.*MioCoin/i });
-    const topUpButton = page.getByRole('button', { name: /Dobít MioCoiny/i });
+    const buyButton = page.getByRole('button', { name: /Uplatnit.*MIO/i });
+    const topUpButton = page.getByRole('button', { name: /Dobít MIO/i });
 
     await expect(buyButton.or(topUpButton).first()).toBeVisible({ timeout: 15_000 });
 

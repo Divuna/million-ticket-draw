@@ -127,15 +127,7 @@ const MyContests: React.FC = () => {
                 <OneMilTicketIcon size={36} className="w-7 h-7 md:w-9 md:h-9 text-black" />
               </div>
               <div>
-                <h1
-                  className="text-2xl md:text-3xl font-bold tracking-tight"
-                  style={{
-                    background: 'linear-gradient(135deg, #FFB547 0%, #FF8A00 50%, #FFB547 100%)',
-                    WebkitBackgroundClip: 'text',
-                    WebkitTextFillColor: 'transparent',
-                    backgroundClip: 'text',
-                  }}
-                >
+                <h1 className="customer-premium-orange-heading text-2xl md:text-3xl font-bold tracking-tight">
                   Moje hry
                 </h1>
                 <p className="text-sm text-gray-400 mt-1">Přehled vašich tiketů a soutěží</p>

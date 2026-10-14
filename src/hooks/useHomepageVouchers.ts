@@ -10,9 +10,23 @@ interface HomepageVoucher {
   redeemed_count: number;
   start_date: string | null;
   end_date: string | null;
+  short_description: string | null;
+  usage_description: string | null;
+  terms_text: string | null;
+  how_to_use_text: string | null;
   user_id: string | null;
   is_public: boolean;
+  available_code_count: number;
 }
+
+const withVoucherTextFallback = (voucher: HomepageVoucher): HomepageVoucher => ({
+  ...voucher,
+  short_description: voucher.short_description ?? null,
+  usage_description: voucher.usage_description ?? null,
+  terms_text: voucher.terms_text ?? null,
+  how_to_use_text: voucher.how_to_use_text ?? null,
+  available_code_count: Number(voucher.available_code_count ?? 0),
+});
 
 export const useHomepageVouchers = () => {
   const [vouchers, setVouchers] = useState<HomepageVoucher[]>([]);
@@ -22,31 +36,11 @@ export const useHomepageVouchers = () => {
     try {
       setLoading(true);
 
-      // Fetch ALL public vouchers visible to everyone (including anon)
-      const { data, error } = await supabase
-        .from("vouchers")
-        .select(
-          "id, name, image_url, banner_url, max_quantity, redeemed_count, start_date, end_date, user_id, is_public",
-        )
-        .eq("is_public", true) // show public vouchers for everyone
-        .order("created_at", { ascending: false });
+      const { data, error } = await supabase.rpc("get_public_available_vouchers");
 
       if (error) throw error;
 
-      const now = new Date();
-
-      // Filter active vouchers (date range)
-      const activeVouchers = (data || []).filter((voucher) => {
-        const startDate = voucher.start_date ? new Date(voucher.start_date) : null;
-        const endDate = voucher.end_date ? new Date(voucher.end_date) : null;
-
-        if (startDate && now < startDate) return false;
-        if (endDate && now > endDate) return false;
-
-        return true;
-      });
-
-      setVouchers(activeVouchers);
+      setVouchers((data || []).map(withVoucherTextFallback));
     } catch (error) {
       console.error("Error fetching active vouchers:", error);
       setVouchers([]);
@@ -66,6 +60,9 @@ export const useHomepageVouchers = () => {
       .on("postgres_changes", { event: "*", schema: "public", table: "vouchers" }, () => {
         fetchActiveVouchers();
       })
+      .on("postgres_changes", { event: "*", schema: "public", table: "voucher_codes" }, () => {
+        fetchActiveVouchers();
+      })
       .subscribe();
 
     return () => {
@@ -73,25 +70,12 @@ export const useHomepageVouchers = () => {
     };
   }, []);
 
-  // Calculate remaining count
   const getRemainingCount = (voucher: HomepageVoucher) => {
-    if (!voucher.max_quantity) return "Neomezeně";
-    const remaining = voucher.max_quantity - voucher.redeemed_count;
-    return remaining > 0 ? remaining : 0;
+    return Math.max(0, voucher.available_code_count);
   };
 
-  // Check voucher availability
   const isVoucherAvailable = (voucher: HomepageVoucher) => {
-    const now = new Date();
-    const startDate = voucher.start_date ? new Date(voucher.start_date) : null;
-    const endDate = voucher.end_date ? new Date(voucher.end_date) : null;
-
-    if (startDate && now < startDate) return false;
-    if (endDate && now > endDate) return false;
-
-    if (voucher.max_quantity && voucher.redeemed_count >= voucher.max_quantity) return false;
-
-    return true;
+    return voucher.is_public && voucher.available_code_count > 0;
   };
 
   const availableVouchers = vouchers.filter(isVoucherAvailable);

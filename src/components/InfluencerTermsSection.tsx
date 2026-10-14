@@ -41,6 +41,8 @@ const InfluencerTermsSection: React.FC<Props> = ({ partnerId, onAccepted }) => {
         .select('slug, title, version, updated_at, content')
         .eq('slug', 'obchodni-podminky')
         .eq('section', 'legal')
+        .eq('is_active', true)
+        .is('deleted_at', null)
         .maybeSingle(),
       supabase
         .from('user_legal_acceptances')

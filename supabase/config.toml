@@ -1,5 +1,46 @@
 project_id = "xkzhjldrojjlrkezorey"
 
+# Sales Leads (modul Obchod / Leady) — auth řeší funkce interně přes JWT +
+# has_admin_permission('sales_leads.manage'). research/draft-email NEODESÍLAJÍ
+# e-maily; send-sales-lead-email odesílá uložený koncept jen na lidský klik.
+[functions.sales-lead-research]
+verify_jwt = false
+
+[functions.sales-lead-draft-email]
+verify_jwt = false
+
+[functions.send-sales-lead-email]
+verify_jwt = false
+
+# Interní worker připravených dávek. Autorizuje se výhradně sdíleným secretem
+# SALES_LEAD_BATCH_WORKER_SECRET (ne uživatelským JWT). PR 4 funkci nenasazuje,
+# secret nenastavuje a nevytváří pro ni žádný cron.
+[functions.process-sales-lead-email-batch]
+verify_jwt = false
+
+# Veřejná stránka reakcí z obchodního e-mailu. GET je pouze čtení; zápis
+# proběhne až vědomým POSTem s jednorázovým tokenem, jehož hash je v DB.
+[functions.sales-lead-magin-supply-agent]
+verify_jwt = false
+
+[functions.sales-lead-response]
+verify_jwt = false
+
+# Příjem PŘÍCHOZÍCH odpovědí firem (reply+LEAD_ID@reply.onemil.cz). Autorizace =
+# ověření podpisu webhooku (SALES_LEAD_INBOUND_WEBHOOK_SECRET) uvnitř funkce.
+# Nikdy neodesílá e-mail; jen zapíše `reply_received` a posune stav na `odpovedel`.
+[functions.sales-lead-inbound]
+verify_jwt = false
+
+# Fáze 5A — automatické NAVRŽENÍ firem (jen `navrzeny`, nikdy odeslání e-mailu).
+[functions.sales-lead-discover]
+verify_jwt = false
+
+# Fáze 5B — dohledání VEŘEJNÉHO kontaktu jako NEOVĚŘENÝ návrh (nikdy nepřepíše
+# odesílací contact_email; NIKDY neodesílá e-mail). AI e-mail nevymýšlí.
+[functions.sales-lead-enrich-contact]
+verify_jwt = false
+
 [functions.sofinity-player-sync]
 verify_jwt = true
 
@@ -10,6 +51,9 @@ verify_jwt = false
 verify_jwt = true
 
 [functions.process_event_queue_worker]
+verify_jwt = false
+
+[functions.process-email-queue]
 verify_jwt = false
 
 [functions.sofinity-integration-test]
@@ -29,6 +73,9 @@ verify_jwt = false
 
 [functions.run-audit]
 verify_jwt = false
+
+[functions.generate-audit-report]
+verify_jwt = true
 
 [functions.generate-contest-banner]
 verify_jwt = false
@@ -52,11 +99,14 @@ verify_jwt = false
 verify_jwt = false
 
 [functions.upload-ticket-share]
-verify_jwt = false
+verify_jwt = true
 
+# Deprecated: kept as a safe tombstone so an existing deployed endpoint cannot
+# send reminders for a field that is no longer required.
 [functions.send-onboarding-reminder]
 verify_jwt = true
 
+# Deprecated: kept as an authenticated no-op for any existing scheduler.
 [functions.daily-onboarding-reminder]
 verify_jwt = false
 
@@ -99,7 +149,16 @@ verify_jwt = true
 [functions.generate-partner-invoice-pdf]
 verify_jwt = false
 
+[functions.get-partner-invoice-export-url]
+verify_jwt = true
+
 [functions.send-partner-invoice-email]
+verify_jwt = false
+
+[functions.partner-invoice-auto-send]
+verify_jwt = false
+
+[functions.send-offer-reminders]
 verify_jwt = false
 
 [functions.stripe-refund]
@@ -124,4 +183,44 @@ verify_jwt = false
 verify_jwt = false
 
 [functions.approve-shoptet-connection]
+verify_jwt = false
+
+# Partnerské ověření napojení před aktivací (#289 část C). Stejný vzor jako
+# submit-: JWT se ověřuje uvnitř funkce, aby šlo vracet přesné chybové kódy
+# (missing_authorization / invalid_token / not_partner).
+[functions.verify-shoptet-connection]
+verify_jwt = false
+
+# Public read-only reward preview for the Shoptet widget. Intentionally
+# unauthenticated: the widget runs in the partner's storefront, where any secret
+# would be readable. Returns only the MioCoin figure for a given basket — never the
+# export URL, Vault secret, API key or any customer data. Writes nothing.
+[functions.partner-reward-preview]
+verify_jwt = false
+[functions.send-sales-lead-reply]
+verify_jwt = false
+
+[functions.send-sales-lead-follow-up]
+verify_jwt = false
+
+[functions.sales-lead-ares-lookup]
+verify_jwt = false
+
+[functions.sales-lead-work-intake]
+verify_jwt = false
+
+# Autorizace je vlastní secret SALES_LEAD_BATCH_AGENT_SECRET ověřený uvnitř funkce
+# (stejný vzor jako sales-lead-work-intake), proto se JWT nevyžaduje.
+[functions.sales-lead-daily-batch-agent]
+verify_jwt = false
+
+[functions.onemil-work-intake-mcp]
+verify_jwt = false
+
+# Disabled legacy contest generators. They remain deployable only to replace
+# old production copies with safe tombstones that never use service_role.
+[functions.generate-complete-contests]
+verify_jwt = false
+
+[functions.generate-tickets]
 verify_jwt = false

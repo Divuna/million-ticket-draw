@@ -1,4 +1,10 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.57.4';
+import {
+  escapeEmailHtml,
+  renderOneMilDetailRows,
+  renderOneMilEmail,
+} from '../_shared/oneMilEmailTemplate.ts';
+import { getSupabaseSecretKey } from "../_shared/supabaseSecretKey.ts";
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -28,7 +34,7 @@ Deno.serve(async (req) => {
 
     const supabaseClient = createClient(
       Deno.env.get('SUPABASE_URL') ?? '',
-      Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
+      getSupabaseSecretKey()
     );
 
     const { action } = await req.json();
@@ -84,7 +90,7 @@ Deno.serve(async (req) => {
             include_player_ids: [devices.player_id],
             headings: { cs: title, en: title },
             contents: { cs: message, en: message },
-            web_url: 'https://onemil.lovable.app/profile'
+            web_url: 'https://onemil.cz/profile'
           })
         });
 
@@ -120,24 +126,25 @@ Deno.serve(async (req) => {
             app_id: appId,
             include_email_tokens: [user.email],
             email_subject: title,
-            email_body: `
-              <html>
-                <body style="font-family: Arial, sans-serif; padding: 20px; background-color: #f5f5f5;">
-                  <div style="max-width: 600px; margin: 0 auto; background: white; padding: 30px; border-radius: 10px;">
-                    <h2 style="color: #333; margin-bottom: 20px;">${title}</h2>
-                    <p style="color: #555; line-height: 1.6;">
-                      Došlo ke změně nastavení marketingových sdělení ve vašem účtu OneMil.
-                    </p>
-                    <p style="color: #555; line-height: 1.6;">
-                      <strong>Datum a čas:</strong> ${datetime}
-                    </p>
-                    <p style="color: #888; margin-top: 30px; font-size: 14px;">
-                      Pokud jste změnu neprovedli vy, kontaktujte podporu.
-                    </p>
-                  </div>
-                </body>
-              </html>
-            `
+            email_body: renderOneMilEmail({
+              preheader: 'Potvrzení změny nastavení marketingových sdělení.',
+              eyebrow: 'Nastavení účtu',
+              title,
+              bodyHtml: `
+                <p style="margin:0 0 18px;">Došlo ke změně nastavení marketingových sdělení ve vašem účtu OneMil.</p>
+                <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#F7EBDD;border:1px solid #F2A16B;border-radius:12px;border-collapse:separate;overflow:hidden;">
+                  ${renderOneMilDetailRows([
+                    { label: 'Změna', value: escapeEmailHtml(actionType) },
+                    { label: 'Datum a čas', value: escapeEmailHtml(datetime) },
+                  ])}
+                </table>
+              `,
+              action: {
+                label: 'Zkontrolovat nastavení',
+                url: 'https://onemil.cz/profile',
+              },
+              footerNote: 'Pokud jste změnu neprovedli vy, kontaktujte podporu OneMil.',
+            })
           })
         });
 

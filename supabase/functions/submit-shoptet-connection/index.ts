@@ -1,4 +1,5 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.57.4";
+import { getSupabaseSecretKey } from "../_shared/supabaseSecretKey.ts";
 
 // Partner submits their Shoptet CSV export URL for admin review.
 //
@@ -13,7 +14,7 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2.57.4";
 //       store URL in Vault → transition draft → submitted → respond (no URL).
 
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
-const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
+const supabaseServiceRoleKey = getSupabaseSecretKey();
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -59,7 +60,7 @@ Deno.serve(async (req) => {
   }
   const token = authHeader.slice(7);
 
-  const admin = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, {
+  const admin = createClient(SUPABASE_URL, supabaseServiceRoleKey, {
     auth: { persistSession: false },
   });
 
@@ -110,7 +111,7 @@ Deno.serve(async (req) => {
   // ── 4. Fetch submittable draft request ─────────────────────────────────────
   const { data: scr, error: scrErr } = await admin
     .from("shoptet_connection_requests")
-    .select("id, status, url_received")
+    .select("id, status, url_received, request_kind")
     .eq("id", request_id)
     .eq("partner_id", partner.id)
     .eq("status", "draft")
@@ -123,6 +124,34 @@ Deno.serve(async (req) => {
   }
   if (!scr) {
     return err(404, "draft_not_found", "No submittable draft request found");
+  }
+
+  const requestKind = (scr.request_kind as string | null) ?? "initial";
+
+  // ── 4b. A URL change only makes sense on top of a live connection ──────────
+  // Without this, a partner with no connection could file a "change" that admin
+  // would approve into a Vault key nothing reads. The first connection must go
+  // through the normal onboarding flow.
+  if (requestKind === "url_change") {
+    const { data: live, error: liveErr } = await admin
+      .from("shoptet_connection_requests")
+      .select("id")
+      .eq("partner_id", partner.id)
+      .eq("request_kind", "initial")
+      .in("status", ["approved", "active"])
+      .maybeSingle();
+
+    if (liveErr) {
+      console.error("live lookup:", liveErr.message);
+      return err(500, "internal_error", "Internal error");
+    }
+    if (!live) {
+      return err(
+        400,
+        "no_active_connection",
+        "URL change requires an already active Shoptet connection",
+      );
+    }
   }
 
   // ── 5. Store URL in Vault — URL never touches any app table ────────────────
@@ -149,11 +178,31 @@ Deno.serve(async (req) => {
 
   if (updateErr) {
     console.error("update:", updateErr.message);
-    // Best-effort Vault cleanup; non-blocking.
-    await admin.rpc("delete_shoptet_pending_url", { p_request_id: request_id }).catch(() => {});
+    // Best-effort Vault cleanup; non-blocking. The URL must not linger for a
+    // request that never became submittable.
+    //
+    // try/catch, not .catch(): a PostgrestBuilder is a thenable but has no .catch,
+    // so chaining one throws a TypeError and takes the whole handler down with a
+    // bare 500 — which is exactly what a duplicate change request used to produce.
+    try {
+      await admin.rpc("delete_shoptet_pending_url", { p_request_id: request_id });
+    } catch (cleanupErr) {
+      console.warn("vault cleanup:", (cleanupErr as Error).message);
+    }
+
+    // scr_partner_pending_change_unique: a second URL change is already awaiting
+    // review. This is the database having the last word on duplicates, so report
+    // it as the expected outcome rather than an internal error.
+    if (updateErr.code === "23505") {
+      return err(
+        409,
+        "change_already_pending",
+        "A URL change for this partner is already awaiting approval",
+      );
+    }
     return err(500, "update_error", "Failed to update request status");
   }
 
   // ── 7. Respond — URL is never included ─────────────────────────────────────
-  return ok({ success: true, request_id, status: "submitted" });
+  return ok({ success: true, request_id, status: "submitted", request_kind: requestKind });
 });

@@ -20,7 +20,7 @@ const ADMIN_PASSWORD = (process.env.E2E_SUPERADMIN_PASSWORD || process.env.E2E_A
 const RUN_ID = Date.now();
 const PARTNER_NAME = `Spec45 Resend Partner ${RUN_ID}`;
 const INVOICE_NUMBER = `TEST-S45-${RUN_ID}`;
-const PDF_URL = `https://example.test/partner-invoices/${RUN_ID}.pdf`;
+const PDF_STORAGE_PATH = `spec45/${RUN_ID}.pdf`;
 
 const isStaging =
   SUPABASE_URL.includes(STAGING_REF) &&
@@ -76,7 +76,9 @@ test.describe('45 - admin partner invoice resend button', () => {
         vat_amount: 1.05,
         amount_gross: 6.05,
         invoice_number: INVOICE_NUMBER,
-        variable_symbol: '45000001',
+        // Unikátní VS pro každý běh — pevná hodnota kolidovala s řádkem, který
+        // po přerušeném běhu zůstal na stagingu (partner_invoices_variable_symbol_uniq).
+        variable_symbol: `45${String(RUN_ID).slice(-8)}`,
         status: 'issued',
       })
       .select('id')
@@ -89,7 +91,9 @@ test.describe('45 - admin partner invoice resend button', () => {
       .insert({
         invoice_id: invoiceId,
         format: 'pdf',
-        file_url: PDF_URL,
+        file_url: null,
+        storage_bucket: 'partner-invoices',
+        storage_path: PDF_STORAGE_PATH,
       });
     if (exportError) throw new Error(`export insert failed: ${exportError.message}`);
   });
@@ -138,8 +142,15 @@ test.describe('45 - admin partner invoice resend button', () => {
     const resendButton = page.getByRole('button', { name: 'Znovu odeslat' });
     await expect(resendButton).toBeVisible();
     await expect(page.getByRole('button', { name: 'Odeslat fakturu emailem' })).toHaveCount(0);
-    await expect(page.getByRole('button', { name: 'Označit jako zaplaceno' })).toHaveCount(0);
     await expect(page.getByRole('button', { name: 'Odeslat', exact: true })).toHaveCount(0);
+
+    // „Označit jako zaplaceno" je u vystavené faktury nově DOSTUPNÉ. Dřívější
+    // status-only tlačítko bylo odstraněno, protože měnilo stav bez jakékoli
+    // kontroly; současné je guardované RPC `admin_mark_partner_invoice_paid`
+    // (is_admin + přechod pouze issued→paid + serverový paid_at) a potvrzovacím
+    // dialogem. Samotné kliknutí sem stav nemění — otevře se jen dialog, takže
+    // níže ověřený invariant „resend nic nemutuje" zůstává v platnosti.
+    await expect(page.getByRole('button', { name: 'Označit jako zaplaceno' })).toBeVisible();
 
     await resendButton.click();
     await expect(page.getByText('Faktura byla znovu odeslána.')).toBeVisible();

@@ -1,4 +1,5 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { getSupabaseSecretKey } from "../_shared/supabaseSecretKey.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -24,11 +25,6 @@ function jsonSuccess(body: Record<string, unknown>) {
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
-  }
-
-  const internalToken = Deno.env.get("INTERNAL_FUNCTION_TOKEN");
-  if (req.headers.get("x-internal-token") !== internalToken) {
-    return jsonError("internal_token_invalid", 401);
   }
 
   try {
@@ -75,7 +71,7 @@ Deno.serve(async (req) => {
 
     const supabaseAdmin = createClient(
       Deno.env.get("SUPABASE_URL") ?? "",
-      Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "",
+      getSupabaseSecretKey(),
     );
 
     // Partner-side rotation is intentionally scoped to the logged-in partner.

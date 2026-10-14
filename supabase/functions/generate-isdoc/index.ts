@@ -1,5 +1,6 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { getSupabaseSecretKey } from "../_shared/supabaseSecretKey.ts";
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -56,6 +57,15 @@ function generateIsdocXml(payload: IsdocPayload, partner: PartnerInfo, invoiceNu
   const dueDate = new Date(Date.now() + 14 * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
   
   // Build invoice lines XML
+  //
+  // MioCoin quantities carry at most ONE decimal place (0.6 MC is a valid line).
+  // build_isdoc_payload returns them as JSON numbers, so `${line.coins}` already
+  // emits "0.6" without loss — do NOT wrap this in a rounding/parseInt "fix".
+  //
+  // OPEN ISSUE (pre-existing, out of scope for the MioCoin decimal work):
+  // LineExtensionAmount is currently fed the COIN QUANTITY rather than the CZK
+  // line amount, and InvoicedQuantity is hardcoded to 1. That is a financial
+  // semantics bug in the ISDOC export and needs its own change + approval.
   const linesXml = payload.lines.map((line, idx) => `
     <InvoiceLine>
       <ID>${idx + 1}</ID>
@@ -188,7 +198,7 @@ serve(async (req) => {
     }
 
     const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
-    const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
+    const supabaseServiceKey = getSupabaseSecretKey();
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
     console.log(`Generating ISDOC for invoice: ${invoice_id}`);
@@ -248,7 +258,7 @@ serve(async (req) => {
     const filename = `isdoc-${invoice_id}-${Date.now()}.isdoc`;
     const xmlBytes = new TextEncoder().encode(xmlContent);
 
-    const { data: uploadData, error: uploadError } = await supabase.storage
+    const { error: uploadError } = await supabase.storage
       .from('partner-invoices')
       .upload(filename, xmlBytes, {
         contentType: 'application/xml',
@@ -263,13 +273,10 @@ serve(async (req) => {
       );
     }
 
-    // 6. Get public URL
-    const { data: urlData } = supabase.storage
-      .from('partner-invoices')
-      .getPublicUrl(filename);
-
-    const fileUrl = urlData.publicUrl;
-    console.log('File uploaded:', fileUrl);
+    // 6. Keep the object private. Signed URLs are created only on authorized download.
+    // Short-lived URL for this immediate response only. Persist the private
+    // Storage object path instead of any public/signed URL.
+    console.log('ISDOC uploaded to private Storage');
 
     // 7. Insert into partner_invoice_exports
     const { data: exportData, error: exportError } = await supabase
@@ -277,7 +284,15 @@ serve(async (req) => {
       .insert({
         invoice_id: invoice_id,
         format: 'isdoc',
-        file_url: fileUrl
+        file_url: null,
+        storage_bucket: 'partner-invoices',
+        storage_path: filename,
+        metadata: {
+          content_type: 'application/xml',
+          filename,
+          size_bytes: xmlBytes.length,
+          generated_by: 'generate-isdoc',
+        },
       })
       .select()
       .single();
@@ -295,8 +310,9 @@ serve(async (req) => {
     return new Response(
       JSON.stringify({
         success: true,
-        file_url: fileUrl,
         export_id: exportData.id,
+        storage_bucket: 'partner-invoices',
+        storage_path: filename,
         filename
       }),
       { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }

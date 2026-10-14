@@ -44,8 +44,8 @@ test.describe('Profile Smoke', () => {
     ).toBeVisible({ timeout: 15_000 });
 
     await expect(page.getByText('Peněženka', { exact: true })).toBeVisible();
-    await expect(page.getByText('MioCoiny', { exact: true })).toBeVisible();
-    await expect(page.getByText(/Váš MioCoin účet/i)).toBeVisible();
+    await expect(page.getByText('MIO', { exact: true }).first()).toBeVisible();
+    await expect(page.getByText(/Váš MIO účet/i)).toBeVisible();
 
     await expect(page.getByRole('heading', { name: 'Účet' })).toBeVisible();
     await expect(page.getByText(/Přihlašovací údaje/i)).toBeVisible();

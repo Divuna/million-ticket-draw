@@ -40,6 +40,7 @@ const SlugContentPage: React.FC<SlugContentPageProps> = ({ slug }) => {
           .select('*')
           .eq('slug', slug)
           .eq('is_active', true)
+          .is('deleted_at', null)
           .maybeSingle();
 
         if (error) throw error;

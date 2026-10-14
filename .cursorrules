@@ -1,5 +1,98 @@
 # OneMil – project rules (centralized)
 
+Stejná závazná pravidla jsou i v `AGENTS.md` a `CLAUDE.md` — jsou to kopie téhož, ne různé režimy.
+
+## POVINNÉ UZAVŘENÍ KAŽDÉHO DOKONČENÉHO ÚKOLU
+
+**Po každé skutečně dokončené, ověřené a mergnuté změně musíš ještě před ukončením práce
+zkontrolovat, zda změna ovlivnila dokumentaci projektu.**
+
+Pokud ano, aktualizuj **ve stejném pracovním toku** existující zdroje pravdy:
+
+- **`onemil_state.md`** — aktuální skutečný stav systému: co je hotové, co je nasazené a co
+  zůstává otevřené.
+- **`onemil_history.md`** — stručný historický záznam dokončené práce, důležitých rozhodnutí,
+  oprav a nalezených problémů.
+- **`CLAUDE.md`** — **pouze** nové trvalé technické nebo bezpečnostní invarianty, které musí znát
+  budoucí AI pracovníci.
+- **`ONEMIL_BUSINESS_CONTEXT.md`** — **pouze** pokud vznikla nebo byla Pavlem potvrzena nová
+  obchodní, produktová, partnerská nebo marketingová skutečnost.
+
+Pravidla:
+
+- **Neaktualizovat dokumentaci mechanicky po každé malé změně.** Jen tehdy, když se změnil
+  skutečný stav, chování systému, architektura, produktové pravidlo, bezpečnostní invariant, nebo
+  vznikl důležitý otevřený problém.
+- **Nikdy nevytvářet nový podobný state/context/business soubor** bez výslovného schválení Pavla.
+- **`ONEMIL_BUSINESS_CONTEXT.md` zůstává jediný hlavní obchodní a produktový zdroj pravdy.**
+- **Historické záznamy nepřepisovat tak, aby se měnila historie.** Nové skutečnosti přidávat jako
+  novější stav; starý zápis byl v době vzniku pravdivý.
+- **Dokumentace musí popisovat pouze skutečně ověřený stav**, ne plán ani domněnku.
+- **Pokud změna ještě není nasazená, musí být jasně označená jako nenasazená.**
+- **Pokud existuje otevřený problém, který se nemá právě opravovat, zaznamenat ho jako
+  `OPEN ISSUE`** — včetně toho, co přesně je špatně a co by oprava obnášela.
+- **Dokumentační aktualizace je součástí definice „hotovo“.** Úkol není považován za kompletně
+  uzavřený, dokud tato kontrola neproběhne.
+
+Kontrola na konci úkolu — pokud je odpověď na kteroukoli otázku „ano“, dokumentaci aktualizuj:
+
+1. Změnilo se, co je nasazené nebo jak se systém reálně chová?
+2. Vznikl nový trvalý invariant, který by budoucí agent mohl omylem porušit?
+3. Potvrdil Pavel novou obchodní nebo produktovou skutečnost?
+4. Našel jsem problém, který teď vědomě neopravuji?
+
+Toto pravidlo neobchází žádné omezení níže — produkční migrace, změny RLS, zásahy do peněženek,
+plateb a soutěžní logiky a destruktivní operace dál vyžadují výslovné schválení Pavla.
+
+## PŘEDSTARTOVNÍ RESET SYSTÉMU (potvrzeno Pavlem 07. 09. 2026)
+
+Stejné pravidlo je i v `CLAUDE.md` a `AGENTS.md`.
+
+**Veškerá současná provozní data OneMil jsou stále testovací.** Před ostrým spuštěním a příchodem
+prvních skutečných zákazníků musí proběhnout **jeden řízený kompletní předstartovní reset systému**.
+
+**Reset zatím NEPROBĚHL.** Do jeho provedení se s produkčními daty pracuje jako s testovacími —
+ale to **není důvod je mazat, měnit ani „uklízet" mimochodem**. Jediná povolená cesta k jejich
+odstranění je ten jeden schválený reset.
+
+**➡️ Reset PROBĚHL 12. 10. 2026** (schválení Pavla; ověřená záloha
+`onemil-production-pre-first-reset-20261012-150802.dump`; detail `onemil_state.md` § -18). Odstavec
+výše je historický záznam. Data vzniklá po resetu se nesmí hromadně mazat ani „uklízet" — každé další
+hromadné mazání produkčních dat vyžaduje nové výslovné schválení Pavla.
+
+**Reset odstraní provozní testovací data:** zákaznické a testovací účty (kromě zachovaného
+superadmina), profily, MioCoin peněženky a jejich pohyby, soutěže, tikety, výhry a testovací ceny,
+vouchery a jejich testovací použití, zprávy a notifikace, testovací platby, testovací partnery
+a jejich provozní data, testovací faktury, referral / affiliate / influencer testovací data,
+Shoptet testovací objednávky a importní provozní data, e-mailovou frontu a další testovací
+provozní záznamy.
+
+**Reset NESMÍ odstranit samotný systém:** databázovou strukturu, migrace, Edge Functions, RLS
+a bezpečnostní pravidla, nutná systémová nastavení, právní obsah a jeho zdroje, potřebné systémové
+šablony a konfiguraci a **zachovaný superadmin účet**.
+
+Závazný postup:
+
+1. **Přesný seznam tabulek a pořadí mazání se musí těsně před resetem znovu vytvořit** podle
+   **aktuální produkční databáze** — read-only mapou dat. **Nepoužívat starší seznam z dokumentace
+   ani z dřívějšího chatu**: schéma se mezitím mění a zastaralé pořadí by narazilo na cizí klíče
+   nebo naopak nechalo osiřelá data.
+2. Reset je **destruktivní produkční operace** a smí být spuštěn **až po novém výslovném schválení
+   Pavla**. Dřívější souhlas s přípravou, s mapou dat ani s tímto pravidlem **není** souhlasem
+   se spuštěním.
+3. Před spuštěním musí existovat **ověřená záloha** (produkční PITR je vypnutý — platí postup
+   z `docs/rollback/`, tedy ruční `pg_dump` ověřený `pg_restore -l`).
+
+Co z toho plyne:
+
+- **Reset nespouštěj sám, ani po částech, ani „jen pro jednu tabulku".** Hromadné `DELETE` /
+  `TRUNCATE` nad produkčními provozními daty patří mezi dangerous actions níže.
+- **Testovací povaha dat není povolení je smazat.** Drží auditní stopu a rozpracované ověřování.
+- **Zjevně testovací záznam, který překáží**, zaznamenej jako `OPEN ISSUE` s poznámkou
+  „vyřeší předstartovní reset" — neřeš ho mazáním.
+
+---
+
 Before doing any task, always read:
 - onemil_state.md — current system state, known bugs, next steps
 - onemil_history.md — project timeline and context

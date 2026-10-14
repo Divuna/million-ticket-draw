@@ -4,7 +4,18 @@ import { supabase } from '@/integrations/supabase/client';
 import { format, startOfWeek, endOfWeek, subWeeks, addWeeks } from 'date-fns';
 import { cs } from 'date-fns/locale';
 import { toast } from 'sonner';
-import { ChevronLeft, ChevronRight, Download, FileText, Loader2, Mail } from 'lucide-react';
+import { Check, ChevronLeft, ChevronRight, Download, FileText, Loader2, Mail } from 'lucide-react';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from '@/components/ui/alert-dialog';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -15,6 +26,8 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { NavigateToLogin } from '@/components/NavigateToLogin';
 import { useAuth } from '@/hooks/useAuth';
 import { useUserRole } from '@/hooks/useUserRole';
+import { openPartnerInvoiceExport } from '@/lib/partnerInvoiceDownload';
+import { formatMioCoinNumber } from '@/lib/miocoin';
 
 type InvoiceStatus = 'draft' | 'issued' | 'paid';
 
@@ -76,7 +89,9 @@ const AdminInvoices: React.FC = () => {
   const [sendingEmail, setSendingEmail] = useState(false);
   const [resendingEmail, setResendingEmail] = useState(false);
   const [generatingPdf, setGeneratingPdf] = useState(false);
-  const [pdfUrl, setPdfUrl] = useState<string | null>(null);
+  const [pdfExportId, setPdfExportId] = useState<string | null>(null);
+  const [downloadingPdf, setDownloadingPdf] = useState(false);
+  const [markingPaid, setMarkingPaid] = useState(false);
 
   const currentWeekStart = startOfWeek(addWeeks(new Date(), weekOffset), { weekStartsOn: 1 });
   const currentWeekEnd = endOfWeek(addWeeks(new Date(), weekOffset), { weekStartsOn: 1 });
@@ -147,7 +162,7 @@ const AdminInvoices: React.FC = () => {
 
   const openInvoiceDetail = (invoice: Invoice) => {
     setSelectedInvoice(invoice);
-    setPdfUrl(null);
+    setPdfExportId(null);
     fetchInvoiceLines(invoice.id);
     fetchExistingPdf(invoice.id);
   };
@@ -155,19 +170,21 @@ const AdminInvoices: React.FC = () => {
   const closeDrawer = () => {
     setSelectedInvoice(null);
     setInvoiceLines([]);
-    setPdfUrl(null);
+    setPdfExportId(null);
   };
 
   const fetchExistingPdf = async (invoiceId: string) => {
     const { data } = await supabase
       .from('partner_invoice_exports')
-      .select('file_url')
+      .select('id, storage_path')
       .eq('invoice_id', invoiceId)
       .eq('format', 'pdf')
+      .eq('storage_bucket', 'partner-invoices')
+      .not('storage_path', 'is', null)
       .order('created_at', { ascending: false })
       .limit(1)
       .maybeSingle();
-    if (data?.file_url) setPdfUrl(data.file_url);
+    if (data?.id && data?.storage_path) setPdfExportId(data.id);
   };
 
   const generatePdf = async () => {
@@ -178,17 +195,30 @@ const AdminInvoices: React.FC = () => {
         body: { invoice_id: selectedInvoice.id },
       });
       if (error) throw error;
-      if (data?.file_url) {
-        setPdfUrl(data.file_url);
+      if (data?.export_id) {
+        setPdfExportId(data.export_id);
         toast.success('PDF faktura byla vygenerována');
       } else {
-        throw new Error('Chybí URL souboru');
+        throw new Error('Chybí záznam exportu PDF');
       }
     } catch (err: any) {
       console.error('PDF generation error:', err);
       toast.error('Chyba při generování PDF faktury');
     } finally {
       setGeneratingPdf(false);
+    }
+  };
+
+  const downloadPdf = async () => {
+    if (!pdfExportId) return;
+    setDownloadingPdf(true);
+    try {
+      await openPartnerInvoiceExport(pdfExportId);
+    } catch (err) {
+      console.error('PDF download error:', err);
+      toast.error('Chyba při přípravě odkazu ke stažení PDF');
+    } finally {
+      setDownloadingPdf(false);
     }
   };
 
@@ -204,9 +234,9 @@ const AdminInvoices: React.FC = () => {
   //
   //     if (error) throw error;
   //
-  //     if (data?.file_url) {
+  //     if (data?.export_id) {
   //       toast.success('ISDOC vygenerován');
-  //       window.open(data.file_url, '_blank');
+  //       await openPartnerInvoiceExport(data.export_id);
   //     }
   //   } catch (err) {
   //     toast.error('Chyba při generování ISDOC');
@@ -240,7 +270,7 @@ const AdminInvoices: React.FC = () => {
   const resendInvoiceEmail = async () => {
     if (!selectedInvoice) return;
 
-    if (!pdfUrl) {
+    if (!pdfExportId) {
       toast.error('PDF faktura zatím není k dispozici.');
       return;
     }
@@ -260,6 +290,55 @@ const AdminInvoices: React.FC = () => {
       toast.error('Fakturu se nepodařilo znovu odeslat.');
     } finally {
       setResendingEmail(false);
+    }
+  };
+
+  /**
+   * Eviduje skutečně přijatou úhradu partnerské faktury (issued -> paid).
+   * Pouze záznam o platbě — neposílá žádné peníze a nevytváří provizi;
+   * provizi z uhrazené faktury odvodí až měsíční výpočet
+   * calculate_affiliate_commissions_for_month.
+   * Server je jediný zdroj pravdy: stav i paid_at nastavuje RPC, ne klient.
+   */
+  const markInvoicePaid = async () => {
+    if (!selectedInvoice) return;
+
+    setMarkingPaid(true);
+    try {
+      const { data, error } = await (supabase as any).rpc('admin_mark_partner_invoice_paid', {
+        p_invoice_id: selectedInvoice.id,
+      });
+
+      if (error) throw error;
+
+      const status = (data as { status?: string } | null)?.status;
+
+      if (status === 'marked_paid') {
+        toast.success('Faktura byla označena jako zaplacená.');
+      } else if (status === 'already_paid') {
+        // Idempotentní opakování (např. dvojklik) není chyba.
+        toast.info('Faktura už je označená jako zaplacená.');
+      } else if (status === 'forbidden') {
+        toast.error('Na tuto akci nemáte oprávnění.');
+        return;
+      } else if (status === 'invalid_transition') {
+        toast.error('Jako zaplacenou lze označit pouze vystavenou fakturu.');
+        return;
+      } else if (status === 'not_found') {
+        toast.error('Faktura nebyla nalezena.');
+        return;
+      } else {
+        toast.error('Fakturu se nepodařilo označit jako zaplacenou.');
+        return;
+      }
+
+      setSelectedInvoice((prev) => (prev ? { ...prev, status: 'paid' } : prev));
+      fetchInvoices();
+    } catch (err) {
+      console.error('Error marking invoice paid:', err);
+      toast.error('Fakturu se nepodařilo označit jako zaplacenou.');
+    } finally {
+      setMarkingPaid(false);
     }
   };
 
@@ -412,7 +491,7 @@ const AdminInvoices: React.FC = () => {
                           {format(new Date(invoice.period_start), 'd. M.', { locale: cs })} – {format(new Date(invoice.period_end), 'd. M.', { locale: cs })}
                         </TableCell>
                         <TableCell className="text-right">
-                          {(invoice.coins_total ?? 0).toLocaleString('cs-CZ')}
+                          {formatMioCoinNumber(Number(invoice.coins_total ?? 0))}
                         </TableCell>
                         <TableCell className="text-right">
                           {formatCurrency(Number(invoice.amount_net ?? 0))}
@@ -460,7 +539,7 @@ const AdminInvoices: React.FC = () => {
               <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
                 <div className="bg-muted/50 rounded-lg p-3">
                   <div className="text-xs text-muted-foreground">Coiny</div>
-                  <div className="font-semibold">{(selectedInvoice.coins_total ?? 0).toLocaleString('cs-CZ')}</div>
+                  <div className="font-semibold">{formatMioCoinNumber(Number(selectedInvoice.coins_total ?? 0))}</div>
                 </div>
                 <div className="bg-muted/50 rounded-lg p-3">
                   <div className="text-xs text-muted-foreground">Netto</div>
@@ -510,7 +589,7 @@ const AdminInvoices: React.FC = () => {
                             {line.external_order_id || '–'}
                           </TableCell>
                           <TableCell className="text-right font-medium">
-                            {line.coins.toLocaleString('cs-CZ')}
+                            {formatMioCoinNumber(Number(line.coins ?? 0))}
                           </TableCell>
                         </TableRow>
                       ))}
@@ -545,16 +624,19 @@ const AdminInvoices: React.FC = () => {
                       )}
                       Generovat PDF
                     </Button>
-                    {pdfUrl && (
+                    {pdfExportId && (
                       <Button
                         variant="outline"
                         size="sm"
-                        asChild
+                        onClick={downloadPdf}
+                        disabled={downloadingPdf}
                       >
-                        <a href={pdfUrl} target="_blank" rel="noopener noreferrer">
+                        {downloadingPdf ? (
+                          <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                        ) : (
                           <Download className="h-4 w-4 mr-2" />
-                          Stáhnout PDF
-                        </a>
+                        )}
+                        Stáhnout PDF
                       </Button>
                     )}
                   </div>
@@ -591,6 +673,41 @@ const AdminInvoices: React.FC = () => {
                     )}
                     Znovu odeslat
                   </Button>
+                )}
+
+                {/* Evidence skutečně přijaté úhrady — pouze pro vystavenou fakturu.
+                    Sama neposílá peníze; teprve z uhrazené faktury vzniká
+                    obchodnická provize při měsíčním výpočtu. */}
+                {selectedInvoice.status === 'issued' && (
+                  <AlertDialog>
+                    <AlertDialogTrigger asChild>
+                      <Button variant="default" size="sm" disabled={markingPaid}>
+                        {markingPaid ? (
+                          <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                        ) : (
+                          <Check className="h-4 w-4 mr-2" />
+                        )}
+                        Označit jako zaplaceno
+                      </Button>
+                    </AlertDialogTrigger>
+                    <AlertDialogContent>
+                      <AlertDialogHeader>
+                        <AlertDialogTitle>Označit fakturu jako zaplacenou?</AlertDialogTitle>
+                        <AlertDialogDescription>
+                          Potvrzujete, že úhrada faktury od partnera{' '}
+                          <strong>{getPartnerDisplayName(selectedInvoice)}</strong> skutečně dorazila.
+                          Tato akce pouze eviduje přijatou platbu — neodesílá žádné peníze.
+                          Z uhrazené faktury následně vznikne provize obchodníka.
+                        </AlertDialogDescription>
+                      </AlertDialogHeader>
+                      <AlertDialogFooter>
+                        <AlertDialogCancel>Zrušit</AlertDialogCancel>
+                        <AlertDialogAction onClick={markInvoicePaid}>
+                          Označit jako zaplaceno
+                        </AlertDialogAction>
+                      </AlertDialogFooter>
+                    </AlertDialogContent>
+                  </AlertDialog>
                 )}
 
               </>

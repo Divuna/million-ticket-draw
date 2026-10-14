@@ -1,8 +1,9 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts"
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2"
+import { getSupabaseSecretKey } from "../_shared/supabaseSecretKey.ts";
 
 const supabaseUrl = Deno.env.get("SUPABASE_URL")!
-const serviceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!
+const serviceRoleKey = getSupabaseSecretKey()
 const internalFunctionToken = Deno.env.get("INTERNAL_FUNCTION_TOKEN") ?? ""
 const timeoutMs = Number(Deno.env.get("EVENT_QUEUE_WORKER_TIMEOUT_MS") ?? "15000")
 const BATCH_LIMIT = 50

@@ -23,6 +23,8 @@ import {
   ChevronLeft,
   X,
   Check,
+  AlertCircle,
+  RefreshCw,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -96,6 +98,9 @@ const AdminInfluencerCampaigns: React.FC = () => {
   // Campaign list
   const [campaigns, setCampaigns] = useState<Campaign[]>([]);
   const [loading, setLoading] = useState(true);
+  // Distinguishes "read failed" from "genuinely no campaigns" so a load
+  // error never renders as the empty-state copy.
+  const [loadError, setLoadError] = useState(false);
 
   // Form dialog
   const [formOpen, setFormOpen] = useState(false);
@@ -121,8 +126,13 @@ const AdminInfluencerCampaigns: React.FC = () => {
       .order("created_at", { ascending: false });
 
     if (error) {
+      // A failed read must never render as "no campaigns" — that would
+      // hide a real problem (e.g. an access error) behind a message that
+      // tells the admin to go create one.
+      setLoadError(true);
       toast.error("Nepodařilo se načíst kampaně");
     } else {
+      setLoadError(false);
       setCampaigns((data as Campaign[]) || []);
     }
     setLoading(false);
@@ -175,20 +185,24 @@ const AdminInfluencerCampaigns: React.FC = () => {
     };
 
     if (editingId) {
-      const { error } = await supabase
+      // `.select()` + affected-rows check: without it an RLS-blocked UPDATE
+      // (0 matched rows) returns no error and would report a false success.
+      const { data, error } = await supabase
         .from("influencer_campaigns")
         .update(payload)
-        .eq("id", editingId);
-      if (error) {
+        .eq("id", editingId)
+        .select("id");
+      if (error || !data || data.length === 0) {
         toast.error("Nepodařilo se uložit kampaň");
       } else {
         toast.success("Kampaň aktualizována");
       }
     } else {
-      const { error } = await supabase
+      const { data, error } = await supabase
         .from("influencer_campaigns")
-        .insert(payload);
-      if (error) {
+        .insert(payload)
+        .select("id");
+      if (error || !data || data.length === 0) {
         toast.error("Nepodařilo se vytvořit kampaň");
       } else {
         toast.success("Kampaň vytvořena");
@@ -205,18 +219,28 @@ const AdminInfluencerCampaigns: React.FC = () => {
   const handleDelete = async (id: string) => {
     if (!window.confirm("Opravdu chcete smazat tuto kampaň?")) return;
 
-    // Remove assignments first
-    await supabase
+    // Remove assignments first. A real error here (not just "there were
+    // none to delete") must stop the flow — proceeding would leave stale
+    // assignment rows pointing at a campaign we're about to remove.
+    const { error: assignmentsError } = await supabase
       .from("influencer_campaign_partners")
       .delete()
       .eq("campaign_id", id);
 
-    const { error } = await supabase
+    if (assignmentsError) {
+      toast.error("Nepodařilo se smazat kampaň");
+      return;
+    }
+
+    // `.select()` + affected-rows check: without it an RLS-blocked DELETE
+    // (0 matched rows) returns no error and would report a false success.
+    const { data, error } = await supabase
       .from("influencer_campaigns")
       .delete()
-      .eq("id", id);
+      .eq("id", id)
+      .select("id");
 
-    if (error) {
+    if (error || !data || data.length === 0) {
       toast.error("Nepodařilo se smazat kampaň");
     } else {
       toast.success("Kampaň smazána");
@@ -232,7 +256,7 @@ const AdminInfluencerCampaigns: React.FC = () => {
     setAssignLoading(true);
 
     // Fetch influencers (partners with influencer in notes)
-    const { data: partners } = await supabase
+    const { data: partners, error: partnersError } = await supabase
       .from("partners")
       .select("id, name, company_name, status")
       .ilike("notes", "%influencer%")
@@ -241,11 +265,17 @@ const AdminInfluencerCampaigns: React.FC = () => {
 
     setInfluencers((partners as InfluencerPartner[]) || []);
 
-    // Fetch current assignments
-    const { data: assignments } = await supabase
+    // Fetch current assignments. A read error must not be presented as "no
+    // one is assigned" — that would be indistinguishable from a genuinely
+    // empty assignment list.
+    const { data: assignments, error: assignmentsError } = await supabase
       .from("influencer_campaign_partners")
       .select("influencer_partner_id")
       .eq("campaign_id", campaign.id);
+
+    if (partnersError || assignmentsError) {
+      toast.error("Nepodařilo se načíst přiřazení");
+    }
 
     const ids = new Set((assignments || []).map((a) => a.influencer_partner_id));
     setAssignedIds(ids);
@@ -268,28 +298,66 @@ const AdminInfluencerCampaigns: React.FC = () => {
     if (!assignCampaign) return;
     setAssignSaving(true);
 
-    // Delete all current assignments for this campaign
-    await supabase
+    const campaignId = assignCampaign.id;
+    const targetIds = Array.from(assignedIds);
+
+    // Delete all current assignments for this campaign. A genuine error
+    // (not "there were none") must stop the flow before we touch anything
+    // else.
+    const { error: deleteError } = await supabase
       .from("influencer_campaign_partners")
       .delete()
-      .eq("campaign_id", assignCampaign.id);
+      .eq("campaign_id", campaignId);
 
-    // Insert new assignments
-    if (assignedIds.size > 0) {
-      const rows = Array.from(assignedIds).map((pid) => ({
-        campaign_id: assignCampaign.id,
+    if (deleteError) {
+      toast.error("Nepodařilo se uložit přiřazení");
+      setAssignSaving(false);
+      return;
+    }
+
+    // Insert new assignments. `.select()` + count check: without it an
+    // RLS-blocked INSERT that silently drops rows (or one that errors only
+    // for part of the batch) would still be reported as saved.
+    if (targetIds.length > 0) {
+      const rows = targetIds.map((pid) => ({
+        campaign_id: campaignId,
         influencer_partner_id: pid,
       }));
 
-      const { error } = await supabase
+      const { data: insertedRows, error: insertError } = await supabase
         .from("influencer_campaign_partners")
-        .insert(rows);
+        .insert(rows)
+        .select("influencer_partner_id");
 
-      if (error) {
+      if (insertError || !insertedRows || insertedRows.length !== rows.length) {
         toast.error("Nepodařilo se uložit přiřazení");
         setAssignSaving(false);
         return;
       }
+    }
+
+    // Final confirmation against the server: re-read what is actually
+    // assigned and compare it to what we asked for. This is what catches
+    // the case a plain "no error" check misses — an RLS-blocked DELETE
+    // silently matches 0 rows (no error) and leaves the OLD assignments in
+    // place, which would otherwise still show "Přiřazení uloženo" even
+    // though nothing changed, most visibly when unassigning everyone
+    // (targetIds is empty, so no INSERT ever runs to catch it).
+    const { data: verifyRows, error: verifyError } = await supabase
+      .from("influencer_campaign_partners")
+      .select("influencer_partner_id")
+      .eq("campaign_id", campaignId);
+
+    const verifiedIds = new Set((verifyRows || []).map((r) => r.influencer_partner_id));
+    const matchesTarget =
+      !verifyError &&
+      verifiedIds.size === targetIds.length &&
+      targetIds.every((id) => verifiedIds.has(id));
+
+    if (!matchesTarget) {
+      toast.error("Nepodařilo se uložit přiřazení");
+      setAssignSaving(false);
+      return;
     }
 
     toast.success("Přiřazení uloženo");
@@ -347,6 +415,15 @@ const AdminInfluencerCampaigns: React.FC = () => {
             {loading ? (
               <div className="flex items-center justify-center py-12">
                 <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+              </div>
+            ) : loadError ? (
+              <div className="flex flex-col items-center gap-3 py-12 text-center text-muted-foreground">
+                <AlertCircle className="h-6 w-6 text-destructive" />
+                <p>Kampaně se nepodařilo načíst.</p>
+                <Button variant="outline" size="sm" onClick={fetchCampaigns}>
+                  <RefreshCw className="h-4 w-4 mr-2" />
+                  Zkusit znovu
+                </Button>
               </div>
             ) : campaigns.length === 0 ? (
               <div className="text-center py-12 text-muted-foreground">

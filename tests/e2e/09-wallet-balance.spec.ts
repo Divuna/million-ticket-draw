@@ -79,7 +79,7 @@ test.describe('Wallet Balance — Post-Purchase Decrease', () => {
     // ── 1. Wait for wallet section to fully render ────────────────────────────
     // ContestDetail renders: <p class="text-xs text-gray-400">Tvůj stav MioCoinů</p>
     //                        <p class="text-4xl ...">5 000</p>   ← balance number
-    const balanceLabel = page.getByText('Tvůj stav MioCoinů', { exact: true });
+    const balanceLabel = page.getByText('Tvůj stav MIO', { exact: true });
     await expect(balanceLabel).toBeVisible({ timeout: 15_000 });
 
     // ── 2. Read balance before purchase ───────────────────────────────────────
@@ -87,7 +87,7 @@ test.describe('Wallet Balance — Post-Purchase Decrease', () => {
     // XPath following-sibling is the most precise selector here — avoids
     // fragile class names and does not require data-testid.
     const balanceParagraph = page
-      .getByText('Tvůj stav MioCoinů', { exact: true })
+      .getByText('Tvůj stav MIO', { exact: true })
       .locator('xpath=following-sibling::p[1]');
     await expect(balanceParagraph).toBeVisible({ timeout: 5_000 });
 
@@ -95,8 +95,8 @@ test.describe('Wallet Balance — Post-Purchase Decrease', () => {
     const balanceBefore = parseCzechInt(balanceBeforeRaw);
 
     // ── 3. Locate buy button and read ticket price ────────────────────────────
-    const buyButton = page.getByRole('button', { name: /Uplatnit.*MioCoin/i });
-    const topUpButton = page.getByRole('button', { name: /Dobít MioCoiny/i });
+    const buyButton = page.getByRole('button', { name: /Uplatnit.*MIO/i });
+    const topUpButton = page.getByRole('button', { name: /Dobít MIO/i });
 
     // If only top-up button appears, staging wallet balance is insufficient.
     // The staging workflow resets wallet to 5 000 MC before every run — if we
@@ -121,7 +121,7 @@ test.describe('Wallet Balance — Post-Purchase Decrease', () => {
 
     // Parse ticket price from button label: "Uplatnit 10 MioCoinů" → 10
     const buttonText = (await buyButton.textContent()) ?? '';
-    const priceMatch = buttonText.match(/Uplatnit\s+([\d\s  ]+)\s+MioCoin/i);
+    const priceMatch = buttonText.match(/Uplatnit\s+([\d\s  ]+)\s+MIO/i);
     if (!priceMatch) {
       throw new Error(`Could not parse ticket price from buy button text: "${buttonText}"`);
     }
@@ -149,12 +149,14 @@ test.describe('Wallet Balance — Post-Purchase Decrease', () => {
     // ── 5. Purchase one ticket ────────────────────────────────────────────────
     await buyButton.click();
 
-    // ── 6. Wait for result modal (TicketResultModal) ──────────────────────────
-    // Scoped to the dialog that contains the "Zavřít" close button, which is
-    // unique to TicketResultModal — avoids strict-mode conflict with the
-    // CookieConsentBanner (also role="dialog").
-    const resultDialog = page.locator('[role="dialog"]:has(button[aria-label="Zavřít"])');
-    await expect(resultDialog, 'TicketResultModal must appear after ticket purchase').toBeVisible({
+    // ── 6. Wait for the purchase result dialog ───────────────────────────────
+    // Every customer purchase goes through purchase_guaranteed_benefit_bundle_atomic
+    // and shows MysteryPurchaseResultDialog (the old TicketResultModal with the
+    // "Zavřít" button is no longer used on ContestDetail). Scoped by the dialog's
+    // accessible name (sr-only DialogTitle) to avoid a strict-mode conflict with
+    // the CookieConsentBanner, which also renders role="dialog".
+    const resultDialog = page.getByRole('dialog', { name: /Tentokrát bez výhry|Vyhrál jsi/i });
+    await expect(resultDialog, 'Purchase result dialog must appear after ticket purchase').toBeVisible({
       timeout: 20_000,
     });
 

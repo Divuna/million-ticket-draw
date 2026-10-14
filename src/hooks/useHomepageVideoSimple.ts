@@ -68,19 +68,24 @@ export const useHomepageVideoSimple = () => {
       if (findError) throw findError;
 
       if (existingBanner) {
-        // Update existing banner
-        const { error: updateError } = await supabase
+        // Update existing banner. `.select("id")` + affected-rows check:
+        // without it an RLS-blocked UPDATE (0 matched rows) returns no
+        // error and this hook would report success with nothing changed.
+        const { data: updatedRows, error: updateError } = await supabase
           .from('banners')
           .update({
             homepage_youtube_url: url,
             homepage_video_active: active
           })
-          .eq('id', existingBanner.id);
+          .eq('id', existingBanner.id)
+          .select('id');
 
-        if (updateError) throw updateError;
+        if (updateError || !updatedRows || updatedRows.length === 0) {
+          throw updateError ?? new Error('no_rows_updated');
+        }
       } else {
         // Create new banner for homepage video
-        const { error: insertError } = await supabase
+        const { data: insertedRows, error: insertError } = await supabase
           .from('banners')
           .insert({
             title: 'Homepage Video Settings',
@@ -89,9 +94,12 @@ export const useHomepageVideoSimple = () => {
             active: true,
             homepage_youtube_url: url,
             homepage_video_active: active
-          });
+          })
+          .select('id');
 
-        if (insertError) throw insertError;
+        if (insertError || !insertedRows || insertedRows.length === 0) {
+          throw insertError ?? new Error('no_rows_inserted');
+        }
       }
 
       // Update local state

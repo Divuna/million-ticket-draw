@@ -16,7 +16,11 @@ function isUnsafePublicOrigin(hostname: string): boolean {
 }
 
 export function getPublicAppUrl(): string {
-  const configuredUrl = import.meta.env.VITE_APP_URL?.trim();
+  // `import.meta.env` is a Vite build-time construct; it is undefined when this module
+  // is imported directly by the Playwright runner. Optional-chaining the object itself
+  // keeps that path on the production fallback instead of throwing. Behaviour under
+  // Vite is unchanged — env is always defined there.
+  const configuredUrl = import.meta.env?.VITE_APP_URL?.trim();
 
   if (!configuredUrl) {
     return PRODUCTION_APP_URL;

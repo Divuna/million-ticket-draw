@@ -2,6 +2,8 @@
 
 Tuto šablonu použij pro konkrétní reklamní kampaň. Konkrétní značky, produkty, modely, partneři a ceny patří sem, ne do obecných brand pravidel.
 
+Vizuální základ se **nevolí v briefu**. Vždy se přebírá z `GRAPHICS_SOURCE_OF_TRUTH.md`: světlý OneMil styl, white/warm cream, tmavý text, oranžový akcent. Starý dark premium směr není platná varianta.
+
 ## Název kampaně
 
 
@@ -74,19 +76,20 @@ Vyplnit pouze pokud je schváleno pro konkrétní kampaň.
 ## Nutný disclaimer
 
 
-## Vizuální styl
+## Vizuální provedení
 
-- dark premium tech-luxury
-- bílý luxusní styl
+Výchozí styl je vždy světlý OneMil podle `GRAPHICS_SOURCE_OF_TRUTH.md`. Zde lze určit jen konkrétní kompozici:
 - produktový hero vizuál
 - mobilní app vizuál
 - B2B clean layout
+- lifestyle vizuál
+- jiná kompozice:
 
 ## Povinné assety
 
-- logo OneMil
-- ikona OneMil
-- MioCoin vizuál
+- originální logo OneMil
+- originální ikona OneMil
+- originální MioCoin vizuál
 - partner logo
 - produktová fotografie
 - jiné:

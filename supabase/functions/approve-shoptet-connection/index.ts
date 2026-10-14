@@ -1,10 +1,16 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.57.4";
+import {
+  escapeEmailHtml,
+  renderOneMilEmail,
+} from "../_shared/oneMilEmailTemplate.ts";
+import { getSupabaseSecretKey } from "../_shared/supabaseSecretKey.ts";
+import { snapshotShoptetExport } from "../_shared/shoptetExportSnapshot.ts";
 
 // Admin approves or rejects a submitted Shoptet connection request.
 //
 // Security model:
 //   - verify_jwt = false: EF validates JWT internally for precise error codes.
-//   - Caller must be admin or superadmin (user_roles check).
+//   - Caller must be superadmin (user_roles check).
 //   - CRITICAL: approve MUST set shoptet_customer_delivery = 'onemil' for
 //     all self-service partners. BOHEMIA stays on 'partner' (separate row,
 //     never submitted through this flow).
@@ -17,7 +23,7 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2.57.4";
 // Reject  response: { success, request_id, status: 'rejected' }
 
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
-const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
+const supabaseServiceRoleKey = getSupabaseSecretKey();
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -50,7 +56,7 @@ Deno.serve(async (req) => {
   }
   const token = authHeader.slice(7);
 
-  const admin = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, {
+  const admin = createClient(SUPABASE_URL, supabaseServiceRoleKey, {
     auth: { persistSession: false },
   });
 
@@ -62,10 +68,10 @@ Deno.serve(async (req) => {
     .from("user_roles")
     .select("role")
     .eq("user_id", user.id)
-    .in("role", ["admin", "superadmin"])
+    .eq("role", "superadmin")
     .maybeSingle();
   if (roleErr) { console.error("role lookup:", roleErr.message); return err(500, "internal_error", "Internal error"); }
-  if (!roleRow) return err(403, "access_denied_admin_only", "Admin or superadmin role required");
+  if (!roleRow) return err(403, "access_denied_superadmin_only", "Superadmin role required");
 
   // ── 3. Parse and validate body ─────────────────────────────────────────────
   let body: Record<string, unknown>;
@@ -89,12 +95,202 @@ Deno.serve(async (req) => {
   // ── 4. Load submitted request ──────────────────────────────────────────────
   const { data: scr, error: scrErr } = await admin
     .from("shoptet_connection_requests")
-    .select("id, partner_id, trigger_status, status")
+    .select("id, partner_id, trigger_status, status, request_kind, verified_at")
     .eq("id", request_id)
     .eq("status", "submitted")
     .maybeSingle();
   if (scrErr) { console.error("scr lookup:", scrErr.message); return err(500, "internal_error", "Internal error"); }
   if (!scr) return err(404, "request_not_found", "No submitted request found with this id");
+
+  const requestKind = (scr.request_kind as string | null) ?? "initial";
+
+  // ── 4a. NOVÉ NAPOJENÍ SMÍ AKTIVOVAT JEN OVĚŘENÝ EXPORT (#289 část C) ───────
+  // `verify-shoptet-connection` je jediné místo, které baseline historických
+  // objednávek zapisuje. Bez něj by se napojení rozjelo nad exportem plným
+  // starých objednávek a ty by při první změně stavu vydaly odměnu.
+  //
+  // Záměrně JEN pro `initial`: `url_change` běží nad už živým napojením, kde
+  // baseline neexistuje a kde se chování stávajícího partnera nesmí měnit.
+  if (action === "approve" && requestKind === "initial" && !scr.verified_at) {
+    return err(
+      409,
+      "verification_required",
+      "Partner musí nejdřív úspěšně ověřit napojení („Ověřit napojení“). Bez ověření nelze aktivovat.",
+    );
+  }
+
+  // ── 4b. DUPLICATE E-SHOP GUARD (TODO #349) ─────────────────────────────────
+  // One e-shop must never be actively connected under two partner accounts —
+  // two live imports of the same order would mean the reward is issued twice.
+  //
+  // Runs BEFORE promote_shoptet_pending_url in both approve branches, so a
+  // conflicting request leaves Vault, `partners` and the request row untouched.
+  // The RPC reads the pending URL inside Vault and returns only the conflicting
+  // partner's identity — never the URL, the hash or the hostname.
+  if (action === "approve") {
+    const { data: conflict, error: conflictErr } = await admin.rpc("shoptet_pending_url_conflict", {
+      p_request_id: request_id,
+      p_partner_id: scr.partner_id,
+    });
+    if (conflictErr) {
+      console.error("duplicate shop check:", conflictErr.message);
+      return err(500, "internal_error", "Internal error");
+    }
+    if (conflict && typeof conflict === "object" && (conflict as { conflict?: boolean }).conflict === true) {
+      const other = conflict as { partner_id?: string; partner_name?: string };
+      console.warn(
+        "shoptet connection refused: e-shop already active under partner",
+        other.partner_id,
+      );
+      return err(
+        409,
+        "eshop_already_connected",
+        `Tento e-shop už je aktivně připojený pod partnerem ${other.partner_name ?? "(neznámý)"}. ` +
+          "Nejdřív ukončete původní napojení.",
+      );
+    }
+  }
+
+  // ── 4c. ČERSTVÝ SNÍMEK EXPORTU V OKAMŽIKU AKTIVACE (#289 část C) ───────────
+  // Partnerské ověření je jen předběžný dry-run — mezi ním a schválením může
+  // v e-shopu vzniknout další objednávka. Ta existovala PŘED aktivací stejně
+  // jako ty ostatní, takže baseline musí vzniknout až tady, z aktuálního stavu
+  // exportu.
+  //
+  // Běží PŘED `promote_shoptet_pending_url`: neúspěch tak nechá pending Vault
+  // klíč, `partners` i řádek požadavku netknuté a partner může po opravě
+  // exportu schválení zopakovat.
+  //
+  // Fail-closed: nedostupný export, chybějící povinná pole, prázdný export
+  // i jediný neplatný objednávkový řádek schválení zastaví. Import se nezapne
+  // a nic se nevydá — raději neaktivované napojení než napojení nad exportem,
+  // o kterém nevíme, co v něm je.
+  let approvalSnapshot: { orderIds: string[] } = { orderIds: [] };
+  if (action === "approve" && requestKind === "initial") {
+    const { data: pendingUrl, error: pendingErr } = await admin.rpc("get_shoptet_pending_url", {
+      p_request_id: request_id,
+    });
+    if (pendingErr || !pendingUrl || typeof pendingUrl !== "string") {
+      console.error("approval snapshot: pending export unavailable:", pendingErr?.message ?? "empty");
+      return err(400, "export_url_unavailable", "Uložený exportní odkaz se nepodařilo načíst.");
+    }
+
+    const snapshot = await snapshotShoptetExport(pendingUrl);
+    if (!snapshot.usable) {
+      console.warn("approval refused, export not usable:", snapshot.reason);
+      return err(
+        409,
+        "export_not_usable",
+        `Export nelze v tuto chvíli bezpečně načíst (${snapshot.reason}). ` +
+          "Napojení nebylo aktivováno; požádejte partnera o nové ověření.",
+      );
+    }
+    approvalSnapshot = { orderIds: snapshot.orderIds };
+  }
+
+  // ── 5a-change. APPROVE a URL CHANGE ────────────────────────────────────────
+  // Deliberately separate from the onboarding branch. Approving a change must swap
+  // the Vault URL and NOTHING else: the partner is already live, so re-applying
+  // onboarding defaults here would silently rewrite settings an admin may have
+  // tuned since (delivery mode, reward trigger, import enabled).
+  if (action === "approve" && requestKind === "url_change") {
+    const expectedKeyName = "shoptet_export_url_" + scr.partner_id.replace(/-/g, "");
+
+    // The promote RPC writes into the partner's permanent key. If the partner row
+    // points somewhere else, promoting would update a key the importer never reads
+    // and the change would look applied while imports kept using the old URL.
+    const { data: partnerRow, error: partnerReadErr } = await admin
+      .from("partners")
+      .select("shoptet_export_secret_name, shoptet_import_enabled")
+      .eq("id", scr.partner_id)
+      .maybeSingle();
+    if (partnerReadErr) {
+      console.error("partner read:", partnerReadErr.message);
+      return err(500, "internal_error", "Internal error");
+    }
+    if (!partnerRow || partnerRow.shoptet_export_secret_name !== expectedKeyName) {
+      return err(
+        409,
+        "partner_key_mismatch",
+        "Partner is not pointed at the expected Shoptet Vault key",
+      );
+    }
+
+    // Swap the URL inside the existing key. Until this line the old URL is live;
+    // after it the new one is, with no window where the partner has no URL.
+    const { error: promoteErr } = await admin.rpc("promote_shoptet_pending_url", {
+      p_request_id: request_id,
+      p_partner_id: scr.partner_id,
+    });
+    if (promoteErr) {
+      console.error("vault promote (change):", promoteErr.message);
+      // Nothing was written — the old URL is untouched and imports keep working.
+      return err(500, "vault_error", "Failed to apply the new export URL");
+    }
+
+    // partners: intentionally NOT updated. shoptet_export_secret_name already
+    // holds expectedKeyName, and every other column must survive a URL change.
+
+    const { error: scrUpdateErr } = await admin
+      .from("shoptet_connection_requests")
+      .update({
+        status: "approved",
+        reviewed_at: new Date().toISOString(),
+        reviewed_by: user.id,
+      })
+      .eq("id", request_id)
+      .eq("status", "submitted"); // race guard
+    if (scrUpdateErr) {
+      console.error("scr change approved:", scrUpdateErr.message);
+      // The URL is already swapped; the row is the only thing out of step.
+      console.warn("export URL swapped but request row not updated for partner", scr.partner_id);
+      return err(500, "status_update_error", "Failed to close the change request");
+    }
+
+    try {
+      const { data: p } = await admin
+        .from("partners")
+        .select("auth_user_id, name")
+        .eq("id", scr.partner_id)
+        .maybeSingle();
+      if (p?.auth_user_id) {
+        const { data: authUser } = await admin.auth.admin.getUserById(p.auth_user_id);
+        const partnerEmail = authUser?.user?.email;
+        const partnerName = p.name ?? "Partner";
+        if (partnerEmail) {
+          await admin.from("email_queue").insert({
+            email: partnerEmail,
+            subject: "Nový exportní odkaz Shoptetu byl schválen",
+            body: renderOneMilEmail({
+              preheader: "Váš nový Shoptet exportní odkaz je aktivní.",
+              eyebrow: "Shoptet propojení",
+              title: "Nový exportní odkaz je aktivní",
+              bodyHtml: `
+                <p style="margin:0 0 16px;">Dobrý den, <strong>${escapeEmailHtml(partnerName)}</strong>,</p>
+                <p style="margin:0 0 16px;">váš nový exportní odkaz Shoptetu byl schválen a od této chvíle se objednávky načítají z něj.</p>
+                <p style="margin:0;">Ostatní nastavení propojení zůstávají beze změny.</p>
+              `,
+              action: {
+                label: "Otevřít partnerský portál",
+                url: "https://onemil.cz/partner/dashboard",
+              },
+              footerNote: "Nastavení propojení můžete kdykoli zkontrolovat v partnerském portálu.",
+            }),
+          });
+        }
+      }
+    } catch (notifErr) {
+      console.warn("change notification skipped:", (notifErr as Error).message);
+    }
+
+    return ok({
+      success: true,
+      request_id,
+      status: "approved",
+      request_kind: "url_change",
+      import_enabled: partnerRow.shoptet_import_enabled,
+    });
+  }
 
   // ── 5a. APPROVE ────────────────────────────────────────────────────────────
   if (action === "approve") {
@@ -107,6 +303,44 @@ Deno.serve(async (req) => {
     if (promoteErr) {
       console.error("vault promote:", promoteErr.message);
       return err(500, "vault_error", "Failed to promote URL to partner Vault key");
+    }
+
+    // Baseline se aktivuje PŘED zapnutím importu. Cron běží každou minutu, takže
+    // opačné pořadí by otevřelo okno, ve kterém by první běh zpracoval i staré
+    // objednávky. `activated_at` je zároveň požadovaný „přesný okamžik aktivace“.
+    //
+    // Zapisuje se snímek pořízený PRÁVĚ TEĎ, ne ten z partnerského ověření:
+    // mezi ověřením a schválením mohla v e-shopu přibýt další objednávka a ta
+    // existovala před aktivací stejně jako ty ostatní. Předběžná sada z ověření
+    // se proto zahodí a nahradí aktuální.
+    const activatedAt = new Date().toISOString();
+
+    const { error: wipeErr } = await admin
+      .from("shoptet_connection_baseline_orders")
+      .delete()
+      .eq("request_id", request_id);
+    if (wipeErr) {
+      console.error("baseline wipe:", wipeErr.message);
+      return err(500, "baseline_error", "Failed to refresh the historical order baseline");
+    }
+
+    const baselineRows = approvalSnapshot.orderIds.map((orderId) => ({
+      request_id,
+      partner_id: scr.partner_id,
+      external_order_id: orderId,
+      activated_at: activatedAt,
+    }));
+    for (let i = 0; i < baselineRows.length; i += 500) {
+      const { error: insErr } = await admin
+        .from("shoptet_connection_baseline_orders")
+        .insert(baselineRows.slice(i, i + 500));
+      if (insErr) {
+        console.error("baseline insert:", insErr.message);
+        // Neúplná baseline je horší než žádná — import se nezapíná, takže se
+        // pořád nic nevydalo, a zbytek se uklidí.
+        await admin.from("shoptet_connection_baseline_orders").delete().eq("request_id", request_id);
+        return err(500, "baseline_error", "Failed to record the historical order baseline");
+      }
     }
 
     // Update partner — CRITICAL: shoptet_customer_delivery MUST be 'onemil'
@@ -159,7 +393,21 @@ Deno.serve(async (req) => {
           await admin.from("email_queue").insert({
             email: partnerEmail,
             subject: "Váš Shoptet e-shop byl úspěšně zapojen do OneMil",
-            body: `Dobrý den, ${partnerName},\n\nváš Shoptet e-shop byl schválen a aktivován pro automatické vydávání MioCoin kódů zákazníkům.\n\nZákazníci budou dostávat kódy e-mailem od OneMil ihned po vydání.\n\nS pozdravem,\nTým OneMil`,
+            body: renderOneMilEmail({
+              preheader: "Váš Shoptet e-shop je propojený s OneMil.",
+              eyebrow: "Shoptet propojení",
+              title: "E-shop je připravený",
+              bodyHtml: `
+                <p style="margin:0 0 16px;">Dobrý den, <strong>${escapeEmailHtml(partnerName)}</strong>,</p>
+                <p style="margin:0 0 16px;">váš Shoptet e-shop byl schválen a aktivován pro automatické vydávání MioCoin kódů zákazníkům.</p>
+                <p style="margin:0;">Zákazníci budou dostávat kódy e-mailem od OneMil ihned po vydání.</p>
+              `,
+              action: {
+                label: "Otevřít partnerský portál",
+                url: "https://onemil.cz/partner/dashboard",
+              },
+              footerNote: "Nastavení propojení můžete kdykoli zkontrolovat v partnerském portálu.",
+            }),
           });
         }
       }
@@ -171,10 +419,18 @@ Deno.serve(async (req) => {
   }
 
   // ── 5b. REJECT ─────────────────────────────────────────────────────────────
+  // Shared by both kinds, and correct for both without branching: only the PENDING
+  // key is removed. For a url_change that means the live export URL is left exactly
+  // as it was and imports carry on from the old link.
   // Delete pending Vault key (best-effort; key is encrypted, lingering is safe but wasteful).
-  await admin.rpc("delete_shoptet_pending_url", { p_request_id: request_id }).catch((e: Error) => {
-    console.warn("vault delete:", e.message);
-  });
+  // try/catch, not .catch(): a PostgrestBuilder is a thenable but exposes no .catch,
+  // so chaining one throws a TypeError and turns a recoverable cleanup failure into
+  // a crashed request.
+  try {
+    await admin.rpc("delete_shoptet_pending_url", { p_request_id: request_id });
+  } catch (e) {
+    console.warn("vault delete:", (e as Error).message);
+  }
 
   // Transition request: submitted → rejected
   const { error: scrRejectErr } = await admin
@@ -194,7 +450,9 @@ Deno.serve(async (req) => {
     return err(500, "status_update_error", "Failed to set request rejected");
   }
 
-  // partners: NO changes — shoptet_import_enabled stays false, delivery stays 'partner' (default).
+  // partners: NO changes. For an initial request that leaves shoptet_import_enabled
+  // false and delivery 'partner' (defaults); for a url_change it leaves the live
+  // connection completely untouched.
 
   // Best-effort rejection notification.
   try {
@@ -209,12 +467,26 @@ Deno.serve(async (req) => {
       const partnerName = partnerRow.name ?? "Partner";
       if (partnerEmail) {
         const reason = typeof rejection_reason === "string" && rejection_reason.trim()
-          ? `\n\nDůvod: ${rejection_reason.trim()}`
+          ? `<div style="margin-top:20px;padding:16px;background:#F7EBDD;border:1px solid #F2A16B;border-radius:12px;"><strong>Důvod:</strong><br>${escapeEmailHtml(rejection_reason.trim())}</div>`
           : "";
         await admin.from("email_queue").insert({
           email: partnerEmail,
           subject: "Váš požadavek na napojení Shoptet e-shopu byl zamítnut",
-          body: `Dobrý den, ${partnerName},\n\nbohužel váš požadavek na napojení Shoptet e-shopu do OneMil byl zamítnut.${reason}\n\nPokud máte dotazy, kontaktujte nás na eshop@onemil.cz.\n\nS pozdravem,\nTým OneMil`,
+          body: renderOneMilEmail({
+            preheader: "Informace k požadavku na propojení Shoptet e-shopu.",
+            eyebrow: "Shoptet propojení",
+            title: "Požadavek potřebuje úpravu",
+            bodyHtml: `
+              <p style="margin:0 0 16px;">Dobrý den, <strong>${escapeEmailHtml(partnerName)}</strong>,</p>
+              <p style="margin:0;">váš požadavek na napojení Shoptet e-shopu do OneMil nyní nemohl být schválen.</p>
+              ${reason}
+            `,
+            action: {
+              label: "Otevřít partnerský portál",
+              url: "https://onemil.cz/partner/dashboard",
+            },
+            footerNote: "Pokud máte dotazy, napište nám na eshop@onemil.cz.",
+          }),
         });
       }
     }
@@ -222,5 +494,5 @@ Deno.serve(async (req) => {
     console.warn("rejection notification skipped:", (notifErr as Error).message);
   }
 
-  return ok({ success: true, request_id, status: "rejected" });
+  return ok({ success: true, request_id, status: "rejected", request_kind: requestKind });
 });

@@ -1,6 +1,7 @@
 import { serve } from 'https://deno.land/std@0.168.0/http/server.ts'
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
 import type { Database } from '../_shared/database.types.ts'
+import { getSupabaseSecretKey } from "../_shared/supabaseSecretKey.ts";
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -16,7 +17,7 @@ serve(async (req) => {
     // Create admin client for auth verification
     const supabaseAdmin = createClient(
       Deno.env.get('SUPABASE_URL') ?? '',
-      Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '',
+      getSupabaseSecretKey(),
     )
 
     // Create user-scoped client for DB writes (auth.uid propagation)  
@@ -71,6 +72,21 @@ serve(async (req) => {
     const validStatuses = ['draft', 'active', 'closed', 'pending']
     if (status && !validStatuses.includes(status)) {
       throw new Error('Invalid status')
+    }
+
+    // Soutěž nesmí být `active` bez nahraných pravidel (PDF). Tahle funkce
+    // `rules_pdf_url` vůbec nepřijímá ani neukládá, takže by každá aktivní
+    // soutěž vytvořená tudy byla veřejně dostupná bez závazných pravidel —
+    // tedy obchvat kolem kontroly v admin UI.
+    //
+    // Pravidla se nahrávají až po vzniku řádku (cesta v úložišti potřebuje
+    // contest id), takže tady `active` nelze bezpečně povolit vůbec: soutěž
+    // vznikne neaktivní a aktivuje se teprve po uložení pravidel.
+    // Totéž nezávisle vynucuje trigger `trg_contest_active_requires_rules_pdf`.
+    if (status === 'active') {
+      throw new Error(
+        'Contest cannot be created as active: rules PDF must be uploaded first. Create it as draft or pending and activate it once the rules are stored.'
+      )
     }
 
     // Create new contest using user-scoped client for auth.uid() propagation

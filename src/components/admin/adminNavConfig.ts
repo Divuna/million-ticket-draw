@@ -14,7 +14,6 @@ import {
   Wrench,
   MessageSquare,
   BookOpen,
-  UserX,
   Receipt,
   Link2,
   Megaphone,
@@ -37,6 +36,7 @@ import {
   Truck,
   Tag,
   Building2,
+  Briefcase,
 } from "lucide-react";
 
 /**
@@ -119,7 +119,6 @@ const DASH_NAV = {
 
 const USERS_NAV = {
   users: { path: "/admin/users", label: "Uživatelé", icon: Users },
-  onboarding: { path: "/admin/onboarding-incomplete", label: "Onboarding", icon: UserX },
   partners: { path: "/admin/partners", label: "Partneři", icon: Handshake },
   partnersPortal: { path: "/admin/partners-portal", label: "Partneři portál", icon: Handshake },
   partnerOffers: { path: "/admin/partner-offers", label: "Nabídky ke schválení", icon: Tag },
@@ -135,6 +134,7 @@ const USERS_NAV = {
   auditRepair: { path: "/admin/audit-repair", label: "Audit repair", icon: Wrench },
   onemilAudit: { path: "/admin/onemil-audit", label: "OneMil audit", icon: FileText },
   companyLeads: { path: "/admin/company-leads", label: "Žádosti firem", icon: Building2 },
+  salesLeads: { path: "/admin/sales-leads", label: "Obchod", icon: Briefcase },
 } as const satisfies Record<string, AdminSubNavItem>;
 
 /** ?tab= hodnoty pro /admin — provoz soutěží a bonusů u tiketů. */
@@ -230,7 +230,9 @@ export const ADMIN_NAV_SECTIONS: readonly AdminNavSectionDefinition[] = [
     mainNav: { label: "Vouchery", icon: Gift, to: "/admin/vouchers" },
     subNavEntries: [
       { kind: "link", item: { path: "/admin/vouchers", label: "Vouchery", icon: Gift } },
+      { kind: "link", item: { path: "/admin/guaranteed-benefits", label: "Garantované benefity", icon: ShieldCheck } },
       { kind: "link", item: { path: "/admin/referrals", label: "Doporučení hráčů", icon: Link2 } },
+      { kind: "link", item: { path: "/admin/promo-mio", label: "Bonusové MIO kódy", icon: Gift } },
       { kind: "link", item: { path: "/admin/referral-dashboard", label: "Přehled doporučení", icon: BarChart3 } },
     ],
   },
@@ -240,10 +242,10 @@ export const ADMIN_NAV_SECTIONS: readonly AdminNavSectionDefinition[] = [
     mainNav: { label: "Uživatelé", icon: Users, to: "/admin/users" },
     subNavEntries: [
       { kind: "link", item: USERS_NAV.users },
-      { kind: "link", item: USERS_NAV.onboarding },
       { kind: "link", item: USERS_NAV.partners },
       { kind: "link", item: USERS_NAV.influencers },
       { kind: "link", item: USERS_NAV.companyLeads },
+      { kind: "link", item: USERS_NAV.salesLeads },
       {
         kind: "menu",
         label: "Více",
@@ -350,8 +352,10 @@ export function getAdminSectionFromPath(pathname: string, search: string = ""): 
 
   if (
     path.startsWith("/admin/vouchers") ||
+    path.startsWith("/admin/guaranteed-benefits") ||
     path.startsWith("/admin/referrals") ||
-    path.startsWith("/admin/referral-dashboard")
+    path.startsWith("/admin/referral-dashboard") ||
+    path.startsWith("/admin/promo-mio")
   ) {
     return "vouchers";
   }
@@ -359,7 +363,6 @@ export function getAdminSectionFromPath(pathname: string, search: string = ""): 
   if (
     path.startsWith("/admin/users") ||
     path.startsWith("/admin/admins") ||
-    path.startsWith("/admin/onboarding-incomplete") ||
     path.startsWith("/admin/partners-portal") ||
     path.startsWith("/admin/partner-offers") ||
     path.startsWith("/admin/partners/") ||
@@ -374,6 +377,7 @@ export function getAdminSectionFromPath(pathname: string, search: string = ""): 
     path.startsWith("/admin/audit-repair") ||
     path.startsWith("/admin/onemil-audit") ||
     path.startsWith("/admin/company-leads") ||
+    path.startsWith("/admin/sales-leads") ||
     path.startsWith("/admin/affiliate-commissions")
   ) {
     return "users";

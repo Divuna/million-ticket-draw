@@ -1,22 +1,37 @@
 {
   "brand": "OneMil",
-  "tagline": "Luxusní soutěže. Skutečné výhry.",
-  "visual_direction": "dark premium tech-luxury",
+  "tagline": "Luxusní soutěže. Prémiové výhry.",
+  "source_of_truth": "docs/advertising/GRAPHICS_SOURCE_OF_TRUTH.md",
+  "visual_direction": "light premium OneMil",
+  "legacy_dark_direction_retired": true,
   "fonts": {
     "headings": "Poppins",
     "body_ui": "Inter",
     "google_fonts_import": "https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Poppins:wght@500;600;700;800&display=swap"
   },
   "colors": {
+    "white": "#FFFFFF",
+    "warm_cream": "#FAFAF9",
+    "cloud": "#F7F8FB",
+    "ink": "#111827",
+    "slate": "#4B5563",
+    "light_border": "#E5E7EB",
+    "energy_orange": "#FF8A00",
+    "approved_ui_orange": "#F97316",
+    "warm_amber": "#FFB547",
+    "soft_gold_optional": "#D8BA78"
+  },
+  "legacy_dark_colors_not_public_background_defaults": {
     "midnight_black": "#0A0B0F",
     "deep_navy": "#101722",
-    "graphite": "#1D2128",
-    "platinum": "#E7EBF0",
-    "silver": "#BFC6CF",
-    "muted_silver": "#8E98A6",
-    "energy_orange": "#FF8A00",
-    "warm_amber": "#FFB547",
-    "soft_gold": "#D8BA78"
+    "graphite": "#1D2128"
+  },
+  "public_graphics_rules": {
+    "default_background": "white or warm cream",
+    "default_text": "dark ink",
+    "primary_accent": "Energy Orange",
+    "full_dark_background_for_new_public_graphics": false,
+    "use_original_onemil_miocoin_assets_only": true
   },
   "forbidden_terms": [
     "casino",
@@ -34,7 +49,7 @@
     "MioCoin",
     "voucher",
     "luxusní cena",
-    "skutečné výhry",
-    "rychlá hra"
+    "prémiové výhry",
+    "prémiové ceny"
   ]
 }

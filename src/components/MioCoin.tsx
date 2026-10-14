@@ -33,7 +33,7 @@ const MioCoin: React.FC<MioCoinProps> = ({ amount, size = "md", showAmount = tru
         <div className="relative flex items-center justify-center rounded-full bg-black/80">
           <img
             src={MIOCOIN_IMAGE_URL}
-            alt="MioCoin"
+            alt="MIO"
             style={{
               width: px,
               height: px,
@@ -43,7 +43,7 @@ const MioCoin: React.FC<MioCoinProps> = ({ amount, size = "md", showAmount = tru
         </div>
       </div>
 
-      {showAmount && formattedAmount && <span className="font-medium tracking-wide">{formattedAmount} MioCoin</span>}
+      {showAmount && formattedAmount && <span className="font-medium tracking-wide">{formattedAmount} MIO</span>}
     </div>
   );
 };

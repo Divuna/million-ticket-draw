@@ -9,12 +9,16 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Badge } from '@/components/ui/badge';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { supabase, withEdgeInternalToken } from '@/integrations/supabase/client';
+import { Switch } from '@/components/ui/switch';
+import { Label } from '@/components/ui/label';
+import { supabase } from '@/integrations/supabase/client';
+import { openPartnerInvoiceExport } from '@/lib/partnerInvoiceDownload';
 import { toast } from 'sonner';
 import { Loader2, Building2, CheckCircle, XCircle, Eye, Coins, FileText, Calendar, Key, Copy, Check, Receipt, Send, Download, UserPlus, Clock } from 'lucide-react';
 import { format, startOfMonth, endOfMonth } from 'date-fns';
 import { cs } from 'date-fns/locale';
 import { jsPDF } from 'jspdf';
+import { formatMioCoinNumber } from '@/lib/miocoin';
 
 type PartnerStatus = 'pending' | 'approved' | 'suspended' | 'rejected';
 type InvoiceStatus = 'draft' | 'issued' | 'paid' | 'void';
@@ -120,7 +124,7 @@ const invoiceStatusColors: Record<InvoiceStatus, "pending" | "info" | "success" 
 const AdminPartnersPortal = () => {
   const navigate = useNavigate();
   const { user } = useAuth();
-  const { isAdmin, loading: roleLoading } = useUserRole();
+  const { isAdmin, isSuperAdmin, loading: roleLoading } = useUserRole();
   const [loading, setLoading] = useState(true);
   const [partners, setPartners] = useState<Partner[]>([]);
   const [selectedPartner, setSelectedPartner] = useState<PartnerDetail | null>(null);
@@ -140,6 +144,11 @@ const AdminPartnersPortal = () => {
   const [generatingPdf, setGeneratingPdf] = useState(false);
   const [sendingEmail, setSendingEmail] = useState(false);
 
+  // Partner-invoice auto-send switch (superadmin only). Default OFF.
+  const [autoSendEnabled, setAutoSendEnabled] = useState(false);
+  const [autoSendLoading, setAutoSendLoading] = useState(true);
+  const [autoSendSaving, setAutoSendSaving] = useState(false);
+
   // Pending registrations state
   const [pendingRegistrations, setPendingRegistrations] = useState<PendingRegistration[]>([]);
   const [pendingLoading, setPendingLoading] = useState(true);
@@ -150,6 +159,56 @@ const AdminPartnersPortal = () => {
     loadInvoices();
     loadPendingRegistrations();
   }, []);
+
+  // Load the auto-send switch only for superadmins (settings RLS is
+  // superadmin-only, so a non-superadmin read simply returns nothing).
+  useEffect(() => {
+    if (roleLoading) return;
+    if (!isSuperAdmin) {
+      setAutoSendLoading(false);
+      return;
+    }
+    loadAutoSendFlag();
+  }, [roleLoading, isSuperAdmin]);
+
+  const loadAutoSendFlag = async () => {
+    setAutoSendLoading(true);
+    try {
+      const { data, error } = await supabase
+        .from('settings')
+        .select('value')
+        .eq('key', 'partner_invoice_auto_send_enabled')
+        .maybeSingle();
+      if (error) throw error;
+      setAutoSendEnabled((data?.value ?? 'false').toString().trim().toLowerCase() === 'true');
+    } catch (error) {
+      console.error('Error loading auto-send flag:', error);
+    } finally {
+      setAutoSendLoading(false);
+    }
+  };
+
+  const toggleAutoSend = async (next: boolean) => {
+    setAutoSendSaving(true);
+    try {
+      const { error } = await supabase
+        .from('settings')
+        .upsert(
+          { key: 'partner_invoice_auto_send_enabled', value: next ? 'true' : 'false', updated_at: new Date().toISOString() },
+          { onConflict: 'key' },
+        );
+      if (error) throw error;
+      setAutoSendEnabled(next);
+      toast.success(next
+        ? 'Automatické vystavování a odesílání faktur zapnuto'
+        : 'Automatické vystavování a odesílání faktur vypnuto');
+    } catch (error) {
+      console.error('Error saving auto-send flag:', error);
+      toast.error('Nastavení se nepodařilo uložit');
+    } finally {
+      setAutoSendSaving(false);
+    }
+  };
 
   const loadPartners = async () => {
     try {
@@ -209,9 +268,9 @@ const AdminPartnersPortal = () => {
       }
 
       const response = await supabase.functions.invoke('get-pending-partner-registrations', {
-        headers: withEdgeInternalToken({
+        headers: {
           Authorization: `Bearer ${sessionData.session.access_token}`,
-        }),
+        },
       });
 
       if (response.error) {
@@ -244,9 +303,9 @@ const AdminPartnersPortal = () => {
       }
 
       const response = await supabase.functions.invoke('approve-partner-registration', {
-        headers: withEdgeInternalToken({
+        headers: {
           Authorization: `Bearer ${sessionData.session.access_token}`,
-        }),
+        },
         body: {
           auth_user_id: registration.id,
           action: action,
@@ -348,7 +407,7 @@ const AdminPartnersPortal = () => {
 
       const invoiceSummary = {
         totalActivations: monthActivationsRes.data?.length || 0,
-        totalCoins: monthActivationsRes.data?.reduce((sum, a) => sum + a.coins, 0) || 0,
+        totalCoins: monthActivationsRes.data?.reduce((sum, a) => sum + Number(a.coins || 0), 0) || 0,
         periodStart: format(startOfMonth(new Date()), 'dd.MM.yyyy', { locale: cs }),
         periodEnd: format(endOfMonth(new Date()), 'dd.MM.yyyy', { locale: cs }),
       };
@@ -439,7 +498,7 @@ const AdminPartnersPortal = () => {
         : (linesRes.data || [])
             .slice(0, 20)
             .map((line: any) =>
-              `${line.coins} MioCoins (${format(new Date(line.activated_at), 'dd.MM.', { locale: cs })})`
+              `${formatMioCoinNumber(Number(line.coins || 0))} MioCoins (${format(new Date(line.activated_at), 'dd.MM.', { locale: cs })})`
             )
             .join(', ');
 
@@ -460,28 +519,42 @@ const AdminPartnersPortal = () => {
 
     setIssuingInvoice(true);
 
-    // Optimistic update
-    const previousInvoices = [...invoices];
-    setInvoices(invoices.map(inv => 
-      inv.id === selectedInvoice.id 
-        ? { ...inv, status: 'issued' as InvoiceStatus, issued_at: new Date().toISOString() } 
-        : inv
-    ));
-    setSelectedInvoice({ ...selectedInvoice, status: 'issued', issued_at: new Date().toISOString() });
-
     try {
-      const { error } = await supabase
-        .from('partner_invoices')
-        .update({ status: 'issued', issued_at: new Date().toISOString() })
-        .eq('id', selectedInvoice.id);
+      // Chráněná serverová cesta: draft -> issued. Server ověřuje oprávnění,
+      // zamyká řádek, povoluje jen správný přechod a nastavuje issued_at
+      // vlastním časem. Žádný přímý klientský UPDATE partner_invoices.
+      const { data, error } = await (supabase as any).rpc('admin_issue_partner_invoice', {
+        p_invoice_id: selectedInvoice.id,
+      });
 
       if (error) throw error;
+
+      const result = data as { status: string; issued_at?: string } | null;
+
+      if (!result || result.status !== 'issued' || !result.issued_at) {
+        // Server odmítl přechod (forbidden / not_found / invalid_transition /
+        // conflict) nebo nevrátil issued_at — lokální stav se nemění, žádný
+        // optimistický úspěch při 0 změněných řádcích.
+        const reason = result?.status ?? 'unknown_error';
+        console.error('Failed to issue invoice, server status:', reason);
+        toast.error('Nepodařilo se vydat fakturu');
+        return;
+      }
+
+      const issuedAt = result.issued_at;
+      setInvoices(prev =>
+        prev.map(inv =>
+          inv.id === selectedInvoice.id
+            ? { ...inv, status: 'issued' as InvoiceStatus, issued_at: issuedAt }
+            : inv
+        )
+      );
+      setSelectedInvoice({ ...selectedInvoice, status: 'issued', issued_at: issuedAt });
+
       toast.success('Faktura byla úspěšně vydána');
       setIssueConfirmOpen(false);
     } catch (error) {
       console.error('Error issuing invoice:', error);
-      setInvoices(previousInvoices);
-      setSelectedInvoice({ ...selectedInvoice, status: 'draft', issued_at: null });
       toast.error('Nepodařilo se vydat fakturu');
     } finally {
       setIssuingInvoice(false);
@@ -559,7 +632,7 @@ const AdminPartnersPortal = () => {
       const col2 = 130;
       
       doc.text('MioCoiny celkem:', col1, yPos);
-      doc.text(`${(selectedInvoice.coins_total || 0).toLocaleString()}`, col2, yPos);
+      doc.text(`${formatMioCoinNumber(Number(selectedInvoice.coins_total || 0))}`, col2, yPos);
       yPos += 10;
       
       doc.text('Castka netto:', col1, yPos);
@@ -611,14 +684,13 @@ const AdminPartnersPortal = () => {
     setGeneratingPdf(true);
     try {
       const { data, error } = await supabase.functions.invoke('generate-partner-invoice-pdf', {
-        headers: withEdgeInternalToken({}),
         body: { invoice_id: selectedInvoice.id },
       });
       if (error) throw error;
       if (!data?.success) throw new Error(data?.error || 'Nepodařilo se vygenerovat PDF');
       toast.success('PDF bylo vygenerováno');
-      if (data.file_url) {
-        window.open(data.file_url, '_blank');
+      if (data.export_id) {
+        await openPartnerInvoiceExport(data.export_id);
       }
     } catch (error: any) {
       console.error('Error generating PDF:', error);
@@ -634,7 +706,6 @@ const AdminPartnersPortal = () => {
     setSendingEmail(true);
     try {
       const { data, error } = await supabase.functions.invoke('send-partner-invoice-email', {
-        headers: withEdgeInternalToken({}),
         body: { invoice_id: selectedInvoice.id },
       });
       if (error) throw error;
@@ -925,6 +996,30 @@ const AdminPartnersPortal = () => {
 
           {/* Invoices Tab */}
           <TabsContent value="invoices">
+            {/* Superadmin-only automation switch. Default OFF. */}
+            {isSuperAdmin && (
+              <Card className="border-border/50 mb-6">
+                <CardContent className="flex items-start justify-between gap-4 pt-6">
+                  <div className="space-y-1">
+                    <Label htmlFor="partner-invoice-auto-send" className="text-base font-medium">
+                      Automaticky vystavovat a odesílat partnerské faktury
+                    </Label>
+                    <p className="text-sm text-muted-foreground">
+                      Když je zapnuto, nedělní automat po vytvoření faktury vygeneruje PDF a odešle
+                      partnerovi jeden e-mail; stav se změní na „Odesláno“ až po úspěšném odeslání.
+                      Když je vypnuto, automat vytvoří pouze koncept a fakturu odešlete ručně.
+                    </p>
+                  </div>
+                  <Switch
+                    id="partner-invoice-auto-send"
+                    checked={autoSendEnabled}
+                    disabled={autoSendLoading || autoSendSaving}
+                    onCheckedChange={toggleAutoSend}
+                  />
+                </CardContent>
+              </Card>
+            )}
+
             <Card className="border-border/50">
               <CardHeader>
                 <CardTitle>Seznam faktur</CardTitle>
@@ -957,7 +1052,7 @@ const AdminPartnersPortal = () => {
                           </TableCell>
                           <TableCell className="font-medium">{invoice.partner_name}</TableCell>
                           <TableCell className="text-right font-medium text-primary">
-                            {(invoice.coins_total || 0).toLocaleString()}
+                            {formatMioCoinNumber(Number(invoice.coins_total || 0))}
                           </TableCell>
                           <TableCell className="text-right">
                             {(invoice.amount_net || 0).toLocaleString()} Kč
@@ -1183,7 +1278,7 @@ const AdminPartnersPortal = () => {
                         <TableRow key={index}>
                           <TableCell className="font-mono text-sm">{activation.code}</TableCell>
                           <TableCell className="text-right font-medium text-primary">
-                            {activation.coins.toLocaleString()}
+                            {formatMioCoinNumber(Number(activation.coins || 0))}
                           </TableCell>
                           <TableCell className="text-sm text-muted-foreground">
                             {activation.external_order_id || '—'}
@@ -1263,7 +1358,7 @@ const AdminPartnersPortal = () => {
                   <CardContent>
                     <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 text-center">
                       <div>
-                        <div className="text-2xl font-bold text-primary">{(selectedInvoice.coins_total || 0).toLocaleString()}</div>
+                        <div className="text-2xl font-bold text-primary">{formatMioCoinNumber(Number(selectedInvoice.coins_total || 0))}</div>
                         <div className="text-xs text-muted-foreground">MioCoinů</div>
                       </div>
                       <div>
@@ -1384,7 +1479,7 @@ const AdminPartnersPortal = () => {
                 </div>
                 <div className="flex justify-between">
                   <span className="text-muted-foreground">MioCoiny:</span>
-                  <span className="font-medium text-primary">{(selectedInvoice.coins_total || 0).toLocaleString()}</span>
+                  <span className="font-medium text-primary">{formatMioCoinNumber(Number(selectedInvoice.coins_total || 0))}</span>
                 </div>
                 <div className="flex justify-between">
                   <span className="text-muted-foreground">Celkem:</span>

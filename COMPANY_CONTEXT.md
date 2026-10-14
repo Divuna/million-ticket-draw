@@ -48,7 +48,7 @@ obchodní komunikací nebo oficiálním popisem OneMil.
 | Hlavní veřejný support e-mail | podpora@onemil.cz |
 | Podpora | podpora@onemil.cz |
 | Obchodní spolupráce | b2b@onemil.cz |
-| Telefon | +420 776 532 562 |
+| Telefon | +420 731 215 816 |
 
 ---
 
@@ -69,7 +69,7 @@ Web: www.onemil.cz
 E-mail: podpora@onemil.cz
 Podpora: podpora@onemil.cz
 Obchodní spolupráce: b2b@onemil.cz
-Tel.: +420 776 532 562
+Tel.: +420 731 215 816
 
 iCONIC POINT s.r.o.
 IČO: 17795851

@@ -29,8 +29,8 @@ export const analytics = {
     push('ticket_purchase', { contest_id: params.contestId, ticket_number: params.ticketNumber });
   },
   voucherRedeem: (voucherId: string, price = 5) => {
-    console.log('[analytics] voucher_purchase', { voucherId, price });
-    push('voucher_purchase', { voucher_id: voucherId, price });
+    console.log('[analytics] voucher_redeemed', { voucherId, price });
+    push('voucher_redeemed', { voucher_id: voucherId, price });
   },
   miocoinPurchase: (params: { value: number; amount: number; sessionId?: string | null }) => {
     console.log('[analytics] miocoin_purchase', params);
@@ -40,5 +40,11 @@ export const analytics = {
       amount: params.amount,
       ...(params.sessionId ? { transaction_id: params.sessionId } : {}),
     });
+  },
+  // No email, IČO, DIČ, phone, company name, user_id, or website URL — GA4 must
+  // never receive personal or company data for this event.
+  partnerRegistrationCompleted: () => {
+    console.log('[analytics] partner_registration_completed');
+    push('partner_registration_completed');
   },
 };

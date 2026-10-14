@@ -1,0 +1,115 @@
+/* OneMil — shared auth pages visual system.
+   Generalized from the approved /register visual design (see Register.css).
+   Scoped to auth pages only (Login, PartnerLogin, PartnerRegister,
+   AffiliateLogin, AffiliateRegister) — each imports this file itself.
+   Does not affect the shared dark theme used across the rest of the app. */
+
+@keyframes om-auth-rise {
+  from {
+    opacity: 0;
+    transform: translateY(14px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes om-auth-blob-drift {
+  0%, 100% { transform: translate(0, 0) scale(1); }
+  50% { transform: translate(16px, -20px) scale(1.08); }
+}
+
+@keyframes om-auth-blob-drift-alt {
+  0%, 100% { transform: translate(0, 0) scale(1); }
+  50% { transform: translate(-14px, 18px) scale(1.05); }
+}
+
+@keyframes om-auth-shimmer {
+  0% { transform: translateX(-160%) skewX(-12deg); }
+  100% { transform: translateX(260%) skewX(-12deg); }
+}
+
+@keyframes om-auth-medallion-glow {
+  0%, 100% {
+    box-shadow: 0 18px 40px -14px rgba(255, 138, 0, 0.4), 0 0 0 1px rgba(255, 138, 0, 0.12);
+  }
+  50% {
+    box-shadow: 0 24px 50px -12px rgba(255, 138, 0, 0.55), 0 0 0 1px rgba(255, 138, 0, 0.22);
+  }
+}
+
+.om-auth-rise {
+  opacity: 0;
+  animation: om-auth-rise 0.7s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+.om-auth-rise-1 { animation-delay: 0.06s; }
+.om-auth-rise-2 { animation-delay: 0.16s; }
+.om-auth-rise-3 { animation-delay: 0.26s; }
+.om-auth-rise-4 { animation-delay: 0.38s; }
+
+.om-auth-blob-a {
+  animation: om-auth-blob-drift 10s ease-in-out infinite;
+}
+
+.om-auth-blob-b {
+  animation: om-auth-blob-drift-alt 12s ease-in-out infinite;
+}
+
+.om-auth-medallion {
+  animation:
+    om-auth-rise 0.8s cubic-bezier(0.16, 1, 0.3, 1) forwards,
+    om-auth-medallion-glow 4.5s ease-in-out 0.9s infinite;
+}
+
+.om-auth-cta {
+  position: relative;
+  overflow: hidden;
+  isolation: isolate;
+}
+
+.om-auth-cta::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  width: 38%;
+  background: linear-gradient(115deg, transparent, rgba(255, 255, 255, 0.65), transparent);
+  transform: translateX(-160%) skewX(-12deg);
+  animation: om-auth-shimmer 3.4s ease-in-out infinite;
+}
+
+.om-auth-dotgrid {
+  background-image: radial-gradient(rgba(255, 138, 0, 0.4) 1px, transparent 1px);
+  background-size: 24px 24px;
+  opacity: 0.35;
+  -webkit-mask-image: radial-gradient(ellipse 65% 55% at 50% 0%, black 0%, transparent 72%);
+  mask-image: radial-gradient(ellipse 65% 55% at 50% 0%, black 0%, transparent 72%);
+}
+
+.om-auth-chip {
+  transition: transform 0.2s ease, border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.om-auth-chip:hover {
+  transform: translateY(-2px);
+  border-color: rgba(255, 138, 0, 0.45);
+  box-shadow: 0 8px 20px -8px rgba(255, 138, 0, 0.35);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .om-auth-rise,
+  .om-auth-blob-a,
+  .om-auth-blob-b,
+  .om-auth-medallion,
+  .om-auth-cta::after {
+    animation: none !important;
+    opacity: 1 !important;
+    transform: none !important;
+    box-shadow: 0 18px 40px -14px rgba(255, 138, 0, 0.4) !important;
+  }
+
+  .om-auth-chip:hover {
+    transform: none;
+  }
+}

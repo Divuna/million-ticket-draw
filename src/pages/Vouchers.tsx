@@ -28,61 +28,130 @@ import {
   DialogDescription,
   DialogFooter,
 } from '@/components/ui/dialog';
-import { Copy, Clock, Loader2 } from 'lucide-react';
+import { Copy } from 'lucide-react';
 import { OneMilVoucherIcon, OneMilHeartIcon, OneMilTicketIcon, OneMilCartIcon } from '@/components/icons/OneMilIcons';
+import { VoucherDetailDialog, VoucherShowcaseCard } from '@/components/VoucherShowcase';
 import { supabase } from '@/integrations/supabase/client';
 import { buildLoginRedirectUrl } from '@/lib/loginRedirect';
 import { toast } from 'sonner';
 import { analytics } from '@/lib/analytics';
-
-// Voucher expiration duration in days (from purchase date)
-const VOUCHER_EXPIRATION_DAYS = 30;
 
 const Vouchers: React.FC = () => {
   const { user } = useAuth();
   const { isAdmin } = useUserRole();
   const [searchParams] = useSearchParams();
   const defaultTab = searchParams.get('tab') || 'available';
-  const { vouchers: availableVouchers, loading: availableLoading, getRemainingCount, isVoucherAvailable, refetch: refetchAvailable } = useHomepageVouchers();
+  const { vouchers: availableVouchers, loading: availableLoading, refetch: refetchAvailable } = useHomepageVouchers();
   const { vouchers: userVouchers, loading: userVouchersLoading, refetch: refetchUserVouchers, optimisticRemoveByVoucherId, optimisticAddFavorite } = useUserVouchers();
   const [purchasingId, setPurchasingId] = useState<string | null>(null);
   const [togglingFavoriteId, setTogglingFavoriteId] = useState<string | null>(null);
   const [removeConfirmId, setRemoveConfirmId] = useState<string | null>(null);
-  const [redeemModalVoucher, setRedeemModalVoucher] = useState<{ code: string; name: string } | null>(null);
+  const [codeModalVoucher, setCodeModalVoucher] = useState<{ code: string | null; name: string } | null>(null);
+  const [selectedVoucher, setSelectedVoucher] = useState<{
+    id: string;
+    name: string;
+    image_url: string | null;
+    banner_url: string | null;
+    max_quantity: number | null;
+    redeemed_count: number;
+    start_date: string | null;
+    end_date: string | null;
+    short_description?: string | null;
+    usage_description?: string | null;
+    terms_text?: string | null;
+    how_to_use_text?: string | null;
+    gallery_images?: string[];
+  } | null>(null);
 
   // Separate user vouchers into favorites (redeemed=false) and purchased (redeemed=true)
   const favoriteVouchers = userVouchers.filter(uv => !uv.redeemed);
   const purchasedVouchers = userVouchers.filter(uv => uv.redeemed);
 
-  // Check if voucher is in user's collection (favorited or purchased)
-  const isInUserVouchers = (voucherId: string) => {
-    return userVouchers.some(uv => uv.voucher_id === voucherId);
+  const toShowcaseVoucher = (userVoucher: (typeof userVouchers)[number]) => ({
+    id: userVoucher.voucher_id,
+    name: userVoucher.voucher?.name ?? 'Voucher',
+    image_url: userVoucher.voucher?.image_url ?? null,
+    banner_url: userVoucher.voucher?.banner_url ?? null,
+    max_quantity: null,
+    redeemed_count: 0,
+    start_date: null,
+    end_date: null,
+    short_description: userVoucher.voucher?.short_description ?? null,
+    usage_description: userVoucher.voucher?.usage_description ?? null,
+    terms_text: userVoucher.voucher?.terms_text ?? null,
+    how_to_use_text: userVoucher.voucher?.how_to_use_text ?? null,
+  });
+
+  const isFavoriteVoucher = (voucherId: string) => {
+    return userVouchers.some(uv => uv.voucher_id === voucherId && !uv.redeemed);
   };
 
-  // Calculate expiration for purchased vouchers
-  const getExpirationInfo = (createdAt: string) => {
-    const purchaseDate = new Date(createdAt);
-    const expirationDate = new Date(purchaseDate);
-    expirationDate.setDate(expirationDate.getDate() + VOUCHER_EXPIRATION_DAYS);
-    
-    const now = new Date();
-    const diffMs = expirationDate.getTime() - now.getTime();
-    const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24));
-    const diffHours = Math.floor((diffMs % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
-    
-    const isExpired = diffMs <= 0;
-    
-    return {
-      isExpired,
-      diffDays,
-      diffHours,
-      expirationDate,
-      text: isExpired 
-        ? 'Vypršel' 
-        : diffDays > 0 
-          ? `${diffDays} dní ${diffHours} hod` 
-          : `${diffHours} hodin`
-    };
+  const isPurchasedVoucher = (voucherId: string) => {
+    return userVouchers.some(uv => uv.voucher_id === voucherId && uv.redeemed);
+  };
+
+  const openVoucherDetail = async (voucher: {
+    id: string;
+    name: string;
+    image_url: string | null;
+    banner_url: string | null;
+    max_quantity: number | null;
+    redeemed_count: number;
+    start_date: string | null;
+    end_date: string | null;
+    short_description?: string | null;
+    usage_description?: string | null;
+    terms_text?: string | null;
+    how_to_use_text?: string | null;
+    gallery_images?: string[];
+  }) => {
+    setSelectedVoucher(voucher);
+
+    try {
+      const { data, error } = await supabase.rpc('get_voucher_customer_detail' as never, {
+        p_voucher_id: voucher.id,
+      } as never);
+
+      if (error) throw error;
+
+      const result = data as {
+        success?: boolean;
+        voucher?: {
+          id?: string;
+          name?: string;
+          image_url?: string | null;
+          banner_url?: string | null;
+          short_description?: string | null;
+          usage_description?: string | null;
+          terms_text?: string | null;
+          how_to_use_text?: string | null;
+          gallery_images?: string[];
+        };
+      } | null;
+
+      if (!result?.success || !result.voucher) return;
+
+      setSelectedVoucher((current) => {
+        if (!current || current.id !== voucher.id) return current;
+        return {
+          ...current,
+          ...result.voucher,
+          id: current.id,
+          name: result.voucher?.name ?? current.name,
+          image_url: result.voucher?.image_url ?? current.image_url,
+          banner_url: result.voucher?.banner_url ?? current.banner_url,
+          short_description: result.voucher?.short_description ?? current.short_description ?? null,
+          usage_description: result.voucher?.usage_description ?? current.usage_description ?? null,
+          terms_text: result.voucher?.terms_text ?? current.terms_text ?? null,
+          how_to_use_text: result.voucher?.how_to_use_text ?? current.how_to_use_text ?? null,
+          gallery_images: Array.isArray(result.voucher?.gallery_images)
+            ? result.voucher.gallery_images
+            : [],
+        };
+      });
+    } catch (error) {
+      console.error('Error loading voucher detail:', error);
+    }
   };
 
   const handleFavoriteClick = (e: React.MouseEvent, voucherId: string) => {
@@ -122,7 +191,11 @@ const Vouchers: React.FC = () => {
         id: voucherData.id,
         name: voucherData.name,
         image_url: voucherData.image_url || '',
-        banner_url: voucherData.banner_url
+        banner_url: voucherData.banner_url,
+        short_description: voucherData.short_description,
+        usage_description: voucherData.usage_description,
+        terms_text: voucherData.terms_text,
+        how_to_use_text: voucherData.how_to_use_text,
       });
     }
 
@@ -253,7 +326,10 @@ const Vouchers: React.FC = () => {
       // Optimistically remove from favorites list immediately (covers oblíbené tab)
       optimisticRemoveByVoucherId(voucherId);
 
-      toast.success(`Voucher úspěšně zakoupen za 5 MioCoinů!`);
+      toast.success(`Voucher úspěšně zakoupen za 5 MIO!`);
+      if (selectedVoucher?.id === voucherId) {
+        setSelectedVoucher(null);
+      }
       await refetchUserVouchers();
       await refetchAvailable();
     } catch (error) {
@@ -273,23 +349,17 @@ const Vouchers: React.FC = () => {
     return <LoggedOutScreen />;
   }
 
-  // Vouchers not in user's collection (available for purchase/favorite)
-  const truelyAvailableVouchers = availableVouchers.filter(v => !isInUserVouchers(v.id));
+  // Available tab keeps favorites visible so the heart can add/remove them.
+  const truelyAvailableVouchers = availableVouchers.filter(v => !isPurchasedVoucher(v.id));
+  const selectedVoucherIsPurchased = selectedVoucher ? isPurchasedVoucher(selectedVoucher.id) : false;
 
   return (
-    <div className="min-h-screen bg-background dark pb-20">
+    <div className="vouchers-light-page min-h-screen bg-background pb-20">
       <Header />
       
       <div className="container mx-auto px-4 py-8 space-y-8">
         {/* Premium Header Card */}
-        <div
-          className="relative overflow-hidden rounded-2xl p-6"
-          style={{
-            background: 'linear-gradient(135deg, hsl(220, 25%, 8%) 0%, hsl(220, 30%, 12%) 50%, hsl(220, 25%, 8%) 100%)',
-            border: '1px solid rgba(255,138,0,0.2)',
-            boxShadow: '0 8px 32px rgba(0,0,0,0.4), inset 0 1px 0 rgba(255,138,0,0.1)',
-          }}
-        >
+        <div className="customer-light-hero-panel relative overflow-hidden rounded-2xl p-6">
           <div
             className="absolute inset-0 opacity-10 pointer-events-none"
             style={{
@@ -309,15 +379,7 @@ const Vouchers: React.FC = () => {
               <OneMilVoucherIcon size={36} className="w-7 h-7 md:w-9 md:h-9 text-black" />
             </div>
             <div>
-              <h1
-                className="text-2xl md:text-3xl font-bold tracking-tight"
-                style={{
-                  background: 'linear-gradient(135deg, #FFB547 0%, #FF8A00 50%, #FFB547 100%)',
-                  WebkitBackgroundClip: 'text',
-                  WebkitTextFillColor: 'transparent',
-                  backgroundClip: 'text',
-                }}
-              >
+              <h1 className="customer-premium-orange-heading text-2xl md:text-3xl font-bold tracking-tight">
                 Vouchery
               </h1>
               <p className="text-sm text-gray-400 mt-1">Sbírejte a uplatňujte exkluzivní vouchery</p>
@@ -326,7 +388,7 @@ const Vouchers: React.FC = () => {
         </div>
 
         <Tabs defaultValue={defaultTab} className="space-y-6">
-          <TabsList className="grid w-full grid-cols-3 max-w-lg mx-auto bg-card/60 border border-border/40 backdrop-blur-sm rounded-xl p-1">
+          <TabsList className="customer-light-tabs grid w-full grid-cols-3 max-w-lg mx-auto bg-card/60 border border-border/40 backdrop-blur-sm rounded-xl p-1">
             <TabsTrigger value="available" className="flex items-center gap-1 text-xs sm:text-sm data-[state=active]:bg-secondary/20 data-[state=active]:text-secondary rounded-lg transition-all">
               <OneMilTicketIcon size={16} className="w-4 h-4" />
               <span className="hidden sm:inline">Dostupné</span>
@@ -365,127 +427,21 @@ const Vouchers: React.FC = () => {
                   </Card>
                 ))}
               </div>
-            ) : truelyAvailableVouchers.length === 0 ? (
-              <Card className="voucher-card-glow relative overflow-hidden rounded-[20px] bg-gradient-to-b from-[hsl(220_35%_8%)] via-[hsl(220_30%_6%)] to-[hsl(220_25%_4%)] border-[3px] border-[rgba(255,138,0,0.3)]">
-                <CardContent className="p-8 space-y-3 text-center">
-                  <OneMilVoucherIcon size={48} className="w-12 h-12 mx-auto text-secondary/50" />
-                  <h3 className="text-xl font-bold text-heading-gold">Žádné dostupné vouchery</h3>
-                  <p className="text-sm text-muted-foreground">
-                    Momentálně nejsou k dispozici žádné nové vouchery.
-                  </p>
-                </CardContent>
-              </Card>
             ) : (
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                {truelyAvailableVouchers.map((voucher) => {
-                  const remaining = getRemainingCount(voucher);
-                  const isAvailable = isVoucherAvailable(voucher);
-                  const isPurchasing = purchasingId === voucher.id;
-                  const isTogglingFavorite = togglingFavoriteId === voucher.id;
-
-                  return (
-                    <Card key={voucher.id} className="voucher-card-glow relative overflow-hidden rounded-[20px] border-[3px] border-[rgba(255,138,0,0.35)] shadow-[0_4px_20px_hsl(220_50%_3%/0.6)] transition-all duration-300 hover:border-[rgba(255,138,0,0.55)] hover:shadow-[0_0_16px_rgba(255,138,0,0.2)] hover:scale-[1.02]">
-                      {/* Dark navy/black gradient background with gold particles */}
-                      <div 
-                        className="absolute inset-0 z-0"
-                        style={{
-                          background: `
-                            radial-gradient(ellipse at center, transparent 40%, hsl(220 30% 4% / 0.8) 100%),
-                            linear-gradient(135deg, hsl(220 35% 10%) 0%, hsl(220 30% 6%) 50%, hsl(220 25% 4%) 100%)
-                          `
-                        }}
-                      />
-                      {/* Gold particle effect */}
-                      <div 
-                        className="absolute inset-0 z-[1] opacity-60"
-                        style={{
-                          background: `
-                            radial-gradient(1.5px 1.5px at 15% 25%, rgba(255,138,0,0.45) 50%, transparent 100%),
-                            radial-gradient(1px 1px at 30% 60%, rgba(255,181,71,0.3) 50%, transparent 100%),
-                            radial-gradient(1.2px 1.2px at 55% 20%, rgba(255,138,0,0.35) 50%, transparent 100%),
-                            radial-gradient(0.8px 0.8px at 70% 45%, rgba(255,181,71,0.25) 50%, transparent 100%),
-                            radial-gradient(1px 1px at 85% 75%, rgba(255,138,0,0.3) 50%, transparent 100%),
-                            radial-gradient(1.3px 1.3px at 10% 80%, rgba(255,181,71,0.28) 50%, transparent 100%),
-                            radial-gradient(0.9px 0.9px at 45% 85%, rgba(255,138,0,0.22) 50%, transparent 100%)
-                          `
-                        }}
-                      />
-
-                      {/* Favorite heart button */}
-                      <button
-                        onClick={(e) => handleFavoriteClick(e, voucher.id)}
-                        disabled={isTogglingFavorite}
-                        className="absolute top-4 left-4 z-20 p-2 rounded-full bg-[hsl(220_30%_8%/0.8)] backdrop-blur-sm border border-[rgba(255,138,0,0.3)] hover:bg-[hsl(220_30%_12%)] transition-all duration-200 disabled:opacity-50"
-                        aria-label="Přidat do oblíbených"
-                      >
-                        {isTogglingFavorite ? (
-                          <Loader2 className="w-5 h-5 text-[#FF8A00] animate-spin" />
-                        ) : (
-                          <OneMilHeartIcon size={20} className="w-5 h-5 text-muted-foreground hover:text-destructive transition-colors" />
-                        )}
-                      </button>
-
-                      <div className="flex h-48 relative z-10">
-                        {/* Left side - Content */}
-                        <div className="flex-1 p-5 flex flex-col justify-center">
-                          {/* Header */}
-                          <div className="mb-2">
-                            <h2 className="text-foreground font-extrabold text-lg tracking-wide">ONEMIL VOUCHER</h2>
-                            <p className="text-muted-foreground/60 text-xs font-normal tracking-widest uppercase">Hraj o ceny</p>
-                          </div>
-
-                          {/* Voucher name */}
-                          <div className="mb-3">
-                            <h3 className="text-foreground font-semibold text-base leading-snug mb-1">{voucher.name}</h3>
-                            <div className="text-[#FFB547] font-bold text-xl">5 MioCoinů</div>
-                          </div>
-
-                          {/* Button */}
-                          <div className="space-y-1.5">
-                            <Button
-                              onClick={() => handleVoucherPurchase(voucher.id)}
-                              disabled={!isAvailable || isPurchasing || isAdmin}
-                              className="w-full h-11 rounded-xl bg-gradient-to-r from-[#FF8A00] to-[#FFB547] text-[#111] font-bold text-sm shadow-[0_2px_8px_rgba(255,138,0,0.25)] hover:shadow-[0_3px_12px_rgba(255,138,0,0.35)] hover:brightness-105 transition-all duration-200 border-0"
-                            >
-                              {isPurchasing ? "Kupuji..." : "KOUPIT ZA 5 MC"}
-                            </Button>
-                            <p className="text-[10px] text-muted-foreground/70">
-                              Vybrané kampaně mohou podpořit dobročinný účel. Konkrétní příjemce, účel a výše podpory budou vždy uvedeny u dané kampaně.
-                            </p>
-                          </div>
-                        </div>
-
-                        {/* Right side - Image */}
-                        <div className="w-28 relative border-l border-dashed border-[rgba(255,138,0,0.2)]">
-                          {voucher.image_url ? (
-                            <img
-                              src={voucher.image_url}
-                              alt={voucher.name}
-                              className="w-full h-full object-cover"
-                              loading="lazy"
-                            />
-                          ) : (
-                            <div className="w-full h-full bg-[hsl(220_30%_10%)] flex items-center justify-center">
-                              <span className="text-muted-foreground/50 text-xs text-center px-2">VOUCHER</span>
-                            </div>
-                          )}
-                        </div>
-
-                        {/* Remaining count indicator */}
-                        <div className="absolute top-3 right-3 bg-[hsl(220_30%_8%/0.85)] backdrop-blur-sm text-foreground/80 text-xs px-2 py-1 rounded border border-[rgba(255,138,0,0.2)]">
-                          Zbývá: {remaining}
-                        </div>
-                        
-                        {/* Unavailable badge */}
-                        {!isAvailable && (
-                          <div className="absolute bottom-3 right-3">
-                            <Badge variant="destructive">Nedostupný</Badge>
-                          </div>
-                        )}
-                      </div>
-                    </Card>
-                  );
-                })}
+                {truelyAvailableVouchers.map((voucher) => (
+                  <VoucherShowcaseCard
+                    key={voucher.id}
+                    voucher={voucher}
+                    onDetail={() => void openVoucherDetail(voucher)}
+                    onFavoriteToggle={(event) => handleFavoriteClick(event, voucher.id)}
+                    favoriteActive={isFavoriteVoucher(voucher.id)}
+                    favoriteDisabled={togglingFavoriteId === voucher.id}
+                    favoriteAriaLabel={isFavoriteVoucher(voucher.id) ? 'Odebrat z oblíbených' : 'Přidat do oblíbených'}
+                    showInfoBadges={false}
+                    className="w-full"
+                  />
+                ))}
               </div>
             )}
           </TabsContent>
@@ -509,7 +465,7 @@ const Vouchers: React.FC = () => {
               <Card className="voucher-card-glow relative overflow-hidden rounded-[20px] bg-gradient-to-b from-[hsl(220_35%_8%)] via-[hsl(220_30%_6%)] to-[hsl(220_25%_4%)] border-[3px] border-[rgba(255,138,0,0.3)]">
                 <CardContent className="p-8 space-y-3 text-center">
                   <OneMilHeartIcon size={48} className="w-12 h-12 mx-auto text-secondary/50" />
-                  <h3 className="text-xl font-bold text-heading-gold">Zatím nemáte žádné oblíbené vouchery</h3>
+                  <h3 className="customer-premium-orange-heading text-xl font-bold text-heading-gold">Zatím nemáte žádné oblíbené vouchery</h3>
                   <p className="text-sm text-muted-foreground">
                     Kliknutím na srdíčko přidáte voucher do oblíbených
                   </p>
@@ -518,103 +474,20 @@ const Vouchers: React.FC = () => {
             ) : (
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                 {favoriteVouchers.map((userVoucher) => {
-                  const isPurchasing = purchasingId === userVoucher.voucher_id;
-                  const isTogglingFavorite = togglingFavoriteId === userVoucher.voucher_id;
+                  const voucher = toShowcaseVoucher(userVoucher);
 
                   return (
-                    <Card key={userVoucher.id} className="voucher-card-glow relative overflow-hidden rounded-[20px] border-[3px] border-[rgba(255,138,0,0.35)] shadow-[0_4px_20px_hsl(220_50%_3%/0.6)] transition-all duration-300 hover:border-[rgba(255,138,0,0.55)] hover:shadow-[0_0_16px_rgba(255,138,0,0.2)] hover:scale-[1.02]">
-                      {/* Dark navy/black gradient background with gold particles */}
-                      <div 
-                        className="absolute inset-0 z-0"
-                        style={{
-                          background: `
-                            radial-gradient(ellipse at center, transparent 40%, hsl(220 30% 4% / 0.8) 100%),
-                            linear-gradient(135deg, hsl(220 35% 10%) 0%, hsl(220 30% 6%) 50%, hsl(220 25% 4%) 100%)
-                          `
-                        }}
-                      />
-                      {/* Gold particle effect */}
-                      <div 
-                        className="absolute inset-0 z-[1] opacity-60"
-                        style={{
-                          background: `
-                            radial-gradient(1.5px 1.5px at 15% 25%, rgba(255,138,0,0.45) 50%, transparent 100%),
-                            radial-gradient(1px 1px at 30% 60%, rgba(255,181,71,0.3) 50%, transparent 100%),
-                            radial-gradient(1.2px 1.2px at 55% 20%, rgba(255,138,0,0.35) 50%, transparent 100%),
-                            radial-gradient(0.8px 0.8px at 70% 45%, rgba(255,181,71,0.25) 50%, transparent 100%),
-                            radial-gradient(1px 1px at 85% 75%, rgba(255,138,0,0.3) 50%, transparent 100%),
-                            radial-gradient(1.3px 1.3px at 10% 80%, rgba(255,181,71,0.28) 50%, transparent 100%),
-                            radial-gradient(0.9px 0.9px at 45% 85%, rgba(255,138,0,0.22) 50%, transparent 100%)
-                          `
-                        }}
-                      />
-
-                      {/* Remove from favorites button */}
-                      <button
-                        onClick={(e) => handleFavoriteClick(e, userVoucher.voucher_id)}
-                        disabled={isTogglingFavorite}
-                        className="absolute top-4 left-4 z-20 p-2 rounded-full bg-[hsl(220_30%_8%/0.8)] backdrop-blur-sm border border-[rgba(255,138,0,0.3)] hover:bg-[hsl(220_30%_12%)] transition-all duration-200 disabled:opacity-50"
-                        aria-label="Odebrat z oblíbených"
-                      >
-                        {isTogglingFavorite ? (
-                          <Loader2 className="w-5 h-5 text-destructive animate-spin" />
-                        ) : (
-                          <OneMilHeartIcon size={20} className="w-5 h-5 fill-destructive text-destructive transition-colors" />
-                        )}
-                      </button>
-
-                      <div className="flex h-48 relative z-10">
-                        {/* Left side - Content */}
-                        <div className="flex-1 p-5 flex flex-col justify-center">
-                          {/* Header */}
-                          <div className="mb-2">
-                            <h2 className="text-foreground font-extrabold text-lg tracking-wide">ONEMIL VOUCHER</h2>
-                            <p className="text-muted-foreground/60 text-xs font-normal tracking-widest uppercase">Hraj o ceny</p>
-                          </div>
-
-                          {/* Voucher name */}
-                          <div className="mb-3">
-                            <h3 className="text-foreground font-semibold text-base leading-snug mb-1">{userVoucher.voucher?.name}</h3>
-                            <div className="text-[#FFB547] font-bold text-xl">5 MioCoinů</div>
-                          </div>
-
-                          {/* Button */}
-                          <div className="space-y-1.5">
-                            <Button
-                              onClick={() => handleVoucherPurchase(userVoucher.voucher_id)}
-                              disabled={isPurchasing || isAdmin}
-                              className="w-full h-11 rounded-xl bg-gradient-to-r from-[#FF8A00] to-[#FFB547] text-[#111] font-bold text-sm shadow-[0_2px_8px_rgba(255,138,0,0.25)] hover:shadow-[0_3px_12px_rgba(255,138,0,0.35)] hover:brightness-105 transition-all duration-200 border-0"
-                            >
-                              {isPurchasing ? "Kupuji..." : "KOUPIT ZA 5 MC"}
-                            </Button>
-                            <p className="text-[10px] text-muted-foreground/70">
-                              Vybrané kampaně mohou podpořit dobročinný účel. Konkrétní příjemce, účel a výše podpory budou vždy uvedeny u dané kampaně.
-                            </p>
-                          </div>
-                        </div>
-
-                        {/* Right side - Image */}
-                        <div className="w-28 relative border-l border-dashed border-[rgba(255,138,0,0.2)]">
-                          {userVoucher.voucher?.image_url ? (
-                            <img
-                              src={userVoucher.voucher.image_url}
-                              alt={userVoucher.voucher?.name}
-                              className="w-full h-full object-cover"
-                              loading="lazy"
-                            />
-                          ) : (
-                            <div className="w-full h-full bg-[hsl(220_30%_10%)] flex items-center justify-center">
-                              <OneMilVoucherIcon size={48} className="w-12 h-12 text-[rgba(255,138,0,0.35)]" />
-                            </div>
-                          )}
-                        </div>
-
-                        {/* Added date indicator */}
-                        <div className="absolute top-3 right-3 bg-[hsl(220_30%_8%/0.85)] backdrop-blur-sm text-foreground/80 text-xs px-2 py-1 rounded border border-[rgba(255,138,0,0.2)]">
-                          Přidáno: {new Date(userVoucher.created_at).toLocaleDateString('cs-CZ')}
-                        </div>
-                      </div>
-                    </Card>
+                    <VoucherShowcaseCard
+                      key={userVoucher.id}
+                      voucher={voucher}
+                      onDetail={() => void openVoucherDetail(voucher)}
+                      onFavoriteToggle={(event) => handleFavoriteClick(event, userVoucher.voucher_id)}
+                      favoriteActive
+                      favoriteDisabled={togglingFavoriteId === userVoucher.voucher_id}
+                      favoriteAriaLabel="Odebrat z oblíbených"
+                      showInfoBadges={false}
+                      className="w-full"
+                    />
                   );
                 })}
               </div>
@@ -641,7 +514,7 @@ const Vouchers: React.FC = () => {
               <Card className="voucher-card-glow relative overflow-hidden rounded-[20px] bg-gradient-to-b from-[hsl(220_35%_8%)] via-[hsl(220_30%_6%)] to-[hsl(220_25%_4%)] border-[3px] border-[rgba(255,138,0,0.3)]">
                 <CardContent className="p-8 space-y-3 text-center">
                   <OneMilCartIcon size={48} className="w-12 h-12 mx-auto text-secondary/50" />
-                  <h3 className="text-xl font-bold text-heading-gold">Zatím nemáte žádné zakoupené vouchery</h3>
+                  <h3 className="customer-premium-orange-heading text-xl font-bold text-heading-gold">Zatím nemáte žádné zakoupené vouchery</h3>
                   <p className="text-sm text-muted-foreground">
                     Zakupte si voucher v sekci "Dostupné" nebo "Oblíbené"
                   </p>
@@ -650,114 +523,63 @@ const Vouchers: React.FC = () => {
             ) : (
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                 {purchasedVouchers.map((userVoucher) => {
-                  const expiration = getExpirationInfo(userVoucher.created_at);
+                  const bannerUrl = userVoucher.voucher?.banner_url || userVoucher.voucher?.image_url || null;
+                  const voucherName = userVoucher.voucher?.name ?? 'Voucher';
+                  const voucher = toShowcaseVoucher(userVoucher);
 
                   return (
                     <Card 
                       key={userVoucher.id} 
-                      className={`voucher-card-glow relative overflow-hidden rounded-[20px] shadow-[0_4px_20px_hsl(220_50%_3%/0.6)] transition-all duration-300 hover:scale-[1.02] border-[3px] ${
-                        expiration.isExpired 
-                          ? 'border-destructive/40'
-                          : 'border-[rgba(255,138,0,0.35)] hover:border-[rgba(255,138,0,0.55)] hover:shadow-[0_0_16px_rgba(255,138,0,0.2)]'
-                      }`}
+                      className="voucher-card-glow relative aspect-[16/9] min-h-0 overflow-hidden rounded-[20px] border-[3px] border-[rgba(255,138,0,0.35)] shadow-[0_4px_20px_hsl(220_50%_3%/0.6)] transition-all duration-300 hover:scale-[1.02] hover:border-[rgba(255,138,0,0.55)] hover:shadow-[0_0_16px_rgba(255,138,0,0.2)]"
                     >
-                      {/* Dark navy/black gradient background with gold particles */}
-                      <div 
-                        className="absolute inset-0 z-0"
-                        style={{
-                          background: expiration.isExpired 
-                            ? `radial-gradient(ellipse at center, transparent 40%, hsl(0 20% 4% / 0.8) 100%),
-                               linear-gradient(135deg, hsl(0 15% 10%) 0%, hsl(0 10% 6%) 50%, hsl(0 8% 4%) 100%)`
-                            : `radial-gradient(ellipse at center, transparent 40%, hsl(220 30% 4% / 0.8) 100%),
-                               linear-gradient(135deg, hsl(220 35% 10%) 0%, hsl(220 30% 6%) 50%, hsl(220 25% 4%) 100%)`
-                        }}
-                      />
-                      {/* Gold particle effect (only for non-expired) */}
-                      {!expiration.isExpired && (
-                        <div 
-                          className="absolute inset-0 z-[1] opacity-60"
-                          style={{
-                            background: `
-                              radial-gradient(1.5px 1.5px at 15% 25%, rgba(255,181,71,0.6) 50%, transparent 100%),
-                              radial-gradient(1px 1px at 30% 60%, rgba(255,138,0,0.4) 50%, transparent 100%),
-                              radial-gradient(1.2px 1.2px at 55% 20%, rgba(255,181,71,0.5) 50%, transparent 100%),
-                              radial-gradient(0.8px 0.8px at 70% 45%, rgba(255,181,71,0.35) 50%, transparent 100%),
-                              radial-gradient(1px 1px at 85% 75%, rgba(255,138,0,0.45) 50%, transparent 100%),
-                              radial-gradient(1.3px 1.3px at 10% 80%, rgba(255,138,0,0.4) 50%, transparent 100%),
-                              radial-gradient(0.9px 0.9px at 45% 85%, rgba(255,181,71,0.3) 50%, transparent 100%)
-                            `
-                          }}
+                      {bannerUrl ? (
+                        <img
+                          src={bannerUrl}
+                          alt={voucherName}
+                          className="absolute inset-0 z-[1] h-full w-full object-cover object-center"
+                          loading="lazy"
                         />
+                      ) : (
+                        <div className="absolute inset-0 z-[1] flex items-center justify-center bg-[hsl(220_30%_10%)]">
+                          <OneMilVoucherIcon size={56} className="h-14 w-14 text-[rgba(255,138,0,0.45)]" />
+                        </div>
                       )}
 
-                      <div className="flex h-48 relative z-10">
-                        {/* Left side - Content */}
-                        <div className="flex-1 p-5 flex flex-col justify-center">
-                          {/* Header */}
-                          <div className="mb-2">
-                            <h2 className="text-foreground font-extrabold text-lg tracking-wide">ONEMIL VOUCHER</h2>
-                            <p className="text-muted-foreground/60 text-xs font-normal tracking-widest uppercase">Zakoupeno</p>
-                          </div>
+                      <div
+                        className="absolute inset-0 z-[2]"
+                        style={{
+                          background: 'linear-gradient(to bottom, rgba(0,0,0,0.08) 0%, rgba(0,0,0,0.24) 42%, rgba(0,0,0,0.82) 100%)',
+                        }}
+                      />
 
-                          {/* Voucher name and code */}
-                          <div className="mb-3">
-                            <h3 className="text-foreground font-semibold text-base leading-snug mb-1">{userVoucher.voucher?.name}</h3>
-                            {!expiration.isExpired && (
-                              <div className="font-mono font-bold text-lg text-[#FFB547]">{userVoucher.code}</div>
-                            )}
-                          </div>
-
-                          {/* Uplatnit voucher / Expiration */}
-                          <div className="space-y-1.5">
-                            {!expiration.isExpired ? (
-                              <>
-                                <Button
-                                  className="w-full h-11 rounded-xl bg-gradient-to-r from-[#FF8A00] to-[#FFB547] text-[#111] font-bold text-sm shadow-[0_2px_8px_rgba(255,138,0,0.25)] border-0"
-                                  onClick={() => setRedeemModalVoucher({ code: userVoucher.code, name: userVoucher.voucher?.name ?? 'Voucher' })}
-                                >
-                                  Uplatnit voucher
-                                </Button>
-                                <Button
-                                  variant="outline"
-                                  size="sm"
-                                  className="w-full h-9 rounded-xl border-[rgba(255,138,0,0.3)] bg-transparent hover:bg-[rgba(255,138,0,0.1)] hover:border-[rgba(255,138,0,0.5)] transition-all duration-200"
-                                  onClick={() => handleCopyVoucherCode(userVoucher.code)}
-                                >
-                                  <Copy className="w-4 h-4 mr-2" />
-                                  Zkopírovat kód
-                                </Button>
-                              </>
-                            ) : (
-                              <Badge variant="destructive" className="w-full justify-center py-2 text-sm">
-                                Voucher vypršel
-                              </Badge>
-                            )}
-                            <div className={`flex items-center justify-center gap-1 text-[10px] ${expiration.isExpired ? 'text-destructive' : 'text-muted-foreground/70'}`}>
-                              <Clock className="w-3 h-3" />
-                              <span>{expiration.isExpired ? 'Vypršel' : `Platnost: ${expiration.text}`}</span>
-                            </div>
-                          </div>
+                      <div className="relative z-[3] flex h-full flex-col p-4 sm:p-5">
+                        <div className="flex items-start justify-between gap-2">
+                          <Badge className="rounded-full border border-white/15 bg-[rgba(10,12,18,0.72)] px-3 py-1 text-[11px] font-medium text-white shadow-[0_4px_20px_rgba(0,0,0,0.25)] backdrop-blur-sm">
+                            Zakoupeno
+                          </Badge>
                         </div>
 
-                        {/* Right side - Image */}
-                        <div className="w-28 relative border-l border-dashed border-[rgba(255,138,0,0.2)]">
-                          {userVoucher.voucher?.image_url ? (
-                            <img
-                              src={userVoucher.voucher.image_url}
-                              alt={userVoucher.voucher?.name}
-                              className={`w-full h-full object-cover ${expiration.isExpired ? 'opacity-50 grayscale' : ''}`}
-                              loading="lazy"
-                            />
-                          ) : (
-                            <div className="w-full h-full bg-[hsl(220_30%_10%)] flex items-center justify-center">
-                              <OneMilVoucherIcon size={48} className={`w-12 h-12 ${expiration.isExpired ? 'text-muted-foreground/30' : 'text-[rgba(255,138,0,0.4)]'}`} />
-                            </div>
-                          )}
-                        </div>
+                        <div className="mt-auto space-y-3">
+                          <div className="space-y-1">
+                            <h3 className="line-clamp-2 text-base font-semibold leading-snug text-white drop-shadow-md">
+                              {voucherName}
+                            </h3>
+                          </div>
 
-                        {/* Purchase date indicator */}
-                        <div className="absolute top-3 right-3 bg-[hsl(220_30%_8%/0.85)] backdrop-blur-sm text-foreground/80 text-xs px-2 py-1 rounded border border-[rgba(255,138,0,0.2)]">
-                          {new Date(userVoucher.created_at).toLocaleDateString('cs-CZ')}
+                          <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
+                            <Button
+                              className="h-10 rounded-xl border-0 bg-gradient-to-r from-[#FF8A00] to-[#FFB547] text-sm font-bold text-[#111] shadow-[0_2px_8px_rgba(255,138,0,0.25)] hover:brightness-105"
+                              onClick={() => void openVoucherDetail(voucher)}
+                            >
+                              Detail
+                            </Button>
+                            <Button
+                              className="h-10 rounded-xl border-0 bg-gradient-to-r from-[#FF8A00] to-[#FFB547] text-sm font-bold text-[#111] shadow-[0_2px_8px_rgba(255,138,0,0.25)] hover:brightness-105"
+                              onClick={() => setCodeModalVoucher({ code: userVoucher.code, name: voucherName })}
+                            >
+                              Zobrazit kód
+                            </Button>
+                          </div>
                         </div>
                       </div>
                     </Card>
@@ -788,29 +610,37 @@ const Vouchers: React.FC = () => {
         </AlertDialogContent>
       </AlertDialog>
 
-      {/* Redeem voucher modal: show code and instructions */}
-      <Dialog open={!!redeemModalVoucher} onOpenChange={(open) => !open && setRedeemModalVoucher(null)}>
-        <DialogContent className="sm:max-w-md border-[rgba(255,138,0,0.35)] bg-gradient-to-b from-[hsl(220_30%_8%)] to-[hsl(220_35%_5%)]">
+      {/* Voucher code modal: showing the code does not change DB state. */}
+      <Dialog open={!!codeModalVoucher} onOpenChange={(open) => !open && setCodeModalVoucher(null)}>
+        <DialogContent className="voucher-code-dialog sm:max-w-md border-[rgba(255,138,0,0.35)] bg-gradient-to-b from-[hsl(220_30%_8%)] to-[hsl(220_35%_5%)]">
           <DialogHeader>
-            <DialogTitle className="text-heading-gold">Uplatnit voucher</DialogTitle>
+            <DialogTitle className="text-heading-gold">Zobrazit kód</DialogTitle>
             <DialogDescription>
-              {redeemModalVoucher?.name}
+              {codeModalVoucher?.name}
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-4 py-2">
             <p className="text-sm text-muted-foreground">
-              Při platbě u partnera zadejte nebo vložte tento kód:
+              Kód můžete zkopírovat, opsat nebo ukázat partnerovi.
             </p>
             <div className="rounded-xl bg-[hsl(220_30%_10%)] border border-[rgba(255,138,0,0.3)] p-4 text-center">
-              <span className="font-mono text-xl font-bold text-[#FFB547] tracking-wider">
-                {redeemModalVoucher?.code}
-              </span>
+              {codeModalVoucher?.code ? (
+                <span className="font-mono text-xl font-bold text-[#FFB547] tracking-wider">
+                  {codeModalVoucher.code}
+                </span>
+              ) : (
+                <span className="text-sm font-medium text-white/75">
+                  Kód zatím není dostupný
+                </span>
+              )}
             </div>
             <Button
-              className="w-full rounded-xl bg-gradient-to-r from-[#FF8A00] to-[#FFB547] text-[#111] font-bold"
+              variant="outline"
+              className="w-full rounded-xl border-[rgba(255,138,0,0.3)] bg-[rgba(10,12,18,0.72)] text-white hover:bg-[rgba(255,138,0,0.12)] hover:border-[rgba(255,138,0,0.5)]"
+              disabled={!codeModalVoucher?.code}
               onClick={() => {
-                if (redeemModalVoucher?.code) {
-                  handleCopyVoucherCode(redeemModalVoucher.code);
+                if (codeModalVoucher?.code) {
+                  handleCopyVoucherCode(codeModalVoucher.code);
                 }
               }}
             >
@@ -819,10 +649,20 @@ const Vouchers: React.FC = () => {
             </Button>
           </div>
           <DialogFooter className="text-xs text-muted-foreground">
-            Kód uplatněte u partnera v pokladně nebo při online nákupu.
+            Zavření okna nic nemění. Kód lze zobrazit opakovaně.
           </DialogFooter>
         </DialogContent>
       </Dialog>
+      <VoucherDetailDialog
+        voucher={selectedVoucher}
+        open={!!selectedVoucher}
+        onOpenChange={(open) => !open && setSelectedVoucher(null)}
+        onPurchase={handleVoucherPurchase}
+        purchaseDisabled={isAdmin || selectedVoucherIsPurchased}
+        purchaseLoading={purchasingId !== null}
+        purchaseLabel={selectedVoucherIsPurchased ? 'Zakoupeno' : 'Koupit za 5 MIO'}
+      />
+
     </div>
   );
 };

@@ -21,3 +21,16 @@ export function buildLoginRedirectUrl(pathnameAndSearch: string): string {
     : `/${pathnameAndSearch}`;
   return `/login?redirect=${encodeURIComponent(path)}`;
 }
+
+/**
+ * Register URL that forwards the affiliate `ref` query param, if present,
+ * from the current location (e.g. homepage reached via the /i/:refCode
+ * short link). Only `ref` is forwarded — a deliberate whitelist, not a
+ * blind pass-through of the whole query string, so an unrelated param
+ * (e.g. a `redirect` value) can never leak into the registration page.
+ */
+export function buildRegisterUrl(search: string): string {
+  const ref = new URLSearchParams(search).get('ref')?.trim();
+  if (!ref) return '/register';
+  return `/register?ref=${encodeURIComponent(ref)}`;
+}

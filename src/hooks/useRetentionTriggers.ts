@@ -57,8 +57,8 @@ export function useRetentionTriggers(userId: string | undefined) {
       if (balance <= 0) return;
 
       const away24h = prevVisit > 0 && now - prevVisit >= MS_24H;
-      const pushBody = 'Máš MioCoiny — otevři soutěže a zkus štěstí znovu!';
-      const toastBody = 'Máš na účtu MioCoiny. Zajdi do soutěží a zkus to znovu!';
+      const pushBody = 'Máš MIO — otevři soutěže a zkus štěstí znovu!';
+      const toastBody = 'Máš na účtu MIO. Zajdi do soutěží a zkus to znovu!';
 
       if (away24h && !wasRetentionPushSentToday()) {
         markRetentionPushSentToday();
@@ -85,7 +85,7 @@ export function useRetentionTriggers(userId: string | undefined) {
       const idle36h = lastTicket > 0 && now - lastTicket >= MS_36H;
       if (idle36h && !wasIdleCoinsToastToday()) {
         markIdleCoinsToastToday();
-        toast.message('Tvoje MioCoiny čekají — pojď si zahrát!', {
+        toast.message('Tvoje MIO čekají — pojď si zahrát!', {
           duration: 5000,
           description: 'Krátká pauza je OK, štěstí neuteče.',
         });
@@ -102,7 +102,7 @@ export function useRetentionTriggers(userId: string | undefined) {
       if (lastTicket <= 0 || now - lastTicket < MS_36H) return;
 
       markIdleCoinsToastToday();
-      toast.message('Tvoje MioCoiny čekají — pojď si zahrát!', {
+      toast.message('Tvoje MIO čekají — pojď si zahrát!', {
         duration: 5000,
         description: 'Krátká pauza je OK, štěstí neuteče.',
       });

@@ -1,5 +1,6 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts"
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2"
+import { getSupabaseSecretKey } from "../_shared/supabaseSecretKey.ts";
 
 console.log("AI-CHAT VERSION: TIMING_V1")
 console.log("AI CHAT: support NOT triggered automatically")
@@ -22,6 +23,41 @@ const BOB_WHATSAPP_FALLBACK_URL =
   "https://wa.me/420XXXXXXXXX?text=Potřebuju%20pomoc%20s%20OneMil"
 
 // ai-chat must never trigger support-handoff or claim it forwarded anything.
+
+type AiChatAuthContext =
+  | { kind: "internal" }
+  | { kind: "user"; userId: string }
+
+async function authorizeAiChatRequest(
+  req: Request,
+  supabaseUrl: string,
+  serviceRoleKey: string,
+  internalToken: string,
+): Promise<
+  | { context: AiChatAuthContext; failure: null }
+  | { context: null; failure: { status: number; error: string } }
+> {
+  const providedInternal = req.headers.get("x-internal-token") ?? ""
+  if (internalToken && providedInternal && providedInternal === internalToken) {
+    return { context: { kind: "internal" }, failure: null }
+  }
+
+  const authHeader = req.headers.get("authorization") ?? ""
+  const token = authHeader.replace(/^Bearer\s+/i, "").trim()
+  if (!token) {
+    return { context: null, failure: { status: 401, error: "missing_authorization" } }
+  }
+
+  const admin = createClient(supabaseUrl, serviceRoleKey, {
+    auth: { persistSession: false, autoRefreshToken: false },
+  })
+  const { data: userData, error: userError } = await admin.auth.getUser(token)
+  if (userError || !userData?.user) {
+    return { context: null, failure: { status: 401, error: "invalid_authorization_token" } }
+  }
+
+  return { context: { kind: "user", userId: userData.user.id }, failure: null }
+}
 
 function bobSupportCtaPayload(text: string): BobAssistantPayload {
   const t = text.trim()
@@ -1673,7 +1709,7 @@ serve(async (req) => {
   }
 
   const supabaseUrl = Deno.env.get("SUPABASE_URL") ?? ""
-  const serviceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? ""
+  const serviceRoleKey = getSupabaseSecretKey()
   const internalToken = Deno.env.get("INTERNAL_FUNCTION_TOKEN") ?? ""
   const openaiKey = Deno.env.get("OPENAI_API_KEY") ?? ""
 
@@ -1684,16 +1720,18 @@ serve(async (req) => {
     })
   }
 
-  if (!openaiKey) {
-    return new Response(JSON.stringify({ error: "OPENAI_API_KEY missing" }), {
-      status: 500,
+  const authResult = await authorizeAiChatRequest(req, supabaseUrl, serviceRoleKey, internalToken)
+  if (authResult.failure) {
+    return new Response(JSON.stringify({ error: authResult.failure.error }), {
+      status: authResult.failure.status,
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     })
   }
+  const authContext = authResult.context
 
   try {
     const body = (await req.json()) as { message_id?: string; ctaClicked?: unknown }
-    if ((body as any)?.ctaClicked === true) {
+    if (body.ctaClicked === true) {
       // ai-chat must never trigger support-handoff; CTA click should call support-handoff directly.
       console.log("BLOCKED SUPPORT CALL")
     }
@@ -1729,6 +1767,13 @@ serve(async (req) => {
       })
     }
 
+    if (authContext.kind === "user" && userMsg.user_id !== authContext.userId) {
+      return new Response(JSON.stringify({ error: "message_not_owned_by_user" }), {
+        status: 403,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      })
+    }
+
     const userContent = typeof userMsg.content === "string" ? userMsg.content.trim() : ""
     if (!userContent) {
       return new Response(JSON.stringify({ error: "Empty content" }), {
@@ -1760,6 +1805,13 @@ serve(async (req) => {
         })
       }
       return jsonSuccess(ins.id)
+    }
+
+    if (!openaiKey) {
+      return new Response(JSON.stringify({ error: "OPENAI_API_KEY missing" }), {
+        status: 500,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      })
     }
 
     // Intent debug (temporary)

@@ -109,17 +109,17 @@ export const CookieConsentBanner: React.FC = () => {
           aria-label="Souhlas s cookies"
           className="fixed bottom-0 left-0 right-0 z-[100] p-4 sm:p-6"
         >
-          <div className="mx-auto max-w-4xl rounded-2xl border border-[rgba(255,138,0,0.15)] bg-gradient-to-b from-[hsl(220_30%_12%)] via-[hsl(220_28%_9%)] to-[hsl(222_35%_7%)] shadow-[0_8px_32px_hsl(222_50%_3%/0.8)] backdrop-blur-xl p-5 sm:p-6">
+          <div className="mx-auto max-w-4xl rounded-2xl border border-[#F4D6AD] bg-[#FFF9F0] shadow-[0_8px_32px_rgba(81,49,10,0.18)] backdrop-blur-xl p-5 sm:p-6">
             <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
               <div className="flex-1">
-                <h2 className="text-heading-gold text-base sm:text-lg font-semibold mb-1">
+                <h2 className="text-[#111827] text-base sm:text-lg font-semibold mb-1">
                   Cookies
                 </h2>
-                <p className="text-sm text-muted-foreground leading-relaxed">
+                <p className="text-sm text-[#4B5563] leading-relaxed">
                   Používáme cookies pro fungování aplikace, analýzu návštěvnosti a personalizaci reklam (Google, Meta).{' '}
                   <Link
                     to="/legal/cookies"
-                    className="text-heading-gold hover:underline"
+                    className="text-[#F97316] hover:underline"
                   >
                     Zásady použití cookies
                   </Link>
@@ -129,14 +129,14 @@ export const CookieConsentBanner: React.FC = () => {
                 <Button
                   variant="outline"
                   onClick={() => setSettingsOpen(true)}
-                  className="border-[rgba(255,138,0,0.2)] hover:border-[rgba(255,138,0,0.4)] hover:bg-[rgba(255,138,0,0.08)]"
+                  className="border-[#F4D6AD] bg-white text-[#111827] hover:bg-[#FFF4E8]"
                 >
                   Nastavení
                 </Button>
                 <Button
                   variant="outline"
                   onClick={rejectAll}
-                  className="border-[rgba(255,138,0,0.2)] hover:border-[rgba(255,138,0,0.4)] hover:bg-[rgba(255,138,0,0.08)]"
+                  className="border-[#F4D6AD] bg-white text-[#111827] hover:bg-[#FFF4E8]"
                 >
                   Odmítnout
                 </Button>
@@ -153,46 +153,46 @@ export const CookieConsentBanner: React.FC = () => {
       )}
 
       <Dialog open={settingsOpen} onOpenChange={setSettingsOpen}>
-        <DialogContent className="bg-gradient-to-b from-[hsl(220_30%_12%)] via-[hsl(220_28%_9%)] to-[hsl(222_35%_7%)] border-[rgba(255,138,0,0.15)]">
+        <DialogContent className="bg-[#FFF9F0] border-[#F4D6AD] text-[#111827]">
           <DialogHeader>
-            <DialogTitle className="text-heading-gold">Nastavení cookies</DialogTitle>
-            <DialogDescription>
+            <DialogTitle className="text-[#111827]">Nastavení cookies</DialogTitle>
+            <DialogDescription className="text-[#4B5563]">
               Vyberte, které kategorie cookies chcete povolit.{' '}
-              <Link to="/legal/cookies" className="text-heading-gold hover:underline">
+              <Link to="/legal/cookies" className="text-[#F97316] hover:underline">
                 Zásady použití cookies
               </Link>
             </DialogDescription>
           </DialogHeader>
 
           <div className="space-y-4 py-2">
-            <div className="flex items-start justify-between gap-4 rounded-lg border border-[rgba(255,138,0,0.1)] p-3">
+            <div className="flex items-start justify-between gap-4 rounded-lg border border-[#F4D6AD] bg-white/60 p-3">
               <div>
-                <p className="font-medium text-sm">Nezbytné</p>
-                <p className="text-xs text-muted-foreground">Nutné pro fungování aplikace. Vždy aktivní.</p>
+                <p className="font-medium text-sm text-[#111827]">Nezbytné</p>
+                <p className="text-xs text-[#6B7280]">Nutné pro fungování aplikace. Vždy aktivní.</p>
               </div>
               <Switch checked disabled />
             </div>
 
-            <div className="flex items-start justify-between gap-4 rounded-lg border border-[rgba(255,138,0,0.1)] p-3">
+            <div className="flex items-start justify-between gap-4 rounded-lg border border-[#F4D6AD] bg-white/60 p-3">
               <div>
-                <p className="font-medium text-sm">Analytické</p>
-                <p className="text-xs text-muted-foreground">Pomáhají měřit návštěvnost (Google Analytics).</p>
+                <p className="font-medium text-sm text-[#111827]">Analytické</p>
+                <p className="text-xs text-[#6B7280]">Pomáhají měřit návštěvnost (Google Analytics).</p>
               </div>
               <Switch checked={analytics} onCheckedChange={setAnalytics} />
             </div>
 
-            <div className="flex items-start justify-between gap-4 rounded-lg border border-[rgba(255,138,0,0.1)] p-3">
+            <div className="flex items-start justify-between gap-4 rounded-lg border border-[#F4D6AD] bg-white/60 p-3">
               <div>
-                <p className="font-medium text-sm">Marketingové</p>
-                <p className="text-xs text-muted-foreground">Personalizace reklam (Google Ads, Meta Pixel).</p>
+                <p className="font-medium text-sm text-[#111827]">Marketingové</p>
+                <p className="text-xs text-[#6B7280]">Personalizace reklam (Google Ads, Meta Pixel).</p>
               </div>
               <Switch checked={marketing} onCheckedChange={setMarketing} />
             </div>
           </div>
 
           <DialogFooter className="gap-2">
-            <Button variant="outline" onClick={rejectAll}>Odmítnout vše</Button>
-            <Button variant="outline" onClick={saveCustom}>Uložit výběr</Button>
+            <Button variant="outline" onClick={rejectAll} className="border-[#F4D6AD] bg-white text-[#111827] hover:bg-[#FFF4E8]">Odmítnout vše</Button>
+            <Button variant="outline" onClick={saveCustom} className="border-[#F4D6AD] bg-white text-[#111827] hover:bg-[#FFF4E8]">Uložit výběr</Button>
             <Button
               onClick={acceptAll}
               className="rounded-xl bg-gradient-to-r from-[#FF8A00] to-[#FFB547] text-black hover:brightness-110"

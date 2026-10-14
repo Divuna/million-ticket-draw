@@ -1,0 +1,2560 @@
+import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
+import {
+  Sheet,
+  SheetContent,
+  SheetHeader,
+  SheetTitle,
+  SheetDescription,
+} from '@/components/ui/sheet';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Textarea } from '@/components/ui/textarea';
+import { Badge } from '@/components/ui/badge';
+import { Checkbox } from '@/components/ui/checkbox';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
+import {
+  ArrowUpRight,
+  Bot,
+  Building2,
+  CalendarClock,
+  CheckCircle2,
+  CircleDot,
+  Clock3,
+  FileText,
+  Globe2,
+  History,
+  Loader2,
+  Mail,
+  MapPin,
+  Maximize2,
+  MessageSquareText,
+  Pencil,
+  PhoneCall,
+  Save,
+  Trash2,
+  Search,
+  Send,
+  Sparkles,
+  UserRound,
+  X,
+} from 'lucide-react';
+import { toast } from 'sonner';
+import { supabase } from '@/integrations/supabase/client';
+import { isNonOfficialWebsiteUrl } from '../../../../supabase/functions/_shared/officialWebsitePolicy';
+import { useUserRole } from '@/hooks/useUserRole';
+import {
+  INDUSTRY_OPTIONS,
+  isInitialEmailStatusAllowed,
+  STATUS_LABELS,
+  STATUS_BADGE_CLASS,
+  LEAD_GROUP_OPTIONS,
+  DISCOVERY_SOURCE_OPTIONS,
+  LEAD_QUALITY_LABELS,
+  PROPOSED_CONTACT_STATUS_LABELS,
+  leadGroupLabel,
+  allowedTargets,
+  isReasonRequired,
+  rpcErrorMessage,
+  type SalesLeadDetail,
+  type DuplicateConflict,
+} from './salesLeadsShared';
+import {
+  RESPONSE_DECLINED_SUMMARY,
+  RESPONSE_INTEREST_SUMMARY,
+} from './salesLeadResponses';
+import { DuplicateConflictAlert } from './DuplicateConflictAlert';
+import { LeadCrmPanel } from './LeadCrmPanel';
+import { SalesLeadEmailTemplatePicker } from './SalesLeadEmailTemplatePicker';
+import {
+  useDraftAutosave,
+  readLocalDraft,
+  clearLocalDraft,
+  DRAFT_AUTOSAVE_LABEL,
+} from './useDraftAutosave';
+import {
+  validateSalesLeadEmailContent,
+  validateSalesLeadEmailDraft,
+  type SalesLeadEmailTemplateType,
+} from './salesLeadEmailTemplates';
+import {
+  applyAresResult,
+  getAresConflicts,
+  isValidSalesLeadIco,
+  lookupSalesLeadAres,
+  SALES_LEAD_ICO_ERROR,
+  type SalesLeadAresConflict,
+  type SalesLeadAresResult,
+} from './salesLeadAres';
+import {
+  SalesLeadEmailAttachmentsField,
+  type SalesLeadEmailAttachment,
+} from './SalesLeadEmailAttachments';
+
+interface Props {
+  leadId: string | null;
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  /** Zavolá se po jakékoli úspěšné mutaci, aby se seznam v rodiči obnovil. */
+  onMutated: () => void;
+}
+
+interface ActivityRow {
+  id: string;
+  activity_type: string;
+  /** 'outbound' | 'inbound' | 'internal' — rozlišuje směr e-mailové komunikace. */
+  direction: string | null;
+  created_at: string | null;
+  scheduled_for: string | null;
+  activity_status: string | null;
+  performed_by: string | null;
+  subject: string | null;
+  /** Plný snapshot těla e-mailu. Zobrazuje se zkráceně, v DB se NIKDY neořezává. */
+  body_snapshot: string | null;
+  /** U `reply_received`: NULL = nepřečteno, vyplněno = přečteno. */
+  read_at: string | null;
+  metadata: Record<string, unknown> | null;
+}
+
+const DETAIL_COLUMNS =
+  'id, company_name, industry, city, address, status, contact_email, updated_at, assigned_admin_id, ' +
+  'ico, dic, website, company_size, contact_person, contact_role, contact_phone, email_source, ' +
+  'email_verified_by_admin, email_verification_method, email_verified_at, do_not_contact, do_not_contact_reason, notes, created_at, ' +
+  'ai_research_summary, ai_research_at, draft_email_subject, draft_email_body, draft_prepared_by, draft_updated_at, ' +
+  'lead_group, lead_quality, discovery_source, discovery_meta, website_verification_status, website_verification_source, website_confidence, website_verified_at, website_verification_evidence, alternative_websites, contact_data_provenance, ' +
+  'proposed_contact_email, proposed_contact_source_url, proposed_contact_at, ' +
+  'proposed_contact_by, proposed_contact_status';
+
+const ACTIVITY_LABELS: Record<string, string> = {
+  lead_created: 'Lead založen',
+  field_updated: 'Údaje upraveny',
+  ai_research: 'AI rešerše firmy',
+  draft_created: 'AI návrh e-mailu',
+  draft_edited: 'Návrh e-mailu upraven',
+  email_sent: 'E-mail odeslán',
+  status_changed: 'Změna stavu',
+  do_not_contact_set: 'Označeno „Nekontaktovat"',
+  converted: 'Spolupráce potvrzena',
+  note_added: 'Přidána poznámka',
+  lead_discovered: 'Firma automaticky navržena',
+  contact_proposed: 'Navržen kontaktní e-mail',
+  contact_approved: 'Kontaktní e-mail schválen',
+  contact_rejected: 'Návrh kontaktu zamítnut',
+  // Příchozí odpovědi firem zapisuje EF `sales-lead-inbound` (Resend Receiving
+  // API) a stav posouvá RPC `sales_lead_mark_replied`.
+  reply_received: 'Odpověď přijata',
+  // NEIMPLEMENTOVÁNO: tyto typy jsou povolené v DB CHECK constraintu od Fáze 1,
+  // ale žádná cesta v aplikaci je zatím nezakládá. Popisky tu jsou proto, aby
+  // se v historii nikdy nezobrazil syrový kód, kdyby takový řádek vznikl.
+  email_failed: 'Odeslání e-mailu selhalo',
+  call_logged: 'Zaznamenán hovor',
+  duplicate_override_confirmed: 'Potvrzena výjimka duplicity',
+  meeting_logged: 'Zaznamenána schůzka',
+  task_created: 'Úkol vytvořen', task_completed: 'Úkol dokončen', task_cancelled: 'Úkol zrušen',
+  email_delivered: 'E-mail doručen', email_delivery_delayed: 'Doručení e-mailu zpožděno',
+  email_bounced: 'E-mail se vrátil jako nedoručený', email_suppressed: 'E-mail byl potlačen',
+};
+
+/** Typy aktivit, které představují e-mailovou zprávu (mají směr, předmět a tělo). */
+const EMAIL_ACTIVITY_TYPES = new Set(['email_sent', 'reply_received']);
+
+/**
+ * Rozdělí tělo e-mailu na vlastní text a citovanou část původního vlákna.
+ * Detekce je konzervativní: hledá první řádek začínající `>` (klasický quote
+ * marker, který používá Gmail i většina klientů). Pokud žádný není, vrátí
+ * celé tělo jako `main`. NIKDY nemění data v DB — jde čistě o zobrazení.
+ */
+const splitQuotedReply = (body: string): { main: string; quoted: string | null } => {
+  const lines = body.split('\n');
+  const firstQuoted = lines.findIndex((l) => l.trimStart().startsWith('>'));
+  if (firstQuoted === -1) return { main: body, quoted: null };
+  const main = lines.slice(0, firstQuoted).join('\n').replace(/\s+$/, '');
+  const quoted = lines.slice(firstQuoted).join('\n');
+  return { main: main.length > 0 ? main : body, quoted: main.length > 0 ? quoted : null };
+};
+
+/** Nad tuto délku se hlavní text sbalí a nabídne „Zobrazit celý e-mail“. */
+const BODY_PREVIEW_CHARS = 320;
+
+const resizeTextareaToContent = (node: HTMLTextAreaElement | null, maxHeight = 360) => {
+  if (!node) return;
+  node.style.height = 'auto';
+  const height = Math.min(node.scrollHeight, maxHeight);
+  node.style.height = `${height}px`;
+  node.style.overflowY = node.scrollHeight > maxHeight ? 'auto' : 'hidden';
+};
+
+const formatDateTime = (iso: string | null): string => {
+  if (!iso) return '—';
+  const d = new Date(iso);
+  if (Number.isNaN(d.getTime())) return '—';
+  return d.toLocaleString('cs-CZ', { day: 'numeric', month: 'numeric', year: 'numeric', hour: '2-digit', minute: '2-digit' });
+};
+
+const WorkspaceColumnHeader = ({
+  icon,
+  eyebrow,
+  title,
+  description,
+}: {
+  icon: ReactNode;
+  eyebrow: string;
+  title: string;
+  description: string;
+}) => (
+  <div className="sticky top-0 z-20 -mx-4 -mt-4 mb-4 border-b border-white/[0.07] bg-background/95 px-4 py-3.5 backdrop-blur-xl xl:-mx-5 xl:-mt-5 xl:px-5">
+    <div className="flex items-start gap-3">
+      <div className="mt-0.5 flex h-9 w-9 shrink-0 items-center justify-center rounded-xl border border-white/[0.09] bg-white/[0.045] text-foreground shadow-sm shadow-black/20">
+        {icon}
+      </div>
+      <div className="min-w-0">
+        <div className="text-[10px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">{eyebrow}</div>
+        <h2 className="mt-0.5 text-[17px] font-semibold tracking-[-0.025em] text-foreground">{title}</h2>
+        <p className="mt-0.5 text-xs leading-relaxed text-muted-foreground">{description}</p>
+      </div>
+    </div>
+  </div>
+);
+
+const WorkspaceCard = ({ children, className = '' }: { children: ReactNode; className?: string }) => (
+  <section className={`rounded-2xl border border-white/[0.09] bg-card p-4 shadow-[0_12px_35px_-24px_rgba(0,0,0,0.9)] ring-1 ring-black/10 transition-colors duration-150 hover:border-white/[0.13] focus-within:border-primary/35 focus-within:ring-primary/10 ${className}`}>
+    {children}
+  </section>
+);
+
+const ActivityGlyph = ({ type }: { type: string }) => {
+  const className = 'h-4 w-4';
+  if (['email_sent', 'email_delivered', 'reply_received'].includes(type)) return <Mail className={className} />;
+  if (type === 'call_logged') return <PhoneCall className={className} />;
+  if (type === 'meeting_logged') return <CalendarClock className={className} />;
+  if (['ai_research', 'draft_created'].includes(type)) return <Bot className={className} />;
+  if (['contact_approved', 'converted'].includes(type)) return <CheckCircle2 className={className} />;
+  if (type === 'status_changed') return <UserRound className={className} />;
+  return <History className={className} />;
+};
+
+/**
+ * Jedna e-mailová zpráva ve vlákně historie kontaktu.
+ * Odchozí (`outbound`) a příchozí (`inbound`) se liší barvou i orientací.
+ * Dlouhý text i citovaná část původního vlákna jsou sbalené.
+ */
+const EmailActivityItem = ({
+  activity,
+  onReply,
+  onReuse,
+  replyForm,
+  reuseForm,
+}: {
+  activity: ActivityRow;
+  onReply?: (activity: ActivityRow) => void;
+  onReuse?: (activity: ActivityRow, mode: 'resend' | 'forward') => void;
+  /** Formulář odpovědi — renderuje se přímo pod TOUTO zprávou, jen když je otevřený. */
+  replyForm?: ReactNode;
+  reuseForm?: ReactNode;
+}) => {
+  const [showFullBody, setShowFullBody] = useState(false);
+  const [showQuoted, setShowQuoted] = useState(false);
+
+  const isInbound = activity.direction === 'inbound';
+  // Nepřečtená příchozí odpověď — zvýrazní se a označí štítkem „Nové".
+  const isUnread = activity.activity_type === 'reply_received' && !activity.read_at;
+  const counterparty =
+    (isInbound ? activity.metadata?.from : activity.metadata?.to) ?? null;
+
+  const body = activity.body_snapshot ?? '';
+  const { main, quoted } = splitQuotedReply(body);
+  const isLong = main.length > BODY_PREVIEW_CHARS;
+  const visibleMain = isLong && !showFullBody ? `${main.slice(0, BODY_PREVIEW_CHARS).trimEnd()}…` : main;
+
+  return (
+    <li className="relative pl-10 before:absolute before:bottom-[-0.75rem] before:left-[17px] before:top-10 before:w-px before:bg-gradient-to-b before:from-primary/35 before:to-border/25 last:before:hidden">
+      <span
+        className={`absolute left-0 top-3 flex h-9 w-9 items-center justify-center rounded-2xl border text-sm shadow-lg ${
+          isInbound ? 'border-primary/30 bg-primary/15 text-primary shadow-primary/10' : 'border-white/[0.09] bg-muted/80 text-muted-foreground shadow-black/10'
+        }`}
+        aria-hidden
+      ><Mail className="h-4 w-4" /></span>
+      <div
+        className={
+          isUnread
+            ? 'w-full rounded-2xl border border-destructive/50 bg-gradient-to-br from-destructive/10 to-card p-4 shadow-lg shadow-destructive/5 transition-colors duration-150'
+            : isInbound
+            ? 'w-full rounded-2xl border border-primary/25 bg-gradient-to-br from-primary/[0.09] to-card p-4 shadow-lg shadow-primary/5 transition-colors duration-150 hover:border-primary/40'
+            : 'w-full rounded-2xl border border-white/[0.09] bg-background/80 p-4 shadow-lg shadow-black/10 transition-colors duration-150 hover:border-white/[0.14]'
+        }
+      >
+        <div className="flex flex-wrap items-center gap-2">
+          <span className="text-base font-semibold tracking-tight">
+            {ACTIVITY_LABELS[activity.activity_type] ?? activity.activity_type}
+          </span>
+          <span
+            className={
+              isInbound
+                ? 'rounded-full bg-primary/15 px-2 py-0.5 text-[10px] font-medium uppercase tracking-wide text-primary'
+                : 'rounded-full bg-muted px-2 py-0.5 text-[10px] font-medium uppercase tracking-wide text-muted-foreground'
+            }
+          >
+            {isInbound ? 'Příchozí' : 'Odchozí'}
+          </span>
+          {isUnread && (
+            <span className="rounded-full bg-destructive px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-destructive-foreground">
+              Nové
+            </span>
+          )}
+        </div>
+
+        {typeof counterparty === 'string' && counterparty.length > 0 && (
+          <div className="mt-0.5 text-xs text-muted-foreground">
+            {isInbound ? 'Od' : 'Komu'}: {counterparty}
+          </div>
+        )}
+        {activity.subject && (
+          <div className="text-xs text-muted-foreground">Předmět: {activity.subject}</div>
+        )}
+
+        {body.length > 0 ? (
+          <div className="mt-3 whitespace-pre-wrap break-words rounded-xl border border-white/[0.07] bg-background/65 p-3.5 text-sm leading-6 text-foreground/90">
+            {visibleMain}
+            {isLong && (
+              <button
+                type="button"
+                onClick={() => setShowFullBody((v) => !v)}
+                className="mt-1 block text-xs font-medium text-primary hover:underline"
+              >
+                {showFullBody ? 'Zobrazit méně' : 'Zobrazit celý e-mail'}
+              </button>
+            )}
+            {quoted && (
+              <>
+                <button
+                  type="button"
+                  onClick={() => setShowQuoted((v) => !v)}
+                  className="mt-1 block text-xs font-medium text-muted-foreground hover:underline"
+                >
+                  {showQuoted ? 'Skrýt citovanou část' : 'Zobrazit citovanou část'}
+                </button>
+                {showQuoted && (
+                  <div className="mt-1 border-l-2 border-border pl-2 text-xs text-muted-foreground">
+                    {quoted}
+                  </div>
+                )}
+              </>
+            )}
+          </div>
+        ) : (
+          <div className="mt-2 text-xs italic text-muted-foreground">Text zprávy není k dispozici.</div>
+        )}
+
+        <div className="mt-1 text-xs text-muted-foreground">{formatDateTime(activity.created_at)}</div>
+        {/* Tlačítko „Odpovědět" jen když formulář NENÍ otevřený u této zprávy. */}
+        {isInbound && onReply && !replyForm && (
+          <Button type="button" variant="outline" size="sm" className="mt-2" onClick={() => onReply(activity)}>
+            Odpovědět
+          </Button>
+        )}
+        {!isInbound && onReuse && !reuseForm && (
+          <div className="mt-2 flex flex-wrap gap-2">
+            <Button type="button" variant="outline" size="sm" onClick={() => onReuse(activity, 'resend')}>
+              Odeslat znovu
+            </Button>
+            <Button type="button" variant="outline" size="sm" onClick={() => onReuse(activity, 'forward')}>
+              Přeposlat na jiný e-mail
+            </Button>
+          </div>
+        )}
+        {/* Formulář odpovědi — přímo pod zprávou, na kterou uživatel klikl. */}
+        {replyForm}
+        {reuseForm}
+      </div>
+    </li>
+  );
+};
+
+const InlineReuseForm = ({
+  mode,
+  recipient,
+  subject,
+  body,
+  sending,
+  onRecipientChange,
+  onSubjectChange,
+  onBodyChange,
+  onSend,
+  onCancel,
+}: {
+  mode: 'resend' | 'forward';
+  recipient: string;
+  subject: string;
+  body: string;
+  sending: boolean;
+  onRecipientChange: (value: string) => void;
+  onSubjectChange: (value: string) => void;
+  onBodyChange: (value: string) => void;
+  onSend: () => void;
+  onCancel: () => void;
+}) => (
+  <div className="mt-4 space-y-3 rounded-xl border border-primary/30 bg-background/90 p-4 shadow-sm">
+    <div className="flex items-center justify-between gap-2">
+      <div className="text-sm font-medium">
+        {mode === 'forward' ? 'Přeposlat na jiný e-mail' : 'Odeslat e-mail znovu'}
+      </div>
+      <Button type="button" variant="ghost" size="sm" onClick={onCancel} disabled={sending}>Zrušit</Button>
+    </div>
+    <div className="space-y-1">
+      <Label htmlFor="reuse-recipient">Příjemce</Label>
+      <Input id="reuse-recipient" type="email" value={recipient} onChange={(event) => onRecipientChange(event.target.value)} disabled={sending} maxLength={320} />
+    </div>
+    <div className="space-y-1">
+      <Label htmlFor="reuse-subject">Předmět</Label>
+      <Input id="reuse-subject" value={subject} onChange={(event) => onSubjectChange(event.target.value)} disabled={sending} maxLength={300} />
+    </div>
+    <div className="space-y-1">
+      <Label htmlFor="reuse-body">Text e-mailu</Label>
+      <Textarea id="reuse-body" value={body} onChange={(event) => onBodyChange(event.target.value)} disabled={sending} rows={8} maxLength={20000} />
+    </div>
+    <p className="text-xs text-muted-foreground">
+      Nic se neodešle automaticky. Hlavní kontakt leadu se změnou příjemce neupraví.
+    </p>
+    <div className="flex justify-end">
+      <Button type="button" onClick={onSend} disabled={sending} className="gap-1.5">
+        {sending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
+        Odeslat e-mail
+      </Button>
+    </div>
+  </div>
+);
+
+/**
+ * Formulář odpovědi zobrazený inline pod vybranou příchozí zprávou.
+ * Po otevření sám odscrolluje do zorného pole. Odesílání i serverovou ochranu
+ * (EF `send-sales-lead-reply`) řídí rodič přes `onSend` — zde se nemění.
+ */
+const InlineReplyForm = ({
+  subject,
+  body,
+  onSubjectChange,
+  onBodyChange,
+  onSend,
+  onCancel,
+  sending,
+  repliedToAt,
+  onChooseTemplate,
+  onPersonalize,
+  onImprove,
+  aiBusy,
+  validationErrors,
+  attachments,
+  onAttachmentsChange,
+}: {
+  subject: string;
+  body: string;
+  onSubjectChange: (v: string) => void;
+  onBodyChange: (v: string) => void;
+  onSend: () => void;
+  onCancel: () => void;
+  sending: boolean;
+  repliedToAt: string | null;
+  onChooseTemplate: () => void;
+  onPersonalize: () => void;
+  onImprove: () => void;
+  aiBusy: boolean;
+  validationErrors: string[];
+  attachments: SalesLeadEmailAttachment[];
+  onAttachmentsChange: (next: SalesLeadEmailAttachment[]) => void;
+}) => {
+  const ref = useRef<HTMLDivElement | null>(null);
+  const bodyRef = useRef<HTMLTextAreaElement | null>(null);
+  useEffect(() => {
+    ref.current?.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+  }, []);
+  useEffect(() => {
+    resizeTextareaToContent(bodyRef.current, 280);
+  }, [body]);
+  return (
+    <div ref={ref} className="mt-4 space-y-3 rounded-xl border border-primary/30 bg-background/90 p-4 shadow-sm">
+      <div className="flex items-center justify-between gap-2">
+        <div className="text-sm font-medium">Odpověď na e-mail z {formatDateTime(repliedToAt)}</div>
+        <Button variant="ghost" size="sm" onClick={onCancel} disabled={sending}>Zrušit</Button>
+      </div>
+      <div className="space-y-1">
+        <Label htmlFor="reply-subject">Předmět</Label>
+        <Input id="reply-subject" value={subject} onChange={(e) => onSubjectChange(e.target.value)} disabled={sending} maxLength={300} />
+      </div>
+      <div className="space-y-1">
+        <Label htmlFor="reply-body">Text odpovědi</Label>
+        <Textarea
+          ref={bodyRef}
+          id="reply-body"
+          value={body}
+          onChange={(e) => {
+            onBodyChange(e.target.value);
+            resizeTextareaToContent(e.currentTarget, 280);
+          }}
+          disabled={sending}
+          rows={6}
+          maxLength={20000}
+          className="resize-none"
+        />
+      </div>
+      <SalesLeadEmailAttachmentsField attachments={attachments} onChange={onAttachmentsChange} disabled={sending} />
+      <div className="flex flex-wrap gap-2">
+        <Button type="button" variant="outline" size="sm" onClick={onChooseTemplate} disabled={sending || aiBusy} className="gap-1.5">
+          <FileText className="h-3.5 w-3.5" /> Vybrat šablonu
+        </Button>
+        <Button type="button" variant="outline" size="sm" onClick={onPersonalize} disabled={sending || aiBusy || !subject.trim() || !body.trim()} className="gap-1.5">
+          <Sparkles className="h-3.5 w-3.5" /> Personalizovat pro firmu
+        </Button>
+        <Button type="button" variant="outline" size="sm" onClick={onImprove} disabled={sending || aiBusy || !subject.trim() || !body.trim()} className="gap-1.5">
+          {aiBusy ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Sparkles className="h-3.5 w-3.5" />} Vylepšit text
+        </Button>
+      </div>
+      {validationErrors.length > 0 && (
+        <div className="rounded-lg border border-destructive/30 bg-destructive/8 px-3 py-2 text-xs text-destructive">
+          {validationErrors.map((error) => <div key={error}>{error}</div>)}
+        </div>
+      )}
+      <div className="flex justify-end">
+        <Button onClick={onSend} disabled={sending || aiBusy || validationErrors.length > 0} className="gap-1.5">
+          {sending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />} Odeslat odpověď
+        </Button>
+      </div>
+    </div>
+  );
+};
+
+type EditForm = {
+  company_name: string;
+  ico: string;
+  dic: string;
+  website: string;
+  industry: string;
+  city: string;
+  address: string;
+  company_size: string;
+  contact_person: string;
+  contact_role: string;
+  contact_email: string;
+  contact_phone: string;
+  email_source: string;
+  email_verified_by_admin: boolean;
+  notes: string;
+};
+
+const toForm = (l: SalesLeadDetail): EditForm => ({
+  company_name: l.company_name ?? '',
+  ico: l.ico ?? '',
+  dic: l.dic ?? '',
+  website: l.website ?? '',
+  industry: l.industry ?? '',
+  city: l.city ?? '',
+  address: l.address ?? '',
+  company_size: l.company_size ?? '',
+  contact_person: l.contact_person ?? '',
+  contact_role: l.contact_role ?? '',
+  contact_email: l.contact_email ?? '',
+  contact_phone: l.contact_phone ?? '',
+  email_source: l.email_source ?? '',
+  email_verified_by_admin: l.email_verified_by_admin ?? false,
+  notes: l.notes ?? '',
+});
+
+export function SalesLeadDetailSheet({ leadId, open, onOpenChange, onMutated }: Props) {
+  const { isSuperAdmin } = useUserRole();
+  const [lead, setLead] = useState<SalesLeadDetail | null>(null);
+  const [activities, setActivities] = useState<ActivityRow[]>([]);
+  const [activityAuthors, setActivityAuthors] = useState<Record<string,string>>({});
+  const [loading, setLoading] = useState(false);
+  const [editing, setEditing] = useState(false);
+  const [approving, setApproving] = useState(false);
+  const [form, setForm] = useState<EditForm | null>(null);
+  const [saving, setSaving] = useState(false);
+  const [aresLoading, setAresLoading] = useState(false);
+  const [icoError, setIcoError] = useState('');
+  const [pendingAresResult, setPendingAresResult] = useState<SalesLeadAresResult | null>(null);
+  const [aresConflicts, setAresConflicts] = useState<SalesLeadAresConflict[]>([]);
+  // Změna stavu: vybraný cíl + důvod.
+  const [pendingStatus, setPendingStatus] = useState<string | null>(null);
+  const [reason, setReason] = useState('');
+  const [statusBusy, setStatusBusy] = useState(false);
+  // AI příprava (Fáze 3B).
+  const [researchBusy, setResearchBusy] = useState(false);
+  const [draftBusy, setDraftBusy] = useState(false);
+  const [aiWorkspaceOpen, setAiWorkspaceOpen] = useState(false);
+  const [draftSaving, setDraftSaving] = useState(false);
+  const [draftSubject, setDraftSubject] = useState('');
+  const [draftBody, setDraftBody] = useState('');
+  const draftTouchedRef = useRef(false);
+  const [deleteDraftOpen, setDeleteDraftOpen] = useState(false);
+  const draftComposerLeadIdRef = useRef<string | null>(null);
+  const [draftExpandedOpen, setDraftExpandedOpen] = useState(false);
+  const [draftAttachments, setDraftAttachments] = useState<SalesLeadEmailAttachment[]>([]);
+  const draftBodyRef = useRef<HTMLTextAreaElement | null>(null);
+  const expandedDraftBodyRef = useRef<HTMLTextAreaElement | null>(null);
+  // Odeslání konceptu člověkem (Fáze 3C).
+  const [sendConfirmOpen, setSendConfirmOpen] = useState(false);
+  const [sending, setSending] = useState(false);
+  // Zařazení / discovery (Fáze 4B).
+  const [clsEditing, setClsEditing] = useState(false);
+  const [clsSaving, setClsSaving] = useState(false);
+  const [clsGroup, setClsGroup] = useState('');
+  const [clsQuality, setClsQuality] = useState('0');
+  const [clsSource, setClsSource] = useState('');
+  // Dohledání / schválení kontaktu (Fáze 5B).
+  const [enrichBusy, setEnrichBusy] = useState(false);
+  const [contactReviewBusy, setContactReviewBusy] = useState(false);
+  const [duplicateConflicts, setDuplicateConflicts] = useState<DuplicateConflict[]>([]);
+  const [overrideReason, setOverrideReason] = useState('');
+  const [replyToActivity, setReplyToActivity] = useState<ActivityRow | null>(null);
+  const [replySubject, setReplySubject] = useState('');
+  const [replyBody, setReplyBody] = useState('');
+  const [replySending, setReplySending] = useState(false);
+  const [replyAiBusy, setReplyAiBusy] = useState(false);
+  const [replyAttachments, setReplyAttachments] = useState<SalesLeadEmailAttachment[]>([]);
+  const [reuseActivity, setReuseActivity] = useState<ActivityRow | null>(null);
+  const [reuseMode, setReuseMode] = useState<'resend' | 'forward'>('resend');
+  const [reuseRecipient, setReuseRecipient] = useState('');
+  const [reuseSubject, setReuseSubject] = useState('');
+  const [reuseBody, setReuseBody] = useState('');
+  const [reuseSending, setReuseSending] = useState(false);
+  const [templatePickerType, setTemplatePickerType] = useState<SalesLeadEmailTemplateType | null>(null);
+
+  const load = useCallback(async () => {
+    if (!leadId) return;
+    setLoading(true);
+    try {
+      const [{ data: leadData, error: leadErr }, { data: actData }] = await Promise.all([
+        (supabase as any).from('sales_leads').select(DETAIL_COLUMNS).eq('id', leadId).single(),
+        (supabase as any)
+          .from('sales_lead_activities')
+          .select('id, activity_type, direction, created_at, scheduled_for, activity_status, performed_by, subject, body_snapshot, read_at, metadata')
+          .eq('lead_id', leadId)
+          .order('created_at', { ascending: false })
+          .limit(50),
+      ]);
+      if (leadErr) throw new Error(leadErr.message);
+      const detail = leadData as SalesLeadDetail;
+      setLead(detail);
+      if (draftComposerLeadIdRef.current !== detail.id || !draftTouchedRef.current) {
+        setDraftSubject(detail.draft_email_subject ?? '');
+        setDraftBody(detail.draft_email_body ?? '');
+        draftTouchedRef.current = false;
+        draftComposerLeadIdRef.current = detail.id;
+      }
+      setClsGroup(detail.lead_group ?? '');
+      setClsQuality(String(detail.lead_quality ?? 0));
+      setClsSource(detail.discovery_source ?? '');
+      setClsEditing(false);
+      setActivities((actData ?? []) as ActivityRow[]);
+      const authorIds = [...new Set(((actData ?? []) as ActivityRow[]).map(a => a.performed_by).filter(Boolean))] as string[];
+      if (authorIds.length > 0) {
+        const { data: profiles } = await (supabase as any).from('profiles').select('id,full_name').in('id', authorIds);
+        setActivityAuthors(Object.fromEntries((profiles ?? []).map((p: {id:string;full_name:string|null}) => [p.id, p.full_name ?? p.id.slice(0,8)])));
+      } else setActivityAuthors({});
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : 'Nepodařilo se načíst detail';
+      toast.error(msg);
+      setLead(null);
+    } finally {
+      setLoading(false);
+    }
+  }, [leadId]);
+
+  // Po otevření detailu označí nepřečtené odpovědi jako přečtené. Záměrně
+  // NEnačítá znovu aktivity — zvýraznění „Nové" tak zůstane vidět v otevřeném
+  // detailu, ale globální počet (nav badge, karta, seznam) klesne ihned.
+  // Nikdy nemění stav leadu (`jednani`/`odpovedel` beze změny).
+  const markRepliesRead = useCallback(async () => {
+    if (!leadId) return;
+    try {
+      const { data } = await (supabase as any).rpc('sales_lead_mark_replies_read', { p_lead_id: leadId });
+      const res = (data ?? {}) as { success?: boolean; marked_count?: number };
+      if (res.success && (res.marked_count ?? 0) > 0) {
+        window.dispatchEvent(new Event('sales-leads-unread-changed'));
+        onMutated();
+      }
+    } catch {
+      // best-effort — zvýraznění zůstává, upozornění se aktualizuje při dalším načtení
+    }
+  }, [leadId, onMutated]);
+
+  useEffect(() => {
+    if (open && leadId) {
+      setEditing(false);
+      setPendingStatus(null);
+      setReason('');
+      setDuplicateConflicts([]);
+      setOverrideReason('');
+      setReplyToActivity(null);
+      setReuseActivity(null);
+      setAresLoading(false);
+      setIcoError('');
+      setPendingAresResult(null);
+      setAresConflicts([]);
+      setDraftExpandedOpen(false);
+      setDraftAttachments([]);
+      draftTouchedRef.current = false;
+      draftComposerLeadIdRef.current = leadId;
+      setReplyAttachments([]);
+      void (async () => {
+        await load();
+        await markRepliesRead();
+      })();
+    }
+  }, [open, leadId, load, markRepliesRead]);
+
+  useEffect(() => {
+    resizeTextareaToContent(draftBodyRef.current);
+    resizeTextareaToContent(expandedDraftBodyRef.current, 620);
+  }, [draftBody, draftExpandedOpen]);
+
+  const startEdit = () => {
+    if (lead) {
+      setForm(toForm(lead));
+      setIcoError('');
+      setPendingAresResult(null);
+      setAresConflicts([]);
+      setEditing(true);
+    }
+  };
+
+  const setField =
+    (field: keyof EditForm) =>
+    (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
+      if (field === 'contact_email') { setDuplicateConflicts([]); setOverrideReason(''); }
+      if (field === 'ico') setIcoError('');
+      setForm((prev) => (prev ? { ...prev, [field]: e.target.value } : prev));
+    };
+
+  const applyLoadedAresResult = (result: SalesLeadAresResult) => {
+    setForm((prev) => (prev ? applyAresResult(prev, result) : prev));
+    setPendingAresResult(null);
+    setAresConflicts([]);
+    toast.success('Údaje firmy byly načteny z ARES');
+  };
+
+  const loadFromAres = async () => {
+    if (!form) return;
+    const ico = form.ico.trim();
+    if (!isValidSalesLeadIco(ico)) {
+      setIcoError(SALES_LEAD_ICO_ERROR);
+      return;
+    }
+
+    setAresLoading(true);
+    setIcoError('');
+    try {
+      const outcome = await lookupSalesLeadAres(
+        (functionName, options) => supabase.functions.invoke(functionName, options),
+        ico,
+      );
+      if (!outcome.ok) {
+        setIcoError(outcome.message);
+        return;
+      }
+
+      const result = outcome.result;
+      const conflicts = getAresConflicts(form, result);
+      if (conflicts.length > 0) {
+        setPendingAresResult(result);
+        setAresConflicts(conflicts);
+        return;
+      }
+      applyLoadedAresResult(result);
+    } finally {
+      setAresLoading(false);
+    }
+  };
+
+  const previewDuplicate = async () => {
+    if (!lead || !form?.contact_email.trim().includes('@')) return;
+    const { data } = await (supabase as any).rpc('sales_lead_check_duplicate', {
+      p_contact_email: form.contact_email.trim(), p_exclude_lead_id: lead.id,
+    });
+    const res = (data ?? {}) as { success?: boolean; conflicts?: DuplicateConflict[] };
+    if (res.success) setDuplicateConflicts(res.conflicts ?? []);
+  };
+
+  const saveEdit = async (confirmOverride = false) => {
+    if (!lead || !form) return;
+    if (form.ico.trim() && !isValidSalesLeadIco(form.ico)) {
+      setIcoError(SALES_LEAD_ICO_ERROR);
+      return;
+    }
+    if (!form.company_name.trim()) {
+      toast.error('Název firmy je povinný');
+      return;
+    }
+    const website = form.website.trim();
+    const normalizedWebsite = website
+      ? /^https?:\/\//i.test(website)
+        ? website
+        : `https://${website}`
+      : '';
+    if (normalizedWebsite && isNonOfficialWebsiteUrl(normalizedWebsite)) {
+      toast.error('Katalog, rejstřík, sociální síť ani cizí profil nelze uložit jako firemní web.');
+      return;
+    }
+    setSaving(true);
+    try {
+      const { data, error } = await (supabase as any).rpc('sales_lead_update_fields', {
+        p_lead_id: lead.id,
+        p_company_name: form.company_name.trim(),
+        p_ico: form.ico.trim() || null,
+        p_dic: form.dic.trim() || null,
+        p_website: normalizedWebsite || null,
+        p_industry: form.industry || null,
+        p_city: form.city.trim() || null,
+        p_address: form.address.trim() || null,
+        p_company_size: form.company_size || null,
+        p_contact_person: form.contact_person.trim() || null,
+        p_contact_role: form.contact_role.trim() || null,
+        p_contact_email: form.contact_email.trim() || null,
+        p_contact_phone: form.contact_phone.trim() || null,
+        p_email_source: form.email_source.trim() || null,
+        p_email_verified_by_admin: form.email_verified_by_admin,
+        p_notes: form.notes.trim() || null,
+        p_duplicate_override: confirmOverride,
+        p_duplicate_override_reason: confirmOverride ? overrideReason.trim() : null,
+      });
+      if (error) throw new Error(error.message);
+      const res = (data ?? {}) as { success?: boolean; error?: string; conflicts?: DuplicateConflict[] };
+      if (!res.success) {
+        if (res.error === 'duplicate_conflict' || res.error === 'duplicate_override_reason_required') {
+          setDuplicateConflicts(res.conflicts ?? []);
+        }
+        toast.error(rpcErrorMessage(res.error));
+        return;
+      }
+      toast.success('Údaje uloženy');
+      setEditing(false);
+      setDuplicateConflicts([]);
+      setOverrideReason('');
+      await load();
+      onMutated();
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : 'Uložení se nezdařilo';
+      toast.error(msg);
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const confirmEditOverride = async () => {
+    if (overrideReason.trim().length < 3) {
+      toast.error('Uveďte důvod výjimky alespoň 3 znaky.');
+      return;
+    }
+    await saveEdit(true);
+  };
+
+  /**
+   * Schválení navrženého leadu JEDNOU akcí: uloží právě upravená pole
+   * (včetně `email_verified_by_admin`) a zároveň změní stav `navrzeny → novy`.
+   *
+   * Vše dělá jediná transakční RPC `sales_lead_approve_proposed`, která uvnitř
+   * volá existující `sales_lead_update_fields` + `sales_lead_set_status` —
+   * duplicitní kontroly, historie stavu i audit tedy zůstávají beze změny
+   * a lead nikdy nezůstane napůl uložený.
+   *
+   * Schválit lze i bez zaškrtnutého ověření e-mailu; odesílání e-mailů hlídají
+   * beze změny stávající kontroly jinde.
+   */
+  const approveProposed = async (confirmOverride = false) => {
+    if (!lead || lead.status !== 'navrzeny') return;
+    if (confirmOverride && overrideReason.trim().length < 3) {
+      toast.error('Uveďte důvod výjimky alespoň 3 znaky.');
+      return;
+    }
+    // Když se needituje, vezmi aktuální hodnoty leadu.
+    const values = editing && form ? form : toForm(lead);
+
+    if (values.ico.trim() && !isValidSalesLeadIco(values.ico)) {
+      setIcoError(SALES_LEAD_ICO_ERROR);
+      toast.error(SALES_LEAD_ICO_ERROR);
+      return;
+    }
+    if (!values.company_name.trim()) {
+      toast.error('Název firmy je povinný');
+      return;
+    }
+    const website = values.website.trim();
+    const normalizedWebsite = website
+      ? (/^https?:\/\//i.test(website) ? website : `https://${website}`)
+      : '';
+    if (normalizedWebsite && isNonOfficialWebsiteUrl(normalizedWebsite)) {
+      toast.error('Katalog, rejstřík, sociální síť ani cizí profil nelze uložit jako firemní web.');
+      return;
+    }
+
+    setApproving(true);
+    try {
+      const { data, error } = await (supabase as any).rpc('sales_lead_approve_proposed', {
+        p_lead_id: lead.id,
+        p_company_name: values.company_name.trim(),
+        p_ico: values.ico.trim() || null,
+        p_dic: values.dic.trim() || null,
+        p_website: normalizedWebsite || null,
+        p_industry: values.industry || null,
+        p_city: values.city.trim() || null,
+        p_address: values.address.trim() || null,
+        p_company_size: values.company_size || null,
+        p_contact_person: values.contact_person.trim() || null,
+        p_contact_role: values.contact_role.trim() || null,
+        p_contact_email: values.contact_email.trim() || null,
+        p_contact_phone: values.contact_phone.trim() || null,
+        p_email_source: values.email_source.trim() || null,
+        p_email_verified_by_admin: values.email_verified_by_admin,
+        p_notes: values.notes.trim() || null,
+        p_duplicate_override: confirmOverride,
+        p_duplicate_override_reason: confirmOverride ? overrideReason.trim() : null,
+      });
+      if (error) throw new Error(error.message);
+      const res = (data ?? {}) as { success?: boolean; error?: string; conflicts?: DuplicateConflict[] };
+      if (!res.success) {
+        if (res.error === 'duplicate_conflict' || res.error === 'duplicate_override_reason_required') {
+          setDuplicateConflicts(res.conflicts ?? []);
+          setEditing(true);
+        }
+        toast.error(rpcErrorMessage(res.error));
+        return;
+      }
+      toast.success('Lead byl schválen a uložen.');
+      setPendingStatus(null);
+      setReason('');
+      setEditing(false);
+      setDuplicateConflicts([]);
+      setOverrideReason('');
+      await load();
+      onMutated();
+    } catch (err: unknown) {
+      toast.error(err instanceof Error ? err.message : 'Schválení se nezdařilo');
+    } finally {
+      setApproving(false);
+    }
+  };
+
+  const startReply = (activity: ActivityRow) => {
+    setReplyToActivity(activity);
+    setReplySubject(activity.subject?.toLowerCase().startsWith('re:') ? activity.subject : `Re: ${activity.subject ?? ''}`);
+    setReplyBody('');
+    setReplyAttachments([]);
+  };
+
+  const sendReply = async () => {
+    if (!lead || !replyToActivity || !replySubject.trim() || !replyBody.trim()) {
+      toast.error('Vyplňte předmět i text odpovědi.');
+      return;
+    }
+    const validationErrors = validateSalesLeadEmailContent('reply', replySubject, replyBody);
+    if (validationErrors.length > 0) {
+      toast.error(validationErrors[0]);
+      return;
+    }
+    setReplySending(true);
+    try {
+      const { data, error } = await supabase.functions.invoke('send-sales-lead-reply', {
+        body: {
+          lead_id: lead.id,
+          reply_to_activity_id: replyToActivity.id,
+          subject: replySubject.trim(),
+          body: replyBody.trim(),
+          attachments: replyAttachments,
+        },
+      });
+      if (error) throw new Error(error.message);
+      const res = (data ?? {}) as { success?: boolean; error?: string; warning?: string };
+      if (!res.success) { toast.error(rpcErrorMessage(res.error)); return; }
+      if (res.warning) toast.warning(rpcErrorMessage(res.warning));
+      else toast.success('Odpověď byla odeslána.');
+      setReplyToActivity(null); setReplyBody(''); setReplySubject(''); setReplyAttachments([]);
+      await load(); onMutated();
+    } catch (err: unknown) {
+      toast.error(err instanceof Error ? err.message : 'Odpověď se nepodařilo odeslat.');
+    } finally { setReplySending(false); }
+  };
+
+  const startReuse = (activity: ActivityRow, mode: 'resend' | 'forward') => {
+    const originalRecipient = typeof activity.metadata?.to === 'string'
+      ? activity.metadata.to
+      : lead?.contact_email ?? '';
+    setReuseActivity(activity);
+    setReuseMode(mode);
+    setReuseRecipient(mode === 'forward' ? '' : originalRecipient);
+    setReuseSubject(activity.subject ?? '');
+    setReuseBody(activity.body_snapshot ?? '');
+  };
+
+  const sendReusedEmail = async () => {
+    if (!lead || !reuseActivity) return;
+    if (lead.do_not_contact) {
+      toast.error('Lead je označený „Nekontaktovat“. E-mail nebyl odeslán.');
+      return;
+    }
+    const recipient = reuseRecipient.trim().toLowerCase();
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(recipient)) {
+      toast.error('Zadejte platnou e-mailovou adresu příjemce.');
+      return;
+    }
+    const validationErrors = validateSalesLeadEmailContent('initial', reuseSubject, reuseBody);
+    if (validationErrors.length > 0) {
+      toast.error(validationErrors[0]);
+      return;
+    }
+    setReuseSending(true);
+    try {
+      const { data, error } = await supabase.functions.invoke('send-sales-lead-email', {
+        body: {
+          lead_id: lead.id,
+          reuse_source_activity_id: reuseActivity.id,
+          reuse_mode: reuseMode,
+          recipient,
+          subject: reuseSubject,
+          body: reuseBody,
+        },
+      });
+      if (error) throw new Error(error.message);
+      const res = (data ?? {}) as { success?: boolean; error?: string; warning?: string; email_sent?: boolean };
+      if (!res.success) {
+        toast.error(rpcErrorMessage(res.error));
+        if (res.email_sent) {
+          setReuseActivity(null);
+          await load();
+          onMutated();
+        }
+        return;
+      }
+      toast.success(reuseMode === 'forward' ? 'E-mail byl přeposlán.' : 'E-mail byl znovu odeslán.');
+      setReuseActivity(null);
+      await load();
+      onMutated();
+    } catch (err: unknown) {
+      toast.error(err instanceof Error ? err.message : 'E-mail se nepodařilo odeslat.');
+    } finally {
+      setReuseSending(false);
+    }
+  };
+
+  const targets = useMemo(
+    () => (lead ? allowedTargets(lead.status, isSuperAdmin) : []),
+    [lead, isSuperAdmin],
+  );
+
+  // ── AI příprava (Fáze 3B) — pouze návrhy, nic se neodesílá ────────────────
+  const runResearch = async () => {
+    if (!lead) return;
+    setResearchBusy(true);
+    try {
+      const { data, error } = await supabase.functions.invoke('sales-lead-research', {
+        body: { lead_id: lead.id },
+      });
+      if (error) throw new Error(error.message);
+      const res = (data ?? {}) as { success?: boolean; error?: string };
+      if (!res.success) {
+        toast.error(rpcErrorMessage(res.error));
+        return;
+      }
+      toast.success('Rešerše dokončena');
+      await load();
+      onMutated();
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : 'Rešerše se nezdařila';
+      toast.error(msg);
+    } finally {
+      setResearchBusy(false);
+    }
+  };
+
+  const improveWithAi = async (
+    emailType: SalesLeadEmailTemplateType,
+    action: 'personalize' | 'improve',
+    subject: string,
+    body: string,
+    replyToActivityId?: string,
+  ) => {
+    if (!lead || !subject.trim() || !body.trim()) {
+      toast.error('Nejdřív vyplňte předmět a text e-mailu.');
+      return null;
+    }
+    try {
+      const { data, error } = await supabase.functions.invoke('sales-lead-draft-email', {
+        body: {
+          lead_id: lead.id,
+          mode: 'assist',
+          action,
+          email_type: emailType,
+          subject,
+          body,
+          reply_to_activity_id: replyToActivityId,
+        },
+      });
+      if (error) throw new Error(error.message);
+      const res = (data ?? {}) as { success?: boolean; error?: string; subject?: string; body?: string };
+      if (!res.success) {
+        toast.error(rpcErrorMessage(res.error));
+        return null;
+      }
+      toast.success(action === 'personalize' ? 'Text byl personalizován pro firmu.' : 'Text byl vylepšen.');
+      return { subject: res.subject ?? subject, body: res.body ?? body };
+    } catch (err: unknown) {
+      toast.error(err instanceof Error ? err.message : 'AI úprava se nezdařila');
+      return null;
+    }
+  };
+
+  const assistDraft = async (action: 'personalize' | 'improve') => {
+    setDraftBusy(true);
+    const result = await improveWithAi('initial', action, draftSubject, draftBody);
+    if (result) {
+      setDraftSubject(result.subject);
+      setDraftBody(result.body);
+      draftTouchedRef.current = true;
+    }
+    setDraftBusy(false);
+  };
+
+  const assistReply = async (action: 'personalize' | 'improve') => {
+    if (!replyToActivity) return;
+    setReplyAiBusy(true);
+    const result = await improveWithAi('reply', action, replySubject, replyBody, replyToActivity.id);
+    if (result) {
+      setReplySubject(result.subject);
+      setReplyBody(result.body);
+    }
+    setReplyAiBusy(false);
+  };
+
+  const openInitialEmailComposer = () => {
+    if (!lead || !isInitialEmailStatusAllowed(lead.status)) {
+      toast.error(lead?.status === 'navrzeny'
+        ? 'Návrh nejdřív schvalte. Potom můžete napsat první e-mail.'
+        : 'V tomto stavu už nelze odeslat první e-mail.');
+      return;
+    }
+    const sameLeadComposer = draftComposerLeadIdRef.current === lead.id;
+    if (sameLeadComposer) {
+      setDraftSubject(draftSubject);
+      setDraftBody(draftBody);
+    } else {
+      // Obnov poslední uložený koncept; pokud v zařízení zůstala NOVĚJŠÍ
+      // neodeslaná verze (výpadek sítě), automaticky ji vrátíme.
+      const local = readLocalDraft(lead.id);
+      const serverAt = lead.draft_updated_at ? Date.parse(lead.draft_updated_at) : 0;
+      const useLocal = local !== null && local.updatedAt > serverAt;
+      setDraftSubject(useLocal ? local.subject : lead.draft_email_subject ?? '');
+      setDraftBody(useLocal ? local.body : lead.draft_email_body ?? '');
+      draftTouchedRef.current = useLocal;
+      if (useLocal) toast.message('Obnovena novější neuložená verze konceptu z tohoto zařízení.');
+    }
+    draftComposerLeadIdRef.current = lead.id;
+    setAiWorkspaceOpen(true);
+  };
+
+  const applyTemplate = (value: { subject: string; body: string; unresolved: string[]; templateName: string }) => {
+    if (templatePickerType === 'reply') {
+      setReplySubject(value.subject);
+      setReplyBody(value.body);
+    } else {
+      setDraftSubject(value.subject);
+      setDraftBody(value.body);
+      draftTouchedRef.current = true;
+      setAiWorkspaceOpen(true);
+    }
+    setTemplatePickerType(null);
+    if (value.unresolved.length > 0) {
+      toast.warning(`Šablona „${value.templateName}“ obsahuje nedoplněné proměnné: ${value.unresolved.join(', ')}`);
+    } else {
+      toast.success(`Šablona „${value.templateName}“ byla vložena do editoru.`);
+    }
+  };
+
+  /**
+   * Tiché automatické ukládání konceptu. Má VLASTNÍ stav — záměrně nepoužívá
+   * `draftSaving`, který zakazuje inputy (to by při psaní shodilo kurzor).
+   * Po uložení obnoví jen seznam/počty v rodiči, nikdy nesahá na text editoru.
+   */
+  const autosave = useDraftAutosave({
+    leadId: lead?.id ?? null,
+    subject: draftSubject,
+    body: draftBody,
+    enabled: Boolean(lead) && aiWorkspaceOpen,
+    onPersisted: onMutated,
+  });
+
+  /**
+   * Best-effort vyčištění konceptu na serveru. Záměrně samostatná funkce —
+   * úklid nesmí být nikdy blízko mazání editoru, aby při chybě odeslání
+   * nemohl přijít rozepsaný text uživatele.
+   */
+  const clearServerDraft = async (targetLeadId: string) => {
+    try {
+      await (supabase as any).rpc('sales_lead_autosave_draft', {
+        p_lead_id: targetLeadId,
+        p_subject: '',
+        p_body: '',
+        p_client_updated_at: new Date().toISOString(),
+      });
+      clearLocalDraft(targetLeadId);
+    } catch {
+      // odeslání už proběhlo; koncept se doklidí při dalším uložení
+    }
+  };
+
+  const deleteDraft = async () => {
+    if (!lead) return;
+    setDraftSaving(true);
+    try {
+      const { data, error } = await (supabase as any).rpc('sales_lead_autosave_draft', {
+        p_lead_id: lead.id,
+        p_subject: '',
+        p_body: '',
+        p_client_updated_at: new Date().toISOString(),
+      });
+      if (error) throw new Error(error.message);
+      const res = (data ?? {}) as { success?: boolean; error?: string };
+      if (!res.success) { toast.error(rpcErrorMessage(res.error)); return; }
+      setDraftSubject('');
+      setDraftBody('');
+      draftTouchedRef.current = false;
+      autosave.reset();
+      clearLocalDraft(lead.id);
+      setDeleteDraftOpen(false);
+      toast.success('Koncept smazán');
+      await load();
+      onMutated();
+    } catch (err: unknown) {
+      toast.error(err instanceof Error ? err.message : 'Smazání konceptu se nezdařilo');
+    } finally {
+      setDraftSaving(false);
+    }
+  };
+
+  const saveDraft = async () => {
+    if (!lead) return;
+    const validationErrors = validateSalesLeadEmailDraft(draftSubject, draftBody);
+    if (validationErrors.length > 0) {
+      toast.error(validationErrors[0]);
+      return;
+    }
+    setDraftSaving(true);
+    try {
+      const { data, error } = await (supabase as any).rpc('sales_lead_save_draft', {
+        p_lead_id: lead.id,
+        p_subject: draftSubject.trim(),
+        p_body: draftBody.trim(),
+      });
+      if (error) throw new Error(error.message);
+      const res = (data ?? {}) as { success?: boolean; error?: string };
+      if (!res.success) {
+        toast.error(rpcErrorMessage(res.error));
+        return;
+      }
+      toast.success('Koncept uložen');
+      draftTouchedRef.current = false;
+      draftComposerLeadIdRef.current = lead.id;
+      autosave.markSaved(draftSubject, draftBody);
+      await load();
+      onMutated();
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : 'Uložení konceptu se nezdařilo';
+      toast.error(msg);
+    } finally {
+      setDraftSaving(false);
+    }
+  };
+
+  // ── Zařazení / discovery (Fáze 4B) — ruční úprava přes SECURITY DEFINER RPC ─
+  const saveClassification = async () => {
+    if (!lead) return;
+    setClsSaving(true);
+    try {
+      const { data, error } = await (supabase as any).rpc('sales_lead_update_discovery', {
+        p_lead_id: lead.id,
+        p_lead_group: clsGroup || null,
+        p_lead_quality: Number(clsQuality),
+        p_discovery_source: clsSource || null,
+      });
+      if (error) throw new Error(error.message);
+      const res = (data ?? {}) as { success?: boolean; error?: string };
+      if (!res.success) {
+        toast.error(rpcErrorMessage(res.error));
+        return;
+      }
+      toast.success('Zařazení uloženo');
+      setClsEditing(false);
+      await load();
+      onMutated();
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : 'Uložení zařazení se nezdařilo';
+      toast.error(msg);
+    } finally {
+      setClsSaving(false);
+    }
+  };
+
+  // ── Dohledání veřejného kontaktu ──────────────────────────────────────────
+  // AI vrátí pouze kandidáta a přesnou URL. Teprve backendové nalezení přesně
+  // stejné adresy na ověřeném oficiálním webu dovolí atomické uložení kontaktu.
+  const runEnrich = async () => {
+    if (!lead) return;
+    setEnrichBusy(true);
+    try {
+      const { data, error } = await supabase.functions.invoke('sales-lead-enrich-contact', {
+        body: { lead_id: lead.id },
+      });
+      if (error) throw new Error(error.message);
+      const res = (data ?? {}) as { success?: boolean; error?: string; found?: boolean; reason?: string };
+      if (!res.success) {
+        toast.error(rpcErrorMessage(res.error));
+        return;
+      }
+      if (res.found === false) {
+        toast.info(res.reason ? rpcErrorMessage(res.reason) : 'Veřejný e-mail se nepodařilo bezpečně ověřit. Nic nebylo uloženo.');
+        return;
+      }
+      toast.success('E-mail byl systémově ověřen na oficiálním webu a uložen.');
+      await load();
+      onMutated();
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : 'Dohledání kontaktu se nezdařilo';
+      toast.error(msg);
+    } finally {
+      setEnrichBusy(false);
+    }
+  };
+
+  // Schválení / zamítnutí návrhu kontaktu ČLOVĚKEM. Teprve schválení vyplní
+  // odesílací contact_email + email_verified_by_admin=true (RPC to hlídá).
+  const reviewContact = async (decision: 'approve' | 'reject') => {
+    if (!lead) return;
+    setContactReviewBusy(true);
+    try {
+      const { data, error } = await (supabase as any).rpc('sales_lead_review_contact', {
+        p_lead_id: lead.id,
+        p_decision: decision,
+      });
+      if (error) throw new Error(error.message);
+      const res = (data ?? {}) as { success?: boolean; error?: string };
+      if (!res.success) {
+        toast.error(rpcErrorMessage(res.error));
+        return;
+      }
+      toast.success(decision === 'approve' ? 'E-mail schválen a nastaven jako kontakt.' : 'Návrh e-mailu zamítnut.');
+      await load();
+      onMutated();
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : 'Akce se nezdařila';
+      toast.error(msg);
+    } finally {
+      setContactReviewBusy(false);
+    }
+  };
+
+  // ── Odeslání aktuálního obsahu ČLOVĚKEM — nikdy ne AI ─────────────────────
+  // Uložení konceptu je volitelné. Edge Function dostane obsah editoru a
+  // autoritativně znovu ověří obsah i všechny stavové a bezpečnostní bariéry.
+  const draftValidationErrors = validateSalesLeadEmailContent('initial', draftSubject, draftBody);
+  const replyValidationErrors = validateSalesLeadEmailContent('reply', replySubject, replyBody);
+  const hasContactEmail = !!lead?.contact_email && lead.email_verified_by_admin === true;
+  const isDoNotContact = !!lead?.do_not_contact;
+  // Reakce na tlačítka v obchodním e-mailu. `activities` je řazeno created_at
+  // DESC → první nález je ta poslední reakce. Ručně nastavené „Nekontaktovat“
+  // nemá metadata.source, takže se sem nikdy nedostane.
+  const interestResponse = activities.find((a) =>
+    a.activity_type === 'reply_received'
+    && a.direction === 'inbound'
+    && a.metadata?.source === 'interest_link') ?? null;
+  const declineResponse = activities.find((a) =>
+    a.activity_type === 'do_not_contact_set'
+    && a.direction === 'inbound'
+    && a.metadata?.source === 'decline_link') ?? null;
+  const initialEmailStatusAllowed = !!lead && isInitialEmailStatusAllowed(lead.status);
+  // activities je řazeno created_at DESC → první email_sent je ten poslední.
+  const lastEmailSent = activities.find((a) => a.activity_type === 'email_sent') ?? null;
+  const initialEmailAlreadySent = activities.some((a) =>
+    a.activity_type === 'email_sent' && a.direction === 'outbound' && a.metadata?.sent_by === 'human');
+  const canSend = initialEmailStatusAllowed && !initialEmailAlreadySent
+    && draftValidationErrors.length === 0 && hasContactEmail && !isDoNotContact;
+
+  const sendEmail = async () => {
+    if (!lead) return;
+    if (!isInitialEmailStatusAllowed(lead.status)) {
+      toast.error(lead.status === 'navrzeny'
+        ? 'Návrh nejdřív schvalte. Z navrženého leadu nelze odeslat první e-mail.'
+        : 'V tomto stavu už nelze odeslat první e-mail.');
+      return;
+    }
+    if (draftValidationErrors.length > 0) {
+      toast.error(draftValidationErrors[0]);
+      return;
+    }
+    setSending(true);
+    try {
+      const { data, error } = await supabase.functions.invoke('send-sales-lead-email', {
+        body: { lead_id: lead.id, subject: draftSubject, body: draftBody, attachments: draftAttachments },
+      });
+      if (error) throw new Error(error.message);
+      const res = (data ?? {}) as { success?: boolean; error?: string; email_sent?: boolean };
+      if (!res.success) {
+        toast.error(rpcErrorMessage(res.error));
+        if (res.email_sent) {
+          setSendConfirmOpen(false);
+          await load();
+          onMutated();
+        }
+        return;
+      }
+      toast.success('E-mail odeslán');
+      setSendConfirmOpen(false);
+      setDraftAttachments([]);
+      setDraftExpandedOpen(false);
+      // Koncept je vyřízený → lead zmizí z Rozpracovaných.
+      // Odeslaný e-mail zůstává v historii (aktivity se nemění).
+      autosave.reset();
+      setDraftSubject('');
+      setDraftBody('');
+      draftTouchedRef.current = false;
+      await clearServerDraft(lead.id);
+      await load();
+      onMutated();
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : 'Odeslání e-mailu se nezdařilo';
+      toast.error(msg);
+    } finally {
+      setSending(false);
+    }
+  };
+
+  const confirmStatusChange = async () => {
+    if (!lead || !pendingStatus) return;
+    if (isReasonRequired(lead.status, pendingStatus) && !reason.trim()) {
+      toast.error('U této změny stavu je nutné uvést důvod.');
+      return;
+    }
+    setStatusBusy(true);
+    try {
+      const { data, error } = await (supabase as any).rpc('sales_lead_set_status', {
+        p_lead_id: lead.id,
+        p_new_status: pendingStatus,
+        p_reason: reason.trim() || null,
+      });
+      if (error) throw new Error(error.message);
+      const res = (data ?? {}) as { success?: boolean; error?: string };
+      if (!res.success) {
+        toast.error(rpcErrorMessage(res.error));
+        return;
+      }
+      toast.success('Stav změněn');
+      setPendingStatus(null);
+      setReason('');
+      await load();
+      onMutated();
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : 'Změna stavu se nezdařila';
+      toast.error(msg);
+    } finally {
+      setStatusBusy(false);
+    }
+  };
+
+  const ReadRow = ({ label, value, href }: { label: string; value: string | null | undefined; href?: string | null }) => {
+    const linkHref = href && value
+      ? (/^https?:\/\//i.test(href) ? href : `https://${href}`)
+      : null;
+    // Zobraz jen čistou doménu (bez protokolu, www, cesty a koncového lomítka);
+    // odkaz (href) míří na celou uloženou URL.
+    const displayText = linkHref
+      ? linkHref
+          .replace(/^https?:\/\//i, '')
+          .replace(/^www\./i, '')
+          .replace(/\/.*$/, '')
+      : value;
+    return (
+      <div className={`${['Název', 'Web', 'Kontakt', 'E-mail', 'Poznámka'].includes(label) ? 'col-span-2' : ''} rounded-xl border border-white/[0.07] bg-background/65 p-3 shadow-inner shadow-black/10 transition-colors duration-150 hover:border-white/[0.11]`}>
+        <span className="block text-[9px] font-bold uppercase tracking-[0.18em] text-muted-foreground">{label}</span>
+        <span className="mt-1.5 block min-w-0 break-words text-sm font-semibold leading-relaxed text-foreground">
+          {linkHref ? (
+            <a
+              href={linkHref}
+              target="_blank"
+              rel="noopener noreferrer nofollow"
+              className="inline-flex items-center gap-1 text-primary underline decoration-primary/30 underline-offset-4 transition-colors hover:decoration-primary"
+            >
+              {displayText}<ArrowUpRight className="h-3 w-3" aria-hidden />
+            </a>
+          ) : (
+            value || '—'
+          )}
+        </span>
+      </div>
+    );
+  };
+
+  return (
+    <Sheet
+      open={open}
+      onOpenChange={(nextOpen) => {
+        // Při zavření detailu okamžitě ulož poslední změny konceptu.
+        // Žádné potvrzovací okno — koncept je bezpečně uložený.
+        if (!nextOpen) void autosave.flush();
+        onOpenChange(nextOpen);
+      }}
+    >
+      <SheetContent data-testid="sales-lead-crm-workspace" className="inset-0 flex h-dvh w-screen max-w-none flex-col gap-0 overflow-hidden border-0 bg-background p-0 sm:max-w-none">
+        {loading || !lead ? (
+          <div className="flex flex-1 items-center justify-center text-muted-foreground">
+            <Loader2 className="h-5 w-5 animate-spin mr-2" /> Načítám…
+          </div>
+        ) : (
+          <>
+            <SheetHeader className="relative shrink-0 overflow-hidden border-b border-white/[0.09] bg-gradient-to-r from-background via-card to-primary/[0.055] px-5 py-4 text-left shadow-xl shadow-black/20 xl:px-7 xl:py-4">
+              <div className="pointer-events-none absolute -right-20 -top-32 h-56 w-56 rounded-full bg-primary/[0.08] blur-3xl" />
+              <div className="relative flex flex-col gap-4 pr-10 xl:flex-row xl:items-center">
+                <div className="flex min-w-0 flex-1 items-center gap-4">
+                <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl border border-primary/25 bg-gradient-to-br from-primary/20 to-primary/[0.04] text-lg font-bold tracking-wide text-primary shadow-lg shadow-primary/10 xl:h-14 xl:w-14">
+                  {lead.company_name.slice(0, 2).toUpperCase()}
+                </div>
+                <div className="min-w-0 flex-1">
+                  <div className="flex flex-wrap items-center gap-3">
+                    <SheetTitle className="truncate text-left text-2xl font-semibold tracking-[-0.035em] xl:text-[28px]">{lead.company_name}</SheetTitle>
+                    <Badge variant="outline" className={`rounded-full px-2.5 py-1 text-[11px] ${STATUS_BADGE_CLASS[lead.status] ?? ''}`}>
+                      <CircleDot className="mr-1 h-3 w-3" aria-hidden />
+                      {STATUS_LABELS[lead.status] ?? lead.status}
+                    </Badge>
+                  </div>
+                  <SheetDescription className="mt-2 flex flex-wrap items-center gap-x-4 gap-y-1.5 text-left text-[13px]">
+                    {lead.website && <a href={/^https?:\/\//i.test(lead.website) ? lead.website : `https://${lead.website}`} target="_blank" rel="noopener noreferrer nofollow" className="inline-flex items-center gap-1.5 font-medium text-foreground transition-colors hover:text-primary"><Globe2 className="h-4 w-4 text-primary" />{lead.website.replace(/^https?:\/\//i, '').replace(/^www\./i, '').replace(/\/.*$/, '')}<ArrowUpRight className="h-3 w-3" /></a>}
+                    {lead.city && <span className="inline-flex items-center gap-1.5"><MapPin className="h-4 w-4" />{lead.city}</span>}
+                    {lead.ico && <span className="inline-flex items-center gap-1.5"><Building2 className="h-4 w-4" />IČO {lead.ico}</span>}
+                    <span className="inline-flex items-center gap-1.5 text-xs"><Clock3 className="h-3.5 w-3.5" />Založeno {formatDateTime(lead.created_at)}</span>
+                  </SheetDescription>
+                </div>
+                </div>
+                {!pendingStatus && targets.length > 0 && (
+                  <div className="flex shrink-0 flex-wrap items-center gap-2 xl:max-w-[420px] xl:justify-end">
+                    {targets.map((t) => {
+                      // Schválení návrhu je JEDNA akce — uloží údaje i změní stav.
+                      // Žádné mezikroky „Schválit návrh" → „Změnit stav na Nový?".
+                      const isApprove = lead.status === 'navrzeny' && t === 'novy';
+                      return (
+                        <Button
+                          key={t}
+                          variant={isApprove ? 'default' : 'outline'}
+                          size="sm"
+                          data-testid={isApprove ? 'sl-approve-proposed' : undefined}
+                          disabled={isApprove && (approving || saving)}
+                          onClick={isApprove
+                            ? () => void approveProposed(false)
+                            : () => { setPendingStatus(t); setReason(''); }}
+                          className={isApprove ? 'h-9 gap-1.5 rounded-xl px-4 font-semibold shadow-md shadow-primary/20 transition-colors duration-150' : 'h-9 rounded-xl border-white/[0.09] bg-background/60 px-4 transition-colors duration-150 hover:bg-muted/70'}
+                        >
+                          {isApprove && approving && <Loader2 className="h-3.5 w-3.5 animate-spin" />}
+                          {isApprove ? 'Schválit a uložit lead' : STATUS_LABELS[t]}
+                        </Button>
+                      );
+                    })}
+                  </div>
+                )}
+              </div>
+            </SheetHeader>
+
+            <div className="flex min-h-0 flex-1 flex-col overflow-y-auto bg-[radial-gradient(circle_at_50%_0%,hsl(var(--primary)/0.045),transparent_32%),hsl(var(--background))] xl:grid xl:grid-cols-[minmax(300px,0.82fr)_minmax(540px,1.55fr)_minmax(330px,0.9fr)] xl:divide-x xl:divide-white/[0.07] xl:overflow-hidden">
+              <aside data-testid="sales-lead-record-column" className="flex flex-col gap-3.5 p-4 xl:min-h-0 xl:overflow-y-auto xl:p-5 xl:[scrollbar-color:hsl(var(--muted-foreground)/0.24)_transparent] xl:[scrollbar-width:thin] xl:[&::-webkit-scrollbar]:w-1 xl:[&::-webkit-scrollbar-track]:bg-transparent xl:[&::-webkit-scrollbar-thumb]:rounded-full xl:[&::-webkit-scrollbar-thumb]:bg-muted-foreground/20 xl:[&::-webkit-scrollbar-thumb:hover]:bg-muted-foreground/35">
+                <WorkspaceColumnHeader
+                  icon={<Building2 className="h-4 w-4" />}
+                  eyebrow="Record"
+                  title="Profil leadu"
+                  description="Identita firmy, kontakt a obchodní kvalifikace."
+                />
+
+            {/* Změna stavu */}
+            {(pendingStatus || lead.do_not_contact) && (
+            <WorkspaceCard className="space-y-3">
+              <div className="flex items-center justify-between gap-3">
+                <div>
+                  <div className="text-[10px] font-semibold uppercase tracking-[0.16em] text-muted-foreground">Pipeline</div>
+                  <div className="mt-1 text-sm font-semibold">Další stav leadu</div>
+                </div>
+                <Badge variant="secondary" className="rounded-full text-[10px]">{STATUS_LABELS[lead.status] ?? lead.status}</Badge>
+              </div>
+              {targets.length === 0 ? (
+                <p className="text-sm text-muted-foreground">Z tohoto stavu není povolen žádný přechod.</p>
+              ) : pendingStatus ? (
+                <div className="rounded-lg border border-border/60 p-3 space-y-2">
+                  <p className="text-sm">
+                    Změnit stav na <strong>{STATUS_LABELS[pendingStatus]}</strong>?
+                  </p>
+                  {(isReasonRequired(lead.status, pendingStatus) || pendingStatus === 'nekontaktovat') && (
+                    <div className="space-y-1">
+                      <Label htmlFor="sl-reason" className="text-xs">
+                        Důvod {isReasonRequired(lead.status, pendingStatus) && <span className="text-destructive">*</span>}
+                      </Label>
+                      <Textarea
+                        id="sl-reason"
+                        value={reason}
+                        onChange={(e) => setReason(e.target.value)}
+                        rows={2}
+                        className="resize-none"
+                        disabled={statusBusy}
+                        placeholder="Krátké odůvodnění…"
+                      />
+                    </div>
+                  )}
+                  <div className="flex gap-2 justify-end">
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => { setPendingStatus(null); setReason(''); }}
+                      disabled={statusBusy}
+                    >
+                      Zrušit
+                    </Button>
+                    <Button size="sm" onClick={confirmStatusChange} disabled={statusBusy} className="gap-1.5">
+                      {statusBusy && <Loader2 className="h-3.5 w-3.5 animate-spin" />}
+                      Potvrdit
+                    </Button>
+                  </div>
+                </div>
+              ) : (
+                <div className="rounded-2xl border border-white/[0.06] bg-background/45 p-3.5 text-xs leading-relaxed text-muted-foreground">
+                  Rozhodovací akce jsou vždy po ruce v hlavní hlavičce firmy.
+                </div>
+              )}
+              {lead.status === 'navrzeny' && (
+                <p className="text-[11px] text-muted-foreground">
+                  Navržený lead: rozhodněte ručně — <strong>Schválit a uložit lead</strong> (uloží
+                  úpravy a rovnou přepne na Nový), <strong>Nekontaktovat</strong> nebo
+                  <strong> Archivován</strong>. Do oslovování ani odesílání e-mailu se z návrhu
+                  nedostanete přímo — nejdřív musí projít schválením.
+                </p>
+              )}
+              {lead.do_not_contact && lead.do_not_contact_reason && (
+                <p className="text-xs text-destructive">Nekontaktovat: {lead.do_not_contact_reason}</p>
+              )}
+            </WorkspaceCard>
+            )}
+
+            {/* Reakce z tlačítka „Mám zájem“ v obchodním e-mailu. */}
+            {interestResponse && (
+              <WorkspaceCard className="order-1 border-emerald-500/30 bg-emerald-500/[0.06]">
+                <div
+                  className="text-[10px] font-semibold uppercase tracking-[0.16em] text-emerald-500"
+                  data-testid="sl-detail-interest-response"
+                >
+                  Reakce z obchodního e-mailu
+                </div>
+                <div className="mt-1 text-sm font-semibold">{RESPONSE_INTEREST_SUMMARY}</div>
+                <dl className="mt-3 grid gap-1.5 text-xs">
+                  <div className="flex gap-2">
+                    <dt className="w-28 shrink-0 text-muted-foreground">Datum a čas</dt>
+                    <dd>{formatDateTime(interestResponse.created_at)}</dd>
+                  </div>
+                  <div className="flex gap-2">
+                    <dt className="w-28 shrink-0 text-muted-foreground">Kontaktní osoba</dt>
+                    <dd>{lead.contact_person?.trim() || '—'}</dd>
+                  </div>
+                  <div className="flex gap-2">
+                    <dt className="w-28 shrink-0 text-muted-foreground">Telefon</dt>
+                    <dd>{lead.contact_phone?.trim() || '—'}</dd>
+                  </div>
+                  <div className="flex gap-2">
+                    <dt className="w-28 shrink-0 text-muted-foreground">E-mail</dt>
+                    <dd>
+                      {(typeof interestResponse.metadata?.recipient === 'string'
+                        ? interestResponse.metadata.recipient
+                        : lead.contact_email) || '—'}
+                    </dd>
+                  </div>
+                  <div className="flex gap-2">
+                    <dt className="w-28 shrink-0 text-muted-foreground">Firma</dt>
+                    <dd>{lead.company_name}</dd>
+                  </div>
+                  {typeof interestResponse.metadata?.batch_item_id === 'string' && (
+                    <div className="flex gap-2">
+                      <dt className="w-28 shrink-0 text-muted-foreground">Původní dávka</dt>
+                      <dd className="font-mono">{interestResponse.metadata.batch_item_id}</dd>
+                    </div>
+                  )}
+                </dl>
+                <p className="mt-3 text-[11px] text-emerald-500">
+                  Kontakt má vysokou prioritu — ozvěte se firmě přednostně.
+                </p>
+              </WorkspaceCard>
+            )}
+
+            {/* Reakce z tlačítka „Nemám zájem“ v obchodním e-mailu. */}
+            {declineResponse && (
+              <WorkspaceCard className="order-1 border-destructive/30 bg-destructive/[0.06]">
+                <div
+                  className="text-[10px] font-semibold uppercase tracking-[0.16em] text-destructive"
+                  data-testid="sl-detail-decline-response"
+                >
+                  Reakce z obchodního e-mailu
+                </div>
+                <div className="mt-1 text-sm font-semibold">{RESPONSE_DECLINED_SUMMARY}</div>
+                <dl className="mt-3 grid gap-1.5 text-xs">
+                  <div className="flex gap-2">
+                    <dt className="w-28 shrink-0 text-muted-foreground">Datum a čas</dt>
+                    <dd>{formatDateTime(declineResponse.created_at)}</dd>
+                  </div>
+                  <div className="flex gap-2">
+                    <dt className="w-28 shrink-0 text-muted-foreground">E-mail</dt>
+                    <dd>
+                      {(typeof declineResponse.metadata?.recipient === 'string'
+                        ? declineResponse.metadata.recipient
+                        : lead.contact_email) || '—'}
+                    </dd>
+                  </div>
+                  <div className="flex gap-2">
+                    <dt className="w-28 shrink-0 text-muted-foreground">Důvod blokace</dt>
+                    <dd>{lead.do_not_contact_reason?.trim() || '—'}</dd>
+                  </div>
+                  <div className="flex gap-2">
+                    <dt className="w-28 shrink-0 text-muted-foreground">Stav odhlášení</dt>
+                    <dd>{lead.do_not_contact ? 'Odhlášeno (Nekontaktovat)' : 'Neaktivní'}</dd>
+                  </div>
+                  {typeof declineResponse.metadata?.batch_item_id === 'string' && (
+                    <div className="flex gap-2">
+                      <dt className="w-28 shrink-0 text-muted-foreground">Původní dávka</dt>
+                      <dd className="font-mono">{declineResponse.metadata.batch_item_id}</dd>
+                    </div>
+                  )}
+                </dl>
+                <p className="mt-3 text-[11px] text-destructive">
+                  Další obchodní e-maily jsou pro tuto adresu blokované. Označení reakce jako
+                  přečtené na tom nic nemění.
+                </p>
+              </WorkspaceCard>
+            )}
+
+            {/* Zařazení / discovery (Fáze 4B) */}
+            <WorkspaceCard className="order-2">
+            <div className="flex items-center justify-between">
+              <div>
+                <div className="text-[10px] font-semibold uppercase tracking-[0.16em] text-muted-foreground">Kvalifikace</div>
+                <div className="mt-1 text-sm font-semibold">Zařazení leadu</div>
+              </div>
+              {!clsEditing ? (
+                <Button variant="ghost" size="sm" onClick={() => setClsEditing(true)} className="gap-1.5">
+                  <Pencil className="h-3.5 w-3.5" /> Upravit
+                </Button>
+              ) : (
+                <Button variant="ghost" size="sm" onClick={() => setClsEditing(false)} disabled={clsSaving} className="gap-1.5">
+                  <X className="h-3.5 w-3.5" /> Zrušit
+                </Button>
+              )}
+            </div>
+
+            {!clsEditing ? (
+              <div className="mt-3.5 grid grid-cols-2 gap-2.5">
+                <ReadRow label="Skupina" value={leadGroupLabel(lead.lead_group)} />
+                <ReadRow label="Kvalita" value={LEAD_QUALITY_LABELS[lead.lead_quality ?? 0] ?? String(lead.lead_quality ?? 0)} />
+                <ReadRow
+                  label="Zdroj nalezení"
+                  value={DISCOVERY_SOURCE_OPTIONS.find((o) => o.value === lead.discovery_source)?.label ?? lead.discovery_source}
+                />
+              </div>
+            ) : (
+              <div className="mt-2 space-y-3">
+                <div className="space-y-1">
+                  <Label htmlFor="cls-group">Skupina</Label>
+                  <Select value={clsGroup} onValueChange={setClsGroup} disabled={clsSaving}>
+                    <SelectTrigger id="cls-group"><SelectValue placeholder="Vyberte skupinu" /></SelectTrigger>
+                    <SelectContent>
+                      {LEAD_GROUP_OPTIONS.map((o) => (
+                        <SelectItem key={o.value} value={o.value}>{o.label}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="space-y-1">
+                    <Label htmlFor="cls-quality">Kvalita</Label>
+                    <Select value={clsQuality} onValueChange={setClsQuality} disabled={clsSaving}>
+                      <SelectTrigger id="cls-quality"><SelectValue /></SelectTrigger>
+                      <SelectContent>
+                        {[0, 1, 2, 3].map((q) => (
+                          <SelectItem key={q} value={String(q)}>{q} — {LEAD_QUALITY_LABELS[q]}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="space-y-1">
+                    <Label htmlFor="cls-source">Zdroj nalezení</Label>
+                    <Select value={clsSource} onValueChange={setClsSource} disabled={clsSaving}>
+                      <SelectTrigger id="cls-source"><SelectValue placeholder="Vyberte zdroj" /></SelectTrigger>
+                      <SelectContent>
+                        {DISCOVERY_SOURCE_OPTIONS.map((o) => (
+                          <SelectItem key={o.value} value={o.value}>{o.label}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
+                <div className="flex justify-end gap-2 pt-1">
+                  <Button variant="outline" size="sm" onClick={() => setClsEditing(false)} disabled={clsSaving}>Zrušit</Button>
+                  <Button size="sm" onClick={saveClassification} disabled={clsSaving} className="gap-1.5">
+                    {clsSaving ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Save className="h-3.5 w-3.5" />}
+                    Uložit zařazení
+                  </Button>
+                </div>
+              </div>
+            )}
+
+            {/* discovery_meta — jen čitelný technický kontext, ne hlavní pole */}
+            {lead.discovery_meta && Object.keys(lead.discovery_meta).length > 0 && (
+              <details className="mt-3 rounded-lg border border-border/50 bg-muted/20 p-2">
+                <summary className="cursor-pointer text-xs text-muted-foreground">Technický kontext nalezení (discovery_meta)</summary>
+                <pre className="mt-2 max-h-40 overflow-auto whitespace-pre-wrap break-words text-[11px] text-muted-foreground">
+                  {JSON.stringify(lead.discovery_meta, null, 2)}
+                </pre>
+              </details>
+            )}
+            </WorkspaceCard>
+
+            {/* Údaje firmy */}
+            <WorkspaceCard className="order-1 bg-gradient-to-br from-card via-card to-primary/[0.035]">
+            <div className="flex items-center justify-between">
+              <div>
+                <div className="text-[10px] font-semibold uppercase tracking-[0.16em] text-primary">Firma</div>
+                <div className="mt-1 text-base font-semibold tracking-tight">Profil firmy</div>
+              </div>
+              {!editing ? (
+                <Button variant="ghost" size="sm" onClick={startEdit} className="gap-1.5">
+                  <Pencil className="h-3.5 w-3.5" /> Upravit
+                </Button>
+              ) : (
+                <Button variant="ghost" size="sm" onClick={() => setEditing(false)} disabled={saving} className="gap-1.5">
+                  <X className="h-3.5 w-3.5" /> Zrušit
+                </Button>
+              )}
+            </div>
+
+            {!editing || !form ? (
+              <div className="mt-3.5 grid grid-cols-2 gap-2.5">
+                <ReadRow label="Název" value={lead.company_name} />
+                <ReadRow label="IČO" value={lead.ico} />
+                <ReadRow label="DIČ" value={lead.dic} />
+                <ReadRow label="Web" value={lead.website} href={lead.website} />
+                <ReadRow label="Stav webu" value={lead.website_verification_status === 'overeny' ? 'Ověřený' : 'Neověřený web'} />
+                <ReadRow label="Zdroj webu" value={lead.website_verification_source} />
+                <ReadRow label="Důvěra webu" value={lead.website_confidence == null ? null : `${lead.website_confidence} %`} />
+                <ReadRow label="Ověřeno" value={lead.website_verified_at ? formatDateTime(lead.website_verified_at) : null} />
+                <ReadRow label="Obor" value={INDUSTRY_OPTIONS.find((o) => o.value === lead.industry)?.label ?? lead.industry} />
+                <ReadRow label="Město" value={lead.city} />
+                <ReadRow label="Adresa" value={lead.address} />
+                <ReadRow label="Velikost" value={lead.company_size} />
+                <ReadRow label="Kontakt" value={lead.contact_person} />
+                <ReadRow label="Funkce" value={lead.contact_role} />
+                <ReadRow label="E-mail" value={lead.contact_email} />
+                <ReadRow label="Telefon" value={lead.contact_phone} />
+                <ReadRow label="Zdroj e-mailu" value={lead.email_source} href={lead.email_source} />
+                <ReadRow label="E-mail ověřen" value={
+                  lead.email_verification_method === 'backend_verified_official_website'
+                    ? 'Systémově ověřeno'
+                    : lead.email_verified_by_admin ? 'Ručně ověřeno' : 'Ne'
+                } />
+                <ReadRow label="Datum ověření e-mailu" value={lead.email_verified_at ? formatDateTime(lead.email_verified_at) : null} />
+                <ReadRow label="Poznámka" value={lead.notes} />
+              </div>
+            ) : (
+              <div className="mt-2 space-y-3">
+                <div className="space-y-1">
+                  <Label htmlFor="e-company_name">Název firmy <span className="text-destructive">*</span></Label>
+                  <Input id="e-company_name" value={form.company_name} onChange={setField('company_name')}
+                    disabled={saving || aresLoading} data-testid="e-company-name" />
+                </div>
+                <div className="space-y-1">
+                  <Label htmlFor="e-ico">IČO</Label>
+                  <div className="flex gap-2">
+                    <Input id="e-ico" value={form.ico} onChange={setField('ico')} disabled={saving || aresLoading}
+                      inputMode="numeric" maxLength={8} aria-invalid={Boolean(icoError)}
+                      aria-describedby={icoError ? 'e-ico-error' : undefined} data-testid="e-ico" />
+                    <Button type="button" variant="outline" onClick={loadFromAres} disabled={saving || aresLoading}
+                      className="shrink-0 gap-2" data-testid="e-ares-lookup">
+                      {aresLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Search className="h-4 w-4" />}
+                      Načíst z ARES
+                    </Button>
+                  </div>
+                  {icoError && <p id="e-ico-error" role="alert" className="text-xs text-destructive">{icoError}</p>}
+                </div>
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="space-y-1">
+                    <Label htmlFor="e-dic">DIČ</Label>
+                    <Input id="e-dic" value={form.dic} onChange={setField('dic')} disabled={saving || aresLoading} />
+                  </div>
+                </div>
+                <div className="space-y-1">
+                  <Label htmlFor="e-address">Adresa sídla</Label>
+                  <Input id="e-address" value={form.address} onChange={setField('address')} disabled={saving || aresLoading} maxLength={500} data-testid="e-address" />
+                </div>
+                <div className="space-y-1">
+                  <Label htmlFor="e-website">Web</Label>
+                  <Input id="e-website" value={form.website} onChange={setField('website')} disabled={saving} placeholder="https://…" />
+                </div>
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="space-y-1">
+                    <Label htmlFor="e-industry">Obor</Label>
+                    <Select value={form.industry} onValueChange={(v) => setForm((p) => (p ? { ...p, industry: v } : p))} disabled={saving}>
+                      <SelectTrigger id="e-industry"><SelectValue placeholder="Vyberte" /></SelectTrigger>
+                      <SelectContent>
+                        {INDUSTRY_OPTIONS.map((o) => (
+                          <SelectItem key={o.value} value={o.value}>{o.label}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="space-y-1">
+                    <Label htmlFor="e-city">Město</Label>
+                    <Input id="e-city" value={form.city} onChange={setField('city')} disabled={saving || aresLoading} />
+                  </div>
+                </div>
+                <div className="space-y-1">
+                  <Label htmlFor="e-company_size">Velikost firmy</Label>
+                  <Input id="e-company_size" value={form.company_size} onChange={setField('company_size')} disabled={saving} placeholder="mikro / malá / střední / velká" />
+                </div>
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="space-y-1">
+                    <Label htmlFor="e-contact_person">Kontaktní osoba</Label>
+                    <Input id="e-contact_person" value={form.contact_person} onChange={setField('contact_person')} disabled={saving} />
+                  </div>
+                  <div className="space-y-1">
+                    <Label htmlFor="e-contact_role">Funkce</Label>
+                    <Input id="e-contact_role" value={form.contact_role} onChange={setField('contact_role')} disabled={saving} />
+                  </div>
+                </div>
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="space-y-1">
+                    <Label htmlFor="e-contact_email">E-mail</Label>
+                    <Input id="e-contact_email" type="email" value={form.contact_email} onChange={setField('contact_email')}
+                      onBlur={previewDuplicate} disabled={saving} />
+                  </div>
+                  <div className="space-y-1">
+                    <Label htmlFor="e-contact_phone">Telefon</Label>
+                    <Input id="e-contact_phone" type="tel" value={form.contact_phone} onChange={setField('contact_phone')} disabled={saving} />
+                  </div>
+                </div>
+                <div className="space-y-1">
+                  <Label htmlFor="e-email_source">Zdroj e-mailu</Label>
+                  <Input id="e-email_source" value={form.email_source} onChange={setField('email_source')} disabled={saving} />
+                </div>
+                <label className="flex items-center gap-2 text-sm">
+                  <Checkbox
+                    checked={form.email_verified_by_admin}
+                    onCheckedChange={(c) => setForm((p) => (p ? { ...p, email_verified_by_admin: c === true } : p))}
+                    disabled={saving}
+                  />
+                  E-mail je ověřený veřejný firemní kontakt
+                </label>
+                <div className="space-y-1">
+                  <Label htmlFor="e-notes">Interní poznámka</Label>
+                  <Textarea id="e-notes" value={form.notes} onChange={setField('notes')} rows={3} className="resize-none" disabled={saving} maxLength={2000} />
+                </div>
+                <DuplicateConflictAlert conflicts={duplicateConflicts} reason={overrideReason}
+                  onReasonChange={setOverrideReason} disabled={saving} />
+                <div className="flex justify-end gap-2 pt-1">
+                  <Button variant="outline" onClick={() => setEditing(false)} disabled={saving || approving || aresLoading}>Zrušit</Button>
+                  {lead.status === 'navrzeny' ? (
+                    // Navržený lead: jedna hlavní akce — uloží úpravy a rovnou schválí.
+                    <Button
+                      data-testid="sl-approve-proposed-edit"
+                      onClick={duplicateConflicts.length > 0
+                        ? () => void approveProposed(true)
+                        : () => void approveProposed(false)}
+                      variant={duplicateConflicts.length > 0 ? 'destructive' : 'default'}
+                      disabled={saving || approving || aresLoading}
+                      className="gap-1.5"
+                    >
+                      {approving && <Loader2 className="h-4 w-4 animate-spin" />}
+                      {duplicateConflicts.length > 0 ? 'Potvrdit výjimku a schválit' : 'Schválit a uložit lead'}
+                    </Button>
+                  ) : (
+                    <Button onClick={duplicateConflicts.length > 0 ? confirmEditOverride : () => saveEdit(false)}
+                      variant={duplicateConflicts.length > 0 ? 'destructive' : 'default'} disabled={saving || aresLoading} className="gap-1.5">
+                      {saving && <Loader2 className="h-4 w-4 animate-spin" />}
+                      {duplicateConflicts.length > 0 ? 'Potvrdit výjimku a pokračovat' : 'Uložit'}
+                    </Button>
+                  )}
+                </div>
+              </div>
+            )}
+            </WorkspaceCard>
+
+            {/* Kontakt firmy — dohledání veřejného e-mailu (Fáze 5B) */}
+            <WorkspaceCard className="order-3">
+            <div className="flex items-center justify-between gap-2 mb-2">
+              <div>
+                <div className="text-[10px] font-semibold uppercase tracking-[0.16em] text-muted-foreground">Contact</div>
+                <div className="mt-1 text-sm font-semibold">Kontaktní e-mail</div>
+              </div>
+              <Button variant="outline" size="sm" onClick={runEnrich} disabled={enrichBusy} className="gap-1.5">
+                {enrichBusy ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Sparkles className="h-3.5 w-3.5" />}
+                Dohledat e-mail
+              </Button>
+            </div>
+            <p className="text-xs text-muted-foreground mb-3">
+              AI pouze navrhne veřejný firemní e-mail a přesnou zdrojovou stránku. Kontakt se uloží jen tehdy,
+              když backend najde stejnou adresu na již ověřeném oficiálním webu firmy.
+            </p>
+
+            {lead.proposed_contact_status === 'neovereny' && lead.proposed_contact_email ? (
+              <div className="rounded-lg border border-amber-500/40 bg-amber-500/10 p-3 space-y-2">
+                <div className="flex items-center gap-2">
+                  <Badge variant="outline" className="bg-amber-500/15 text-amber-600 border-amber-500/30">
+                    {PROPOSED_CONTACT_STATUS_LABELS.neovereny}
+                  </Badge>
+                  {lead.proposed_contact_by && (
+                    <span className="text-[11px] text-muted-foreground">
+                      Navrhl: {lead.proposed_contact_by === 'ai' ? 'AI' : 'admin'} · {formatDateTime(lead.proposed_contact_at)}
+                    </span>
+                  )}
+                </div>
+                <div className="text-sm break-all"><strong>{lead.proposed_contact_email}</strong></div>
+                {lead.proposed_contact_source_url && (
+                  <div className="text-xs text-muted-foreground break-all">
+                    Zdroj:{' '}
+                    <a
+                      href={lead.proposed_contact_source_url}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="underline underline-offset-2 hover:text-foreground"
+                    >
+                      {lead.proposed_contact_source_url}
+                    </a>
+                  </div>
+                )}
+                <p className="text-[11px] text-muted-foreground">
+                  {lead.proposed_contact_by === 'ai'
+                    ? 'Starý AI návrh nelze schválit bez backendového důkazu. Zamítněte ho a spusťte ověření znovu.'
+                    : 'Ručně vložený návrh můžete po vlastní kontrole schválit.'}
+                </p>
+                <div className="flex justify-end gap-2">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => reviewContact('reject')}
+                    disabled={contactReviewBusy}
+                    className="gap-1.5"
+                  >
+                    {contactReviewBusy ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <X className="h-3.5 w-3.5" />}
+                    Zamítnout e-mail
+                  </Button>
+                  {lead.proposed_contact_by !== 'ai' && (
+                    <Button
+                      size="sm"
+                      onClick={() => reviewContact('approve')}
+                      disabled={contactReviewBusy}
+                      className="gap-1.5"
+                    >
+                      {contactReviewBusy ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Save className="h-3.5 w-3.5" />}
+                      Schválit e-mail
+                    </Button>
+                  )}
+                </div>
+              </div>
+            ) : (
+              <div className="text-sm text-muted-foreground">
+                {lead.contact_email ? (
+                  <>
+                    Kontaktní e-mail: <strong className="text-foreground break-all">{lead.contact_email}</strong>
+                    {lead.email_verification_method === 'backend_verified_official_website'
+                      ? ' · systémově ověřeno'
+                      : lead.email_verified_by_admin ? ' · ručně ověřeno' : ' · neověřeno'}
+                    {lead.email_verified_at ? ` · ${formatDateTime(lead.email_verified_at)}` : ''}
+                  </>
+                ) : lead.proposed_contact_status === 'zamitnuty' ? (
+                  'Poslední návrh e-mailu byl zamítnut. Můžete zkusit dohledat znovu.'
+                ) : (
+                  'Zatím žádný kontaktní e-mail. Použijte „Dohledat e-mail" nebo vyplňte ručně v Údajích firmy.'
+                )}
+              </div>
+            )}
+            </WorkspaceCard>
+              </aside>
+
+              <main data-testid="sales-lead-engagement-column" className="flex flex-col gap-3.5 p-4 xl:min-h-0 xl:overflow-y-auto xl:p-5 xl:[scrollbar-color:hsl(var(--muted-foreground)/0.24)_transparent] xl:[scrollbar-width:thin] xl:[&::-webkit-scrollbar]:w-1 xl:[&::-webkit-scrollbar-track]:bg-transparent xl:[&::-webkit-scrollbar-thumb]:rounded-full xl:[&::-webkit-scrollbar-thumb]:bg-muted-foreground/20 xl:[&::-webkit-scrollbar-thumb:hover]:bg-muted-foreground/35">
+                <WorkspaceColumnHeader
+                  icon={<MessageSquareText className="h-4 w-4" />}
+                  eyebrow="Engagement"
+                  title="Komunikace a AI"
+                  description="Příprava oslovení, konverzace a úplná historie vztahu."
+                />
+
+            {/* AI příprava (Fáze 3B) — jen interní koncepty, nic se neodesílá */}
+            <WorkspaceCard className="order-3 border-primary/20 bg-gradient-to-br from-primary/[0.08] via-card to-card">
+            <div className="flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wide text-primary mb-2">
+              <Sparkles className="h-3.5 w-3.5" aria-hidden /> AI pracovní panel
+            </div>
+            <p className="text-xs text-muted-foreground mb-3">
+              AI je jen asistent — výstupy ověřte. E-mail se odsud neodesílá; jde pouze o interní koncept.
+            </p>
+
+            <div className="grid gap-2 sm:grid-cols-2">
+              <Button
+                variant="outline"
+                onClick={() => { setAiWorkspaceOpen(true); void runResearch(); }}
+                disabled={researchBusy}
+                className="h-auto justify-start gap-3 rounded-xl border-white/[0.09] bg-background/65 px-3.5 py-3 text-left shadow-sm transition-colors duration-150 hover:border-primary/30 hover:bg-background/80 focus-visible:ring-2 focus-visible:ring-primary/40"
+              >
+                <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-primary/15 text-primary"><Globe2 className="h-4 w-4" /></span>
+                <span><span className="block text-sm font-semibold">Zjistit informace</span><span className="block text-[10px] font-normal text-muted-foreground">Ověřit kontext firmy</span></span>
+              </Button>
+              <Button
+                variant="outline"
+                onClick={openInitialEmailComposer}
+                disabled={draftBusy || !initialEmailStatusAllowed}
+                title={lead.status === 'navrzeny' ? 'Nejdřív schvalte návrh' : undefined}
+                className="h-auto justify-start gap-3 rounded-xl border-white/[0.09] bg-background/65 px-3.5 py-3 text-left shadow-sm transition-colors duration-150 hover:border-primary/30 hover:bg-background/80 focus-visible:ring-2 focus-visible:ring-primary/40"
+              >
+                <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-primary/15 text-primary"><Mail className="h-4 w-4" /></span>
+                <span><span className="block text-sm font-semibold">Napsat e-mail</span><span className="block text-[10px] font-normal text-muted-foreground">Otevřít prázdný editor</span></span>
+              </Button>
+            </div>
+
+            {aiWorkspaceOpen && (
+            <div className="mt-4 space-y-4 border-t border-white/[0.07] pt-4">
+              <div className="flex justify-end"><Button variant="ghost" size="sm" onClick={() => setAiWorkspaceOpen(false)}>Skrýt pracovní panel</Button></div>
+
+            {/* Rešerše */}
+            <div className="space-y-2">
+              <div className="flex items-center justify-between gap-2">
+                <span className="text-sm font-medium">Informace o firmě</span>
+                {researchBusy && <Loader2 className="h-4 w-4 animate-spin text-primary" />}
+              </div>
+              {lead.ai_research_summary ? (
+                <div className="rounded-lg border border-border/60 bg-muted/30 p-3">
+                  <p className="whitespace-pre-wrap text-sm">{lead.ai_research_summary}</p>
+                  <p className="mt-2 text-[11px] text-muted-foreground">
+                    Výstup AI — ověřte před použitím · {formatDateTime(lead.ai_research_at)}
+                  </p>
+                </div>
+              ) : (
+                <p className="text-sm text-muted-foreground">Zatím bez rešerše.</p>
+              )}
+            </div>
+
+            {/* Návrh e-mailu */}
+            <div className="mt-4 space-y-2">
+              <div className="flex items-center justify-between gap-2">
+                <span className="text-sm font-medium">Návrh oslovovacího e-mailu</span>
+                {draftBusy && <Loader2 className="h-4 w-4 animate-spin text-primary" />}
+              </div>
+              {lead.draft_prepared_by && (
+                <p className="text-[11px] text-muted-foreground">
+                  Připravil: {lead.draft_prepared_by === 'ai' ? 'AI' : 'admin'}
+                </p>
+              )}
+              <div className="flex flex-wrap gap-2">
+                <Button type="button" size="sm" variant="outline" onClick={() => setTemplatePickerType('initial')} disabled={draftBusy || draftSaving} className="gap-1.5">
+                  <FileText className="h-3.5 w-3.5" /> Použít šablonu
+                </Button>
+                <Button type="button" size="sm" variant="outline" onClick={() => void assistDraft('personalize')} disabled={draftBusy || draftSaving || !draftSubject.trim() || !draftBody.trim()} className="gap-1.5">
+                  <Sparkles className="h-3.5 w-3.5" /> Personalizovat pro firmu
+                </Button>
+                <Button type="button" size="sm" variant="outline" onClick={() => void assistDraft('improve')} disabled={draftBusy || draftSaving || !draftSubject.trim() || !draftBody.trim()} className="gap-1.5">
+                  {draftBusy ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Sparkles className="h-3.5 w-3.5" />} Vylepšit text
+                </Button>
+              </div>
+              <div className="space-y-1">
+                <Label htmlFor="sl-draft-subject" className="text-xs">Předmět</Label>
+                <Input
+                  id="sl-draft-subject"
+                  value={draftSubject}
+                  onChange={(e) => {
+                    draftTouchedRef.current = true;
+                    setDraftSubject(e.target.value);
+                  }}
+                  disabled={draftBusy || draftSaving}
+                  placeholder="Předmět e-mailu…"
+                />
+              </div>
+              <div className="space-y-1">
+                <Label htmlFor="sl-draft-body" className="text-xs">Tělo e-mailu (koncept)</Label>
+                <Textarea
+                  ref={draftBodyRef}
+                  id="sl-draft-body"
+                  value={draftBody}
+                  onChange={(e) => {
+                    draftTouchedRef.current = true;
+                    setDraftBody(e.target.value);
+                    resizeTextareaToContent(e.currentTarget);
+                  }}
+                  disabled={draftBusy || draftSaving}
+                  rows={8}
+                  className="max-h-[360px] resize-none"
+                  placeholder="Tělo e-mailu — libovolně upravte…"
+                />
+              </div>
+              <div className="flex flex-wrap gap-2">
+                <Button type="button" size="sm" variant="outline" onClick={() => setDraftExpandedOpen(true)} disabled={draftBusy || draftSaving} className="gap-1.5">
+                  <Maximize2 className="h-3.5 w-3.5" /> Zvětšit editor
+                </Button>
+              </div>
+              <SalesLeadEmailAttachmentsField attachments={draftAttachments} onChange={setDraftAttachments} disabled={draftBusy || draftSaving || sending} />
+              {draftValidationErrors.length > 0 && (draftSubject.length > 0 || draftBody.length > 0) && (
+                <div className="rounded-lg border border-destructive/30 bg-destructive/8 px-3 py-2 text-xs text-destructive">
+                  {draftValidationErrors.map((error) => <div key={error}>{error}</div>)}
+                </div>
+              )}
+              <div className="flex flex-wrap items-center justify-end gap-2">
+                {/* Nenápadný stav automatického ukládání */}
+                <span
+                  data-testid="sl-draft-autosave-state"
+                  data-state={autosave.state}
+                  className={`mr-auto text-[11px] ${autosave.state === 'offline' ? 'text-amber-500' : 'text-muted-foreground'}`}
+                >
+                  {DRAFT_AUTOSAVE_LABEL[autosave.state]}
+                </span>
+                {(draftSubject.trim() || draftBody.trim()) && (
+                  <Button type="button" size="sm" variant="ghost" data-testid="sl-draft-delete"
+                    onClick={() => setDeleteDraftOpen(true)}
+                    disabled={draftSaving || draftBusy || sending}
+                    className="gap-1.5 text-muted-foreground hover:text-destructive">
+                    <Trash2 className="h-3.5 w-3.5" /> Smazat koncept
+                  </Button>
+                )}
+                <Button type="button" size="sm" variant="outline" onClick={saveDraft} disabled={draftSaving || draftBusy || sending} className="gap-1.5">
+                  {draftSaving ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Save className="h-3.5 w-3.5" />}
+                  Uložit koncept
+                </Button>
+                <Button
+                  size="sm"
+                  onClick={() => setSendConfirmOpen(true)}
+                  disabled={!canSend || sending || draftSaving || draftBusy}
+                  className="gap-1.5"
+                  title={
+                    initialEmailAlreadySent
+                      ? 'První e-mail už byl odeslán'
+                      : !initialEmailStatusAllowed
+                      ? lead.status === 'navrzeny' ? 'Nejdřív schvalte návrh' : 'První e-mail už v tomto stavu nelze odeslat'
+                      : !hasContactEmail
+                      ? 'Lead nemá schválený kontaktní e-mail'
+                      : isDoNotContact
+                      ? 'Lead je označený Nekontaktovat'
+                      : 'Odeslat aktuální obsah editoru na kontaktní e-mail'
+                  }
+                >
+                  {sending ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Send className="h-3.5 w-3.5" />}
+                  Odeslat e-mail
+                </Button>
+              </div>
+              <p className="text-[11px] text-muted-foreground">
+                E-mail odesíláte <strong>vy (člověk)</strong>, ne AI. Odešle se aktuální předmět a text z editoru výše.
+                Uložení konceptu je volitelné; schválený kontaktní e-mail je povinný.
+              </p>
+              {lastEmailSent && (
+                <p className="text-[11px] text-muted-foreground">
+                  Poslední e-mail odeslán: <strong className="text-foreground">{formatDateTime(lastEmailSent.created_at)}</strong>
+                  {typeof lastEmailSent.metadata?.to === 'string' ? (
+                    <> na <strong className="text-foreground">{lastEmailSent.metadata?.to as string}</strong></>
+                  ) : null}
+                </p>
+              )}
+            </div>
+            </div>
+            )}
+            </WorkspaceCard>
+
+            {/* Historie */}
+            <WorkspaceCard className="order-2 bg-gradient-to-b from-card to-background/80">
+            <div className="mb-4 flex items-center gap-3">
+              <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-primary/12 text-primary"><MessageSquareText className="h-4 w-4" aria-hidden /></div>
+              <div>
+                <div className="text-[10px] font-semibold uppercase tracking-[0.18em] text-primary">Konverzace</div>
+                <div className="mt-0.5 text-lg font-semibold tracking-tight">Komunikace a historie</div>
+              </div>
+            </div>
+            {activities.length === 0 ? (
+              <div className="flex items-center gap-3 rounded-xl border border-dashed border-white/[0.09] bg-background/45 px-4 py-3 text-sm text-muted-foreground">
+                <History className="h-4 w-4 shrink-0 opacity-60" />Zatím bez komunikace a historie.
+              </div>
+            ) : (
+              <ul className="space-y-2">
+                {activities.filter((a) => !(a.activity_status === 'naplanovano' && a.scheduled_for && new Date(a.scheduled_for) > new Date())).map((a) =>
+                  EMAIL_ACTIVITY_TYPES.has(a.activity_type) ? (
+                    // E-mailová zpráva — plné vlákno (odesílatel/příjemce, předmět, text).
+                    <EmailActivityItem
+                      key={a.id}
+                      activity={a}
+                      onReply={startReply}
+                      onReuse={startReuse}
+                      replyForm={
+                        replyToActivity?.id === a.id ? (
+                          <InlineReplyForm
+                            subject={replySubject}
+                            body={replyBody}
+                            onSubjectChange={setReplySubject}
+                            onBodyChange={setReplyBody}
+                            onSend={sendReply}
+                            onCancel={() => { setReplyToActivity(null); setReplyAttachments([]); }}
+                            sending={replySending}
+                            repliedToAt={replyToActivity.created_at}
+                            onChooseTemplate={() => setTemplatePickerType('reply')}
+                            onPersonalize={() => void assistReply('personalize')}
+                            onImprove={() => void assistReply('improve')}
+                            aiBusy={replyAiBusy}
+                            validationErrors={replyValidationErrors}
+                            attachments={replyAttachments}
+                            onAttachmentsChange={setReplyAttachments}
+                          />
+                        ) : undefined
+                      }
+                      reuseForm={
+                        reuseActivity?.id === a.id ? (
+                          <InlineReuseForm
+                            mode={reuseMode}
+                            recipient={reuseRecipient}
+                            subject={reuseSubject}
+                            body={reuseBody}
+                            sending={reuseSending}
+                            onRecipientChange={setReuseRecipient}
+                            onSubjectChange={setReuseSubject}
+                            onBodyChange={setReuseBody}
+                            onSend={() => void sendReusedEmail()}
+                            onCancel={() => setReuseActivity(null)}
+                          />
+                        ) : undefined
+                      }
+                    />
+                  ) : (
+                    // Systémová aktivita — samostatný bod na časové ose.
+                    <li key={a.id} className={a.activity_type === 'duplicate_override_confirmed'
+                      ? 'relative ml-4 rounded-xl border border-destructive/35 bg-destructive/8 p-3.5 pl-12 text-sm'
+                      : 'relative ml-4 rounded-xl border border-white/[0.07] bg-background/55 p-3.5 pl-12 text-sm transition-colors duration-150 hover:border-white/[0.11] before:absolute before:-bottom-3 before:left-[17px] before:top-10 before:w-px before:bg-border/40 last:before:hidden'}>
+                      <span className="absolute left-3 top-3 flex h-9 w-9 items-center justify-center rounded-2xl border border-white/[0.08] bg-muted/55 text-muted-foreground shadow-md" aria-hidden><ActivityGlyph type={a.activity_type} /></span>
+                      <div className="min-w-0 pt-0.5">
+                        <div className="font-semibold tracking-tight">{ACTIVITY_LABELS[a.activity_type] ?? a.activity_type}</div>
+                        {['call_logged','meeting_logged','note_added'].includes(a.activity_type) && (
+                          <div className="mt-1 space-y-0.5 text-xs">
+                            <div><strong>Datum a čas:</strong> {formatDateTime(a.scheduled_for ?? a.created_at)}</div>
+                            <div><strong>Účel/výsledek:</strong> {String(a.metadata?.result ?? '—')}</div>
+                            <div><strong>Poznámka:</strong> {a.body_snapshot ?? '—'}</div>
+                            <div><strong>Následující krok:</strong> {String(a.metadata?.next_step ?? '—')}</div>
+                            <div><strong>Stav:</strong> {a.activity_status === 'zruseno' ? 'Zrušeno' : a.activity_status === 'dokonceno' ? 'Dokončeno' : 'Naplánováno'}</div>
+                            <div><strong>Autor:</strong> {a.performed_by ? activityAuthors[a.performed_by] ?? a.performed_by.slice(0,8) : 'Systém'}</div>
+                          </div>
+                        )}
+                        {a.activity_type === 'duplicate_override_confirmed' && (
+                          <div className="mt-1 space-y-1 text-xs">
+                            <div>Důvod: {String(a.metadata?.reason ?? '—')}</div>
+                            {Array.isArray(a.metadata?.conflicts) && (a.metadata?.conflicts as DuplicateConflict[]).map((c) => (
+                              <div key={`${c.lead_id}-${c.match_type}`}>
+                                Původní lead: <strong>{c.company_name}</strong> · {c.contact_email ?? '—'} · první oslovení {formatDateTime(c.first_contacted_at)}
+                              </div>
+                            ))}
+                          </div>
+                        )}
+                        {!['call_logged','meeting_logged','note_added'].includes(a.activity_type) && <div className="mt-1 text-xs text-muted-foreground">{formatDateTime(a.created_at)}</div>}
+                      </div>
+                    </li>
+                  ),
+                )}
+              </ul>
+            )}
+            </WorkspaceCard>
+              </main>
+
+              <aside data-testid="sales-lead-next-column" className="space-y-3.5 p-4 xl:min-h-0 xl:overflow-y-auto xl:p-5 xl:[scrollbar-color:hsl(var(--muted-foreground)/0.24)_transparent] xl:[scrollbar-width:thin] xl:[&::-webkit-scrollbar]:w-1 xl:[&::-webkit-scrollbar-track]:bg-transparent xl:[&::-webkit-scrollbar-thumb]:rounded-full xl:[&::-webkit-scrollbar-thumb]:bg-muted-foreground/20 xl:[&::-webkit-scrollbar-thumb:hover]:bg-muted-foreground/35">
+                <WorkspaceColumnHeader
+                  icon={<CalendarClock className="h-4 w-4" />}
+                  eyebrow="Next"
+                  title="Další kroky"
+                  description="Naplánované aktivity, úkoly a follow-up na jednom místě."
+                />
+                <LeadCrmPanel
+                  leadId={lead.id}
+                  status={lead.status}
+                  emailApproved={lead.email_verified_by_admin}
+                  templateContext={{
+                    company_name: lead.company_name,
+                    contact_person: lead.contact_person,
+                    contact_role: lead.contact_role,
+                    city: lead.city,
+                    website: lead.website,
+                  }}
+                  onChanged={() => { void load(); onMutated(); }}
+                />
+              </aside>
+            </div>
+          </>
+        )}
+      </SheetContent>
+
+      <AlertDialog
+        open={pendingAresResult !== null}
+        onOpenChange={(dialogOpen) => {
+          if (!dialogOpen) {
+            setPendingAresResult(null);
+            setAresConflicts([]);
+          }
+        }}
+      >
+        <AlertDialogContent data-testid="e-ares-confirm">
+          <AlertDialogHeader>
+            <AlertDialogTitle>Přepsat ručně vyplněné údaje?</AlertDialogTitle>
+            <AlertDialogDescription>
+              ARES našel odlišné hodnoty. Bez vašeho potvrzení se formulář nezmění.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <div className="max-h-64 space-y-2 overflow-y-auto text-sm">
+            {aresConflicts.map((conflict) => (
+              <div key={conflict.field} className="rounded-lg border border-border bg-muted/30 p-3">
+                <div className="font-medium">{conflict.label}</div>
+                <div className="mt-1 text-xs text-muted-foreground">Vaše hodnota: {conflict.current}</div>
+                <div className="text-xs text-muted-foreground">ARES: {conflict.incoming || '—'}</div>
+              </div>
+            ))}
+          </div>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Zachovat ruční údaje</AlertDialogCancel>
+            <AlertDialogAction onClick={() => pendingAresResult && applyLoadedAresResult(pendingAresResult)}>
+              Přepsat údaji z ARES
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* Potvrzení odeslání — jasné, že odesílá člověk, ne AI */}
+      {lead && templatePickerType && templatePickerType !== 'follow_up' && (
+        <SalesLeadEmailTemplatePicker
+          open
+          onOpenChange={(pickerOpen) => { if (!pickerOpen) setTemplatePickerType(null); }}
+          type={templatePickerType}
+          context={{
+            company_name: lead.company_name,
+            contact_person: lead.contact_person,
+            contact_role: lead.contact_role,
+            city: lead.city,
+            website: lead.website,
+          }}
+          onSelect={applyTemplate}
+        />
+      )}
+
+      <Dialog open={draftExpandedOpen} onOpenChange={setDraftExpandedOpen}>
+        <DialogContent className="flex h-[92vh] max-w-[min(1100px,94vw)] flex-col gap-4 overflow-hidden bg-card">
+          <DialogHeader>
+            <DialogTitle>Zvětšený editor e-mailu</DialogTitle>
+            <DialogDescription>
+              Upravujete stejný předmět, text i přílohy jako v detailu leadu.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="grid min-h-0 flex-1 grid-rows-[auto_minmax(0,1fr)_auto] gap-3">
+            <div className="space-y-1">
+              <Label htmlFor="sl-draft-subject-expanded" className="text-xs">Předmět</Label>
+              <Input
+                id="sl-draft-subject-expanded"
+                value={draftSubject}
+                onChange={(e) => {
+                  draftTouchedRef.current = true;
+                  setDraftSubject(e.target.value);
+                }}
+                disabled={draftBusy || draftSaving}
+                maxLength={300}
+              />
+            </div>
+            <div className="min-h-0 space-y-1">
+              <Label htmlFor="sl-draft-body-expanded" className="text-xs">Text e-mailu</Label>
+              <Textarea
+                ref={expandedDraftBodyRef}
+                id="sl-draft-body-expanded"
+                value={draftBody}
+                onChange={(e) => {
+                  draftTouchedRef.current = true;
+                  setDraftBody(e.target.value);
+                  resizeTextareaToContent(e.currentTarget, 620);
+                }}
+                disabled={draftBusy || draftSaving}
+                maxLength={20000}
+                className="h-full min-h-[420px] resize-none leading-6"
+              />
+            </div>
+            <SalesLeadEmailAttachmentsField attachments={draftAttachments} onChange={setDraftAttachments} disabled={draftBusy || draftSaving || sending} />
+          </div>
+          <div className="flex justify-end">
+            <Button type="button" onClick={() => setDraftExpandedOpen(false)}>Zpět do detailu</Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      <AlertDialog open={sendConfirmOpen} onOpenChange={(o) => !sending && setSendConfirmOpen(o)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Odeslat e-mail firmě?</AlertDialogTitle>
+            <AlertDialogDescription asChild>
+              <div className="space-y-2 text-sm">
+                <p>
+                  Odešle se aktuální obsah editoru na{' '}
+                  <strong>{lead?.contact_email ?? '—'}</strong>
+                  {lead?.company_name ? <> (firma {lead.company_name})</> : null}.
+                </p>
+                <p className="text-muted-foreground">
+                  E-mail odesíláte <strong>vy jako člověk</strong> s oprávněním „Obchodní leady". AI e-mail nikdy
+                  neodesílá. Odeslání proběhne přesně podle aktuálního obsahu editoru, nic se nepřegeneruje.
+                </p>
+              </div>
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={sending}>Zrušit</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={(e) => { e.preventDefault(); sendEmail(); }}
+              disabled={sending}
+              className="gap-1.5"
+            >
+              {sending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
+              Odeslat e-mail
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* Smazání konceptu — čistí jen rozepsaný text, ne lead ani historii. */}
+      <AlertDialog open={deleteDraftOpen} onOpenChange={setDeleteDraftOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Smazat rozepsaný koncept?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Smaže se pouze rozepsaný předmět a text e-mailu. Lead ani historie
+              komunikace se nesmažou. Lead zmizí ze záložky „Rozpracované".
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={draftSaving}>Zrušit</AlertDialogCancel>
+            <AlertDialogAction
+              data-testid="sl-draft-delete-confirm"
+              onClick={(e) => { e.preventDefault(); void deleteDraft(); }}
+              disabled={draftSaving}
+              className="gap-1.5"
+            >
+              {draftSaving && <Loader2 className="h-4 w-4 animate-spin" />}
+              Smazat koncept
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+    </Sheet>
+  );
+}

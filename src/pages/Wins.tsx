@@ -37,6 +37,8 @@ interface Win {
   bonus_prize: {
     id: string;
     title: string | null;
+    description: string | null;
+    amount: number | null;
     image_url: string | null;
     guardian_required: boolean | null;
   } | null;
@@ -79,7 +81,6 @@ const Wins: React.FC = () => {
   const [filter, setFilter] = useState<FilterStatus>('all');
   const [typeFilter, setTypeFilter] = useState<FilterType>('all');
   const [sortOrder, setSortOrder] = useState<SortOrder>('newest');
-  const [userAge, setUserAge] = useState<number | null>(null);
 
   // ── Offers state ───────────────────────────────────────────────────────────
   const [offers, setOffers] = useState<UserOffer[]>([]);
@@ -168,41 +169,10 @@ const Wins: React.FC = () => {
 
       fetchWins();
       fetchOffers();
-      fetchUserAge();
     };
 
     initPage();
   }, [user]);
-
-  const fetchUserAge = async () => {
-    if (!user) return;
-    try {
-      const { data, error } = await supabase
-        .from('profiles')
-        .select('date_of_birth')
-        .eq('id', user.id)
-        .maybeSingle();
-
-      if (error) {
-        console.error('Error fetching user age:', error);
-        return;
-      }
-
-      const dob = data?.date_of_birth;
-      if (dob) {
-        const birthDate = new Date(dob);
-        const today = new Date();
-        let age = today.getFullYear() - birthDate.getFullYear();
-        const monthDiff = today.getMonth() - birthDate.getMonth();
-        if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birthDate.getDate())) {
-          age--;
-        }
-        setUserAge(age);
-      }
-    } catch (error) {
-      console.error('Error fetching user age:', error);
-    }
-  };
 
   // ── Realtime: win status updates ───────────────────────────────────────────
   useEffect(() => {
@@ -301,7 +271,7 @@ const Wins: React.FC = () => {
       if (prizeIds.length > 0) {
         const { data: prizesData } = await supabase
           .from('bonus_prizes')
-          .select('id, title, image_url, guardian_required')
+          .select('id, title, description, amount, image_url, guardian_required')
           .in('id', prizeIds);
 
         if (prizesData) {
@@ -379,9 +349,9 @@ const Wins: React.FC = () => {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-[hsl(220,20%,4%)] via-[hsl(220,25%,6%)] to-[hsl(220,20%,4%)] relative overflow-hidden pb-20">
+    <div className="wins-light-page min-h-screen bg-background relative overflow-hidden pb-20">
       {/* Premium floating particles */}
-      <div className="absolute inset-0 overflow-hidden pointer-events-none">
+      <div className="wins-dark-particles absolute inset-0 overflow-hidden pointer-events-none">
         {[...Array(25)].map((_, i) => (
           <div
             key={i}
@@ -400,7 +370,7 @@ const Wins: React.FC = () => {
 
       {/* Premium shimmer overlay */}
       <div
-        className="absolute inset-0 pointer-events-none opacity-[0.02]"
+        className="wins-dark-shimmer absolute inset-0 pointer-events-none opacity-[0.02]"
         style={{
           background: 'linear-gradient(45deg, transparent 30%, rgba(255,181,71,1) 50%, transparent 70%)',
           backgroundSize: '200% 200%',
@@ -412,14 +382,7 @@ const Wins: React.FC = () => {
 
       <div className="relative z-10 container mx-auto px-4 py-8">
         {/* Premium Header Card */}
-        <div
-          className="relative overflow-hidden rounded-2xl p-6 mb-6"
-          style={{
-            background: 'linear-gradient(135deg, hsl(220, 25%, 8%) 0%, hsl(220, 30%, 12%) 50%, hsl(220, 25%, 8%) 100%)',
-            border: '1px solid rgba(255,138,0,0.2)',
-            boxShadow: '0 8px 32px rgba(0,0,0,0.4), inset 0 1px 0 rgba(255,138,0,0.1)',
-          }}
-        >
+        <div className="customer-light-hero-panel relative overflow-hidden rounded-2xl p-6 mb-6">
           {/* Header shimmer */}
           <div
             className="absolute inset-0 opacity-10"
@@ -443,15 +406,7 @@ const Wins: React.FC = () => {
               </div>
 
               <div>
-                <h1
-                  className="text-3xl font-bold tracking-tight"
-                  style={{
-                    background: 'linear-gradient(135deg, #FFB547 0%, #FF8A00 50%, #FFB547 100%)',
-                    WebkitBackgroundClip: 'text',
-                    WebkitTextFillColor: 'transparent',
-                    backgroundClip: 'text',
-                  }}
-                >
+                <h1 className="customer-premium-orange-heading text-3xl font-bold tracking-tight">
                   Moje výhry
                 </h1>
                 <p className="text-gray-400 mt-1">Přehled všech vašich výher</p>
@@ -468,13 +423,7 @@ const Wins: React.FC = () => {
         </div>
 
         {/* ── Tab switcher: Výhry / Nabídky ─────────────────────────────────── */}
-        <div
-          className="flex gap-2 mb-6 p-1 rounded-xl"
-          style={{
-            background: 'hsl(220, 25%, 8%)',
-            border: '1px solid hsl(220, 20%, 16%)',
-          }}
-        >
+        <div className="customer-light-tabs flex gap-2 mb-6 p-1 rounded-xl">
           <button
             onClick={() => setActiveTab('vyhry')}
             className={`flex-1 flex items-center justify-center gap-2 px-5 py-3 rounded-lg text-sm font-semibold transition-all duration-300 ${
@@ -522,12 +471,7 @@ const Wins: React.FC = () => {
             {/* Filter and Sort Controls */}
             {wins.length > 0 && (
               <div
-                className="relative overflow-hidden rounded-2xl p-5 mb-6 space-y-4"
-                style={{
-                  background: 'linear-gradient(135deg, hsl(220, 25%, 8%) 0%, hsl(220, 30%, 10%) 100%)',
-                  border: '1px solid hsl(220, 20%, 18%)',
-                  boxShadow: '0 4px 16px hsl(0, 0%, 0%, 0.3)',
-                }}
+                className="wins-light-filter-panel relative overflow-hidden rounded-2xl p-5 mb-6 space-y-4"
               >
                 {/* Type Filter */}
                 <div className="flex flex-wrap items-center gap-3">
@@ -567,7 +511,7 @@ const Wins: React.FC = () => {
                 </div>
 
                 {/* Status Filter and Sort */}
-                <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 pt-2 border-t border-[hsl(220,20%,15%)]">
+                <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 pt-2 border-t border-slate-200">
                   <div className="flex flex-wrap items-center gap-3">
                     <OneMilFilterIcon size={16} className="w-4 h-4 text-gray-500" />
                     <button
@@ -644,7 +588,7 @@ const Wins: React.FC = () => {
               </div>
             ) : wins.length === 0 ? (
               <div
-                className="relative overflow-hidden rounded-2xl p-12 text-center"
+                className="wins-light-empty-panel relative overflow-hidden rounded-2xl p-12 text-center"
                 style={{
                   background: 'linear-gradient(135deg, hsl(220, 25%, 8%) 0%, hsl(220, 30%, 12%) 50%, hsl(220, 25%, 8%) 100%)',
                   border: '1px solid rgba(255,138,0,0.15)',
@@ -660,22 +604,14 @@ const Wins: React.FC = () => {
                 >
                   <OneMilWinIcon size={48} className="w-12 h-12 text-[#FF8A00]/30" />
                 </div>
-                <h3
-                  className="text-2xl font-bold mb-3"
-                  style={{
-                    background: 'linear-gradient(135deg, #FFB547 0%, #FF8A00 100%)',
-                    WebkitBackgroundClip: 'text',
-                    WebkitTextFillColor: 'transparent',
-                    backgroundClip: 'text',
-                  }}
-                >
+                <h3 className="customer-premium-orange-heading text-2xl font-bold mb-3">
                   Zatím nemáte žádné výhry
                 </h3>
                 <p className="text-gray-400 text-lg">Kupte si tikety v soutěžích a vyhrajte skvělé ceny!</p>
               </div>
             ) : filteredWins.length === 0 ? (
               <div
-                className="relative overflow-hidden rounded-2xl p-12 text-center"
+                className="wins-light-empty-panel relative overflow-hidden rounded-2xl p-12 text-center"
                 style={{
                   background: 'linear-gradient(135deg, hsl(220, 25%, 8%) 0%, hsl(220, 30%, 12%) 100%)',
                   border: '1px solid hsl(220, 20%, 18%)',
@@ -708,7 +644,6 @@ const Wins: React.FC = () => {
               open={!!selectedWin}
               onClose={() => setSelectedWin(null)}
               onNavigateToContest={(contestId) => navigate(`/contest/${contestId}`)}
-              userAge={userAge}
             />
           </>
         )}
@@ -740,7 +675,7 @@ const Wins: React.FC = () => {
               </div>
             ) : offers.length === 0 ? (
               <div
-                className="relative overflow-hidden rounded-2xl p-12 text-center"
+                className="wins-light-empty-panel relative overflow-hidden rounded-2xl p-12 text-center"
                 style={{
                   background: 'linear-gradient(135deg, hsl(220, 25%, 8%) 0%, hsl(220, 30%, 12%) 50%, hsl(220, 25%, 8%) 100%)',
                   border: '1px solid hsl(220, 20%, 18%)',

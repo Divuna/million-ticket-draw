@@ -2,21 +2,33 @@ import { useNavigate, useLocation } from "react-router-dom";
 import { useUnreadMessagesCount } from "@/hooks/useUnreadMessagesCount";
 import { useUnseenWinsCount } from "@/hooks/useUnseenWinsCount";
 import { useUserRole } from "@/hooks/useUserRole";
+import { isNativeApp } from "@/lib/nativeApp";
 import {
   OneMilHomeIcon,
   OneMilTicketIcon,
   OneMilTrophyIcon,
   OneMilMedalIcon,
-  OneMilMessageIcon,
+  OneMilMioCoinIcon,
   OneMilProfileIcon,
 } from "@/components/icons/OneMilIcons";
 
+/**
+ * Zákaznické spodní menu.
+ *
+ * Pravidla (neměnit):
+ * - Položka `Dobít` (`/top-up`) je jen pro web a PWA. V nativní Android/iOS
+ *   aplikaci se nezobrazuje (Apple/Google pravidla) — detekce výhradně přes
+ *   `isNativeApp()` ze `src/lib/nativeApp.ts`. Samotná stránka `/top-up` má
+ *   vlastní guard, tohle je jen skrytí vstupu.
+ * - Vstup do Zpráv je v `Můj profil`; badge nepřečtených zpráv se proto
+ *   zobrazuje na položce `/profile`. Badge Výher zůstává na `/wins`.
+ */
 const CUSTOMER_NAV_ITEMS = [
   { path: "/", label: "Domů", icon: OneMilHomeIcon },
   { path: "/vouchers", label: "Vouchery", icon: OneMilTicketIcon },
   { path: "/games", label: "Soutěže", icon: OneMilTrophyIcon },
   { path: "/wins", label: "Výhry", icon: OneMilMedalIcon },
-  { path: "/messages", label: "Zprávy", icon: OneMilMessageIcon },
+  { path: "/top-up", label: "Dobít", icon: OneMilMioCoinIcon },
   { path: "/profile", label: "Můj profil", icon: OneMilProfileIcon },
 ] as const;
 
@@ -29,6 +41,11 @@ export const BottomNavigation = () => {
 
   const onAdminShell = isAdmin && location.pathname.startsWith("/admin");
 
+  // Dobíjení není v nativní aplikaci dostupné — položku vůbec nevykreslujeme.
+  const navItems = CUSTOMER_NAV_ITEMS.filter(
+    (item) => !(item.path === "/top-up" && isNativeApp()),
+  );
+
   // Admin naviguje výhradně přes AdminLayout (AdminPrimaryNav + AdminContextSubNav) — žádná druhá lišta.
   if (onAdminShell) {
     return null;
@@ -36,18 +53,19 @@ export const BottomNavigation = () => {
 
   return (
     <div
-      className="ios-pwa-bottom-nav fixed bottom-0 left-0 right-0 z-50 flex justify-around bg-[#0B0F19] border-t border-white/10 py-2 shadow-[0_-8px_24px_rgba(0,0,0,0.35)]"
+      className="public-customer-bottom-nav ios-pwa-bottom-nav fixed bottom-0 left-0 right-0 z-50 flex justify-around bg-[#0B0F19] border-t border-white/10 py-2 shadow-[0_-8px_24px_rgba(0,0,0,0.35)]"
       style={{ paddingBottom: "calc(0.5rem + env(safe-area-inset-bottom, 0px))" }}
       role="navigation"
       aria-label="Hlavní menu"
     >
-      {CUSTOMER_NAV_ITEMS.map((item) => {
+      {navItems.map((item) => {
         const Icon = item.icon;
         const isActive = location.pathname === item.path;
-        const showMessagesBadge = item.path === "/messages" && unreadCount > 0;
+        // Zprávy mají vstup v profilu → badge nepřečtených zpráv patří na /profile.
+        const showMessagesBadge = item.path === "/profile" && unreadCount > 0;
         const showWinsBadge = item.path === "/wins" && unseenWinsCount > 0;
         const badgeCount =
-          item.path === "/messages" ? unreadCount : item.path === "/wins" ? unseenWinsCount : 0;
+          item.path === "/profile" ? unreadCount : item.path === "/wins" ? unseenWinsCount : 0;
 
         return (
           <button
@@ -55,7 +73,7 @@ export const BottomNavigation = () => {
             type="button"
             onClick={() => navigate(item.path)}
             aria-current={isActive ? "page" : undefined}
-            className={`relative flex flex-col items-center justify-center gap-0.5 px-2.5 py-1.5 min-w-[3.75rem] rounded-2xl text-[11px] font-medium tracking-wide transition-all duration-200 ease-out
+            className={`public-customer-bottom-nav-item relative flex flex-col items-center justify-center gap-0.5 px-2.5 py-1.5 min-w-[3.75rem] rounded-2xl text-[11px] font-medium tracking-wide transition-all duration-200 ease-out
               ${
                 isActive
                   ? "text-white bg-white/[0.14] shadow-[0_0_0_1px_rgba(255,138,0,0.45),0_8px_24px_rgba(255,138,0,0.18)] ring-2 ring-[rgba(255,181,71,0.8)] ring-offset-2 ring-offset-[#0B0F19]"

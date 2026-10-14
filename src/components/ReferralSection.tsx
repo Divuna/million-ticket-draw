@@ -20,7 +20,9 @@
 import React, { useState, useEffect } from 'react';
 import { format } from 'date-fns';
 import { cs } from 'date-fns/locale';
+import { QRCodeSVG } from 'qrcode.react';
 import { supabase } from '@/integrations/supabase/client';
+import { sumNetReferralRewards } from '@/lib/referralRewards';
 import { useAuth } from '@/hooks/useAuth';
 import { toast } from '@/hooks/use-toast';
 import { buildPublicUrl } from '@/lib/publicAppUrl';
@@ -43,6 +45,7 @@ import {
 interface ReferralReward {
   id: string;
   reward_mc: number;
+  reversal_target_mc?: number | null;
   status: string;
   created_at: string;
 }
@@ -70,8 +73,11 @@ const ReferralSection: React.FC<{ isLoaded: boolean }> = ({ isLoaded }) => {
   const [submitting, setSubmitting] = useState(false);
   const [alreadyHasReferrer, setAlreadyHasReferrer] = useState(false);
 
+  // Short public alias for the long-form /register?ref=CODE link — same
+  // ?ref= attribution flow, only the URL shown/copied/shared/encoded to the
+  // customer is shorter. See src/pages/CustomerReferralShortLink.tsx.
   const referralLink = referralCode
-    ? buildPublicUrl(`/register?ref=${encodeURIComponent(referralCode)}`)
+    ? buildPublicUrl(`/r/${encodeURIComponent(referralCode)}`)
     : '';
 
   useEffect(() => {
@@ -126,7 +132,7 @@ const ReferralSection: React.FC<{ isLoaded: boolean }> = ({ isLoaded }) => {
     try {
       const { data, error } = await supabase
         .from('referral_rewards')
-        .select('id, reward_mc, status, created_at')
+        .select('id, reward_mc, reversal_target_mc, status, created_at')
         .eq('referrer_user_id', user!.id)
         .order('created_at', { ascending: false });
 
@@ -136,9 +142,8 @@ const ReferralSection: React.FC<{ isLoaded: boolean }> = ({ isLoaded }) => {
       }
 
       setRewards(data || []);
-      const totalEarned = (data || [])
-        .filter((r) => r.status !== 'reversed')
-        .reduce((sum, r) => sum + Number(r.reward_mc || 0), 0);
+      // Čistá odměna: částečně stornovaná jen v části, která zůstala.
+      const totalEarned = sumNetReferralRewards(data || []);
       setSummary((prev) => ({ ...prev, totalEarned }));
     } catch (err) {
       console.error('Error:', err);
@@ -229,6 +234,10 @@ const ReferralSection: React.FC<{ isLoaded: boolean }> = ({ isLoaded }) => {
       } else if (result === 'rejected:already_has_referrer') {
         toast({ title: 'Upozornění', description: 'Již máte přiřazeného doporučitele.', variant: 'destructive' });
         setAlreadyHasReferrer(true);
+      } else if (result === 'rejected:already_attributed_to_other_source') {
+        // Hráč už má jiný odměňovaný zdroj přivedení (affiliate) — platí first-touch.
+        toast({ title: 'Upozornění', description: 'Váš účet už je přiřazen k jinému doporučení. Další kód už nelze přidat.' });
+        setAlreadyHasReferrer(true);
       } else if (result === 'rejected:invalid_code') {
         toast({ title: 'Chyba', description: 'Neplatný doporučovací kód.', variant: 'destructive' });
       } else if (result === 'rejected:self_referral') {
@@ -254,6 +263,8 @@ const ReferralSection: React.FC<{ isLoaded: boolean }> = ({ isLoaded }) => {
         return { text: 'Připsáno', cls: 'text-green-500 bg-green-500/15 border-green-500/25' };
       case 'reversed':
         return { text: 'Stornováno', cls: 'text-destructive bg-destructive/15 border-destructive/25' };
+      case 'partially_reversed':
+        return { text: 'Částečně stornováno', cls: 'text-amber-500 bg-amber-500/15 border-amber-500/25' };
       case 'blocked':
         return { text: 'Zablokováno', cls: 'text-muted-foreground bg-muted/15 border-border/25' };
       default:
@@ -342,7 +353,7 @@ const ReferralSection: React.FC<{ isLoaded: boolean }> = ({ isLoaded }) => {
           <ul className="space-y-1 text-sm text-muted-foreground">
             <li className="flex items-start gap-2">
               <span className="text-primary mt-0.5">•</span>
-              <span>Za každé <strong className="text-foreground">placené dobití</strong> pozvaného uživatele získáte <strong className="text-primary">5 % v MioCoinech</strong>.</span>
+              <span>Za každé <strong className="text-foreground">placené dobití</strong> pozvaného uživatele získáte <strong className="text-primary">5 % v MIO</strong>.</span>
             </li>
             <li className="flex items-start gap-2">
               <span className="text-primary mt-0.5">•</span>
@@ -354,7 +365,7 @@ const ReferralSection: React.FC<{ isLoaded: boolean }> = ({ isLoaded }) => {
             </li>
             <li className="flex items-start gap-2">
               <span className="text-muted-foreground mt-0.5">•</span>
-              <span>MioCoiny nelze vybrat ani směnit za peníze.</span>
+              <span>MIO nelze vybrat ani směnit za peníze.</span>
             </li>
           </ul>
         </div>
@@ -380,7 +391,7 @@ const ReferralSection: React.FC<{ isLoaded: boolean }> = ({ isLoaded }) => {
             </div>
           </div>
 
-          {/* Link */}
+          {/* Link + QR */}
           <div className="p-5 rounded-2xl bg-gradient-to-br from-primary/8 via-transparent to-primary/5 border border-primary/15 hover:border-primary/30 transition-all duration-500 hover:shadow-lg hover:shadow-primary/5">
             <p className="text-xs font-semibold text-muted-foreground/60 uppercase tracking-wider mb-2">Doporučovací odkaz</p>
             <div className="flex items-center gap-3">
@@ -395,6 +406,16 @@ const ReferralSection: React.FC<{ isLoaded: boolean }> = ({ isLoaded }) => {
                 {linkCopied ? <Check className="h-4 w-4 text-green-500" /> : <LinkIcon className="h-4 w-4" />}
               </Button>
             </div>
+            {referralLink && (
+              <div className="flex items-center gap-4 pt-4 mt-4 border-t border-primary/10">
+                <div className="rounded-xl border border-primary/15 bg-white p-3 shadow-sm shrink-0">
+                  <QRCodeSVG value={referralLink} size={112} data-testid="referral-qr-code" />
+                </div>
+                <p className="text-xs text-muted-foreground/70 leading-relaxed">
+                  Naskenováním QR kódu se přátelé dostanou přímo na registraci s vaším doporučovacím kódem.
+                </p>
+              </div>
+            )}
           </div>
         </div>
 

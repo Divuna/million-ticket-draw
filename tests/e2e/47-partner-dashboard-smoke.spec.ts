@@ -86,6 +86,16 @@ async function cleanupData(): Promise<void> {
 }
 
 async function loginAsPartner(page: Page): Promise<void> {
+  // CookieConsentBanner je `fixed bottom-0 z-[100]` a bez souhlasu pohlcuje kliknutí
+  // ve spodní části stránky (tlačítko Odhlásit se v partnerském sidebaru). Souhlas
+  // se proto předsazuje stejně jako ve spec 56 — nutně přes addInitScript, aby
+  // v localStorage byl dřív, než se banner poprvé vyrenderuje.
+  await page.addInitScript(() => {
+    localStorage.setItem(
+      'cookie_consent',
+      JSON.stringify({ essential: true, analytics: false, marketing: false, timestamp: new Date().toISOString() }),
+    );
+  });
   await page.goto('/partner/login');
   await page.locator('input[type="email"]').fill(PARTNER_EMAIL);
   await page.locator('input[type="password"]').fill(PASSWORD);
@@ -148,9 +158,9 @@ test.describe.serial('47 — Approved partner dashboard smoke', () => {
     test.setTimeout(60_000);
     await loginAsPartner(page);
 
-    // The partner top navigation (PartnerHeader) exposes an "Odhlásit se" button
-    // (visible at the default desktop viewport). handleLogout signs out and
-    // navigates to /partner/login.
+    // Partnerská navigace (PartnerSidebar) nabízí tlačítko "Odhlásit se"
+    // (viditelné na výchozím desktop viewportu). handleLogout odhlásí a
+    // přesměruje na /partner/login.
     await page.getByRole('button', { name: /Odhlásit se/i }).click();
 
     await page.waitForURL(/\/partner\/login/, { timeout: 15_000 });

@@ -1,5 +1,8 @@
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.57.4";
+import { renderOneMilEmail } from "../_shared/oneMilEmailTemplate.ts";
+import { getSupabaseSecretKey } from "../_shared/supabaseSecretKey.ts";
+import { findAuthUserIdByEmail, type AuthAdminListClient } from "../_shared/authUserLookup.ts";
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 
@@ -55,14 +58,8 @@ async function findAuthUserByEmail(
   supabaseAdmin: ReturnType<typeof createClient>,
   email: string,
 ): Promise<string | null> {
-  // listUsers paginates up to 1000; sufficient for current scale.
-  const { data, error } = await supabaseAdmin.auth.admin.listUsers({
-    page: 1,
-    perPage: 1000,
-  });
-  if (error) throw new Error(`listUsers failed: ${error.message}`);
-  const found = (data?.users ?? []).find((u: { email?: string }) => u.email === email);
-  return found ? (found as { id: string }).id : null;
+  // Prochází všechny stránky (nad 1000 účtů by první stránka nestačila).
+  return await findAuthUserIdByEmail(supabaseAdmin as unknown as AuthAdminListClient, email);
 }
 
 /**
@@ -70,19 +67,20 @@ async function findAuthUserByEmail(
  * Contains the one-time setup link. NEVER contains a generated password.
  */
 function buildInviteEmail(params: { setupLink: string }): string {
-  return `
-    <h2>Pozvánka do administrace OneMil</h2>
-    <p>Dobrý den,</p>
-    <p>Byli jste pozváni jako administrátor (subadmin) do systému OneMil.</p>
-    <p>Pro aktivaci účtu a nastavení hesla klikněte na odkaz níže. Odkaz je platný jen jednou a po krátkou dobu.</p>
-    <p>
-      <a href="${escapeHtml(params.setupLink)}"
-         style="display:inline-block;padding:12px 18px;background:#ff8a00;color:#0a0b0f;text-decoration:none;border-radius:6px;font-weight:700">
-        Nastavit heslo a aktivovat účet
-      </a>
-    </p>
-    <p>Pokud jste tuto pozvánku nečekali, tento e-mail ignorujte.</p>
-  `;
+  return renderOneMilEmail({
+    preheader: "Pozvánka do administrace OneMil.",
+    eyebrow: "Administrace OneMil",
+    title: "Přijměte pozvánku do týmu",
+    bodyHtml: `
+      <p style="margin:0 0 16px;">Dobrý den,</p>
+      <p style="margin:0;">Byli jste pozváni jako administrátor do systému OneMil. Aktivaci účtu dokončíte bezpečným nastavením hesla.</p>
+    `,
+    action: {
+      label: "Nastavit heslo a aktivovat účet",
+      url: escapeHtml(params.setupLink),
+    },
+    footerNote: "Odkaz je jednorázový a platný jen po omezenou dobu. Pokud jste pozvánku nečekali, e-mail ignorujte.",
+  });
 }
 
 // ─── Handler ───────────────────────────────────────────────────────────────────
@@ -97,7 +95,7 @@ serve(async (req: Request) => {
   }
 
   const supabaseUrl = Deno.env.get("SUPABASE_URL") ?? "";
-  const serviceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "";
+  const serviceRoleKey = getSupabaseSecretKey();
 
   const supabaseAdmin = createClient(supabaseUrl, serviceRoleKey, {
     auth: { persistSession: false },

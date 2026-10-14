@@ -1,5 +1,6 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts"
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
+import { getSupabaseSecretKey } from "../_shared/supabaseSecretKey.ts";
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -26,7 +27,7 @@ serve(async (req) => {
   try {
     const supabaseAdmin = createClient(
       Deno.env.get('SUPABASE_URL') ?? '',
-      Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
+      getSupabaseSecretKey()
     )
 
     // Verify caller is admin
@@ -47,20 +48,29 @@ serve(async (req) => {
       .from('user_roles')
       .select('role')
       .eq('user_id', user.id)
-      .in('role', ['admin', 'superadmin'])
+      .eq('role', 'superadmin')
       .single()
 
     if (!roleData) {
       throw new Error('Přístup odepřen - pouze pro administrátory')
     }
 
-    // Fetch all auth users
-    const { data: authUsers, error: listError } = await supabaseAdmin.auth.admin.listUsers()
-    
-    if (listError) {
-      console.error('Error listing users:', listError)
-      throw listError
+    // Fetch all auth users. listUsers() bez parametrů vrací jen první stránku
+    // (50 účtů) — čekající registrace mimo ni by se adminovi vůbec nezobrazila.
+    const PER_PAGE = 1000
+    const MAX_PAGES = 50
+    // deno-lint-ignore no-explicit-any
+    const allUsers: any[] = []
+    for (let page = 1; page <= MAX_PAGES; page++) {
+      const { data: pageData, error: listError } = await supabaseAdmin.auth.admin.listUsers({ page, perPage: PER_PAGE })
+      if (listError) {
+        console.error('Error listing users:', listError)
+        throw listError
+      }
+      allUsers.push(...pageData.users)
+      if (pageData.users.length < PER_PAGE) break
     }
+    const authUsers = { users: allUsers }
 
     console.log(`Total auth users: ${authUsers.users.length}`)
 

@@ -32,6 +32,32 @@
     --om-font-heading: 'Poppins', system-ui, sans-serif;
     --om-font-body:    'Inter', system-ui, sans-serif;
 
+    /* Badge semantic tokens — defaults reproduce Badge's previous hardcoded
+       Tailwind colors (destructive/success/warning/pending/info) exactly, so
+       every existing consumer (customer, partner, affiliate, admin) renders
+       byte-identical to before. Only .admin-theme redefines these, for
+       legibility on a light background — see that scope below. */
+    --badge-destructive-fg: #fecaca;
+    --badge-destructive-bg: #ef444426;
+    --badge-destructive-bg-hover: #ef444433;
+    --badge-destructive-border: #ef444459;
+    --badge-success-fg: #a7f3d0;
+    --badge-success-bg: #10b9811f;
+    --badge-success-bg-hover: #10b9812e;
+    --badge-success-border: #10b98166;
+    --badge-warning-fg: #fef3c7;
+    --badge-warning-bg: #f59e0b1f;
+    --badge-warning-bg-hover: #f59e0b2e;
+    --badge-warning-border: #f59e0b66;
+    --badge-pending-fg: #e0f2fe;
+    --badge-pending-bg: #0ea5e91a;
+    --badge-pending-bg-hover: #0ea5e929;
+    --badge-pending-border: #0ea5e959;
+    --badge-info-fg: #FFB547;
+    --badge-info-bg: rgba(255,138,0,0.1);
+    --badge-info-bg-hover: rgba(255,138,0,0.16);
+    --badge-info-border: rgba(255,138,0,0.35);
+
     /* Premium Dark Theme — aligned with OneMil brand */
     --background: 228 22% 5%;
     --foreground: 212 25% 92%;
@@ -135,6 +161,281 @@
     --glow-red: 0 0 20px hsl(var(--neon-red) / 0.4), 0 0 40px hsl(var(--neon-red) / 0.2);
     --mystery-shadow: 0 0 32px hsl(var(--neon-blue) / 0.2), inset 0 0 24px hsl(var(--background) / 0.15);
   }
+
+  .public-customer-theme {
+    --background: 0 0% 100%;
+    --foreground: 222 30% 9%;
+    --card: 0 0% 100%;
+    --card-foreground: 222 30% 9%;
+    --popover: 0 0% 100%;
+    --popover-foreground: 222 30% 9%;
+    --primary: 33 100% 50%;
+    --primary-foreground: 0 0% 7%;
+    --secondary: 33 100% 50%;
+    --secondary-foreground: 0 0% 7%;
+    --muted: 220 18% 96%;
+    --muted-foreground: 220 9% 42%;
+    --accent: 33 100% 50%;
+    --accent-foreground: 0 0% 7%;
+    --border: 220 14% 90%;
+    --input: 220 14% 90%;
+    --ring: 33 100% 50%;
+    --heading-gold: 33 100% 50%;
+    --text-silver: 222 30% 12%;
+    --text-muted-gray: 220 9% 42%;
+    color: hsl(var(--foreground));
+    background:
+      radial-gradient(circle at 50% 0%, rgba(255, 138, 0, 0.08), transparent 34rem),
+      linear-gradient(180deg, #ffffff 0%, #f7f8fb 100%);
+  }
+
+  /* Partner portal — light premium SaaS theme, scoped to /partner/* only.
+     Every existing partner-portal component already reads these same shadcn
+     CSS variables (bg-background, bg-card, border-border, text-primary,
+     hsl(var(--neon-gold)) etc.) — redefining the variables here re-themes the
+     entire existing markup with zero JSX/behavior changes. Nothing here is
+     read by the admin or the rest of the customer-facing app. */
+  .partner-portal-theme {
+    --background: 228 33% 97%;
+    --foreground: 252 24% 16%;
+    --card: 0 0% 100%;
+    --card-foreground: 252 24% 16%;
+    --popover: 0 0% 100%;
+    --popover-foreground: 252 24% 16%;
+    --primary: 243 75% 59%;
+    --primary-foreground: 0 0% 100%;
+    --secondary: 258 90% 66%;
+    --secondary-foreground: 0 0% 100%;
+    --muted: 228 25% 95%;
+    --muted-foreground: 220 9% 46%;
+    --accent: 243 75% 59%;
+    --accent-foreground: 0 0% 100%;
+    --destructive: 0 72% 51%;
+    --destructive-foreground: 0 0% 100%;
+    --border: 228 20% 90%;
+    --input: 228 20% 90%;
+    --ring: 243 75% 59%;
+
+    /* The partner portal reads these "brand" tokens directly (hsl(var(--neon-gold))
+       etc.) as its one accent color throughout — remapped to the same indigo. */
+    --neon-gold: 243 75% 59%;
+    --neon-blue: 243 75% 59%;
+    --heading-gold: 243 60% 45%;
+    --text-silver: 252 24% 18%;
+    --text-muted-gray: 220 9% 46%;
+
+    --card-shadow: 0 1px 2px hsl(228 30% 20% / 0.04), 0 4px 16px hsl(228 30% 20% / 0.06);
+    --card-border: 1px solid hsl(228 20% 90%);
+
+    --sidebar-background: 0 0% 100%;
+    --sidebar-foreground: 252 24% 20%;
+    --sidebar-primary: 243 75% 59%;
+    --sidebar-primary-foreground: 0 0% 100%;
+    --sidebar-accent: 243 60% 96%;
+    --sidebar-accent-foreground: 243 75% 45%;
+    --sidebar-border: 228 20% 92%;
+    --sidebar-ring: 243 75% 59%;
+
+    color: hsl(var(--foreground));
+    background: hsl(var(--background));
+  }
+
+  /* Affiliate/Influencer portal (/affiliate/dashboard, /influencer/messages) —
+     a colorful, premium-SaaS variant of .partner-portal-theme's approach (same
+     "redefine CSS vars, zero JSX changes" technique), kept as its own class so
+     the two account-type themes never couple. Applied to document.body (not
+     just a wrapper div) so Radix-portaled content — Dialog/Popover/Select,
+     which render as direct children of <body> — also inherits these variables
+     instead of falling back to the global dark theme. */
+  .affiliate-portal-theme {
+    --background: 240 45% 97%;
+    --foreground: 252 30% 15%;
+    --card: 0 0% 100%;
+    --card-foreground: 252 30% 15%;
+    --popover: 0 0% 100%;
+    --popover-foreground: 252 30% 15%;
+    --primary: 243 75% 59%;
+    --primary-foreground: 0 0% 100%;
+    --secondary: 258 90% 66%;
+    --secondary-foreground: 0 0% 100%;
+    --muted: 240 35% 95%;
+    --muted-foreground: 222 12% 45%;
+    --accent: 243 75% 59%;
+    --accent-foreground: 0 0% 100%;
+    --destructive: 0 72% 51%;
+    --destructive-foreground: 0 0% 100%;
+    --border: 240 25% 90%;
+    --input: 240 25% 90%;
+    --ring: 243 75% 59%;
+
+    --neon-gold: 243 75% 59%;
+    --neon-blue: 243 75% 59%;
+    --heading-gold: 248 55% 40%;
+    --text-silver: 252 30% 16%;
+    --text-muted-gray: 222 12% 45%;
+
+    /* Extra accent hues for colored icon chips/section headers — the reference
+       layout leans on blue/green/orange/purple tints to visually separate
+       cards; existing components only ever read --neon-gold for a single
+       accent, so these are additive tokens new markup can opt into. */
+    --affiliate-blue: 217 91% 60%;
+    --affiliate-green: 152 55% 42%;
+    --affiliate-orange: 32 95% 54%;
+    --affiliate-purple: 262 80% 62%;
+    --affiliate-pink: 330 75% 62%;
+
+    --card-shadow: 0 2px 8px hsl(248 40% 25% / 0.06), 0 10px 28px hsl(248 40% 25% / 0.08);
+    --card-border: 1px solid hsl(240 25% 91%);
+
+    --sidebar-background: 0 0% 100%;
+    --sidebar-foreground: 252 24% 20%;
+    --sidebar-primary: 243 75% 59%;
+    --sidebar-primary-foreground: 0 0% 100%;
+    --sidebar-accent: 243 65% 95%;
+    --sidebar-accent-foreground: 243 75% 45%;
+    --sidebar-border: 240 25% 93%;
+    --sidebar-ring: 243 75% 59%;
+
+    color: hsl(var(--foreground));
+    background:
+      radial-gradient(circle at 8% 0%, hsl(258 85% 88% / 0.55), transparent 32rem),
+      radial-gradient(circle at 100% 12%, hsl(217 85% 88% / 0.4), transparent 30rem),
+      hsl(var(--background));
+    background-attachment: fixed;
+  }
+
+  /* Bigger radius + softer, colorful shadow for affiliate portal cards — the
+     global .luxury-card is reused as-is (same class, no JSX change) but this
+     scoped override gives it the rounder, deeper "premium SaaS" card look the
+     reference layout uses, without touching .luxury-card anywhere else. */
+  .affiliate-portal-theme .luxury-card {
+    border-radius: 1.25rem;
+    border-color: hsl(240 25% 91%);
+    box-shadow: var(--card-shadow);
+  }
+
+  .affiliate-portal-theme .luxury-card:hover {
+    border-color: hsl(243 75% 59% / 0.25);
+    box-shadow: 0 4px 14px hsl(248 40% 25% / 0.08), 0 16px 36px hsl(248 45% 40% / 0.12);
+  }
+
+  /* Admin (superadmin + admin) — light modern SaaS theme, scoped to /admin/*
+     only via AdminLayout. Same technique as .partner-portal-theme /
+     .affiliate-portal-theme: redefine the shadcn CSS variables every existing
+     admin Card/Button/Badge/Table/Dialog/Tabs/Input already reads, so the
+     whole admin surface re-themes with zero JSX/behavior changes. Nothing
+     here is read outside /admin/* — public, partner and affiliate surfaces
+     are untouched. OneMil orange stays the only accent (--primary/--accent/
+     --ring); everything else is neutral light/dark, per Pavel's brief. */
+  .admin-theme {
+    --background: 220 20% 97%;
+    --foreground: 224 24% 14%;
+    --card: 0 0% 100%;
+    --card-foreground: 224 24% 14%;
+    --popover: 0 0% 100%;
+    --popover-foreground: 224 24% 14%;
+    --primary: 33 100% 50%;
+    --primary-foreground: 0 0% 7%;
+    --secondary: 220 14% 93%;
+    --secondary-foreground: 224 20% 20%;
+    --muted: 220 16% 95%;
+    --muted-foreground: 220 9% 42%;
+    --accent: 33 100% 50%;
+    --accent-foreground: 0 0% 7%;
+    --destructive: 0 72% 45%;
+    --destructive-foreground: 0 0% 100%;
+    --border: 220 14% 90%;
+    --input: 220 14% 90%;
+    --ring: 33 100% 50%;
+
+    /* Unified box styles — soft, light-appropriate shadow/border. */
+    --card-shadow: 0 1px 2px hsl(220 20% 20% / 0.04), 0 8px 24px hsl(220 20% 20% / 0.07);
+    --card-border: 1px solid hsl(220 14% 90%);
+
+    /* Dark left navigation rail. */
+    --sidebar-background: 222 32% 8%;
+    --sidebar-foreground: 212 25% 92%;
+    --sidebar-primary: 33 100% 50%;
+    --sidebar-primary-foreground: 0 0% 7%;
+    --sidebar-accent: 222 28% 15%;
+    --sidebar-accent-foreground: 212 25% 96%;
+    --sidebar-border: 222 24% 16%;
+    --sidebar-ring: 33 100% 50%;
+
+    /* Status accents — darkened for AA legibility on white (positive =
+       green, warning = amber, danger = red/--destructive above). */
+    --neon-green: 152 62% 30%;
+    --neon-gold: 38 92% 40%;
+    --neon-red: 0 70% 45%;
+    --neon-blue: 217 85% 45%;
+    --neon-cyan: 199 85% 36%;
+    --neon-purple: 262 55% 45%;
+    --neon-pink: 330 55% 45%;
+    --heading-gold: 33 100% 42%;
+    --text-silver: 224 24% 16%;
+    --text-muted-gray: 220 9% 42%;
+
+    /* Badge semantic tokens — same 5 statuses, re-tuned for a white card
+       instead of a dark one. Badge component/variant list is unchanged;
+       only these CSS variables change, see src/components/ui/badge.tsx. */
+    --badge-destructive-fg: #991b1b;
+    --badge-destructive-bg: #fef2f2;
+    --badge-destructive-bg-hover: #fee2e2;
+    --badge-destructive-border: #fecaca;
+    --badge-success-fg: #065f46;
+    --badge-success-bg: #ecfdf5;
+    --badge-success-bg-hover: #d1fae5;
+    --badge-success-border: #a7f3d0;
+    --badge-warning-fg: #92400e;
+    --badge-warning-bg: #fffbeb;
+    --badge-warning-bg-hover: #fef3c7;
+    --badge-warning-border: #fde68a;
+    --badge-pending-fg: #075985;
+    --badge-pending-bg: #f0f9ff;
+    --badge-pending-bg-hover: #e0f2fe;
+    --badge-pending-border: #bae6fd;
+    --badge-info-fg: #b45309;
+    --badge-info-bg: rgba(255,138,0,0.08);
+    --badge-info-bg-hover: rgba(255,138,0,0.14);
+    --badge-info-border: rgba(255,138,0,0.35);
+
+    color: hsl(var(--foreground));
+    background: hsl(var(--background));
+  }
+}
+
+/* Deliberately OUTSIDE any @layer: Tailwind's own utility classes (including
+   border-white/10 etc.) live in @layer utilities, which always outranks
+   @layer base regardless of selector specificity — an override placed inside
+   @layer base would silently lose. Unlayered rules outrank every layer, so
+   this is the only place such a fallback can actually take effect.
+
+   Purpose: any leftover hardcoded "translucent white divider" utility
+   (border-white/N, bg-white/N, ring-white/N, divide-white/N) in admin markup
+   that has not been individually restyled — these were only ever meant as
+   subtle separators against the old dark surface. Redirecting them to the
+   theme's neutral border/muted tokens is a like-for-like equivalent on a
+   light surface, scoped to .admin-theme only, so nothing outside /admin/* is
+   affected and no component file needs touching for this fallback.
+
+   Scoped to "main" (the light content area rendered inside AdminLayout's
+   <Outlet/>) ONLY — never the dark left rail (<aside>) or its children. The
+   rail intentionally keeps its own dark-surface translucent-white utilities
+   (e.g. AdminPrimaryNav's hover:bg-white/5, the brand-tile bg-white/10);
+   this fallback matching them unconditionally (not just on :hover) was what
+   painted the nav's inactive rows near-white, making light-on-light text
+   unreadable — see AdminPrimaryNav.tsx / AdminLayout.tsx for the real fix. */
+.admin-theme main [class*="border-white/"] {
+  border-color: hsl(var(--border));
+}
+.admin-theme main [class*="bg-white/"] {
+  background-color: hsl(var(--muted));
+}
+.admin-theme main [class*="ring-white/"] {
+  --tw-ring-color: hsl(var(--border));
+}
+.admin-theme main [class*="divide-white/"] > :not([hidden]) ~ :not([hidden]) {
+  border-color: hsl(var(--border));
 }
 
 @layer base {
@@ -266,6 +567,488 @@
       overscroll-behavior: contain;
     }
   }
+}
+
+.public-customer-theme .public-customer-header {
+  background: rgba(255, 255, 255, 0.88);
+  border-bottom: 1px solid rgba(15, 23, 42, 0.08);
+  box-shadow: 0 8px 30px rgba(15, 23, 42, 0.06);
+}
+
+.public-customer-theme .public-customer-header-link {
+  color: #111827;
+}
+
+.public-customer-theme .public-customer-header-link:hover {
+  color: #ff8a00;
+  background: rgba(255, 138, 0, 0.08);
+}
+
+.public-customer-theme .public-customer-header-outline {
+  color: #111827;
+  background: #ffffff;
+  border-color: rgba(15, 23, 42, 0.14);
+}
+
+.public-customer-theme .public-customer-header-outline:hover {
+  color: #111827;
+  border-color: rgba(255, 138, 0, 0.4);
+  background: rgba(255, 138, 0, 0.08);
+}
+
+.public-customer-theme .public-customer-header-primary {
+  color: #111111;
+  background: linear-gradient(135deg, #ff8a00 0%, #ffb547 100%);
+  border: 0;
+  box-shadow: 0 8px 20px rgba(255, 138, 0, 0.18);
+}
+
+.public-customer-theme .public-customer-header-primary:hover {
+  filter: brightness(1.03);
+}
+
+.public-customer-theme .public-customer-bottom-nav {
+  background: rgba(255, 255, 255, 0.94);
+  border-top: 1px solid rgba(15, 23, 42, 0.08);
+  box-shadow: 0 -8px 28px rgba(15, 23, 42, 0.08);
+  backdrop-filter: blur(18px);
+}
+
+.public-customer-theme .public-customer-bottom-nav-item {
+  color: rgba(17, 24, 39, 0.62);
+}
+
+.public-customer-theme .public-customer-bottom-nav-item:hover {
+  color: #111827;
+  background: rgba(255, 138, 0, 0.08);
+}
+
+.public-customer-theme .public-customer-bottom-nav-item[aria-current="page"] {
+  color: #111827;
+  background: rgba(255, 138, 0, 0.12);
+  --tw-ring-color: rgba(255, 138, 0, 0.32);
+  --tw-ring-offset-color: #ffffff;
+  box-shadow:
+    0 0 0 1px rgba(255, 138, 0, 0.28),
+    0 10px 24px rgba(255, 138, 0, 0.12);
+}
+
+body:has(.games-light-page),
+body:has(.homepage-light-page),
+body:has(.vouchers-light-page),
+body:has(.winners-light-page),
+body:has(.wins-light-page) {
+  background: #ffffff;
+}
+
+body:has(.games-light-page)::before,
+body:has(.games-light-page)::after,
+body:has(.homepage-light-page)::before,
+body:has(.homepage-light-page)::after,
+body:has(.vouchers-light-page)::before,
+body:has(.vouchers-light-page)::after,
+body:has(.winners-light-page)::before,
+body:has(.winners-light-page)::after,
+body:has(.wins-light-page)::before,
+body:has(.wins-light-page)::after {
+  background: none;
+}
+
+.public-customer-theme.customer-layout:has(.games-light-page),
+.public-customer-theme.customer-layout:has(.homepage-light-page),
+.public-customer-theme.customer-layout:has(.vouchers-light-page),
+.public-customer-theme.customer-layout:has(.winners-light-page),
+.public-customer-theme.customer-layout:has(.wins-light-page) {
+  min-height: 100dvh;
+  background:
+    radial-gradient(circle at 50% 0%, rgba(255, 138, 0, 0.08), transparent 34rem),
+    linear-gradient(180deg, #ffffff 0%, #f7f8fb 100%);
+}
+
+.public-customer-theme .games-light-page,
+.public-customer-theme .homepage-light-page,
+.public-customer-theme .vouchers-light-page,
+.public-customer-theme .winners-light-page,
+.public-customer-theme .wins-light-page {
+  color: #111827;
+  background:
+    radial-gradient(circle at 50% 0%, rgba(255, 138, 0, 0.07), transparent 32rem),
+    linear-gradient(180deg, #ffffff 0%, #f7f8fb 100%);
+}
+
+body:has(.homepage-light-page) {
+  background: #fbfaf7;
+}
+
+body:has(.winners-light-page) {
+  background: #fbfaf7;
+}
+
+/* Layered premium light theme: white ↔ champagne ↔ white bands */
+.public-customer-theme.customer-layout:has(.homepage-light-page) {
+  background:
+    radial-gradient(circle at 14% 6%, rgba(255, 181, 71, 0.10), transparent 28rem),
+    radial-gradient(circle at 88% 14%, rgba(255, 138, 0, 0.06), transparent 24rem),
+    linear-gradient(
+      180deg,
+      #ffffff 0%,
+      #fbf7ef 22%,
+      #ffffff 44%,
+      #faf5ea 66%,
+      #ffffff 84%,
+      #f7f1e4 100%
+    );
+}
+
+.public-customer-theme .homepage-light-page {
+  background:
+    radial-gradient(circle at 18% 6%, rgba(255, 181, 71, 0.08), transparent 26rem),
+    radial-gradient(circle at 82% 18%, rgba(255, 138, 0, 0.05), transparent 22rem),
+    linear-gradient(
+      180deg,
+      #ffffff 0%,
+      #fbf7ef 22%,
+      #ffffff 44%,
+      #faf5ea 66%,
+      #ffffff 84%,
+      #f7f1e4 100%
+    );
+}
+
+.public-customer-theme.customer-layout:has(.winners-light-page) {
+  background:
+    radial-gradient(circle at 12% 8%, rgba(255, 181, 71, 0.10), transparent 28rem),
+    radial-gradient(circle at 86% 16%, rgba(255, 138, 0, 0.06), transparent 24rem),
+    radial-gradient(ellipse at 48% 64%, rgba(86, 93, 105, 0.07), transparent 34rem),
+    linear-gradient(
+      180deg,
+      #ffffff 0%,
+      #fbf7ef 20%,
+      #ffffff 42%,
+      #faf5ea 64%,
+      #ffffff 82%,
+      #f5efe4 100%
+    );
+}
+
+.public-customer-theme .winners-light-page {
+  background:
+    radial-gradient(circle at 16% 8%, rgba(255, 181, 71, 0.08), transparent 26rem),
+    radial-gradient(circle at 82% 18%, rgba(255, 138, 0, 0.05), transparent 22rem),
+    radial-gradient(ellipse at 50% 66%, rgba(86, 93, 105, 0.06), transparent 32rem),
+    linear-gradient(
+      180deg,
+      #ffffff 0%,
+      #fbf7ef 20%,
+      #ffffff 42%,
+      #faf5ea 64%,
+      #ffffff 82%,
+      #f5efe4 100%
+    );
+}
+
+.public-customer-theme .homepage-light-content {
+  color: #111827;
+}
+
+.public-customer-theme .winners-light-content {
+  color: #111827;
+}
+
+.public-customer-theme .homepage-light-content .text-heading-gold {
+  background: none;
+  color: #f97316;
+  -webkit-text-fill-color: currentColor;
+}
+
+.public-customer-theme .homepage-light-content .homepage-premium-orange-heading,
+.public-customer-theme .homepage-light-content .customer-premium-orange-heading,
+.public-customer-theme .winners-light-content .customer-premium-orange-heading,
+.public-customer-theme .customer-premium-orange-heading {
+  color: #e26305;
+  background: linear-gradient(115deg, #e45f00 0%, #f27f0c 42%, #b85b05 100%);
+  background-clip: text;
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  letter-spacing: 0;
+  font-weight: 800;
+  text-shadow:
+    0 1px 0 rgba(255, 255, 255, 0.38),
+    0 10px 22px rgba(226, 99, 5, 0.13);
+}
+
+.public-customer-theme .homepage-light-content .homepage-premium-orange-heading svg,
+.public-customer-theme .homepage-light-content .customer-premium-orange-heading svg,
+.public-customer-theme .winners-light-content .customer-premium-orange-heading svg,
+.public-customer-theme .customer-premium-orange-heading svg {
+  filter:
+    drop-shadow(0 1px 0 rgba(255, 255, 255, 0.48))
+    drop-shadow(0 8px 14px rgba(226, 99, 5, 0.15));
+}
+
+.public-customer-theme .winners-light-content .text-heading-gold {
+  background: none;
+  color: #f97316;
+  -webkit-text-fill-color: currentColor;
+}
+
+.public-customer-theme .homepage-light-content .text-text-silver,
+.public-customer-theme .homepage-light-content .text-content-silver,
+.public-customer-theme .winners-light-content .text-text-silver,
+.public-customer-theme .winners-light-content .text-content-silver {
+  color: #334155;
+}
+
+.public-customer-theme .homepage-light-content .text-muted-foreground,
+.public-customer-theme .winners-light-content .text-muted-foreground {
+  color: #64748b;
+}
+
+/* Cards: white with warm champagne shadow + thin gold-tinted border */
+.public-customer-theme .homepage-light-content .homepage-light-panel {
+  background: linear-gradient(180deg, #ffffff 0%, #fdfaf4 100%);
+  border: 1px solid rgba(200, 155, 80, 0.16);
+  box-shadow:
+    0 20px 44px -18px rgba(180, 130, 60, 0.22),
+    0 6px 14px -6px rgba(180, 130, 60, 0.12),
+    0 1px 0 rgba(255, 255, 255, 0.9) inset;
+  border-radius: 1rem;
+}
+
+.public-customer-theme .homepage-light-content .homepage-light-tile {
+  background: linear-gradient(180deg, #ffffff 0%, #fdf9f1 100%);
+  border: 1px solid rgba(200, 155, 80, 0.14);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.9),
+    0 10px 24px -12px rgba(180, 130, 60, 0.18);
+}
+
+.public-customer-theme .homepage-light-content .homepage-miocoin-panel {
+  background:
+    radial-gradient(circle at 18% 0%, rgba(255, 181, 71, 0.14), transparent 18rem),
+    radial-gradient(circle at 92% 16%, rgba(226, 99, 5, 0.08), transparent 16rem),
+    linear-gradient(180deg, #ffffff 0%, #fffaf2 48%, #fbf3e6 100%) !important;
+  border: 1px solid rgba(200, 155, 80, 0.22) !important;
+  box-shadow:
+    0 28px 64px -28px rgba(180, 130, 60, 0.30),
+    0 10px 24px -16px rgba(15, 23, 42, 0.16),
+    inset 0 1px 0 rgba(255, 255, 255, 0.96) !important;
+}
+
+.public-customer-theme .homepage-light-content .homepage-miocoin-header {
+  padding-bottom: 1rem;
+  border-bottom: 1px solid rgba(200, 155, 80, 0.16);
+}
+
+.public-customer-theme .homepage-light-content .homepage-miocoin-package {
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.96) 0%, rgba(255, 250, 242, 0.96) 58%, rgba(248, 239, 224, 0.96) 100%) !important;
+  border: 1px solid rgba(200, 155, 80, 0.20) !important;
+  box-shadow:
+    0 18px 34px -22px rgba(120, 73, 24, 0.38),
+    inset 0 1px 0 rgba(255, 255, 255, 0.94) !important;
+  transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease;
+}
+
+.public-customer-theme .homepage-light-content .homepage-miocoin-package:hover {
+  transform: translateY(-2px);
+  border-color: rgba(226, 99, 5, 0.34) !important;
+  box-shadow:
+    0 22px 40px -24px rgba(226, 99, 5, 0.30),
+    0 8px 18px -18px rgba(15, 23, 42, 0.18),
+    inset 0 1px 0 rgba(255, 255, 255, 0.96) !important;
+}
+
+.public-customer-theme .homepage-light-content .homepage-miocoin-package img {
+  filter: saturate(0.94) contrast(0.98);
+}
+
+.public-customer-theme .homepage-light-content .homepage-miocoin-button {
+  color: #fffaf2 !important;
+  background: linear-gradient(135deg, #d95700 0%, #ee7a08 48%, #b85b05 100%) !important;
+  border: 1px solid rgba(184, 91, 5, 0.22) !important;
+  box-shadow:
+    0 12px 22px -16px rgba(226, 99, 5, 0.62),
+    inset 0 1px 0 rgba(255, 255, 255, 0.22) !important;
+}
+
+.public-customer-theme .homepage-light-content .homepage-miocoin-button:hover {
+  filter: brightness(1.03);
+  box-shadow:
+    0 16px 28px -18px rgba(226, 99, 5, 0.72),
+    inset 0 1px 0 rgba(255, 255, 255, 0.28) !important;
+}
+
+.public-customer-theme .homepage-light-content .homepage-miocoin-bonus {
+  color: #7c3b06 !important;
+  background: rgba(255, 250, 242, 0.94) !important;
+  border: 1px solid rgba(226, 99, 5, 0.22) !important;
+  box-shadow: 0 10px 22px -16px rgba(120, 73, 24, 0.42);
+  backdrop-filter: blur(10px);
+}
+
+.public-customer-theme .homepage-light-content .homepage-miocoin-link-tile {
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.95) 0%, rgba(255, 248, 237, 0.95) 100%) !important;
+  border: 1px solid rgba(200, 155, 80, 0.22) !important;
+  box-shadow:
+    0 14px 30px -22px rgba(120, 73, 24, 0.30),
+    inset 0 1px 0 rgba(255, 255, 255, 0.94) !important;
+}
+
+.public-customer-theme .homepage-light-content .homepage-miocoin-link-tile:hover {
+  border-color: rgba(226, 99, 5, 0.34) !important;
+  box-shadow:
+    0 18px 34px -22px rgba(226, 99, 5, 0.24),
+    inset 0 1px 0 rgba(255, 255, 255, 0.96) !important;
+}
+
+.public-customer-theme .homepage-light-content .homepage-light-logo-card {
+  background: #ffffff;
+  border: 1px solid rgba(200, 155, 80, 0.16);
+  box-shadow:
+    0 12px 28px -14px rgba(180, 130, 60, 0.18),
+    0 2px 4px rgba(15, 23, 42, 0.03);
+  transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease;
+}
+
+.public-customer-theme .homepage-light-content .homepage-light-logo-card:hover {
+  border-color: rgba(255, 138, 0, 0.42);
+  box-shadow:
+    0 18px 36px -14px rgba(255, 138, 0, 0.22),
+    0 0 0 1px rgba(255, 181, 71, 0.18);
+  transform: translateY(-1px);
+}
+
+.public-customer-theme .homepage-light-content .homepage-light-panel h3,
+.public-customer-theme .homepage-light-content .homepage-light-panel h4 {
+  color: #111827;
+}
+
+.public-customer-theme .homepage-light-content .homepage-light-panel .bg-muted\/20,
+.public-customer-theme .homepage-light-content .homepage-light-panel .bg-muted\/40 {
+  background-color: #faf5ea;
+}
+
+/* Latest winners: champagne-tinted white with warm glow */
+.public-customer-theme .homepage-light-content .homepage-latest-winners-panel {
+  background: linear-gradient(180deg, #ffffff 0%, #fbf6ea 100%);
+  border: 1px solid rgba(200, 155, 80, 0.20);
+  box-shadow:
+    0 26px 60px -24px rgba(180, 130, 60, 0.26),
+    0 8px 18px -10px rgba(180, 130, 60, 0.14),
+    inset 0 1px 0 rgba(255, 255, 255, 0.9);
+  border-radius: 1.25rem;
+}
+
+.public-customer-theme .winners-light-content .winners-light-panel {
+  background: linear-gradient(180deg, #ffffff 0%, #fbf6ea 100%);
+  border: 1px solid rgba(200, 155, 80, 0.20);
+  box-shadow:
+    0 26px 60px -24px rgba(180, 130, 60, 0.26),
+    0 8px 18px -10px rgba(180, 130, 60, 0.14),
+    inset 0 1px 0 rgba(255, 255, 255, 0.9);
+  border-radius: 1.25rem;
+}
+
+.public-customer-theme .homepage-light-content .homepage-latest-winners-panel .animate-pulse {
+  background: #f7f1e4 !important;
+  border-color: rgba(200, 155, 80, 0.18) !important;
+}
+
+.public-customer-theme .winners-light-content .winners-light-skeleton,
+.public-customer-theme .winners-light-content .winners-light-skeleton .animate-pulse {
+  background: #f7f1e4 !important;
+  border-color: rgba(200, 155, 80, 0.18) !important;
+}
+
+/* Thin champagne accent line utility */
+.public-customer-theme .homepage-light-content hr,
+.public-customer-theme .homepage-light-content .homepage-light-divider {
+  border: none;
+  height: 1px;
+  background: linear-gradient(
+    90deg,
+    transparent 0%,
+    rgba(200, 155, 80, 0.28) 20%,
+    rgba(255, 138, 0, 0.32) 50%,
+    rgba(200, 155, 80, 0.28) 80%,
+    transparent 100%
+  );
+}
+
+/* Footer: light champagne wash, not pure white */
+.public-customer-theme footer {
+  background: linear-gradient(180deg, #ffffff 0%, #fbf6ea 100%) !important;
+  border-top: 1px solid rgba(200, 155, 80, 0.22);
+  color: #1f2937;
+  box-shadow: 0 -1px 0 rgba(200, 155, 80, 0.14), 0 -18px 40px -24px rgba(180, 130, 60, 0.14);
+}
+
+.public-customer-theme footer h4 {
+  color: #111827;
+}
+
+.public-customer-theme footer .text-muted-foreground,
+.public-customer-theme footer a.text-muted-foreground,
+.public-customer-theme footer div.text-muted-foreground {
+  color: #6b6355;
+}
+
+.public-customer-theme footer a:hover,
+.public-customer-theme footer button:hover {
+  color: #f97316;
+}
+
+.public-customer-theme footer .border-border\/40 {
+  border-color: rgba(200, 155, 80, 0.22);
+}
+
+.public-customer-theme .wins-light-page .customer-win-card {
+  background: linear-gradient(180deg, #ffffff 0%, #fffaf2 100%);
+  border-color: rgba(200, 155, 80, 0.18);
+  box-shadow:
+    0 22px 48px -28px rgba(120, 73, 24, 0.28),
+    0 8px 18px -18px rgba(15, 23, 42, 0.18),
+    inset 0 1px 0 rgba(255, 255, 255, 0.95);
+}
+
+.public-customer-theme .wins-light-page .customer-win-card:hover {
+  border-color: rgba(226, 99, 5, 0.26);
+  box-shadow:
+    0 26px 54px -30px rgba(226, 99, 5, 0.28),
+    0 10px 22px -20px rgba(15, 23, 42, 0.18),
+    inset 0 1px 0 rgba(255, 255, 255, 0.96);
+}
+
+.public-customer-theme .wins-light-page .customer-win-card-media {
+  background:
+    radial-gradient(circle at 18% 18%, rgba(255, 181, 71, 0.16), transparent 12rem),
+    radial-gradient(circle at 82% 22%, rgba(86, 93, 105, 0.08), transparent 14rem),
+    linear-gradient(135deg, #fffaf2 0%, #f3eee6 52%, #ffffff 100%);
+}
+
+.public-customer-theme .wins-light-page .customer-win-card-media-mio {
+  isolation: isolate;
+  background:
+    radial-gradient(circle at 48% 50%, rgba(255, 181, 71, 0.28), transparent 7rem),
+    radial-gradient(circle at 50% 58%, rgba(86, 93, 105, 0.10), transparent 12rem),
+    linear-gradient(135deg, #fffaf2 0%, #f0ebe3 52%, #ffffff 100%);
+}
+
+.public-customer-theme .wins-light-page .customer-win-card-media-mio .customer-win-card-image {
+  position: relative;
+  z-index: 1;
+  filter:
+    drop-shadow(0 18px 24px rgba(15, 23, 42, 0.18))
+    drop-shadow(0 0 18px rgba(255, 181, 71, 0.16));
+}
+
+.public-customer-theme .wins-light-page .customer-win-card-mio-glow {
+  z-index: 0;
+  background:
+    radial-gradient(circle at 50% 48%, rgba(255, 255, 255, 0.38), transparent 5.5rem),
+    linear-gradient(90deg, transparent 0%, rgba(255, 181, 71, 0.12) 50%, transparent 100%);
 }
 
 /* Luxury Glow Effects */

@@ -1,4 +1,5 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.57.4';
+import { getSupabaseSecretKey } from "../_shared/supabaseSecretKey.ts";
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -28,7 +29,7 @@ Deno.serve(async (req) => {
 
     const supabaseClient = createClient(
       Deno.env.get('SUPABASE_URL') ?? '',
-      Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
+      getSupabaseSecretKey()
     );
 
     console.log('🧪 Test notifikace pro uživatele:', user.id);
@@ -84,7 +85,7 @@ Deno.serve(async (req) => {
         include_player_ids: [playerId],
         headings: { en: 'Test notifikace' },
         contents: { en: 'Gratulujeme! Notifikace fungují správně. 🎉' },
-        web_url: Deno.env.get('SUPABASE_URL')?.replace('.supabase.co', '.lovable.app') || 'https://onemil.lovable.app'
+        web_url: 'https://onemil.cz'
       })
     });
 

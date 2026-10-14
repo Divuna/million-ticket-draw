@@ -7,6 +7,7 @@ interface UserVoucher {
   voucher_id: string;
   created_at: string;
   redeemed: boolean;
+  voucher_code_id: string | null;
   /**
    * Voucher detail fetched in a separate query.
    * Null when the vouchers lookup returns no row (e.g. RLS edge-case) — UI
@@ -18,9 +19,34 @@ interface UserVoucher {
     name: string;
     image_url: string;
     banner_url: string | null;
+    short_description: string | null;
+    usage_description: string | null;
+    terms_text: string | null;
+    how_to_use_text: string | null;
   } | null;
-  code: string;
+  code: string | null;
 }
+
+const VOUCHER_SELECT_FULL =
+  "id, name, image_url, banner_url, short_description, usage_description, terms_text, how_to_use_text";
+
+const VOUCHER_SELECT_BASE = "id, name, image_url, banner_url";
+
+const isOptionalVoucherTextColumnError = (error: unknown) => {
+  const message = typeof error === "object" && error && "message" in error
+    ? String((error as { message?: unknown }).message ?? "")
+    : "";
+
+  return /short_description|usage_description|terms_text|how_to_use_text/i.test(message);
+};
+
+const withVoucherTextFallback = (voucher: any) => ({
+  ...voucher,
+  short_description: voucher.short_description ?? null,
+  usage_description: voucher.usage_description ?? null,
+  terms_text: voucher.terms_text ?? null,
+  how_to_use_text: voucher.how_to_use_text ?? null,
+});
 
 export const useUserVouchers = () => {
   const { user } = useAuth();
@@ -54,7 +80,7 @@ export const useUserVouchers = () => {
       // ── Query 1: user_vouchers rows (no join) ────────────────────────────────
       const { data: uvData, error: uvError } = await supabase
         .from("user_vouchers")
-        .select("id, voucher_id, created_at, redeemed")
+        .select("id, voucher_id, created_at, redeemed, voucher_code_id")
         .eq("user_id", user.id)
         .order("created_at", { ascending: false });
 
@@ -69,18 +95,62 @@ export const useUserVouchers = () => {
       // for a freshly purchased, non-expired voucher.
       const voucherMap = new Map<
         string,
-        { id: string; name: string; image_url: string; banner_url: string | null }
+        {
+          id: string;
+          name: string;
+          image_url: string;
+          banner_url: string | null;
+          short_description: string | null;
+          usage_description: string | null;
+          terms_text: string | null;
+          how_to_use_text: string | null;
+        }
       >();
 
       if (rows.length > 0) {
         const voucherIds = [...new Set(rows.map((r) => r.voucher_id))];
-        const { data: vData } = await supabase
+        let { data: vData, error: vError } = await supabase
           .from("vouchers")
-          .select("id, name, image_url, banner_url")
+          .select(VOUCHER_SELECT_FULL)
           .in("id", voucherIds);
 
+        if (vError && isOptionalVoucherTextColumnError(vError)) {
+          const fallback = await supabase
+            .from("vouchers")
+            .select(VOUCHER_SELECT_BASE)
+            .in("id", voucherIds);
+
+          vData = fallback.data;
+          vError = fallback.error;
+        }
+
+        if (vError) throw vError;
+
         for (const v of vData || []) {
-          voucherMap.set(v.id, v);
+          voucherMap.set(v.id, withVoucherTextFallback(v));
+        }
+      }
+
+      const voucherCodeMap = new Map<string, string>();
+
+      const voucherCodeIds = [
+        ...new Set(
+          rows
+            .filter((r) => r.redeemed && r.voucher_code_id)
+            .map((r) => r.voucher_code_id as string),
+        ),
+      ];
+
+      if (voucherCodeIds.length > 0) {
+        const { data: codeData, error: codeError } = await supabase
+          .from("voucher_codes")
+          .select("id, code")
+          .in("id", voucherCodeIds);
+
+        if (codeError) throw codeError;
+
+        for (const codeRow of codeData || []) {
+          voucherCodeMap.set(codeRow.id, codeRow.code);
         }
       }
 
@@ -90,8 +160,9 @@ export const useUserVouchers = () => {
         voucher_id: item.voucher_id,
         created_at: item.created_at,
         redeemed: item.redeemed,
+        voucher_code_id: item.voucher_code_id,
         voucher: voucherMap.get(item.voucher_id) ?? null,
-        code: `OMV-${item.id.substring(0, 8).toUpperCase()}`,
+        code: item.voucher_code_id ? voucherCodeMap.get(item.voucher_code_id) ?? null : null,
       }));
 
       setVouchers(transformedData);
@@ -117,7 +188,16 @@ export const useUserVouchers = () => {
   const optimisticAddFavorite = useCallback(
     (
       voucherId: string,
-      voucherData: { id: string; name: string; image_url: string; banner_url: string | null } | null,
+      voucherData: {
+        id: string;
+        name: string;
+        image_url: string;
+        banner_url: string | null;
+        short_description: string | null;
+        usage_description: string | null;
+        terms_text: string | null;
+        how_to_use_text: string | null;
+      } | null,
     ) => {
       const tempId = `fav-${Date.now()}`;
 
@@ -126,8 +206,9 @@ export const useUserVouchers = () => {
         voucher_id: voucherId,
         created_at: new Date().toISOString(),
         redeemed: false,
+        voucher_code_id: null,
         voucher: voucherData,
-        code: `OMV-${tempId.substring(0, 8).toUpperCase()}`,
+        code: null,
       };
 
       setVouchers((prev) => [newEntry, ...prev]);
