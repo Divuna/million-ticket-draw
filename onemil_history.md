@@ -1,3 +1,14 @@
+# 15. 10. 2026 — Grafický redesign na větvi + zpětně kompatibilní DB/EF kroky v produkci
+
+Redesign zákaznické části podle schváleného plátna dokončen na větvi `claude/onemil-graphics-redesign-d386f3`
+(frontend nenasazen). Pavel schválil body 1–4: výsledek nákupu jako „momenty“ (černý/zlatý tiket, avatar,
+pečeť, MIO jako korunkový odznak), cookie lišta a nastavení, obrázek pro sdílení bez čísla tiketu (EF
+`og-ticket-share` nasazena), slevová nálepka voucheru (`vouchers.discount_label`), živý pás skutečných výher
+v detailu soutěže, nová kostra e-mailů a čtyři zákaznická upozornění za vypínači (v produkci vypnuto).
+Opraven push „MIO uplatněna“, který ukazoval číslo tiketu. Detail `onemil_state.md` § -20.
+
+---
+
 # 13. 10. 2026 — Sdílené bonusové MIO kódy nasazeny na produkci
 
 Pavel schválil produkční migraci a nasazení nové funkce. PR #423 mergnut `dac13c443dd4c67908e2ac167866b721dcd03225`, Vercel nasazení `dpl_B4QCFjQwcPosGvrwqsBnWsMsJXDs` READY. Supabase produkce `xkzhjldrojjlrkezorey` — migrace `promo_mio_campaigns_20261013` (verze `20261013065013`) úspěšná, RLS a zákaz anonymního uplatnění ověřeny. Nová stránka `/admin/promo-mio`: sdílený kód pro hráče, výše MIO, limit použití, platnost, volba noví / stávající hráči, tiskový QR, pozastavení, přehled počtu. Každý účet může kód použít jednou, kredit přes `wallet_credit_lot` v jedné transakci s evidencí uplatnění. Staging test + CI úspěšné. Zatím žádný kód vytvořen, žádná MIO nepřipsána; dosavadní platby, soutěže, affiliate a partner kódy nedotčeny. Detail `onemil_state.md` § -19.
