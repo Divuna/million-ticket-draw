@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from "react";
 import { Chrome, Download, Plus, Share2 } from "lucide-react";
-import { Button } from "@/components/ui/button";
+
 import {
   Dialog,
   DialogContent,
@@ -146,62 +146,40 @@ export const InstallAppButton: React.FC = () => {
       </div>
 
       <Dialog open={instructionsOpen} onOpenChange={setInstructionsOpen}>
-        <DialogContent className="max-w-sm rounded-2xl border-[rgba(194,144,47,0.3)] bg-[hsl(220_45%_6%)] text-foreground shadow-[0_16px_48px_rgba(0,0,0,0.55)]">
-          <DialogHeader className="space-y-2 pr-6">
-            <DialogTitle className="text-heading-gold flex items-center gap-2">
-              <Download className="w-5 h-5 text-[#C2902F]" />
-              Nainstalovat aplikaci
-            </DialogTitle>
-            <DialogDescription>
-              Přidej si OneMil na plochu telefonu.
+        <DialogContent className="om-install max-w-sm rounded-[22px] border-0">
+          <DialogHeader className="space-y-1.5 pr-6 text-left">
+            <DialogTitle className="om-install-title">Přidej si OneMil na plochu</DialogTitle>
+            <DialogDescription className="text-[13.5px] text-[#5E5B57]">
+              Otevřeš ho jedním klepnutím jako aplikaci.
             </DialogDescription>
           </DialogHeader>
 
-          <div className="space-y-3 text-sm">
-            <div className="flex items-start gap-3 rounded-lg border border-[rgba(194,144,47,0.18)] bg-black/20 p-3">
-              <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-[#C2902F] text-xs font-bold text-black">
-                1
+          <ol className="space-y-2.5 text-sm text-[#17171B]">
+            <li className="om-install-step">
+              <span className="om-install-num">1</span>
+              <span className="flex flex-wrap items-center gap-1.5">
+                V Safari klepni dole na <b>Sdílet</b>
+                <Share2 className="h-4 w-4 text-[#8A5A10]" aria-hidden="true" />
               </span>
-              <span>Otevři OneMil v Safari.</span>
-            </div>
-            <div className="flex items-start gap-3 rounded-lg border border-[rgba(194,144,47,0.18)] bg-black/20 p-3">
-              <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-[#C2902F] text-xs font-bold text-black">
-                2
+            </li>
+            <li className="om-install-step">
+              <span className="om-install-num">2</span>
+              <span className="flex flex-wrap items-center gap-1.5">
+                Sjeď níž a vyber <b>Přidat na plochu</b>
+                <Plus className="h-4 w-4 text-[#8A5A10]" aria-hidden="true" />
               </span>
-              <span className="flex items-center gap-2">
-                Klepni na Sdílet.
-                <Share2 className="h-4 w-4 text-[#E9B949]" />
+            </li>
+            <li className="om-install-step">
+              <span className="om-install-num">3</span>
+              <span>
+                Vpravo nahoře klepni na <b>Přidat</b>
               </span>
-            </div>
-            <div className="flex items-start gap-3 rounded-lg border border-[rgba(194,144,47,0.18)] bg-black/20 p-3">
-              <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-[#C2902F] text-xs font-bold text-black">
-                3
-              </span>
-              <span className="flex items-center gap-2">
-                Zvol „Přidat na plochu“.
-                <Plus className="h-4 w-4 text-[#E9B949]" />
-              </span>
-            </div>
-            <div className="flex items-start gap-3 rounded-lg border border-[rgba(194,144,47,0.18)] bg-black/20 p-3">
-              <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-[#C2902F] text-xs font-bold text-black">
-                4
-              </span>
-              <span>Potvrď „Přidat“.</span>
-            </div>
-          </div>
+            </li>
+          </ol>
 
-          <p className="rounded-lg border border-[rgba(233,185,73,0.2)] bg-[rgba(194,144,47,0.08)] p-3 text-xs leading-relaxed text-muted-foreground">
-            Na iPhonu instalaci potvrzuješ ručně přes Safari.
-          </p>
-
-          <Button
-            type="button"
-            variant="premium"
-            className="w-full"
-            onClick={() => setInstructionsOpen(false)}
-          >
+          <button type="button" className="om-ps-gold" onClick={() => setInstructionsOpen(false)}>
             Rozumím
-          </Button>
+          </button>
         </DialogContent>
       </Dialog>
     </>

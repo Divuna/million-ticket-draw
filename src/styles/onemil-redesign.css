@@ -930,6 +930,26 @@ body:has(.om-redesign) {
 .om-redesign .om-cms .prose .cms-section-heading { scroll-margin-top: 90px; }
 .om-redesign .om-cms .prose a { color: #8A5A10; }
 
+/* ───────── Instalace na iPhone (deska 28) ───────── */
+.om-install {
+  font-family: 'Manrope', system-ui, sans-serif; color: #17171B;
+  background: linear-gradient(180deg, #FFFFFF, #FDF8EF);
+  box-shadow: inset 0 1px 0 #fff, 0 0 0 1px rgba(194, 144, 47, 0.3), 0 24px 50px rgba(23, 23, 27, 0.3);
+}
+.om-install-title {
+  font-family: 'Exo 2', sans-serif; font-weight: 900; font-style: italic; text-transform: uppercase;
+  font-size: 22px; line-height: 1.05; color: #17171B;
+}
+.om-install-step {
+  display: flex; align-items: flex-start; gap: 12px; padding: 12px; border-radius: 14px;
+  background: #fff; box-shadow: 0 0 0 1px rgba(194, 144, 47, 0.25);
+}
+.om-install-num {
+  flex: none; width: 26px; height: 26px; border-radius: 50%; display: flex; align-items: center; justify-content: center;
+  font-family: 'Exo 2', sans-serif; font-weight: 900; font-style: italic; font-size: 13px; color: #1A1205;
+  background: linear-gradient(180deg, #FFE29A, #E9B949 55%, #C2902F);
+}
+
 /* ───────── Sdílený tiket (deska 26) ───────── */
 .om-share {
   font-family: 'Manrope', system-ui, sans-serif; color: #17171B;
