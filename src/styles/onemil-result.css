@@ -73,3 +73,6 @@ p.om-rd-prize{font-size:22px;font-weight:800;color:#F6D77A !important;line-heigh
 p.om-rd-note{font-size:12px;color:#A9AAB3 !important;text-align:center}
 .om-rd-note b{color:#ECEDEF}
 @media (prefers-reduced-motion:reduce){.om-rt,.om-rt *,.om-rt-seal,.om-rd-rays,.om-rd-avatar,.om-rd-avatar-big,.om-rd-up,.om-rt-shine::after{animation:none !important}}
+
+/* Slevová nálepka na kartě voucheru (deska Vouchery) */
+.om-vc-sticker{position:absolute;top:10px;right:12px;min-width:56px;height:56px;padding:0 6px;border-radius:999px;display:flex;align-items:center;justify-content:center;text-align:center;background:radial-gradient(circle at 35% 30%,#FF4A62,#B5122B 55%,#5A0714);box-shadow:0 0 0 2.5px #FFE29A,0 6px 14px rgba(0,0,0,.4);color:#fff;font-family:'Exo 2',sans-serif;font-weight:900;font-style:italic;font-size:16px;line-height:1;white-space:nowrap;transform:rotate(-8deg);z-index:4;pointer-events:none}

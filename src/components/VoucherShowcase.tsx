@@ -14,6 +14,7 @@ import {
 } from '@/components/ui/dialog';
 import { OneMilHeartIcon, OneMilVoucherIcon } from '@/components/icons/OneMilIcons';
 import { cn } from '@/lib/utils';
+import { useVoucherDiscountLabels } from '@/hooks/useVoucherDiscountLabels';
 
 export interface VoucherShowcaseVoucher {
   id: string;
@@ -30,6 +31,8 @@ export interface VoucherShowcaseVoucher {
   how_to_use_text?: string | null;
   gallery_images?: string[];
   available_code_count?: number;
+  /** Slevová nálepka na kartě (např. „−20 %“); jen zobrazení. */
+  discount_label?: string | null;
 }
 
 export interface VoucherDetailText {
@@ -104,6 +107,8 @@ export const VoucherShowcaseCard: React.FC<VoucherShowcaseCardProps> = ({
   const remaining = showInfoBadges ? (remainingLabel ?? getVoucherRemainingLabel(voucher)) : null;
   const shownValidityLabel = showInfoBadges ? validityLabel : null;
   const hasBanner = Boolean(voucher.banner_url || voucher.image_url);
+  const discountLabels = useVoucherDiscountLabels();
+  const discountLabel = (voucher.discount_label ?? discountLabels[voucher.id] ?? '').trim();
 
   return (
     <Card
@@ -163,7 +168,7 @@ export const VoucherShowcaseCard: React.FC<VoucherShowcaseCardProps> = ({
           ) : (
             <div />
           )}
-          <div className="flex flex-wrap justify-end gap-2">
+          <div className={cn('flex flex-wrap justify-end gap-2', discountLabel && 'pr-16')}>
             {remaining && (
               <Badge className="rounded-full border border-white/15 bg-[rgba(10,12,18,0.72)] px-3 py-1 text-[11px] font-medium text-white shadow-[0_4px_20px_rgba(0,0,0,0.25)] backdrop-blur-sm">
                 {remaining}
@@ -176,6 +181,12 @@ export const VoucherShowcaseCard: React.FC<VoucherShowcaseCardProps> = ({
             )}
           </div>
         </div>
+
+        {discountLabel && (
+          <span data-testid="voucher-discount-sticker" className="om-vc-sticker" aria-label={'Sleva ' + discountLabel}>
+            {discountLabel}
+          </span>
+        )}
 
         <div className="mt-auto flex items-end justify-end pt-6">
           <Button
