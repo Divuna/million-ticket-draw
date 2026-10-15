@@ -145,7 +145,7 @@ export const CustomerContestView: React.FC<CustomerContestViewProps> = ({
 
               <div className="hidden md:flex items-center gap-3 text-xs md:text-sm text-muted-foreground">
                 <div className="flex items-center gap-1.5">
-                  <Coins className="w-4 h-4 text-[#FFB547]" />
+                  <Coins className="w-4 h-4 text-[#E9B949]" />
                   <span>
                     Cena ticketu:{" "}
                     <span className="font-semibold">
@@ -169,7 +169,7 @@ export const CustomerContestView: React.FC<CustomerContestViewProps> = ({
             <div className="flex flex-col lg:flex-row gap-6 lg:gap-10 items-start lg:items-end justify-between">
               <div className="space-y-3 max-w-2xl">
                 <h1 className="text-3xl md:text-4xl lg:text-5xl font-bold tracking-tight">
-                  <span className="bg-clip-text text-transparent bg-gradient-to-r from-[#FFB547] via-[#FF8A00] to-[#FFB547] drop-shadow-[0_0_30px_rgba(255,138,0,0.45)]">
+                  <span className="bg-clip-text text-transparent bg-gradient-to-r from-[#E9B949] via-[#C2902F] to-[#E9B949] drop-shadow-[0_0_30px_rgba(194,144,47,0.45)]">
                     {contest.title}
                   </span>
                 </h1>
@@ -179,7 +179,7 @@ export const CustomerContestView: React.FC<CustomerContestViewProps> = ({
                 </p>
 
                 <div className="inline-flex items-center gap-2 rounded-full bg-background/70 border border-border/60 px-3 py-1.5 text-xs md:text-sm text-muted-foreground">
-                  <Crown className="w-4 h-4 text-[#FFB547]" />
+                  <Crown className="w-4 h-4 text-[#E9B949]" />
                   <span className="font-medium text-foreground/90">Hlavní výhra:</span>
                   <span>{contest.main_prize}</span>
                 </div>
@@ -218,7 +218,7 @@ export const CustomerContestView: React.FC<CustomerContestViewProps> = ({
             {/* Spodní meta řádek – responzivní verze ticket info */}
             <div className="flex md:hidden flex-wrap items-center gap-3 pt-1 border-t border-border/50 mt-2 pt-3">
               <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
-                <Coins className="w-3.5 h-3.5 text-[#FFB547]" />
+                <Coins className="w-3.5 h-3.5 text-[#E9B949]" />
                 <span>
                   Cena ticketu:{" "}
                   <span className="font-semibold">
@@ -245,7 +245,7 @@ export const CustomerContestView: React.FC<CustomerContestViewProps> = ({
         <Card className="rounded-3xl shadow-md border-border/70 bg-gradient-to-b from-background/80 to-background/40">
           <CardHeader className="pb-3">
             <div className="flex items-center gap-2">
-              <Crown className="w-5 h-5 text-[#FFB547]" />
+              <Crown className="w-5 h-5 text-[#E9B949]" />
               <CardTitle className="text-xl">Detail hlavní výhry</CardTitle>
             </div>
           </CardHeader>
@@ -290,7 +290,7 @@ export const CustomerContestView: React.FC<CustomerContestViewProps> = ({
             <div className="flex items-center justify-between">
               <span className="text-sm text-muted-foreground">Zůstatek MIO</span>
               <span className="text-lg font-semibold flex items-center gap-2">
-                <Coins className="w-4 h-4 text-[#FFB547]" />
+                <Coins className="w-4 h-4 text-[#E9B949]" />
                 {userWallet.balance_coins}
               </span>
             </div>
@@ -320,8 +320,8 @@ export const CustomerContestView: React.FC<CustomerContestViewProps> = ({
         <CardContent className="space-y-4">
           {/* Progress line */}
           <div className="relative w-full h-2 rounded-full bg-gradient-to-r from-border/50 via-border/40 to-border/20 overflow-hidden">
-            <div className="absolute inset-y-0 left-0 w-full bg-[radial-gradient(circle_at_center,_rgba(255,138,0,0.2),transparent_55%)] opacity-60" />
-            <div className="absolute inset-y-0 left-0 w-2/3 bg-gradient-to-r from-[rgba(255,138,0,0.7)] via-[rgba(255,181,71,0.6)] to-transparent shadow-[0_0_30px_rgba(255,138,0,0.5)]" />
+            <div className="absolute inset-y-0 left-0 w-full bg-[radial-gradient(circle_at_center,_rgba(194,144,47,0.2),transparent_55%)] opacity-60" />
+            <div className="absolute inset-y-0 left-0 w-2/3 bg-gradient-to-r from-[rgba(194,144,47,0.7)] via-[rgba(233,185,73,0.6)] to-transparent shadow-[0_0_30px_rgba(194,144,47,0.5)]" />
           </div>
 
           {/* Milestones */}
@@ -337,7 +337,7 @@ export const CustomerContestView: React.FC<CustomerContestViewProps> = ({
                 { value: 1000000, label: "1 000 000" },
               ].map((milestone, index) => (
                 <div key={milestone.value} className="flex flex-col items-center gap-1 min-w-[40px]">
-                  <div className="w-2.5 h-2.5 rounded-full bg-gradient-to-b from-[#FFB547] to-[#FF8A00] shadow-[0_0_16px_rgba(255,138,0,0.9)]" />
+                  <div className="w-2.5 h-2.5 rounded-full bg-gradient-to-b from-[#E9B949] to-[#C2902F] shadow-[0_0_16px_rgba(194,144,47,0.9)]" />
                   <span>{milestone.label}</span>
                 </div>
               ))}

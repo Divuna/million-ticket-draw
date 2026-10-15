@@ -357,7 +357,7 @@ const Wins: React.FC = () => {
             key={i}
             className="absolute w-1 h-1 rounded-full"
             style={{
-              background: `radial-gradient(circle, rgba(255,181,71,1) 0%, transparent 70%)`,
+              background: `radial-gradient(circle, rgba(233,185,73,1) 0%, transparent 70%)`,
               left: `${Math.random() * 100}%`,
               top: `${Math.random() * 100}%`,
               opacity: 0.15 + Math.random() * 0.15,
@@ -372,7 +372,7 @@ const Wins: React.FC = () => {
       <div
         className="wins-dark-shimmer absolute inset-0 pointer-events-none opacity-[0.02]"
         style={{
-          background: 'linear-gradient(45deg, transparent 30%, rgba(255,181,71,1) 50%, transparent 70%)',
+          background: 'linear-gradient(45deg, transparent 30%, rgba(233,185,73,1) 50%, transparent 70%)',
           backgroundSize: '200% 200%',
           animation: 'shimmer 8s ease-in-out infinite',
         }}
@@ -387,7 +387,7 @@ const Wins: React.FC = () => {
           <div
             className="absolute inset-0 opacity-10"
             style={{
-              background: 'linear-gradient(90deg, transparent 0%, rgba(255,181,71,1) 50%, transparent 100%)',
+              background: 'linear-gradient(90deg, transparent 0%, rgba(233,185,73,1) 50%, transparent 100%)',
               backgroundSize: '200% 100%',
               animation: 'shimmer 4s ease-in-out infinite',
             }}
@@ -398,8 +398,8 @@ const Wins: React.FC = () => {
               <div
                 className="w-16 h-16 rounded-xl flex items-center justify-center"
                 style={{
-                  background: 'linear-gradient(135deg, #FF8A00 0%, #c86000 100%)',
-                  boxShadow: '0 4px 20px rgba(255,138,0,0.3)',
+                  background: 'linear-gradient(135deg, #C2902F 0%, #8A5A10 100%)',
+                  boxShadow: '0 4px 20px rgba(194,144,47,0.3)',
                 }}
               >
                 <OneMilWinIcon size={36} className="w-8 h-8 md:w-9 md:h-9 text-black" />
@@ -409,14 +409,14 @@ const Wins: React.FC = () => {
                 <h1 className="customer-premium-orange-heading text-3xl font-bold tracking-tight">
                   Moje výhry
                 </h1>
-                <p className="text-gray-400 mt-1">Přehled všech vašich výher</p>
+                <p className="text-gray-400 mt-1">Přehled všech tvých výher</p>
               </div>
             </div>
 
             {wins.length > 0 && (
-              <div className="flex items-center gap-2 px-4 py-2 rounded-full bg-[rgba(255,138,0,0.1)] border border-[rgba(255,138,0,0.2)]">
-                <OneMilWinIcon size={20} className="w-5 h-5 text-[#FF8A00]" />
-                <span className="text-lg font-bold text-[#FFB547]">{wins.length}</span>
+              <div className="flex items-center gap-2 px-4 py-2 rounded-full bg-[rgba(194,144,47,0.1)] border border-[rgba(194,144,47,0.2)]">
+                <OneMilWinIcon size={20} className="w-5 h-5 text-[#C2902F]" />
+                <span className="text-lg font-bold text-[#E9B949]">{wins.length}</span>
               </div>
             )}
           </div>
@@ -428,7 +428,7 @@ const Wins: React.FC = () => {
             onClick={() => setActiveTab('vyhry')}
             className={`flex-1 flex items-center justify-center gap-2 px-5 py-3 rounded-lg text-sm font-semibold transition-all duration-300 ${
               activeTab === 'vyhry'
-                ? 'bg-gradient-to-r from-[#FF8A00] to-[#c86000] text-black shadow-[0_4px_16px_rgba(255,138,0,0.3)]'
+                ? 'bg-gradient-to-r from-[#C2902F] to-[#8A5A10] text-black shadow-[0_4px_16px_rgba(194,144,47,0.3)]'
                 : 'text-gray-400 hover:text-gray-200'
             }`}
           >
@@ -447,7 +447,7 @@ const Wins: React.FC = () => {
             onClick={() => setActiveTab('nabidky')}
             className={`flex-1 flex items-center justify-center gap-2 px-5 py-3 rounded-lg text-sm font-semibold transition-all duration-300 ${
               activeTab === 'nabidky'
-                ? 'bg-gradient-to-r from-[#FF8A00] to-[#c86000] text-black shadow-[0_4px_16px_rgba(255,138,0,0.3)]'
+                ? 'bg-gradient-to-r from-[#C2902F] to-[#8A5A10] text-black shadow-[0_4px_16px_rgba(194,144,47,0.3)]'
                 : 'text-gray-400 hover:text-gray-200'
             }`}
           >
@@ -480,8 +480,8 @@ const Wins: React.FC = () => {
                     onClick={() => setTypeFilter('all')}
                     className={`px-4 py-2 rounded-xl text-sm font-medium transition-all duration-300 ${
                       typeFilter === 'all'
-                        ? 'bg-gradient-to-r from-[#FF8A00] to-[#c86000] text-black shadow-[0_4px_16px_rgba(255,138,0,0.3)]'
-                        : 'bg-[hsl(220,25%,12%)] text-gray-300 border border-[hsl(220,20%,20%)] hover:border-[rgba(255,138,0,0.3)]'
+                        ? 'bg-gradient-to-r from-[#C2902F] to-[#8A5A10] text-black shadow-[0_4px_16px_rgba(194,144,47,0.3)]'
+                        : 'bg-[hsl(220,25%,12%)] text-gray-300 border border-[hsl(220,20%,20%)] hover:border-[rgba(194,144,47,0.3)]'
                     }`}
                   >
                     Všechny ({typeCounts.all})
@@ -518,8 +518,8 @@ const Wins: React.FC = () => {
                       onClick={() => setFilter('all')}
                       className={`px-4 py-2 rounded-xl text-sm font-medium transition-all duration-300 ${
                         filter === 'all'
-                          ? 'bg-gradient-to-r from-[#FF8A00] to-[#c86000] text-black shadow-[0_4px_16px_rgba(255,138,0,0.3)]'
-                          : 'bg-[hsl(220,25%,12%)] text-gray-300 border border-[hsl(220,20%,20%)] hover:border-[rgba(255,138,0,0.3)]'
+                          ? 'bg-gradient-to-r from-[#C2902F] to-[#8A5A10] text-black shadow-[0_4px_16px_rgba(194,144,47,0.3)]'
+                          : 'bg-[hsl(220,25%,12%)] text-gray-300 border border-[hsl(220,20%,20%)] hover:border-[rgba(194,144,47,0.3)]'
                       }`}
                     >
                       Všechny ({statusCounts.all})
@@ -528,8 +528,8 @@ const Wins: React.FC = () => {
                       onClick={() => setFilter('pending')}
                       className={`px-4 py-2 rounded-xl text-sm font-medium transition-all duration-300 ${
                         filter === 'pending'
-                          ? 'bg-gradient-to-r from-[#FF8A00] to-[#FFB547] text-black shadow-[0_4px_16px_rgba(255,138,0,0.3)]'
-                          : 'bg-[rgba(255,138,0,0.1)] text-[#FFB547] border border-[rgba(255,138,0,0.3)] hover:bg-[rgba(255,138,0,0.2)]'
+                          ? 'bg-gradient-to-r from-[#C2902F] to-[#E9B949] text-black shadow-[0_4px_16px_rgba(194,144,47,0.3)]'
+                          : 'bg-[rgba(194,144,47,0.1)] text-[#E9B949] border border-[rgba(194,144,47,0.3)] hover:bg-[rgba(194,144,47,0.2)]'
                       }`}
                     >
                       Čeká ({statusCounts.pending})
@@ -538,8 +538,8 @@ const Wins: React.FC = () => {
                       onClick={() => setFilter('shipped')}
                       className={`px-4 py-2 rounded-xl text-sm font-medium transition-all duration-300 ${
                         filter === 'shipped'
-                          ? 'bg-gradient-to-r from-[#FF8A00] to-[#FFB547] text-black shadow-[0_4px_16px_rgba(255,138,0,0.3)]'
-                          : 'bg-[rgba(255,138,0,0.1)] text-[#FFB547] border border-[rgba(255,138,0,0.3)] hover:bg-[rgba(255,138,0,0.2)]'
+                          ? 'bg-gradient-to-r from-[#C2902F] to-[#E9B949] text-black shadow-[0_4px_16px_rgba(194,144,47,0.3)]'
+                          : 'bg-[rgba(194,144,47,0.1)] text-[#E9B949] border border-[rgba(194,144,47,0.3)] hover:bg-[rgba(194,144,47,0.2)]'
                       }`}
                     >
                       Odesláno ({statusCounts.shipped})
@@ -558,12 +558,12 @@ const Wins: React.FC = () => {
 
                   <button
                     onClick={() => setSortOrder(prev => prev === 'newest' ? 'oldest' : 'newest')}
-                    className="flex items-center gap-2 px-4 py-2 rounded-xl bg-[hsl(220,25%,12%)] border border-[hsl(220,20%,20%)] hover:border-[rgba(255,138,0,0.3)] transition-all duration-300 text-sm text-gray-300 hover:text-white"
+                    className="flex items-center gap-2 px-4 py-2 rounded-xl bg-[hsl(220,25%,12%)] border border-[hsl(220,20%,20%)] hover:border-[rgba(194,144,47,0.3)] transition-all duration-300 text-sm text-gray-300 hover:text-white"
                   >
                     {sortOrder === 'newest' ? (
-                      <ArrowDown className="w-4 h-4 text-[#FF8A00]" />
+                      <ArrowDown className="w-4 h-4 text-[#C2902F]" />
                     ) : (
-                      <ArrowUp className="w-4 h-4 text-[#FF8A00]" />
+                      <ArrowUp className="w-4 h-4 text-[#C2902F]" />
                     )}
                     {sortOrder === 'newest' ? 'Nejnovější' : 'Nejstarší'}
                   </button>
@@ -591,7 +591,7 @@ const Wins: React.FC = () => {
                 className="wins-light-empty-panel relative overflow-hidden rounded-2xl p-12 text-center"
                 style={{
                   background: 'linear-gradient(135deg, hsl(220, 25%, 8%) 0%, hsl(220, 30%, 12%) 50%, hsl(220, 25%, 8%) 100%)',
-                  border: '1px solid rgba(255,138,0,0.15)',
+                  border: '1px solid rgba(194,144,47,0.15)',
                   boxShadow: '0 8px 32px hsl(0, 0%, 0%, 0.3)',
                 }}
               >
@@ -599,13 +599,13 @@ const Wins: React.FC = () => {
                   className="w-24 h-24 mx-auto mb-6 rounded-2xl flex items-center justify-center"
                   style={{
                     background: 'linear-gradient(135deg, hsl(220, 25%, 12%) 0%, hsl(220, 30%, 16%) 100%)',
-                    border: '1px solid rgba(255,138,0,0.1)',
+                    border: '1px solid rgba(194,144,47,0.1)',
                   }}
                 >
-                  <OneMilWinIcon size={48} className="w-12 h-12 text-[#FF8A00]/30" />
+                  <OneMilWinIcon size={48} className="w-12 h-12 text-[#C2902F]/30" />
                 </div>
                 <h3 className="customer-premium-orange-heading text-2xl font-bold mb-3">
-                  Zatím nemáte žádné výhry
+                  Zatím nemáš žádné výhry
                 </h3>
                 <p className="text-gray-400 text-lg">Kupte si tikety v soutěžích a vyhrajte skvělé ceny!</p>
               </div>
@@ -689,13 +689,13 @@ const Wins: React.FC = () => {
                     border: '1px solid hsl(220, 20%, 20%)',
                   }}
                 >
-                  <Tag className="w-12 h-12 text-[rgba(255,138,0,0.3)]" />
+                  <Tag className="w-12 h-12 text-[rgba(194,144,47,0.3)]" />
                 </div>
                 <h3 className="text-2xl font-bold mb-3 text-gray-200">
-                  Zatím nemáte žádné nabídky
+                  Zatím nemáš žádné nabídky
                 </h3>
                 <p className="text-gray-400 text-lg">
-                  Nabídky partnerů se přidělují automaticky k vašim tiketům v soutěžích.
+                  Nabídky partnerů se přidělují automaticky k tvým tiketům v soutěžích.
                 </p>
               </div>
             ) : (

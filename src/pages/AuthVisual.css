@@ -32,10 +32,10 @@
 
 @keyframes om-auth-medallion-glow {
   0%, 100% {
-    box-shadow: 0 18px 40px -14px rgba(255, 138, 0, 0.4), 0 0 0 1px rgba(255, 138, 0, 0.12);
+    box-shadow: 0 18px 40px -14px rgba(194,144,47, 0.4), 0 0 0 1px rgba(194,144,47, 0.12);
   }
   50% {
-    box-shadow: 0 24px 50px -12px rgba(255, 138, 0, 0.55), 0 0 0 1px rgba(255, 138, 0, 0.22);
+    box-shadow: 0 24px 50px -12px rgba(194,144,47, 0.55), 0 0 0 1px rgba(194,144,47, 0.22);
   }
 }
 
@@ -80,7 +80,7 @@
 }
 
 .om-auth-dotgrid {
-  background-image: radial-gradient(rgba(255, 138, 0, 0.4) 1px, transparent 1px);
+  background-image: radial-gradient(rgba(194,144,47, 0.4) 1px, transparent 1px);
   background-size: 24px 24px;
   opacity: 0.35;
   -webkit-mask-image: radial-gradient(ellipse 65% 55% at 50% 0%, black 0%, transparent 72%);
@@ -93,8 +93,8 @@
 
 .om-auth-chip:hover {
   transform: translateY(-2px);
-  border-color: rgba(255, 138, 0, 0.45);
-  box-shadow: 0 8px 20px -8px rgba(255, 138, 0, 0.35);
+  border-color: rgba(194,144,47, 0.45);
+  box-shadow: 0 8px 20px -8px rgba(194,144,47, 0.35);
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -106,7 +106,7 @@
     animation: none !important;
     opacity: 1 !important;
     transform: none !important;
-    box-shadow: 0 18px 40px -14px rgba(255, 138, 0, 0.4) !important;
+    box-shadow: 0 18px 40px -14px rgba(194,144,47, 0.4) !important;
   }
 
   .om-auth-chip:hover {

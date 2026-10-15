@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from "react";
+import { AppLoadingScreen } from "@/components/brand/AppLoadingScreen";
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider, Tooltip, TooltipTrigger, TooltipContent } from "@/components/ui/tooltip";
@@ -227,7 +228,7 @@ function GlobalWinnersRealtimeFeed() {
             description: <div className="winner-toast-shimmer" />,
             style: {
               background: 'linear-gradient(135deg, hsl(222, 47%, 11%), hsl(222, 40%, 16%))',
-              border: '1px solid rgba(255,138,0,0.3)',
+              border: '1px solid rgba(194,144,47,0.3)',
               borderRadius: '0.75rem',
               boxShadow: '0 8px 24px hsl(222, 50%, 3%, 0.5)',
               backdropFilter: 'blur(8px)',
@@ -368,11 +369,7 @@ function AppContent() {
     location.pathname === "/affiliate/register";
 
   if (user && roleLoading && !authEntryPath) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-background">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
-      </div>
-    );
+    return <AppLoadingScreen />;
   }
 
   // Hard-block: If partner/influencer tries to access blocked route, show spinner (redirect in effect)
@@ -481,10 +478,18 @@ function AppContent() {
     !location.pathname.startsWith('/affiliate') &&
     !location.pathname.startsWith('/influencer');
 
+  // Nový vizuál (om-redesign) jen pro zákaznické stránky; firemní stránky
+  // /pro-eshopy a /partnerstvi zůstávají ve stávajícím vzhledu.
+  const isB2BPublicPage =
+    location.pathname === '/pro-eshopy' || location.pathname === '/partnerstvi';
+
   const layoutClassName = [
     isPartnerAccount ? 'partner-layout' : 'customer-layout',
     !isPartnerAccount && !isAffiliateAccount && isPublicCustomerThemeRoute
       ? 'public-customer-theme'
+      : '',
+    !isPartnerAccount && !isAffiliateAccount && isPublicCustomerThemeRoute && !isB2BPublicPage
+      ? 'om-redesign'
       : '',
   ]
     .filter(Boolean)

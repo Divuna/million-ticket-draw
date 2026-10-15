@@ -27,7 +27,7 @@ test.describe('Voucher Code - Purchased Voucher Detail', () => {
       .filter({ has: page.locator('img[alt*="E2E Spec11 Voucher"]') })
       .first();
 
-    const emptyHeading = page.getByRole('heading', { name: 'Zatím nemáte žádné zakoupené vouchery' });
+    const emptyHeading = page.getByRole('heading', { name: 'Zatím nemáš žádné zakoupené vouchery' });
 
     await expect(async () => {
       const hasSpec11 = (await page

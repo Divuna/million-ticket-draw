@@ -81,7 +81,7 @@ export const OfferDetailModal: React.FC<OfferDetailModalProps> = ({
       onClose();
       toast({
         title: 'Nabídka skryta',
-        description: 'Nabídka byla odstraněna z vašeho seznamu.',
+        description: 'Nabídka byla odstraněna z tvého seznamu.',
       });
     } catch (err: any) {
       console.error('OfferDetailModal: hide failed:', err.message);
@@ -113,7 +113,7 @@ export const OfferDetailModal: React.FC<OfferDetailModalProps> = ({
             <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent" />
             <div className="absolute top-4 left-4">
               <Badge className="bg-background/80 text-foreground border-0 backdrop-blur-sm">
-                <Tag className="h-4 w-4 text-[#FFB547] mr-1" />
+                <Tag className="h-4 w-4 text-[#E9B949] mr-1" />
                 Nabídka partnera
               </Badge>
             </div>
@@ -125,7 +125,7 @@ export const OfferDetailModal: React.FC<OfferDetailModalProps> = ({
           {/* Header */}
           <DialogHeader className="space-y-1">
             {partnerName && (
-              <p className="text-sm text-[#FFB547] font-medium uppercase tracking-wide">
+              <p className="text-sm text-[#E9B949] font-medium uppercase tracking-wide">
                 {partnerName}
               </p>
             )}
@@ -168,7 +168,7 @@ export const OfferDetailModal: React.FC<OfferDetailModalProps> = ({
           {/* Info note */}
           <div className="bg-primary/5 rounded-lg p-4 border border-primary/20">
             <p className="text-sm text-muted-foreground">
-              Tato nabídka byla přidělena automaticky k vašemu tiketu. Pro uplatnění kontaktujte
+              Tato nabídka byla přidělena automaticky k tvému tiketu. Pro uplatnění kontaktuj
               partnera nebo využijte kód výše.
             </p>
           </div>

@@ -1,11 +1,11 @@
 import React, { useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
-import { XCircle } from 'lucide-react';
 import { Header } from '@/components/Header';
 import { toast } from '@/hooks/use-toast';
 import { isNativeApp } from '@/lib/nativeApp';
+import avatarShrug from '@/assets/redesign/avatar/avatar-krci-rameny.png';
+
+const CANCEL_TEXT = 'Dobití MIO jsme zrušili. Žádné peníze ti nebyly strženy.';
 
 const PaymentCancel: React.FC = () => {
   const navigate = useNavigate();
@@ -20,7 +20,7 @@ const PaymentCancel: React.FC = () => {
     // Show cancel toast
     toast({
       title: "Platba byla zrušena",
-      description: "Nákup voucherů byl zrušen. Žádné peníze nebyly účtovány.",
+      description: CANCEL_TEXT,
       variant: "destructive"
     });
   }, [nativeApp, navigate]);
@@ -30,39 +30,26 @@ const PaymentCancel: React.FC = () => {
   return (
     <div className="min-h-screen bg-background">
       <Header />
-      
+
       <div className="container mx-auto px-4 py-8">
-        <div className="max-w-md mx-auto">
-          <Card>
-            <CardHeader className="text-center">
-              <div className="mx-auto w-12 h-12 bg-red-100 rounded-full flex items-center justify-center mb-4">
-                <XCircle className="w-6 h-6 text-red-600" />
-              </div>
-              <CardTitle className="text-red-600">Platba zrušena</CardTitle>
-              <CardDescription>
-                Nákup voucherů byl zrušen. Žádné peníze nebyly účtovány.
-              </CardDescription>
-            </CardHeader>
-            
-            <CardContent className="space-y-4">
-              <div className="flex flex-col space-y-3">
-                <Button 
-                  onClick={() => navigate('/profile')}
-                  className="w-full"
-                >
-                  Zkusit znovu
-                </Button>
-                
-                <Button 
-                  variant="outline"
-                  onClick={() => navigate('/')}
-                  className="w-full"
-                >
-                  Zpět na domovskou stránku
-                </Button>
-              </div>
-            </CardContent>
-          </Card>
+        <div className="om-pc mx-auto flex max-w-md flex-col items-center gap-3 px-6 pb-7 pt-6 text-center">
+          <img
+            src={avatarShrug}
+            alt=""
+            aria-hidden="true"
+            className="om-float h-[170px] w-auto object-contain"
+            style={{ filter: 'drop-shadow(0 12px 18px rgba(60,40,10,0.3))' }}
+          />
+          <h1 className="om-pc-title">Platba zrušena</h1>
+          <p className="text-sm leading-relaxed text-[#5E5B57]">{CANCEL_TEXT}</p>
+          <div className="mt-2 flex w-full flex-col gap-2.5">
+            <button type="button" onClick={() => navigate('/top-up')} className="om-ps-gold">
+              Zkusit znovu
+            </button>
+            <button type="button" onClick={() => navigate('/profile')} className="om-pc-ghost">
+              Zpět do profilu
+            </button>
+          </div>
         </div>
       </div>
     </div>

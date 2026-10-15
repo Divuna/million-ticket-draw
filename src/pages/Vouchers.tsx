@@ -158,7 +158,7 @@ const Vouchers: React.FC = () => {
     e.stopPropagation();
     
     if (!user) {
-      toast.error("Pro přidání do oblíbených se musíte přihlásit");
+      toast.error("Pro přidání do oblíbených se musíš přihlásit");
       return;
     }
 
@@ -264,7 +264,7 @@ const Vouchers: React.FC = () => {
       
       // Check if any row was actually deleted
       if (!data || data.length === 0) {
-        throw new Error('Voucher nebyl nalezen nebo nemáte oprávnění k jeho odebrání');
+        throw new Error('Voucher nebyl nalezen nebo nemáš oprávnění k jeho odebrání');
       }
       
       toast.success("Voucher odebrán z oblíbených");
@@ -282,7 +282,7 @@ const Vouchers: React.FC = () => {
 
   const handleVoucherPurchase = async (voucherId: string) => {
     if (!user) {
-      toast.error("Pro koupi voucheru se musíte přihlásit");
+      toast.error("Pro koupi voucheru se musíš přihlásit");
       return;
     }
 
@@ -363,7 +363,7 @@ const Vouchers: React.FC = () => {
           <div
             className="absolute inset-0 opacity-10 pointer-events-none"
             style={{
-              background: 'linear-gradient(90deg, transparent 0%, rgba(255,181,71,1) 50%, transparent 100%)',
+              background: 'linear-gradient(90deg, transparent 0%, rgba(233,185,73,1) 50%, transparent 100%)',
               backgroundSize: '200% 100%',
               animation: 'shimmer 4s ease-in-out infinite',
             }}
@@ -372,8 +372,8 @@ const Vouchers: React.FC = () => {
             <div
               className="w-14 h-14 md:w-16 md:h-16 rounded-xl flex items-center justify-center shrink-0"
               style={{
-                background: 'linear-gradient(135deg, #FF8A00 0%, #c86000 100%)',
-                boxShadow: '0 4px 20px rgba(255,138,0,0.3)',
+                background: 'linear-gradient(135deg, #C2902F 0%, #8A5A10 100%)',
+                boxShadow: '0 4px 20px rgba(194,144,47,0.3)',
               }}
             >
               <OneMilVoucherIcon size={36} className="w-7 h-7 md:w-9 md:h-9 text-black" />
@@ -382,7 +382,7 @@ const Vouchers: React.FC = () => {
               <h1 className="customer-premium-orange-heading text-2xl md:text-3xl font-bold tracking-tight">
                 Vouchery
               </h1>
-              <p className="text-sm text-gray-400 mt-1">Sbírejte a uplatňujte exkluzivní vouchery</p>
+              <p className="text-sm text-gray-400 mt-1">Sbírej a uplatňuj exkluzivní vouchery</p>
             </div>
           </div>
         </div>
@@ -417,7 +417,7 @@ const Vouchers: React.FC = () => {
             {availableLoading ? (
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                 {Array.from({ length: 3 }).map((_, index) => (
-                  <Card key={index} className="voucher-card-glow relative overflow-hidden rounded-[20px] bg-gradient-to-b from-[hsl(220_35%_8%)] via-[hsl(220_30%_6%)] to-[hsl(220_25%_4%)] border-[3px] border-[rgba(255,138,0,0.3)]">
+                  <Card key={index} className="voucher-card-glow relative overflow-hidden rounded-[20px] bg-gradient-to-b from-[hsl(220_35%_8%)] via-[hsl(220_30%_6%)] to-[hsl(220_25%_4%)] border-[3px] border-[rgba(194,144,47,0.3)]">
                     <CardContent className="p-5 space-y-4">
                       <div className="h-32 bg-muted/20 rounded-lg animate-pulse" />
                       <div className="h-6 bg-muted/20 rounded animate-pulse w-3/4" />
@@ -451,7 +451,7 @@ const Vouchers: React.FC = () => {
             {userVouchersLoading ? (
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                 {Array.from({ length: 3 }).map((_, index) => (
-                  <Card key={index} className="voucher-card-glow relative overflow-hidden rounded-[20px] bg-gradient-to-b from-[hsl(220_35%_8%)] via-[hsl(220_30%_6%)] to-[hsl(220_25%_4%)] border-[3px] border-[rgba(255,138,0,0.3)]">
+                  <Card key={index} className="voucher-card-glow relative overflow-hidden rounded-[20px] bg-gradient-to-b from-[hsl(220_35%_8%)] via-[hsl(220_30%_6%)] to-[hsl(220_25%_4%)] border-[3px] border-[rgba(194,144,47,0.3)]">
                     <CardContent className="p-5 space-y-4">
                       <div className="aspect-video bg-muted/20 rounded-lg animate-pulse" />
                       <div className="h-6 bg-muted/20 rounded animate-pulse w-3/4" />
@@ -462,12 +462,12 @@ const Vouchers: React.FC = () => {
                 ))}
               </div>
             ) : favoriteVouchers.length === 0 ? (
-              <Card className="voucher-card-glow relative overflow-hidden rounded-[20px] bg-gradient-to-b from-[hsl(220_35%_8%)] via-[hsl(220_30%_6%)] to-[hsl(220_25%_4%)] border-[3px] border-[rgba(255,138,0,0.3)]">
+              <Card className="voucher-card-glow relative overflow-hidden rounded-[20px] bg-gradient-to-b from-[hsl(220_35%_8%)] via-[hsl(220_30%_6%)] to-[hsl(220_25%_4%)] border-[3px] border-[rgba(194,144,47,0.3)]">
                 <CardContent className="p-8 space-y-3 text-center">
                   <OneMilHeartIcon size={48} className="w-12 h-12 mx-auto text-secondary/50" />
-                  <h3 className="customer-premium-orange-heading text-xl font-bold text-heading-gold">Zatím nemáte žádné oblíbené vouchery</h3>
+                  <h3 className="customer-premium-orange-heading text-xl font-bold text-heading-gold">Zatím nemáš žádné oblíbené vouchery</h3>
                   <p className="text-sm text-muted-foreground">
-                    Kliknutím na srdíčko přidáte voucher do oblíbených
+                    Kliknutím na srdíčko přidáš voucher do oblíbených
                   </p>
                 </CardContent>
               </Card>
@@ -499,7 +499,7 @@ const Vouchers: React.FC = () => {
             {userVouchersLoading ? (
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                 {Array.from({ length: 3 }).map((_, index) => (
-                  <Card key={index} className="voucher-card-glow relative overflow-hidden rounded-[20px] bg-gradient-to-b from-[hsl(220_35%_8%)] via-[hsl(220_30%_6%)] to-[hsl(220_25%_4%)] border-[3px] border-[rgba(255,138,0,0.3)]">
+                  <Card key={index} className="voucher-card-glow relative overflow-hidden rounded-[20px] bg-gradient-to-b from-[hsl(220_35%_8%)] via-[hsl(220_30%_6%)] to-[hsl(220_25%_4%)] border-[3px] border-[rgba(194,144,47,0.3)]">
                     <CardContent className="p-5 space-y-4">
                       <div className="aspect-video bg-muted/20 rounded-lg animate-pulse" />
                       <div className="h-6 bg-muted/20 rounded animate-pulse w-3/4" />
@@ -511,10 +511,10 @@ const Vouchers: React.FC = () => {
                 ))}
               </div>
             ) : purchasedVouchers.length === 0 ? (
-              <Card className="voucher-card-glow relative overflow-hidden rounded-[20px] bg-gradient-to-b from-[hsl(220_35%_8%)] via-[hsl(220_30%_6%)] to-[hsl(220_25%_4%)] border-[3px] border-[rgba(255,138,0,0.3)]">
+              <Card className="voucher-card-glow relative overflow-hidden rounded-[20px] bg-gradient-to-b from-[hsl(220_35%_8%)] via-[hsl(220_30%_6%)] to-[hsl(220_25%_4%)] border-[3px] border-[rgba(194,144,47,0.3)]">
                 <CardContent className="p-8 space-y-3 text-center">
                   <OneMilCartIcon size={48} className="w-12 h-12 mx-auto text-secondary/50" />
-                  <h3 className="customer-premium-orange-heading text-xl font-bold text-heading-gold">Zatím nemáte žádné zakoupené vouchery</h3>
+                  <h3 className="customer-premium-orange-heading text-xl font-bold text-heading-gold">Zatím nemáš žádné zakoupené vouchery</h3>
                   <p className="text-sm text-muted-foreground">
                     Zakupte si voucher v sekci "Dostupné" nebo "Oblíbené"
                   </p>
@@ -530,7 +530,7 @@ const Vouchers: React.FC = () => {
                   return (
                     <Card 
                       key={userVoucher.id} 
-                      className="voucher-card-glow relative aspect-[16/9] min-h-0 overflow-hidden rounded-[20px] border-[3px] border-[rgba(255,138,0,0.35)] shadow-[0_4px_20px_hsl(220_50%_3%/0.6)] transition-all duration-300 hover:scale-[1.02] hover:border-[rgba(255,138,0,0.55)] hover:shadow-[0_0_16px_rgba(255,138,0,0.2)]"
+                      className="voucher-card-glow relative aspect-[16/9] min-h-0 overflow-hidden rounded-[20px] border-[3px] border-[rgba(194,144,47,0.35)] shadow-[0_4px_20px_hsl(220_50%_3%/0.6)] transition-all duration-300 hover:scale-[1.02] hover:border-[rgba(194,144,47,0.55)] hover:shadow-[0_0_16px_rgba(194,144,47,0.2)]"
                     >
                       {bannerUrl ? (
                         <img
@@ -541,7 +541,7 @@ const Vouchers: React.FC = () => {
                         />
                       ) : (
                         <div className="absolute inset-0 z-[1] flex items-center justify-center bg-[hsl(220_30%_10%)]">
-                          <OneMilVoucherIcon size={56} className="h-14 w-14 text-[rgba(255,138,0,0.45)]" />
+                          <OneMilVoucherIcon size={56} className="h-14 w-14 text-[rgba(194,144,47,0.45)]" />
                         </div>
                       )}
 
@@ -568,13 +568,13 @@ const Vouchers: React.FC = () => {
 
                           <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
                             <Button
-                              className="h-10 rounded-xl border-0 bg-gradient-to-r from-[#FF8A00] to-[#FFB547] text-sm font-bold text-[#111] shadow-[0_2px_8px_rgba(255,138,0,0.25)] hover:brightness-105"
+                              className="h-10 rounded-xl border-0 bg-gradient-to-r from-[#C2902F] to-[#E9B949] text-sm font-bold text-[#111] shadow-[0_2px_8px_rgba(194,144,47,0.25)] hover:brightness-105"
                               onClick={() => void openVoucherDetail(voucher)}
                             >
                               Detail
                             </Button>
                             <Button
-                              className="h-10 rounded-xl border-0 bg-gradient-to-r from-[#FF8A00] to-[#FFB547] text-sm font-bold text-[#111] shadow-[0_2px_8px_rgba(255,138,0,0.25)] hover:brightness-105"
+                              className="h-10 rounded-xl border-0 bg-gradient-to-r from-[#C2902F] to-[#E9B949] text-sm font-bold text-[#111] shadow-[0_2px_8px_rgba(194,144,47,0.25)] hover:brightness-105"
                               onClick={() => setCodeModalVoucher({ code: userVoucher.code, name: voucherName })}
                             >
                               Zobrazit kód
@@ -598,7 +598,7 @@ const Vouchers: React.FC = () => {
           <AlertDialogHeader>
             <AlertDialogTitle>Odebrat z oblíbených?</AlertDialogTitle>
             <AlertDialogDescription>
-              Opravdu chcete odebrat tento voucher z oblíbených?
+              Opravdu chceš odebrat tento voucher z oblíbených?
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
@@ -612,7 +612,7 @@ const Vouchers: React.FC = () => {
 
       {/* Voucher code modal: showing the code does not change DB state. */}
       <Dialog open={!!codeModalVoucher} onOpenChange={(open) => !open && setCodeModalVoucher(null)}>
-        <DialogContent className="voucher-code-dialog sm:max-w-md border-[rgba(255,138,0,0.35)] bg-gradient-to-b from-[hsl(220_30%_8%)] to-[hsl(220_35%_5%)]">
+        <DialogContent className="voucher-code-dialog sm:max-w-md border-[rgba(194,144,47,0.35)] bg-gradient-to-b from-[hsl(220_30%_8%)] to-[hsl(220_35%_5%)]">
           <DialogHeader>
             <DialogTitle className="text-heading-gold">Zobrazit kód</DialogTitle>
             <DialogDescription>
@@ -621,11 +621,11 @@ const Vouchers: React.FC = () => {
           </DialogHeader>
           <div className="space-y-4 py-2">
             <p className="text-sm text-muted-foreground">
-              Kód můžete zkopírovat, opsat nebo ukázat partnerovi.
+              Kód můžeš zkopírovat, opsat nebo ukázat partnerovi.
             </p>
-            <div className="rounded-xl bg-[hsl(220_30%_10%)] border border-[rgba(255,138,0,0.3)] p-4 text-center">
+            <div className="rounded-xl bg-[hsl(220_30%_10%)] border border-[rgba(194,144,47,0.3)] p-4 text-center">
               {codeModalVoucher?.code ? (
-                <span className="font-mono text-xl font-bold text-[#FFB547] tracking-wider">
+                <span className="font-mono text-xl font-bold text-[#E9B949] tracking-wider">
                   {codeModalVoucher.code}
                 </span>
               ) : (
@@ -636,7 +636,7 @@ const Vouchers: React.FC = () => {
             </div>
             <Button
               variant="outline"
-              className="w-full rounded-xl border-[rgba(255,138,0,0.3)] bg-[rgba(10,12,18,0.72)] text-white hover:bg-[rgba(255,138,0,0.12)] hover:border-[rgba(255,138,0,0.5)]"
+              className="w-full rounded-xl border-[rgba(194,144,47,0.3)] bg-[rgba(10,12,18,0.72)] text-white hover:bg-[rgba(194,144,47,0.12)] hover:border-[rgba(194,144,47,0.5)]"
               disabled={!codeModalVoucher?.code}
               onClick={() => {
                 if (codeModalVoucher?.code) {

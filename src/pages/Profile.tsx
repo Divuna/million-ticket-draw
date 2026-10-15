@@ -1,4 +1,5 @@
 import React, { useEffect, useState, useRef } from 'react';
+import { MioBadge } from "@/components/brand/MioBadge";
 import { format } from 'date-fns';
 import { cs } from 'date-fns/locale';
 import { useNavigate, useLocation } from 'react-router-dom';
@@ -117,7 +118,7 @@ const useCountUp = (target: number, duration: number = 1200) => {
 // Vzhled řídí `homepage-light-panel` uvnitř `homepage-light-content`.
 const PremiumCard: React.FC<{ children: React.ReactNode; className?: string }> = ({ children, className = '' }) => (
   <div
-    className={`homepage-light-panel relative overflow-hidden rounded-2xl border border-[rgba(255,138,0,0.18)] bg-white ${className}`}
+    className={`homepage-light-panel relative overflow-hidden rounded-2xl border border-[rgba(194,144,47,0.18)] bg-white ${className}`}
   >
     {children}
   </div>
@@ -128,8 +129,8 @@ const SectionTile: React.FC<{ icon: React.ReactNode }> = ({ icon }) => (
   <div
     className="w-12 h-12 rounded-xl flex items-center justify-center shrink-0"
     style={{
-      background: 'linear-gradient(135deg, #FF8A00 0%, #c86000 100%)',
-      boxShadow: '0 4px 20px rgba(255,138,0,0.25)',
+      background: 'linear-gradient(135deg, #C2902F 0%, #8A5A10 100%)',
+      boxShadow: '0 4px 20px rgba(194,144,47,0.25)',
     }}
   >
     {icon}
@@ -499,7 +500,7 @@ const Profile: React.FC = () => {
       }
       toast({
         title: "Notifikace odeslána",
-        description: "Testovací notifikace byla úspěšně odeslána. Zkontrolujte svá zařízení.",
+        description: "Testovací notifikace byla úspěšně odeslána. Zkontroluj svá zařízení.",
       });
     } catch (error: any) {
       console.error('Error sending test notification:', error);
@@ -528,7 +529,7 @@ const Profile: React.FC = () => {
       if (!amount || amount < 1) {
         toast({
           title: "Chyba",
-          description: "Zadejte platnou částku.",
+          description: "Zadej platnou částku.",
           variant: "destructive"
         });
         return;
@@ -538,7 +539,7 @@ const Profile: React.FC = () => {
     } else {
       toast({
         title: "Chyba",
-        description: "Vyberte balíček nebo zadejte vlastní částku.",
+        description: "Vyber balíček nebo zadej vlastní částku.",
         variant: "destructive"
       });
       return;
@@ -630,8 +631,8 @@ const Profile: React.FC = () => {
         <div className="homepage-light-content container mx-auto px-4 py-8">
           <div className="flex items-center justify-center h-64">
             <div className="relative">
-              <div className="w-12 h-12 rounded-full border-2 border-[rgba(255,138,0,0.25)] border-t-[#FF8A00] animate-spin" />
-              <OneMilDiamondIcon size={20} className="absolute inset-0 m-auto w-5 h-5 text-[#FF8A00] animate-pulse" />
+              <div className="w-12 h-12 rounded-full border-2 border-[rgba(194,144,47,0.25)] border-t-[#C2902F] animate-spin" />
+              <OneMilDiamondIcon size={20} className="absolute inset-0 m-auto w-5 h-5 text-[#C2902F] animate-pulse" />
             </div>
           </div>
         </div>
@@ -646,11 +647,11 @@ const Profile: React.FC = () => {
       <div className="homepage-light-content container mx-auto px-4 py-8">
 
         {/* ── Premium Profile Header ──────────────────────────────────── */}
-        <div className="homepage-light-panel homepage-miocoin-panel relative overflow-hidden rounded-2xl border border-[rgba(255,138,0,0.2)] bg-white p-6 mb-6">
+        <div className="homepage-light-panel homepage-miocoin-panel relative overflow-hidden rounded-2xl border border-[rgba(194,144,47,0.2)] bg-white p-6 mb-6">
           <div
             className="absolute inset-0 opacity-20 pointer-events-none"
             style={{
-              background: 'linear-gradient(90deg, transparent 0%, rgba(255,181,71,0.55) 50%, transparent 100%)',
+              background: 'linear-gradient(90deg, transparent 0%, rgba(233,185,73,0.55) 50%, transparent 100%)',
               backgroundSize: '200% 100%',
               animation: 'shimmer 4s ease-in-out infinite',
             }}
@@ -658,11 +659,11 @@ const Profile: React.FC = () => {
           <div className="relative flex items-center gap-5">
             {/* Avatar with upload */}
             <div className="relative group flex-shrink-0">
-              <Avatar className="h-20 w-20 border-2 border-[rgba(255,138,0,0.4)] shadow-lg">
+              <Avatar className="h-20 w-20 border-2 border-[rgba(194,144,47,0.4)] shadow-lg">
                 <AvatarImage src={profile.avatar_url || undefined} alt="Avatar" className="object-cover" />
                 <AvatarFallback
                   className="text-2xl font-bold"
-                  style={{ background: 'rgba(255,138,0,0.15)', color: '#FFB547', fontFamily: 'var(--om-font-heading)' }}
+                  style={{ background: 'rgba(194,144,47,0.15)', color: '#E9B949', fontFamily: 'var(--om-font-heading)' }}
                 >
                   {getInitials()}
                 </AvatarFallback>
@@ -673,8 +674,8 @@ const Profile: React.FC = () => {
                 className="absolute inset-0 flex items-center justify-center bg-black/70 rounded-full opacity-0 group-hover:opacity-100 transition-opacity duration-200 cursor-pointer"
               >
                 {avatarUploading
-                  ? <Loader2 className="h-7 w-7 text-[#FF8A00] animate-spin" />
-                  : <Camera className="h-7 w-7 text-[#FF8A00]" />}
+                  ? <Loader2 className="h-7 w-7 text-[#C2902F] animate-spin" />
+                  : <Camera className="h-7 w-7 text-[#C2902F]" />}
               </button>
               <input ref={avatarInputRef} type="file" accept="image/*" onChange={handleAvatarUpload} className="hidden" />
             </div>
@@ -686,7 +687,7 @@ const Profile: React.FC = () => {
               >
                 {profile.nickname || profile.first_name || 'Můj profil'}
               </h1>
-              <p className="text-sm text-muted-foreground mt-1">Kliknutím na avatar změníte obrázek</p>
+              <p className="text-sm text-muted-foreground mt-1">Kliknutím na avatar změníš obrázek</p>
             </div>
           </div>
         </div>
@@ -706,38 +707,34 @@ const Profile: React.FC = () => {
                   <SectionTile icon={<OneMilWalletIcon size={24} className="w-6 h-6 text-black" />} />
                   <div>
                     <h2 className="text-xl font-bold text-foreground">Peněženka</h2>
-                    <p className="text-sm text-muted-foreground">Váš MIO účet</p>
+                    <p className="text-sm text-muted-foreground">Tvůj MIO účet</p>
                   </div>
                 </div>
                 <Button variant="ghost" size="sm" onClick={handleRefreshBalance} disabled={refreshing}
-                  className="text-muted-foreground hover:text-[#FF8A00] hover:bg-[rgba(255,138,0,0.08)] transition-all duration-200">
+                  className="text-muted-foreground hover:text-[#C2902F] hover:bg-[rgba(194,144,47,0.08)] transition-all duration-200">
                   <RefreshCw className={`h-4 w-4 mr-2 ${refreshing ? 'animate-spin' : ''}`} />
                   {refreshing ? 'Aktualizuji...' : 'Aktualizovat'}
                 </Button>
               </div>
 
               {/* Balance display */}
-              <div className="rounded-xl border border-[rgba(255,138,0,0.15)] bg-[rgba(255,138,0,0.04)] p-6 mb-5 overflow-hidden">
+              <div className="rounded-xl border border-[rgba(194,144,47,0.15)] bg-[rgba(194,144,47,0.04)] p-6 mb-5 overflow-hidden">
                 <div className="grid grid-cols-1 xl:grid-cols-2 gap-5 xl:gap-6">
                   {/* Main balance */}
                   <div className="flex items-center gap-4 min-w-0">
-                    <div className="p-3 rounded-full bg-gradient-to-br from-[#FFB547] via-[#FF8A00] to-[#e07800] shadow-lg shadow-[rgba(255,138,0,0.2)] shrink-0">
-                      <OneMilCoinsIcon size={32} className="h-8 w-8 text-black" />
-                    </div>
+                    <MioBadge width={68} className="shrink-0 drop-shadow-[0_6px_12px_rgba(23,23,27,0.25)]" />
                     <div className="min-w-0">
-                      <p className="text-xs text-[#c2570a] uppercase tracking-wider mb-0.5">MIO</p>
-                      <p className="text-4xl lg:text-5xl font-black text-[#FFB547] tabular-nums tracking-tight truncate">
+                      <p className="text-xs font-bold text-[#8A5A10] uppercase tracking-wider mb-0.5">MIO</p>
+                      <p className="text-4xl lg:text-5xl font-black text-[#E9B949] tabular-nums tracking-tight truncate">
                         {animatedBalance.toLocaleString('cs-CZ', { minimumFractionDigits: 0, maximumFractionDigits: 1 })}
                       </p>
                     </div>
                   </div>
 
                   {/* Bonus balance */}
-                  <div className="flex flex-col gap-3 pt-5 border-t xl:pt-0 xl:border-t-0 xl:pl-6 xl:border-l border-[rgba(255,138,0,0.15)] min-w-0">
+                  <div className="flex flex-col gap-3 pt-5 border-t xl:pt-0 xl:border-t-0 xl:pl-6 xl:border-l border-[rgba(194,144,47,0.15)] min-w-0">
                     <div className="flex items-center gap-3 min-w-0">
-                      <div className="p-2.5 rounded-xl bg-green-500/20 border border-green-500/30 shrink-0">
-                        <OneMilCoinsIcon size={20} className="h-5 w-5 text-green-500" />
-                      </div>
+                      <MioBadge width={44} tier="graphite" className="shrink-0" />
                       <div className="min-w-0">
                         <div className="flex items-center gap-2 mb-0.5">
                           <p className="text-xs text-green-700 uppercase tracking-wider">Bonusové</p>
@@ -747,7 +744,7 @@ const Profile: React.FC = () => {
                                 <OneMilInfoIcon size={14} className="h-3.5 w-3.5 text-muted-foreground hover:text-green-500 cursor-help transition-colors" />
                               </TooltipTrigger>
                               <TooltipContent side="top" className="max-w-xs bg-card/95 backdrop-blur-xl border-border/50">
-                                <p className="text-sm">Bonusová MIO získáváte jako odměnu při hraní soutěží. Můžete je převést do hlavní peněženky a použít na otevření tiketů.</p>
+                                <p className="text-sm">Bonusová MIO získáváš jako odměnu při hraní soutěží. Můžeš je převést do hlavní peněženky a použít na otevření tiketů.</p>
                               </TooltipContent>
                             </Tooltip>
                           </TooltipProvider>
@@ -771,14 +768,14 @@ const Profile: React.FC = () => {
               <div className="flex flex-col sm:flex-row gap-3 mb-5">
                 {!isNativeApp() && (
                   <Button onClick={() => setShowTopUpModal(true)}
-                    className="flex-1 bg-gradient-to-r from-[#FF8A00] to-[#FFB547] hover:from-[#FFB547] hover:to-[#FF8A00] text-black font-bold shadow-lg shadow-[rgba(255,138,0,0.2)] transition-all duration-200"
+                    className="flex-1 bg-gradient-to-r from-[#C2902F] to-[#E9B949] hover:from-[#E9B949] hover:to-[#C2902F] text-black font-bold shadow-lg shadow-[rgba(194,144,47,0.2)] transition-all duration-200"
                     size="lg">
-                    <OneMilCoinsIcon size={20} className="h-5 w-5 mr-2" />
+                    <MioBadge width={30} className="mr-2" />
                     Dobít MIO
                   </Button>
                 )}
                 <Button onClick={() => navigate('/my-contests')} variant="outline"
-                  className="flex-1 border-[rgba(255,138,0,0.3)] hover:border-[rgba(255,138,0,0.5)] hover:bg-[rgba(255,138,0,0.06)] text-foreground font-semibold transition-all duration-200"
+                  className="flex-1 border-[rgba(194,144,47,0.3)] hover:border-[rgba(194,144,47,0.5)] hover:bg-[rgba(194,144,47,0.06)] text-foreground font-semibold transition-all duration-200"
                   size="lg">
                   <GamepadIcon className="h-5 w-5 mr-2" />
                   Moje hry
@@ -809,7 +806,7 @@ const Profile: React.FC = () => {
                     <h2 className="text-xl font-bold text-foreground">Zprávy</h2>
                     <p className="text-sm text-muted-foreground">
                       {unreadCount > 0
-                        ? `Máte ${unreadCount} nepřečtených zpráv`
+                        ? `Máš ${unreadCount} nepřečtených zpráv`
                         : 'Konverzace s podporou OneMil'}
                     </p>
                   </div>
@@ -817,7 +814,7 @@ const Profile: React.FC = () => {
                 <Button
                   onClick={() => navigate('/messages')}
                   size="lg"
-                  className="w-full sm:w-auto bg-gradient-to-r from-[#FF8A00] to-[#FFB547] hover:from-[#FFB547] hover:to-[#FF8A00] text-black font-bold shadow-lg shadow-[rgba(255,138,0,0.2)] transition-all duration-200"
+                  className="w-full sm:w-auto bg-gradient-to-r from-[#C2902F] to-[#E9B949] hover:from-[#E9B949] hover:to-[#C2902F] text-black font-bold shadow-lg shadow-[rgba(194,144,47,0.2)] transition-all duration-200"
                 >
                   <OneMilMessageIcon size={20} className="h-5 w-5 mr-2" />
                   Otevřít zprávy
@@ -857,7 +854,7 @@ const Profile: React.FC = () => {
                     size="default" 
                     type="button"
                     onClick={() => setEditMode(true)}
-                    className="relative z-20 border-[rgba(255,138,0,0.3)] bg-[rgba(255,138,0,0.04)] hover:bg-[rgba(255,138,0,0.08)] hover:border-[rgba(255,138,0,0.5)] text-[#c2570a] hover:text-[#e26305] transition-all duration-300 font-semibold px-6 rounded-xl hover:shadow-lg hover:shadow-[rgba(255,138,0,0.08)] hover:scale-[1.02]"
+                    className="relative z-20 border-[rgba(194,144,47,0.3)] bg-[rgba(194,144,47,0.04)] hover:bg-[rgba(194,144,47,0.08)] hover:border-[rgba(194,144,47,0.5)] text-[#8A5A10] hover:text-[#B5122B] transition-all duration-300 font-semibold px-6 rounded-xl hover:shadow-lg hover:shadow-[rgba(194,144,47,0.08)] hover:scale-[1.02]"
                   >
                     <OneMilDiamondIcon size={16} className="h-4 w-4 mr-2" />
                     Upravit
@@ -870,7 +867,7 @@ const Profile: React.FC = () => {
                   {/* Edit Mode - Premium Input Fields */}
                   <div className="relative z-20 grid grid-cols-1 md:grid-cols-2 gap-5 mb-8">
                     <div className="space-y-2.5">
-                      <Label htmlFor="nickname" className="text-xs font-semibold text-[rgba(255,138,0,0.65)] uppercase tracking-widest flex items-center gap-2">
+                      <Label htmlFor="nickname" className="text-xs font-semibold text-[rgba(194,144,47,0.65)] uppercase tracking-widest flex items-center gap-2">
                         <OneMilDiamondIcon size={12} className="h-3 w-3" />
                         Přezdívka
                       </Label>
@@ -883,13 +880,13 @@ const Profile: React.FC = () => {
                           ...prev,
                           nickname: e.target.value
                         }))} 
-                        placeholder="Zadejte přezdívku"
-                        className="premium-input pointer-events-auto h-14 px-5 rounded-xl bg-[rgba(255,138,0,0.04)] border-[rgba(255,138,0,0.15)] focus:border-[rgba(255,138,0,0.35)] focus:bg-[rgba(255,138,0,0.08)] transition-all duration-300 placeholder:text-muted-foreground/30 text-lg"
+                        placeholder="Zadej přezdívku"
+                        className="premium-input pointer-events-auto h-14 px-5 rounded-xl bg-[rgba(194,144,47,0.04)] border-[rgba(194,144,47,0.15)] focus:border-[rgba(194,144,47,0.35)] focus:bg-[rgba(194,144,47,0.08)] transition-all duration-300 placeholder:text-muted-foreground/30 text-lg"
                       />
                     </div>
                     
                     <div className="space-y-2.5">
-                      <Label htmlFor="phone" className="text-xs font-semibold text-[rgba(255,138,0,0.65)] uppercase tracking-widest flex items-center gap-2">
+                      <Label htmlFor="phone" className="text-xs font-semibold text-[rgba(194,144,47,0.65)] uppercase tracking-widest flex items-center gap-2">
                         <OneMilDiamondIcon size={12} className="h-3 w-3" />
                         Telefon
                       </Label>
@@ -902,13 +899,13 @@ const Profile: React.FC = () => {
                           ...prev,
                           phone: e.target.value
                         }))} 
-                        placeholder="Zadejte telefon"
-                        className="premium-input pointer-events-auto h-14 px-5 rounded-xl bg-[rgba(255,138,0,0.04)] border-[rgba(255,138,0,0.15)] focus:border-[rgba(255,138,0,0.35)] focus:bg-[rgba(255,138,0,0.08)] transition-all duration-300 placeholder:text-muted-foreground/30 text-lg"
+                        placeholder="Zadej telefon"
+                        className="premium-input pointer-events-auto h-14 px-5 rounded-xl bg-[rgba(194,144,47,0.04)] border-[rgba(194,144,47,0.15)] focus:border-[rgba(194,144,47,0.35)] focus:bg-[rgba(194,144,47,0.08)] transition-all duration-300 placeholder:text-muted-foreground/30 text-lg"
                       />
                     </div>
                     
                     <div className="space-y-2.5">
-                      <Label htmlFor="first_name" className="text-xs font-semibold text-[rgba(255,138,0,0.65)] uppercase tracking-widest flex items-center gap-2">
+                      <Label htmlFor="first_name" className="text-xs font-semibold text-[rgba(194,144,47,0.65)] uppercase tracking-widest flex items-center gap-2">
                         <OneMilDiamondIcon size={12} className="h-3 w-3" />
                         Křestní jméno
                       </Label>
@@ -921,13 +918,13 @@ const Profile: React.FC = () => {
                           ...prev,
                           first_name: e.target.value
                         }))} 
-                        placeholder="Zadejte křestní jméno"
-                        className="premium-input pointer-events-auto h-14 px-5 rounded-xl bg-[rgba(255,138,0,0.04)] border-[rgba(255,138,0,0.15)] focus:border-[rgba(255,138,0,0.35)] focus:bg-[rgba(255,138,0,0.08)] transition-all duration-300 placeholder:text-muted-foreground/30 text-lg"
+                        placeholder="Zadej křestní jméno"
+                        className="premium-input pointer-events-auto h-14 px-5 rounded-xl bg-[rgba(194,144,47,0.04)] border-[rgba(194,144,47,0.15)] focus:border-[rgba(194,144,47,0.35)] focus:bg-[rgba(194,144,47,0.08)] transition-all duration-300 placeholder:text-muted-foreground/30 text-lg"
                       />
                     </div>
                     
                     <div className="space-y-2.5">
-                      <Label htmlFor="last_name" className="text-xs font-semibold text-[rgba(255,138,0,0.65)] uppercase tracking-widest flex items-center gap-2">
+                      <Label htmlFor="last_name" className="text-xs font-semibold text-[rgba(194,144,47,0.65)] uppercase tracking-widest flex items-center gap-2">
                         <OneMilDiamondIcon size={12} className="h-3 w-3" />
                         Příjmení
                       </Label>
@@ -940,13 +937,13 @@ const Profile: React.FC = () => {
                           ...prev,
                           last_name: e.target.value
                         }))} 
-                        placeholder="Zadejte příjmení"
-                        className="premium-input pointer-events-auto h-14 px-5 rounded-xl bg-[rgba(255,138,0,0.04)] border-[rgba(255,138,0,0.15)] focus:border-[rgba(255,138,0,0.35)] focus:bg-[rgba(255,138,0,0.08)] transition-all duration-300 placeholder:text-muted-foreground/30 text-lg"
+                        placeholder="Zadej příjmení"
+                        className="premium-input pointer-events-auto h-14 px-5 rounded-xl bg-[rgba(194,144,47,0.04)] border-[rgba(194,144,47,0.15)] focus:border-[rgba(194,144,47,0.35)] focus:bg-[rgba(194,144,47,0.08)] transition-all duration-300 placeholder:text-muted-foreground/30 text-lg"
                       />
                     </div>
                     
                     <div className="space-y-2.5 md:col-span-2">
-                      <Label htmlFor="address" className="text-xs font-semibold text-[rgba(255,138,0,0.65)] uppercase tracking-widest flex items-center gap-2">
+                      <Label htmlFor="address" className="text-xs font-semibold text-[rgba(194,144,47,0.65)] uppercase tracking-widest flex items-center gap-2">
                         <OneMilDiamondIcon size={12} className="h-3 w-3" />
                         Doručovací adresa výhry
                       </Label>
@@ -958,9 +955,9 @@ const Profile: React.FC = () => {
                           ...prev,
                           address: e.target.value
                         }))} 
-                        placeholder="Zadejte doručovací adresu pro výhry" 
+                        placeholder="Zadej doručovací adresu pro výhry" 
                         rows={3}
-                        className="premium-input pointer-events-auto px-5 py-4 rounded-xl bg-[rgba(255,138,0,0.04)] border-[rgba(255,138,0,0.15)] focus:border-[rgba(255,138,0,0.35)] focus:bg-[rgba(255,138,0,0.08)] transition-all duration-300 placeholder:text-muted-foreground/30 resize-none text-lg"
+                        className="premium-input pointer-events-auto px-5 py-4 rounded-xl bg-[rgba(194,144,47,0.04)] border-[rgba(194,144,47,0.15)] focus:border-[rgba(194,144,47,0.35)] focus:bg-[rgba(194,144,47,0.08)] transition-all duration-300 placeholder:text-muted-foreground/30 resize-none text-lg"
                       />
                     </div>
                   </div>
@@ -970,7 +967,7 @@ const Profile: React.FC = () => {
                     <Button 
                       onClick={handleProfileSave} 
                       disabled={profileSaving}
-                      className="bg-gradient-to-r from-[#FF8A00] via-[#FFB547] to-[#FF8A00] hover:from-[#FFB547] hover:via-[#FF8A00] hover:to-[#FFB547] text-black font-bold px-8 h-12 rounded-xl transition-all duration-300 shadow-lg shadow-[rgba(255,138,0,0.2)] hover:shadow-[rgba(255,138,0,0.35)] hover:scale-[1.02]"
+                      className="bg-gradient-to-r from-[#C2902F] via-[#E9B949] to-[#C2902F] hover:from-[#E9B949] hover:via-[#C2902F] hover:to-[#E9B949] text-black font-bold px-8 h-12 rounded-xl transition-all duration-300 shadow-lg shadow-[rgba(194,144,47,0.2)] hover:shadow-[rgba(194,144,47,0.35)] hover:scale-[1.02]"
                     >
                       {profileSaving ? (
                         <>
@@ -988,7 +985,7 @@ const Profile: React.FC = () => {
                       variant="ghost" 
                       onClick={() => setEditMode(false)}
                       disabled={profileSaving}
-                      className="text-muted-foreground hover:text-foreground hover:bg-[rgba(255,138,0,0.08)] transition-all duration-300 h-12 px-6 rounded-xl border border-transparent hover:border-[rgba(255,138,0,0.15)]"
+                      className="text-muted-foreground hover:text-foreground hover:bg-[rgba(194,144,47,0.08)] transition-all duration-300 h-12 px-6 rounded-xl border border-transparent hover:border-[rgba(194,144,47,0.15)]"
                     >
                       Zrušit
                     </Button>
@@ -1000,8 +997,8 @@ const Profile: React.FC = () => {
                   {(profile.nickname || profile.phone || profile.first_name || profile.last_name || profile.address || profile.date_of_birth) ? (
                     <div className="space-y-4">
                       {/* Nickname Row */}
-                      <div className="group p-4 rounded-xl bg-gradient-to-r from-[rgba(255,138,0,0.06)] via-transparent to-[rgba(255,138,0,0.04)] border border-[rgba(255,138,0,0.12)] hover:border-[rgba(255,138,0,0.25)] transition-all duration-300 hover:shadow-lg hover:shadow-[rgba(255,138,0,0.04)]">
-                        <p className="text-xs font-semibold text-[rgba(255,138,0,0.55)] uppercase tracking-wider mb-2 flex items-center gap-2">
+                      <div className="group p-4 rounded-xl bg-gradient-to-r from-[rgba(194,144,47,0.06)] via-transparent to-[rgba(194,144,47,0.04)] border border-[rgba(194,144,47,0.12)] hover:border-[rgba(194,144,47,0.25)] transition-all duration-300 hover:shadow-lg hover:shadow-[rgba(194,144,47,0.04)]">
+                        <p className="text-xs font-semibold text-[rgba(194,144,47,0.55)] uppercase tracking-wider mb-2 flex items-center gap-2">
                           <OneMilDiamondIcon size={12} className="h-3 w-3" />
                           Přezdívka
                         </p>
@@ -1011,8 +1008,8 @@ const Profile: React.FC = () => {
                       </div>
                       
                       {/* Full Name Row */}
-                      <div className="group p-4 rounded-xl bg-gradient-to-r from-[rgba(255,138,0,0.06)] via-transparent to-[rgba(255,138,0,0.04)] border border-[rgba(255,138,0,0.12)] hover:border-[rgba(255,138,0,0.25)] transition-all duration-300 hover:shadow-lg hover:shadow-[rgba(255,138,0,0.04)]">
-                        <p className="text-xs font-semibold text-[rgba(255,138,0,0.55)] uppercase tracking-wider mb-2 flex items-center gap-2">
+                      <div className="group p-4 rounded-xl bg-gradient-to-r from-[rgba(194,144,47,0.06)] via-transparent to-[rgba(194,144,47,0.04)] border border-[rgba(194,144,47,0.12)] hover:border-[rgba(194,144,47,0.25)] transition-all duration-300 hover:shadow-lg hover:shadow-[rgba(194,144,47,0.04)]">
+                        <p className="text-xs font-semibold text-[rgba(194,144,47,0.55)] uppercase tracking-wider mb-2 flex items-center gap-2">
                           <OneMilProfileIcon size={12} className="h-3 w-3" />
                           Celé jméno
                         </p>
@@ -1024,16 +1021,16 @@ const Profile: React.FC = () => {
                       </div>
                       
                       {/* Phone Row */}
-                      <div className="group p-4 rounded-xl bg-gradient-to-r from-[rgba(255,138,0,0.06)] via-transparent to-[rgba(255,138,0,0.04)] border border-[rgba(255,138,0,0.12)] hover:border-[rgba(255,138,0,0.25)] transition-all duration-300 hover:shadow-lg hover:shadow-[rgba(255,138,0,0.04)]">
-                        <p className="text-xs font-semibold text-[rgba(255,138,0,0.55)] uppercase tracking-wider mb-2">Telefon</p>
+                      <div className="group p-4 rounded-xl bg-gradient-to-r from-[rgba(194,144,47,0.06)] via-transparent to-[rgba(194,144,47,0.04)] border border-[rgba(194,144,47,0.12)] hover:border-[rgba(194,144,47,0.25)] transition-all duration-300 hover:shadow-lg hover:shadow-[rgba(194,144,47,0.04)]">
+                        <p className="text-xs font-semibold text-[rgba(194,144,47,0.55)] uppercase tracking-wider mb-2">Telefon</p>
                         <p className="text-xl text-foreground font-semibold tracking-tight">
                           {profile.phone || <span className="text-muted-foreground/40 font-normal italic">Nenastaveno</span>}
                         </p>
                       </div>
                       
                       {/* Date of Birth Row */}
-                      <div className="group p-4 rounded-xl bg-gradient-to-r from-[rgba(255,138,0,0.06)] via-transparent to-[rgba(255,138,0,0.04)] border border-[rgba(255,138,0,0.12)] hover:border-[rgba(255,138,0,0.25)] transition-all duration-300 hover:shadow-lg hover:shadow-[rgba(255,138,0,0.04)]">
-                        <p className="text-xs font-semibold text-[rgba(255,138,0,0.55)] uppercase tracking-wider mb-2">Datum narození</p>
+                      <div className="group p-4 rounded-xl bg-gradient-to-r from-[rgba(194,144,47,0.06)] via-transparent to-[rgba(194,144,47,0.04)] border border-[rgba(194,144,47,0.12)] hover:border-[rgba(194,144,47,0.25)] transition-all duration-300 hover:shadow-lg hover:shadow-[rgba(194,144,47,0.04)]">
+                        <p className="text-xs font-semibold text-[rgba(194,144,47,0.55)] uppercase tracking-wider mb-2">Datum narození</p>
                         <p className="text-xl text-foreground font-semibold tracking-tight">
                           {profile.date_of_birth 
                             ? format(new Date(profile.date_of_birth), 'dd. MMMM yyyy', { locale: cs })
@@ -1042,8 +1039,8 @@ const Profile: React.FC = () => {
                       </div>
                       
                       {/* Address Row */}
-                      <div className="group p-4 rounded-xl bg-gradient-to-r from-[rgba(255,138,0,0.06)] via-transparent to-[rgba(255,138,0,0.04)] border border-[rgba(255,138,0,0.12)] hover:border-[rgba(255,138,0,0.25)] transition-all duration-300 hover:shadow-lg hover:shadow-[rgba(255,138,0,0.04)]">
-                        <p className="text-xs font-semibold text-[rgba(255,138,0,0.55)] uppercase tracking-wider mb-2">Doručovací adresa</p>
+                      <div className="group p-4 rounded-xl bg-gradient-to-r from-[rgba(194,144,47,0.06)] via-transparent to-[rgba(194,144,47,0.04)] border border-[rgba(194,144,47,0.12)] hover:border-[rgba(194,144,47,0.25)] transition-all duration-300 hover:shadow-lg hover:shadow-[rgba(194,144,47,0.04)]">
+                        <p className="text-xs font-semibold text-[rgba(194,144,47,0.55)] uppercase tracking-wider mb-2">Doručovací adresa</p>
                         <p className="text-xl text-foreground font-semibold tracking-tight whitespace-pre-wrap leading-relaxed">
                           {profile.address || <span className="text-muted-foreground/40 font-normal italic">Nenastaveno</span>}
                         </p>
@@ -1052,13 +1049,13 @@ const Profile: React.FC = () => {
                   ) : (
                     <div className="text-center py-16 px-8">
                       <div className="relative w-fit mx-auto mb-6">
-                        <div className="absolute inset-0 bg-[rgba(255,138,0,0.15)] rounded-3xl blur-xl" />
-                        <div className="relative p-6 rounded-3xl bg-gradient-to-br from-[rgba(255,138,0,0.12)] to-[rgba(255,138,0,0.04)] border border-[rgba(255,138,0,0.15)]">
-                          <OneMilProfileIcon size={48} className="w-12 h-12 text-[rgba(255,138,0,0.4)]" />
+                        <div className="absolute inset-0 bg-[rgba(194,144,47,0.15)] rounded-3xl blur-xl" />
+                        <div className="relative p-6 rounded-3xl bg-gradient-to-br from-[rgba(194,144,47,0.12)] to-[rgba(194,144,47,0.04)] border border-[rgba(194,144,47,0.15)]">
+                          <OneMilProfileIcon size={48} className="w-12 h-12 text-[rgba(194,144,47,0.4)]" />
                         </div>
                       </div>
-                      <p className="text-xl text-foreground font-semibold mb-2">Zatím nemáte vyplněny osobní údaje</p>
-                      <p className="text-sm text-muted-foreground/60">Klikněte na „Upravit" pro jejich zadání</p>
+                      <p className="text-xl text-foreground font-semibold mb-2">Zatím nemáš vyplněné osobní údaje</p>
+                      <p className="text-sm text-muted-foreground/60">Klikni na „Upravit" a doplň je</p>
                     </div>
                   )}
                 </div>
@@ -1087,10 +1084,10 @@ const Profile: React.FC = () => {
                 </div>
               </div>
               <div className="space-y-3">
-                <div className="flex items-start justify-between gap-4 p-4 rounded-xl bg-[rgba(255,138,0,0.04)] border border-[rgba(255,138,0,0.1)]">
+                <div className="flex items-start justify-between gap-4 p-4 rounded-xl bg-[rgba(194,144,47,0.04)] border border-[rgba(194,144,47,0.1)]">
                   <div className="flex items-center gap-3 flex-1 min-w-0">
-                    <div className="p-2 rounded-lg bg-[rgba(255,138,0,0.1)]">
-                      <OneMilEmailIcon size={18} className="text-[#FF8A00]" />
+                    <div className="p-2 rounded-lg bg-[rgba(194,144,47,0.1)]">
+                      <OneMilEmailIcon size={18} className="text-[#C2902F]" />
                     </div>
                     <div className="flex-1 min-w-0">
                       <p className="text-xs text-muted-foreground uppercase tracking-wider mb-1">E-mailová adresa</p>
@@ -1103,9 +1100,9 @@ const Profile: React.FC = () => {
                   </div>
                 </div>
                 {wallet?.name && (
-                  <div className="flex items-center gap-3 p-4 rounded-xl bg-[rgba(255,138,0,0.04)] border border-[rgba(255,138,0,0.1)]">
-                    <div className="p-2 rounded-lg bg-[rgba(255,138,0,0.1)]">
-                      <OneMilProfileIcon size={18} className="text-[#FF8A00]" />
+                  <div className="flex items-center gap-3 p-4 rounded-xl bg-[rgba(194,144,47,0.04)] border border-[rgba(194,144,47,0.1)]">
+                    <div className="p-2 rounded-lg bg-[rgba(194,144,47,0.1)]">
+                      <OneMilProfileIcon size={18} className="text-[#C2902F]" />
                     </div>
                     <div className="min-w-0">
                       <p className="text-xs text-muted-foreground uppercase tracking-wider mb-1">Jméno účtu</p>
@@ -1129,7 +1126,7 @@ const Profile: React.FC = () => {
               </div>
 
               {/* Message sound toggle */}
-              <div className="flex items-center justify-between mb-3 p-4 rounded-xl bg-[rgba(255,138,0,0.04)] border border-[rgba(255,138,0,0.1)] hover:border-[rgba(255,138,0,0.2)] transition-all duration-200">
+              <div className="flex items-center justify-between mb-3 p-4 rounded-xl bg-[rgba(194,144,47,0.04)] border border-[rgba(194,144,47,0.1)] hover:border-[rgba(194,144,47,0.2)] transition-all duration-200">
                 <div className="flex items-center gap-4">
                   <div className={`p-3 rounded-xl transition-all duration-300 ${messageSoundEnabled ? 'bg-primary/25 border border-primary/40 shadow-lg shadow-primary/15' : 'bg-muted/30 border border-border/30'}`}>
                     {messageSoundEnabled ? (
@@ -1151,11 +1148,11 @@ const Profile: React.FC = () => {
               </div>
 
               {/* Win sound toggle */}
-              <div className="flex items-center justify-between mb-4 p-4 rounded-xl bg-[rgba(255,138,0,0.04)] border border-[rgba(255,138,0,0.1)] hover:border-[rgba(255,138,0,0.2)] transition-all duration-200">
+              <div className="flex items-center justify-between mb-4 p-4 rounded-xl bg-[rgba(194,144,47,0.04)] border border-[rgba(194,144,47,0.1)] hover:border-[rgba(194,144,47,0.2)] transition-all duration-200">
                 <div className="flex items-center gap-4">
-                  <div className={`p-3 rounded-xl transition-all duration-300 ${winSoundEnabled ? 'bg-[rgba(255,138,0,0.2)] border border-[rgba(255,138,0,0.35)] shadow-lg shadow-[rgba(255,138,0,0.12)]' : 'bg-muted/30 border border-border/30'}`}>
+                  <div className={`p-3 rounded-xl transition-all duration-300 ${winSoundEnabled ? 'bg-[rgba(194,144,47,0.2)] border border-[rgba(194,144,47,0.35)] shadow-lg shadow-[rgba(194,144,47,0.12)]' : 'bg-muted/30 border border-border/30'}`}>
                     {winSoundEnabled ? (
-                      <Volume2 className="h-5 w-5 text-[#FF8A00]" />
+                      <Volume2 className="h-5 w-5 text-[#C2902F]" />
                     ) : (
                       <VolumeX className="h-5 w-5 text-muted-foreground" />
                     )}
@@ -1168,15 +1165,15 @@ const Profile: React.FC = () => {
                 <Switch
                   checked={winSoundEnabled}
                   onCheckedChange={toggleWinSound}
-                  className="data-[state=checked]:bg-[#FF8A00]"
+                  className="data-[state=checked]:bg-[#C2902F]"
                 />
               </div>
 
               {/* Test notification section */}
-              <div className="pt-4 border-t border-[rgba(255,138,0,0.12)]">
-                <p className="text-sm text-muted-foreground mb-3">Otestujte si funkčnost push notifikací na vašem zařízení.</p>
+              <div className="pt-4 border-t border-[rgba(194,144,47,0.12)]">
+                <p className="text-sm text-muted-foreground mb-3">Otestuj si funkčnost push notifikací na svém zařízení.</p>
                 <Button onClick={handleTestNotification} variant="outline" disabled={testingNotification}
-                  className="w-full sm:w-auto border-[rgba(255,138,0,0.3)] hover:border-[rgba(255,138,0,0.5)] hover:bg-[rgba(255,138,0,0.06)] text-foreground font-semibold transition-all duration-200">
+                  className="w-full sm:w-auto border-[rgba(194,144,47,0.3)] hover:border-[rgba(194,144,47,0.5)] hover:bg-[rgba(194,144,47,0.06)] text-foreground font-semibold transition-all duration-200">
                   <OneMilBellIcon size={16} className={`h-4 w-4 mr-2 ${testingNotification ? 'animate-pulse' : ''}`} />
                   {testingNotification ? 'Odesílám...' : 'Otestovat notifikaci'}
                 </Button>
@@ -1203,7 +1200,7 @@ const Profile: React.FC = () => {
                 <div className={`flex items-center gap-4 p-5 rounded-xl transition-all duration-500 hover:shadow-lg ${
                   marketingStatus === 'active' 
                     ? 'bg-gradient-to-r from-green-500/15 via-green-500/5 to-transparent border border-green-500/30 hover:border-green-500/50 hover:shadow-green-500/10' 
-                    : 'bg-gradient-to-r from-[rgba(255,138,0,0.08)] via-transparent to-[rgba(255,138,0,0.04)] border border-[rgba(255,138,0,0.15)] hover:border-[rgba(255,138,0,0.3)] hover:shadow-[rgba(255,138,0,0.04)]'
+                    : 'bg-gradient-to-r from-[rgba(194,144,47,0.08)] via-transparent to-[rgba(194,144,47,0.04)] border border-[rgba(194,144,47,0.15)] hover:border-[rgba(194,144,47,0.3)] hover:shadow-[rgba(194,144,47,0.04)]'
                 }`}>
                   {marketingStatus === 'active' ? (
                     <>
@@ -1212,7 +1209,7 @@ const Profile: React.FC = () => {
                       </div>
                       <div>
                         <span className="font-bold text-foreground text-lg block">Marketing: Aktivní</span>
-                        <span className="text-sm text-green-500/70">Dostáváte novinky e-mailem</span>
+                        <span className="text-sm text-green-500/70">Dostáváš novinky e-mailem</span>
                       </div>
                     </>
                   ) : marketingStatus === 'revoked' ? (
@@ -1222,7 +1219,7 @@ const Profile: React.FC = () => {
                       </div>
                       <div>
                         <span className="font-bold text-foreground text-lg block">Marketing: Odhlášeno</span>
-                        <span className="text-sm text-muted-foreground/60">Nepřijímáte marketingové e-maily</span>
+                        <span className="text-sm text-muted-foreground/60">Nepřijímáš marketingové e-maily</span>
                       </div>
                     </>
                   ) : marketingStatus === 'none' ? (
@@ -1232,24 +1229,24 @@ const Profile: React.FC = () => {
                       </div>
                       <div>
                         <span className="font-bold text-foreground text-lg block">Marketing: Nepřihlášeno</span>
-                        <span className="text-sm text-muted-foreground/60">Nejste přihlášeni k odběru</span>
+                        <span className="text-sm text-muted-foreground/60">Nejsi přihlášený k odběru</span>
                       </div>
                     </>
                   ) : (
                     <div className="flex items-center gap-3">
-                      <Loader2 className="h-5 w-5 animate-spin text-[#FF8A00]" />
+                      <Loader2 className="h-5 w-5 animate-spin text-[#C2902F]" />
                       <span className="text-muted-foreground">Načítám...</span>
                     </div>
                   )}
                 </div>
 
                 <p className="text-sm text-muted-foreground/70 leading-relaxed">
-                  V rámci vašeho účtu můžete dostávat informace o nových soutěžích, speciálních akcích a dalších novinkách prostřednictvím e-mailu.
+                  V rámci svého účtu můžeš dostávat informace o nových soutěžích, speciálních akcích a dalších novinkách prostřednictvím e-mailu.
                 </p>
                 
                 {marketingStatus === 'active' && (
-                  <div className="pt-4 border-t border-[rgba(255,138,0,0.08)]">
-                    <p className="text-sm text-muted-foreground/60 mb-4">Pokud si již nepřejete dostávat marketingová sdělení, můžete se odhlásit.</p>
+                  <div className="pt-4 border-t border-[rgba(194,144,47,0.08)]">
+                    <p className="text-sm text-muted-foreground/60 mb-4">Pokud už nechceš dostávat marketingová sdělení, můžeš se odhlásit.</p>
                     <Button 
                       variant="outline" 
                       className="w-full sm:w-auto border-destructive/35 bg-destructive/5 hover:border-destructive/55 hover:bg-destructive/15 transition-all duration-300 hover:scale-[1.02] hover:shadow-lg hover:shadow-destructive/10 font-semibold"
@@ -1265,10 +1262,10 @@ const Profile: React.FC = () => {
                 )}
 
                 {(marketingStatus === 'revoked' || marketingStatus === 'none') && (
-                  <div className="pt-4 border-t border-[rgba(255,138,0,0.08)]">
-                    <p className="text-sm text-muted-foreground/60 mb-4">Chcete-li dostávat marketingová sdělení, můžete se přihlásit.</p>
+                  <div className="pt-4 border-t border-[rgba(194,144,47,0.08)]">
+                    <p className="text-sm text-muted-foreground/60 mb-4">Pokud chceš dostávat marketingová sdělení, můžeš se přihlásit.</p>
                     <Button 
-                      className="w-full sm:w-auto bg-gradient-to-r from-[#FF8A00] via-[#FFB547] to-[#FF8A00] hover:from-[#FFB547] hover:via-[#FF8A00] hover:to-[#FFB547] text-black font-bold transition-all duration-300 hover:scale-[1.02] shadow-lg shadow-[rgba(255,138,0,0.2)] hover:shadow-[rgba(255,138,0,0.35)]"
+                      className="w-full sm:w-auto bg-gradient-to-r from-[#C2902F] via-[#E9B949] to-[#C2902F] hover:from-[#E9B949] hover:via-[#C2902F] hover:to-[#E9B949] text-black font-bold transition-all duration-300 hover:scale-[1.02] shadow-lg shadow-[rgba(194,144,47,0.2)] hover:shadow-[rgba(194,144,47,0.35)]"
                       onClick={() => {
                         setPendingMarketingAction('subscribe');
                         setMarketingDialogOpen(true);
@@ -1299,15 +1296,15 @@ const Profile: React.FC = () => {
       {/* Premium Top-up Modal */}
       {/* Top-up modal se v nativní aplikaci vůbec nerenderuje — nejde otevřít ani nepřímo. */}
       <Dialog open={showTopUpModal && !isNativeApp()} onOpenChange={setShowTopUpModal}>
-        <DialogContent className="max-w-md border-[rgba(255,138,0,0.15)] bg-gradient-to-br from-card via-card to-[rgba(255,138,0,0.04)] backdrop-blur-xl">
+        <DialogContent className="max-w-md border-[rgba(194,144,47,0.15)] bg-gradient-to-br from-card via-card to-[rgba(194,144,47,0.04)] backdrop-blur-xl">
           <DialogHeader>
             <DialogTitle className="text-2xl font-bold flex items-center gap-3">
-              <div className="p-2 rounded-xl bg-[rgba(255,138,0,0.15)]">
-                <OneMilCoinsIcon size={20} className="h-5 w-5 text-[#FF8A00]" />
+              <div className="p-2 rounded-xl bg-[rgba(194,144,47,0.15)]">
+                <OneMilCoinsIcon size={20} className="h-5 w-5 text-[#C2902F]" />
               </div>
               Dobít MIO
             </DialogTitle>
-            <DialogDescription>Vyberte balíček nebo zadejte vlastní částku.</DialogDescription>
+            <DialogDescription>Vyber balíček nebo zadej vlastní částku.</DialogDescription>
           </DialogHeader>
           
           <div className="space-y-4">
@@ -1318,14 +1315,14 @@ const Profile: React.FC = () => {
                   onClick={() => handlePackageSelect(pkg)}
                   className={`p-5 rounded-xl border-2 text-left transition-all duration-300 hover:scale-[1.01] ${
                     selectedPackage?.id === pkg.id
-                      ? 'border-[rgba(255,138,0,0.5)] bg-gradient-to-r from-[rgba(255,138,0,0.12)] via-[rgba(255,138,0,0.08)] to-[rgba(255,138,0,0.04)] shadow-lg shadow-[rgba(255,138,0,0.08)]'
-                      : 'border-border/40 hover:border-[rgba(255,138,0,0.25)] bg-muted/10'
+                      ? 'border-[rgba(194,144,47,0.5)] bg-gradient-to-r from-[rgba(194,144,47,0.12)] via-[rgba(194,144,47,0.08)] to-[rgba(194,144,47,0.04)] shadow-lg shadow-[rgba(194,144,47,0.08)]'
+                      : 'border-border/40 hover:border-[rgba(194,144,47,0.25)] bg-muted/10'
                   }`}
                 >
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-4">
-                      <div className={`p-2.5 rounded-xl transition-all duration-300 ${selectedPackage?.id === pkg.id ? 'bg-[rgba(255,138,0,0.2)]' : 'bg-muted/30'}`}>
-                        <OneMilCoinsIcon size={20} className={`h-5 w-5 transition-colors ${selectedPackage?.id === pkg.id ? 'text-[#FF8A00]' : 'text-muted-foreground'}`} />
+                      <div className={`p-2.5 rounded-xl transition-all duration-300 ${selectedPackage?.id === pkg.id ? 'bg-[rgba(194,144,47,0.2)]' : 'bg-muted/30'}`}>
+                        <OneMilCoinsIcon size={20} className={`h-5 w-5 transition-colors ${selectedPackage?.id === pkg.id ? 'text-[#C2902F]' : 'text-muted-foreground'}`} />
                       </div>
                       <div>
                         <p className="font-bold text-lg">
@@ -1338,7 +1335,7 @@ const Profile: React.FC = () => {
                       </div>
                     </div>
                     {selectedPackage?.id === pkg.id && (
-                      <Check className="h-6 w-6 text-[#FF8A00]" />
+                      <Check className="h-6 w-6 text-[#C2902F]" />
                     )}
                   </div>
                 </button>
@@ -1350,15 +1347,15 @@ const Profile: React.FC = () => {
               <Input
                 id="customAmount"
                 type="number"
-                placeholder="Zadejte částku..."
+                placeholder="Zadej částku..."
                 min="1"
                 value={customAmount}
                 onChange={(e) => handleCustomAmountChange(e.target.value)}
-                className="mt-2 premium-input bg-muted/20 border-border/40 focus:border-[rgba(255,138,0,0.45)]"
+                className="mt-2 premium-input bg-muted/20 border-border/40 focus:border-[rgba(194,144,47,0.45)]"
               />
               {customAmount && parseInt(customAmount) > 0 && (
                 <p className="text-sm text-muted-foreground mt-2">
-                  Obdržíte <span className="text-[#FFB547] font-semibold">{parseInt(customAmount).toLocaleString('cs-CZ')} MIO</span> (bez bonusu)
+                  Dostaneš <span className="text-[#E9B949] font-semibold">{parseInt(customAmount).toLocaleString('cs-CZ')} MIO</span> (bez bonusu)
                 </p>
               )}
             </div>
@@ -1380,7 +1377,7 @@ const Profile: React.FC = () => {
             <Button 
               onClick={handleTopUpPurchase} 
               disabled={purchaseLoading || (!selectedPackage && !customAmount)}
-              className="bg-gradient-to-r from-[#FF8A00] to-[#FFB547] hover:from-[#FFB547] hover:to-[#FF8A00] text-black font-bold transition-all duration-300 hover:scale-[1.02]"
+              className="bg-gradient-to-r from-[#C2902F] to-[#E9B949] hover:from-[#E9B949] hover:to-[#C2902F] text-black font-bold transition-all duration-300 hover:scale-[1.02]"
             >
               {purchaseLoading ? (
                 <>
@@ -1399,7 +1396,7 @@ const Profile: React.FC = () => {
           <AlertDialogHeader>
             <AlertDialogTitle className="text-xl font-bold">Potvrzení změny</AlertDialogTitle>
             <AlertDialogDescription>
-              Opravdu chcete změnit nastavení marketingových sdělení? Tuto volbu můžete kdykoliv změnit.
+              Opravdu chceš změnit nastavení marketingových sdělení? Tuto volbu můžeš kdykoliv změnit.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>

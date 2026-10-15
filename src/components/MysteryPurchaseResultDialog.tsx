@@ -3,15 +3,15 @@ import Confetti from "react-confetti";
 import { useWindowSize } from "react-use";
 import { supabase } from "@/integrations/supabase/client";
 import { MIOCOIN_IMAGE_URL } from "@/components/MioCoin";
-import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Copy, Check, Gift, Calendar, ChevronRight } from "lucide-react";
 import { toast } from "sonner";
 import type { MysteryCoupon } from "@/lib/mysteryCouponPurchase";
-import auroraIdle from "@/assets/aurora-idle.jpg";
-import auroraWinVideo from "@/assets/aurora-win.mp4";
-import auroraWinPoster from "@/assets/aurora-win-poster.jpg";
-import logoOnemil from "@/assets/logo-onemil.png";
+import { ResultTicket } from "@/components/brand/ResultTicket";
+import { MioBadge } from "@/components/brand/MioBadge";
+import avatarSmile from "@/assets/redesign/avatar/face-jisty.png";
+import faceExcited from "@/assets/redesign/avatar/face-nadseny.png";
+import avatarJoy from "@/assets/redesign/avatar/avatar-mava.png";
 import voucherTicket from "@/assets/mystery-voucher-ticket.jpg";
 
 /**
@@ -83,8 +83,27 @@ export function MysteryPurchaseResultDialog({
   const [bonusPrize, setBonusPrize] = useState<BonusPrizeRow | null>(null);
   const [contestPrize, setContestPrize] = useState<ContestPrizeRow | null>(null);
   const [copied, setCopied] = useState(false);
+  const [contestTitle, setContestTitle] = useState<string | null>(null);
 
   const wonType = ticket?.won_type ?? null;
+
+  // Název soutěže na tiketu (veřejný údaj); číslo tiketu se nikdy neukazuje.
+  useEffect(() => {
+    if (!open || !contestId) {
+      setContestTitle(null);
+      return;
+    }
+    let cancelled = false;
+    void supabase
+      .from("contests")
+      .select("title")
+      .eq("id", contestId)
+      .maybeSingle()
+      .then(({ data }) => {
+        if (!cancelled) setContestTitle((data as { title?: string | null } | null)?.title ?? null);
+      });
+    return () => { cancelled = true; };
+  }, [open, contestId]);
   const isWin = wonType === "bonus" || wonType === "main";
 
   // Detaily výhry se dotahují ze stejných zdrojů jako v TicketResultModal:
@@ -189,7 +208,7 @@ export function MysteryPurchaseResultDialog({
     <Dialog open={open} onOpenChange={(next) => { if (!next) onClose(); }}>
       <DialogContent
         data-testid="mystery-result-dialog"
-        className="bg-[#FFF9F0] border border-[#F4D6AD] text-[#111827] shadow-[0_28px_80px_rgba(81,49,10,0.24)] max-w-[632px] w-[calc(100vw-1.5rem)] max-h-[92vh] overflow-y-auto overflow-x-hidden p-4 sm:p-6 sm:rounded-[10px] [&>button]:right-4 [&>button]:top-4 [&>button]:text-[#94A3B8] [&>button]:hover:text-[#111827]"
+        className={`om-rd ${wonType === "bonus" ? "om-rd-bonus" : wonType === "main" ? "om-rd-main" : ""} max-w-[480px] w-[calc(100vw-1.5rem)] max-h-[92vh] overflow-y-auto overflow-x-hidden p-5 sm:p-6 [&>button]:right-4 [&>button]:top-4 [&>button]:z-20`}
       >
         {isWin && (
           <Confetti
@@ -198,6 +217,7 @@ export function MysteryPurchaseResultDialog({
             recycle={false}
             numberOfPieces={wonType === "main" ? 520 : 220}
             gravity={wonType === "main" ? 0.18 : 0.32}
+            colors={["#FFE29A", "#E9B949", "#C2902F", "#B5122B", "#FF6B80", "#ECEDEF"]}
             className="pointer-events-none fixed inset-0 z-[60]"
           />
         )}
@@ -208,124 +228,94 @@ export function MysteryPurchaseResultDialog({
           </DialogTitle>
         </DialogHeader>
 
-        {/* ── Reveal hero — same Aurora Ignition footage as TicketResultModal;
-             pure visual backdrop, no text (headline below already carries it
-             and has its own tested data-testid markup, kept untouched). ── */}
-        <div className="relative -mx-4 -mt-4 h-40 w-[calc(100%+2rem)] animate-in fade-in zoom-in-95 duration-500 overflow-hidden rounded-t-[10px] bg-[#FFF9F0] sm:-mx-6 sm:-mt-6 sm:h-48 sm:w-[calc(100%+3rem)]">
-          <img
-            src={logoOnemil}
-            alt="OneMil"
-            className="absolute left-4 top-4 z-10 h-6 w-auto object-contain drop-shadow-[0_1px_4px_rgba(255,255,255,0.9)] sm:h-7"
-          />
-          {isWin ? (
-            <video
-              key={`aurora-mystery-${contestId}-${ticket?.ticket_number}`}
-              src={auroraWinVideo}
-              poster={auroraWinPoster}
-              autoPlay
-              muted
-              playsInline
-              className="absolute inset-0 h-full w-full object-cover"
-            />
-          ) : (
-            <img
-              src={auroraIdle}
-              alt=""
-              className="absolute inset-0 h-full w-full animate-[pulse_3.4s_ease-in-out_infinite] object-cover"
-            />
-          )}
-          <div aria-hidden className="absolute inset-x-0 bottom-0 h-16 bg-gradient-to-t from-[#FFF9F0] to-transparent" />
-        </div>
-
-        <span
-          aria-hidden="true"
-          className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_82%_10%,rgba(255,181,71,0.18),transparent_23%),radial-gradient(circle_at_10%_88%,rgba(255,138,0,0.11),transparent_26%)]"
-        />
+        {/* Hlavní výhra: zlaté paprsky za tiketem (deska Momenty, krok 3). */}
+        {wonType === "main" && <span aria-hidden="true" className="om-rd-rays" />}
 
         <div className="relative flex flex-col gap-4 min-w-0">
-          {/* ── Hlavní sdělení: výhra z tiketu ─────────────────────────── */}
-          <section
-            data-testid="mystery-result-prize"
-            className="grid grid-cols-[minmax(0,1fr)_7rem] sm:grid-cols-[minmax(0,1fr)_10rem] gap-2 sm:gap-4 items-center min-w-0 animate-in fade-in slide-in-from-bottom-3 duration-700 [animation-delay:150ms] fill-mode-both"
-          >
-            <div className="text-left min-w-0">
-              {isWin ? (
-                <>
-                  <p className="text-xl sm:text-2xl font-extrabold tracking-wide bg-gradient-to-r from-[#FF8A00] to-[#FFB547] bg-clip-text text-transparent">
-                    🎉 GRATULUJEME!
-                  </p>
-                  <p className="text-3xl sm:text-5xl font-black text-[#111827] leading-none mt-1">
-                    VYHRÁL JSI!
-                  </p>
-                  <p className="text-[11px] uppercase tracking-[0.2em] text-[#6B7280] font-semibold mt-4">
-                    {prizeLabel}
-                  </p>
-                </>
-              ) : (
-                // Nevýherní tiket není chyba ani prázdná obrazovka: zákazník
-                // se dozví, co se stalo, a rovnou i to, co si odnáší.
-                <div data-testid="mystery-result-noprize">
-                  <p className="font-heading text-[clamp(1.15rem,4.3vw,2.1rem)] font-black text-[#111827] leading-[1.08] tracking-tight min-[480px]:whitespace-nowrap">
-                    TENTOKRÁT <span className="text-[#F97316]">BEZ VÝHRY</span>
-                  </p>
-                  <p className="font-heading text-base sm:text-lg font-black text-[#111827] mt-1 break-words">
-                    Ale jsi stále ve hře!
-                  </p>
-                  <p className="text-[11px] sm:text-xs text-[#6B7280] mt-2 max-w-[24rem] break-words">
-                    Voucher najdeš ve Voucherech a tvůj ticket zůstává bezpečně uložený v účtu.
-                  </p>
-                </div>
-              )}
+          {/* ── Tiket: černý bez výhry, zlatý při výhře; nikdy s číslem ── */}
+          <div className="pt-10 px-3">
+            {isWin ? (
+              <ResultTicket
+                variant="gold"
+                label="VÝHERNÍ TIKET"
+                word={wonType === "main" ? "Hlavní výhra" : "Bonus"}
+                contestTitle={contestTitle}
+                seal={
+                  wonType === "main"
+                    ? "emblem"
+                    : isMioCoinWin
+                      ? { top: `+${miocoinAmount.toLocaleString("cs-CZ")}`, bottom: "MIO" }
+                      : null
+                }
+              />
+            ) : (
+              <ResultTicket variant="black" label="SOUTĚŽNÍ TIKET" word="Tiket" contestTitle={contestTitle} />
+            )}
+          </div>
 
-              {isWin && (
-                <>
+          {/* ── Avatar podle momentu ── */}
+          {!isWin ? (
+            <div data-testid="mystery-result-noprize-icon" aria-hidden="true" className="om-rd-avatar">
+              <img src={avatarSmile} alt="" />
+            </div>
+          ) : wonType === "main" ? (
+            <img src={avatarJoy} alt="" aria-hidden="true" className="om-rd-avatar-big" />
+          ) : (
+            <div aria-hidden="true" className="om-rd-avatar" style={{ width: 96, height: 96, boxShadow: "0 0 0 2px #E9B949" }}>
+              <img src={faceExcited} alt="" />
+            </div>
+          )}
+
+          {/* ── Hlavní sdělení: výhra z tiketu ─────────────────────────── */}
+          <section data-testid="mystery-result-prize" className="om-rd-up text-center min-w-0">
+            {isWin ? (
+              <>
+                <p className="om-rd-eyebrow">Gratulujeme – VYHRÁL JSI!</p>
+                <p className={`om-rd-head mt-1.5 ${wonType === "main" ? "om-rd-head-gold" : ""}`}>
+                  {wonType === "main" ? "Hlavní výhra je tvoje!" : "Bonus je tvůj!"}
+                </p>
+                <p className="mt-4 text-[11px] font-bold uppercase tracking-[0.2em] text-[#A9AAB3]">{prizeLabel}</p>
+                <div className="mt-1.5 flex items-center justify-center gap-3 min-w-0">
+                  {isMioCoinWin ? (
+                    // MIO se ukazuje vždy jako korunkový odznak (pravidlo redesignu).
+                    <span data-testid="mystery-result-prize-badge" className="shrink-0">
+                      <MioBadge width={58} />
+                    </span>
+                  ) : prizeImage && (
+                    <img
+                      src={prizeImage}
+                      alt={prizeTitle}
+                      data-testid="mystery-result-prize-image"
+                      className="h-20 w-20 shrink-0 rounded-xl bg-white/5 object-contain p-1"
+                      onError={(e) => { e.currentTarget.style.display = "none"; }}
+                    />
+                  )}
                   <p
                     data-testid={isMioCoinWin ? "mystery-result-miocoin-amount" : "mystery-result-prize-title"}
-                    className="text-2xl sm:text-3xl font-extrabold text-[#F97316] mt-2 break-words"
+                    className="om-rd-prize break-words text-left"
                   >
                     {prizeTitle}
                   </p>
-                  {prizeDescription && (
-                    <p className="text-sm text-[#4B5563] mt-2 break-words">{prizeDescription}</p>
-                  )}
-                </>
-              )}
-            </div>
-
-            {isWin && prizeImage && (
-              <img
-                src={prizeImage}
-                alt={prizeTitle}
-                data-testid="mystery-result-prize-image"
-                className={
-                  isMioCoinWin
-                    ? "order-1 md:order-2 h-28 w-28 mx-auto object-contain drop-shadow-[0_12px_22px_rgba(249,115,22,0.28)]"
-                    : "order-1 md:order-2 h-40 w-40 sm:h-48 sm:w-48 mx-auto object-contain drop-shadow-[0_16px_26px_rgba(91,57,16,0.2)]"
-                }
-              />
-            )}
-
-            {/* Dárková krabička podle schváleného návrhu. Originální logo
-                zůstává beze změny a je vložené na přední stranu dárku. */}
-            {!isWin && (
-              <div
-                data-testid="mystery-result-noprize-icon"
-                aria-hidden="true"
-                className="relative h-[94px] sm:h-[108px] w-full"
-              >
-                <span className="absolute left-1 sm:left-3 top-4 sm:top-5 h-[70px] w-[68px] sm:h-[80px] sm:w-[78px] rotate-[8deg] rounded-md border border-[#F0C58D] bg-gradient-to-br from-white via-[#FFF9F0] to-[#FFE8C6] shadow-[0_12px_24px_rgba(180,94,8,0.22)]">
-                  <span className="absolute inset-x-0 top-0 h-3 rounded-t-md bg-gradient-to-r from-[#FFB547] via-[#F97316] to-[#FFB547]" />
-                  <span className="absolute left-1/2 top-0 h-full w-2 -translate-x-1/2 bg-gradient-to-b from-[#FFB547] to-[#F97316]" />
-                  <span className="absolute -top-4 left-1/2 h-7 w-9 -translate-x-1/2 rounded-[50%] border-[5px] border-[#F97316]" />
-                  <span className="absolute left-1/2 top-7 flex h-8 w-8 -translate-x-1/2 items-center justify-center rounded-full bg-white/95 shadow-sm">
-                    <img src={couponImage ?? "/apple-touch-icon.png"} alt="" className="h-7 w-7 rounded-full object-contain" />
-                  </span>
-                </span>
-                <span className="absolute right-0 sm:right-1 top-10 sm:top-12 rotate-[-8deg] text-[9px] sm:text-[11px] italic font-bold leading-tight text-[#F97316]">
-                  Více zážitků<br />z každého<br />nákupu
-                </span>
-                <span className="absolute left-0 top-2 text-[#F97316] text-xs">✦</span>
-                <span className="absolute right-4 top-1 text-[#FFB547] text-sm">✦</span>
+                </div>
+                {prizeDescription && (
+                  <p className="om-rd-sub mt-2 break-words">
+                    {wonType === "main" ? `${prizeDescription}` : prizeDescription}
+                  </p>
+                )}
+                {wonType === "main" && (
+                  <p className="om-rd-sub mt-2">Ozveme se ti kvůli předání výhry.</p>
+                )}
+              </>
+            ) : (
+              // Nevýherní tiket není chyba ani prázdná obrazovka: zákazník
+              // se dozví, co se stalo, a rovnou i to, co si odnáší.
+              <div data-testid="mystery-result-noprize">
+                <p className="om-rd-head">TENTOKRÁT BEZ VÝHRY</p>
+                <p className="mt-1.5 text-base font-extrabold text-[#F6D77A]">Ale jsi stále ve hře!</p>
+                <p className="om-rd-sub mt-1">„Nevadí – každý tiket je nová šance.“</p>
+                <p className="om-rd-note mt-2 break-words">
+                  Voucher najdeš ve Voucherech a tvůj ticket zůstává bezpečně uložený v účtu.
+                </p>
               </div>
             )}
           </section>
@@ -333,8 +323,8 @@ export function MysteryPurchaseResultDialog({
           {/* ── Druhý, garantovaný bonus: kupon — má vlastní, opožděný reveal,
                 aby to působilo jako druhá odměna odhalená až po hlavním výsledku ── */}
           <div className="flex items-center justify-center gap-2 animate-in fade-in slide-in-from-bottom-2 duration-700 [animation-delay:450ms] fill-mode-both">
-            <Gift className="h-4 w-4 shrink-0 text-[#F97316]" />
-            <p className="text-[11px] sm:text-xs uppercase tracking-[0.18em] font-bold text-[#334155]">
+            <Gift className="h-4 w-4 shrink-0 text-[#E9B949]" />
+            <p className="text-[11px] sm:text-xs uppercase tracking-[0.18em] font-bold text-[#F2C55C]">
               A navíc získáváš voucher
             </p>
           </div>
@@ -349,7 +339,7 @@ export function MysteryPurchaseResultDialog({
           */}
           <section
             data-testid="mystery-coupon-reveal"
-            className="relative w-full rounded-xl overflow-hidden text-[#111827] drop-shadow-[0_16px_28px_rgba(91,57,16,0.28)] animate-in fade-in slide-in-from-bottom-4 zoom-in-95 spin-in-[6deg] duration-[900ms] [animation-delay:550ms] fill-mode-both"
+            className="relative w-full rounded-xl overflow-hidden text-[#111827] drop-shadow-[0_16px_28px_rgba(0,0,0,0.5)] animate-in fade-in slide-in-from-bottom-4 zoom-in-95 spin-in-[6deg] duration-[900ms] [animation-delay:550ms] fill-mode-both"
             style={{ aspectRatio: "2688 / 1152" }}
           >
             {/* Samotný ticket — nosný vizuální objekt, ne pozadí karty. */}
@@ -441,28 +431,28 @@ export function MysteryPurchaseResultDialog({
           {showNextWin && (
             <section
               data-testid="mystery-result-next-win"
-              className="rounded-2xl border border-[#FFD69E] bg-white/75 px-3 py-3 sm:px-4 sm:py-3 shadow-[0_12px_30px_rgba(249,115,22,0.12)] min-w-0 animate-in fade-in slide-in-from-bottom-2 duration-700 [animation-delay:650ms] fill-mode-both"
+              className="om-rd-panel min-w-0 animate-in fade-in slide-in-from-bottom-2 duration-700 [animation-delay:650ms] fill-mode-both"
             >
               <div className="grid grid-cols-[3rem_minmax(0,1fr)] sm:grid-cols-[3.25rem_minmax(0,1fr)_5.5rem] items-center gap-3 min-w-0">
-                <span className="h-12 w-12 sm:h-[52px] sm:w-[52px] rounded-full bg-gradient-to-br from-[#FF9B22] to-[#C85D00] flex items-center justify-center shadow-[0_9px_22px_rgba(201,93,0,0.34)]">
-                  <Calendar className="h-6 w-6 text-white" />
+                <span className="h-12 w-12 sm:h-[52px] sm:w-[52px] rounded-full bg-gradient-to-b from-[#FFE29A] via-[#E9B949] to-[#C2902F] flex items-center justify-center shadow-[0_8px_18px_rgba(194,144,47,0.35)]">
+                  <Calendar className="h-6 w-6 text-[#1A1205]" />
                 </span>
                 <div className="min-w-0">
-                  <p className="font-heading text-xs sm:text-sm font-black text-[#111827] leading-tight break-words">
+                  <p className="text-xs sm:text-sm font-extrabold text-[#ECEDEF] leading-tight break-words">
                     Další výherní ticket čeká už za{" "}
                     <span
                       data-testid="mystery-result-next-win-distance"
-                      className="text-[#F97316]"
+                      className="text-[#F6D77A]"
                     >
                       {distance.toLocaleString("cs-CZ")} {tahPlural(distance)}
                     </span>
                     .
                   </p>
-                  <p className="text-[10px] sm:text-[11px] text-[#94A3B8] mt-1 break-words">
+                  <p className="text-[10px] sm:text-[11px] text-[#A9AAB3] mt-1 break-words">
                     Může obsahovat MIO, bonusovou cenu nebo hlavní výhru.
                   </p>
                 </div>
-                <p className="hidden sm:block rotate-[-8deg] text-center text-[11px] italic font-bold leading-tight text-[#F97316]">
+                <p className="hidden sm:block rotate-[-8deg] text-center text-[11px] italic font-bold leading-tight text-[#F2C55C]">
                   Jsi blíž<br />než si myslíš!
                 </p>
               </div>
@@ -473,9 +463,9 @@ export function MysteryPurchaseResultDialog({
                   aria-hidden="true"
                   className="relative mt-3 grid grid-cols-5 items-center px-2 sm:ml-[3.8rem] sm:mr-[5.8rem]"
                 >
-                  <span className="absolute left-[10%] right-[10%] top-1/2 h-[2px] -translate-y-1/2 bg-[#F1E3D2]" />
+                  <span className="absolute left-[10%] right-[10%] top-1/2 h-[2px] -translate-y-1/2 bg-white/15" />
                   <span
-                    className="absolute left-[10%] top-1/2 h-[2px] -translate-y-1/2 bg-[#FF8A00]"
+                    className="absolute left-[10%] top-1/2 h-[2px] -translate-y-1/2 bg-[#C2902F]"
                     style={{ width: `${completedPreviewSteps * 20}%` }}
                   />
                   {Array.from({ length: 5 }, (_, index) => {
@@ -487,10 +477,10 @@ export function MysteryPurchaseResultDialog({
                         key={step}
                         className={`relative z-10 mx-auto flex h-5 w-5 items-center justify-center rounded-full text-[10px] font-bold ${
                           completed
-                            ? "bg-[#FF8A00] text-white shadow-[0_4px_10px_rgba(249,115,22,0.25)]"
+                            ? "bg-[#C2902F] text-white shadow-[0_4px_10px_rgba(194,144,47,0.25)]"
                             : current
-                              ? "border border-[#FFB35C] bg-white text-[#F97316]"
-                              : "border border-[#E8DED2] bg-[#FAF8F5] text-[#C9C0B7]"
+                              ? "border border-[#E9B949] bg-[#17171B] text-[#F6D77A]"
+                              : "border border-white/15 bg-white/5 text-[#8E8F98]"
                         }`}
                       >
                         {completed ? <Check className="h-3 w-3" /> : step}
@@ -502,17 +492,18 @@ export function MysteryPurchaseResultDialog({
             </section>
           )}
 
-          <p data-testid="mystery-result-storage-note" className="text-xs text-[#6B7280] text-center break-words animate-in fade-in duration-700 [animation-delay:700ms] fill-mode-both">
-            Voucher najdeš ve <span className="font-semibold text-[#374151]">Voucherech</span>, ticket máš uložený ve svém účtu.
+          <p data-testid="mystery-result-storage-note" className="om-rd-note break-words animate-in fade-in duration-700 [animation-delay:700ms] fill-mode-both">
+            Voucher najdeš ve <b>Voucherech</b>, ticket máš uložený ve svém účtu.
           </p>
 
-          <Button
+          <button
+            type="button"
             data-testid="mystery-result-continue"
             onClick={onClose}
-            className="h-11 font-heading font-bold rounded-full w-full text-base animate-in fade-in slide-in-from-bottom-2 duration-700 [animation-delay:750ms] fill-mode-both bg-gradient-to-b from-[#F6A63A] via-[#E47B0A] to-[#C35A00] text-white shadow-[0_8px_20px_rgba(180,82,0,0.3)] hover:brightness-105"
+            className="om-rd-gold animate-in fade-in slide-in-from-bottom-2 duration-700 [animation-delay:750ms] fill-mode-both"
           >
             Pokračovat <ChevronRight className="h-4 w-4" />
-          </Button>
+          </button>
         </div>
       </DialogContent>
     </Dialog>

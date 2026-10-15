@@ -38,7 +38,7 @@ const SupportForm: React.FC = () => {
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     if (!emailRegex.test(email.trim())) {
       setSubmitStatus('error');
-      setStatusMessage('Zadejte platnou e-mailovou adresu.');
+      setStatusMessage('Zadej platnou e-mailovou adresu.');
       return;
     }
 
@@ -58,7 +58,7 @@ const SupportForm: React.FC = () => {
       if (error) throw error;
 
       setSubmitStatus('success');
-      setStatusMessage('Vaše zpráva byla úspěšně odeslána. Brzy se vám ozveme.');
+      setStatusMessage('Tvoje zpráva byla úspěšně odeslána. Brzy se ti ozveme.');
       
       // Reset form
       setName('');
@@ -76,16 +76,16 @@ const SupportForm: React.FC = () => {
 
   return (
     <div className="mt-12 pt-8 border-t border-border/20">
-      <h2 className="text-xl md:text-2xl font-heading mb-6 bg-gradient-to-r from-[hsl(var(--heading-gold))] via-[#FFB547] to-[hsl(var(--heading-gold))] bg-clip-text text-transparent">
+      <h2 className="text-xl md:text-2xl font-heading mb-6 bg-gradient-to-r from-[hsl(var(--heading-gold))] via-[#E9B949] to-[hsl(var(--heading-gold))] bg-clip-text text-transparent">
         Formulář pro nahlášení problému
       </h2>
       
       {/* Status Messages */}
       {submitStatus === 'success' && (
-        <div className="mb-6 p-4 rounded-lg border border-[rgba(255,138,0,0.3)] bg-[rgba(255,138,0,0.08)]">
+        <div className="mb-6 p-4 rounded-lg border border-[rgba(194,144,47,0.3)] bg-[rgba(194,144,47,0.08)]">
           <div className="flex items-start gap-3">
-            <CheckCircle2 className="h-5 w-5 text-[#FF8A00] flex-shrink-0 mt-0.5" />
-            <p className="text-[#FFB547] text-sm leading-relaxed">
+            <CheckCircle2 className="h-5 w-5 text-[#C2902F] flex-shrink-0 mt-0.5" />
+            <p className="text-[#E9B949] text-sm leading-relaxed">
               {statusMessage}
             </p>
           </div>
@@ -112,7 +112,7 @@ const SupportForm: React.FC = () => {
           <Input
             id="support-name"
             type="text"
-            placeholder="Vaše jméno"
+            placeholder="Tvoje jméno"
             value={name}
             onChange={(e) => setName(e.target.value)}
             className="h-11 bg-muted/30 border-border/50 rounded-md focus:border-primary/50 focus:ring-primary/20 transition-colors"
@@ -164,7 +164,7 @@ const SupportForm: React.FC = () => {
           </Label>
           <Textarea
             id="support-message"
-            placeholder="Popište váš problém..."
+            placeholder="Popiš svůj problém..."
             rows={5}
             value={message}
             onChange={(e) => setMessage(e.target.value)}

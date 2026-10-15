@@ -134,7 +134,7 @@ const Homepage = () => {
     e.stopPropagation();
     
     if (!user) {
-      toast.error('Pro uložení oblíbených se musíte přihlásit');
+      toast.error('Pro uložení oblíbených se musíš přihlásit');
       return;
     }
 
@@ -273,7 +273,7 @@ const Homepage = () => {
 
   const handleContestClick = (contestId: string) => {
     if (!user) {
-      toast.error("Pro hraní her se musíte přihlásit");
+      toast.error("Pro hraní her se musíš přihlásit");
       navigate(buildLoginRedirectUrl(location.pathname + location.search));
       return;
     }
@@ -285,7 +285,7 @@ const Homepage = () => {
 
   const handleVoucherPurchase = async (voucherId: string) => {
     if (!user) {
-      toast.error("Pro koupi voucheru se musíte přihlásit");
+      toast.error("Pro koupi voucheru se musíš přihlásit");
       navigate(buildLoginRedirectUrl(location.pathname + location.search));
       return;
     }
@@ -334,7 +334,7 @@ const Homepage = () => {
               <div
                 className="h-[2px]"
                 style={{
-                  background: 'linear-gradient(90deg, transparent 0%, rgba(255,138,0,0.5) 5%, rgba(255,138,0,0.8) 20%, rgba(255,181,71,0.95) 50%, rgba(255,138,0,0.8) 80%, rgba(255,138,0,0.5) 95%, transparent 100%)'
+                  background: 'linear-gradient(90deg, transparent 0%, rgba(194,144,47,0.5) 5%, rgba(194,144,47,0.8) 20%, rgba(233,185,73,0.95) 50%, rgba(194,144,47,0.8) 80%, rgba(194,144,47,0.5) 95%, transparent 100%)'
                 }}
               />
             </div>
@@ -352,7 +352,7 @@ const Homepage = () => {
                   <div 
                     className="absolute inset-0 pointer-events-none"
                     style={{
-                      background: 'linear-gradient(to bottom, transparent 0%, transparent 30%, rgba(255,138,0,0.1) 42%, rgba(255,181,71,0.18) 50%, rgba(255,138,0,0.1) 58%, transparent 70%, transparent 100%)'
+                      background: 'linear-gradient(to bottom, transparent 0%, transparent 30%, rgba(194,144,47,0.1) 42%, rgba(233,185,73,0.18) 50%, rgba(194,144,47,0.1) 58%, transparent 70%, transparent 100%)'
                     }}
                   />
 
@@ -407,7 +407,7 @@ const Homepage = () => {
               <div
                 className="absolute inset-0 animate-golden-pulse"
                 style={{
-                  background: 'linear-gradient(90deg, transparent 0%, rgba(255,138,0,0.1) 10%, rgba(255,138,0,0.18) 30%, rgba(255,181,71,0.22) 50%, rgba(255,138,0,0.18) 70%, rgba(255,138,0,0.1) 90%, transparent 100%)',
+                  background: 'linear-gradient(90deg, transparent 0%, rgba(194,144,47,0.1) 10%, rgba(194,144,47,0.18) 30%, rgba(233,185,73,0.22) 50%, rgba(194,144,47,0.18) 70%, rgba(194,144,47,0.1) 90%, transparent 100%)',
                   filter: 'blur(8px)'
                 }}
               />
@@ -415,7 +415,7 @@ const Homepage = () => {
               <div
                 className="relative h-[5px] overflow-hidden"
                 style={{
-                  background: 'linear-gradient(90deg, transparent 0%, rgba(255,138,0,0.45) 3%, rgba(255,138,0,0.75) 15%, rgba(255,181,71,0.95) 50%, rgba(255,138,0,0.75) 85%, rgba(255,138,0,0.45) 97%, transparent 100%)'
+                  background: 'linear-gradient(90deg, transparent 0%, rgba(194,144,47,0.45) 3%, rgba(194,144,47,0.75) 15%, rgba(233,185,73,0.95) 50%, rgba(194,144,47,0.75) 85%, rgba(194,144,47,0.45) 97%, transparent 100%)'
                 }}
               >
                 {/* Shimmer overlay */}
@@ -440,7 +440,7 @@ const Homepage = () => {
           <PartnerRecruitmentCard />
 
           {/* Right Column - Poslední výherci */}
-          <Card className="homepage-light-panel homepage-latest-winners-panel rounded-xl overflow-hidden bg-[hsl(220_45%_6%)] border border-[rgba(255,138,0,0.2)] shadow-[0_4px_16px_hsl(222_50%_3%/0.5)] h-full relative">
+          <Card className="homepage-light-panel homepage-latest-winners-panel rounded-xl overflow-hidden bg-[hsl(220_45%_6%)] border border-[rgba(194,144,47,0.2)] shadow-[0_4px_16px_hsl(222_50%_3%/0.5)] h-full relative">
             <CardContent className="p-4 md:p-5 h-full flex flex-col relative z-10">
               <div className="space-y-3 flex-1 flex flex-col">
                 <div className="space-y-2">
@@ -480,7 +480,7 @@ const Homepage = () => {
                           prizeImageUrl={winner.prize_image_url}
                           cardStyleImageUrl={WINNER_BG_ROTATION[index % WINNER_BG_ROTATION.length]}
                           userAvatarUrl={winner.user_avatar_url}
-                          variant="champagne"
+                          variant="dark"
                           compact
                         />
                       ))
@@ -502,7 +502,7 @@ const Homepage = () => {
           <div 
             className="absolute inset-0 max-w-[1300px] mx-auto left-0 right-0 animate-golden-pulse"
             style={{
-              background: 'linear-gradient(90deg, transparent 0%, rgba(255,138,0,0.1) 10%, rgba(255,138,0,0.18) 30%, rgba(255,181,71,0.22) 50%, rgba(255,138,0,0.18) 70%, rgba(255,138,0,0.1) 90%, transparent 100%)',
+              background: 'linear-gradient(90deg, transparent 0%, rgba(194,144,47,0.1) 10%, rgba(194,144,47,0.18) 30%, rgba(233,185,73,0.22) 50%, rgba(194,144,47,0.18) 70%, rgba(194,144,47,0.1) 90%, transparent 100%)',
               filter: 'blur(8px)'
             }}
           />
@@ -510,7 +510,7 @@ const Homepage = () => {
           <div 
             className="relative h-[5px] max-w-[1300px] mx-auto overflow-hidden"
             style={{
-              background: 'linear-gradient(90deg, transparent 0%, rgba(255,138,0,0.45) 3%, rgba(255,138,0,0.75) 15%, rgba(255,181,71,0.95) 50%, rgba(255,138,0,0.75) 85%, rgba(255,138,0,0.45) 97%, transparent 100%)'
+              background: 'linear-gradient(90deg, transparent 0%, rgba(194,144,47,0.45) 3%, rgba(194,144,47,0.75) 15%, rgba(233,185,73,0.95) 50%, rgba(194,144,47,0.75) 85%, rgba(194,144,47,0.45) 97%, transparent 100%)'
             }}
           >
             {/* Shimmer overlay */}
@@ -529,7 +529,7 @@ const Homepage = () => {
         <section className="w-full">
           <div className="max-w-[720px] mx-auto px-4 py-2 text-center">
             <div className="flex items-center justify-center gap-2 mb-2">
-              <OneMilGiftIcon size={18} className="w-[18px] h-[18px] shrink-0" color="#FFB547" />
+              <OneMilGiftIcon size={18} className="w-[18px] h-[18px] shrink-0" color="#E9B949" />
               <h3
                 className="customer-premium-orange-heading text-base md:text-lg font-bold tracking-tight"
                 style={{ fontFamily: 'var(--om-font-heading)' }}
@@ -538,7 +538,7 @@ const Homepage = () => {
               </h3>
             </div>
             <p className="text-sm leading-relaxed max-w-[600px] mx-auto mt-2" style={{ color: '#8E98A6' }}>
-              Největší radost máme, když MIO získáváte jako odměnu za nákupy u našich partnerů. Právě na tom je OneMil postavený. Dobití berte jen jako další možnost, když se chcete do soutěže zapojit hned a nechcete čekat na další odměnu z nákupu.
+              Největší radost máme, když MIO získáváš jako odměnu za nákupy u našich partnerů. Právě na tom je OneMil postavený. Dobití ber jen jako další možnost, když se chceš do soutěže zapojit hned a nechcete čekat na další odměnu z nákupu.
             </p>
           </div>
         </section>
@@ -577,7 +577,7 @@ const Homepage = () => {
           <div 
             className="absolute inset-0 max-w-[1300px] mx-auto left-0 right-0 animate-golden-pulse"
             style={{
-              background: 'linear-gradient(90deg, transparent 0%, rgba(255,138,0,0.1) 10%, rgba(255,138,0,0.18) 30%, rgba(255,181,71,0.22) 50%, rgba(255,138,0,0.18) 70%, rgba(255,138,0,0.1) 90%, transparent 100%)',
+              background: 'linear-gradient(90deg, transparent 0%, rgba(194,144,47,0.1) 10%, rgba(194,144,47,0.18) 30%, rgba(233,185,73,0.22) 50%, rgba(194,144,47,0.18) 70%, rgba(194,144,47,0.1) 90%, transparent 100%)',
               filter: 'blur(8px)'
             }}
           />
@@ -585,7 +585,7 @@ const Homepage = () => {
           <div 
             className="relative h-[5px] max-w-[1300px] mx-auto overflow-hidden"
             style={{
-              background: 'linear-gradient(90deg, transparent 0%, rgba(255,138,0,0.45) 3%, rgba(255,138,0,0.75) 15%, rgba(255,181,71,0.95) 50%, rgba(255,138,0,0.75) 85%, rgba(255,138,0,0.45) 97%, transparent 100%)'
+              background: 'linear-gradient(90deg, transparent 0%, rgba(194,144,47,0.45) 3%, rgba(194,144,47,0.75) 15%, rgba(233,185,73,0.95) 50%, rgba(194,144,47,0.75) 85%, rgba(194,144,47,0.45) 97%, transparent 100%)'
             }}
           >
             {/* Shimmer overlay */}
@@ -610,10 +610,10 @@ const Homepage = () => {
               <ChevronRight className="w-5 h-5 text-muted-foreground" />
               {/* Role indicator */}
               {isAdmin && (
-                <div className="px-2 py-1 bg-[rgba(255,138,0,0.08)] border border-[rgba(255,138,0,0.3)] rounded text-xs text-[#FF8A00]">Pouze čtení</div>
+                <div className="px-2 py-1 bg-[rgba(194,144,47,0.08)] border border-[rgba(194,144,47,0.3)] rounded text-xs text-[#C2902F]">Pouze čtení</div>
               )}
               {!user && (
-                <div className="px-2 py-1 bg-[rgba(255,138,0,0.1)] border border-[rgba(255,138,0,0.3)] rounded text-xs text-[#FFB547]">Přihlásit pro interakci</div>
+                <div className="px-2 py-1 bg-[rgba(194,144,47,0.1)] border border-[rgba(194,144,47,0.3)] rounded text-xs text-[#E9B949]">Přihlásit pro interakci</div>
               )}
             </div>
           </div>
@@ -661,11 +661,11 @@ const Homepage = () => {
             ) : contests.length === 0 ? (
               // No contests message
               <div className="flex-none w-72">
-                <Card className="homepage-light-panel coupon-card border-[rgba(255,138,0,0.4)] bg-gradient-to-b from-[hsl(220_35%_8%)] to-[hsl(220_30%_5%)] relative overflow-hidden h-full">
+                <Card className="homepage-light-panel coupon-card border-[rgba(194,144,47,0.4)] bg-gradient-to-b from-[hsl(220_35%_8%)] to-[hsl(220_30%_5%)] relative overflow-hidden h-full">
                   <div className="absolute left-0 top-1/2 transform -translate-y-1/2 w-4 h-4 bg-background rounded-full -translate-x-2" />
                   <div className="absolute right-0 top-1/2 transform -translate-y-1/2 w-4 h-4 bg-background rounded-full translate-x-2" />
                   <CardHeader className="pb-2">
-                    <CardTitle className="text-lg font-bold text-[#FFB547]">
+                    <CardTitle className="text-lg font-bold text-[#E9B949]">
                       Žádné aktivní soutěže
                     </CardTitle>
                   </CardHeader>
@@ -699,7 +699,7 @@ const Homepage = () => {
           <div 
             className="absolute inset-0 max-w-[1300px] mx-auto left-0 right-0 animate-golden-pulse"
             style={{
-              background: 'linear-gradient(90deg, transparent 0%, rgba(255,138,0,0.1) 10%, rgba(255,138,0,0.18) 30%, rgba(255,181,71,0.22) 50%, rgba(255,138,0,0.18) 70%, rgba(255,138,0,0.1) 90%, transparent 100%)',
+              background: 'linear-gradient(90deg, transparent 0%, rgba(194,144,47,0.1) 10%, rgba(194,144,47,0.18) 30%, rgba(233,185,73,0.22) 50%, rgba(194,144,47,0.18) 70%, rgba(194,144,47,0.1) 90%, transparent 100%)',
               filter: 'blur(8px)'
             }}
           />
@@ -707,7 +707,7 @@ const Homepage = () => {
           <div 
             className="relative h-[5px] max-w-[1300px] mx-auto overflow-hidden"
             style={{
-              background: 'linear-gradient(90deg, transparent 0%, rgba(255,138,0,0.45) 3%, rgba(255,138,0,0.75) 15%, rgba(255,181,71,0.95) 50%, rgba(255,138,0,0.75) 85%, rgba(255,138,0,0.45) 97%, transparent 100%)'
+              background: 'linear-gradient(90deg, transparent 0%, rgba(194,144,47,0.45) 3%, rgba(194,144,47,0.75) 15%, rgba(233,185,73,0.95) 50%, rgba(194,144,47,0.75) 85%, rgba(194,144,47,0.45) 97%, transparent 100%)'
             }}
           >
             {/* Shimmer overlay */}
@@ -792,7 +792,7 @@ const Homepage = () => {
           <div 
             className="absolute inset-0 max-w-[1300px] mx-auto left-0 right-0 animate-golden-pulse"
             style={{
-              background: 'linear-gradient(90deg, transparent 0%, rgba(255,138,0,0.1) 10%, rgba(255,138,0,0.18) 30%, rgba(255,181,71,0.22) 50%, rgba(255,138,0,0.18) 70%, rgba(255,138,0,0.1) 90%, transparent 100%)',
+              background: 'linear-gradient(90deg, transparent 0%, rgba(194,144,47,0.1) 10%, rgba(194,144,47,0.18) 30%, rgba(233,185,73,0.22) 50%, rgba(194,144,47,0.18) 70%, rgba(194,144,47,0.1) 90%, transparent 100%)',
               filter: 'blur(8px)'
             }}
           />
@@ -800,7 +800,7 @@ const Homepage = () => {
           <div 
             className="relative h-[5px] max-w-[1300px] mx-auto overflow-hidden"
             style={{
-              background: 'linear-gradient(90deg, transparent 0%, rgba(255,138,0,0.45) 3%, rgba(255,138,0,0.75) 15%, rgba(255,181,71,0.95) 50%, rgba(255,138,0,0.75) 85%, rgba(255,138,0,0.45) 97%, transparent 100%)'
+              background: 'linear-gradient(90deg, transparent 0%, rgba(194,144,47,0.45) 3%, rgba(194,144,47,0.75) 15%, rgba(233,185,73,0.95) 50%, rgba(194,144,47,0.75) 85%, rgba(194,144,47,0.45) 97%, transparent 100%)'
             }}
           >
             {/* Shimmer overlay */}
@@ -819,7 +819,7 @@ const Homepage = () => {
           <div className="flex items-center justify-between">
             <h3 className="customer-premium-orange-heading text-2xl font-bold text-heading-gold flex items-center gap-2">
               <Handshake className="w-6 h-6" />
-              Naši partneři, kde můžete získat MIO za nákup
+              Naši partneři, kde můžeš získat MIO za nákup
             </h3>
           </div>
 
@@ -838,7 +838,7 @@ const Homepage = () => {
               partners.map((partner) => (
                 <div
                   key={partner.id}
-                  className="homepage-light-logo-card voucher-card-glow aspect-square bg-gradient-to-b from-[hsl(220_35%_8%)] via-[hsl(220_30%_6%)] to-[hsl(220_25%_4%)] border-[3px] border-[rgba(255,138,0,0.35)] rounded-[20px] overflow-hidden cursor-pointer transition-all duration-300 hover:border-[rgba(255,138,0,0.55)] hover:shadow-[0_0_12px_rgba(255,138,0,0.2)] hover:scale-[1.02] shadow-[0_4px_16px_hsl(222_50%_3%/0.5)] group"
+                  className="homepage-light-logo-card voucher-card-glow aspect-square bg-gradient-to-b from-[hsl(220_35%_8%)] via-[hsl(220_30%_6%)] to-[hsl(220_25%_4%)] border-[3px] border-[rgba(194,144,47,0.35)] rounded-[20px] overflow-hidden cursor-pointer transition-all duration-300 hover:border-[rgba(194,144,47,0.55)] hover:shadow-[0_0_12px_rgba(194,144,47,0.2)] hover:scale-[1.02] shadow-[0_4px_16px_hsl(222_50%_3%/0.5)] group"
                   onClick={() => window.open(partner.website_url, "_blank")}
                 >
                   <div className="w-full h-full p-5 flex items-center justify-center relative">
@@ -873,7 +873,7 @@ const Homepage = () => {
           <div 
             className="absolute inset-0 max-w-[1300px] mx-auto left-0 right-0 animate-golden-pulse"
             style={{
-              background: 'linear-gradient(90deg, transparent 0%, rgba(255,138,0,0.1) 10%, rgba(255,138,0,0.18) 30%, rgba(255,181,71,0.22) 50%, rgba(255,138,0,0.18) 70%, rgba(255,138,0,0.1) 90%, transparent 100%)',
+              background: 'linear-gradient(90deg, transparent 0%, rgba(194,144,47,0.1) 10%, rgba(194,144,47,0.18) 30%, rgba(233,185,73,0.22) 50%, rgba(194,144,47,0.18) 70%, rgba(194,144,47,0.1) 90%, transparent 100%)',
               filter: 'blur(8px)'
             }}
           />
@@ -881,7 +881,7 @@ const Homepage = () => {
           <div 
             className="relative h-[5px] max-w-[1300px] mx-auto overflow-hidden"
             style={{
-              background: 'linear-gradient(90deg, transparent 0%, rgba(255,138,0,0.45) 3%, rgba(255,138,0,0.75) 15%, rgba(255,181,71,0.95) 50%, rgba(255,138,0,0.75) 85%, rgba(255,138,0,0.45) 97%, transparent 100%)'
+              background: 'linear-gradient(90deg, transparent 0%, rgba(194,144,47,0.45) 3%, rgba(194,144,47,0.75) 15%, rgba(233,185,73,0.95) 50%, rgba(194,144,47,0.75) 85%, rgba(194,144,47,0.45) 97%, transparent 100%)'
             }}
           >
             {/* Shimmer overlay */}
@@ -907,7 +907,7 @@ const Homepage = () => {
             {comingSoonLoading ? (
               // Loading placeholder
               Array.from({ length: 3 }).map((_, index) => (
-                <Card key={index} className="homepage-light-panel coming-soon-card-glow relative overflow-hidden rounded-[20px] bg-gradient-to-b from-[hsl(220_35%_8%)] via-[hsl(220_30%_6%)] to-[hsl(220_25%_4%)] border-[2px] border-[rgba(255,138,0,0.4)] shadow-[0_4px_16px_hsl(222_50%_3%/0.5)] transition-transform duration-300 hover:scale-[1.02]">
+                <Card key={index} className="homepage-light-panel coming-soon-card-glow relative overflow-hidden rounded-[20px] bg-gradient-to-b from-[hsl(220_35%_8%)] via-[hsl(220_30%_6%)] to-[hsl(220_25%_4%)] border-[2px] border-[rgba(194,144,47,0.4)] shadow-[0_4px_16px_hsl(222_50%_3%/0.5)] transition-transform duration-300 hover:scale-[1.02]">
                   <CardContent className="p-0">
                     <div className="aspect-video rounded-lg overflow-hidden bg-muted/20 animate-pulse" />
                   </CardContent>
@@ -916,7 +916,7 @@ const Homepage = () => {
             ) : comingSoonBanners.length === 0 ? (
               // Placeholder cards when empty
               Array.from({ length: 3 }).map((_, index) => (
-                <Card key={index} className="homepage-light-panel coming-soon-card-glow relative overflow-hidden rounded-[20px] bg-gradient-to-b from-[hsl(220_35%_8%)] via-[hsl(220_30%_6%)] to-[hsl(220_25%_4%)] border-[2px] border-[rgba(255,138,0,0.4)] shadow-[0_4px_16px_hsl(222_50%_3%/0.5)] transition-transform duration-300 hover:scale-[1.02]">
+                <Card key={index} className="homepage-light-panel coming-soon-card-glow relative overflow-hidden rounded-[20px] bg-gradient-to-b from-[hsl(220_35%_8%)] via-[hsl(220_30%_6%)] to-[hsl(220_25%_4%)] border-[2px] border-[rgba(194,144,47,0.4)] shadow-[0_4px_16px_hsl(222_50%_3%/0.5)] transition-transform duration-300 hover:scale-[1.02]">
                   <CardContent className="p-0">
                     <div className="aspect-video rounded-lg overflow-hidden bg-muted/20 flex items-center justify-center">
                       <div className="text-center text-muted-foreground">
@@ -928,7 +928,7 @@ const Homepage = () => {
               ))
             ) : (
               comingSoonBanners.map((banner) => (
-                <Card key={banner.id} className="homepage-light-panel coming-soon-card-glow relative overflow-hidden rounded-[20px] bg-gradient-to-b from-[hsl(220_35%_8%)] via-[hsl(220_30%_6%)] to-[hsl(220_25%_4%)] border-[2px] border-[rgba(255,138,0,0.4)] shadow-[0_4px_16px_hsl(222_50%_3%/0.5)] transition-transform duration-300 hover:scale-[1.02]">
+                <Card key={banner.id} className="homepage-light-panel coming-soon-card-glow relative overflow-hidden rounded-[20px] bg-gradient-to-b from-[hsl(220_35%_8%)] via-[hsl(220_30%_6%)] to-[hsl(220_25%_4%)] border-[2px] border-[rgba(194,144,47,0.4)] shadow-[0_4px_16px_hsl(222_50%_3%/0.5)] transition-transform duration-300 hover:scale-[1.02]">
                   <CardContent className="p-0">
                     <div className="relative aspect-video rounded-lg overflow-hidden bg-muted/40">
                       <img
@@ -942,8 +942,8 @@ const Homepage = () => {
                           onClick={() => setInfoPopup({ title: banner.title, description: banner.description! })}
                           className="absolute top-2 right-2 z-10 w-8 h-8 rounded-full flex items-center justify-center"
                           style={{
-                            background: 'linear-gradient(135deg, rgba(255,138,0,0.9) 0%, rgba(255,181,71,0.9) 100%)',
-                            boxShadow: '0 0 0 0 rgba(255,138,0,0.7)',
+                            background: 'linear-gradient(135deg, rgba(194,144,47,0.9) 0%, rgba(233,185,73,0.9) 100%)',
+                            boxShadow: '0 0 0 0 rgba(194,144,47,0.7)',
                             animation: 'info-pulse 2s ease-in-out infinite',
                           }}
                           aria-label="Zobrazit info"
@@ -957,9 +957,9 @@ const Homepage = () => {
                         <h4
                           className="font-bold text-center tracking-wide truncate"
                           style={{
-                            fontFamily: "'Poppins', system-ui, sans-serif",
+                            fontFamily: "'Manrope', system-ui, sans-serif",
                             fontSize: '1rem',
-                            background: 'linear-gradient(90deg, #E7EBF0 0%, #FFB547 60%, #FF8A00 100%)',
+                            background: 'linear-gradient(90deg, #E7EBF0 0%, #E9B949 60%, #C2902F 100%)',
                             WebkitBackgroundClip: 'text',
                             WebkitTextFillColor: 'transparent',
                             backgroundClip: 'text',
@@ -996,8 +996,8 @@ const Homepage = () => {
               className="relative w-full max-w-md rounded-2xl p-6 space-y-4"
               style={{
                 background: 'linear-gradient(160deg, hsl(220 35% 9%) 0%, hsl(220 25% 5%) 100%)',
-                border: '1.5px solid rgba(255,138,0,0.35)',
-                boxShadow: '0 8px 40px rgba(0,0,0,0.7), 0 0 0 1px rgba(255,181,71,0.08)',
+                border: '1.5px solid rgba(194,144,47,0.35)',
+                boxShadow: '0 8px 40px rgba(0,0,0,0.7), 0 0 0 1px rgba(233,185,73,0.08)',
               }}
               onClick={(e) => e.stopPropagation()}
             >
@@ -1015,9 +1015,9 @@ const Homepage = () => {
                 <h3
                   className="font-bold tracking-wide pr-8"
                   style={{
-                    fontFamily: "'Poppins', system-ui, sans-serif",
+                    fontFamily: "'Manrope', system-ui, sans-serif",
                     fontSize: '1.15rem',
-                    background: 'linear-gradient(90deg, #E7EBF0 0%, #FFB547 55%, #FF8A00 100%)',
+                    background: 'linear-gradient(90deg, #E7EBF0 0%, #E9B949 55%, #C2902F 100%)',
                     WebkitBackgroundClip: 'text',
                     WebkitTextFillColor: 'transparent',
                     backgroundClip: 'text',
@@ -1028,7 +1028,7 @@ const Homepage = () => {
               )}
 
               {/* Divider */}
-              <div style={{ height: '1px', background: 'linear-gradient(90deg, transparent, rgba(255,138,0,0.4), transparent)' }} />
+              <div style={{ height: '1px', background: 'linear-gradient(90deg, transparent, rgba(194,144,47,0.4), transparent)' }} />
 
               {/* Description */}
               <p className="text-sm leading-relaxed" style={{ color: '#BFC6CF' }}>
@@ -1054,19 +1054,19 @@ const Homepage = () => {
                 <h4 className="text-xl sm:text-2xl font-semibold text-foreground leading-snug">Jak hra funguje, co se vyhrává a jak probíhá nákup voucherů</h4>
                 <div className="space-y-4 max-w-2xl mx-auto text-left">
                   <div className="text-base leading-relaxed">
-                    <p className="text-foreground font-medium">Nakupujete u partnerských e-shopů</p>
-                    <p className="text-muted-foreground mt-1">Za nákup u zapojených e-shopů můžete získat digitální kredity MIO jako marketingovou odměnu.</p>
+                    <p className="text-foreground font-medium">Nakupuješ u partnerských e-shopů</p>
+                    <p className="text-muted-foreground mt-1">Za nákup u zapojených e-shopů můžeš získat digitální kredity MIO jako marketingovou odměnu.</p>
                   </div>
                   <div className="text-base leading-relaxed">
-                    <p className="text-foreground font-medium">Získáváte MIO za nákup</p>
+                    <p className="text-foreground font-medium">Získáváš MIO za nákup</p>
                     <p className="text-muted-foreground mt-1">Počet MIO se odvíjí od hodnoty nákupu nebo konkrétních produktů – vždy podle pravidel daného e-shopu.</p>
                   </div>
                   <div className="text-base leading-relaxed">
-                    <p className="text-foreground font-medium">MIO využijete k účasti v soutěžích</p>
+                    <p className="text-foreground font-medium">MIO využiješ k účasti v soutěžích</p>
                     <p className="text-muted-foreground mt-1">MIO slouží výhradně k účasti ve spotřebitelských soutěžích o věcné ceny v aplikaci OneMil.</p>
                   </div>
                   <div className="text-base leading-relaxed">
-                    <p className="text-foreground font-medium">Hrajete o luxusní věcné ceny</p>
+                    <p className="text-foreground font-medium">Hraješ o luxusní věcné ceny</p>
                     <p className="text-muted-foreground mt-1">Soutěže probíhají o ceny jako auta, dovolené, elektroniku nebo jiné hodnotné věcné výhry.</p>
                   </div>
                 </div>

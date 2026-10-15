@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
+import { MioBadge } from "@/components/brand/MioBadge";
 import { useNavigate } from 'react-router-dom';
 import { Header } from '@/components/Header';
 import { Button } from '@/components/ui/button';
@@ -162,7 +163,7 @@ const Index = () => {
     e.stopPropagation();
     
     if (!user) {
-      toast.error('Pro uložení oblíbených se musíte přihlásit');
+      toast.error('Pro uložení oblíbených se musíš přihlásit');
       return;
     }
 
@@ -279,7 +280,7 @@ const Index = () => {
     purchaseInFlightRef.current = true;
 
     if (!user) {
-      toast.error('Pro koupi tiketu se musíte přihlásit');
+      toast.error('Pro koupi tiketu se musíš přihlásit');
       purchaseInFlightRef.current = false;
       return;
     }
@@ -337,7 +338,29 @@ const Index = () => {
       <div className="games-light-page min-h-screen bg-background">
         <Header />
         <div className="container mx-auto px-4 py-8">
-          <div className="text-center text-muted-foreground">Načítání soutěží...</div>
+          {/* Obrysy karet se třpytem místo prázdna (deska Načítání, krok 2) */}
+          <div className="mx-auto flex max-w-md flex-col gap-3" role="status" aria-live="polite">
+            <div className="flex items-center gap-2.5">
+              <MioBadge width={44} />
+              <strong className="text-sm text-[#5E5B57]">Načítání soutěží…</strong>
+            </div>
+            {[0, 1].map((i) => (
+              <div
+                key={i}
+                className="overflow-hidden rounded-[20px] bg-[#17171B] pb-3.5 shadow-[0_0_0_1.5px_rgba(233,185,73,0.35),0_14px_28px_rgba(23,23,27,0.2)]"
+              >
+                <span className="om-skd h-[150px] rounded-none" />
+                <div className="flex flex-col gap-2 px-3.5 pt-3">
+                  <span className="om-skd h-[18px] w-[70%]" />
+                  <span className="om-skd h-3 w-[45%]" />
+                  <div className="mt-1.5 flex items-center justify-between">
+                    <span className="om-skd h-3 w-[36%]" />
+                    <span className="om-skd h-10 w-[120px]" />
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
         </div>
       </div>
     );
@@ -352,7 +375,7 @@ const Index = () => {
           <div
             className="absolute inset-0 opacity-10 pointer-events-none"
             style={{
-              background: 'linear-gradient(90deg, transparent 0%, rgba(255,181,71,1) 50%, transparent 100%)',
+              background: 'linear-gradient(90deg, transparent 0%, rgba(233,185,73,1) 50%, transparent 100%)',
               backgroundSize: '200% 100%',
               animation: 'shimmer 4s ease-in-out infinite',
             }}
@@ -362,8 +385,8 @@ const Index = () => {
               <div
                 className="w-14 h-14 md:w-16 md:h-16 rounded-xl flex items-center justify-center shrink-0"
                 style={{
-                  background: 'linear-gradient(135deg, #FF8A00 0%, #c86000 100%)',
-                  boxShadow: '0 4px 20px rgba(255,138,0,0.3)',
+                  background: 'linear-gradient(135deg, #C2902F 0%, #8A5A10 100%)',
+                  boxShadow: '0 4px 20px rgba(194,144,47,0.3)',
                 }}
               >
                 <OneMilTrophyIcon size={36} className="w-7 h-7 md:w-9 md:h-9 text-black" />
@@ -375,7 +398,7 @@ const Index = () => {
                 >
                   Soutěže
                 </h1>
-                <p className="text-sm text-slate-600 mt-1">Vyberte si soutěž a otevřete další tiket v pořadí.</p>
+                <p className="text-sm text-slate-600 mt-1">Vyber si soutěž a otevři další tiket v pořadí.</p>
               </div>
             </div>
             {(() => {
@@ -385,7 +408,7 @@ const Index = () => {
               );
               return (
                 <Button
-                  className="bg-primary hover:brightness-110 text-primary-foreground font-bold px-4 py-2 md:px-6 md:py-3 rounded-xl shadow-[0_8px_20px_rgba(255,138,0,0.18)] transition-all duration-200 shrink-0"
+                  className="bg-primary hover:brightness-110 text-primary-foreground font-bold px-4 py-2 md:px-6 md:py-3 rounded-xl shadow-[0_8px_20px_rgba(194,144,47,0.18)] transition-all duration-200 shrink-0"
                   onClick={() => navigate('/favorite-games')}
                 >
                   <OneMilHeartIcon size={20} className="w-5 h-5 mr-2" />
@@ -403,7 +426,7 @@ const Index = () => {
               <h2 className="text-xl font-bold text-slate-950 md:text-2xl" style={{ fontFamily: 'var(--om-font-heading)' }}>
                 Dostupné soutěže
               </h2>
-              <p className="text-sm text-slate-600">Vyberte soutěž a pokračujte tlačítkem na kartě.</p>
+              <p className="text-sm text-slate-600">Vyber soutěž a pokračuj tlačítkem na kartě.</p>
             </div>
           </div>
           <div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3">
@@ -430,7 +453,7 @@ const Index = () => {
 
         {contests.length === 0 && (
           <div className="rounded-2xl border border-slate-200 bg-white py-16 text-center shadow-[0_14px_38px_rgba(15,23,42,0.06)] space-y-4">
-            <OneMilTrophyIcon size={64} className="w-16 h-16 mx-auto text-[rgba(255,138,0,0.45)]" />
+            <OneMilTrophyIcon size={64} className="w-16 h-16 mx-auto text-[rgba(194,144,47,0.45)]" />
             <h3 className="text-xl font-bold text-slate-900" style={{ fontFamily: 'var(--om-font-heading)' }}>Žádné soutěže</h3>
             <p className="text-sm text-muted-foreground">Momentálně nejsou dostupné žádné soutěže.</p>
           </div>

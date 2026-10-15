@@ -30,6 +30,7 @@ interface VoucherForm {
   startDate: Date | undefined;
   endDate: Date | undefined;
   shortDescription: string;
+  discountLabel: string;
   usageDescription: string;
   termsText: string;
   howToUseText: string;
@@ -45,6 +46,7 @@ interface Voucher {
   start_date: string | null;
   end_date: string | null;
   short_description: string | null;
+  discount_label: string | null;
   usage_description: string | null;
   terms_text: string | null;
   how_to_use_text: string | null;
@@ -258,6 +260,7 @@ function normalizeVoucherRow(row: Record<string, unknown> | null | undefined): V
   const ed = row.end_date;
   const end_date = typeof ed === 'string' ? ed : null;
   const short_description = normalizeNullableText(row.short_description);
+  const discount_label = normalizeNullableText(row.discount_label);
   const usage_description = normalizeNullableText(row.usage_description);
   const terms_text = normalizeNullableText(row.terms_text);
   const how_to_use_text = normalizeNullableText(row.how_to_use_text);
@@ -271,6 +274,7 @@ function normalizeVoucherRow(row: Record<string, unknown> | null | undefined): V
     start_date,
     end_date,
     short_description,
+    discount_label,
     usage_description,
     terms_text,
     how_to_use_text,
@@ -315,6 +319,7 @@ const AdminVouchers: React.FC = () => {
     startDate: undefined,
     endDate: undefined,
     shortDescription: '',
+    discountLabel: '',
     usageDescription: '',
     termsText: '',
     howToUseText: '',
@@ -624,6 +629,7 @@ const AdminVouchers: React.FC = () => {
           start_date: voucherForm.startDate?.toISOString(),
           end_date: voucherForm.endDate?.toISOString(),
           short_description: normalizeOptionalText(voucherForm.shortDescription),
+          discount_label: normalizeOptionalText(voucherForm.discountLabel),
           usage_description: normalizeOptionalText(voucherForm.usageDescription),
           terms_text: normalizeOptionalText(voucherForm.termsText),
           how_to_use_text: normalizeOptionalText(voucherForm.howToUseText),
@@ -668,6 +674,7 @@ const AdminVouchers: React.FC = () => {
       startDate: undefined,
       endDate: undefined,
       shortDescription: '',
+      discountLabel: '',
       usageDescription: '',
       termsText: '',
       howToUseText: '',
@@ -688,6 +695,7 @@ const AdminVouchers: React.FC = () => {
       startDate: parseDateForForm(voucher.start_date),
       endDate: parseDateForForm(voucher.end_date),
       shortDescription: voucher.short_description ?? '',
+      discountLabel: voucher.discount_label ?? '',
       usageDescription: voucher.usage_description ?? '',
       termsText: voucher.terms_text ?? '',
       howToUseText: voucher.how_to_use_text ?? '',
@@ -726,6 +734,7 @@ const AdminVouchers: React.FC = () => {
           start_date: voucherForm.startDate?.toISOString(),
           end_date: voucherForm.endDate?.toISOString(),
           short_description: normalizeOptionalText(voucherForm.shortDescription),
+          discount_label: normalizeOptionalText(voucherForm.discountLabel),
           usage_description: normalizeOptionalText(voucherForm.usageDescription),
           terms_text: normalizeOptionalText(voucherForm.termsText),
           how_to_use_text: normalizeOptionalText(voucherForm.howToUseText),
@@ -1172,6 +1181,22 @@ const AdminVouchers: React.FC = () => {
                   placeholder="Krátký text pro detail voucheru"
                   className="min-h-[90px]"
                 />
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor={`${mode}-discount-label`}>Slevová nálepka na kartě (nepovinné)</Label>
+                <Input
+                  id={`${mode}-discount-label`}
+                  value={voucherForm.discountLabel}
+                  maxLength={12}
+                  onChange={(event) =>
+                    setVoucherForm({ ...voucherForm, discountLabel: event.target.value })
+                  }
+                  placeholder="např. −20 % nebo −150 Kč"
+                />
+                <p className="text-xs text-muted-foreground">
+                  Jen zobrazení na kartě voucheru (max. 12 znaků). Nemění cenu ani nákup.
+                </p>
               </div>
 
               <div className="space-y-2">

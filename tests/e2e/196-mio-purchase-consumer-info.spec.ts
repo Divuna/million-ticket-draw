@@ -63,8 +63,8 @@ test.describe('196 spotřebitelská informace k nákupu MIO (kontrakt)', () => {
       expect(visible(read(f)), f).not.toMatch(/MioCoin/);
     }
     const panel = read('src/components/MioCoinTopUpSection.tsx');
-    expect(panel).toContain('Dobijte si MIO');
-    expect(panel).toContain('Dobíjejte si MIO pro');
+    expect(panel).toContain('Dobij si MIO');
+    expect(panel).toContain('Dobij si MIO na');
     expect(read('src/components/Header.tsx')).toContain('aria-label="Rychlé dobití MIO"');
     expect(read('src/pages/PaymentSuccess.tsx')).not.toContain('MioCoiny byly připsány');
     const ef = read('supabase/functions/create-stripe-checkout/index.ts');

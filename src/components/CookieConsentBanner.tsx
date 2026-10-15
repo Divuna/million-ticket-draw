@@ -1,7 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { Button } from '@/components/ui/button';
-import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Switch } from '@/components/ui/switch';
 import {
   CONSENT_OPEN_EVENT,
@@ -27,6 +26,10 @@ async function persistConsentToDb(analytics: boolean, marketing: boolean) {
   }
 }
 
+/**
+ * Lišta a nastavení cookies (deska Dialogy 3 a 4): tmavá karta se zlatým rámečkem,
+ * nastavení jako světlá karta se zlatými přepínači. Volby i logika souhlasu beze změny.
+ */
 export const CookieConsentBanner: React.FC = () => {
   const [visible, setVisible] = useState(false);
   const [settingsOpen, setSettingsOpen] = useState(false);
@@ -102,50 +105,44 @@ export const CookieConsentBanner: React.FC = () => {
 
   return (
     <>
-      {visible && (
+      {visible && !settingsOpen && (
         <div
           role="dialog"
           aria-live="polite"
           aria-label="Souhlas s cookies"
-          className="fixed bottom-0 left-0 right-0 z-[100] p-4 sm:p-6"
+          className="fixed bottom-0 left-0 right-0 z-[100] p-3 sm:p-6"
         >
-          <div className="mx-auto max-w-4xl rounded-2xl border border-[#F4D6AD] bg-[#FFF9F0] shadow-[0_8px_32px_rgba(81,49,10,0.18)] backdrop-blur-xl p-5 sm:p-6">
-            <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+          <div className="om-ck-bar mx-auto max-w-4xl">
+            <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between sm:gap-6">
               <div className="flex-1">
-                <h2 className="text-[#111827] text-base sm:text-lg font-semibold mb-1">
-                  Cookies
-                </h2>
-                <p className="text-sm text-[#4B5563] leading-relaxed">
+                <div className="mb-1.5 flex items-center gap-2.5">
+                  <span aria-hidden="true" className="om-ck-ico">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#E9B949" strokeWidth="2">
+                      <path d="M21 12a9 9 0 11-9-9 3 3 0 003 3 3 3 0 003 3 3 3 0 003 3z" />
+                      <circle cx="8.5" cy="10.5" r="1" fill="#E9B949" />
+                      <circle cx="12" cy="15" r="1" fill="#E9B949" />
+                      <circle cx="15.5" cy="12" r="1" fill="#E9B949" />
+                    </svg>
+                  </span>
+                  <strong className="om-ck-title">Cookies</strong>
+                </div>
+                <p className="om-ck-text">
                   Používáme cookies pro fungování aplikace, analýzu návštěvnosti a personalizaci reklam (Google, Meta).{' '}
-                  <Link
-                    to="/legal/cookies"
-                    className="text-[#F97316] hover:underline"
-                  >
+                  <Link to="/legal/cookies" className="om-ck-link">
                     Zásady použití cookies
                   </Link>
                 </p>
               </div>
-              <div className="flex flex-col sm:flex-row gap-2 sm:flex-shrink-0">
-                <Button
-                  variant="outline"
-                  onClick={() => setSettingsOpen(true)}
-                  className="border-[#F4D6AD] bg-white text-[#111827] hover:bg-[#FFF4E8]"
-                >
+              <div className="grid grid-cols-2 gap-2 sm:flex sm:flex-shrink-0">
+                <button type="button" onClick={() => setSettingsOpen(true)} className="om-ck-ghost">
                   Nastavení
-                </Button>
-                <Button
-                  variant="outline"
-                  onClick={rejectAll}
-                  className="border-[#F4D6AD] bg-white text-[#111827] hover:bg-[#FFF4E8]"
-                >
+                </button>
+                <button type="button" onClick={rejectAll} className="om-ck-ghost">
                   Odmítnout
-                </Button>
-                <Button
-                  onClick={acceptAll}
-                  className="rounded-xl bg-gradient-to-r from-[#FF8A00] to-[#FFB547] text-black shadow-[0_2px_12px_rgba(255,138,0,0.25)] hover:shadow-[0_4px_16px_rgba(255,138,0,0.35)] hover:brightness-110 transition-all"
-                >
+                </button>
+                <button type="button" onClick={acceptAll} className="om-ck-gold col-span-2">
                   Souhlasím
-                </Button>
+                </button>
               </div>
             </div>
           </div>
@@ -153,53 +150,50 @@ export const CookieConsentBanner: React.FC = () => {
       )}
 
       <Dialog open={settingsOpen} onOpenChange={setSettingsOpen}>
-        <DialogContent className="bg-[#FFF9F0] border-[#F4D6AD] text-[#111827]">
-          <DialogHeader>
-            <DialogTitle className="text-[#111827]">Nastavení cookies</DialogTitle>
-            <DialogDescription className="text-[#4B5563]">
-              Vyberte, které kategorie cookies chcete povolit.{' '}
-              <Link to="/legal/cookies" className="text-[#F97316] hover:underline">
+        <DialogContent className="om-ck-sheet border-0 text-[#17171B]">
+          <DialogHeader className="text-left">
+            <DialogTitle className="om-ck-sheet-title">Nastavení cookies</DialogTitle>
+            <DialogDescription className="text-[13px] text-[#5E5B57]">
+              Vyber, které kategorie cookies chceš povolit.{' '}
+              <Link to="/legal/cookies" className="font-bold text-[#8A5A10] hover:underline">
                 Zásady použití cookies
               </Link>
             </DialogDescription>
           </DialogHeader>
 
-          <div className="space-y-4 py-2">
-            <div className="flex items-start justify-between gap-4 rounded-lg border border-[#F4D6AD] bg-white/60 p-3">
-              <div>
-                <p className="font-medium text-sm text-[#111827]">Nezbytné</p>
-                <p className="text-xs text-[#6B7280]">Nutné pro fungování aplikace. Vždy aktivní.</p>
+          <div className="flex flex-col">
+            <div className="om-ck-row">
+              <div className="flex-1">
+                <p className="text-sm font-bold text-[#17171B]">Nezbytné</p>
+                <p className="text-xs text-[#5E5B57]">Nutné pro fungování aplikace. Vždy aktivní.</p>
               </div>
-              <Switch checked disabled />
+              <Switch checked disabled aria-label="Nezbytné cookies" className="om-ck-switch om-ck-switch-lock" />
             </div>
 
-            <div className="flex items-start justify-between gap-4 rounded-lg border border-[#F4D6AD] bg-white/60 p-3">
-              <div>
-                <p className="font-medium text-sm text-[#111827]">Analytické</p>
-                <p className="text-xs text-[#6B7280]">Pomáhají měřit návštěvnost (Google Analytics).</p>
+            <div className="om-ck-row">
+              <div className="flex-1">
+                <p className="text-sm font-bold text-[#17171B]">Analytické</p>
+                <p className="text-xs text-[#5E5B57]">Pomáhají měřit návštěvnost (Google Analytics).</p>
               </div>
-              <Switch checked={analytics} onCheckedChange={setAnalytics} />
+              <Switch checked={analytics} onCheckedChange={setAnalytics} aria-label="Analytické cookies" className="om-ck-switch" />
             </div>
 
-            <div className="flex items-start justify-between gap-4 rounded-lg border border-[#F4D6AD] bg-white/60 p-3">
-              <div>
-                <p className="font-medium text-sm text-[#111827]">Marketingové</p>
-                <p className="text-xs text-[#6B7280]">Personalizace reklam (Google Ads, Meta Pixel).</p>
+            <div className="om-ck-row om-ck-row-last">
+              <div className="flex-1">
+                <p className="text-sm font-bold text-[#17171B]">Marketingové</p>
+                <p className="text-xs text-[#5E5B57]">Personalizace reklam (Google Ads, Meta Pixel).</p>
               </div>
-              <Switch checked={marketing} onCheckedChange={setMarketing} />
+              <Switch checked={marketing} onCheckedChange={setMarketing} aria-label="Marketingové cookies" className="om-ck-switch" />
             </div>
           </div>
 
-          <DialogFooter className="gap-2">
-            <Button variant="outline" onClick={rejectAll} className="border-[#F4D6AD] bg-white text-[#111827] hover:bg-[#FFF4E8]">Odmítnout vše</Button>
-            <Button variant="outline" onClick={saveCustom} className="border-[#F4D6AD] bg-white text-[#111827] hover:bg-[#FFF4E8]">Uložit výběr</Button>
-            <Button
-              onClick={acceptAll}
-              className="rounded-xl bg-gradient-to-r from-[#FF8A00] to-[#FFB547] text-black hover:brightness-110"
-            >
+          <div className="grid grid-cols-2 gap-2">
+            <button type="button" onClick={rejectAll} className="om-ck-light">Odmítnout vše</button>
+            <button type="button" onClick={saveCustom} className="om-ck-black">Uložit výběr</button>
+            <button type="button" onClick={acceptAll} className="om-ck-gold col-span-2">
               Souhlasím se vším
-            </Button>
-          </DialogFooter>
+            </button>
+          </div>
         </DialogContent>
       </Dialog>
     </>

@@ -62,7 +62,7 @@ test.describe('44 - customer password reset', () => {
     await page.getByTestId('reset-email').fill('reset-smoke@onemil.test');
     await page.getByTestId('reset-request-submit').click();
 
-    await expect(page.getByText('Zkontrolujte e-mail')).toBeVisible({ timeout: 10_000 });
+    await expect(page.getByText('Zkontroluj e-mail')).toBeVisible({ timeout: 10_000 });
     expect(requestBody).toContain('reset-smoke@onemil.test');
     expect(decodeURIComponent(requestUrl)).toContain('/reset-password');
   });
@@ -99,7 +99,7 @@ test.describe('44 - customer password reset', () => {
 
     await page.goto('/reset-password', { waitUntil: 'domcontentloaded' });
 
-    await expect(page.getByRole('heading', { name: 'Nastavte nové heslo' })).toBeVisible({ timeout: 10_000 });
+    await expect(page.getByRole('heading', { name: 'Nastav si nové heslo' })).toBeVisible({ timeout: 10_000 });
     await page.getByTestId('reset-password').fill('CustomerReset123!');
     await page.getByTestId('reset-confirm').fill('CustomerReset123!');
     await page.getByTestId('reset-update-submit').click();

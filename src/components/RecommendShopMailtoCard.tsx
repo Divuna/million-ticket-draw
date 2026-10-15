@@ -30,7 +30,7 @@ const RecommendShopMailtoCard: React.FC = () => {
     if (!EMAIL_PATTERN.test(trimmedEmail)) {
       toast({
         title: 'Chyba',
-        description: 'Zadejte platný e-mail obchodu nebo prodejce.',
+        description: 'Zadej platný e-mail obchodu nebo prodejce.',
         variant: 'destructive',
       });
       return;
@@ -41,12 +41,12 @@ const RecommendShopMailtoCard: React.FC = () => {
 
     toast({
       title: 'E-mail připraven',
-      description: 'E-mail jsme připravili ve vaší e-mailové aplikaci. Odeslání je jen na vás.',
+      description: 'E-mail jsme připravili v tvé e-mailové aplikaci. Odeslání je jen na tobě.',
     });
   };
 
   return (
-    <div className="relative overflow-hidden rounded-2xl border border-primary/20 bg-gradient-to-br from-card/95 via-primary/5 to-card/95 p-5 shadow-[0_0_28px_-10px_rgba(255,138,0,0.22)]">
+    <div className="relative overflow-hidden rounded-2xl border border-primary/20 bg-gradient-to-br from-card/95 via-primary/5 to-card/95 p-5 shadow-[0_0_28px_-10px_rgba(194,144,47,0.22)]">
       <div className="pointer-events-none absolute right-0 top-0 h-20 w-20 rounded-bl-full bg-primary/10" />
 
       <div className="relative space-y-4">
@@ -57,7 +57,7 @@ const RecommendShopMailtoCard: React.FC = () => {
           <div className="min-w-0">
             <h2 className="text-lg font-bold text-foreground">Doporučit OneMil oblíbenému obchodu</h2>
             <p className="mt-1 text-sm leading-relaxed text-muted-foreground/80">
-              Pošlete e-mail svému oblíbenému e-shopu nebo prodejci a dejte jim vědět, že byste u nich rádi získávali MIO za nákupy.
+              Pošli e-mail svému oblíbenému e-shopu nebo prodejci a dej jim vědět, že bys u nich rád získával MIO za nákupy.
             </p>
           </div>
         </div>
@@ -80,7 +80,7 @@ const RecommendShopMailtoCard: React.FC = () => {
           <Button
             type="button"
             onClick={handlePrepareEmail}
-            className="w-full bg-gradient-to-r from-[#FF8A00] to-[#FFB547] font-bold text-black transition-all duration-300 hover:from-[#FFB547] hover:to-[#FF8A00] hover:shadow-lg hover:shadow-primary/20 sm:w-auto"
+            className="w-full bg-gradient-to-r from-[#C2902F] to-[#E9B949] font-bold text-black transition-all duration-300 hover:from-[#E9B949] hover:to-[#C2902F] hover:shadow-lg hover:shadow-primary/20 sm:w-auto"
           >
             <Mail className="h-4 w-4" />
             Připravit e-mail

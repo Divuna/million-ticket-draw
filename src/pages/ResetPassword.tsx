@@ -9,6 +9,7 @@ import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
 import { CheckCircle2, KeyRound, Loader2, Mail } from "lucide-react";
 import logo from "@/assets/logo-onemil.png";
+import { AuthHero } from "@/components/brand/AuthHero";
 
 type PageMode = "request" | "update" | "success";
 
@@ -44,7 +45,7 @@ export default function ResetPassword() {
       // Log the exact Supabase error so the cause is diagnosable.
       console.error("ResetPassword: recovery link error", { err, errCode, errDesc });
       setLinkError(
-        "Odkaz pro nastavení hesla vypršel nebo už byl použit. Vyžádejte si prosím nový odkaz níže.",
+        "Odkaz pro nastavení hesla vypršel nebo už byl použit. Vyžádej si prosím nový odkaz níže.",
       );
       setMode("request");
     }
@@ -62,7 +63,7 @@ export default function ResetPassword() {
     const normalizedEmail = email.trim().toLowerCase();
 
     if (!normalizedEmail) {
-      toast.error("Zadejte e-mail");
+      toast.error("Zadej e-mail");
       return;
     }
 
@@ -75,7 +76,7 @@ export default function ResetPassword() {
       if (error) throw error;
 
       toast.success("E-mail pro obnovení hesla byl odeslán", {
-        description: "Pokud u nás máte účet, najdete ve schránce odkaz pro nastavení nového hesla.",
+        description: "Pokud u nás máš účet, najdeš ve schránce odkaz pro nastavení nového hesla. Zkontroluj i složku spam.",
       });
       setMode("success");
     } catch (error) {
@@ -90,7 +91,7 @@ export default function ResetPassword() {
     event.preventDefault();
 
     if (!password.trim()) {
-      toast.error("Zadejte nové heslo");
+      toast.error("Zadej nové heslo");
       return;
     }
 
@@ -101,7 +102,7 @@ export default function ResetPassword() {
 
     if (password !== confirm) {
       toast.error("Hesla se neshodují", {
-        description: "Ujistěte se, že obě hesla jsou stejná.",
+        description: "Zkontroluj, že jsou obě hesla stejná.",
       });
       return;
     }
@@ -112,7 +113,7 @@ export default function ResetPassword() {
       if (error) throw error;
 
       toast.success("Heslo bylo změněno", {
-        description: "Teď se můžete přihlásit novým heslem.",
+        description: "Teď se můžeš přihlásit novým heslem.",
       });
       await supabase.auth.signOut();
       navigate("/login", { replace: true });
@@ -132,7 +133,7 @@ export default function ResetPassword() {
         // Most common real cause: the one-time recovery link expired or was already
         // used (e.g. pre-fetched by an email scanner), so there is no valid session.
         description =
-          "Odkaz pro nastavení hesla vypršel nebo už byl použit. Vyžádejte si prosím nový odkaz.";
+          "Odkaz pro nastavení hesla vypršel nebo už byl použit. Vyžádej si prosím nový odkaz.";
       } else if (lower.includes("weak") || lower.includes("at least") || lower.includes("should be at least")) {
         description = "Heslo je příliš slabé. Zvolte silnější heslo (alespoň 8 znaků).";
       } else if (lower.includes("different from the old")) {
@@ -145,17 +146,20 @@ export default function ResetPassword() {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-b from-background via-background to-[hsl(222_40%_8%)] p-4">
+    <div className="min-h-screen flex items-center justify-center p-4">
       <div className="w-full max-w-md">
-        <Link to="/" aria-label="OneMil domů">
-          <img
-            src={logo}
-            alt="OneMil logo"
-            className="h-16 w-auto mx-auto mb-4 object-contain onemil-logo-animated"
-          />
-        </Link>
+        <AuthHero
+          title={mode === "success" ? "Hotovo!" : mode === "request" ? "Nevadí, stává se" : "Nové heslo"}
+          subtitle={
+            mode === "success"
+              ? "Mrkni do e-mailu na odkaz."
+              : mode === "request"
+                ? "Pošleme ti odkaz na nové heslo."
+                : "Zvol si nové heslo ke svému účtu."
+          }
+        />
 
-        <Card className="w-full voucher-card-glow rounded-[20px] bg-gradient-to-b from-[hsl(220_30%_12%)] via-[hsl(220_28%_9%)] to-[hsl(222_35%_7%)] border-[2px] border-[rgba(255,138,0,0.15)] shadow-[0_4px_24px_hsl(222_50%_3%/0.6)]">
+        <Card className="w-full rounded-[28px] border border-[#F3E4CF] bg-white text-[#17171B] shadow-[0_20px_60px_-24px_rgba(26,20,10,0.25)]">
           {mode === "request" && (
             <form onSubmit={handleRequestReset}>
               <CardHeader>
@@ -164,7 +168,7 @@ export default function ResetPassword() {
                 </div>
                 <CardTitle className="customer-premium-orange-heading text-heading-gold">Obnovení hesla</CardTitle>
                 <CardDescription>
-                  Zadejte e-mail k vašemu účtu. Pošleme vám odkaz pro nastavení nového hesla.
+                  Zadej e-mail ke svému účtu. Pošleme ti odkaz pro nastavení nového hesla.
                 </CardDescription>
                 {linkError && (
                   <p className="mt-2 text-sm rounded-md border border-destructive/40 bg-destructive/10 px-3 py-2 text-destructive">
@@ -193,7 +197,7 @@ export default function ResetPassword() {
                 <Button
                   type="submit"
                   data-testid="reset-request-submit"
-                  className="w-full rounded-xl bg-gradient-to-r from-[#FF8A00] to-[#FFB547] text-black"
+                  className="w-full rounded-xl bg-gradient-to-r from-[#C2902F] to-[#E9B949] text-black"
                   disabled={loading}
                 >
                   {loading && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
@@ -212,9 +216,9 @@ export default function ResetPassword() {
                 <div className="w-12 h-12 rounded-full bg-green-500/10 flex items-center justify-center mb-2">
                   <CheckCircle2 className="w-6 h-6 text-green-500" />
                 </div>
-                <CardTitle className="customer-premium-orange-heading text-heading-gold">Zkontrolujte e-mail</CardTitle>
+                <CardTitle className="customer-premium-orange-heading text-heading-gold">Zkontroluj e-mail</CardTitle>
                 <CardDescription>
-                  Pokud u nás máte účet, poslali jsme vám odkaz pro nastavení nového hesla.
+                  Hotovo. Pokud u nás máš účet, poslali jsme ti odkaz na nastavení nového hesla. Zkontroluj i složku spam.
                 </CardDescription>
               </CardHeader>
               <CardFooter>
@@ -231,7 +235,7 @@ export default function ResetPassword() {
                 <div className="w-12 h-12 rounded-full bg-primary/10 flex items-center justify-center mb-2">
                   <KeyRound className="w-6 h-6 text-primary" />
                 </div>
-                <CardTitle className="customer-premium-orange-heading text-heading-gold">Nastavte nové heslo</CardTitle>
+                <CardTitle className="customer-premium-orange-heading text-heading-gold">Nastav si nové heslo</CardTitle>
                 <CardDescription>
                   Zvolte nové heslo pro svůj zákaznický účet OneMil.
                 </CardDescription>
@@ -263,7 +267,7 @@ export default function ResetPassword() {
                     data-testid="reset-confirm"
                     type="password"
                     autoComplete="new-password"
-                    placeholder="Zopakujte heslo"
+                    placeholder="Zopakuj heslo"
                     value={confirm}
                     onChange={(e) => setConfirm(e.target.value)}
                     disabled={loading}
@@ -275,7 +279,7 @@ export default function ResetPassword() {
                 <Button
                   type="submit"
                   data-testid="reset-update-submit"
-                  className="w-full rounded-xl bg-gradient-to-r from-[#FF8A00] to-[#FFB547] text-black"
+                  className="w-full rounded-xl bg-gradient-to-r from-[#C2902F] to-[#E9B949] text-black"
                   disabled={loading}
                 >
                   {loading && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}

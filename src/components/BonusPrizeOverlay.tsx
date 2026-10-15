@@ -114,7 +114,7 @@ export const BonusPrizeOverlay: React.FC<BonusPrizeOverlayProps> = ({
   const handleClaimBonus = async (bonusId: string, bonusDescription: string) => {
     // Non-logged-in users get login prompt
     if (!user) {
-      toast.error('Pro uplatnění bonusu se musíte přihlásit');
+      toast.error('Pro uplatnění bonusu se musíš přihlásit');
       navigate(buildLoginRedirectUrl(location.pathname + location.search));
       return;
     }
@@ -165,7 +165,7 @@ export const BonusPrizeOverlay: React.FC<BonusPrizeOverlayProps> = ({
         return 'bg-amber-50 border-amber-200 text-amber-800 dark:bg-amber-900/20 dark:border-amber-700 dark:text-amber-400';
       case 'delivered':
       case 'claimed':
-        return 'bg-[rgba(255,138,0,0.08)] border-[rgba(255,138,0,0.3)] text-[#FF8A00] dark:bg-[rgba(255,138,0,0.1)] dark:border-[rgba(255,138,0,0.3)] dark:text-[#FFB547]';
+        return 'bg-[rgba(194,144,47,0.08)] border-[rgba(194,144,47,0.3)] text-[#C2902F] dark:bg-[rgba(194,144,47,0.1)] dark:border-[rgba(194,144,47,0.3)] dark:text-[#E9B949]';
       case 'won':
         return 'bg-purple-50 border-purple-200 text-purple-800 dark:bg-purple-900/20 dark:border-purple-700 dark:text-purple-400';
       default:
@@ -319,7 +319,7 @@ export const BonusPrizeOverlay: React.FC<BonusPrizeOverlayProps> = ({
             <Card className="bg-muted/50">
               <CardContent className="pt-4">
                 <div className="text-sm text-muted-foreground text-center">
-                  💡 Klikněte na dostupný bonus pro jeho uplatnění
+                  💡 Klikni na dostupný bonus a uplatni ho
                 </div>
               </CardContent>
             </Card>

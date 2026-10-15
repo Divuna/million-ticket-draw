@@ -1,0 +1,1449 @@
+/*
+ * OneMil – nový vizuál zákaznické části (návrh „OneMil – nový vizuál“, 10/2026).
+ *
+ * Jen vzhled: barvy, písma, pozadí, spodní lišta. Žádná funkce se tu nemění.
+ * Všechno je omezené na `.om-redesign` (zákaznický layout bez firemních stránek) nebo na
+ * třídy `om-*`, které používají jen zákaznické komponenty – admin a partnerský
+ * portál zůstávají beze změny.
+ *
+ * Písma (pravidla z desky „Písmo a nadpisy“):
+ *  - Exo 2 Black Italic   – název stránky / soutěže, velká čísla, MIO
+ *  - Barlow Condensed      – nadpisy sekcí a karet (velká písmena)
+ *  - Manrope               – text, tlačítka, popisky
+ *  - JetBrains Mono        – kódy voucherů a MIO kódy
+ */
+/* Písma se načítají v index.html (<link>), aby nezáleželo na pořadí CSS souborů. */
+
+:root {
+  --om2-page: #F5EEE3;
+  --om2-ink: #17171B;
+  --om2-muted: #5E5B57;
+  --om2-gold-1: #FFE29A;
+  --om2-gold-2: #E9B949;
+  --om2-gold-3: #C2902F;
+  --om2-gold-text: #8A5A10;
+  --om2-crimson: #B5122B;
+  --om2-dark-card: #17171B;
+  --om2-font-display: 'Exo 2', 'Arial Narrow', system-ui, sans-serif;
+  --om2-font-section: 'Barlow Condensed', 'Arial Narrow', system-ui, sans-serif;
+  --om2-font-body: 'Manrope', system-ui, -apple-system, 'Segoe UI', sans-serif;
+  --om2-font-code: 'JetBrains Mono', ui-monospace, Consolas, monospace;
+  --om2-page-bg:
+    radial-gradient(120% 28rem at 50% 0%, rgba(255, 226, 154, 0.35), rgba(255, 226, 154, 0) 70%),
+    repeating-linear-gradient(135deg, rgba(194, 144, 47, 0.045) 0 1px, transparent 1px 14px),
+    #F5EEE3;
+}
+
+/* ---------- Zákaznický motiv: barvy a písmo ---------- */
+.om-redesign {
+  --primary: 42 79% 60%;
+  --primary-foreground: 30 60% 6%;
+  --secondary: 42 79% 60%;
+  --secondary-foreground: 30 60% 6%;
+  --accent: 42 79% 60%;
+  --accent-foreground: 30 60% 6%;
+  --ring: 42 79% 52%;
+  --heading-gold: 36 79% 30%;
+  --muted: 36 38% 92%;
+  --muted-foreground: 30 4% 36%;
+  --border: 38 40% 84%;
+  --input: 38 40% 84%;
+  --background: 36 47% 93%;
+  font-family: var(--om2-font-body);
+  background: var(--om2-page-bg);
+}
+
+.om-redesign p {
+  font-family: var(--om2-font-body);
+}
+
+/* Název stránky = písmo loga (Exo 2), nadpisy sekcí = Barlow Condensed. */
+.om-redesign h1 {
+  font-family: var(--om2-font-display);
+  font-weight: 900;
+  font-style: italic;
+  letter-spacing: 0;
+}
+
+.om-redesign h2,
+.om-redesign .customer-premium-orange-heading,
+.om-redesign .homepage-premium-orange-heading {
+  font-family: var(--om2-font-section);
+  font-weight: 800;
+  font-style: italic;
+  letter-spacing: 0.01em;
+}
+
+/* Původně oranžové nadpisy sekcí → tmavé písmo s rudozlatou linkou. */
+.om-redesign .customer-premium-orange-heading,
+.om-redesign .homepage-light-content .homepage-premium-orange-heading,
+.om-redesign .homepage-light-content .customer-premium-orange-heading,
+.om-redesign .winners-light-content .customer-premium-orange-heading {
+  color: var(--om2-ink);
+  background: none;
+  -webkit-text-fill-color: currentColor;
+  text-transform: uppercase;
+  text-shadow: 0 1px 0 #fff, 0 3px 10px rgba(194, 144, 47, 0.28);
+}
+
+.om-redesign .homepage-light-content .text-heading-gold,
+.om-redesign .winners-light-content .text-heading-gold {
+  color: var(--om2-gold-text);
+}
+
+/* Kódy voucherů a MIO kódy. */
+.om-redesign .font-mono {
+  font-family: var(--om2-font-code);
+}
+
+/* ---------- Pozadí stránek: krémová s jemným zlatým vzorem ---------- */
+body:has(.om-redesign) {
+  background: var(--om2-page);
+}
+
+.om-redesign.customer-layout,
+.om-redesign.customer-layout:has(.games-light-page),
+.om-redesign.customer-layout:has(.homepage-light-page),
+.om-redesign.customer-layout:has(.vouchers-light-page),
+.om-redesign.customer-layout:has(.winners-light-page),
+.om-redesign.customer-layout:has(.wins-light-page),
+.om-redesign .games-light-page,
+.om-redesign .homepage-light-page,
+.om-redesign .vouchers-light-page,
+.om-redesign .winners-light-page,
+.om-redesign .wins-light-page {
+  background: var(--om2-page-bg);
+}
+
+/* ---------- Hlavička ---------- */
+.om-redesign .public-customer-header {
+  background: rgba(250, 246, 239, 0.94);
+  border-bottom: 1px solid rgba(194, 144, 47, 0.22);
+  box-shadow: 0 6px 20px rgba(60, 40, 10, 0.1);
+}
+
+.om-redesign .public-customer-header-link:hover {
+  color: var(--om2-gold-text);
+  background: rgba(233, 185, 73, 0.12);
+}
+
+.om-redesign .public-customer-header-outline:hover {
+  border-color: rgba(194, 144, 47, 0.5);
+  background: rgba(233, 185, 73, 0.12);
+}
+
+.om-redesign .public-customer-header-primary {
+  color: #1A1205;
+  background: linear-gradient(180deg, var(--om2-gold-1), var(--om2-gold-2) 55%, var(--om2-gold-3));
+  box-shadow: 0 6px 16px rgba(194, 144, 47, 0.35);
+}
+
+/* ---------- Spodní lišta „Tmavá s korunkou“ ---------- */
+.om-bottom-nav {
+  box-shadow: 0 -10px 24px rgba(23, 23, 27, 0.18);
+  font-family: var(--om2-font-body);
+}
+
+.om-bottom-nav-hairline {
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 0;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, #E9B949 30%, #FFF0B8 42%, #E9B949 55%, transparent);
+  pointer-events: none;
+}
+
+.om-bottom-nav-item {
+  color: #8E8F98;
+  font-weight: 600;
+  background: none;
+  border: 0;
+}
+
+.om-bottom-nav-item:hover {
+  color: #C9CDD4;
+}
+
+.om-bottom-nav-item--active {
+  color: #F2C55C;
+  font-weight: 800;
+}
+
+.om-bottom-nav-item--active svg {
+  filter: drop-shadow(0 0 8px rgba(242, 193, 78, 0.6));
+}
+
+.om-bottom-nav-crown {
+  position: absolute;
+  top: 0;
+  left: 50%;
+  width: 15px;
+  margin-left: -7.5px;
+  filter: drop-shadow(0 2px 3px rgba(0, 0, 0, 0.5));
+  animation: om2-crown 3s ease-in-out infinite;
+  pointer-events: none;
+}
+
+.om-bottom-nav-glow {
+  position: absolute;
+  top: 6px;
+  left: 50%;
+  width: 56px;
+  height: 40px;
+  margin-left: -28px;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(233, 185, 73, 0.28), rgba(233, 185, 73, 0) 70%);
+  pointer-events: none;
+}
+
+.om-bottom-nav-badge {
+  position: absolute;
+  top: -6px;
+  right: -11px;
+  min-width: 17px;
+  height: 17px;
+  padding: 0 4px;
+  box-sizing: border-box;
+  border-radius: 9px;
+  background: var(--om2-crimson);
+  color: #fff;
+  font-size: 10px;
+  font-weight: 800;
+  line-height: 17px;
+  text-align: center;
+  box-shadow: 0 0 0 2px #121216;
+}
+
+@keyframes om2-crown {
+  0%, 100% { transform: translateY(0) rotate(-8deg); }
+  50% { transform: translateY(-2px) rotate(4deg); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .om-bottom-nav-crown { animation: none; }
+}
+
+/* ---------- Tlačítka (sdílená komponenta Button – přebarvení jen v zákaznické části) ---------- */
+/* Hlavní tlačítko: zlatý přechod místo ploché barvy. */
+.om-redesign button.bg-primary,
+.om-redesign a.bg-primary {
+  background-image: linear-gradient(180deg, var(--om2-gold-1), var(--om2-gold-2) 55%, var(--om2-gold-3));
+  color: #1A1205;
+  font-weight: 800;
+  box-shadow: 0 6px 16px rgba(194, 144, 47, 0.35);
+}
+/* Aktivní záložka na světlém podkladu: tmavší zlatá, aby byla čitelná. */
+.om-redesign [role="tab"][data-state="active"] {
+  color: #8A5A10;
+  font-weight: 800;
+}
+
+/* Ikony uvnitř zlatého tlačítka mají tmavou barvu písma (stříbrná by na zlaté zmizela). */
+.om-redesign button.bg-primary svg[color],
+.om-redesign a.bg-primary svg[color] {
+  color: #1A1205;
+}
+
+/* Varianta „premium“ (dříve tmavá s oranžovým písmem) → tmavá se zlatým písmem a okrajem. */
+.om-redesign [class*="text-[#FF8A00]"][class*="bg-[hsl(220_45%_8%)]"] {
+  background: linear-gradient(180deg, #26262C, #121215);
+  color: #F6D77A;
+  border-color: rgba(233, 185, 73, 0.55);
+  box-shadow: inset 0 0 0 1px rgba(233, 185, 73, 0.25);
+  font-weight: 800;
+}
+
+/* ---------- Nadpisy (deska 23 „Písmo a nadpisy“) ---------- */
+/* Nadpis sekce na světlém pozadí: tmavé písmo, velká písmena, rudozlatá linka.
+   Nadpisy s vlastní světlou barvou (na tmavých kartách) se nemění. */
+.om-redesign h2:not([class*="text-white"]):not([class*="text-zinc"]):not([class*="text-gray-1"]):not([class*="text-[#E"]):not([class*="text-[#F"]) {
+  color: var(--om2-ink);
+  -webkit-text-fill-color: currentColor;
+  background: linear-gradient(90deg, #B5122B, #E9B949) left bottom / 58px 4px no-repeat;
+  -webkit-background-clip: border-box;
+  background-clip: border-box;
+  padding-bottom: 12px;
+  text-transform: uppercase;
+  text-shadow: 0 1px 0 #fff, 0 3px 10px rgba(194, 144, 47, 0.28);
+}
+
+.om-redesign h2.text-center:not([class*="text-white"]),
+.om-redesign .text-center > h2:not([class*="text-white"]) {
+  background-position: center bottom;
+}
+
+.om-redesign h2 svg {
+  color: var(--om2-gold-3);
+}
+
+/* Menší nadpisy karet a hlášek: Manrope (ne staré Poppins). */
+.om-redesign h3,
+.om-redesign h4,
+.om-redesign h5,
+.om-redesign h6 {
+  font-family: var(--om2-font-body);
+  font-weight: 800;
+  letter-spacing: 0;
+}
+
+/* Nadpisy sekcí v aplikaci používají třídy *-premium-orange-heading (často jako h3).
+   !important jen kvůli starším 3třídním selektorům v index.css. */
+.om-redesign .customer-premium-orange-heading,
+.om-redesign .homepage-premium-orange-heading {
+  font-family: var(--om2-font-section) !important;
+  font-weight: 800 !important;
+  font-style: italic;
+  text-transform: uppercase;
+  color: var(--om2-ink) !important;
+  -webkit-text-fill-color: currentColor !important;
+  background: linear-gradient(90deg, #B5122B, #E9B949) left bottom / 58px 4px no-repeat !important;
+  -webkit-background-clip: border-box !important;
+  background-clip: border-box !important;
+  padding-bottom: 12px;
+  text-shadow: 0 1px 0 #fff, 0 3px 10px rgba(194, 144, 47, 0.28) !important;
+}
+
+.om-redesign .text-center .customer-premium-orange-heading,
+.om-redesign .customer-premium-orange-heading.text-center,
+.om-redesign .text-center .homepage-premium-orange-heading {
+  background-position: center bottom !important;
+}
+
+.om-redesign .customer-premium-orange-heading svg,
+.om-redesign .homepage-premium-orange-heading svg {
+  color: var(--om2-gold-3);
+  filter: none !important;
+}
+
+/* Zlaté „heading“ texty na světlém pozadí → tmavší zlatá, aby byly čitelné. */
+.om-redesign .text-heading-gold:not(h1):not(h2):not(h3) {
+  color: var(--om2-gold-text);
+  -webkit-text-fill-color: currentColor;
+  background: none;
+}
+
+/* ---------- Karta soutěže (Domů, Soutěže, Oblíbené) – vždy tmavá se zlatým rámečkem ---------- */
+.om-redesign .customer-contest-card.contest-card-glow,
+.om-redesign .customer-games-contest-card.customer-contest-card.contest-card-glow {
+  background: #17171B;
+  border: 1.5px solid rgba(233, 185, 73, 0.55);
+  box-shadow: 0 14px 30px rgba(23, 23, 27, 0.22), 0 0 0 1px rgba(23, 23, 27, 0.04);
+}
+
+.om-redesign .customer-contest-card .contest-card-readability-overlay,
+.om-redesign .customer-games-contest-card.customer-contest-card .contest-card-readability-overlay {
+  background: linear-gradient(180deg, rgba(23, 23, 27, 0) 30%, rgba(23, 23, 27, 0.55) 62%, rgba(23, 23, 27, 0.96) 100%) !important;
+}
+
+.om-redesign .customer-contest-card .contest-card-image-fallback,
+.om-redesign .customer-games-contest-card.customer-contest-card .contest-card-image-fallback {
+  background: radial-gradient(120% 120% at 80% 0%, #3A1118, #17171B 60%);
+}
+
+.om-redesign .customer-contest-card .contest-card-title,
+.om-redesign .customer-games-contest-card.customer-contest-card .contest-card-title {
+  color: #FFFFFF;
+  font-style: italic;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0;
+  text-shadow: 0 2px 8px rgba(0, 0, 0, 0.6);
+}
+
+.om-redesign .customer-contest-card .contest-card-meta,
+.om-redesign .customer-games-contest-card.customer-contest-card .contest-card-meta {
+  color: #C9CDD4;
+}
+
+.om-redesign .customer-contest-card .contest-card-shortage,
+.om-redesign .customer-games-contest-card.customer-contest-card .contest-card-shortage {
+  color: #F2C55C;
+}
+
+.om-redesign .customer-contest-card .contest-card-favorite-button,
+.om-redesign .customer-contest-card .contest-card-secondary-cta,
+.om-redesign .customer-contest-card .contest-card-login-cta,
+.om-redesign .customer-games-contest-card.customer-contest-card .contest-card-favorite-button,
+.om-redesign .customer-games-contest-card.customer-contest-card .contest-card-secondary-cta,
+.om-redesign .customer-games-contest-card.customer-contest-card .contest-card-login-cta {
+  color: #F6D77A;
+  background: linear-gradient(180deg, rgba(38, 38, 44, 0.92), rgba(18, 18, 21, 0.92));
+  border: 1px solid rgba(233, 185, 73, 0.5);
+  box-shadow: none;
+}
+
+.om-redesign .customer-games-contest-card.customer-contest-card .contest-card-favorite-button svg {
+  color: #F6D77A;
+}
+
+.om-redesign .customer-contest-card .contest-card-primary-cta {
+  color: #1A1205;
+  font-weight: 800;
+  background-image: linear-gradient(180deg, #FFF0B8, #E9B949 55%, #C2902F);
+  box-shadow: 0 8px 18px rgba(194, 144, 47, 0.35);
+}
+
+.om-redesign .customer-contest-card .contest-card-status-badge,
+.om-redesign .customer-games-contest-card.customer-contest-card .contest-card-status-badge {
+  color: #ECEDEF;
+  background: rgba(23, 23, 27, 0.85);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+.om-redesign .om-contest-fast {
+  background: linear-gradient(180deg, #FFE29A, #E9B949);
+  color: #1A1205;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  border: 0;
+}
+
+/* Štítek ŽIVĚ u běžící soutěže (schválený prvek ✦ NAVÍC, jen zobrazení stavu). */
+.om-live-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 3px 9px;
+  border-radius: 999px;
+  background: #B5122B;
+  color: #fff;
+  font-family: var(--om2-font-body);
+  font-size: 10.5px;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  box-shadow: 0 4px 10px rgba(181, 18, 43, 0.35);
+}
+
+.om-live-badge i {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: #fff;
+  animation: om2-blink 1.2s ease-in-out infinite;
+}
+
+@keyframes om2-blink {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.25; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .om-live-badge i { animation: none; }
+}
+
+/* Štítek „PRÁVĚ TEĎ“ u výherce z poslední hodiny (schválený prvek ✦ NAVÍC, jen zobrazení data). */
+.om-just-now-badge {
+  position: absolute;
+  top: 6px;
+  right: 8px;
+  z-index: 3;
+  padding: 2px 8px;
+  border-radius: 999px;
+  background: linear-gradient(180deg, #FFE29A, #E9B949);
+  color: #1A1205;
+  font-family: var(--om2-font-body);
+  font-size: 9.5px;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+  box-shadow: 0 4px 10px rgba(233, 185, 73, 0.4);
+}
+
+/* ---------- Voucher jako vstupenka (výřezy po stranách, zlatý rámeček, perforace) ---------- */
+.om-redesign .om-voucher-ticket {
+  border-width: 1.5px !important;
+  border-color: rgba(233, 185, 73, 0.6) !important;
+  -webkit-mask:
+    radial-gradient(circle at 0 72%, transparent 11px, #000 12px) left / 51% 100% no-repeat,
+    radial-gradient(circle at 100% 72%, transparent 11px, #000 12px) right / 51% 100% no-repeat;
+  mask:
+    radial-gradient(circle at 0 72%, transparent 11px, #000 12px) left / 51% 100% no-repeat,
+    radial-gradient(circle at 100% 72%, transparent 11px, #000 12px) right / 51% 100% no-repeat;
+}
+
+/* Perforace vstupenky – nahrazuje animovaný pruh rámečku (voucher-card-glow::before). */
+.om-redesign .om-voucher-ticket::before {
+  content: "";
+  position: absolute;
+  inset: auto 16px auto 16px;
+  top: 72%;
+  height: 0;
+  padding: 0;
+  border-radius: 0;
+  background: none;
+  animation: none;
+  -webkit-mask: none;
+  mask: none;
+  z-index: 3;
+  border-top: 2px dashed rgba(233, 185, 73, 0.55);
+  pointer-events: none;
+}
+
+/* Nadpis sekce na tmavé kartě: světlé písmo, linka zůstává. */
+.om-redesign .om-on-dark.customer-premium-orange-heading,
+.om-redesign .om-on-dark.homepage-premium-orange-heading,
+.om-redesign h2.om-on-dark {
+  color: #FFFFFF !important;
+  text-shadow: 0 2px 8px rgba(0, 0, 0, 0.5) !important;
+}
+
+.om-redesign .text-center.om-on-dark,
+.om-redesign .om-on-dark.text-center {
+  background-position: center bottom !important;
+}
+
+/* Jemné vznášení avatara. */
+.om-float {
+  animation: om2-float 3.6s ease-in-out infinite;
+}
+
+@keyframes om2-float {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-6px); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .om-float { animation: none; }
+}
+
+/* Starší proměnné písem používané v zákaznických komponentách → nová písma. */
+.om-redesign {
+  --om-font-heading: var(--om2-font-section);
+  --om-font-body: var(--om2-font-body);
+}
+
+/* ---------- Přihlášení / registrace / obnova hesla (deska 16) ---------- */
+.om-auth-hero {
+  background: radial-gradient(120% 120% at 80% 0%, #3A1118, #17171B 60%);
+  box-shadow: 0 18px 40px rgba(23, 23, 27, 0.28), inset 0 0 0 1.5px rgba(233, 185, 73, 0.45);
+  min-height: 168px;
+}
+
+.om-auth-hero-title {
+  margin: 0;
+  font-family: var(--om2-font-display);
+  font-weight: 900;
+  font-style: italic;
+  font-size: 30px;
+  line-height: 1;
+  text-transform: uppercase;
+  background: linear-gradient(180deg, #FFF1C2, #E9B949 55%, #A8741F);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  filter: drop-shadow(0 2px 0 rgba(0, 0, 0, 0.5));
+}
+
+.om-auth-hero-sweep {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 0;
+  width: 35%;
+  background: linear-gradient(100deg, transparent, rgba(255, 246, 220, 0.14), transparent);
+  animation: om2-sweep 6s ease-in-out infinite;
+  pointer-events: none;
+}
+
+@keyframes om2-sweep {
+  0%, 55% { transform: translateX(-120%) skewX(-18deg); }
+  100% { transform: translateX(420%) skewX(-18deg); }
+}
+
+.om-auth-card-title {
+  font-family: var(--om2-font-display) !important;
+  font-weight: 900 !important;
+  font-style: italic;
+  text-transform: uppercase;
+  letter-spacing: 0;
+  color: var(--om2-ink) !important;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .om-auth-hero-sweep { animation: none; }
+}
+
+/* ───────── Patička (deska Patička) ───────── */
+.om-redesign .om-footer {
+  overflow: hidden;
+  background: radial-gradient(70% 90% at 0% 0%, #3A0A14 0%, #121215 45%, #0B0B0D 100%) !important;
+  border-top: 0;
+  box-shadow: none;
+  color: #C9CAD1;
+  font-family: var(--om2-font-body, 'Manrope', system-ui, sans-serif);
+}
+.om-redesign footer.om-footer .text-muted-foreground,
+.om-redesign footer.om-footer a.text-muted-foreground,
+.om-redesign footer.om-footer div.text-muted-foreground { color: #C9CAD1; }
+.om-redesign footer.om-footer a:hover,
+.om-redesign footer.om-footer button:hover { color: #F6D77A; }
+.om-redesign .om-footer .text-heading-gold { color: #F2C55C; }
+.om-redesign footer.om-footer .border-border\/40 { border-color: rgba(255, 255, 255, 0.08); }
+.om-redesign footer.om-footer .text-foreground { color: #ECEDEF; }
+.om-redesign .om-ft-topline {
+  display: block;
+  position: absolute; left: 0; right: 0; top: 0; height: 2px; overflow: hidden;
+  background: linear-gradient(90deg, transparent, #E9B949 20%, #B5122B 50%, #E9B949 80%, transparent);
+}
+.om-redesign .om-ft-topline > i {
+  position: absolute; top: -2px; bottom: -2px; width: 20%;
+  background: linear-gradient(90deg, transparent, #FFF3C8, transparent);
+  animation: om2-ft-line 4s linear infinite;
+}
+@keyframes om2-ft-line { 0% { left: -25%; } 100% { left: 100%; } }
+.om-redesign .om-ft-brand { display: none; }
+.om-redesign .om-ft-logo { display: block; }
+.om-redesign footer.om-footer .om-ft-col h4,
+.om-redesign .om-ft-toggle {
+  font-family: 'Barlow Condensed', sans-serif;
+  font-weight: 800; font-style: italic; text-transform: uppercase;
+  font-size: 17px; letter-spacing: 0.04em; color: #F2C55C;
+}
+.om-redesign .om-ft-soc {
+  width: 40px; height: 40px; border-radius: 12px;
+  background: rgba(255, 255, 255, 0.06);
+  border: 0; box-shadow: inset 0 0 0 1px rgba(233, 185, 73, 0.4);
+}
+.om-redesign .om-ft-soc svg { color: #F2C55C; }
+
+/* mobil: sloupce jako rozbalovací řádky (✦ NAVÍC) */
+@media (max-width: 639px) {
+  .om-redesign .om-ft-grid { gap: 0; }
+  .om-redesign .om-ft-about { margin-bottom: 18px; }
+  .om-redesign .om-ft-col { border-top: 1px solid rgba(255, 255, 255, 0.08); padding: 14px 0; }
+  .om-redesign .om-ft-col > * + * { margin-top: 0; }
+  .om-redesign .om-ft-toggle { display: flex; justify-content: space-between; align-items: center; cursor: pointer; }
+  .om-redesign .om-ft-sign { display: inline; font-style: normal; }
+  .om-redesign .om-ft-col[data-open="false"] .om-ft-links { display: none; }
+  .om-redesign .om-ft-col[data-open="true"] .om-ft-links { margin-top: 12px; }
+}
+
+/* desktop: avatar vykukuje zpoza okraje + „Dostupné pro" */
+@media (min-width: 1024px) {
+  .om-redesign .om-ft-peek {
+    display: block; position: absolute; right: -10px; top: 26px; height: 170px; width: auto;
+    pointer-events: none; filter: drop-shadow(0 12px 18px rgba(0, 0, 0, 0.5));
+    animation: om2-ft-peek 6s cubic-bezier(0.2, 0.8, 0.2, 1) infinite;
+  }
+}
+@keyframes om2-ft-peek {
+  0%, 35%, 100% { transform: translateX(70px); }
+  50%, 85% { transform: translateX(0); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .om-redesign .om-ft-topline > i, .om-redesign .om-ft-peek { animation: none; }
+}
+
+/* ───────── Stránka nenalezena (deska Načítání a 404) ───────── */
+.om-notfound { font-family: 'Manrope', system-ui, sans-serif; color: #17171B; }
+.om-notfound-code {
+  position: absolute; top: 0; left: 0; right: 0;
+  font-family: 'Exo 2', sans-serif; font-weight: 900; font-style: italic;
+  font-size: 150px; line-height: 1; letter-spacing: -0.02em;
+  background: linear-gradient(180deg, #FFF1C2, #E9B949 50%, #A8741F);
+  -webkit-background-clip: text; background-clip: text; color: transparent;
+  filter: drop-shadow(0 6px 0 #17171B) drop-shadow(0 16px 24px rgba(60, 40, 10, 0.25));
+}
+.om-notfound-avatar {
+  filter: drop-shadow(0 14px 22px rgba(60, 40, 10, 0.3));
+  animation: om2-bob 3.6s ease-in-out infinite;
+}
+@keyframes om2-bob { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-6px); } }
+.om-notfound-title {
+  margin: 0; font-family: 'Exo 2', sans-serif; font-weight: 900; font-style: italic;
+  font-size: 28px; line-height: 1.05; text-transform: uppercase; color: #17171B;
+}
+.om-notfound-btn {
+  align-self: stretch; min-height: 52px; border-radius: 14px;
+  display: flex; align-items: center; justify-content: center;
+  font-weight: 800; font-size: 16px; color: #1A1205;
+  background: linear-gradient(180deg, #FFE29A, #E9B949 55%, #C2902F);
+  box-shadow: 0 8px 18px rgba(194, 144, 47, 0.35);
+  transition: filter 0.2s, transform 0.2s;
+}
+.om-notfound-btn:hover { filter: brightness(1.05); transform: translateY(-1px); }
+@media (prefers-reduced-motion: reduce) {
+  .om-notfound-avatar, .om-notfound-code { animation: none; }
+}
+
+/* ───────── Dobít MIO (deska Dobít, krok 1) ───────── */
+.om-redesign .homepage-light-content .homepage-miocoin-panel.om-tu-panel {
+  background: radial-gradient(120% 60% at 50% 0%, #241A10 0%, #0E0E11 55%, #0A0A0C 100%) !important;
+  border: 1px solid rgba(233, 185, 73, 0.3) !important;
+  box-shadow: 0 24px 50px rgba(23, 23, 27, 0.3), inset 0 0 0 1px rgba(233, 185, 73, 0.12) !important;
+  color: #ECEDEF;
+}
+.om-redesign .homepage-light-content .om-tu-panel .homepage-miocoin-header {
+  padding-bottom: 0.5rem; border-bottom: 1px solid rgba(233, 185, 73, 0.15);
+}
+.om-redesign h2.om-tu-title,
+.om-tu-title {
+  margin: 0; font-family: 'Exo 2', sans-serif; font-weight: 900; font-style: italic; text-transform: uppercase;
+  font-size: 30px; line-height: 1; background: none; padding: 0; -webkit-text-fill-color: initial;
+}
+.om-tu-title-a { background: linear-gradient(180deg, #FFFFFF, #BFC3CB); -webkit-background-clip: text; background-clip: text; color: transparent; -webkit-text-fill-color: transparent; }
+.om-tu-title-b { background: linear-gradient(180deg, #FFF1C2, #E9B949 55%, #A8741F); -webkit-background-clip: text; background-clip: text; color: transparent; -webkit-text-fill-color: transparent; }
+.om-tu-avatar { filter: drop-shadow(0 8px 14px rgba(0, 0, 0, 0.5)); animation: om2-bob 3.6s ease-in-out infinite; margin-bottom: -18px; }
+.om-redesign .homepage-light-content .homepage-miocoin-package.om-tu-tile {
+  position: relative; display: flex; flex-direction: column; align-items: center; gap: 6px; overflow: hidden;
+  padding: 0 10px 10px; border-radius: 18px; transform: none;
+  background: linear-gradient(180deg, #1A1A1F, #121215) !important;
+  border: 0 !important;
+}
+.om-redesign .homepage-light-content .om-tu-tile.om-tu-graphite { box-shadow: inset 0 0 0 1px rgba(220, 225, 235, 0.35) !important; }
+.om-redesign .homepage-light-content .om-tu-tile.om-tu-crimson { box-shadow: inset 0 0 0 1px rgba(224, 37, 63, 0.6) !important; }
+.om-redesign .homepage-light-content .om-tu-tile.om-tu-crown { box-shadow: inset 0 0 0 1.5px rgba(233, 185, 73, 0.75), 0 0 24px rgba(233, 185, 73, 0.15) !important; }
+.om-redesign .homepage-light-content .om-tu-tile.om-tu-holo { box-shadow: inset 0 0 0 1.5px rgba(185, 140, 255, 0.7), 0 0 24px rgba(185, 140, 255, 0.18) !important; }
+.om-redesign .homepage-light-content .homepage-miocoin-package.om-tu-tile:hover { transform: translateY(-2px); }
+.om-tu-stage { position: relative; height: 112px; width: 100%; display: flex; align-items: center; justify-content: center; }
+.om-tu-graphite .om-tu-stage { background: radial-gradient(closest-side, rgba(220, 225, 235, 0.18), transparent); }
+.om-tu-crimson .om-tu-stage { background: radial-gradient(closest-side, rgba(224, 37, 63, 0.32), transparent); }
+.om-tu-crown .om-tu-stage { background: radial-gradient(closest-side, rgba(233, 185, 73, 0.3), transparent); }
+.om-tu-holo .om-tu-stage { background: radial-gradient(closest-side, rgba(185, 140, 255, 0.3), transparent); }
+.om-tu-tilt { animation: om2-tu-tilt 5.5s ease-in-out infinite; filter: drop-shadow(0 10px 14px rgba(0, 0, 0, 0.55)); }
+.om-tu-seal {
+  position: absolute; top: 10px; right: 2px; min-width: 44px; height: 44px; padding: 0 6px; border-radius: 999px;
+  display: flex; align-items: center; justify-content: center;
+  font-family: 'Exo 2', sans-serif; font-weight: 900; font-style: italic; font-size: 15px; color: #fff;
+  background: radial-gradient(circle at 35% 30%, #FF4A62, #B5122B 55%, #5A0714);
+  box-shadow: 0 0 0 2px #050505, 0 0 0 3.5px #D9DCE2, 0 8px 14px rgba(0, 0, 0, 0.45);
+  animation: om2-tu-seal 3s ease-in-out infinite;
+}
+.om-tu-crown .om-tu-seal { box-shadow: 0 0 0 2px #050505, 0 0 0 3.5px #E9B949, 0 8px 14px rgba(0, 0, 0, 0.45); }
+.om-tu-holo .om-tu-seal { box-shadow: 0 0 0 2px #050505, 0 0 0 3.5px #C9A8FF, 0 8px 14px rgba(0, 0, 0, 0.45); }
+.om-tu-num { font-family: 'Exo 2', sans-serif; font-weight: 900; font-style: italic; font-size: 30px; line-height: 1; color: #ECEDEF; }
+.om-tu-unit { font-family: 'Barlow Condensed', sans-serif; font-weight: 800; font-size: 15px; color: #C9CAD1; }
+.om-tu-crimson .om-tu-unit, .om-tu-crimson .om-tu-sub b { color: #FF8A9A; }
+.om-tu-crown .om-tu-unit, .om-tu-crown .om-tu-sub b { color: #F2C55C; }
+.om-tu-holo .om-tu-unit, .om-tu-holo .om-tu-sub b { color: #C9A8FF; }
+.om-tu-sub { font-size: 11.5px; color: #A9AAB3; min-height: 16px; }
+.om-tu-banner { width: calc(100% + 20px); margin: 0 -10px; height: 150px; overflow: hidden; }
+.om-redesign .homepage-light-content .homepage-miocoin-button.om-tu-btn {
+  width: 100%; min-height: 44px; border-radius: 12px; font-weight: 800; font-size: 13.5px; white-space: nowrap; filter: none;
+}
+.om-redesign .homepage-light-content .homepage-miocoin-button.om-tu-btn-graphite {
+  color: #ECEDEF !important; background: rgba(255, 255, 255, 0.06) !important;
+  border: 1px solid rgba(220, 225, 235, 0.5) !important; box-shadow: none !important;
+}
+.om-redesign .homepage-light-content .homepage-miocoin-button.om-tu-btn-crimson {
+  color: #fff !important; background: linear-gradient(180deg, #E0253F, #9E0E24) !important;
+  border: 0 !important; box-shadow: 0 6px 16px rgba(181, 18, 43, 0.4) !important;
+}
+.om-redesign .homepage-light-content .homepage-miocoin-button.om-tu-btn-crown {
+  color: #1A1205 !important; background: linear-gradient(180deg, #FFE29A, #E9B949 55%, #C2902F) !important;
+  border: 0 !important; box-shadow: 0 6px 16px rgba(194, 144, 47, 0.35) !important;
+}
+.om-redesign .homepage-light-content .homepage-miocoin-button.om-tu-btn-holo {
+  color: #1A1205 !important; background: linear-gradient(100deg, #FFD6E0, #FFE9A8, #C8F7DC, #BFE3FF, #E4CCFF) !important;
+  border: 0 !important; box-shadow: 0 6px 16px rgba(185, 140, 255, 0.35) !important;
+}
+.om-redesign .homepage-light-content .homepage-miocoin-button.om-tu-btn:hover { filter: brightness(1.06); }
+/* Spotřebitelská informace o MIO na tmavém panelu – čitelná barva (text beze změny). */
+.om-redesign .homepage-light-content .om-tu-panel .text-muted-foreground { color: #A9AAB3; }
+.om-redesign .homepage-light-content .om-tu-panel a { color: #F2C55C; }
+@keyframes om2-tu-tilt { 0%, 100% { transform: rotate(-4deg) translateY(0); } 50% { transform: rotate(3deg) translateY(-5px); } }
+@keyframes om2-tu-seal { 0%, 100% { transform: rotate(-10deg) scale(1); } 50% { transform: rotate(-4deg) scale(1.07); } }
+@media (prefers-reduced-motion: reduce) {
+  .om-tu-tilt, .om-tu-seal, .om-tu-avatar { animation: none; }
+}
+
+/* ───────── Načítání (deska Načítání) ───────── */
+.om-load {
+  position: relative; min-height: 100vh; overflow: hidden; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 26px;
+  background: radial-gradient(90% 60% at 50% 42%, #3A0A14 0%, #121215 55%, #08080A 100%); color: #ECEDEF;
+  font-family: 'Manrope', system-ui, sans-serif;
+}
+.om-load-rays {
+  position: absolute; left: 50%; top: 42%; width: 760px; height: 760px; margin: -380px 0 0 -380px; border-radius: 50%; pointer-events: none;
+  background: repeating-conic-gradient(from 0deg, rgba(233, 185, 73, 0.08) 0 6deg, rgba(233, 185, 73, 0) 6deg 20deg);
+  animation: om2-cd-spin 30s linear infinite;
+}
+.om-load-logo { position: relative; width: 250px; height: 126px; animation: om2-load-breathe 2.2s ease-in-out infinite; }
+.om-load-logo img { width: 100%; height: 100%; object-fit: contain; }
+.om-load-shine {
+  position: absolute; inset: 0; overflow: hidden; display: block; border-radius: 16px;
+}
+.om-load-shine i {
+  position: absolute; top: 0; bottom: 0; left: 0; width: 30%;
+  background: linear-gradient(90deg, transparent, rgba(255, 250, 230, 0.55), transparent);
+  animation: om2-cd-glint 3.8s cubic-bezier(0.4, 0, 0.2, 1) infinite; mix-blend-mode: screen;
+}
+.om-load-bar { position: relative; width: 180px; height: 4px; border-radius: 2px; overflow: hidden; background: rgba(233, 185, 73, 0.2); }
+.om-load-bar span {
+  position: absolute; top: 0; bottom: 0; border-radius: 2px;
+  background: linear-gradient(90deg, transparent, #FFE29A, #E9B949, transparent);
+  animation: om2-load-bar 2.4s cubic-bezier(0.4, 0, 0.2, 1) infinite;
+}
+.om-load-label { position: relative; font-size: 12px; letter-spacing: 0.24em; font-weight: 800; color: #A9AAB3; }
+/* Obrysy karet při načítání obsahu (deska Načítání, krok 2) */
+.om-sk, .om-skd { position: relative; display: block; overflow: hidden; border-radius: 12px; }
+.om-sk { background: #E9E0D0; }
+.om-skd { background: #26262C; }
+.om-sk::after, .om-skd::after { content: ""; position: absolute; inset: 0; background-size: 300% 100%; animation: om2-load-sk 1.4s linear infinite; }
+.om-sk::after { background-image: linear-gradient(100deg, transparent 30%, rgba(255, 255, 255, 0.7) 50%, transparent 70%); }
+.om-skd::after { background-image: linear-gradient(100deg, transparent 30%, rgba(233, 185, 73, 0.25) 50%, transparent 70%); }
+@keyframes om2-load-breathe {
+  0%, 100% { transform: scale(1); filter: drop-shadow(0 0 0 rgba(233, 185, 73, 0)); }
+  50% { transform: scale(1.04); filter: drop-shadow(0 0 22px rgba(233, 185, 73, 0.45)); }
+}
+@keyframes om2-load-bar { 0% { left: -40%; width: 40%; } 60% { left: 60%; width: 40%; } 100% { left: 110%; width: 40%; } }
+@keyframes om2-load-sk { 0% { background-position: 100% 0; } 100% { background-position: -100% 0; } }
+@media (prefers-reduced-motion: reduce) {
+  .om-load-rays, .om-load-logo, .om-load-shine i, .om-load-bar span, .om-sk::after, .om-skd::after { animation: none; }
+}
+
+/* ───────── Platba proběhla / zrušena (deska Dobít krok 3, deska 26) ───────── */
+.om-ps {
+  border-radius: 28px; color: #ECEDEF;
+  background: radial-gradient(90% 55% at 50% 30%, #4A0D18 0%, #17090C 45%, #08080A 100%);
+  box-shadow: 0 24px 50px rgba(23, 23, 27, 0.35), inset 0 0 0 1px rgba(233, 185, 73, 0.3);
+}
+.om-ps-beam {
+  position: absolute; top: -40px; left: 50%; margin-left: -110px; width: 220px; height: 520px; pointer-events: none;
+  background: linear-gradient(180deg, rgba(255, 226, 154, 0.22), rgba(255, 226, 154, 0) 80%);
+  clip-path: polygon(42% 0, 58% 0, 100% 100%, 0 100%);
+  animation: om2-ps-sweep 6s ease-in-out infinite alternate;
+}
+.om-ps-fall { position: absolute; top: -14px; width: 7px; height: 11px; border-radius: 2px; pointer-events: none; animation: om2-ps-fall 3.6s linear infinite; }
+.om-ps-land { animation: om2-ps-land 0.9s cubic-bezier(0.3, 1.4, 0.5, 1) both; filter: drop-shadow(0 14px 18px rgba(0, 0, 0, 0.55)); }
+.om-ps-ring {
+  position: absolute; left: 50%; top: 50%; width: 220px; height: 220px; margin: -110px 0 0 -110px; border-radius: 50%; pointer-events: none;
+  box-shadow: 0 0 0 3px rgba(233, 185, 73, 0.7); animation: om2-ps-ring 2.4s ease-out infinite;
+}
+.om-ps-stamp {
+  position: absolute; top: -12px; right: -14px; width: 66px; height: 66px; border-radius: 50%;
+  display: flex; flex-direction: column; align-items: center; justify-content: center; color: #fff;
+  font-family: 'Exo 2', sans-serif; font-weight: 900; font-style: italic; font-size: 20px; line-height: 1;
+  background: radial-gradient(circle at 35% 30%, #FF4A62, #B5122B 55%, #5A0714);
+  box-shadow: 0 0 0 3px #050505, 0 0 0 5px #D9DCE2, 0 8px 14px rgba(0, 0, 0, 0.45);
+  transform: rotate(-10deg); animation: om2-ps-stamp 0.7s 0.6s cubic-bezier(0.3, 1.6, 0.5, 1) both;
+}
+.om-ps-stamp small { font-family: 'Manrope', sans-serif; font-style: normal; font-size: 9px; font-weight: 800; letter-spacing: 0.08em; color: #FFE3E7; margin-top: 2px; }
+.om-ps-pill {
+  display: inline-flex; align-items: center; gap: 8px; padding: 6px 12px; border-radius: 999px;
+  font-size: 12px; font-weight: 800; letter-spacing: 0.12em; color: #7EE0A8;
+  background: rgba(46, 158, 91, 0.15); box-shadow: inset 0 0 0 1px rgba(46, 158, 91, 0.6);
+}
+.om-ps-amount {
+  font-family: 'Exo 2', sans-serif; font-weight: 900; font-style: italic; text-transform: uppercase; font-size: 52px; line-height: 0.95;
+  background: linear-gradient(180deg, #FFF1C2, #E9B949 50%, #A8741F); -webkit-background-clip: text; background-clip: text;
+  color: transparent; -webkit-text-fill-color: transparent;
+}
+.om-ps-amount-sm { font-size: 26px; line-height: 1.1; }
+.om-ps-balance {
+  margin-top: 6px; width: 100%; border-radius: 18px; padding: 14px 16px; display: flex; align-items: center; justify-content: space-between;
+  background: rgba(255, 255, 255, 0.05); box-shadow: inset 0 0 0 1px rgba(233, 185, 73, 0.35);
+}
+.om-ps-face { width: 44px; height: 44px; border-radius: 50%; overflow: hidden; display: flex; align-items: flex-end; justify-content: center; background: #17171B; box-shadow: 0 0 0 2px #E9B949; }
+.om-ps-face img { width: 42px; height: auto; }
+.om-ps-balance-num { font-family: 'Exo 2', sans-serif; font-weight: 900; font-style: italic; font-size: 28px; color: #F6D77A; }
+.om-ps-gold {
+  width: 100%; min-height: 52px; border-radius: 14px; font-weight: 800; font-size: 16px; color: #1A1205;
+  background: linear-gradient(180deg, #FFE29A, #E9B949 55%, #C2902F); box-shadow: 0 8px 18px rgba(194, 144, 47, 0.35);
+  transition: filter 0.2s, transform 0.2s;
+}
+.om-ps-gold:hover { filter: brightness(1.05); transform: translateY(-1px); }
+.om-ps-ghost {
+  width: 100%; min-height: 48px; border-radius: 14px; font-weight: 800; font-size: 15px; color: #F6D77A;
+  background: rgba(255, 255, 255, 0.05); border: 1.5px solid rgba(233, 185, 73, 0.6);
+}
+.om-ps-ghost:hover { background: rgba(233, 185, 73, 0.12); }
+.om-pc {
+  border-radius: 24px; background: linear-gradient(180deg, #FFFFFF, #FDF8EF);
+  box-shadow: inset 0 1px 0 #fff, 0 0 0 1px rgba(194, 144, 47, 0.24), 0 14px 30px rgba(60, 40, 10, 0.12);
+}
+.om-redesign h1.om-pc-title,
+.om-pc-title {
+  margin: 0; font-family: 'Exo 2', sans-serif; font-weight: 900; font-style: italic; text-transform: uppercase;
+  font-size: 28px; line-height: 1; color: #17171B; -webkit-text-fill-color: #17171B;
+}
+.om-pc-ghost {
+  width: 100%; min-height: 48px; border-radius: 14px; font-weight: 800; font-size: 15px; color: #8A5A10;
+  background: #fff; border: 1px solid rgba(194, 144, 47, 0.55);
+}
+.om-pc-ghost:hover { background: #FFF6E0; }
+@keyframes om2-ps-sweep { 0% { transform: rotate(-8deg); } 100% { transform: rotate(8deg); } }
+@keyframes om2-ps-fall { 0% { transform: translateY(0) rotate(0); opacity: 0; } 10% { opacity: 1; } 100% { transform: translateY(560px) rotate(540deg); opacity: 0; } }
+@keyframes om2-ps-land { 0% { transform: translateY(-80px) scale(0.85); opacity: 0; } 100% { transform: none; opacity: 1; } }
+@keyframes om2-ps-ring { 0% { transform: scale(0.7); opacity: 0.9; } 100% { transform: scale(1.15); opacity: 0; } }
+@keyframes om2-ps-stamp { 0% { transform: rotate(-10deg) scale(2.2); opacity: 0; } 100% { transform: rotate(-10deg) scale(1); opacity: 1; } }
+@media (prefers-reduced-motion: reduce) {
+  .om-ps-beam, .om-ps-fall, .om-ps-ring, .om-ps-land, .om-ps-stamp { animation: none; }
+}
+
+/* ───────── Kontakt (deska 27) ───────── */
+.om-redesign h1.om-kontakt-title,
+.om-kontakt-title {
+  margin: 0; font-family: 'Exo 2', sans-serif; font-weight: 900; font-style: italic; text-transform: uppercase;
+  font-size: 40px; line-height: 1; color: #17171B; -webkit-text-fill-color: #17171B;
+  text-shadow: 0 1px 0 #fff, 0 3px 10px rgba(194, 144, 47, 0.28);
+}
+.om-kontakt-founder {
+  color: #ECEDEF;
+  background: radial-gradient(120% 90% at 85% 0%, #3A1118, #17171B 60%);
+  box-shadow: 0 16px 30px rgba(23, 23, 27, 0.25), inset 0 0 0 1px rgba(233, 185, 73, 0.45);
+}
+.om-redesign h2.om-kontakt-name,
+.om-kontakt-name {
+  margin: 0; font-family: 'Exo 2', sans-serif; font-weight: 900; font-style: italic; text-transform: uppercase;
+  font-size: 28px; line-height: 1; background: none !important; padding: 0 !important;
+  color: #F6D77A !important; -webkit-text-fill-color: #F6D77A !important;
+}
+.om-redesign .om-kontakt-founder .text-muted-foreground,
+.om-redesign .om-kontakt-founder [class*="text-muted-foreground"] { color: #C9CDD4; }
+.om-redesign .om-kontakt-founder p:not([class]) { color: inherit; }
+.om-redesign .om-kontakt-founder .text-foreground,
+.om-redesign .om-kontakt-founder [class*="text-foreground"] { color: #F6EFD9; }
+.om-kontakt-info {
+  background: linear-gradient(180deg, #FFFFFF, #FDF8EF);
+  box-shadow: inset 0 1px 0 #fff, 0 0 0 1px rgba(194, 144, 47, 0.24), 0 14px 30px rgba(60, 40, 10, 0.12);
+}
+.om-redesign .om-kontakt-info h2 { font-family: 'Barlow Condensed', sans-serif; font-weight: 800; font-style: italic; text-transform: uppercase; }
+.om-redesign .om-kontakt-info [class*="bg-muted/"] { background: #FFFBF2; border-color: rgba(194, 144, 47, 0.22); }
+
+/* ───────── Textové stránky – VOP, ochrana údajů, pravidla, cookies (deska 27) ───────── */
+.om-cms-card {
+  background: linear-gradient(180deg, #FFFFFF, #FDF8EF);
+  box-shadow: inset 0 1px 0 #fff, 0 0 0 1px rgba(194, 144, 47, 0.24), 0 14px 30px rgba(60, 40, 10, 0.12);
+}
+.om-redesign h1.om-cms-title,
+.om-cms-title {
+  margin: 0; font-family: 'Exo 2', sans-serif; font-weight: 900; font-style: italic; text-transform: uppercase;
+  font-size: 32px; line-height: 1.05; color: #17171B; -webkit-text-fill-color: #17171B; overflow-wrap: anywhere;
+  background: linear-gradient(90deg, #B5122B, #E9B949) left bottom / 58px 4px no-repeat; padding-bottom: 12px;
+}
+.om-cms-toc { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 18px; }
+.om-cms-chip {
+  display: inline-flex; align-items: center; min-height: 34px; padding: 0 12px; border-radius: 999px;
+  font-size: 12.5px; font-weight: 700; color: #8A5A10; background: #fff; border: 1px solid rgba(194, 144, 47, 0.45);
+  transition: background 0.2s;
+}
+.om-cms-chip:hover { background: #FFF6E0; }
+.om-cms-top { font-size: 13px; font-weight: 800; color: #8A5A10; }
+.om-cms-top:hover { color: #B5122B; }
+.om-redesign .om-cms .prose { color: #3A3A40; }
+.om-redesign .om-cms .prose h2 {
+  font-family: 'Barlow Condensed', sans-serif; font-weight: 800; font-style: italic; text-transform: uppercase;
+  scroll-margin-top: 90px; background: none; color: #17171B;
+}
+.om-redesign .om-cms .prose .cms-section-heading { scroll-margin-top: 90px; }
+.om-redesign .om-cms .prose a { color: #8A5A10; }
+
+/* ───────── Detail bonusové výhry – vitrína (deska Dialogy, krok 2) ───────── */
+.om-bpm {
+  font-family: 'Manrope', system-ui, sans-serif; color: #ECEDEF; border-radius: 22px;
+  background: radial-gradient(120% 80% at 80% 0%, rgba(181, 18, 43, 0.4), rgba(181, 18, 43, 0) 60%), #121216;
+  box-shadow: inset 0 0 0 1.5px rgba(233, 185, 73, 0.45), 0 24px 50px rgba(0, 0, 0, 0.5);
+}
+.om-bpm > button[class*="absolute"] { color: #F6D77A; }
+.om-bpm-title {
+  font-family: 'Exo 2', sans-serif; font-weight: 900; font-style: italic; text-transform: uppercase;
+  font-size: 24px; line-height: 1.05; color: #fff; overflow-wrap: anywhere;
+}
+.om-bpm-showcase {
+  position: relative; display: flex; align-items: center; justify-content: center; overflow: hidden;
+  border-radius: 16px; padding: 14px; background: radial-gradient(circle at 50% 70%, #2A1A12, #0B0B0D 70%);
+  box-shadow: 0 0 0 2px #E9B949, 0 0 0 5px rgba(233, 185, 73, 0.18);
+}
+.om-bpm-spot {
+  position: absolute; left: 50%; top: -30%; width: 70%; height: 140%; margin-left: -35%; pointer-events: none;
+  background: linear-gradient(180deg, rgba(255, 226, 154, 0.25), rgba(255, 226, 154, 0) 75%);
+  clip-path: polygon(40% 0, 60% 0, 100% 100%, 0 100%);
+}
+.om-bpm-count {
+  display: inline-flex; align-items: center; padding: 5px 12px; border-radius: 999px; font-size: 12px; font-weight: 800; color: #fff;
+  background: radial-gradient(circle at 35% 30%, #FF4A62, #B5122B 55%, #5A0714); box-shadow: 0 0 0 1.5px #F2C14E;
+}
+.om-bpm-close {
+  min-height: 42px; padding: 0 22px; border-radius: 999px; font-weight: 800; font-size: 14px; color: #F6D77A;
+  background: rgba(255, 255, 255, 0.05); border: 1.5px solid rgba(233, 185, 73, 0.6);
+}
+.om-bpm-close:hover { background: rgba(233, 185, 73, 0.12); }
+
+/* ───────── Instalace na iPhone (deska 28) ───────── */
+.om-install {
+  font-family: 'Manrope', system-ui, sans-serif; color: #17171B;
+  background: linear-gradient(180deg, #FFFFFF, #FDF8EF);
+  box-shadow: inset 0 1px 0 #fff, 0 0 0 1px rgba(194, 144, 47, 0.3), 0 24px 50px rgba(23, 23, 27, 0.3);
+}
+.om-install-title {
+  font-family: 'Exo 2', sans-serif; font-weight: 900; font-style: italic; text-transform: uppercase;
+  font-size: 22px; line-height: 1.05; color: #17171B;
+}
+.om-install-step {
+  display: flex; align-items: flex-start; gap: 12px; padding: 12px; border-radius: 14px;
+  background: #fff; box-shadow: 0 0 0 1px rgba(194, 144, 47, 0.25);
+}
+.om-install-num {
+  flex: none; width: 26px; height: 26px; border-radius: 50%; display: flex; align-items: center; justify-content: center;
+  font-family: 'Exo 2', sans-serif; font-weight: 900; font-style: italic; font-size: 13px; color: #1A1205;
+  background: linear-gradient(180deg, #FFE29A, #E9B949 55%, #C2902F);
+}
+
+/* ───────── Sdílený tiket (deska 26) ───────── */
+.om-share {
+  font-family: 'Manrope', system-ui, sans-serif; color: #17171B;
+  background:
+    radial-gradient(120% 40% at 50% 0%, #FFF6E0, rgba(255, 246, 224, 0) 70%),
+    repeating-linear-gradient(135deg, rgba(194, 144, 47, 0.045) 0 1px, transparent 1px 14px),
+    #F5EEE3;
+}
+.om-share-title {
+  margin: 0 0 8px; text-align: center; font-family: 'Exo 2', sans-serif; font-weight: 900; font-style: italic;
+  text-transform: uppercase; font-size: 28px; line-height: 1.05; color: #17171B; -webkit-text-fill-color: #17171B;
+}
+.om-share-frame {
+  border-radius: 16px; overflow: hidden; background: #17171B;
+  box-shadow: 0 0 0 2px #E9B949, 0 0 0 5px rgba(233, 185, 73, 0.18), 0 18px 34px rgba(60, 40, 10, 0.25);
+}
+.om-share .om-share-btn {
+  min-height: 48px; border-radius: 14px; font-weight: 800; color: #17171B; background: #fff;
+  border: 1px solid rgba(194, 144, 47, 0.45);
+}
+.om-share .om-share-btn:hover { background: #FFF6E0; }
+
+/* ───────── Moje hry (deska 25) ───────── */
+.om-redesign h1.om-mg-title,
+.om-mg-title {
+  margin: 0; font-family: 'Exo 2', sans-serif; font-weight: 900; font-style: italic; text-transform: uppercase;
+  font-size: 30px; line-height: 1; color: #17171B; -webkit-text-fill-color: #17171B;
+  text-shadow: 0 1px 0 #fff, 0 3px 10px rgba(194, 144, 47, 0.28);
+  background: linear-gradient(90deg, #B5122B, #E9B949) left bottom / 58px 4px no-repeat; padding-bottom: 12px;
+}
+.om-mg-card {
+  border-radius: 20px; color: #ECEDEF;
+  background: radial-gradient(120% 120% at 85% 10%, #3A1118, #17171B 60%);
+  box-shadow: 0 16px 30px rgba(23, 23, 27, 0.25), inset 0 0 0 1px rgba(233, 185, 73, 0.45);
+  transition: transform 0.2s, box-shadow 0.2s;
+}
+button.om-mg-card:hover { transform: translateY(-2px); box-shadow: 0 20px 34px rgba(23, 23, 27, 0.3), inset 0 0 0 1px rgba(233, 185, 73, 0.7); }
+.om-mg-thumb {
+  flex: none; width: 62px; height: 62px; border-radius: 12px; overflow: hidden; display: flex; align-items: center; justify-content: center;
+  background: #0B0B0D; box-shadow: 0 0 0 1.5px #E9B949;
+}
+.om-mg-thumb img { width: 100%; height: 100%; object-fit: cover; }
+.om-mg-name {
+  font-family: 'Barlow Condensed', sans-serif; font-weight: 800; font-style: italic; text-transform: uppercase;
+  font-size: 19px; line-height: 1; color: #ECEDEF; overflow-wrap: anywhere;
+}
+.om-mg-cta {
+  min-height: 44px; padding: 0 20px; border-radius: 999px; font-weight: 800; font-size: 14px; color: #1A1205;
+  background: linear-gradient(180deg, #FFE29A, #E9B949 55%, #C2902F); box-shadow: 0 6px 16px rgba(194, 144, 47, 0.35);
+}
+
+/* ───────── Zprávy (deska Zprávy) ───────── */
+.om-msg-shell {
+  background:
+    radial-gradient(120% 30% at 50% 0%, #FFF6E0, rgba(255, 246, 224, 0) 70%),
+    repeating-linear-gradient(135deg, rgba(194, 144, 47, 0.045) 0 1px, transparent 1px 14px),
+    #F5EEE3;
+  color: #17171B;
+}
+.om-msg-bar {
+  display: flex; align-items: center; gap: 10px; min-height: 66px; padding: 10px 14px; border-radius: 18px; color: #ECEDEF;
+  background: radial-gradient(140% 120% at 90% 0%, #3A1118, #17171B 60%);
+  box-shadow: 0 8px 20px rgba(23, 23, 27, 0.25), inset 0 0 0 1px rgba(233, 185, 73, 0.25);
+}
+.om-msg-ava {
+  position: relative; flex: none; width: 46px; height: 46px; border-radius: 50%; display: flex; align-items: center; justify-content: center;
+  background: radial-gradient(circle at 50% 30%, #3A1118, #15151A 70%); box-shadow: 0 0 0 2px #E9B949;
+}
+.om-msg-dot { position: absolute; right: -1px; bottom: -1px; width: 12px; height: 12px; border-radius: 50%; background: #2E9E5B; box-shadow: 0 0 0 2px #17171B; }
+.om-redesign h1.om-msg-title,
+.om-msg-title {
+  margin: 0; font-family: 'Exo 2', sans-serif; font-weight: 900; font-style: italic; text-transform: uppercase;
+  font-size: 20px; line-height: 1; color: #F6EFD9; -webkit-text-fill-color: #F6EFD9; background: none;
+}
+.om-msg-count {
+  flex: none; padding: 4px 10px; border-radius: 999px; font-size: 11px; font-weight: 800; color: #F6D77A;
+  background: rgba(233, 185, 73, 0.12); box-shadow: inset 0 0 0 1px rgba(233, 185, 73, 0.4);
+}
+.om-msg-empty-avatar { filter: drop-shadow(0 14px 22px rgba(60, 40, 10, 0.3)); animation: om2-bob 3.6s ease-in-out infinite; }
+.om-msg-empty-title {
+  font-family: 'Exo 2', sans-serif; font-weight: 900; font-style: italic; text-transform: uppercase;
+  font-size: 24px; line-height: 1.05; color: #17171B;
+}
+.om-msg-quick {
+  min-height: 38px; padding: 0 14px; border-radius: 999px; border: 1px solid rgba(194, 144, 47, 0.55); background: #fff;
+  font-size: 12.5px; font-weight: 700; color: #8A5A10; transition: background 0.2s;
+}
+.om-msg-quick:hover { background: #FFF6E0; }
+.om-msg-compose {
+  padding: 10px 12px; border-radius: 18px; background: rgba(250, 246, 239, 0.97);
+  box-shadow: 0 -8px 22px rgba(60, 40, 10, 0.1), inset 0 0 0 1px rgba(194, 144, 47, 0.2);
+}
+.om-msg-field {
+  flex: 1; min-width: 0; min-height: 46px; border-radius: 23px; border: 1px solid rgba(160, 120, 50, 0.3); background: #fff;
+  padding: 0 16px; font-size: 14px; color: #17171B; outline: none; transition: border-color 0.2s, box-shadow 0.2s;
+}
+.om-msg-field::placeholder { color: #8E8F98; }
+.om-msg-field:focus { border-color: rgba(194, 144, 47, 0.7); box-shadow: 0 0 0 3px rgba(233, 185, 73, 0.25); }
+.om-msg-field:disabled { opacity: 0.5; }
+.om-msg-send {
+  position: relative; flex: none; width: 46px; height: 46px; border-radius: 50%; display: flex; align-items: center; justify-content: center;
+  background: linear-gradient(180deg, #FFE29A, #E9B949 55%, #C2902F); box-shadow: 0 6px 14px rgba(194, 144, 47, 0.4);
+  transition: transform 0.2s, opacity 0.2s;
+}
+.om-msg-send:hover:not(:disabled) { transform: scale(1.05); }
+.om-msg-send:disabled { opacity: 0.45; cursor: not-allowed; }
+
+/* ───────── Detail soutěže (deska 5 – schválená verze 5F/5G) ───────── */
+.om-cd-bgimg {
+  position: absolute; left: 0; right: 0; top: 0; height: 560px; z-index: 0; pointer-events: none;
+  background-size: cover; background-position: center; opacity: 0.22;
+  -webkit-mask: linear-gradient(180deg, #000 0%, rgba(0, 0, 0, 0.6) 45%, transparent 100%);
+  mask: linear-gradient(180deg, #000 0%, rgba(0, 0, 0, 0.6) 45%, transparent 100%);
+}
+
+/* 1 · rámeček hlavní výhry */
+.om-cd-frame {
+  position: relative; border-radius: 24px; padding: 2px; overflow: hidden;
+  box-shadow: 0 24px 50px rgba(40, 10, 15, 0.3), 0 0 0 1px rgba(194, 144, 47, 0.25);
+}
+.om-cd-frame::before {
+  content: ""; position: absolute; left: -50%; top: -50%; width: 200%; height: 200%;
+  background: conic-gradient(from 0deg, #8C6420, #FFE29A, #B5122B, #E9B949, #FFF6D0, #8C6420);
+  animation: om2-cd-spin 7s linear infinite;
+}
+.om-cd-inner {
+  position: relative; border-radius: 22px; overflow: hidden; color: #ECEDEF;
+  background:
+    radial-gradient(90% 70% at 85% 0%, rgba(181, 18, 43, 0.55), rgba(181, 18, 43, 0) 60%),
+    radial-gradient(70% 60% at 0% 100%, rgba(233, 185, 73, 0.16), rgba(233, 185, 73, 0) 70%),
+    repeating-radial-gradient(circle at 100% 0%, rgba(233, 185, 73, 0.06) 0 1px, transparent 1px 9px),
+    #121216;
+}
+.om-cd-corner { position: absolute; width: 22px; height: 22px; border-color: #E9B949; border-style: solid; opacity: 0.9; pointer-events: none; z-index: 1; }
+.om-cd-c1 { top: 10px; left: 10px; border-width: 2px 0 0 2px; border-radius: 6px 0 0 0; }
+.om-cd-c2 { top: 10px; right: 10px; border-width: 2px 2px 0 0; border-radius: 0 6px 0 0; }
+.om-cd-c3 { bottom: 10px; left: 10px; border-width: 0 0 2px 2px; border-radius: 0 0 0 6px; }
+.om-cd-c4 { bottom: 10px; right: 10px; border-width: 0 2px 2px 0; border-radius: 0 0 6px 0; }
+.om-cd-rise {
+  position: absolute; bottom: -12px; border-radius: 50%; pointer-events: none;
+  background: radial-gradient(circle at 35% 30%, #FFF6D0, #E9B949 60%, rgba(233, 185, 73, 0));
+  animation: om2-cd-rise linear infinite;
+}
+.om-cd-fast {
+  display: inline-flex; align-items: center; gap: 5px; padding: 5px 11px; border-radius: 999px;
+  background: linear-gradient(180deg, #FFE29A, #E9B949); color: #1A1205;
+  font-size: 11px; font-weight: 800; letter-spacing: 0.06em; text-transform: uppercase;
+  box-shadow: 0 4px 12px rgba(233, 185, 73, 0.4);
+}
+.om-redesign h1.om-cd-title,
+.om-cd-title {
+  margin: 0; font-family: 'Exo 2', sans-serif; font-weight: 900; font-style: italic; text-transform: uppercase;
+  line-height: 0.98; overflow-wrap: anywhere;
+  background: linear-gradient(100deg, #9C6A1A 0%, #E9B949 28%, #FFF6D0 44%, #E9B949 58%, #9C6A1A 100%);
+  background-size: 260% 100%;
+  -webkit-background-clip: text; background-clip: text; color: transparent; -webkit-text-fill-color: transparent;
+  filter: drop-shadow(0 3px 0 rgba(0, 0, 0, 0.6)) drop-shadow(0 0 18px rgba(233, 185, 73, 0.25));
+  animation: om2-cd-tglint 5.5s linear infinite;
+}
+.om-cd-uline {
+  display: block; width: 90px; height: 4px; border-radius: 2px; margin-top: 10px;
+  background: linear-gradient(90deg, #B5122B, #E9B949, #FFF0B8);
+  transform-origin: left center; animation: om2-cd-uline 6s cubic-bezier(0.6, 0, 0.2, 1) infinite;
+}
+.om-cd-plaque {
+  display: flex; align-items: center; gap: 12px; padding: 10px 14px 10px 10px; border-radius: 14px;
+  background: linear-gradient(90deg, rgba(233, 185, 73, 0.18), rgba(233, 185, 73, 0.03));
+  box-shadow: inset 0 0 0 1px rgba(233, 185, 73, 0.4);
+}
+.om-cd-medal {
+  flex: none; width: 40px; height: 40px; border-radius: 50%; display: flex; align-items: center; justify-content: center;
+  background: radial-gradient(circle at 35% 30%, #3A3A40, #0B0B0D);
+  box-shadow: 0 0 0 2px #E9B949, 0 0 16px rgba(233, 185, 73, 0.5);
+}
+.om-cd-plaque-label { font-size: 10.5px; font-weight: 800; letter-spacing: 0.16em; color: #F2C55C; text-transform: uppercase; }
+.om-cd-plaque-name { font-size: 16px; color: #fff; overflow-wrap: anywhere; }
+.om-cd-desc { margin: 0; font-size: 13.5px; line-height: 1.6; color: #C9CDD4; }
+.om-cd-more { font-size: 13px; font-weight: 800; color: #F2C55C; }
+.om-cd-more:hover { color: #FFE29A; }
+.om-cd-photo {
+  position: relative; border-radius: 16px; overflow: hidden; aspect-ratio: 16 / 9; background: #0B0B0D;
+  box-shadow: 0 0 0 2px #E9B949, 0 0 0 5px rgba(233, 185, 73, 0.18), 0 18px 34px rgba(0, 0, 0, 0.55);
+}
+.om-cd-photo::after {
+  content: ""; position: absolute; top: 0; bottom: 0; left: 0; width: 35%; pointer-events: none;
+  background: linear-gradient(100deg, transparent, rgba(255, 246, 220, 0.3), transparent);
+  animation: om2-cd-sweep 5s ease-in-out infinite;
+}
+.om-cd-live-badge {
+  position: absolute; left: 12px; top: 12px; z-index: 2; display: inline-flex; align-items: center; gap: 6px;
+  padding: 5px 10px; border-radius: 999px; background: #B5122B; color: #fff;
+  font-size: 11px; font-weight: 800; letter-spacing: 0.08em; box-shadow: 0 4px 12px rgba(181, 18, 43, 0.45);
+}
+.om-cd-live-badge i { width: 7px; height: 7px; border-radius: 50%; background: #fff; animation: om2-cd-blink 1.2s ease-in-out infinite; }
+
+/* 2 + 3 · karty ve tvaru tiketu (výřezy po stranách pod útržkem) */
+.om-cd-ticket {
+  position: relative; border-radius: 20px; display: flex; flex-direction: column; overflow: hidden; color: #ECEDEF;
+  background:
+    radial-gradient(90% 60% at 90% 0%, rgba(181, 18, 43, 0.45), rgba(181, 18, 43, 0) 60%),
+    radial-gradient(120% 140% at 20% 0%, #34343C, #17171B 55%, #0B0B0D);
+  -webkit-mask:
+    radial-gradient(circle at 0 64px, transparent 16px, #000 17px) left / 51% 100% no-repeat,
+    radial-gradient(circle at 100% 64px, transparent 16px, #000 17px) right / 51% 100% no-repeat;
+  mask:
+    radial-gradient(circle at 0 64px, transparent 16px, #000 17px) left / 51% 100% no-repeat,
+    radial-gradient(circle at 100% 64px, transparent 16px, #000 17px) right / 51% 100% no-repeat;
+  filter: drop-shadow(0 18px 30px rgba(23, 23, 27, 0.3));
+}
+.om-cd-tk-grain {
+  position: absolute; inset: 0; pointer-events: none;
+  background: repeating-radial-gradient(circle at 80% 40%, rgba(255, 255, 255, 0) 0 7px, rgba(255, 255, 255, 0.05) 8px 9px);
+}
+.om-cd-tk-shine {
+  position: absolute; top: 0; bottom: 0; left: 0; width: 30%; pointer-events: none;
+  background: linear-gradient(100deg, transparent, rgba(255, 246, 220, 0.12), transparent);
+  animation: om2-cd-sweep 6s ease-in-out infinite;
+}
+.om-cd-tk-stub {
+  position: relative; height: 64px; flex: none; display: flex; align-items: center; justify-content: center; gap: 14px;
+  border-bottom: 2px dashed rgba(233, 185, 73, 0.4);
+}
+.om-cd-stub-label { font-size: 9px; font-weight: 800; letter-spacing: 0.3em; color: #8E8F98; }
+.om-cd-barcode { position: relative; width: 170px; height: 30px; display: flex; justify-content: space-between; align-items: stretch; overflow: hidden; }
+.om-cd-barcode i { display: block; height: 100%; background: #D9DCE2; border-radius: 1px; opacity: 0.9; }
+.om-cd-barcode-scan {
+  position: absolute; top: -6px; bottom: -6px; width: 2px; background: #F2C14E;
+  box-shadow: 0 0 10px #F2C14E, 0 0 22px rgba(242, 193, 78, 0.7);
+  animation: om2-cd-hscan 2.8s ease-in-out infinite alternate;
+}
+.om-cd-tk-main { position: relative; flex: 1; padding: 18px 20px 20px; display: flex; flex-direction: column; gap: 10px; }
+.om-cd-label { margin: 0; font-size: 11px; font-weight: 800; letter-spacing: 0.2em; text-transform: uppercase; color: #F2C55C; }
+.om-cd-num {
+  margin: 0; font-family: 'Exo 2', sans-serif; font-weight: 900; font-style: italic; line-height: 1;
+  background: linear-gradient(180deg, #FFF6D0, #F2C14E 50%, #B8862B);
+  -webkit-background-clip: text; background-clip: text; color: transparent; -webkit-text-fill-color: transparent;
+  filter: drop-shadow(0 2px 0 rgba(0, 0, 0, 0.6)) drop-shadow(0 0 14px rgba(233, 185, 73, 0.35));
+}
+.om-cd-plat {
+  font-family: 'Exo 2', sans-serif; font-weight: 900; font-style: italic; line-height: 1; white-space: nowrap;
+  background: linear-gradient(180deg, #FFFFFF, #D9DCE2 55%, #9EA3AD);
+  -webkit-background-clip: text; background-clip: text; color: transparent; -webkit-text-fill-color: transparent;
+  filter: drop-shadow(0 2px 0 rgba(0, 0, 0, 0.6));
+}
+.om-cd-sub { font-size: 13px; font-weight: 700; color: #C9CDD4; }
+.om-cd-holo {
+  position: absolute; right: 18px; top: 16px; width: 30px; height: 30px; border-radius: 50%;
+  background: conic-gradient(#FFD6E0, #FFE9A8, #C8F7DC, #BFE3FF, #E4CCFF, #FFD6E0);
+  box-shadow: inset 0 0 0 2px rgba(255, 255, 255, 0.6);
+  animation: om2-cd-spin 6s linear infinite;
+}
+.om-cd-feed {
+  border-radius: 16px; padding: 10px 12px 0; overflow: hidden;
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.07), rgba(255, 255, 255, 0.02));
+  box-shadow: inset 0 0 0 1px rgba(233, 185, 73, 0.28), 0 8px 18px rgba(0, 0, 0, 0.25);
+}
+.om-cd-sig { display: inline-flex; align-items: flex-end; gap: 2px; height: 12px; }
+.om-cd-sig i { width: 3px; border-radius: 1px; background: #4ADE80; animation: om2-cd-sig 1.6s ease-in-out infinite; }
+.om-cd-sig i:nth-child(1) { height: 5px; }
+.om-cd-sig i:nth-child(2) { height: 8px; animation-delay: 0.2s; }
+.om-cd-sig i:nth-child(3) { height: 12px; animation-delay: 0.4s; }
+.om-cd-sig-off i { background: #F87171; animation: none; opacity: 0.6; }
+.om-cd-feedbox { display: flex; align-items: center; gap: 10px; min-height: 40px; margin-top: 8px; overflow: hidden; }
+.om-cd-fi {
+  flex: none; width: 34px; height: 34px; border-radius: 11px; display: flex; align-items: center; justify-content: center; color: #1A1205;
+  background: linear-gradient(180deg, #FFF0B8, #E9B949 55%, #B8862B);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.8), 0 6px 14px rgba(194, 144, 47, 0.45);
+}
+.om-cd-fi svg[color] { color: #1A1205; }
+.om-cd-ft { font-size: 13.5px; font-weight: 800; color: #fff; line-height: 1.3; }
+.om-cd-timer { height: 3px; margin: 10px -12px 0; background: rgba(255, 255, 255, 0.07); }
+.om-cd-timer i {
+  display: block; height: 100%; background: linear-gradient(90deg, #B5122B, #E9B949, #FFF0B8);
+  transform-origin: left center; animation: om2-cd-timer 8s linear forwards;
+}
+.om-cd-ticket button.om-cd-gold {
+  position: relative; overflow: hidden; min-height: 52px; border: 0; border-radius: 999px;
+  font-size: 15.5px; font-weight: 800; color: #1A1205; white-space: nowrap;
+  background: linear-gradient(180deg, #FFF0B8, #F2C14E 45%, #C2902F);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.8), 0 10px 24px rgba(194, 144, 47, 0.45), 0 0 0 1px rgba(120, 80, 10, 0.5);
+  animation: om2-cd-ring 2.4s ease-out infinite;
+}
+.om-cd-ticket button.om-cd-gold:hover { filter: brightness(1.05); }
+.om-cd-ticket button.om-cd-gold::after {
+  content: ""; position: absolute; top: 0; bottom: 0; left: 0; width: 30%; pointer-events: none;
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.75), transparent);
+  animation: om2-cd-glint 3.6s cubic-bezier(0.4, 0, 0.2, 1) infinite;
+}
+.om-cd-ticket button.om-cd-ghost {
+  min-height: 52px; border-radius: 999px; font-size: 15px; font-weight: 800; color: #F6D77A; white-space: nowrap;
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.07), rgba(255, 255, 255, 0.02));
+  border: 1.5px solid rgba(233, 185, 73, 0.6); box-shadow: inset 0 0 14px rgba(233, 185, 73, 0.12);
+}
+.om-cd-ticket button.om-cd-ghost:hover { background: rgba(233, 185, 73, 0.12); color: #FFE29A; }
+.om-cd-seq { display: flex; align-items: center; gap: 8px; }
+.om-cd-seq-l { font-size: 9.5px; font-weight: 800; letter-spacing: 0.06em; color: #8E8F98; text-transform: uppercase; }
+.om-cd-mt {
+  position: relative; width: 34px; height: 24px; flex: none; border-radius: 5px; display: flex; align-items: center; justify-content: center;
+  font-family: 'Exo 2', sans-serif; font-weight: 900; font-style: italic; font-size: 12px; color: #E2E3E8; background: #1C1C22;
+  box-shadow: inset 0 0 0 1px rgba(233, 185, 73, 0.55);
+  animation: om2-cd-mt 7s ease-out infinite both;
+}
+.om-cd-mt::before, .om-cd-mt::after {
+  content: ""; position: absolute; top: 50%; width: 6px; height: 6px; margin-top: -3px; border-radius: 50%; background: #17171B;
+}
+.om-cd-mt::before { left: -3px; }
+.om-cd-mt::after { right: -3px; }
+.om-cd-dots { flex: 1; min-width: 10px; height: 1px; background: repeating-linear-gradient(90deg, rgba(233, 185, 73, 0.5) 0 4px, transparent 4px 8px); }
+.om-cd-fin { flex: none; display: flex; align-items: center; margin-left: auto; }
+.om-cd-fin i {
+  width: 30px; height: 30px; border-radius: 50%; display: flex; align-items: center; justify-content: center;
+  background: radial-gradient(circle at 35% 30%, #3A3A40, #0B0B0D); box-shadow: 0 0 0 1.5px rgba(233, 185, 73, 0.7);
+  animation: om2-cd-fin 7s ease-in-out infinite;
+}
+
+/* 4 + 5 · světlé karty */
+.om-cd-lightcard {
+  border-radius: 20px; background: linear-gradient(180deg, #FFFFFF, #FDF8EF);
+  box-shadow: inset 0 1px 0 #fff, 0 0 0 1px rgba(194, 144, 47, 0.24), 0 14px 30px rgba(60, 40, 10, 0.12);
+}
+.om-redesign h2.om-cd-section-title,
+.om-cd-section-title {
+  display: inline-block; margin-top: 0; font-family: 'Barlow Condensed', sans-serif; font-weight: 800; font-style: italic;
+  text-transform: uppercase; line-height: 1; color: #17171B;
+}
+.om-cd-step { position: relative; z-index: 1; display: flex; flex-direction: column; align-items: center; gap: 6px; text-align: center; width: 96px; }
+.om-cd-stepi {
+  width: 54px; height: 54px; border-radius: 16px; display: flex; align-items: center; justify-content: center; color: #F6D77A;
+  background: linear-gradient(180deg, #26262C, #121215); box-shadow: 0 0 0 2px #E9B949, 0 8px 18px rgba(23, 23, 27, 0.25);
+  animation: om2-cd-stepon 6s ease-in-out infinite;
+}
+.om-cd-stepi svg[color] { color: #F6D77A; }
+.om-cd-track {
+  position: absolute; left: 58px; right: 58px; top: 27px; height: 3px; border-radius: 2px;
+  background: repeating-linear-gradient(90deg, rgba(194, 144, 47, 0.6) 0 6px, transparent 6px 12px);
+}
+.om-cd-track i {
+  position: absolute; top: -5px; width: 13px; height: 13px; border-radius: 50%;
+  background: radial-gradient(circle at 35% 30%, #FFF6D0, #E9B949); box-shadow: 0 0 12px #E9B949;
+  animation: om2-cd-travel 6s ease-in-out infinite;
+}
+.om-cd-marq-mask {
+  overflow: hidden;
+  -webkit-mask: linear-gradient(90deg, transparent, #000 6%, #000 94%, transparent);
+  mask: linear-gradient(90deg, transparent, #000 6%, #000 94%, transparent);
+}
+.om-cd-marq { display: flex; gap: 12px; width: max-content; padding: 4px 0 10px; animation: om2-cd-marq 26s linear infinite; }
+.om-cd-logo {
+  flex: none; width: 88px; height: 48px; padding: 6px 10px; display: flex; align-items: center; justify-content: center;
+  border-radius: 12px; background: #fff; box-shadow: 0 0 0 1px rgba(23, 23, 27, 0.08), 0 6px 14px rgba(60, 40, 10, 0.12);
+}
+.om-cd-logo img { max-width: 100%; max-height: 100%; object-fit: contain; }
+.om-cd-bp {
+  position: relative; display: flex; flex-direction: column; gap: 10px; padding: 12px; border-radius: 18px; border: 0; text-align: left;
+  color: #ECEDEF; cursor: pointer; overflow: visible; transition: transform 0.2s;
+  background:
+    radial-gradient(120% 80% at 80% 0%, rgba(181, 18, 43, 0.35), rgba(181, 18, 43, 0) 60%),
+    radial-gradient(1px 1px at 20% 30%, #fff, transparent),
+    radial-gradient(1px 1px at 70% 60%, #fff, transparent),
+    radial-gradient(1px 1px at 40% 80%, #FFE29A, transparent),
+    #121216;
+  box-shadow: inset 0 0 0 1.5px rgba(233, 185, 73, 0.4), 0 14px 28px rgba(23, 23, 27, 0.22);
+}
+.om-cd-bp:hover { transform: translateY(-2px); }
+.om-cd-bp-im { position: relative; display: block; aspect-ratio: 4 / 3; border-radius: 12px; overflow: hidden; background: #0B0B0D; }
+.om-cd-bp-im img { width: 100%; height: 100%; object-fit: contain; display: block; }
+.om-cd-bp-im::after {
+  content: ""; position: absolute; top: 0; bottom: 0; left: 0; width: 35%; pointer-events: none;
+  background: linear-gradient(100deg, transparent, rgba(255, 246, 220, 0.3), transparent);
+  animation: om2-cd-sweep 6s ease-in-out infinite;
+}
+/* Vlastní vrstva, aby „další kusy“ za kartou nezmizely za bílým pozadím sekce. */
+.om-cd-bp-multi { isolation: isolate; }
+.om-cd-bp-multi::before, .om-cd-bp-multi::after {
+  content: ""; position: absolute; inset: 0; z-index: -1; border-radius: 18px; background: #1B1418;
+  box-shadow: inset 0 0 0 1.5px rgba(233, 185, 73, 0.35);
+}
+.om-cd-bp-multi::before { transform: translate(7px, 7px) rotate(1.6deg); opacity: 0.8; }
+.om-cd-bp-multi::after { transform: translate(14px, 13px) rotate(3.2deg); opacity: 0.5; }
+.om-cd-cnt {
+  position: absolute; top: -20px; right: -16px; z-index: 3; width: 70px; height: 70px; border-radius: 50%;
+  display: flex; flex-direction: column; align-items: center; justify-content: center; color: #fff;
+  background: radial-gradient(circle at 35% 30%, #FF4A62, #B5122B 55%, #5A0714);
+  box-shadow: 0 0 0 3px #F2C14E, 0 0 0 5px #5A0714, 0 10px 20px rgba(0, 0, 0, 0.45);
+  transform: rotate(-10deg); animation: om2-cd-seal 4s ease-in-out infinite;
+}
+.om-cd-cnt b {
+  font-family: 'Exo 2', sans-serif; font-weight: 900; font-style: italic; font-size: 22px; line-height: 1;
+  background: linear-gradient(180deg, #FFF6D0, #F2C14E); -webkit-background-clip: text; background-clip: text;
+  color: transparent; -webkit-text-fill-color: transparent;
+}
+.om-cd-cnt small { font-size: 8.5px; font-weight: 800; letter-spacing: 0.1em; text-transform: uppercase; color: #FFE1E6; margin-top: 2px; }
+.om-cd-cnt::after { content: ""; position: absolute; inset: 6px; border-radius: 50%; border: 1px dashed rgba(255, 226, 154, 0.6); }
+.om-cd-mine { align-self: flex-start; padding: 3px 9px; border-radius: 999px; background: rgba(74, 222, 128, 0.14); color: #4ADE80; font-size: 11.5px; font-weight: 800; }
+.om-cd-rules-btn {
+  display: inline-flex; align-items: center; gap: 8px; padding: 10px 20px; border-radius: 999px;
+  font-size: 14px; font-weight: 800; color: #1A1205;
+  background: linear-gradient(180deg, #FFF0B8, #F2C14E 45%, #C2902F); box-shadow: 0 8px 18px rgba(194, 144, 47, 0.35);
+}
+.om-cd-rules-btn:hover { filter: brightness(1.05); }
+
+@keyframes om2-cd-spin { to { transform: rotate(360deg); } }
+@keyframes om2-cd-rise { 0% { transform: translate(0, 0); opacity: 0; } 12% { opacity: 1; } 100% { transform: translate(var(--dx, 14px), -460px); opacity: 0; } }
+@keyframes om2-cd-tglint { 0% { background-position: 100% 0; } 100% { background-position: -160% 0; } }
+@keyframes om2-cd-uline { 0% { transform: scaleX(0); } 25%, 85% { transform: scaleX(1); } 100% { transform: scaleX(0); opacity: 0; } }
+@keyframes om2-cd-sweep { 0%, 55% { transform: translateX(-120%) skewX(-18deg); } 100% { transform: translateX(420%) skewX(-18deg); } }
+@keyframes om2-cd-glint { 0% { transform: translateX(-140%) skewX(-18deg); } 55%, 100% { transform: translateX(520%) skewX(-18deg); } }
+@keyframes om2-cd-blink { 0%, 100% { opacity: 1; } 50% { opacity: 0.25; } }
+@keyframes om2-cd-hscan { 0% { left: 0; } 100% { left: calc(100% - 2px); } }
+@keyframes om2-cd-sig { 0%, 100% { opacity: 0.35; } 50% { opacity: 1; } }
+@keyframes om2-cd-timer { from { transform: scaleX(0); } to { transform: scaleX(1); } }
+@keyframes om2-cd-ring {
+  0% { box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.8), 0 10px 24px rgba(194, 144, 47, 0.45), 0 0 0 0 rgba(255, 226, 154, 0.75); }
+  70%, 100% { box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.8), 0 10px 24px rgba(194, 144, 47, 0.45), 0 0 0 14px rgba(255, 226, 154, 0); }
+}
+@keyframes om2-cd-mt {
+  0% { opacity: 0; transform: translateX(-18px); }
+  6% { opacity: 1; transform: none; background: linear-gradient(180deg, #FFF0B8, #E9B949); color: #1A1205; }
+  14% { background: #1C1C22; color: #E2E3E8; }
+  82% { opacity: 1; transform: none; }
+  92%, 100% { opacity: 0; transform: none; }
+}
+@keyframes om2-cd-fin {
+  0%, 48% { box-shadow: 0 0 0 1.5px rgba(233, 185, 73, 0.7); transform: scale(1); }
+  56%, 74% { box-shadow: 0 0 0 2px #FFF0B8, 0 0 22px rgba(233, 185, 73, 0.85); transform: scale(1.12); }
+  84%, 100% { box-shadow: 0 0 0 1.5px rgba(233, 185, 73, 0.7); transform: scale(1); }
+}
+@keyframes om2-cd-stepon {
+  0%, 100% { box-shadow: 0 0 0 2px #E9B949, 0 8px 18px rgba(23, 23, 27, 0.25); }
+  50% { box-shadow: 0 0 0 2px #FFF0B8, 0 0 22px rgba(233, 185, 73, 0.8); }
+}
+@keyframes om2-cd-travel { 0% { left: -6px; } 45%, 55% { left: calc(50% - 6px); } 100% { left: calc(100% - 6px); } }
+@keyframes om2-cd-marq { to { transform: translateX(-50%); } }
+@keyframes om2-cd-seal { 0%, 100% { transform: rotate(-10deg) scale(1); } 50% { transform: rotate(-4deg) scale(1.06); } }
+
+@media (prefers-reduced-motion: reduce) {
+  .om-cd *, .om-cd *::before, .om-cd *::after, .om-cd-frame::before { animation: none !important; }
+  .om-cd-mt { opacity: 1; }
+}
+
+/* ===== Cookies – lišta a nastavení (deska Dialogy 3 a 4); globální, lišta je na všech stránkách ===== */
+.om-ck-bar{border-radius:22px;background:#17171B;color:#ECEDEF;padding:16px;box-shadow:0 20px 40px rgba(0,0,0,.45),inset 0 0 0 1px rgba(233,185,73,.5);animation:om-ck-up .45s cubic-bezier(.2,.8,.2,1)}
+@media (min-width:640px){.om-ck-bar{padding:18px 22px}}
+@keyframes om-ck-up{from{transform:translateY(24px);opacity:0}to{transform:none;opacity:1}}
+@media (prefers-reduced-motion:reduce){.om-ck-bar{animation:none}}
+.om-ck-ico{width:34px;height:34px;border-radius:10px;background:rgba(233,185,73,.14);display:flex;align-items:center;justify-content:center;flex:none}
+.om-ck-title{font-family:'Exo 2',sans-serif;font-weight:900;font-style:italic;font-size:20px;text-transform:uppercase;color:#ECEDEF;letter-spacing:.01em}
+p.om-ck-text{margin:0;font-size:13px;line-height:1.5;color:#C9CAD1 !important}
+.om-ck-link{color:#F2C55C;font-weight:700}
+.om-ck-link:hover{text-decoration:underline}
+.om-ck-ghost{min-height:44px;padding:0 16px;border-radius:12px;border:1px solid rgba(255,255,255,.25);background:transparent;color:#ECEDEF;font-weight:700;font-size:13.5px;white-space:nowrap}
+.om-ck-ghost:hover{background:rgba(255,255,255,.06)}
+.om-ck-gold{min-height:46px;padding:0 20px;border:0;border-radius:12px;font-weight:800;font-size:15px;color:#1A1205;background:linear-gradient(180deg,#FFE29A,#E9B949 55%,#C2902F);box-shadow:0 6px 16px rgba(194,144,47,.35);white-space:nowrap}
+.om-ck-gold:hover{filter:brightness(1.06)}
+.om-ck-light{min-height:46px;border-radius:12px;font-weight:700;font-size:14px;color:#17171B;background:#fff;border:1px solid rgba(160,120,50,.35)}
+.om-ck-black{min-height:46px;border:0;border-radius:12px;font-weight:800;font-size:14px;color:#F6D77A;background:linear-gradient(180deg,#26262C,#121215);box-shadow:inset 0 0 0 1px rgba(233,185,73,.55),0 6px 14px rgba(23,23,27,.25)}
+.om-ck-gold:focus-visible,.om-ck-ghost:focus-visible,.om-ck-light:focus-visible,.om-ck-black:focus-visible{outline:2px solid #E9B949;outline-offset:2px}
+.om-ck-sheet{border-radius:24px !important;background:linear-gradient(180deg,#FFFFFF,#FBF5EA) !important;box-shadow:0 24px 60px rgba(20,14,6,.35) !important}
+h2.om-ck-sheet-title{font-family:'Exo 2',sans-serif !important;font-weight:900 !important;font-style:italic !important;font-size:22px !important;text-transform:uppercase;color:#17171B !important;background:none !important;-webkit-text-fill-color:#17171B !important}
+.om-ck-row{display:flex;align-items:center;gap:12px;padding:12px 0;border-bottom:1px solid rgba(160,120,50,.18)}
+.om-ck-row-last{border-bottom:0}
+.om-ck-row p{margin:0}
+.om-ck-switch[data-state=checked]{background:linear-gradient(180deg,#E9B949,#C2902F) !important}
+.om-ck-switch[data-state=unchecked]{background:#D8CBB2 !important}
+.om-ck-switch-lock[data-state=checked]{background:#2E9E5B !important;opacity:.7}
+.om-ck-switch > span{background:#fff !important;box-shadow:0 2px 4px rgba(0,0,0,.25) !important}

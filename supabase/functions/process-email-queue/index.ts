@@ -1,7 +1,10 @@
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.57.4";
 import { Resend } from "npm:resend@2.0.0";
-import { applyOneMilBrandToLegacyAutomaticEmail } from "../_shared/oneMilEmailTemplate.ts";
+import {
+  applyOneMilBrandToLegacyAutomaticEmail,
+  renderOneMilStructuredEmail,
+} from "../_shared/oneMilEmailTemplate.ts";
 import { getSupabaseSecretKey } from "../_shared/supabaseSecretKey.ts";
 
 const corsHeaders = {
@@ -292,7 +295,9 @@ const handler = async (req: Request): Promise<Response> => {
           from: "OneMil <noreply@onemil.cz>",
           to: [emailRecord.email],
           subject: emailRecord.subject,
-          html: applyOneMilBrandToLegacyAutomaticEmail(emailRecord.body),
+          // Strukturovaný e-mail (JSON z DB) se vykreslí sdílenou kostrou; jinak beze změny.
+          html: renderOneMilStructuredEmail(emailRecord.body) ??
+            applyOneMilBrandToLegacyAutomaticEmail(emailRecord.body),
         };
 
         let attachment: Attachment | null = null;

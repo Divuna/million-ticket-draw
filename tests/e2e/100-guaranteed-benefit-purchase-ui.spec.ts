@@ -848,9 +848,9 @@ test.describe.serial('Spec 100 — mystery kupon (UI)', () => {
       await expect(dialog).toContainText('GRATULUJEME');
       await expect(dialog).toContainText('VYHRÁL JSI');
       await expect(page.getByTestId('mystery-result-miocoin-amount')).toContainText('250');
-      // Originální MioCoin obrázek, žádná nová ikona.
-      await expect(page.getByTestId('mystery-result-prize-image'))
-        .toHaveAttribute('src', /storage\/v1\/object\/public\/assets\//);
+      // Od redesignu se MIO ukazuje jako korunkový odznak MIO, ne jako obrázek mince.
+      await expect(page.getByTestId('mystery-result-prize-badge')).toBeVisible();
+      await expect(page.getByTestId('mystery-result-prize-image')).toHaveCount(0);
 
       // Kupon je pod ní jako druhý, garantovaný bonus.
       await expect(dialog).toContainText('A navíc získáváš voucher');

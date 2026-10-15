@@ -6,6 +6,7 @@ import {
   applyOneMilBrandToLegacyAutomaticEmail,
   ONE_MIL_EMAIL_LOGO_URL,
   renderOneMilEmail,
+  renderOneMilStructuredEmail,
 } from "../../supabase/functions/_shared/oneMilEmailTemplate";
 
 const root = process.cwd();
@@ -32,7 +33,7 @@ const previewFiles = () => {
 };
 
 test.describe("OneMil automatic email visual system", () => {
-  test("shared layout uses the approved light cream style and neutral footer", () => {
+  test("shared layout uses the approved redesign skeleton (dark header, gold line, light card, gold button)", () => {
     const html = renderOneMilEmail({
       preheader: "Náhled",
       eyebrow: "OneMil",
@@ -43,11 +44,12 @@ test.describe("OneMil automatic email visual system", () => {
     });
 
     expect(html).toContain('data-onemil-email="light-cream"');
-    expect(html).toContain("#FBF7F0");
-    expect(html).toContain("#FFFDF9");
-    expect(html).toContain("#F7EBDD");
-    expect(html).toContain("#F47A1F");
-    expect(html).toContain("#2E2A27");
+    expect(html).toContain("#F5EEE3");
+    expect(html).toContain("background:#17171B");
+    expect(html).toContain("#E9B949");
+    expect(html).toContain("#FBF5EA");
+    expect(html).toContain("#17171B");
+    expect(html).not.toContain("#F47A1F");
     expect(html).toContain("@media only screen and (max-width: 620px)");
     expect(html).toContain(`src="${ONE_MIL_EMAIL_LOGO_URL}"`);
     expect(html).toContain('href="https://onemil.cz"');
@@ -58,14 +60,14 @@ test.describe("OneMil automatic email visual system", () => {
     expect(html).not.toMatch(/#0A0B0F|#1a1a2e|#2563eb|#6366f1/i);
   });
 
-  test("public email logo is the exact existing project logo", () => {
-    const source = readFileSync(path.join(root, "src/assets/logo-onemil.png"));
-    const emailAsset = readFileSync(path.join(root, "public/onemil-logo.png"));
+  test("public email logo is the exact approved redesign logo", () => {
+    const source = readFileSync(path.join(root, "src/assets/redesign/onemil-logo.png"));
+    const emailAsset = readFileSync(path.join(root, "public/brand/onemil-logo-email.png"));
     const digest = (value: Buffer) =>
       createHash("sha256").update(value).digest("hex");
 
     expect(digest(emailAsset)).toBe(digest(source));
-    expect(ONE_MIL_EMAIL_LOGO_URL).toBe("https://onemil.cz/onemil-logo.png");
+    expect(ONE_MIL_EMAIL_LOGO_URL).toBe("https://onemil.cz/brand/onemil-logo-email.png");
   });
 
   test("legacy DB templates get only the shared branding and neutral footer", () => {
@@ -74,7 +76,7 @@ test.describe("OneMil automatic email visual system", () => {
 
     expect(branded).toContain('data-onemil-email="light-cream"');
     expect(branded).toContain(ONE_MIL_EMAIL_LOGO_URL);
-    expect(branded).toContain("#FBF7F0");
+    expect(branded).toContain("#F5EEE3");
     expect(branded).toContain('href="https://onemil.cz/wins"');
     expect(branded).toContain('href="https://onemil.cz"');
     expect(branded).toContain('href="mailto:podpora@onemil.cz"');
@@ -84,6 +86,31 @@ test.describe("OneMil automatic email visual system", () => {
 
     const unrelated = "<p>Ručně napsaný obchodní e-mail</p>";
     expect(applyOneMilBrandToLegacyAutomaticEmail(unrelated)).toBe(unrelated);
+  });
+
+  test("structured queue e-mails render escaped text in the shared skeleton", () => {
+    const html = renderOneMilStructuredEmail(JSON.stringify({
+      om_template: "v1",
+      eyebrow: "Platba přijata",
+      title: "+310 MIO je tvých",
+      greeting: "Dobrý den,",
+      paragraphs: ["<script>x</script> děkujeme za dobití."],
+      rows: [{ label: "Zaplaceno", value: "300 Kč" }],
+      code: { label: "Kód voucheru", value: "ABC-123" },
+      action: { label: "Otevřít OneMil", url: "https://onemil.cz/profile" },
+    }));
+    expect(html).not.toBeNull();
+    expect(html).toContain("+310 MIO je tvých");
+    expect(html).toContain("ABC-123");
+    expect(html).toContain("300 Kč");
+    expect(html).toContain('href="https://onemil.cz/profile"');
+    expect(html).toContain("&lt;script&gt;");
+    expect(html).not.toContain("<script>x");
+    // Cizí odkaz se do tlačítka nedostane.
+    const foreign = renderOneMilStructuredEmail(JSON.stringify({ om_template: "v1", title: "T", action: { label: "X", url: "https://evil.example" } }));
+    expect(foreign).not.toContain("evil.example");
+    // Běžné HTML tělo není strukturované.
+    expect(renderOneMilStructuredEmail("<p>ahoj</p>")).toBeNull();
   });
 
   test("date-of-birth reminder has no sending path or automatic template", () => {

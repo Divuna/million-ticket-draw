@@ -1,7 +1,42 @@
 # OneMil – aktuální stav projektu
 
-> **Autoritativní aktuální stav. Poslední aktualizace 13. 10. 2026 — sdílené MIO promo kódy nasazeny (§ -19, PR #423). Předtím 12. 10. 2026 — PRVNÍ PŘEDSTARTOVNÍ RESET PRODUKCE PROVEDEN (§ -18) se schválením Pavla; záloha ověřena, CRM zachováno, kroky 05 (Vault) a úklid Storage zatím neprovedeny. Předtím 30. 9. 2026 — příprava prvního resetu (§ -17: mapa, skript, suchý běh na stagingu), reset NEPROBĚHL, záloha zatím NEVYTVOŘENA. Předtím předstartovní opravy nasazeny do produkce (§ -16). Předtím 29. 9. 2026 — 2. kolo předstartovních oprav (§ -15, staging + větev). Předtím předstartovní audit (§ -14). Předtím 29. 9. 2026 — veřejný název MIO a spotřebitelské informace k nákupu MIO (bod 8 VOP) nasazeny do produkce; bannery balíčků čekají na rozhodnutí. Předtím 25. 9. 2026 — jeden odměňovaný zdroj přivedení hráče nasazen do produkce. Předtím 24. 9. 2026 — Fáze 5 (osobní doporučení hráčů) nasazena do produkce `xkzhjldrojjlrkezorey` se schválením Pavla. Předtím 23. 9. 2026 refund blok F2 + F3 + F4 a Fáze 1.**
+> **Autoritativní aktuální stav. Poslední aktualizace 15. 10. 2026 — grafický redesign na větvi (frontend NENASAZEN), v produkci jen zpětně kompatibilní DB/EF kroky a upozornění za vypínači (vše vypnuto) (§ -20). Předtím 13. 10. 2026 — sdílené MIO promo kódy nasazeny (§ -19, PR #423). Předtím 12. 10. 2026 — PRVNÍ PŘEDSTARTOVNÍ RESET PRODUKCE PROVEDEN (§ -18) se schválením Pavla; záloha ověřena, CRM zachováno, kroky 05 (Vault) a úklid Storage zatím neprovedeny. Předtím 30. 9. 2026 — příprava prvního resetu (§ -17: mapa, skript, suchý běh na stagingu), reset NEPROBĚHL, záloha zatím NEVYTVOŘENA. Předtím předstartovní opravy nasazeny do produkce (§ -16). Předtím 29. 9. 2026 — 2. kolo předstartovních oprav (§ -15, staging + větev). Předtím předstartovní audit (§ -14). Předtím 29. 9. 2026 — veřejný název MIO a spotřebitelské informace k nákupu MIO (bod 8 VOP) nasazeny do produkce; bannery balíčků čekají na rozhodnutí. Předtím 25. 9. 2026 — jeden odměňovaný zdroj přivedení hráče nasazen do produkce. Předtím 24. 9. 2026 — Fáze 5 (osobní doporučení hráčů) nasazena do produkce `xkzhjldrojjlrkezorey` se schválením Pavla. Předtím 23. 9. 2026 refund blok F2 + F3 + F4 a Fáze 1.**
 
+
+## -20. Grafický redesign zákaznické části — VĚTEV, FRONTEND NENASAZEN (15. 10. 2026, schválil Pavel)
+
+Větev `claude/onemil-graphics-redesign-d386f3` (podle plátna https://claude.ai/artifact/DxBmNteH2GBg62ziQEEwnd).
+**Frontend NENÍ v `main` ani na Vercelu** – projeví se až po merge. Produkce už obsahuje jen tyto
+zpětně kompatibilní DB/EF změny (schválení Pavla „bod 1–4“):
+
+- **EF `og-ticket-share`** (produkce i staging, `verify_jwt=false`): obrázek pro sdílení bez čísla tiketu,
+  s názvem soutěže a hlavní výhrou (veřejné čtení `contests` anon klíčem, UUID validováno), karmín/zlato.
+- **Migrace `20261015100000_voucher_discount_label`** (produkce i staging): `vouchers.discount_label`
+  (nepovinný, max 12 znaků) = slevová nálepka na kartě voucheru, nastavuje admin ve formuláři voucheru.
+  Jen zobrazení – cena (5 MIO), `buy_voucher_atomic` ani B2B ceny se nemění.
+- **Migrace `20261015110000_customer_notices_mio_support_voucher`** (produkce i staging): push „MIO
+  připsány“, e-mail „Platba přijata“, push „Nová zpráva od podpory“, e-mail s kódem voucheru. Čtyři
+  vypínače `settings.notice_*` = **VŠE VYPNUTO**; zapíná superadmin v `/admin/notifications`. Spouštěče
+  jsou AFTER s `EXCEPTION` blokem (nikdy nezastaví platbu/zprávu/nákup), push jde existující cestou
+  `notifications → push_log → OneSignal`, e-mail jako JSON `om_template v1` do `email_queue`.
+  Ověřeno na stagingu v transakcích s ROLLBACK (MIO 310, dvě odpovědi admina = jedno upozornění,
+  kód voucheru doplněný po vložení se zachytí).
+- **Migrace `20261015120000_coin_redeemed_notice_without_ticket_number`**: push „MIO uplatněna“
+  místo „Ticket: N“ říká „Tiket je ve hře. Hodně štěstí!“ (jen literál v živé definici).
+
+**Pořadí před zapnutím e-mailů:** nejdřív merge frontendu (nové logo `public/brand/onemil-logo-email.png`),
+pak deploy `process-email-queue` (umí strukturované e-maily, `verify_jwt=false` zachovat!), teprve pak
+zapnout `notice_email_*`. Bez nového `process-email-queue` by e-mail odešel jako surový JSON.
+
+**OPEN ISSUE:**
+- `process-email-queue` s novou kostrou e-mailů zatím NENASAZEN (čeká na merge kvůli logu). Dalších 8 EF,
+  které sdílenou šablonu používají, dostane nový vzhled až při svém příštím nasazení.
+- Staging `email_queue` nemá sloupec `dedupe_key` (drift, chybí migrace `20260723194828`) → na stagingu se
+  e-mailová upozornění nezařadí (chyba se jen zaloguje). Produkce sloupec má.
+- `TicketResultModal` se nikde neotevírá (zákazník vidí jen `MysteryPurchaseResultDialog`) – mrtvý kód.
+- ~~Ikona 512 px čeká na emblem~~ → vyřešeno 15. 10. 2026: ikony aplikace (512/192/180, favicon 16/32/48)
+  a `src/assets/redesign/onemil-emblem.png` (222×240) vygenerovány z emblemu 1253 px od Pavla.
+- Staging E2E workflow padá na seed kroku „Ensure staging admin E2E user has admin role“ (i na `main`, nesouvisí).
 
 ## -19. Sdílené bonusové MIO kódy — NASAZENO (13. 10. 2026, schválil Pavel)
 

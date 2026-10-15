@@ -20,6 +20,7 @@ import { ENABLED_OAUTH_PROVIDERS, type OAuthProvider } from '@/config/socialAuth
 import { getSafeRedirectPath } from '@/lib/loginRedirect';
 import { Mail, Lock, Loader2, ShieldCheck } from 'lucide-react';
 import { OneMilTrophyIcon, OneMilWinIcon, OneMilVoucherIcon } from '@/components/icons/OneMilIcons';
+import { AuthHero } from '@/components/brand/AuthHero';
 
 const GoogleIcon = () => (
   <svg aria-hidden="true" viewBox="0 0 24 24" className="h-5 w-5 shrink-0">
@@ -115,7 +116,7 @@ const Register: React.FC = () => {
     if (!termsAccepted || !gdprAccepted) {
       toast({
         title: "Chyba",
-        description: "Pro registraci musíte souhlasit s obchodními podmínkami a zásadami ochrany osobních údajů.",
+        description: "Pro registraci musíš souhlasit s obchodními podmínkami a zásadami ochrany osobních údajů.",
         variant: "destructive"
       });
       return;
@@ -228,15 +229,15 @@ const Register: React.FC = () => {
   };
 
   return (
-    <div className="relative min-h-screen w-full overflow-x-hidden bg-gradient-to-b from-[#FFF8EE] via-[#FFF4E7] to-white px-4 py-10 sm:py-14">
+    <div className="relative min-h-screen w-full overflow-x-hidden px-4 py-10 sm:py-14">
       {/* Ambient decorative glow — purely visual, does not affect layout flow */}
       <div
         aria-hidden="true"
-        className="om-register-blob-a pointer-events-none absolute -top-20 -right-14 h-64 w-64 rounded-full bg-[#FF8A00]/25 blur-[90px] sm:h-80 sm:w-80"
+        className="om-register-blob-a pointer-events-none absolute -top-20 -right-14 h-64 w-64 rounded-full bg-[#C2902F]/25 blur-[90px] sm:h-80 sm:w-80"
       />
       <div
         aria-hidden="true"
-        className="om-register-blob-b pointer-events-none absolute -bottom-24 -left-16 h-64 w-64 rounded-full bg-[#FFB547]/30 blur-[90px] sm:h-80 sm:w-80"
+        className="om-register-blob-b pointer-events-none absolute -bottom-24 -left-16 h-64 w-64 rounded-full bg-[#E9B949]/30 blur-[90px] sm:h-80 sm:w-80"
       />
       <div
         aria-hidden="true"
@@ -244,50 +245,13 @@ const Register: React.FC = () => {
       />
 
       <div className="relative z-10 mx-auto flex w-full max-w-md flex-col items-center">
-        {/* Logo medallion */}
-        <Link
-          to="/"
-          aria-label="Zpět na OneMil"
-          className="om-register-medallion om-register-rise mb-5 block overflow-hidden rounded-[26px] shadow-[0_18px_40px_-14px_rgba(255,138,0,0.4)]"
-        >
-          <img
-            src={logo}
-            alt="OneMil — luxusní soutěže, skutečné výhry"
-            className="h-24 w-24 object-cover sm:h-28 sm:w-28"
-          />
-        </Link>
-
-        {/* Tagline */}
-        <div className="om-register-rise om-register-rise-1 mb-5 text-center">
-          <p className="mb-1.5 text-[11px] font-semibold uppercase tracking-[0.22em] text-[#C2570A]">
-            Vítejte v OneMil
-          </p>
-          <h1 className="font-heading text-2xl font-bold leading-tight text-[#1A1A1A] sm:text-[28px]">
-            Otevřete si cestu k luxusním soutěžím
-          </h1>
-        </div>
-
-        {/* Benefit chips */}
-        <div className="om-register-rise om-register-rise-2 mb-6 grid w-full grid-cols-3 gap-2">
-          <div className="om-register-chip flex flex-col items-center gap-1.5 rounded-2xl border border-[#FFE3C2] bg-white/80 px-2 py-3 text-center shadow-[0_2px_10px_rgba(255,138,0,0.08)]">
-            <OneMilTrophyIcon active size={20} />
-            <span className="text-[11px] font-medium text-[#4A4A4A]">Soutěže</span>
-          </div>
-          <div className="om-register-chip flex flex-col items-center gap-1.5 rounded-2xl border border-[#FFE3C2] bg-white/80 px-2 py-3 text-center shadow-[0_2px_10px_rgba(255,138,0,0.08)]">
-            <OneMilWinIcon active size={20} />
-            <span className="text-[11px] font-medium text-[#4A4A4A]">Výhry</span>
-          </div>
-          <div className="om-register-chip flex flex-col items-center gap-1.5 rounded-2xl border border-[#FFE3C2] bg-white/80 px-2 py-3 text-center shadow-[0_2px_10px_rgba(255,138,0,0.08)]">
-            <OneMilVoucherIcon active size={20} />
-            <span className="text-[11px] font-medium text-[#4A4A4A]">Vouchery</span>
-          </div>
-        </div>
+        <AuthHero title="Vítej v OneMil!" subtitle="Účet máš za minutu." />
 
         {/* Registration card */}
         <div className="om-register-rise om-register-rise-3 w-full rounded-[28px] border border-[#F3E4CF] bg-white p-6 shadow-[0_20px_60px_-24px_rgba(26,20,10,0.25)] sm:p-8">
           <div className="mb-6 text-center">
-            <h2 className="font-heading text-xl font-bold text-[#1A1A1A]">Registrace</h2>
-            <p className="mt-1 text-sm text-[#8A8A8A]">Vytvořte si nový účet OneMil</p>
+            <h2 className="om-auth-card-title text-2xl">Registrace</h2>
+            <p className="mt-1 text-sm text-[#8A8A8A]">Vytvoř si nový účet OneMil</p>
           </div>
 
           <form onSubmit={handleSubmit} className="space-y-4">
@@ -304,7 +268,7 @@ const Register: React.FC = () => {
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                   required
-                  className="h-11 rounded-xl border-[#E7E1D8] bg-[#FCFAF7] pl-10 text-[#1A1A1A] placeholder:text-[#B4ACA0] focus-visible:border-[#FF8A00] focus-visible:ring-[#FF8A00]/25 focus-visible:ring-offset-white"
+                  className="h-11 rounded-xl border-[#E7E1D8] bg-[#FCFAF7] pl-10 text-[#1A1A1A] placeholder:text-[#B4ACA0] focus-visible:border-[#C2902F] focus-visible:ring-[#C2902F]/25 focus-visible:ring-offset-white"
                 />
               </div>
             </div>
@@ -322,7 +286,7 @@ const Register: React.FC = () => {
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   required
-                  className="h-11 rounded-xl border-[#E7E1D8] bg-[#FCFAF7] pl-10 text-[#1A1A1A] placeholder:text-[#B4ACA0] focus-visible:border-[#FF8A00] focus-visible:ring-[#FF8A00]/25 focus-visible:ring-offset-white"
+                  className="h-11 rounded-xl border-[#E7E1D8] bg-[#FCFAF7] pl-10 text-[#1A1A1A] placeholder:text-[#B4ACA0] focus-visible:border-[#C2902F] focus-visible:ring-[#C2902F]/25 focus-visible:ring-offset-white"
                 />
               </div>
             </div>
@@ -336,11 +300,11 @@ const Register: React.FC = () => {
                 <Input
                   id="confirmPassword"
                   type="password"
-                  placeholder="Zopakujte heslo"
+                  placeholder="Zopakuj heslo"
                   value={confirmPassword}
                   onChange={(e) => setConfirmPassword(e.target.value)}
                   required
-                  className="h-11 rounded-xl border-[#E7E1D8] bg-[#FCFAF7] pl-10 text-[#1A1A1A] placeholder:text-[#B4ACA0] focus-visible:border-[#FF8A00] focus-visible:ring-[#FF8A00]/25 focus-visible:ring-offset-white"
+                  className="h-11 rounded-xl border-[#E7E1D8] bg-[#FCFAF7] pl-10 text-[#1A1A1A] placeholder:text-[#B4ACA0] focus-visible:border-[#C2902F] focus-visible:ring-[#C2902F]/25 focus-visible:ring-offset-white"
                 />
               </div>
             </div>
@@ -354,7 +318,7 @@ const Register: React.FC = () => {
                     setAgeConfirmed(checked === true);
                     setAgeError('');
                   }}
-                  className="mt-0.5 border-[#D8C9AE] data-[state=checked]:border-[#FF8A00] data-[state=checked]:bg-[#FF8A00]"
+                  className="mt-0.5 border-[#D8C9AE] data-[state=checked]:border-[#C2902F] data-[state=checked]:bg-[#C2902F]"
                 />
                 <label htmlFor="ageConfirm" className="cursor-pointer text-sm leading-snug text-[#3A3A3A]">
                   {ADULT_CONFIRMATION_TEXT} *
@@ -369,13 +333,13 @@ const Register: React.FC = () => {
                   id="terms"
                   checked={termsAccepted}
                   onCheckedChange={(checked) => setTermsAccepted(checked === true)}
-                  className="mt-0.5 border-[#D8C9AE] data-[state=checked]:border-[#FF8A00] data-[state=checked]:bg-[#FF8A00]"
+                  className="mt-0.5 border-[#D8C9AE] data-[state=checked]:border-[#C2902F] data-[state=checked]:bg-[#C2902F]"
                 />
                 <label htmlFor="terms" className="cursor-pointer text-sm leading-snug text-[#3A3A3A]">
                   Souhlasím s{' '}
                   <Link
                     to="/vop"
-                    className="font-medium text-[#C2570A] hover:underline"
+                    className="font-medium text-[#8A5A10] hover:underline"
                     target="_blank"
                   >
                     Obchodními podmínkami
@@ -389,13 +353,13 @@ const Register: React.FC = () => {
                   id="gdpr"
                   checked={gdprAccepted}
                   onCheckedChange={(checked) => setGdprAccepted(checked === true)}
-                  className="mt-0.5 border-[#D8C9AE] data-[state=checked]:border-[#FF8A00] data-[state=checked]:bg-[#FF8A00]"
+                  className="mt-0.5 border-[#D8C9AE] data-[state=checked]:border-[#C2902F] data-[state=checked]:bg-[#C2902F]"
                 />
                 <label htmlFor="gdpr" className="cursor-pointer text-sm leading-snug text-[#3A3A3A]">
                   Souhlasím se{' '}
                   <Link
                     to="/gdpr"
-                    className="font-medium text-[#C2570A] hover:underline"
+                    className="font-medium text-[#8A5A10] hover:underline"
                     target="_blank"
                   >
                     Zásadami ochrany osobních údajů
@@ -409,7 +373,7 @@ const Register: React.FC = () => {
                   id="marketing"
                   checked={marketingAccepted}
                   onCheckedChange={(checked) => setMarketingAccepted(checked === true)}
-                  className="mt-0.5 border-[#D8C9AE] data-[state=checked]:border-[#FF8A00] data-[state=checked]:bg-[#FF8A00]"
+                  className="mt-0.5 border-[#D8C9AE] data-[state=checked]:border-[#C2902F] data-[state=checked]:bg-[#C2902F]"
                 />
                 <label htmlFor="marketing" className="cursor-pointer text-sm leading-snug text-[#8A8A8A]">
                   Souhlasím se zasíláním marketingových sdělení
@@ -420,7 +384,7 @@ const Register: React.FC = () => {
             <Button
               type="submit"
               disabled={loading}
-              className="om-register-cta h-12 w-full rounded-xl bg-gradient-to-r from-[#FF8A00] to-[#FFB547] text-base font-semibold text-[#1A1200] shadow-[0_10px_30px_-8px_rgba(255,138,0,0.55)] transition-all hover:shadow-[0_14px_36px_-6px_rgba(255,138,0,0.65)] hover:brightness-105 active:scale-[0.99]"
+              className="om-register-cta h-12 w-full rounded-xl bg-gradient-to-r from-[#C2902F] to-[#E9B949] text-base font-semibold text-[#1A1200] shadow-[0_10px_30px_-8px_rgba(194,144,47,0.55)] transition-all hover:shadow-[0_14px_36px_-6px_rgba(194,144,47,0.65)] hover:brightness-105 active:scale-[0.99]"
             >
               {loading ? (
                 <>
@@ -446,7 +410,7 @@ const Register: React.FC = () => {
                     <Button
                       type="button"
                       variant="outline"
-                      className="relative h-11 w-full justify-center border-[#E7E1D8] bg-white text-[#2B2B2B] hover:border-[#FF8A00]/50 hover:bg-[#FFF7EC] hover:text-[#2B2B2B]"
+                      className="relative h-11 w-full justify-center border-[#E7E1D8] bg-white text-[#2B2B2B] hover:border-[#C2902F]/50 hover:bg-[#FFF7EC] hover:text-[#2B2B2B]"
                       onClick={() => handleOAuthSignIn('google')}
                     >
                       <span className="absolute left-4 top-1/2 -translate-y-1/2"><GoogleIcon /></span>
@@ -458,7 +422,7 @@ const Register: React.FC = () => {
                     <Button
                       type="button"
                       variant="outline"
-                      className="h-11 w-full justify-center border-[#E7E1D8] bg-white text-[#2B2B2B] hover:border-[#FF8A00]/50 hover:bg-[#FFF7EC] hover:text-[#2B2B2B]"
+                      className="h-11 w-full justify-center border-[#E7E1D8] bg-white text-[#2B2B2B] hover:border-[#C2902F]/50 hover:bg-[#FFF7EC] hover:text-[#2B2B2B]"
                       onClick={() => handleOAuthSignIn('apple')}
                     >
                       Registrovat se přes Apple
@@ -469,7 +433,7 @@ const Register: React.FC = () => {
                     <Button
                       type="button"
                       variant="outline"
-                      className="relative h-11 w-full justify-center border-[#E7E1D8] bg-white text-[#2B2B2B] hover:border-[#FF8A00]/50 hover:bg-[#FFF7EC] hover:text-[#2B2B2B]"
+                      className="relative h-11 w-full justify-center border-[#E7E1D8] bg-white text-[#2B2B2B] hover:border-[#C2902F]/50 hover:bg-[#FFF7EC] hover:text-[#2B2B2B]"
                       onClick={() => handleOAuthSignIn('facebook')}
                     >
                       <span className="absolute left-4 top-1/2 -translate-y-1/2"><FacebookIcon /></span>
@@ -481,16 +445,16 @@ const Register: React.FC = () => {
             )}
 
             <p className="pt-1 text-center text-sm text-[#8A8A8A]">
-              Už máte účet?{' '}
-              <Link to="/login" className="font-medium text-[#C2570A] hover:underline">
-                Přihlaste se
+              Už máš účet?{' '}
+              <Link to="/login" className="font-medium text-[#8A5A10] hover:underline">
+                Přihlas se
               </Link>
             </p>
           </form>
         </div>
 
         <p className="om-register-rise om-register-rise-4 mt-5 flex items-center justify-center gap-1.5 text-xs text-[#A79A82]">
-          <ShieldCheck className="h-3.5 w-3.5 text-[#C2570A]" />
+          <ShieldCheck className="h-3.5 w-3.5 text-[#8A5A10]" />
           Bezpečná registrace · pouze 18+
         </p>
       </div>

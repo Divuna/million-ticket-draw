@@ -63,6 +63,22 @@ odstranění je ten jeden schválený reset.
 výše je historický záznam. Data vzniklá po resetu se nesmí hromadně mazat ani „uklízet" — každé další
 hromadné mazání produkčních dat vyžaduje nové výslovné schválení Pavla.
 
+## REDESIGN — ZÁKAZNICKÁ UPOZORNĚNÍ A SDÍLENÍ (15. 10. 2026, PRODUKCE DB/EF; frontend na větvi)
+
+Detail: `onemil_state.md` § -20.
+
+- **Číslo tiketu se nikde neukazuje ani nesdílí** – ani v obrázku `og-ticket-share`, ani v pushi
+  (`coin_redeemed` → „Tiket je ve hře. Hodně štěstí!“). `og-ticket-share` musí zůstat `verify_jwt=false`.
+- Upozornění `settings.notice_push_mio_credited`, `notice_email_payment_received`,
+  `notice_push_support_reply`, `notice_email_voucher_code` mají **výchozí stav 'false'** a zapíná je jen
+  superadmin. Spouštěče `trg_zz_*` musí zůstat AFTER s `EXCEPTION` blokem – nikdy nesmí zastavit platbu,
+  připsání MIO, zprávu ani nákup voucheru. E-mail s kódem voucheru je `DEFERRABLE INITIALLY DEFERRED`
+  a čte aktuální řádek (kód se může doplnit až po vložení).
+- E-maily z DB se vkládají jako JSON `om_template: "v1"`; HTML skládá jen
+  `_shared/oneMilEmailTemplate.ts` (`renderOneMilStructuredEmail`) v `process-email-queue`. **Nezapínat
+  `notice_email_*`, dokud není nasazený `process-email-queue` s touto podporou** (jinak odejde surový JSON).
+- `vouchers.discount_label` je jen zobrazení (nálepka); nikdy z něj nepočítat cenu.
+
 ## PŘEDSTARTOVNÍ OPRAVY — TRVALÉ INVARIANTY (30. 09. 2026, PRODUKCE)
 
 Detail: `onemil_state.md` § -16. Reset tím NEPROBĚHL.

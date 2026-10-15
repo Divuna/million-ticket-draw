@@ -1,7 +1,7 @@
 import { useNavigate, useLocation } from 'react-router-dom';
 import { Header } from '@/components/Header';
 import { Button } from '@/components/ui/button';
-import logoOnemil from '@/assets/logo-onemil.png';
+import avatarWave from '@/assets/redesign/avatar/avatar-mava.png';
 import { buildLoginRedirectUrl } from '@/lib/loginRedirect';
 import { usePartners } from '@/hooks/usePartners';
 
@@ -29,13 +29,13 @@ const FLOAT_ANIMS = [
 
 const ROUTE_MESSAGES: Record<string, string> = {
   '/vouchers':
-    'Děkujeme, že používáte OneMil. Těšíme se, až se vrátíte. Připravujeme nové vouchery a partnerské nabídky, které vás potěší.',
+    'Děkujeme, že používáš OneMil. Těšíme se, až se vrátíš. Připravujeme nové vouchery a partnerské nabídky, které tě potěší.',
   '/messages':
-    'Děkujeme, že jste byli s námi. Vaše zprávy na vás budou čekat, až se znovu přihlásíte.',
+    'Děkujeme, že jsi byl s námi. Tvoje zprávy na tebe budou čekat, až se znovu přihlásíš.',
   '/wins':
-    'Děkujeme, že hrajete s OneMil. Vaše výhry a odměny budou dostupné po přihlášení.',
+    'Děkujeme, že hraješ s OneMil. Tvoje výhry a odměny budou dostupné po přihlášení.',
   '/games':
-    'Děkujeme, že používáte OneMil. Až se vrátíte, budou na vás čekat nové soutěže a další šance na zajímavé výhry.',
+    'Děkujeme, že používáš OneMil. Až se vrátíš, budou na tebe čekat nové soutěže a další šance na zajímavé výhry.',
 };
 
 export const LoggedOutScreen = () => {
@@ -45,7 +45,7 @@ export const LoggedOutScreen = () => {
 
   const message =
     ROUTE_MESSAGES[pathname] ??
-    'Děkujeme, že používáte OneMil. Pro pokračování se prosím přihlaste.';
+    'Děkujeme, že používáš OneMil. Pro pokračování se prosím přihlas.';
 
   const handleLogin = () => {
     navigate(buildLoginRedirectUrl(pathname));
@@ -64,7 +64,7 @@ export const LoggedOutScreen = () => {
         className="absolute inset-0 pointer-events-none"
         style={{
           background:
-            'radial-gradient(ellipse 70% 45% at 50% 12%, rgba(255,181,71,0.10) 0%, transparent 70%), radial-gradient(ellipse 60% 40% at 50% 95%, rgba(200,155,80,0.10) 0%, transparent 70%)',
+            'radial-gradient(ellipse 70% 45% at 50% 12%, rgba(233,185,73,0.10) 0%, transparent 70%), radial-gradient(ellipse 60% 40% at 50% 95%, rgba(200,155,80,0.10) 0%, transparent 70%)',
         }}
       />
 
@@ -116,45 +116,31 @@ export const LoggedOutScreen = () => {
         <div
           className="w-full max-w-md flex flex-col items-center gap-8 rounded-2xl p-8 md:p-10"
           style={{
-            background: 'hsl(220 40% 7%)',
-            border: '1px solid rgba(255,138,0,0.15)',
-            boxShadow:
-              '0 4px 32px rgba(0,0,0,0.5), inset 0 1px 0 rgba(255,181,71,0.06)',
+            background: 'radial-gradient(120% 90% at 85% 0%, #3A1118, #17171B 60%)',
+            border: '1.5px solid rgba(233,185,73,0.5)',
+            boxShadow: '0 18px 40px rgba(23,23,27,0.28)',
           }}
         >
-          {/* Logo — dark pill backdrop + layered amber glow for contrast */}
-          <div
-            className="flex items-center justify-center rounded-2xl px-8 py-5"
-            style={{
-              background: 'radial-gradient(ellipse 90% 80% at 50% 50%, rgba(255,138,0,0.07) 0%, rgba(10,11,15,0.55) 60%, rgba(10,11,15,0.80) 100%)',
-              boxShadow:
-                '0 0 0 1px rgba(255,138,0,0.10), 0 0 24px 4px rgba(255,138,0,0.08), inset 0 1px 0 rgba(255,181,71,0.08)',
-            }}
-          >
-            <img
-              src={logoOnemil}
-              alt="OneMil"
-              className="h-20 md:h-24 w-auto object-contain"
-              style={{
-                filter:
-                  'drop-shadow(0 0 8px rgba(255,138,0,0.55)) drop-shadow(0 0 22px rgba(255,181,71,0.30)) drop-shadow(0 2px 4px rgba(0,0,0,0.60))',
-              }}
-            />
-          </div>
+          {/* Avatar mává (nový vizuál, deska 8) */}
+          <img
+            src={avatarWave}
+            alt="Avatar OneMil mává"
+            className="om-float h-40 md:h-48 w-auto object-contain -mb-4"
+            style={{ filter: 'drop-shadow(0 14px 18px rgba(0,0,0,0.45))' }}
+          />
 
           {/* Divider line */}
           <div
             className="w-16 h-px"
             style={{
               background:
-                'linear-gradient(90deg, transparent, rgba(255,138,0,0.5), transparent)',
+                'linear-gradient(90deg, transparent, rgba(194,144,47,0.5), transparent)',
             }}
           />
 
           {/* Heading */}
           <h2
-            className="customer-premium-orange-heading text-2xl md:text-3xl font-bold text-center leading-tight"
-            style={{ fontFamily: "'Poppins', system-ui, sans-serif" }}
+            className="customer-premium-orange-heading om-on-dark text-2xl md:text-3xl font-bold text-center leading-tight"
           >
             Děkujeme
           </h2>
@@ -163,8 +149,7 @@ export const LoggedOutScreen = () => {
           <p
             className="text-center text-sm md:text-base leading-relaxed"
             style={{
-              fontFamily: "'Inter', system-ui, sans-serif",
-              color: '#8E98A6',
+              color: '#C9CDD4',
               maxWidth: '320px',
             }}
           >
@@ -174,13 +159,13 @@ export const LoggedOutScreen = () => {
           {/* CTA button */}
           <Button
             onClick={handleLogin}
-            className="w-full h-12 text-base font-semibold rounded-xl transition-all duration-200 hover:brightness-110 hover:-translate-y-0.5 hover:shadow-[0_4px_20px_rgba(255,138,0,0.4)]"
+            className="w-full h-12 text-base font-semibold rounded-xl transition-all duration-200 hover:brightness-110 hover:-translate-y-0.5 hover:shadow-[0_4px_20px_rgba(194,144,47,0.4)]"
             style={{
-              fontFamily: "'Poppins', system-ui, sans-serif",
-              background: 'linear-gradient(90deg, #FF8A00 0%, #FFB547 100%)',
+              fontFamily: "'Manrope', system-ui, sans-serif",
+              background: 'linear-gradient(90deg, #C2902F 0%, #E9B949 100%)',
               color: '#0A0B0F',
               border: 'none',
-              boxShadow: '0 2px 12px rgba(255,138,0,0.25)',
+              boxShadow: '0 2px 12px rgba(194,144,47,0.25)',
             }}
           >
             Přihlásit se

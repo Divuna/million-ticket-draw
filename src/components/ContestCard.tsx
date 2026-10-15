@@ -140,7 +140,7 @@ export const ContestCard: React.FC<ContestCardProps> = ({
         customer-contest-card
         relative overflow-hidden
         rounded-[20px]
-        border-[3px] border-[rgba(255,138,0,0.45)]
+        border-[3px] border-[rgba(194,144,47,0.45)]
         transition-all duration-300 ease-out
         hover:scale-[1.02]
         ${className}
@@ -208,10 +208,17 @@ export const ContestCard: React.FC<ContestCardProps> = ({
             <div />
           )}
           
-          {/* Fast game badge */}
-          {contest.fast_game && (
-            <Badge className="bg-amber-500/80 text-white text-[10px] px-2 py-0.5">Fast game</Badge>
-          )}
+          {/* Štítky vpravo nahoře: Fast game + ŽIVĚ (běžící soutěž – jen zobrazení stavu) */}
+          <div className="flex items-center gap-1.5">
+            {contest.fast_game && (
+              <Badge className="om-contest-fast bg-amber-500/80 text-white text-[10px] px-2 py-0.5">Fast game</Badge>
+            )}
+            {contest.status === 'active' && (
+              <span className="om-live-badge" aria-label="Soutěž právě běží">
+                <i aria-hidden="true" />ŽIVĚ
+              </span>
+            )}
+          </div>
 
           {/* Status badge - only show for non-active states */}
           {contest.status !== 'active' && (
@@ -235,7 +242,7 @@ export const ContestCard: React.FC<ContestCardProps> = ({
           {!hideTitleAndCount && (
             <h3
               className="contest-card-title font-bold text-xl text-[#E7EBF0] drop-shadow-md line-clamp-2 tracking-[-0.02em]"
-              style={{ fontFamily: 'var(--om-font-heading)' }}
+              style={{ fontFamily: 'var(--om2-font-section, var(--om-font-heading))' }}
             >
               {contest.title}
             </h3>
@@ -253,7 +260,7 @@ export const ContestCard: React.FC<ContestCardProps> = ({
               </p>
               <div className="w-full h-1 rounded-full overflow-hidden bg-white/20">
                 <div
-                  className="h-full rounded-full bg-gradient-to-r from-[#FF8A00] to-[#FFB547] transition-all duration-300"
+                  className="h-full rounded-full bg-gradient-to-r from-[#C2902F] to-[#E9B949] transition-all duration-300"
                   style={{
                     width: `${ticketsTotal > 0 ? Math.min(100, (soldForBar / ticketsTotal) * 100) : 0}%`,
                   }}
@@ -277,12 +284,12 @@ export const ContestCard: React.FC<ContestCardProps> = ({
                   flex-1 flex items-center justify-center gap-2
                   h-11 px-5
                   whitespace-nowrap
-                  bg-gradient-to-r from-[#FF8A00] to-[#FFB547]
+                  bg-gradient-to-r from-[#C2902F] to-[#E9B949]
                   text-[#111] font-bold text-sm
                   rounded-full
-                  border border-[rgba(255,181,71,0.65)]
-                  shadow-[0_0_16px_rgba(255,138,0,0.25)]
-                  hover:shadow-[0_0_24px_rgba(255,138,0,0.35)]
+                  border border-[rgba(233,185,73,0.65)]
+                  shadow-[0_0_16px_rgba(194,144,47,0.25)]
+                  hover:shadow-[0_0_24px_rgba(194,144,47,0.35)]
                   hover:brightness-105
                   active:scale-[0.98]
                   transition-all duration-200
@@ -319,7 +326,7 @@ export const ContestCard: React.FC<ContestCardProps> = ({
                   text-[#E7EBF0]/80 font-medium text-sm
                   rounded-full
                   border border-[rgba(191,198,207,0.25)]
-                  hover:border-[rgba(255,138,0,0.4)]
+                  hover:border-[rgba(194,144,47,0.4)]
                   hover:text-[#E7EBF0]
                   active:scale-[0.98]
                   transition-all duration-200
@@ -342,7 +349,7 @@ export const ContestCard: React.FC<ContestCardProps> = ({
                 text-[#E7EBF0]/80 font-medium text-sm
                 rounded-full
                 border border-[rgba(191,198,207,0.25)]
-                hover:border-[rgba(255,138,0,0.4)]
+                hover:border-[rgba(194,144,47,0.4)]
                 hover:text-[#E7EBF0]
                 active:scale-[0.98]
                 transition-all duration-200

@@ -212,7 +212,7 @@ const ReferralSection: React.FC<{ isLoaded: boolean }> = ({ isLoaded }) => {
   const handleSubmitCode = async () => {
     const code = inputCode.trim();
     if (!code) {
-      toast({ title: 'Chyba', description: 'Zadejte doporučovací kód.', variant: 'destructive' });
+      toast({ title: 'Chyba', description: 'Zadej doporučovací kód.', variant: 'destructive' });
       return;
     }
 
@@ -232,16 +232,16 @@ const ReferralSection: React.FC<{ isLoaded: boolean }> = ({ isLoaded }) => {
         setInputCode('');
         setAlreadyHasReferrer(true);
       } else if (result === 'rejected:already_has_referrer') {
-        toast({ title: 'Upozornění', description: 'Již máte přiřazeného doporučitele.', variant: 'destructive' });
+        toast({ title: 'Upozornění', description: 'Už máš přiřazeného doporučitele.', variant: 'destructive' });
         setAlreadyHasReferrer(true);
       } else if (result === 'rejected:already_attributed_to_other_source') {
         // Hráč už má jiný odměňovaný zdroj přivedení (affiliate) — platí first-touch.
-        toast({ title: 'Upozornění', description: 'Váš účet už je přiřazen k jinému doporučení. Další kód už nelze přidat.' });
+        toast({ title: 'Upozornění', description: 'Tvůj účet už je přiřazen k jinému doporučení. Další kód už nelze přidat.' });
         setAlreadyHasReferrer(true);
       } else if (result === 'rejected:invalid_code') {
         toast({ title: 'Chyba', description: 'Neplatný doporučovací kód.', variant: 'destructive' });
       } else if (result === 'rejected:self_referral') {
-        toast({ title: 'Chyba', description: 'Nemůžete použít vlastní kód.', variant: 'destructive' });
+        toast({ title: 'Chyba', description: 'Nemůžeš použít vlastní kód.', variant: 'destructive' });
       } else if (result === 'rejected:email_not_verified') {
         toast({ title: 'Chyba', description: 'Nejprve ověřte svůj e-mail.', variant: 'destructive' });
       } else if (result === 'rejected:referrer_blocked') {
@@ -289,7 +289,7 @@ const ReferralSection: React.FC<{ isLoaded: boolean }> = ({ isLoaded }) => {
 
   return (
     <div
-      className={`relative overflow-hidden rounded-2xl border backdrop-blur-xl border-primary/25 bg-gradient-to-br from-primary/5 via-card/95 to-primary/3 shadow-[0_0_40px_-8px_rgba(255,138,0,0.15)] hover:border-opacity-60 hover:shadow-xl transition-all duration-700 ease-out ${
+      className={`relative overflow-hidden rounded-2xl border backdrop-blur-xl border-primary/25 bg-gradient-to-br from-primary/5 via-card/95 to-primary/3 shadow-[0_0_40px_-8px_rgba(194,144,47,0.15)] hover:border-opacity-60 hover:shadow-xl transition-all duration-700 ease-out ${
         isLoaded ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-6'
       }`}
       style={{ transitionDelay: '650ms' }}
@@ -299,7 +299,7 @@ const ReferralSection: React.FC<{ isLoaded: boolean }> = ({ isLoaded }) => {
         className="absolute inset-0 opacity-0 hover:opacity-100 transition-opacity duration-500 pointer-events-none"
         style={{
           background:
-            'linear-gradient(105deg, transparent 40%, rgba(255,138,0,0.03) 45%, rgba(255,138,0,0.05) 50%, rgba(255,138,0,0.03) 55%, transparent 60%)',
+            'linear-gradient(105deg, transparent 40%, rgba(194,144,47,0.03) 45%, rgba(194,144,47,0.05) 50%, rgba(194,144,47,0.03) 55%, transparent 60%)',
           backgroundSize: '200% 100%',
           animation: 'shimmer 3s ease-in-out infinite',
         }}
@@ -342,7 +342,7 @@ const ReferralSection: React.FC<{ isLoaded: boolean }> = ({ isLoaded }) => {
               Pozvi přátele
             </h2>
             <p className="text-sm text-muted-foreground/70 mt-0.5">
-              Získejte <span className="text-primary font-semibold">5 %</span> z každého dobití pozvaného uživatele + <span className="text-primary font-semibold">15 MC bonus</span> za jeho první dobití
+              Získej <span className="text-primary font-semibold">5 %</span> z každého dobití pozvaného uživatele + <span className="text-primary font-semibold">15 MC bonus</span> za jeho první dobití
             </p>
           </div>
         </div>
@@ -353,7 +353,7 @@ const ReferralSection: React.FC<{ isLoaded: boolean }> = ({ isLoaded }) => {
           <ul className="space-y-1 text-sm text-muted-foreground">
             <li className="flex items-start gap-2">
               <span className="text-primary mt-0.5">•</span>
-              <span>Za každé <strong className="text-foreground">placené dobití</strong> pozvaného uživatele získáte <strong className="text-primary">5 % v MIO</strong>.</span>
+              <span>Za každé <strong className="text-foreground">placené dobití</strong> pozvaného uživatele získáš <strong className="text-primary">5 % v MIO</strong>.</span>
             </li>
             <li className="flex items-start gap-2">
               <span className="text-primary mt-0.5">•</span>
@@ -374,7 +374,7 @@ const ReferralSection: React.FC<{ isLoaded: boolean }> = ({ isLoaded }) => {
         <div className="space-y-4 mb-6">
           {/* Code */}
           <div className="p-5 rounded-2xl bg-gradient-to-br from-primary/8 via-transparent to-primary/5 border border-primary/15 hover:border-primary/30 transition-all duration-500 hover:shadow-lg hover:shadow-primary/5">
-            <p className="text-xs font-semibold text-muted-foreground/60 uppercase tracking-wider mb-2">Váš doporučovací kód</p>
+            <p className="text-xs font-semibold text-muted-foreground/60 uppercase tracking-wider mb-2">Tvůj doporučovací kód</p>
             <div className="flex items-center gap-3">
               <code className="flex-1 text-xl font-bold text-foreground tracking-widest select-all">
                 {referralCode || '—'}
@@ -412,7 +412,7 @@ const ReferralSection: React.FC<{ isLoaded: boolean }> = ({ isLoaded }) => {
                   <QRCodeSVG value={referralLink} size={112} data-testid="referral-qr-code" />
                 </div>
                 <p className="text-xs text-muted-foreground/70 leading-relaxed">
-                  Naskenováním QR kódu se přátelé dostanou přímo na registraci s vaším doporučovacím kódem.
+                  Naskenováním QR kódu se přátelé dostanou přímo na registraci s tvým doporučovacím kódem.
                 </p>
               </div>
             )}
@@ -421,11 +421,11 @@ const ReferralSection: React.FC<{ isLoaded: boolean }> = ({ isLoaded }) => {
 
         {/* Summary Stats */}
         <div className="grid grid-cols-3 gap-3 mb-6">
-          <div className="p-4 rounded-xl bg-gradient-to-br from-[rgba(255,138,0,0.1)] to-[rgba(255,138,0,0.05)] border border-[rgba(255,138,0,0.2)] text-center">
+          <div className="p-4 rounded-xl bg-gradient-to-br from-[rgba(194,144,47,0.1)] to-[rgba(194,144,47,0.05)] border border-[rgba(194,144,47,0.2)] text-center">
             <div className="flex items-center justify-center mb-1">
-              <Coins className="h-4 w-4 text-[#FFB547]" />
+              <Coins className="h-4 w-4 text-[#E9B949]" />
             </div>
-            <p className="text-xl font-bold text-[#FFB547] tabular-nums">{summary.totalEarned}</p>
+            <p className="text-xl font-bold text-[#E9B949] tabular-nums">{summary.totalEarned}</p>
             <p className="text-[10px] text-muted-foreground/60 uppercase tracking-wider mt-1">Celkem MC</p>
           </div>
           <div className="p-4 rounded-xl bg-gradient-to-br from-green-500/10 to-green-500/5 border border-green-500/20 text-center">
@@ -459,7 +459,7 @@ const ReferralSection: React.FC<{ isLoaded: boolean }> = ({ isLoaded }) => {
 
         {/* Action: Enter referral code */}
         {!alreadyHasReferrer && (
-          <div className="mb-6 p-5 rounded-2xl bg-gradient-to-br from-[rgba(255,138,0,0.08)] via-transparent to-[rgba(255,138,0,0.05)] border border-[rgba(255,138,0,0.15)]">
+          <div className="mb-6 p-5 rounded-2xl bg-gradient-to-br from-[rgba(194,144,47,0.08)] via-transparent to-[rgba(194,144,47,0.05)] border border-[rgba(194,144,47,0.15)]">
             <p className="text-xs font-semibold text-muted-foreground/60 uppercase tracking-wider mb-3">
               Mám doporučovací kód
             </p>
@@ -467,14 +467,14 @@ const ReferralSection: React.FC<{ isLoaded: boolean }> = ({ isLoaded }) => {
               <Input
                 value={inputCode}
                 onChange={(e) => setInputCode(e.target.value.toUpperCase())}
-                placeholder="Zadejte kód..."
-                className="premium-input flex-1 bg-[rgba(255,138,0,0.05)] border-[rgba(255,138,0,0.2)] focus:border-[rgba(255,138,0,0.4)] focus:bg-[rgba(255,138,0,0.1)] transition-all duration-300 uppercase tracking-wider"
+                placeholder="Zadej kód..."
+                className="premium-input flex-1 bg-[rgba(194,144,47,0.05)] border-[rgba(194,144,47,0.2)] focus:border-[rgba(194,144,47,0.4)] focus:bg-[rgba(194,144,47,0.1)] transition-all duration-300 uppercase tracking-wider"
                 onKeyDown={(e) => e.key === 'Enter' && handleSubmitCode()}
               />
               <Button
                 onClick={handleSubmitCode}
                 disabled={submitting || !inputCode.trim()}
-                className="vip-button bg-gradient-to-r from-[#FF8A00] to-[#FFB547] hover:from-[#FFB547] hover:to-[#FF8A00] text-black font-bold transition-all duration-300 hover:scale-[1.02]"
+                className="vip-button bg-gradient-to-r from-[#C2902F] to-[#E9B949] hover:from-[#E9B949] hover:to-[#C2902F] text-black font-bold transition-all duration-300 hover:scale-[1.02]"
               >
                 {submitting ? <Loader2 className="h-4 w-4 animate-spin" /> : <Gift className="h-4 w-4" />}
               </Button>
@@ -486,7 +486,7 @@ const ReferralSection: React.FC<{ isLoaded: boolean }> = ({ isLoaded }) => {
           <div className="mb-6 p-4 rounded-xl bg-green-500/10 border border-green-500/20">
             <div className="flex items-center gap-3">
               <Check className="h-5 w-5 text-green-500 shrink-0" />
-              <p className="text-sm text-green-500/80">Váš doporučitel je již přiřazen.</p>
+              <p className="text-sm text-green-500/80">Tvůj doporučitel je už přiřazen.</p>
             </div>
           </div>
         )}

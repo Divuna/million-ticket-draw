@@ -18,10 +18,10 @@ import { ImmediateUseConsentDialog } from '@/components/ImmediateUseConsentDialo
 import { MioPurchaseInfo } from '@/components/MioPurchaseInfo';
 import { useAdminRealtimeContext } from '@/components/AdminRealtimeProvider';
 import { AdminSoundIndicator } from '@/components/AdminSoundIndicator';
-import { OneMilMioCoinIcon } from '@/components/icons/OneMilIcons';
+import { MioBadge } from '@/components/brand/MioBadge';
 import { supabase } from '@/integrations/supabase/client';
 import { ChevronDown } from 'lucide-react';
-import logo from '@/assets/logo-onemil.png';
+import logo from '@/assets/redesign/onemil-logo.png';
 
 /**
  * Veřejná zákaznická hlavička.
@@ -146,12 +146,12 @@ export const Header: React.FC = () => {
     account.balance != null ? account.balance.toLocaleString('cs-CZ', { maximumFractionDigits: 1 }) : null;
 
   const balanceChipClass =
-    'public-customer-header-balance flex items-center gap-1.5 rounded-full border border-[rgba(255,138,0,0.28)] bg-[rgba(255,138,0,0.08)] px-2.5 py-1.5 sm:px-3';
+    'public-customer-header-balance flex items-center gap-1.5 rounded-full bg-[#17171B] py-1 pl-1.5 pr-3 shadow-[inset_0_0_0_1px_rgba(233,185,73,0.55)]';
   const balanceChipContent = (
     <>
-      <OneMilMioCoinIcon size={18} className="h-[18px] w-[18px] shrink-0" />
-      <span className="text-sm font-bold tabular-nums text-foreground">{formattedBalance}</span>
-      <span className="hidden text-xs font-medium text-muted-foreground sm:inline">MIO</span>
+      <MioBadge width={34} />
+      <span className="text-sm font-extrabold tabular-nums text-[#F6D77A]">{formattedBalance}</span>
+      <span className="hidden text-xs font-bold text-[#F6D77A]/80 sm:inline">MIO</span>
     </>
   );
 
@@ -164,7 +164,7 @@ export const Header: React.FC = () => {
             <img
               src={logo}
               alt="OneMil logo"
-              className="h-12 md:h-20 w-auto object-contain"
+              className="h-10 md:h-14 w-auto object-contain"
             />
           </Link>
 
@@ -193,7 +193,7 @@ export const Header: React.FC = () => {
                         type="button"
                         aria-label="Rychlé dobití MIO"
                         disabled={checkoutLoading}
-                        className={`${balanceChipClass} transition-colors hover:border-[rgba(255,138,0,0.5)] hover:bg-[rgba(255,138,0,0.14)] disabled:cursor-wait disabled:opacity-70`}
+                        className={`${balanceChipClass} transition-colors hover:border-[rgba(194,144,47,0.5)] hover:bg-[rgba(194,144,47,0.14)] disabled:cursor-wait disabled:opacity-70`}
                       >
                         {balanceChipContent}
                       </button>
@@ -218,11 +218,11 @@ export const Header: React.FC = () => {
                           </span>
                           <span className="flex items-center gap-1.5">
                             {pkg.bonusLabel && (
-                              <span className="rounded-full bg-[rgba(255,138,0,0.14)] px-1.5 py-0.5 text-[10px] font-bold text-[#e26305]">
+                              <span className="rounded-full bg-[#B5122B] px-1.5 py-0.5 text-[10px] font-bold text-white">
                                 {pkg.bonusLabel}
                               </span>
                             )}
-                            <OneMilMioCoinIcon size={14} className="h-3.5 w-3.5 shrink-0" />
+                            <MioBadge width={26} />
                             <span className="text-sm font-semibold tabular-nums text-foreground">
                               {pkg.totalCoins.toLocaleString('cs-CZ')}
                             </span>
@@ -248,9 +248,9 @@ export const Header: React.FC = () => {
                   <button
                     type="button"
                     aria-label="Menu účtu"
-                    className="public-customer-header-account flex max-w-[11rem] items-center gap-2 rounded-full border border-[rgba(15,23,42,0.12)] bg-white/70 py-1 pl-1 pr-2 transition-colors hover:border-[rgba(255,138,0,0.4)] sm:max-w-[16rem] sm:pr-3"
+                    className="public-customer-header-account flex max-w-[11rem] items-center gap-2 rounded-full border border-[rgba(15,23,42,0.12)] bg-white/70 py-1 pl-1 pr-2 transition-colors hover:border-[rgba(194,144,47,0.4)] sm:max-w-[16rem] sm:pr-3"
                   >
-                    <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-[#FFB547] to-[#FF8A00] text-sm font-extrabold text-black">
+                    <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-[#E9B949] to-[#C2902F] text-sm font-extrabold text-black">
                       {initial}
                     </span>
                     {account.displayName && (

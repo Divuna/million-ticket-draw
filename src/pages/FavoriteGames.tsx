@@ -235,7 +235,7 @@ const FavoriteGames = () => {
     purchaseInFlightRef.current = true;
 
     if (!user) {
-      toast.error('Pro koupi tiketu se musíte přihlásit');
+      toast.error('Pro koupi tiketu se musíš přihlásit');
       purchaseInFlightRef.current = false;
       return;
     }
@@ -315,7 +315,7 @@ const FavoriteGames = () => {
                 </Badge>
               )}
             </h1>
-            <p className="text-xl text-muted-foreground">Soutěže, které máte oblíbené nebo jste již hráli</p>
+            <p className="text-xl text-muted-foreground">Soutěže, které máš oblíbené nebo jsi už hrál</p>
           </div>
           <div className="w-[100px]" />
         </div>

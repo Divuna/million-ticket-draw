@@ -23,17 +23,17 @@ const Kontakt: React.FC = () => {
 
       {/* Ambient premium glow */}
       <div className="pointer-events-none fixed inset-0 -z-10 overflow-hidden">
-        <div className="absolute -top-32 left-1/2 -translate-x-1/2 w-[640px] h-[640px] rounded-full bg-[radial-gradient(circle,rgba(255,138,0,0.10),transparent_60%)]" />
+        <div className="absolute -top-32 left-1/2 -translate-x-1/2 w-[640px] h-[640px] rounded-full bg-[radial-gradient(circle,rgba(194,144,47,0.10),transparent_60%)]" />
       </div>
 
       <main className="max-w-[980px] mx-auto px-4 sm:px-6 py-10 md:py-16 space-y-8">
 
         {/* ── Hero ─────────────────────────────────────────────────────────── */}
         <header className="text-center space-y-3">
-          <span className="inline-flex items-center gap-2 rounded-full border border-[rgba(255,138,0,0.3)] bg-[rgba(255,138,0,0.06)] px-4 py-1.5 text-[11px] font-semibold uppercase tracking-[0.18em] text-[#FFB547]">
+          <span className="inline-flex items-center gap-2 rounded-full border border-[rgba(194,144,47,0.3)] bg-[rgba(194,144,47,0.06)] px-4 py-1.5 text-[11px] font-semibold uppercase tracking-[0.18em] text-[#E9B949]">
             <Sparkles className="w-3.5 h-3.5" /> OneMil
           </span>
-          <h1 className="text-4xl md:text-5xl font-heading font-bold bg-gradient-to-r from-[hsl(var(--heading-gold))] via-[#FFB547] to-[hsl(var(--heading-gold))] bg-clip-text text-transparent leading-tight">
+          <h1 className="om-kontakt-title">
             Kontakt
           </h1>
           <p className="text-muted-foreground/80 text-[15px] md:text-base">
@@ -43,17 +43,17 @@ const Kontakt: React.FC = () => {
 
         {/* ── Vzkaz zakladatele ────────────────────────────────────────────── */}
         <section
-          className="relative overflow-hidden rounded-3xl border border-[rgba(255,138,0,0.22)] bg-gradient-to-b from-[hsl(220_30%_11%)] via-[hsl(220_28%_8%)] to-[hsl(222_35%_6%)] shadow-[0_12px_48px_hsl(222_50%_3%/0.55)]"
+          className="om-kontakt-founder relative overflow-hidden rounded-3xl"
           aria-labelledby="founder-heading"
         >
           {/* top accent line */}
-          <div className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-[rgba(255,181,71,0.6)] to-transparent" />
+          <div className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-[rgba(233,185,73,0.6)] to-transparent" />
 
           <div className="p-6 sm:p-9 md:p-12">
             <div className="flex flex-col sm:flex-row sm:items-center gap-6">
               {/* Founder photo (falls back to a premium PD placeholder until added) */}
               <div className="shrink-0 mx-auto sm:mx-0">
-                <div className="relative w-28 h-28 md:w-32 md:h-32 rounded-2xl bg-gradient-to-br from-[hsl(45_80%_45%)] via-[hsl(35_85%_38%)] to-[hsl(30_80%_30%)] p-[2px] shadow-[0_8px_30px_rgba(255,138,0,0.28)]">
+                <div className="relative w-28 h-28 md:w-32 md:h-32 rounded-2xl bg-gradient-to-br from-[hsl(45_80%_45%)] via-[hsl(35_85%_38%)] to-[hsl(30_80%_30%)] p-[2px] shadow-[0_8px_30px_rgba(194,144,47,0.28)]">
                   {!photoFailed ? (
                     <img
                       src={FOUNDER_PHOTO_SRC}
@@ -64,7 +64,7 @@ const Kontakt: React.FC = () => {
                     />
                   ) : (
                     <div className="w-full h-full rounded-2xl bg-[hsl(220_25%_10%)] flex flex-col items-center justify-center gap-1">
-                      <span className="font-heading font-bold text-2xl md:text-3xl bg-gradient-to-br from-[#FFB547] to-[hsl(var(--heading-gold))] bg-clip-text text-transparent">
+                      <span className="font-heading font-bold text-2xl md:text-3xl bg-gradient-to-br from-[#E9B949] to-[hsl(var(--heading-gold))] bg-clip-text text-transparent">
                         PD
                       </span>
                       <span className="text-[9px] uppercase tracking-wider text-muted-foreground/60">Foto brzy</span>
@@ -74,8 +74,8 @@ const Kontakt: React.FC = () => {
               </div>
 
               <div className="text-center sm:text-left">
-                <p className="text-[11px] uppercase tracking-[0.2em] text-[#FFB547] font-semibold mb-1">Vzkaz zakladatele</p>
-                <h2 id="founder-heading" className="font-heading font-bold text-2xl md:text-3xl text-foreground">
+                <p className="text-[11px] uppercase tracking-[0.2em] text-[#E9B949] font-semibold mb-1">Vzkaz zakladatele</p>
+                <h2 id="founder-heading" className="om-kontakt-name">
                   Pavel Diviš
                 </h2>
                 <p className="text-muted-foreground/85 text-[15px] mt-1">Jednatel / zakladatel OneMil</p>
@@ -94,8 +94,8 @@ const Kontakt: React.FC = () => {
                 s nadšením a společně s vámi, může z toho vzniknout něco opravdu velkého.
               </p>
 
-              <blockquote className="relative mt-2 rounded-2xl border-l-2 border-[rgba(255,181,71,0.7)] bg-[rgba(255,138,0,0.05)] px-5 py-4">
-                <Quote className="absolute -top-2 left-3 w-5 h-5 text-[rgba(255,181,71,0.55)]" />
+              <blockquote className="relative mt-2 rounded-2xl border-l-2 border-[rgba(233,185,73,0.7)] bg-[rgba(194,144,47,0.05)] px-5 py-4">
+                <Quote className="absolute -top-2 left-3 w-5 h-5 text-[rgba(233,185,73,0.55)]" />
                 <p className="font-heading text-foreground/95 text-[16px] md:text-[18px] leading-relaxed italic">
                   „Chceme, aby OneMil nebyl jen o výhrách, ale o radosti, napětí a pocitu, že každý nákup může mít příběh.“
                 </p>
@@ -105,7 +105,7 @@ const Kontakt: React.FC = () => {
         </section>
 
         {/* ── Firemní a právní údaje ───────────────────────────────────────── */}
-        <article className="rounded-3xl border border-border/30 bg-gradient-to-b from-card/60 to-card/40 backdrop-blur-sm shadow-[0_8px_32px_hsl(222_50%_3%/0.4)]">
+        <article className="om-kontakt-info rounded-3xl">
           <div className="px-6 sm:px-9 md:px-12 py-9 md:py-11 space-y-9">
 
             <div className="grid gap-5 sm:grid-cols-2">
@@ -172,7 +172,7 @@ const Kontakt: React.FC = () => {
               <div className="grid gap-4 sm:grid-cols-2">
                 <a
                   href="mailto:podpora@onemil.cz"
-                  className="flex items-center gap-4 p-5 bg-muted/30 rounded-xl border border-border/20 transition-all hover:bg-muted/40 hover:border-[rgba(255,138,0,0.35)]"
+                  className="flex items-center gap-4 p-5 bg-muted/30 rounded-xl border border-border/20 transition-all hover:bg-muted/40 hover:border-[rgba(194,144,47,0.35)]"
                 >
                   <div className="w-10 h-10 bg-[hsl(var(--heading-gold))]/10 rounded-full flex items-center justify-center flex-shrink-0">
                     <Mail className="w-5 h-5" style={{ color: GOLD }} />
@@ -185,7 +185,7 @@ const Kontakt: React.FC = () => {
 
                 <a
                   href="tel:+420731215816"
-                  className="flex items-center gap-4 p-5 bg-muted/30 rounded-xl border border-border/20 transition-all hover:bg-muted/40 hover:border-[rgba(255,138,0,0.35)]"
+                  className="flex items-center gap-4 p-5 bg-muted/30 rounded-xl border border-border/20 transition-all hover:bg-muted/40 hover:border-[rgba(194,144,47,0.35)]"
                 >
                   <div className="w-10 h-10 bg-[hsl(var(--heading-gold))]/10 rounded-full flex items-center justify-center flex-shrink-0">
                     <Phone className="w-5 h-5" style={{ color: GOLD }} />

@@ -1,23 +1,25 @@
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { isNativeApp } from "@/lib/nativeApp";
 import { useMioCoinCheckout } from "@/hooks/useMioCoinCheckout";
 import { ImmediateUseConsentDialog } from "@/components/ImmediateUseConsentDialog";
 import { MioPurchaseInfo } from "@/components/MioPurchaseInfo";
-import { OneMilMioCoinIcon } from "@/components/icons/OneMilIcons";
+import { MioBadge } from "@/components/brand/MioBadge";
+import avatarHoldsMio from "@/assets/redesign/avatar/avatar-drzi-mio.png";
 
 /**
- * Dobíjecí panel MioCoinů (nadpis + čtyři balíčky + Stripe checkout).
+ * Dobíjecí panel MIO (nadpis + čtyři balíčky + Stripe checkout).
  *
- * Přesunuto 1:1 z `src/pages/Homepage.tsx` — jediný zdroj pravdy pro dobíjecí
- * blok. Markup, třídy, texty, částky i chování zůstávají beze změny, aby šel
- * panel později přesunout na samostatnou stránku bez vizuální regrese.
+ * Jediný zdroj pravdy pro dobíjecí blok. Nový vzhled (deska Dobít): tmavé dlaždice,
+ * korunovaná karta MIO podle úrovně balíčku a pečeť s bonusem. Částky, bonusy,
+ * pořadí balíčků i chování zůstávají beze změny.
  *
  * Pravidla (neměnit):
  * - Nativní aplikace (Apple/Google pravidla) panel nerenderuje ani nespouští
  *   checkout — detekce výhradně přes `isNativeApp()` z `src/lib/nativeApp.ts`.
  * - Samotné spuštění platby je ve sdíleném `useMioCoinCheckout`, který sdílí
  *   i rychlé dobíjení v hlavičce. Nezakládat tady druhou platební cestu.
+ * - Částky a bonusy musí odpovídat `create-stripe-checkout` (50→50, 300→310,
+ *   500→525, 1200→1280).
  */
 
 type MioCoinPlacementKey = "miocoin_50" | "miocoin_310" | "miocoin_525" | "miocoin_1280";
@@ -25,6 +27,20 @@ type MioCoinPlacementKey = "miocoin_50" | "miocoin_310" | "miocoin_525" | "mioco
 interface MioCoinTopUpSectionProps {
   placementBanners: Partial<Record<MioCoinPlacementKey, { image_url: string } | null>>;
 }
+
+/** Balíčky v pořadí zobrazení. `tier` určuje vzhled karty MIO a tlačítka. */
+const PACKAGES: Array<{
+  price: number;
+  coins: number;
+  bonus: number;
+  placement: MioCoinPlacementKey;
+  tier: "graphite" | "crimson" | "crown" | "holo";
+}> = [
+  { price: 50, coins: 50, bonus: 0, placement: "miocoin_50", tier: "graphite" },
+  { price: 300, coins: 310, bonus: 10, placement: "miocoin_310", tier: "crimson" },
+  { price: 500, coins: 525, bonus: 25, placement: "miocoin_525", tier: "crown" },
+  { price: 1200, coins: 1280, bonus: 80, placement: "miocoin_1280", tier: "holo" },
+];
 
 export const MioCoinTopUpSection = ({ placementBanners }: MioCoinTopUpSectionProps) => {
   // Jediný společný Stripe postup — sdílený s rychlým dobíjením v hlavičce.
@@ -36,150 +52,72 @@ export const MioCoinTopUpSection = ({ placementBanners }: MioCoinTopUpSectionPro
 
   return (
     <>
-                <div className="space-y-2 homepage-miocoin-header">
-                  <h2 className="homepage-premium-orange-heading text-xl md:text-2xl font-bold text-heading-gold flex items-center gap-2">
-                    <OneMilMioCoinIcon size={24} className="w-6 h-6 md:w-7 md:h-7" />
-                    Dobijte si MIO
-                  </h2>
-                  <p className="text-sm text-text-silver">Dobíjejte si MIO pro otevření voucherů nebo účasti ve hře.</p>
+      <div className="homepage-miocoin-header flex items-center gap-3">
+        <div className="flex-1 min-w-0 space-y-1.5">
+          <h2 className="om-tu-title">
+            <span className="om-tu-title-a">Dobij si </span>
+            <span className="om-tu-title-b">MIO</span>
+          </h2>
+          <p className="text-[12.5px] leading-snug text-[#A9AAB3]">Dobij si MIO na otevření voucherů nebo účast ve hře.</p>
+        </div>
+        <img
+          src={avatarHoldsMio}
+          alt=""
+          aria-hidden="true"
+          className="om-tu-avatar h-[104px] w-auto shrink-0 object-contain"
+        />
+      </div>
+
+      {/* Balíčky 2×2 (na desktopu 4 vedle sebe) */}
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-2.5 md:gap-4 flex-1">
+        {PACKAGES.map(({ price, coins, bonus, placement, tier }, i) => {
+          const banner = placementBanners[placement]?.image_url;
+          return (
+            <div key={placement} className={`homepage-miocoin-package om-tu-tile om-tu-${tier}`}>
+              {banner ? (
+                <div className="om-tu-banner">
+                  <img src={banner} alt={`MIO ${coins}`} className="w-full h-full object-cover object-center" />
                 </div>
-
-                {/* Coin Packages Grid */}
-                <div className="grid grid-cols-2 md:grid-cols-4 gap-3 md:gap-4 flex-1">
-                  {/* Package 50 Kč → 50 MC */}
-                  <div className="homepage-light-tile homepage-miocoin-package rounded-xl w-full min-h-[160px] bg-[hsl(220_45%_6%)] border-2 border-package-blue/30 flex flex-col shadow-[inset_0_1px_12px_hsl(var(--package-blue)/0.08)] overflow-hidden">
-                    {/* Top area: image or fallback text */}
-                    <div className="flex-1 min-h-0 flex flex-col items-center justify-center overflow-hidden">
-                      {placementBanners.miocoin_50?.image_url ? (
-                        <img
-                          src={placementBanners.miocoin_50.image_url}
-                          alt="MIO 50"
-                          className="w-full h-full object-cover object-center"
-                        />
-                      ) : (
-                        <div className="text-center py-3">
-                          <div className="text-3xl font-bold text-package-blue drop-shadow-[0_2px_4px_rgba(0,0,0,0.8)]">50</div>
-                          <div className="text-sm text-muted-foreground drop-shadow-[0_1px_2px_rgba(0,0,0,0.8)]">MIO</div>
-                          <div className="text-xs text-muted-foreground/70 drop-shadow-[0_1px_2px_rgba(0,0,0,0.8)]">50 Kč</div>
-                        </div>
-                      )}
+              ) : (
+                <>
+                  <div className="om-tu-stage">
+                    <div className="om-tu-tilt" style={{ animationDelay: `${-1.3 * i}s` }}>
+                      <MioBadge width={118} tier={tier} />
                     </div>
-                    {/* Button — always at bottom */}
-                    <div className="flex-shrink-0 px-3 pb-3 pt-2">
-                      <Button
-                        size="sm"
-                        className="homepage-miocoin-button w-full bg-package-blue text-black font-bold shadow-[0_0_10px_hsl(var(--package-blue)/0.3)] hover:brightness-110 transition-all duration-200"
-                        onClick={() => handleCoinPurchase(50, 50)}
-                        disabled={topUpLoading}
-                      >
-                        {topUpLoading ? "..." : "Dobít"}
-                      </Button>
-                    </div>
+                    {bonus > 0 && (
+                      <span className="om-tu-seal" style={{ animationDelay: `${0.6 * i}s` }}>
+                        +{bonus}
+                      </span>
+                    )}
                   </div>
-
-                  {/* Package 300 Kč → 310 MC (+10 Bonus) */}
-                  <div className="relative z-20 overflow-visible h-full">
-                    <Badge className="homepage-miocoin-bonus absolute -top-2 -right-2 bg-package-gold/90 text-black text-xs font-medium z-50 pointer-events-none">+10 Bonus</Badge>
-                    <div className="homepage-light-tile homepage-miocoin-package rounded-xl w-full h-full min-h-[160px] bg-[hsl(220_45%_6%)] border-2 border-package-gold/30 flex flex-col shadow-[inset_0_1px_12px_hsl(var(--package-gold)/0.08)] overflow-hidden">
-                      {/* Top area: image or fallback text */}
-                      <div className="flex-1 min-h-0 flex flex-col items-center justify-center overflow-hidden">
-                        {placementBanners.miocoin_310?.image_url ? (
-                          <img
-                            src={placementBanners.miocoin_310.image_url}
-                            alt="MIO 310"
-                            className="w-full h-full object-cover object-center"
-                          />
-                        ) : (
-                          <div className="text-center py-3">
-                            <div className="text-3xl font-bold text-package-gold drop-shadow-[0_2px_4px_rgba(0,0,0,0.8)]">310</div>
-                            <div className="text-sm text-muted-foreground drop-shadow-[0_1px_2px_rgba(0,0,0,0.8)]">MIO</div>
-                            <div className="text-xs text-muted-foreground/70 drop-shadow-[0_1px_2px_rgba(0,0,0,0.8)]">300 Kč</div>
-                          </div>
-                        )}
-                      </div>
-                      {/* Button — always at bottom */}
-                      <div className="flex-shrink-0 px-3 pb-3 pt-2">
-                        <Button
-                          size="sm"
-                          className="homepage-miocoin-button w-full bg-package-gold text-black font-bold shadow-[0_0_10px_hsl(var(--package-gold)/0.3)] hover:brightness-110 transition-all duration-200"
-                          onClick={() => handleCoinPurchase(300, 310)}
-                          disabled={topUpLoading}
-                        >
-                          {topUpLoading ? "..." : "Dobít"}
-                        </Button>
-                      </div>
-                    </div>
+                  <div className="flex items-baseline gap-1">
+                    <span className="om-tu-num">{coins.toLocaleString("cs-CZ")}</span>
+                    <span className="om-tu-unit">MIO</span>
                   </div>
-
-                  {/* Package 500 Kč → 525 MC (+25 Bonus) */}
-                  <div className="relative z-20 overflow-visible h-full">
-                    <Badge className="homepage-miocoin-bonus absolute -top-2 -right-2 bg-package-purple/90 text-white text-xs font-medium z-50 pointer-events-none">+25 Bonus</Badge>
-                    <div className="homepage-light-tile homepage-miocoin-package rounded-xl w-full h-full min-h-[160px] bg-[hsl(220_45%_6%)] border-2 border-package-purple/30 flex flex-col shadow-[inset_0_1px_12px_hsl(var(--package-purple)/0.08)] overflow-hidden">
-                      {/* Top area: image or fallback text */}
-                      <div className="flex-1 min-h-0 flex flex-col items-center justify-center overflow-hidden">
-                        {placementBanners.miocoin_525?.image_url ? (
-                          <img
-                            src={placementBanners.miocoin_525.image_url}
-                            alt="MIO 525"
-                            className="w-full h-full object-cover object-center"
-                          />
-                        ) : (
-                          <div className="text-center py-3">
-                            <div className="text-3xl font-bold text-package-purple drop-shadow-[0_2px_4px_rgba(0,0,0,0.8)]">525</div>
-                            <div className="text-sm text-muted-foreground drop-shadow-[0_1px_2px_rgba(0,0,0,0.8)]">MIO</div>
-                            <div className="text-xs text-muted-foreground/70 drop-shadow-[0_1px_2px_rgba(0,0,0,0.8)]">500 Kč</div>
-                          </div>
-                        )}
-                      </div>
-                      {/* Button — always at bottom */}
-                      <div className="flex-shrink-0 px-3 pb-3 pt-2">
-                        <Button
-                          size="sm"
-                          className="homepage-miocoin-button w-full bg-package-purple text-white font-bold shadow-[0_0_10px_hsl(var(--package-purple)/0.3)] hover:brightness-110 transition-all duration-200"
-                          onClick={() => handleCoinPurchase(500, 525)}
-                          disabled={topUpLoading}
-                        >
-                          {topUpLoading ? "..." : "Dobít"}
-                        </Button>
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Package 1200 Kč → 1280 MC (+80 Bonus) */}
-                  <div className="relative z-20 overflow-visible h-full">
-                    <Badge className="homepage-miocoin-bonus absolute -top-2 -right-2 bg-package-green/90 text-white text-xs font-medium z-50 pointer-events-none">+80 Bonus</Badge>
-                    <div className="homepage-light-tile homepage-miocoin-package rounded-xl w-full h-full min-h-[160px] bg-[hsl(220_45%_6%)] border-2 border-package-green/30 flex flex-col shadow-[inset_0_1px_12px_hsl(var(--package-green)/0.08)] overflow-hidden">
-                      {/* Top area: image or fallback text */}
-                      <div className="flex-1 min-h-0 flex flex-col items-center justify-center overflow-hidden">
-                        {placementBanners.miocoin_1280?.image_url ? (
-                          <img
-                            src={placementBanners.miocoin_1280.image_url}
-                            alt="MIO 1280"
-                            className="w-full h-full object-cover object-center"
-                          />
-                        ) : (
-                          <div className="text-center py-3">
-                            <div className="text-3xl font-bold text-package-green drop-shadow-[0_2px_4px_rgba(0,0,0,0.8)]">1280</div>
-                            <div className="text-sm text-muted-foreground drop-shadow-[0_1px_2px_rgba(0,0,0,0.8)]">MIO</div>
-                            <div className="text-xs text-muted-foreground/70 drop-shadow-[0_1px_2px_rgba(0,0,0,0.8)]">1200 Kč</div>
-                          </div>
-                        )}
-                      </div>
-                      {/* Button — always at bottom */}
-                      <div className="flex-shrink-0 px-3 pb-3 pt-2">
-                        <Button
-                          size="sm"
-                          className="homepage-miocoin-button w-full bg-package-green text-white font-bold shadow-[0_0_10px_hsl(var(--package-green)/0.3)] hover:brightness-110 transition-all duration-200"
-                          onClick={() => handleCoinPurchase(1200, 1280)}
-                          disabled={topUpLoading}
-                        >
-                          {topUpLoading ? "..." : "Dobít"}
-                        </Button>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-      <MioPurchaseInfo className="mt-3" />
+                  <span className="om-tu-sub">
+                    {bonus > 0 ? (
+                      <>
+                        {price.toLocaleString("cs-CZ")} + <b>{bonus} bonus</b>
+                      </>
+                    ) : (
+                      "Základní balíček"
+                    )}
+                  </span>
+                </>
+              )}
+              <Button
+                className={`homepage-miocoin-button om-tu-btn om-tu-btn-${tier}`}
+                onClick={() => handleCoinPurchase(price, coins)}
+                disabled={topUpLoading}
+              >
+                {topUpLoading ? "..." : `Dobít · ${price.toLocaleString("cs-CZ")} Kč`}
+              </Button>
+            </div>
+          );
+        })}
+      </div>
+      <p className="text-center text-[11.5px] text-[#8E8F98]">Bezpečná platba kartou · MIO platí jen v OneMil</p>
+      <MioPurchaseInfo className="mt-1" />
       <ImmediateUseConsentDialog {...consentDialogProps} />
     </>
   );
