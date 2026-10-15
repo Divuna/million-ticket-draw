@@ -34,7 +34,8 @@ zapnout `notice_email_*`. Bez nového `process-email-queue` by e-mail odešel ja
 - Staging `email_queue` nemá sloupec `dedupe_key` (drift, chybí migrace `20260723194828`) → na stagingu se
   e-mailová upozornění nezařadí (chyba se jen zaloguje). Produkce sloupec má.
 - `TicketResultModal` se nikde neotevírá (zákazník vidí jen `MysteryPurchaseResultDialog`) – mrtvý kód.
-- Ikona 512 px čeká na emblem ve vysokém rozlišení od Pavla.
+- ~~Ikona 512 px čeká na emblem~~ → vyřešeno 15. 10. 2026: ikony aplikace (512/192/180, favicon 16/32/48)
+  a `src/assets/redesign/onemil-emblem.png` (222×240) vygenerovány z emblemu 1253 px od Pavla.
 - Staging E2E workflow padá na seed kroku „Ensure staging admin E2E user has admin role“ (i na `main`, nesouvisí).
 
 ## -19. Sdílené bonusové MIO kódy — NASAZENO (13. 10. 2026, schválil Pavel)
