@@ -1,4 +1,5 @@
 import React, { useEffect, useState, useRef } from 'react';
+import { MioBadge } from "@/components/brand/MioBadge";
 import { format } from 'date-fns';
 import { cs } from 'date-fns/locale';
 import { useNavigate, useLocation } from 'react-router-dom';
@@ -721,11 +722,9 @@ const Profile: React.FC = () => {
                 <div className="grid grid-cols-1 xl:grid-cols-2 gap-5 xl:gap-6">
                   {/* Main balance */}
                   <div className="flex items-center gap-4 min-w-0">
-                    <div className="p-3 rounded-full bg-gradient-to-br from-[#E9B949] via-[#C2902F] to-[#e07800] shadow-lg shadow-[rgba(194,144,47,0.2)] shrink-0">
-                      <OneMilCoinsIcon size={32} className="h-8 w-8 text-black" />
-                    </div>
+                    <MioBadge width={68} className="shrink-0 drop-shadow-[0_6px_12px_rgba(23,23,27,0.25)]" />
                     <div className="min-w-0">
-                      <p className="text-xs text-[#c2570a] uppercase tracking-wider mb-0.5">MIO</p>
+                      <p className="text-xs font-bold text-[#8A5A10] uppercase tracking-wider mb-0.5">MIO</p>
                       <p className="text-4xl lg:text-5xl font-black text-[#E9B949] tabular-nums tracking-tight truncate">
                         {animatedBalance.toLocaleString('cs-CZ', { minimumFractionDigits: 0, maximumFractionDigits: 1 })}
                       </p>
@@ -735,9 +734,7 @@ const Profile: React.FC = () => {
                   {/* Bonus balance */}
                   <div className="flex flex-col gap-3 pt-5 border-t xl:pt-0 xl:border-t-0 xl:pl-6 xl:border-l border-[rgba(194,144,47,0.15)] min-w-0">
                     <div className="flex items-center gap-3 min-w-0">
-                      <div className="p-2.5 rounded-xl bg-green-500/20 border border-green-500/30 shrink-0">
-                        <OneMilCoinsIcon size={20} className="h-5 w-5 text-green-500" />
-                      </div>
+                      <MioBadge width={44} tier="graphite" className="shrink-0" />
                       <div className="min-w-0">
                         <div className="flex items-center gap-2 mb-0.5">
                           <p className="text-xs text-green-700 uppercase tracking-wider">Bonusové</p>
@@ -773,7 +770,7 @@ const Profile: React.FC = () => {
                   <Button onClick={() => setShowTopUpModal(true)}
                     className="flex-1 bg-gradient-to-r from-[#C2902F] to-[#E9B949] hover:from-[#E9B949] hover:to-[#C2902F] text-black font-bold shadow-lg shadow-[rgba(194,144,47,0.2)] transition-all duration-200"
                     size="lg">
-                    <OneMilCoinsIcon size={20} className="h-5 w-5 mr-2" />
+                    <MioBadge width={30} className="mr-2" />
                     Dobít MIO
                   </Button>
                 )}

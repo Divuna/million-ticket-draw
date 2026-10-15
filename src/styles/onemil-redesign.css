@@ -233,6 +233,12 @@ body:has(.om-redesign) {
   font-weight: 800;
   box-shadow: 0 6px 16px rgba(194, 144, 47, 0.35);
 }
+/* Aktivní záložka na světlém podkladu: tmavší zlatá, aby byla čitelná. */
+.om-redesign [role="tab"][data-state="active"] {
+  color: #8A5A10;
+  font-weight: 800;
+}
+
 /* Ikony uvnitř zlatého tlačítka mají tmavou barvu písma (stříbrná by na zlaté zmizela). */
 .om-redesign button.bg-primary svg[color],
 .om-redesign a.bg-primary svg[color] {
