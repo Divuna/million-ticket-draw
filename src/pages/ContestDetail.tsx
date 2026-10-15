@@ -73,6 +73,8 @@ type Contest = {
 };
 
 type BonusPrize = {
+  /** Počet kusů v soutěži – jen pro zobrazení v detailu výhry. */
+  quantity?: number | null;
   id: string;
   contest_id: string;
   description: string | null;
@@ -1103,7 +1105,7 @@ export default function ContestDetail() {
                   key={key}
                   type="button"
                   onClick={() => {
-                    setSelectedBonusPrize({ ...b, image_url: bonusImageUrl });
+                    setSelectedBonusPrize({ ...b, image_url: bonusImageUrl, quantity: count });
                   }}
                   className={`om-cd-bp ${count > 1 ? 'om-cd-bp-multi' : ''}`}
                 >
