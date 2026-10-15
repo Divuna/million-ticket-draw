@@ -151,3 +151,11 @@ pokud to není výslovně potvrzené.
 Pokud není jasné, jaký vizuál použít, vždy použij **světlý OneMil styl** podle tohoto dokumentu: bílá/warm cream plocha, tmavý text, Energy Orange akcent, realistický prémiový produkt a čistá kompozice.
 
 Pokud není jasné, zda jde o obecný brand materiál nebo konkrétní kampaň, používej obecnou verzi bez konkrétních značek, modelů a partnerů.
+
+
+### Nové oficiální logo — potvrzeno 15. 10. 2026
+
+- Pavel určil jako aktuální oficiální logo OneMil obrázek vložený do zdrojů projektu ChatGPT s názvem `ChatGPT Image 12. 10. 2026 16_48_02` (nahraný soubor může mít příponu `.png` a suffix `(1)`).
+- Pro nově vytvářené vizuály používat výhradně tento originální obrázek; starší varianty loga v brand kitu nejsou automaticky platnou náhradou.
+- Logo nikdy nepřekreslovat, nedomýšlet ani negenerovat. Pokud zdrojový obrázek není v daném nástroji dostupný, vytvořit návrh bez loga.
+- Obrázek je potvrzen jako příloha/zdroj projektu ChatGPT; jeho umístění v GitHub repozitáři zatím nebylo ověřeno. Nepředstírat, že je v repozitáři uložen.

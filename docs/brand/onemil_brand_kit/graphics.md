@@ -124,3 +124,11 @@ Follow `docs/advertising/GRAPHICS_SOURCE_OF_TRUTH.md` and the current legal/copy
 2. `docs/advertising/VISUAL_RULES.md`, `AD_FORMATS.md`, `PROMPTS_FOR_ADS.md`, `SOCIAL_ADS_OPERATIONS.md` — channel-specific rules derived from it.
 3. This brand-kit file, old brand manual, design tokens and AI prompt files — implementation/reference only.
 4. Old PDF/reference images may document historical assets but do not define current colors or visual direction.
+
+
+### Nové oficiální logo — potvrzeno 15. 10. 2026
+
+- Pavel určil jako aktuální oficiální logo OneMil obrázek vložený do zdrojů projektu ChatGPT s názvem `ChatGPT Image 12. 10. 2026 16_48_02` (nahraný soubor může mít příponu `.png` a suffix `(1)`).
+- Pro nově vytvářené vizuály používat výhradně tento originální obrázek; starší varianty loga v brand kitu nejsou automaticky platnou náhradou.
+- Logo nikdy nepřekreslovat, nedomýšlet ani negenerovat. Pokud zdrojový obrázek není v daném nástroji dostupný, vytvořit návrh bez loga.
+- Obrázek je potvrzen jako příloha/zdroj projektu ChatGPT; jeho umístění v GitHub repozitáři zatím nebylo ověřeno. Nepředstírat, že je v repozitáři uložen.
