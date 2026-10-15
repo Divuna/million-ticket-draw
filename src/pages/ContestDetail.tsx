@@ -219,7 +219,9 @@ export default function ContestDetail() {
     'Otevři další tiket v pořadí',
     'Výherní pozice jsou předem určeny',
   ];
-  const { data: latestWins } = useLatestWinners(40);
+  const { data: latestWins, refetch: refetchLatestWins } = useLatestWinners(40);
+  const refetchLatestWinsRef = useRef(refetchLatestWins);
+  refetchLatestWinsRef.current = refetchLatestWins;
   const LIVE_MESSAGES = useMemo(() => {
     const title = contest?.title;
     const wins = title
@@ -272,6 +274,7 @@ export default function ContestDetail() {
         },
         () => {
           setLastWinnersEventAt(Date.now());
+          void refetchLatestWinsRef.current();
         }
       )
       .subscribe((status) => {
