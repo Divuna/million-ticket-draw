@@ -444,10 +444,10 @@ jobs:
           # failure (bad key, GoTrue rejecting per_page, etc.) is diagnosable in
           # the log. per_page kept modest (200) — current GoTrue rejects very
           # large per_page values with HTTP 400.
-          # Staging má víc než 200 uživatelů (nesmazatelné testovací účty) →
+          # Staging má přes 2000 uživatelů (nesmazatelné testovací účty, 15. 10. 2026: 2029) →
           # projít stránky, dokud se účet nenajde nebo stránka není plná.
           ADMIN_UUID=""
-          for PAGE in 1 2 3 4 5 6 7 8 9 10; do
+          for PAGE in $(seq 1 100); do
             LIST_RESP=$(curl -s -w $'\n%{http_code}' \
               "${ADMIN_API}?page=${PAGE}&per_page=200" \
               -H "apikey: ${SERVICE_ROLE_KEY}" \
@@ -568,7 +568,7 @@ jobs:
           REST_API="${SUPABASE_URL}/rest/v1"
 
           SA_UUID=""
-          for PAGE in 1 2 3 4 5 6 7 8 9 10; do
+          for PAGE in $(seq 1 100); do
             LIST_RESP=$(curl -s -w $'\n%{http_code}' \
               "${ADMIN_API}?page=${PAGE}&per_page=200" \
               -H "apikey: ${SERVICE_ROLE_KEY}" \
