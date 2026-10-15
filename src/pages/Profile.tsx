@@ -854,7 +854,7 @@ const Profile: React.FC = () => {
                     size="default" 
                     type="button"
                     onClick={() => setEditMode(true)}
-                    className="relative z-20 border-[rgba(194,144,47,0.3)] bg-[rgba(194,144,47,0.04)] hover:bg-[rgba(194,144,47,0.08)] hover:border-[rgba(194,144,47,0.5)] text-[#c2570a] hover:text-[#8A5A10] transition-all duration-300 font-semibold px-6 rounded-xl hover:shadow-lg hover:shadow-[rgba(194,144,47,0.08)] hover:scale-[1.02]"
+                    className="relative z-20 border-[rgba(194,144,47,0.3)] bg-[rgba(194,144,47,0.04)] hover:bg-[rgba(194,144,47,0.08)] hover:border-[rgba(194,144,47,0.5)] text-[#8A5A10] hover:text-[#B5122B] transition-all duration-300 font-semibold px-6 rounded-xl hover:shadow-lg hover:shadow-[rgba(194,144,47,0.08)] hover:scale-[1.02]"
                   >
                     <OneMilDiamondIcon size={16} className="h-4 w-4 mr-2" />
                     Upravit
