@@ -99,7 +99,7 @@ test.describe('44 - customer password reset', () => {
 
     await page.goto('/reset-password', { waitUntil: 'domcontentloaded' });
 
-    await expect(page.getByRole('heading', { name: 'Nastavte nové heslo' })).toBeVisible({ timeout: 10_000 });
+    await expect(page.getByRole('heading', { name: 'Nastav si nové heslo' })).toBeVisible({ timeout: 10_000 });
     await page.getByTestId('reset-password').fill('CustomerReset123!');
     await page.getByTestId('reset-confirm').fill('CustomerReset123!');
     await page.getByTestId('reset-update-submit').click();

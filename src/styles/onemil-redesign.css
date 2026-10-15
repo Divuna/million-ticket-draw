@@ -667,6 +667,87 @@ body:has(.om-redesign) {
   .om-notfound-avatar, .om-notfound-code { animation: none; }
 }
 
+/* ───────── Dobít MIO (deska Dobít, krok 1) ───────── */
+.om-redesign .homepage-light-content .homepage-miocoin-panel.om-tu-panel {
+  background: radial-gradient(120% 60% at 50% 0%, #241A10 0%, #0E0E11 55%, #0A0A0C 100%) !important;
+  border: 1px solid rgba(233, 185, 73, 0.3) !important;
+  box-shadow: 0 24px 50px rgba(23, 23, 27, 0.3), inset 0 0 0 1px rgba(233, 185, 73, 0.12) !important;
+  color: #ECEDEF;
+}
+.om-redesign .homepage-light-content .om-tu-panel .homepage-miocoin-header {
+  padding-bottom: 0.5rem; border-bottom: 1px solid rgba(233, 185, 73, 0.15);
+}
+.om-redesign h2.om-tu-title,
+.om-tu-title {
+  margin: 0; font-family: 'Exo 2', sans-serif; font-weight: 900; font-style: italic; text-transform: uppercase;
+  font-size: 30px; line-height: 1; background: none; padding: 0; -webkit-text-fill-color: initial;
+}
+.om-tu-title-a { background: linear-gradient(180deg, #FFFFFF, #BFC3CB); -webkit-background-clip: text; background-clip: text; color: transparent; -webkit-text-fill-color: transparent; }
+.om-tu-title-b { background: linear-gradient(180deg, #FFF1C2, #E9B949 55%, #A8741F); -webkit-background-clip: text; background-clip: text; color: transparent; -webkit-text-fill-color: transparent; }
+.om-tu-avatar { filter: drop-shadow(0 8px 14px rgba(0, 0, 0, 0.5)); animation: om2-bob 3.6s ease-in-out infinite; margin-bottom: -18px; }
+.om-redesign .homepage-light-content .homepage-miocoin-package.om-tu-tile {
+  position: relative; display: flex; flex-direction: column; align-items: center; gap: 6px; overflow: hidden;
+  padding: 0 10px 10px; border-radius: 18px; transform: none;
+  background: linear-gradient(180deg, #1A1A1F, #121215) !important;
+  border: 0 !important;
+}
+.om-redesign .homepage-light-content .om-tu-tile.om-tu-graphite { box-shadow: inset 0 0 0 1px rgba(220, 225, 235, 0.35) !important; }
+.om-redesign .homepage-light-content .om-tu-tile.om-tu-crimson { box-shadow: inset 0 0 0 1px rgba(224, 37, 63, 0.6) !important; }
+.om-redesign .homepage-light-content .om-tu-tile.om-tu-crown { box-shadow: inset 0 0 0 1.5px rgba(233, 185, 73, 0.75), 0 0 24px rgba(233, 185, 73, 0.15) !important; }
+.om-redesign .homepage-light-content .om-tu-tile.om-tu-holo { box-shadow: inset 0 0 0 1.5px rgba(185, 140, 255, 0.7), 0 0 24px rgba(185, 140, 255, 0.18) !important; }
+.om-redesign .homepage-light-content .homepage-miocoin-package.om-tu-tile:hover { transform: translateY(-2px); }
+.om-tu-stage { position: relative; height: 112px; width: 100%; display: flex; align-items: center; justify-content: center; }
+.om-tu-graphite .om-tu-stage { background: radial-gradient(closest-side, rgba(220, 225, 235, 0.18), transparent); }
+.om-tu-crimson .om-tu-stage { background: radial-gradient(closest-side, rgba(224, 37, 63, 0.32), transparent); }
+.om-tu-crown .om-tu-stage { background: radial-gradient(closest-side, rgba(233, 185, 73, 0.3), transparent); }
+.om-tu-holo .om-tu-stage { background: radial-gradient(closest-side, rgba(185, 140, 255, 0.3), transparent); }
+.om-tu-tilt { animation: om2-tu-tilt 5.5s ease-in-out infinite; filter: drop-shadow(0 10px 14px rgba(0, 0, 0, 0.55)); }
+.om-tu-seal {
+  position: absolute; top: 10px; right: 2px; min-width: 44px; height: 44px; padding: 0 6px; border-radius: 999px;
+  display: flex; align-items: center; justify-content: center;
+  font-family: 'Exo 2', sans-serif; font-weight: 900; font-style: italic; font-size: 15px; color: #fff;
+  background: radial-gradient(circle at 35% 30%, #FF4A62, #B5122B 55%, #5A0714);
+  box-shadow: 0 0 0 2px #050505, 0 0 0 3.5px #D9DCE2, 0 8px 14px rgba(0, 0, 0, 0.45);
+  animation: om2-tu-seal 3s ease-in-out infinite;
+}
+.om-tu-crown .om-tu-seal { box-shadow: 0 0 0 2px #050505, 0 0 0 3.5px #E9B949, 0 8px 14px rgba(0, 0, 0, 0.45); }
+.om-tu-holo .om-tu-seal { box-shadow: 0 0 0 2px #050505, 0 0 0 3.5px #C9A8FF, 0 8px 14px rgba(0, 0, 0, 0.45); }
+.om-tu-num { font-family: 'Exo 2', sans-serif; font-weight: 900; font-style: italic; font-size: 30px; line-height: 1; color: #ECEDEF; }
+.om-tu-unit { font-family: 'Barlow Condensed', sans-serif; font-weight: 800; font-size: 15px; color: #C9CAD1; }
+.om-tu-crimson .om-tu-unit, .om-tu-crimson .om-tu-sub b { color: #FF8A9A; }
+.om-tu-crown .om-tu-unit, .om-tu-crown .om-tu-sub b { color: #F2C55C; }
+.om-tu-holo .om-tu-unit, .om-tu-holo .om-tu-sub b { color: #C9A8FF; }
+.om-tu-sub { font-size: 11.5px; color: #A9AAB3; min-height: 16px; }
+.om-tu-banner { width: calc(100% + 20px); margin: 0 -10px; height: 150px; overflow: hidden; }
+.om-redesign .homepage-light-content .homepage-miocoin-button.om-tu-btn {
+  width: 100%; min-height: 44px; border-radius: 12px; font-weight: 800; font-size: 13.5px; white-space: nowrap; filter: none;
+}
+.om-redesign .homepage-light-content .homepage-miocoin-button.om-tu-btn-graphite {
+  color: #ECEDEF !important; background: rgba(255, 255, 255, 0.06) !important;
+  border: 1px solid rgba(220, 225, 235, 0.5) !important; box-shadow: none !important;
+}
+.om-redesign .homepage-light-content .homepage-miocoin-button.om-tu-btn-crimson {
+  color: #fff !important; background: linear-gradient(180deg, #E0253F, #9E0E24) !important;
+  border: 0 !important; box-shadow: 0 6px 16px rgba(181, 18, 43, 0.4) !important;
+}
+.om-redesign .homepage-light-content .homepage-miocoin-button.om-tu-btn-crown {
+  color: #1A1205 !important; background: linear-gradient(180deg, #FFE29A, #E9B949 55%, #C2902F) !important;
+  border: 0 !important; box-shadow: 0 6px 16px rgba(194, 144, 47, 0.35) !important;
+}
+.om-redesign .homepage-light-content .homepage-miocoin-button.om-tu-btn-holo {
+  color: #1A1205 !important; background: linear-gradient(100deg, #FFD6E0, #FFE9A8, #C8F7DC, #BFE3FF, #E4CCFF) !important;
+  border: 0 !important; box-shadow: 0 6px 16px rgba(185, 140, 255, 0.35) !important;
+}
+.om-redesign .homepage-light-content .homepage-miocoin-button.om-tu-btn:hover { filter: brightness(1.06); }
+/* Spotřebitelská informace o MIO na tmavém panelu – čitelná barva (text beze změny). */
+.om-redesign .homepage-light-content .om-tu-panel .text-muted-foreground { color: #A9AAB3; }
+.om-redesign .homepage-light-content .om-tu-panel a { color: #F2C55C; }
+@keyframes om2-tu-tilt { 0%, 100% { transform: rotate(-4deg) translateY(0); } 50% { transform: rotate(3deg) translateY(-5px); } }
+@keyframes om2-tu-seal { 0%, 100% { transform: rotate(-10deg) scale(1); } 50% { transform: rotate(-4deg) scale(1.07); } }
+@media (prefers-reduced-motion: reduce) {
+  .om-tu-tilt, .om-tu-seal, .om-tu-avatar { animation: none; }
+}
+
 /* ───────── Zprávy (deska Zprávy) ───────── */
 .om-msg-shell {
   background:
