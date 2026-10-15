@@ -1,13 +1,15 @@
 # OneMil – aktuální stav projektu
 
-> **Autoritativní aktuální stav. Poslední aktualizace 15. 10. 2026 — grafický redesign na větvi (frontend NENASAZEN), v produkci jen zpětně kompatibilní DB/EF kroky a upozornění za vypínači (vše vypnuto) (§ -20). Předtím 13. 10. 2026 — sdílené MIO promo kódy nasazeny (§ -19, PR #423). Předtím 12. 10. 2026 — PRVNÍ PŘEDSTARTOVNÍ RESET PRODUKCE PROVEDEN (§ -18) se schválením Pavla; záloha ověřena, CRM zachováno, kroky 05 (Vault) a úklid Storage zatím neprovedeny. Předtím 30. 9. 2026 — příprava prvního resetu (§ -17: mapa, skript, suchý běh na stagingu), reset NEPROBĚHL, záloha zatím NEVYTVOŘENA. Předtím předstartovní opravy nasazeny do produkce (§ -16). Předtím 29. 9. 2026 — 2. kolo předstartovních oprav (§ -15, staging + větev). Předtím předstartovní audit (§ -14). Předtím 29. 9. 2026 — veřejný název MIO a spotřebitelské informace k nákupu MIO (bod 8 VOP) nasazeny do produkce; bannery balíčků čekají na rozhodnutí. Předtím 25. 9. 2026 — jeden odměňovaný zdroj přivedení hráče nasazen do produkce. Předtím 24. 9. 2026 — Fáze 5 (osobní doporučení hráčů) nasazena do produkce `xkzhjldrojjlrkezorey` se schválením Pavla. Předtím 23. 9. 2026 refund blok F2 + F3 + F4 a Fáze 1.**
+> **Autoritativní aktuální stav. Poslední aktualizace 15. 10. 2026 — grafický redesign NASAZEN na onemil.cz (PR #424), nová kostra e-mailů ( v193) a zákaznická upozornění za vypínači (vše vypnuto) (§ -20). Předtím 13. 10. 2026 — sdílené MIO promo kódy nasazeny (§ -19, PR #423). Předtím 12. 10. 2026 — PRVNÍ PŘEDSTARTOVNÍ RESET PRODUKCE PROVEDEN (§ -18) se schválením Pavla; záloha ověřena, CRM zachováno, kroky 05 (Vault) a úklid Storage zatím neprovedeny. Předtím 30. 9. 2026 — příprava prvního resetu (§ -17: mapa, skript, suchý běh na stagingu), reset NEPROBĚHL, záloha zatím NEVYTVOŘENA. Předtím předstartovní opravy nasazeny do produkce (§ -16). Předtím 29. 9. 2026 — 2. kolo předstartovních oprav (§ -15, staging + větev). Předtím předstartovní audit (§ -14). Předtím 29. 9. 2026 — veřejný název MIO a spotřebitelské informace k nákupu MIO (bod 8 VOP) nasazeny do produkce; bannery balíčků čekají na rozhodnutí. Předtím 25. 9. 2026 — jeden odměňovaný zdroj přivedení hráče nasazen do produkce. Předtím 24. 9. 2026 — Fáze 5 (osobní doporučení hráčů) nasazena do produkce `xkzhjldrojjlrkezorey` se schválením Pavla. Předtím 23. 9. 2026 refund blok F2 + F3 + F4 a Fáze 1.**
 
 
-## -20. Grafický redesign zákaznické části — VĚTEV, FRONTEND NENASAZEN (15. 10. 2026, schválil Pavel)
+## -20. Grafický redesign zákaznické části — NASAZENO (15. 10. 2026, schválil Pavel)
 
-Větev `claude/onemil-graphics-redesign-d386f3` (podle plátna https://claude.ai/artifact/DxBmNteH2GBg62ziQEEwnd).
-**Frontend NENÍ v `main` ani na Vercelu** – projeví se až po merge. Produkce už obsahuje jen tyto
-zpětně kompatibilní DB/EF změny (schválení Pavla „bod 1–4“):
+Podle plátna https://claude.ai/artifact/DxBmNteH2GBg62ziQEEwnd. **PR #424 sloučen do `main`
+(`a6ba5260`) na výslovný pokyn Pavla**, Vercel Production READY, produkční smoke (run `38792641302`) zelený,
+ověřeno na https://www.onemil.cz (nový vzhled, nové ikony, `/brand/onemil-logo-email.png` 200).
+`process-email-queue` **v193** nasazen na produkci i staging (`verify_jwt=false` zachováno); cron job 16
+v 19:20 UTC vrátil 200 `No pending emails`. DB/EF změny (schválení Pavla „bod 1–4“):
 
 - **EF `og-ticket-share`** (produkce i staging, `verify_jwt=false`): obrázek pro sdílení bez čísla tiketu,
   s názvem soutěže a hlavní výhrou (veřejné čtení `contests` anon klíčem, UUID validováno), karmín/zlato.
@@ -24,13 +26,13 @@ zpětně kompatibilní DB/EF změny (schválení Pavla „bod 1–4“):
 - **Migrace `20261015120000_coin_redeemed_notice_without_ticket_number`**: push „MIO uplatněna“
   místo „Ticket: N“ říká „Tiket je ve hře. Hodně štěstí!“ (jen literál v živé definici).
 
-**Pořadí před zapnutím e-mailů:** nejdřív merge frontendu (nové logo `public/brand/onemil-logo-email.png`),
-pak deploy `process-email-queue` (umí strukturované e-maily, `verify_jwt=false` zachovat!), teprve pak
-zapnout `notice_email_*`. Bez nového `process-email-queue` by e-mail odešel jako surový JSON.
+**Zapnutí upozornění:** všechny předpoklady jsou splněné (frontend s logem i `process-email-queue` v193 jsou
+nasazené) – zapíná superadmin v `/admin/notifications` → Automatická upozornění. Při budoucím nasazení
+`process-email-queue` zachovat `--no-verify-jwt` a podporu `renderOneMilStructuredEmail`.
 
 **OPEN ISSUE:**
-- `process-email-queue` s novou kostrou e-mailů zatím NENASAZEN (čeká na merge kvůli logu). Dalších 8 EF,
-  které sdílenou šablonu používají, dostane nový vzhled až při svém příštím nasazení.
+- Dalších 8 EF, které sdílenou šablonu e-mailů používají (pozvánky, faktury, affiliate, Shoptet…), dostane nový
+  vzhled až při svém příštím nasazení – do té doby posílají předchozí krémovou verzi.
 - Staging `email_queue` nemá sloupec `dedupe_key` (drift, chybí migrace `20260723194828`) → na stagingu se
   e-mailová upozornění nezařadí (chyba se jen zaloguje). Produkce sloupec má.
 - `TicketResultModal` se nikde neotevírá (zákazník vidí jen `MysteryPurchaseResultDialog`) – mrtvý kód.

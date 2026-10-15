@@ -1,3 +1,9 @@
+# 15. 10. 2026 — Grafický redesign nasazen na onemil.cz
+
+Na pokyn Pavla sloučen PR #424 (`a6ba5260`), Vercel Production READY, produkční smoke zelený.
+`process-email-queue` v193 (nová kostra e-mailů + strukturované e-maily z DB) nasazen, cron job 16 běží (200).
+Nové ikony aplikace z emblemu ve vysokém rozlišení. Zákaznická upozornění zůstávají vypnutá.
+
 # 15. 10. 2026 — Grafický redesign na větvi + zpětně kompatibilní DB/EF kroky v produkci
 
 Redesign zákaznické části podle schváleného plátna dokončen na větvi `claude/onemil-graphics-redesign-d386f3`

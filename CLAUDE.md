@@ -63,7 +63,7 @@ odstranění je ten jeden schválený reset.
 výše je historický záznam. Data vzniklá po resetu se nesmí hromadně mazat ani „uklízet" — každé další
 hromadné mazání produkčních dat vyžaduje nové výslovné schválení Pavla.
 
-## REDESIGN — ZÁKAZNICKÁ UPOZORNĚNÍ A SDÍLENÍ (15. 10. 2026, PRODUKCE DB/EF; frontend na větvi)
+## REDESIGN — ZÁKAZNICKÁ UPOZORNĚNÍ A SDÍLENÍ (15. 10. 2026, PRODUKCE; PR #424)
 
 Detail: `onemil_state.md` § -20.
 
