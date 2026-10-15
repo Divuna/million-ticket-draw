@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { Helmet } from 'react-helmet-async';
 import { Header } from '@/components/Header';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -31,8 +31,27 @@ const CMSPageLayout: React.FC<CMSPageLayoutProps> = ({
   loading = false,
   children,
 }) => {
+  // Obsah kapitol (deska 27): z nadpisů vykresleného textu, text samotný se nemění.
+  const contentRef = useRef<HTMLDivElement>(null);
+  const [toc, setToc] = useState<Array<{ id: string; label: string }>>([]);
+  useEffect(() => {
+    const root = contentRef.current;
+    if (!root || loading) {
+      setToc([]);
+      return;
+    }
+    const heads = Array.from(root.querySelectorAll<HTMLElement>('h2, .cms-section-heading'));
+    const items = heads
+      .map((h, i) => {
+        if (!h.id) h.id = 'kapitola-' + (i + 1);
+        return { id: h.id, label: (h.textContent || '').trim() };
+      })
+      .filter((t) => t.label.length > 0);
+    setToc(items.length >= 2 ? items : []);
+  }, [content, loading]);
+
   return (
-    <div className="min-h-screen bg-background pb-24">
+    <div className="om-cms min-h-screen bg-background pb-24" id="om-cms-top">
       {title && (
         <Helmet>
           <title>{title} | OneMil</title>
@@ -57,10 +76,10 @@ const CMSPageLayout: React.FC<CMSPageLayoutProps> = ({
             </div>
           </div>
         ) : (
-          <article className="rounded-2xl border border-border/30 bg-gradient-to-b from-card/60 to-card/40 backdrop-blur-sm shadow-[0_8px_32px_hsl(222_50%_3%/0.4)]">
+          <article className="om-cms-card rounded-2xl">
             {/* Header Section */}
             <header className="px-8 md:px-12 pt-10 md:pt-14 pb-8">
-              <h1 className="text-3xl md:text-4xl font-heading font-bold bg-gradient-to-r from-[hsl(var(--heading-gold))] via-[#E9B949] to-[hsl(var(--heading-gold))] bg-clip-text text-transparent leading-tight">
+              <h1 className="om-cms-title">
                 {title}
               </h1>
               {version && (
@@ -68,16 +87,26 @@ const CMSPageLayout: React.FC<CMSPageLayoutProps> = ({
                   Verze: {version}
                 </p>
               )}
+              {toc.length > 0 && (
+                <nav aria-label="Obsah stránky" className="om-cms-toc">
+                  {toc.map((t) => (
+                    <a key={t.id} href={'#' + t.id} className="om-cms-chip">
+                      {t.label}
+                    </a>
+                  ))}
+                </nav>
+              )}
             </header>
             
-            <Separator className="mx-8 md:mx-12 bg-gradient-to-r from-transparent via-border/40 to-transparent" />
+            <Separator className="mx-8 w-auto md:mx-12 bg-gradient-to-r from-transparent via-[rgba(194,144,47,0.35)] to-transparent" />
             
             {/* Content Section */}
             <div className="px-8 md:px-12 py-10 md:py-12">
               {content && (
-                <div 
+                <div
+                  ref={contentRef}
                   className="
-                    prose prose-lg dark:prose-invert max-w-none
+                    prose prose-lg max-w-none
                     
                     /* CMS Question styling - numbered headings with gold accent */
                     [&_.cms-question]:font-heading [&_.cms-question]:font-semibold
@@ -177,6 +206,11 @@ const CMSPageLayout: React.FC<CMSPageLayoutProps> = ({
               
               {/* Additional content (forms, etc.) */}
               {children}
+              {toc.length > 0 && (
+                <div className="mt-10 text-center">
+                  <a href="#om-cms-top" className="om-cms-top">↑ Zpět nahoru</a>
+                </div>
+              )}
             </div>
           </article>
         )}

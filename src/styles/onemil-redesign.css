@@ -902,6 +902,34 @@ body:has(.om-redesign) {
 .om-redesign .om-kontakt-info h2 { font-family: 'Barlow Condensed', sans-serif; font-weight: 800; font-style: italic; text-transform: uppercase; }
 .om-redesign .om-kontakt-info [class*="bg-muted/"] { background: #FFFBF2; border-color: rgba(194, 144, 47, 0.22); }
 
+/* ───────── Textové stránky – VOP, ochrana údajů, pravidla, cookies (deska 27) ───────── */
+.om-cms-card {
+  background: linear-gradient(180deg, #FFFFFF, #FDF8EF);
+  box-shadow: inset 0 1px 0 #fff, 0 0 0 1px rgba(194, 144, 47, 0.24), 0 14px 30px rgba(60, 40, 10, 0.12);
+}
+.om-redesign h1.om-cms-title,
+.om-cms-title {
+  margin: 0; font-family: 'Exo 2', sans-serif; font-weight: 900; font-style: italic; text-transform: uppercase;
+  font-size: 32px; line-height: 1.05; color: #17171B; -webkit-text-fill-color: #17171B; overflow-wrap: anywhere;
+  background: linear-gradient(90deg, #B5122B, #E9B949) left bottom / 58px 4px no-repeat; padding-bottom: 12px;
+}
+.om-cms-toc { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 18px; }
+.om-cms-chip {
+  display: inline-flex; align-items: center; min-height: 34px; padding: 0 12px; border-radius: 999px;
+  font-size: 12.5px; font-weight: 700; color: #8A5A10; background: #fff; border: 1px solid rgba(194, 144, 47, 0.45);
+  transition: background 0.2s;
+}
+.om-cms-chip:hover { background: #FFF6E0; }
+.om-cms-top { font-size: 13px; font-weight: 800; color: #8A5A10; }
+.om-cms-top:hover { color: #B5122B; }
+.om-redesign .om-cms .prose { color: #3A3A40; }
+.om-redesign .om-cms .prose h2 {
+  font-family: 'Barlow Condensed', sans-serif; font-weight: 800; font-style: italic; text-transform: uppercase;
+  scroll-margin-top: 90px; background: none; color: #17171B;
+}
+.om-redesign .om-cms .prose .cms-section-heading { scroll-margin-top: 90px; }
+.om-redesign .om-cms .prose a { color: #8A5A10; }
+
 /* ───────── Sdílený tiket (deska 26) ───────── */
 .om-share {
   font-family: 'Manrope', system-ui, sans-serif; color: #17171B;
