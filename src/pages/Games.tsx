@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
+import { MioBadge } from "@/components/brand/MioBadge";
 import { useNavigate } from 'react-router-dom';
 import { Header } from '@/components/Header';
 import { Button } from '@/components/ui/button';
@@ -337,7 +338,29 @@ const Index = () => {
       <div className="games-light-page min-h-screen bg-background">
         <Header />
         <div className="container mx-auto px-4 py-8">
-          <div className="text-center text-muted-foreground">Načítání soutěží...</div>
+          {/* Obrysy karet se třpytem místo prázdna (deska Načítání, krok 2) */}
+          <div className="mx-auto flex max-w-md flex-col gap-3" role="status" aria-live="polite">
+            <div className="flex items-center gap-2.5">
+              <MioBadge width={44} />
+              <strong className="text-sm text-[#5E5B57]">Načítání soutěží…</strong>
+            </div>
+            {[0, 1].map((i) => (
+              <div
+                key={i}
+                className="overflow-hidden rounded-[20px] bg-[#17171B] pb-3.5 shadow-[0_0_0_1.5px_rgba(233,185,73,0.35),0_14px_28px_rgba(23,23,27,0.2)]"
+              >
+                <span className="om-skd h-[150px] rounded-none" />
+                <div className="flex flex-col gap-2 px-3.5 pt-3">
+                  <span className="om-skd h-[18px] w-[70%]" />
+                  <span className="om-skd h-3 w-[45%]" />
+                  <div className="mt-1.5 flex items-center justify-between">
+                    <span className="om-skd h-3 w-[36%]" />
+                    <span className="om-skd h-10 w-[120px]" />
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
         </div>
       </div>
     );

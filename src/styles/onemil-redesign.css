@@ -748,6 +748,130 @@ body:has(.om-redesign) {
   .om-tu-tilt, .om-tu-seal, .om-tu-avatar { animation: none; }
 }
 
+/* ───────── Načítání (deska Načítání) ───────── */
+.om-load {
+  position: relative; min-height: 100vh; overflow: hidden; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 26px;
+  background: radial-gradient(90% 60% at 50% 42%, #3A0A14 0%, #121215 55%, #08080A 100%); color: #ECEDEF;
+  font-family: 'Manrope', system-ui, sans-serif;
+}
+.om-load-rays {
+  position: absolute; left: 50%; top: 42%; width: 760px; height: 760px; margin: -380px 0 0 -380px; border-radius: 50%; pointer-events: none;
+  background: repeating-conic-gradient(from 0deg, rgba(233, 185, 73, 0.08) 0 6deg, rgba(233, 185, 73, 0) 6deg 20deg);
+  animation: om2-cd-spin 30s linear infinite;
+}
+.om-load-logo { position: relative; width: 250px; height: 126px; animation: om2-load-breathe 2.2s ease-in-out infinite; }
+.om-load-logo img { width: 100%; height: 100%; object-fit: contain; }
+.om-load-shine {
+  position: absolute; inset: 0; overflow: hidden; display: block; border-radius: 16px;
+}
+.om-load-shine i {
+  position: absolute; top: 0; bottom: 0; left: 0; width: 30%;
+  background: linear-gradient(90deg, transparent, rgba(255, 250, 230, 0.55), transparent);
+  animation: om2-cd-glint 3.8s cubic-bezier(0.4, 0, 0.2, 1) infinite; mix-blend-mode: screen;
+}
+.om-load-bar { position: relative; width: 180px; height: 4px; border-radius: 2px; overflow: hidden; background: rgba(233, 185, 73, 0.2); }
+.om-load-bar span {
+  position: absolute; top: 0; bottom: 0; border-radius: 2px;
+  background: linear-gradient(90deg, transparent, #FFE29A, #E9B949, transparent);
+  animation: om2-load-bar 2.4s cubic-bezier(0.4, 0, 0.2, 1) infinite;
+}
+.om-load-label { position: relative; font-size: 12px; letter-spacing: 0.24em; font-weight: 800; color: #A9AAB3; }
+/* Obrysy karet při načítání obsahu (deska Načítání, krok 2) */
+.om-sk, .om-skd { position: relative; display: block; overflow: hidden; border-radius: 12px; }
+.om-sk { background: #E9E0D0; }
+.om-skd { background: #26262C; }
+.om-sk::after, .om-skd::after { content: ""; position: absolute; inset: 0; background-size: 300% 100%; animation: om2-load-sk 1.4s linear infinite; }
+.om-sk::after { background-image: linear-gradient(100deg, transparent 30%, rgba(255, 255, 255, 0.7) 50%, transparent 70%); }
+.om-skd::after { background-image: linear-gradient(100deg, transparent 30%, rgba(233, 185, 73, 0.25) 50%, transparent 70%); }
+@keyframes om2-load-breathe {
+  0%, 100% { transform: scale(1); filter: drop-shadow(0 0 0 rgba(233, 185, 73, 0)); }
+  50% { transform: scale(1.04); filter: drop-shadow(0 0 22px rgba(233, 185, 73, 0.45)); }
+}
+@keyframes om2-load-bar { 0% { left: -40%; width: 40%; } 60% { left: 60%; width: 40%; } 100% { left: 110%; width: 40%; } }
+@keyframes om2-load-sk { 0% { background-position: 100% 0; } 100% { background-position: -100% 0; } }
+@media (prefers-reduced-motion: reduce) {
+  .om-load-rays, .om-load-logo, .om-load-shine i, .om-load-bar span, .om-sk::after, .om-skd::after { animation: none; }
+}
+
+/* ───────── Platba proběhla / zrušena (deska Dobít krok 3, deska 26) ───────── */
+.om-ps {
+  border-radius: 28px; color: #ECEDEF;
+  background: radial-gradient(90% 55% at 50% 30%, #4A0D18 0%, #17090C 45%, #08080A 100%);
+  box-shadow: 0 24px 50px rgba(23, 23, 27, 0.35), inset 0 0 0 1px rgba(233, 185, 73, 0.3);
+}
+.om-ps-beam {
+  position: absolute; top: -40px; left: 50%; margin-left: -110px; width: 220px; height: 520px; pointer-events: none;
+  background: linear-gradient(180deg, rgba(255, 226, 154, 0.22), rgba(255, 226, 154, 0) 80%);
+  clip-path: polygon(42% 0, 58% 0, 100% 100%, 0 100%);
+  animation: om2-ps-sweep 6s ease-in-out infinite alternate;
+}
+.om-ps-fall { position: absolute; top: -14px; width: 7px; height: 11px; border-radius: 2px; pointer-events: none; animation: om2-ps-fall 3.6s linear infinite; }
+.om-ps-land { animation: om2-ps-land 0.9s cubic-bezier(0.3, 1.4, 0.5, 1) both; filter: drop-shadow(0 14px 18px rgba(0, 0, 0, 0.55)); }
+.om-ps-ring {
+  position: absolute; left: 50%; top: 50%; width: 220px; height: 220px; margin: -110px 0 0 -110px; border-radius: 50%; pointer-events: none;
+  box-shadow: 0 0 0 3px rgba(233, 185, 73, 0.7); animation: om2-ps-ring 2.4s ease-out infinite;
+}
+.om-ps-stamp {
+  position: absolute; top: -12px; right: -14px; width: 66px; height: 66px; border-radius: 50%;
+  display: flex; flex-direction: column; align-items: center; justify-content: center; color: #fff;
+  font-family: 'Exo 2', sans-serif; font-weight: 900; font-style: italic; font-size: 20px; line-height: 1;
+  background: radial-gradient(circle at 35% 30%, #FF4A62, #B5122B 55%, #5A0714);
+  box-shadow: 0 0 0 3px #050505, 0 0 0 5px #D9DCE2, 0 8px 14px rgba(0, 0, 0, 0.45);
+  transform: rotate(-10deg); animation: om2-ps-stamp 0.7s 0.6s cubic-bezier(0.3, 1.6, 0.5, 1) both;
+}
+.om-ps-stamp small { font-family: 'Manrope', sans-serif; font-style: normal; font-size: 9px; font-weight: 800; letter-spacing: 0.08em; color: #FFE3E7; margin-top: 2px; }
+.om-ps-pill {
+  display: inline-flex; align-items: center; gap: 8px; padding: 6px 12px; border-radius: 999px;
+  font-size: 12px; font-weight: 800; letter-spacing: 0.12em; color: #7EE0A8;
+  background: rgba(46, 158, 91, 0.15); box-shadow: inset 0 0 0 1px rgba(46, 158, 91, 0.6);
+}
+.om-ps-amount {
+  font-family: 'Exo 2', sans-serif; font-weight: 900; font-style: italic; text-transform: uppercase; font-size: 52px; line-height: 0.95;
+  background: linear-gradient(180deg, #FFF1C2, #E9B949 50%, #A8741F); -webkit-background-clip: text; background-clip: text;
+  color: transparent; -webkit-text-fill-color: transparent;
+}
+.om-ps-amount-sm { font-size: 26px; line-height: 1.1; }
+.om-ps-balance {
+  margin-top: 6px; width: 100%; border-radius: 18px; padding: 14px 16px; display: flex; align-items: center; justify-content: space-between;
+  background: rgba(255, 255, 255, 0.05); box-shadow: inset 0 0 0 1px rgba(233, 185, 73, 0.35);
+}
+.om-ps-face { width: 44px; height: 44px; border-radius: 50%; overflow: hidden; display: flex; align-items: flex-end; justify-content: center; background: #17171B; box-shadow: 0 0 0 2px #E9B949; }
+.om-ps-face img { width: 42px; height: auto; }
+.om-ps-balance-num { font-family: 'Exo 2', sans-serif; font-weight: 900; font-style: italic; font-size: 28px; color: #F6D77A; }
+.om-ps-gold {
+  width: 100%; min-height: 52px; border-radius: 14px; font-weight: 800; font-size: 16px; color: #1A1205;
+  background: linear-gradient(180deg, #FFE29A, #E9B949 55%, #C2902F); box-shadow: 0 8px 18px rgba(194, 144, 47, 0.35);
+  transition: filter 0.2s, transform 0.2s;
+}
+.om-ps-gold:hover { filter: brightness(1.05); transform: translateY(-1px); }
+.om-ps-ghost {
+  width: 100%; min-height: 48px; border-radius: 14px; font-weight: 800; font-size: 15px; color: #F6D77A;
+  background: rgba(255, 255, 255, 0.05); border: 1.5px solid rgba(233, 185, 73, 0.6);
+}
+.om-ps-ghost:hover { background: rgba(233, 185, 73, 0.12); }
+.om-pc {
+  border-radius: 24px; background: linear-gradient(180deg, #FFFFFF, #FDF8EF);
+  box-shadow: inset 0 1px 0 #fff, 0 0 0 1px rgba(194, 144, 47, 0.24), 0 14px 30px rgba(60, 40, 10, 0.12);
+}
+.om-redesign h1.om-pc-title,
+.om-pc-title {
+  margin: 0; font-family: 'Exo 2', sans-serif; font-weight: 900; font-style: italic; text-transform: uppercase;
+  font-size: 28px; line-height: 1; color: #17171B; -webkit-text-fill-color: #17171B;
+}
+.om-pc-ghost {
+  width: 100%; min-height: 48px; border-radius: 14px; font-weight: 800; font-size: 15px; color: #8A5A10;
+  background: #fff; border: 1px solid rgba(194, 144, 47, 0.55);
+}
+.om-pc-ghost:hover { background: #FFF6E0; }
+@keyframes om2-ps-sweep { 0% { transform: rotate(-8deg); } 100% { transform: rotate(8deg); } }
+@keyframes om2-ps-fall { 0% { transform: translateY(0) rotate(0); opacity: 0; } 10% { opacity: 1; } 100% { transform: translateY(560px) rotate(540deg); opacity: 0; } }
+@keyframes om2-ps-land { 0% { transform: translateY(-80px) scale(0.85); opacity: 0; } 100% { transform: none; opacity: 1; } }
+@keyframes om2-ps-ring { 0% { transform: scale(0.7); opacity: 0.9; } 100% { transform: scale(1.15); opacity: 0; } }
+@keyframes om2-ps-stamp { 0% { transform: rotate(-10deg) scale(2.2); opacity: 0; } 100% { transform: rotate(-10deg) scale(1); opacity: 1; } }
+@media (prefers-reduced-motion: reduce) {
+  .om-ps-beam, .om-ps-fall, .om-ps-ring, .om-ps-land, .om-ps-stamp { animation: none; }
+}
+
 /* ───────── Moje hry (deska 25) ───────── */
 .om-redesign h1.om-mg-title,
 .om-mg-title {

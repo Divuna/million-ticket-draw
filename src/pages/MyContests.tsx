@@ -152,7 +152,8 @@ const MyContests: React.FC = () => {
           ) : groups.length === 0 ? (
             <div className="om-mg-card flex flex-col items-center gap-3 py-12 text-center">
               <OneMilTicketIcon size={56} className="h-14 w-14 text-[#E9B949]" />
-              <p className="text-[#C9CDD4]">Zatím nemáš žádné tikety.</p>
+              <p className="font-bold text-[#ECEDEF]">Zatím nemáš žádné tikety</p>
+              <p className="text-sm text-[#A9AAB3]">Vyber si soutěž a otevři svůj první tiket.</p>
               <button type="button" className="om-mg-cta" onClick={() => navigate('/games')}>
                 Prohlédnout soutěže
               </button>

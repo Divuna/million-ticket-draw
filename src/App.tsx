@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from "react";
+import { AppLoadingScreen } from "@/components/brand/AppLoadingScreen";
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider, Tooltip, TooltipTrigger, TooltipContent } from "@/components/ui/tooltip";
@@ -368,11 +369,7 @@ function AppContent() {
     location.pathname === "/affiliate/register";
 
   if (user && roleLoading && !authEntryPath) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-background">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
-      </div>
-    );
+    return <AppLoadingScreen />;
   }
 
   // Hard-block: If partner/influencer tries to access blocked route, show spinner (redirect in effect)
