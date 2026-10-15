@@ -17,7 +17,7 @@ export function useVoucherDiscountLabels(): Record<string, string> {
         .not('discount_label' as never, 'is', null);
       if (error) return {} as Record<string, string>;
       const map: Record<string, string> = {};
-      for (const row of (data ?? []) as Array<{ id: string; discount_label: string | null }>) {
+      for (const row of (data ?? []) as unknown as Array<{ id: string; discount_label: string | null }>) {
         const label = row.discount_label?.trim();
         if (label) map[row.id] = label;
       }
