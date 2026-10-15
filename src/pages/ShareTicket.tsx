@@ -3,7 +3,7 @@ import { useParams } from 'react-router-dom';
 import { Helmet } from 'react-helmet-async';
 import { Button } from '@/components/ui/button';
 import { Facebook } from 'lucide-react';
-import logoOnemil from '@/assets/logo-onemil.png';
+import logoOnemil from '@/assets/redesign/onemil-logo.png';
 import { supabaseUrl } from '@/integrations/supabase/client';
 
 const ShareTicket: React.FC = () => {
@@ -17,8 +17,6 @@ const ShareTicket: React.FC = () => {
   const [imageUrl, setImageUrl] = useState<string | null>(publicTicketImageUrl);
   const [isLoading, setIsLoading] = useState(true);
 
-  // Extract ticket number from ticketId (format: contestId-ticketNumber)
-  const ticketNumber = ticketId?.split('-').pop() || ticketId || '';
   const ogImage = `${supabaseUrl}/functions/v1/og-ticket-share?id=${encodeURIComponent(ticketId)}`;
   const pageUrl = `https://onemil.cz/share/ticket/${ticketId}`;
   
@@ -30,7 +28,8 @@ const ShareTicket: React.FC = () => {
 
   const shareUrl = ogImage;
   const ogTitle = 'Zkusil jsem štěstí na OneMil!';
-  const ogDescription = `Ticket #${ticketNumber} – zkus to taky na onemil.cz`;
+  // Bez čísla tiketu – sdílí se jen soutěž a výhra (rozhodnutí Pavla, deska 26).
+  const ogDescription = 'Zkus to taky na onemil.cz';
 
   const handleShareFacebook = () => {
     window.open(
@@ -72,80 +71,52 @@ const ShareTicket: React.FC = () => {
         <meta name="twitter:description" content={ogDescription} />
       </Helmet>
 
-      <div className="min-h-screen bg-gradient-to-b from-background to-muted/30 flex flex-col items-center justify-center p-4">
-        {/* Logo */}
-        <img 
-          src={logoOnemil} 
-          alt="OneMil" 
-          className="h-12 mb-6"
-        />
+      <div className="om-share min-h-screen flex flex-col items-center justify-center p-4">
+        <img src={logoOnemil} alt="OneMil" className="mb-6 h-14 w-auto" />
 
-        {/* Title */}
-        <h1 className="text-2xl font-bold text-center mb-2">
-          {ogTitle}
-        </h1>
-        <p className="text-muted-foreground text-center mb-6">
-          {ogDescription}
-        </p>
+        <h1 className="om-share-title">{ogTitle}</h1>
+        <p className="mb-6 text-center text-[15px] text-[#5E5B57]">{ogDescription}</p>
 
-        {/* Ticket Image Preview */}
-        <div className="w-full max-w-md mb-8">
+        {/* Náhled sdíleného tiketu */}
+        <div className="mb-8 w-full max-w-md">
           {isLoading ? (
-            <div className="aspect-[1200/630] bg-muted/30 rounded-lg flex items-center justify-center">
-              <div className="text-sm text-muted-foreground">Načítám...</div>
+            <div className="om-share-frame flex aspect-[1200/630] items-center justify-center">
+              <div className="text-sm text-[#A9AAB3]">Načítám...</div>
             </div>
           ) : imageUrl ? (
-            <img 
-              src={imageUrl} 
-              alt="Ticket preview" 
-              className="w-full rounded-lg shadow-lg border border-border/30"
+            <img
+              src={imageUrl}
+              alt="Náhled tiketu"
+              className="om-share-frame w-full"
               onError={() => setImageUrl(null)}
             />
           ) : (
-            <div className="aspect-[1200/630] bg-muted/30 rounded-lg flex items-center justify-center">
-              <div className="text-sm text-muted-foreground text-center p-4">
-                Náhled tiketu není k dispozici
-              </div>
+            <div className="om-share-frame flex aspect-[1200/630] items-center justify-center">
+              <div className="p-4 text-center text-sm text-[#A9AAB3]">Náhled tiketu není k dispozici</div>
             </div>
           )}
         </div>
 
-        {/* Share Buttons */}
-        <div className="flex gap-4 mb-8">
-          <Button
-            variant="outline"
-            size="lg"
-            className="gap-2"
-            onClick={handleShareFacebook}
-          >
+        {/* Sdílení */}
+        <div className="mb-8 flex w-full max-w-md flex-col gap-2.5 sm:flex-row">
+          <Button variant="outline" size="lg" className="om-share-btn flex-1 gap-2" onClick={handleShareFacebook}>
             <Facebook className="h-5 w-5 text-[#1877F2]" />
             Sdílet na Facebook
           </Button>
-
-          <Button
-            variant="outline"
-            size="lg"
-            className="gap-2"
-            onClick={handleShareX}
-          >
-            <svg className="h-4 w-4" viewBox="0 0 24 24" fill="currentColor">
+          <Button variant="outline" size="lg" className="om-share-btn flex-1 gap-2" onClick={handleShareX}>
+            <svg className="h-4 w-4" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
               <path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"/>
             </svg>
             Sdílet na X
           </Button>
         </div>
 
-        {/* CTA */}
-        <div className="text-center">
-          <p className="text-muted-foreground mb-4">
-            Chceš taky zkusit štěstí?
-          </p>
-          <Button 
-            size="lg"
-            onClick={() => window.location.href = 'https://onemil.cz'}
-          >
-            Hrát na OneMil
-          </Button>
+        {/* Pozvánka pro kamaráda (✦ NAVÍC) */}
+        <div className="w-full max-w-md text-center">
+          <p className="mb-3 text-[#5E5B57]">Chceš taky zkusit štěstí?</p>
+          <button type="button" className="om-ps-gold" onClick={() => (window.location.href = 'https://onemil.cz')}>
+            Vyzkoušet OneMil
+          </button>
         </div>
       </div>
     </>

@@ -872,6 +872,28 @@ body:has(.om-redesign) {
   .om-ps-beam, .om-ps-fall, .om-ps-ring, .om-ps-land, .om-ps-stamp { animation: none; }
 }
 
+/* ───────── Sdílený tiket (deska 26) ───────── */
+.om-share {
+  font-family: 'Manrope', system-ui, sans-serif; color: #17171B;
+  background:
+    radial-gradient(120% 40% at 50% 0%, #FFF6E0, rgba(255, 246, 224, 0) 70%),
+    repeating-linear-gradient(135deg, rgba(194, 144, 47, 0.045) 0 1px, transparent 1px 14px),
+    #F5EEE3;
+}
+.om-share-title {
+  margin: 0 0 8px; text-align: center; font-family: 'Exo 2', sans-serif; font-weight: 900; font-style: italic;
+  text-transform: uppercase; font-size: 28px; line-height: 1.05; color: #17171B; -webkit-text-fill-color: #17171B;
+}
+.om-share-frame {
+  border-radius: 16px; overflow: hidden; background: #17171B;
+  box-shadow: 0 0 0 2px #E9B949, 0 0 0 5px rgba(233, 185, 73, 0.18), 0 18px 34px rgba(60, 40, 10, 0.25);
+}
+.om-share .om-share-btn {
+  min-height: 48px; border-radius: 14px; font-weight: 800; color: #17171B; background: #fff;
+  border: 1px solid rgba(194, 144, 47, 0.45);
+}
+.om-share .om-share-btn:hover { background: #FFF6E0; }
+
 /* ───────── Moje hry (deska 25) ───────── */
 .om-redesign h1.om-mg-title,
 .om-mg-title {

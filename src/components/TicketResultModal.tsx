@@ -647,15 +647,15 @@ export const TicketResultModal: React.FC<TicketResultModalProps> = ({
   /** Text copied by „Sdílet výhru“ — short viral hook + CTA (clipboard only) */
   const getWinRetentionShareText = () => {
     if (!isWinner || !result) return '';
-    const ticket = result.ticket_number.toLocaleString('cs-CZ');
+    // Číslo tiketu se nesdílí (rozhodnutí Pavla) – jen výhra a odkaz.
     if (isMainPrize) {
       const prize = result.won_prize?.trim() || 'hlavní výhru';
-      return `🔥 Vyhrál jsem „${prize}“ na OneMil! Zkus štěstí taky → onemil.cz · ticket #${ticket}`;
+      return `🔥 Vyhrál jsem „${prize}“ na OneMil! Zkus štěstí taky → onemil.cz`;
     }
     if (bonusPrize) {
       // U MIO výhry už název nese částku („500 MIO“).
       const name = bonusPrizeDisplayName(bonusPrize, 'bonus');
-      return `🎯 Trefa na OneMil: ${name}! Hraj i ty → onemil.cz · #${ticket}`;
+      return `🎯 Trefa na OneMil: ${name}! Hraj i ty → onemil.cz`;
     }
     return getShareText();
   };
