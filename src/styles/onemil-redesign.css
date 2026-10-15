@@ -1420,3 +1420,30 @@ button.om-mg-card:hover { transform: translateY(-2px); box-shadow: 0 20px 34px r
   .om-cd *, .om-cd *::before, .om-cd *::after, .om-cd-frame::before { animation: none !important; }
   .om-cd-mt { opacity: 1; }
 }
+
+/* ===== Cookies – lišta a nastavení (deska Dialogy 3 a 4); globální, lišta je na všech stránkách ===== */
+.om-ck-bar{border-radius:22px;background:#17171B;color:#ECEDEF;padding:16px;box-shadow:0 20px 40px rgba(0,0,0,.45),inset 0 0 0 1px rgba(233,185,73,.5);animation:om-ck-up .45s cubic-bezier(.2,.8,.2,1)}
+@media (min-width:640px){.om-ck-bar{padding:18px 22px}}
+@keyframes om-ck-up{from{transform:translateY(24px);opacity:0}to{transform:none;opacity:1}}
+@media (prefers-reduced-motion:reduce){.om-ck-bar{animation:none}}
+.om-ck-ico{width:34px;height:34px;border-radius:10px;background:rgba(233,185,73,.14);display:flex;align-items:center;justify-content:center;flex:none}
+.om-ck-title{font-family:'Exo 2',sans-serif;font-weight:900;font-style:italic;font-size:20px;text-transform:uppercase;color:#ECEDEF;letter-spacing:.01em}
+p.om-ck-text{margin:0;font-size:13px;line-height:1.5;color:#C9CAD1 !important}
+.om-ck-link{color:#F2C55C;font-weight:700}
+.om-ck-link:hover{text-decoration:underline}
+.om-ck-ghost{min-height:44px;padding:0 16px;border-radius:12px;border:1px solid rgba(255,255,255,.25);background:transparent;color:#ECEDEF;font-weight:700;font-size:13.5px;white-space:nowrap}
+.om-ck-ghost:hover{background:rgba(255,255,255,.06)}
+.om-ck-gold{min-height:46px;padding:0 20px;border:0;border-radius:12px;font-weight:800;font-size:15px;color:#1A1205;background:linear-gradient(180deg,#FFE29A,#E9B949 55%,#C2902F);box-shadow:0 6px 16px rgba(194,144,47,.35);white-space:nowrap}
+.om-ck-gold:hover{filter:brightness(1.06)}
+.om-ck-light{min-height:46px;border-radius:12px;font-weight:700;font-size:14px;color:#17171B;background:#fff;border:1px solid rgba(160,120,50,.35)}
+.om-ck-black{min-height:46px;border:0;border-radius:12px;font-weight:800;font-size:14px;color:#F6D77A;background:linear-gradient(180deg,#26262C,#121215);box-shadow:inset 0 0 0 1px rgba(233,185,73,.55),0 6px 14px rgba(23,23,27,.25)}
+.om-ck-gold:focus-visible,.om-ck-ghost:focus-visible,.om-ck-light:focus-visible,.om-ck-black:focus-visible{outline:2px solid #E9B949;outline-offset:2px}
+.om-ck-sheet{border-radius:24px !important;background:linear-gradient(180deg,#FFFFFF,#FBF5EA) !important;box-shadow:0 24px 60px rgba(20,14,6,.35) !important}
+h2.om-ck-sheet-title{font-family:'Exo 2',sans-serif !important;font-weight:900 !important;font-style:italic !important;font-size:22px !important;text-transform:uppercase;color:#17171B !important;background:none !important;-webkit-text-fill-color:#17171B !important}
+.om-ck-row{display:flex;align-items:center;gap:12px;padding:12px 0;border-bottom:1px solid rgba(160,120,50,.18)}
+.om-ck-row-last{border-bottom:0}
+.om-ck-row p{margin:0}
+.om-ck-switch[data-state=checked]{background:linear-gradient(180deg,#E9B949,#C2902F) !important}
+.om-ck-switch[data-state=unchecked]{background:#D8CBB2 !important}
+.om-ck-switch-lock[data-state=checked]{background:#2E9E5B !important;opacity:.7}
+.om-ck-switch > span{background:#fff !important;box-shadow:0 2px 4px rgba(0,0,0,.25) !important}
