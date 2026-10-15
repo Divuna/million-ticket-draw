@@ -16,6 +16,7 @@ import {
 } from "@/lib/monitoring";
 import { analytics } from "@/lib/analytics";
 import { TicketResultModal } from "@/components/TicketResultModal";
+import { useLatestWinners } from "@/hooks/useLatestWinners";
 import {
   MysteryPurchaseResultDialog,
   type MysteryTicketOutcome,
@@ -209,14 +210,32 @@ export default function ContestDetail() {
   const [, forceUpdate] = useState(0);
   const [progressTicketsTotal, setProgressTicketsTotal] = useState(1_000_000);
 
-  // Live activity rotating messages
-  const LIVE_MESSAGES = [
+  // Live activity rotating messages: nejdřív skutečné nedávné výhry této soutěže
+  // (veřejný zdroj jako „Poslední výherci“), pak obecné hlášky.
+  const BASE_LIVE_MESSAGES = [
     'Soutěž je aktivní',
     'Bonusové výherní pozice jsou součástí pravidel soutěže',
     'Každý další tiket posouvá pořadí soutěže',
     'Otevři další tiket v pořadí',
     'Výherní pozice jsou předem určeny',
   ];
+  const { data: latestWins } = useLatestWinners(40);
+  const LIVE_MESSAGES = useMemo(() => {
+    const title = contest?.title;
+    const wins = title
+      ? (latestWins ?? [])
+          .filter((w) => w.contest_title === title && w.prize_name)
+          .slice(0, 5)
+          .map((w) => {
+            const who = (w.user_nickname || w.user_name || '').trim();
+            return who && who !== 'Výherce' ? `${who} získává ${w.prize_name}` : `Nová výhra: ${w.prize_name}`;
+          })
+      : [];
+    return [...wins, ...BASE_LIVE_MESSAGES];
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [latestWins, contest?.title]);
+  const liveCountRef = useRef(LIVE_MESSAGES.length);
+  liveCountRef.current = LIVE_MESSAGES.length;
   const [liveMessageIndex, setLiveMessageIndex] = useState(0);
   const [liveVisible, setLiveVisible] = useState(true);
 
@@ -224,7 +243,7 @@ export default function ContestDetail() {
     const interval = setInterval(() => {
       setLiveVisible(false);
       setTimeout(() => {
-        setLiveMessageIndex((prev) => (prev + 1) % LIVE_MESSAGES.length);
+        setLiveMessageIndex((prev) => (prev + 1) % liveCountRef.current);
         setLiveVisible(true);
       }, 400);
     }, 8000);
@@ -924,7 +943,7 @@ export default function ContestDetail() {
                     transform: liveVisible ? 'translateX(0)' : 'translateX(-24px)',
                   }}
                 >
-                  {LIVE_MESSAGES[liveMessageIndex]}
+                  {LIVE_MESSAGES[liveMessageIndex % LIVE_MESSAGES.length]}
                 </span>
               </div>
               <div className="om-cd-timer" aria-hidden="true">
