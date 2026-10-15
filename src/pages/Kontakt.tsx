@@ -33,7 +33,7 @@ const Kontakt: React.FC = () => {
           <span className="inline-flex items-center gap-2 rounded-full border border-[rgba(194,144,47,0.3)] bg-[rgba(194,144,47,0.06)] px-4 py-1.5 text-[11px] font-semibold uppercase tracking-[0.18em] text-[#E9B949]">
             <Sparkles className="w-3.5 h-3.5" /> OneMil
           </span>
-          <h1 className="text-4xl md:text-5xl font-heading font-bold bg-gradient-to-r from-[hsl(var(--heading-gold))] via-[#E9B949] to-[hsl(var(--heading-gold))] bg-clip-text text-transparent leading-tight">
+          <h1 className="om-kontakt-title">
             Kontakt
           </h1>
           <p className="text-muted-foreground/80 text-[15px] md:text-base">
@@ -43,7 +43,7 @@ const Kontakt: React.FC = () => {
 
         {/* ── Vzkaz zakladatele ────────────────────────────────────────────── */}
         <section
-          className="relative overflow-hidden rounded-3xl border border-[rgba(194,144,47,0.22)] bg-gradient-to-b from-[hsl(220_30%_11%)] via-[hsl(220_28%_8%)] to-[hsl(222_35%_6%)] shadow-[0_12px_48px_hsl(222_50%_3%/0.55)]"
+          className="om-kontakt-founder relative overflow-hidden rounded-3xl"
           aria-labelledby="founder-heading"
         >
           {/* top accent line */}
@@ -75,7 +75,7 @@ const Kontakt: React.FC = () => {
 
               <div className="text-center sm:text-left">
                 <p className="text-[11px] uppercase tracking-[0.2em] text-[#E9B949] font-semibold mb-1">Vzkaz zakladatele</p>
-                <h2 id="founder-heading" className="font-heading font-bold text-2xl md:text-3xl text-foreground">
+                <h2 id="founder-heading" className="om-kontakt-name">
                   Pavel Diviš
                 </h2>
                 <p className="text-muted-foreground/85 text-[15px] mt-1">Jednatel / zakladatel OneMil</p>
@@ -105,7 +105,7 @@ const Kontakt: React.FC = () => {
         </section>
 
         {/* ── Firemní a právní údaje ───────────────────────────────────────── */}
-        <article className="rounded-3xl border border-border/30 bg-gradient-to-b from-card/60 to-card/40 backdrop-blur-sm shadow-[0_8px_32px_hsl(222_50%_3%/0.4)]">
+        <article className="om-kontakt-info rounded-3xl">
           <div className="px-6 sm:px-9 md:px-12 py-9 md:py-11 space-y-9">
 
             <div className="grid gap-5 sm:grid-cols-2">

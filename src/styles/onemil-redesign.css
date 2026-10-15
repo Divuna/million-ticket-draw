@@ -872,6 +872,36 @@ body:has(.om-redesign) {
   .om-ps-beam, .om-ps-fall, .om-ps-ring, .om-ps-land, .om-ps-stamp { animation: none; }
 }
 
+/* ───────── Kontakt (deska 27) ───────── */
+.om-redesign h1.om-kontakt-title,
+.om-kontakt-title {
+  margin: 0; font-family: 'Exo 2', sans-serif; font-weight: 900; font-style: italic; text-transform: uppercase;
+  font-size: 40px; line-height: 1; color: #17171B; -webkit-text-fill-color: #17171B;
+  text-shadow: 0 1px 0 #fff, 0 3px 10px rgba(194, 144, 47, 0.28);
+}
+.om-kontakt-founder {
+  color: #ECEDEF;
+  background: radial-gradient(120% 90% at 85% 0%, #3A1118, #17171B 60%);
+  box-shadow: 0 16px 30px rgba(23, 23, 27, 0.25), inset 0 0 0 1px rgba(233, 185, 73, 0.45);
+}
+.om-redesign h2.om-kontakt-name,
+.om-kontakt-name {
+  margin: 0; font-family: 'Exo 2', sans-serif; font-weight: 900; font-style: italic; text-transform: uppercase;
+  font-size: 28px; line-height: 1; background: none !important; padding: 0 !important;
+  color: #F6D77A !important; -webkit-text-fill-color: #F6D77A !important;
+}
+.om-redesign .om-kontakt-founder .text-muted-foreground,
+.om-redesign .om-kontakt-founder [class*="text-muted-foreground"] { color: #C9CDD4; }
+.om-redesign .om-kontakt-founder p:not([class]) { color: inherit; }
+.om-redesign .om-kontakt-founder .text-foreground,
+.om-redesign .om-kontakt-founder [class*="text-foreground"] { color: #F6EFD9; }
+.om-kontakt-info {
+  background: linear-gradient(180deg, #FFFFFF, #FDF8EF);
+  box-shadow: inset 0 1px 0 #fff, 0 0 0 1px rgba(194, 144, 47, 0.24), 0 14px 30px rgba(60, 40, 10, 0.12);
+}
+.om-redesign .om-kontakt-info h2 { font-family: 'Barlow Condensed', sans-serif; font-weight: 800; font-style: italic; text-transform: uppercase; }
+.om-redesign .om-kontakt-info [class*="bg-muted/"] { background: #FFFBF2; border-color: rgba(194, 144, 47, 0.22); }
+
 /* ───────── Sdílený tiket (deska 26) ───────── */
 .om-share {
   font-family: 'Manrope', system-ui, sans-serif; color: #17171B;
