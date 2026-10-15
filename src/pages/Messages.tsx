@@ -20,8 +20,9 @@ import {
   AI_ASSISTANT_TYPING_SUBLINE,
 } from "@/constants/messagesUi";
 import { SUPPORT_REQUEST_MARKER } from "@/constants/supportRequestMarker";
-import { Send } from "lucide-react";
-import { OneMilMessageIcon, OneMilDiamondIcon } from "@/components/icons/OneMilIcons";
+import { Send, Sparkles } from "lucide-react";
+import avatarPhone from "@/assets/redesign/avatar/avatar-telefon-voucher.png";
+import { OneMilDiamondIcon } from "@/components/icons/OneMilIcons";
 
 function parseMessageContent(content: string): { text: string; cta?: { label: string; action: string } } {
   try {
@@ -38,26 +39,6 @@ function parseMessageContent(content: string): { text: string; cta?: { label: st
     // not JSON, return raw
   }
   return { text: content };
-}
-
-/** Stable background particles — avoid Math.random() on every parent re-render (typing) → forced reflow. */
-const BACKGROUND_PARTICLE_COUNT = 20;
-function buildBackgroundParticles(): Array<{
-  id: number;
-  hueBoost: number;
-  leftPct: number;
-  topPct: number;
-  durationS: number;
-  delayS: number;
-}> {
-  return Array.from({ length: BACKGROUND_PARTICLE_COUNT }, (_, i) => ({
-    id: i,
-    hueBoost: 50 + ((i * 17) % 20),
-    leftPct: ((i * 37) % 100) + (i % 7) * 0.3,
-    topPct: ((i * 53) % 100) + (i % 5) * 0.4,
-    durationS: 8 + (i % 12) + (i % 3) * 0.5,
-    delayS: ((i * 1.1) % 5) * 0.4,
-  }));
 }
 
 interface Sparkle {
@@ -154,6 +135,27 @@ type MessageThreadItemProps = {
   supportHandoffMessage: string;
 };
 
+/** Rychlé otázky v prázdných Zprávách – jen vloží text do pole, nic samy neodešlou (✦ NAVÍC). */
+const QUICK_QUESTIONS = ["Jak funguje MIO?", "Jak se hraje soutěž?", "Kde najdu voucher?"];
+
+/** Vlastní značka asistenta Boba – zlatá jiskřička v tmavém kroužku (deska Zprávy). */
+function BobMark({ size = 16 }: { size?: number }) {
+  return (
+    <span
+      aria-hidden="true"
+      className="inline-flex shrink-0 items-center justify-center rounded-full"
+      style={{
+        width: size,
+        height: size,
+        background: "radial-gradient(circle at 50% 30%, #3A1118, #15151A 70%)",
+        boxShadow: "0 0 0 1px #E9B949",
+      }}
+    >
+      <Sparkles style={{ width: size * 0.62, height: size * 0.62 }} color="#F6D77A" strokeWidth={2.4} />
+    </span>
+  );
+}
+
 function MessageThreadItem({
   msg,
   index,
@@ -180,29 +182,30 @@ function MessageThreadItem({
         ? "Podpora"
         : null;
 
+  // Nový vzhled (deska Zprávy): moje zpráva = tmavá se zlatým lemem, Bob = bílá karta,
+  // podpora = karmínově tónovaná, systémová zpráva = světlá zlatá.
   const bubbleStyle: CSSProperties = isUserMessage
     ? {
-        background: "linear-gradient(135deg, #1FAF6D 0%, #169B5C 100%)",
-        border: "1px solid rgba(34, 197, 94, 0.6)",
-        boxShadow: "0 6px 25px rgba(34, 197, 94, 0.35)",
+        background: "linear-gradient(180deg, #26262C, #121215)",
+        boxShadow: "inset 0 0 0 1px rgba(233,185,73,0.4), 0 6px 14px rgba(23,23,27,0.2)",
+        borderRadius: "18px 18px 4px 18px",
       }
     : isAiMessage
       ? {
-          background: "linear-gradient(135deg, hsl(260, 60%, 18%) 0%, hsl(280, 65%, 14%) 100%)",
-          border: "1px solid hsl(270, 70%, 60%, 0.7)",
-          boxShadow: "0 6px 24px hsl(270, 80%, 20%, 0.6)",
-          filter: "brightness(1.1)",
+          background: "linear-gradient(180deg, #FFFFFF, #FDF8EF)",
+          boxShadow: "inset 0 1px 0 #fff, 0 0 0 1px rgba(194,144,47,0.24), 0 6px 14px rgba(60,40,10,0.1)",
+          borderRadius: "18px 18px 18px 4px",
         }
       : isSystemSender || isSystemMessage
         ? {
-            background: "linear-gradient(135deg, hsl(220, 25%, 12%) 0%, hsl(220, 25%, 10%) 100%)",
-            border: "1px solid rgba(194,144,47, 0.2)",
-            boxShadow: "0 4px 16px hsl(0, 0%, 0%, 0.3)",
+            background: "linear-gradient(180deg, #FFFBEF, #FBF1D8)",
+            boxShadow: "inset 0 0 0 1px rgba(194,144,47,0.4), 0 6px 14px rgba(60,40,10,0.08)",
+            borderRadius: "18px",
           }
         : {
-            background: "linear-gradient(135deg, hsl(220, 25%, 12%) 0%, hsl(220, 30%, 15%) 100%)",
-            border: "1px solid hsl(220, 20%, 25%, 0.5)",
-            boxShadow: "0 4px 16px hsl(0, 0%, 0%, 0.3)",
+            background: "linear-gradient(180deg, #FFF6F7, #FBE9EC)",
+            boxShadow: "inset 0 0 0 1px rgba(181,18,43,0.35), 0 6px 14px rgba(60,40,10,0.08)",
+            borderRadius: "18px 18px 18px 4px",
           };
 
   const timeLabel = useMemo(
@@ -226,24 +229,13 @@ function MessageThreadItem({
       }}
     >
       <div
-        className={`max-w-[75%] relative overflow-hidden rounded-2xl p-4 hover:scale-[1.01] ${
+        className={`max-w-[80%] relative overflow-hidden px-[13px] py-[10px] ${
           isAiMessage
             ? "transition-[transform,opacity] duration-150 [contain:layout]"
             : "transition-all duration-300"
         }`}
         style={bubbleStyle}
       >
-        {isUserMessage && (
-          <div
-            className="absolute inset-0 opacity-20 pointer-events-none"
-            style={{
-              background: "linear-gradient(90deg, transparent 0%, rgba(34, 197, 94, 0.5) 50%, transparent 100%)",
-              backgroundSize: "200% 100%",
-              animation: "shimmer 3s ease-in-out infinite",
-            }}
-          />
-        )}
-
         {(isSystemSender || (isSystemMessage && !isUserMessage)) && (
           <div className="flex items-center gap-2 mb-2">
             <OneMilDiamondIcon size={16} className="w-4 h-4 text-[#C2902F]" />
@@ -261,16 +253,23 @@ function MessageThreadItem({
         )}
 
         {!isSystemSender && !isSystemMessage && senderLabel && (
-          <p className="relative z-10 text-xs font-semibold text-gray-400 mb-1">{senderLabel}</p>
+          <p
+            className={`relative z-10 flex items-center gap-1.5 text-[11px] font-extrabold mb-[3px] ${
+              isAiMessage ? "text-[#8A5A10]" : "text-[#B5122B]"
+            }`}
+          >
+            {isAiMessage && <BobMark size={16} />}
+            {senderLabel}
+          </p>
         )}
 
         {isUserMessage && (
-          <p className="relative z-10 text-xs font-semibold text-white/70 mb-1">{userName}</p>
+          <p className="relative z-10 text-[11px] font-extrabold text-[#E9B949]/80 mb-[3px]">{userName}</p>
         )}
 
         <p
-          className={`relative z-10 text-[15px] leading-relaxed whitespace-pre-wrap break-words ${
-            isUserMessage ? "text-white font-medium" : "text-gray-100"
+          className={`relative z-10 text-[14px] leading-[1.45] whitespace-pre-wrap break-words ${
+            isUserMessage ? "text-[#F6EFD9] font-medium" : "text-[#17171B]"
           }`}
         >
           {displayText}
@@ -308,16 +307,26 @@ function MessageThreadItem({
                 navigate(effectiveCta.action);
               }
             }}
-            className="relative z-10 mt-3 px-4 py-2 rounded-lg text-sm font-semibold transition-all duration-200 hover:scale-[1.03] active:scale-[0.98]"
-            style={{
-              background: "linear-gradient(135deg, #C2902F 0%, #8A5A10 100%)",
-              color: "hsl(220, 20%, 8%)",
-              boxShadow: "0 4px 12px rgba(194,144,47, 0.3)",
-              border: "1px solid rgba(194,144,47, 0.4)",
-              pointerEvents: "auto",
-              position: "relative",
-              zIndex: 50,
-            }}
+            className="relative z-10 mt-[9px] flex min-h-[40px] w-full items-center justify-center gap-1.5 rounded-[11px] px-4 text-[13px] font-extrabold transition-all duration-200 hover:brightness-105 active:scale-[0.98]"
+            style={
+              effectiveCta.action === "/messages" && supportSent
+                ? {
+                    background: "rgba(46,158,91,0.14)",
+                    color: "#1F7A45",
+                    boxShadow: "inset 0 0 0 1px rgba(46,158,91,0.45)",
+                    pointerEvents: "auto",
+                    position: "relative",
+                    zIndex: 50,
+                  }
+                : {
+                    background: "linear-gradient(180deg, #FFE29A, #E9B949 55%, #C2902F)",
+                    color: "#1A1205",
+                    boxShadow: "0 4px 10px rgba(194,144,47,0.35)",
+                    pointerEvents: "auto",
+                    position: "relative",
+                    zIndex: 50,
+                  }
+            }
           >
             {effectiveCta.action === "/messages" && supportSent ? "Předáno podpoře" : effectiveCta.label}
           </button>
@@ -325,8 +334,8 @@ function MessageThreadItem({
         })()}
 
         <p
-          className={`relative z-10 text-xs mt-2 ${
-            isUserMessage ? "text-white/50" : "text-gray-500"
+          className={`relative z-10 text-[10px] mt-1 ${
+            isUserMessage ? "text-right text-[#A9AAB3]" : "text-[#8E8F98]"
           }`}
         >
           {timeLabel}
@@ -409,7 +418,6 @@ export default function MessagesPage() {
   const hasMoreOlderRef = useRef(false);
   const loadingOlderRef = useRef(false);
   const currentUserIdRef = useRef<string | undefined>(undefined);
-  const backgroundParticles = useMemo(() => buildBackgroundParticles(), []);
 
   messagesRef.current = messages;
   currentUserIdRef.current = user?.id;
@@ -931,103 +939,26 @@ export default function MessagesPage() {
   }, []);
 
   const hasDraft = newMessage.trim().length > 0;
-  const sendButtonSurface = useMemo(
-    () =>
-      hasDraft
-        ? {
-            background: "linear-gradient(135deg, #C2902F 0%, #8A5A10 100%)",
-            boxShadow: "0 4px 20px rgba(194,144,47, 0.4)",
-            border: "1px solid rgba(194,144,47, 0.3)",
-          }
-        : {
-            background: "linear-gradient(135deg, hsl(220, 25%, 15%) 0%, hsl(220, 30%, 20%) 100%)",
-            boxShadow: "none",
-            border: "1px solid hsl(220, 20%, 25%)",
-          },
-    [hasDraft],
-  );
 
   if (!user) {
     return <LoggedOutScreen />;
   }
 
   return (
-    <div className="messages-mobile-fixed-shell bg-gradient-to-b from-[hsl(220,20%,4%)] via-[hsl(220,25%,6%)] to-[hsl(220,20%,4%)] relative overflow-hidden">
-      {/* Premium floating particles */}
-      <div className="absolute inset-0 overflow-hidden pointer-events-none">
-        {backgroundParticles.map((p) => (
-          <div
-            key={p.id}
-            className="absolute w-1 h-1 rounded-full opacity-20"
-            style={{
-              background: `radial-gradient(circle, rgba(233,185,73, ${0.5 + p.hueBoost / 200}) 0%, transparent 70%)`,
-              left: `${p.leftPct}%`,
-              top: `${p.topPct}%`,
-              animation: `float ${p.durationS}s ease-in-out infinite`,
-              animationDelay: `${p.delayS}s`,
-            }}
-          />
-        ))}
-      </div>
-
-      {/* Premium shimmer overlay */}
-      <div 
-        className="absolute inset-0 pointer-events-none opacity-[0.02]"
-        style={{
-          background: 'linear-gradient(45deg, transparent 30%, rgba(233,185,73, 1) 50%, transparent 70%)',
-          backgroundSize: '200% 200%',
-          animation: 'shimmer 8s ease-in-out infinite',
-        }}
-      />
-
+    <div className="messages-mobile-fixed-shell om-msg-shell relative overflow-hidden">
       <div className="relative z-10 flex h-full flex-col md:h-[calc(100vh-80px)] max-w-4xl mx-auto">
-        {/* Premium Header */}
-        <div className="shrink-0 p-6 pb-4">
-          <div 
-            className="relative overflow-hidden rounded-2xl p-6"
-            style={{
-              background: 'linear-gradient(135deg, hsl(220, 25%, 8%) 0%, hsl(220, 30%, 12%) 50%, hsl(220, 25%, 8%) 100%)',
-              border: '1px solid rgba(194,144,47, 0.2)',
-              boxShadow: '0 8px 32px hsl(0, 0%, 0%, 0.4), inset 0 1px 0 rgba(194,144,47, 0.1)',
-            }}
-          >
-            {/* Header shimmer */}
-            <div 
-              className="absolute inset-0 opacity-10"
-              style={{
-                background: 'linear-gradient(90deg, transparent 0%, rgba(233,185,73, 1) 50%, transparent 100%)',
-                backgroundSize: '200% 100%',
-                animation: 'shimmer 4s ease-in-out infinite',
-              }}
-            />
-            
-            <div className="relative flex items-center gap-4">
-              <div
-                className="w-14 h-14 md:w-16 md:h-16 rounded-xl flex items-center justify-center shrink-0"
-                style={{
-                  background: 'linear-gradient(135deg, #C2902F 0%, #8A5A10 100%)',
-                  boxShadow: '0 4px 20px rgba(194,144,47,0.3)',
-                }}
-              >
-                <OneMilMessageIcon size={36} className="w-7 h-7 md:w-9 md:h-9 text-black" />
-              </div>
-
-              <div className="flex-1">
-                <h1 className="customer-premium-orange-heading text-2xl md:text-3xl font-bold tracking-tight">
-                  Zprávy
-                </h1>
-                <p className="text-sm text-gray-400 mt-1">
-                  Komunikace s podporou
-                </p>
-              </div>
-
-              <div className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-[rgba(194,144,47,0.1)] border border-[rgba(194,144,47,0.2)]">
-                <OneMilDiamondIcon size={16} className="w-4 h-4 text-[#C2902F]" />
-                <span className="text-xs font-medium text-[#E9B949]">
-                  {messages.length} zpráv
-                </span>
-              </div>
+        {/* Záhlaví – tmavý pruh s Bobem (deska Zprávy) */}
+        <div className="shrink-0 px-4 pt-4 pb-3 md:px-6 md:pt-6">
+          <div className="om-msg-bar">
+            <div className="om-msg-ava">
+              <Sparkles className="h-5 w-5" color="#F6D77A" strokeWidth={2.2} aria-hidden="true" />
+              <span className="om-msg-dot" aria-hidden="true" />
             </div>
+            <div className="flex-1 min-w-0">
+              <h1 className="om-msg-title">Zprávy</h1>
+              <p className="text-[11.5px] text-[#A9AAB3]">Bob a podpora OneMil</p>
+            </div>
+            <span className="om-msg-count">{messages.length} zpráv</span>
           </div>
         </div>
 
@@ -1043,21 +974,32 @@ export default function MessagesPage() {
             }}
           >
           {visibleMessages.length === 0 && !loading && (
-            <div 
-              className="flex flex-col items-center justify-center h-full text-center py-12"
+            <div
+              className="flex flex-col items-center justify-center min-h-full text-center py-6 gap-2.5"
               style={{ animation: 'fade-in 0.5s ease-out' }}
             >
-              <div 
-                className="w-20 h-20 rounded-2xl flex items-center justify-center mb-6"
-                style={{
-                  background: 'linear-gradient(135deg, hsl(220, 25%, 12%) 0%, hsl(220, 30%, 16%) 100%)',
-                  border: '1px solid rgba(194,144,47, 0.15)',
-                }}
-              >
-                <OneMilMessageIcon size={40} className="w-10 h-10 text-[#C2902F]/40" />
+              <img
+                src={avatarPhone}
+                alt="Avatar píše na telefonu"
+                className="om-msg-empty-avatar h-[220px] w-auto object-contain"
+              />
+              <p className="om-msg-empty-title">Zatím žádné zprávy</p>
+              <p className="text-sm text-[#5E5B57]">Napiš nám svou první zprávu</p>
+              <div className="mt-1.5 flex flex-wrap justify-center gap-2">
+                {QUICK_QUESTIONS.map((q) => (
+                  <button
+                    key={q}
+                    type="button"
+                    className="om-msg-quick"
+                    onClick={() => {
+                      setNewMessage(q);
+                      inputRef.current?.focus();
+                    }}
+                  >
+                    {q}
+                  </button>
+                ))}
               </div>
-              <p className="text-gray-400 text-lg font-medium">Zatím žádné zprávy</p>
-              <p className="text-gray-500 text-sm mt-2">Napiš nám svou první zprávu</p>
             </div>
           )}
 
@@ -1074,17 +1016,18 @@ export default function MessagesPage() {
           {showTypingIndicator && (
             <div className="flex justify-start">
               <div
-                className="max-w-[75%] relative overflow-hidden rounded-2xl p-4 transition-all duration-300"
+                className="max-w-[80%] relative overflow-hidden px-[13px] py-[10px] transition-all duration-300"
                 style={{
-                  background:
-                    "linear-gradient(135deg, hsl(260, 60%, 18%) 0%, hsl(280, 65%, 14%) 100%)",
-                  border: "1px solid hsl(270, 70%, 60%, 0.7)",
-                  boxShadow: "0 6px 24px hsl(270, 80%, 20%, 0.6)",
-                  filter: "brightness(1.1)",
+                  background: "linear-gradient(180deg, #FFFFFF, #FDF8EF)",
+                  boxShadow: "inset 0 1px 0 #fff, 0 0 0 1px rgba(194,144,47,0.24), 0 6px 14px rgba(60,40,10,0.1)",
+                  borderRadius: "18px 18px 18px 4px",
                 }}
               >
-                <p className="relative z-10 text-xs font-semibold text-gray-400 mb-1">{AI_ASSISTANT_BOB_LABEL}</p>
-                <p className="relative z-10 text-[15px] leading-relaxed text-gray-100">
+                <p className="relative z-10 flex items-center gap-1.5 text-[11px] font-extrabold text-[#8A5A10] mb-[3px]">
+                  <BobMark size={16} />
+                  {AI_ASSISTANT_BOB_LABEL}
+                </p>
+                <p className="relative z-10 text-[14px] leading-[1.45] text-[#17171B]">
                   <span>{AI_ASSISTANT_TYPING_SUBLINE}</span>
                   <span className="typing-bob-dots" aria-hidden="true">
                     <span className="typing-bob-dot">.</span>
@@ -1118,25 +1061,8 @@ export default function MessagesPage() {
 
         {/* Premium Input Bar */}
         <div className="shrink-0 p-6 pt-4">
-          <div 
-            className="relative overflow-hidden rounded-2xl p-4"
-            style={{
-              background: 'linear-gradient(135deg, hsl(220, 25%, 8%) 0%, hsl(220, 30%, 12%) 50%, hsl(220, 25%, 8%) 100%)',
-              border: '1px solid rgba(194,144,47, 0.2)',
-              boxShadow: '0 -8px 32px hsl(0, 0%, 0%, 0.3), inset 0 1px 0 rgba(194,144,47, 0.1)',
-            }}
-          >
-            {/* Input shimmer */}
-            <div 
-              className="absolute inset-0 opacity-5"
-              style={{
-                background: 'linear-gradient(90deg, transparent 0%, rgba(233,185,73, 1) 50%, transparent 100%)',
-                backgroundSize: '200% 100%',
-                animation: 'shimmer 6s ease-in-out infinite',
-              }}
-            />
-
-            <div className="relative flex items-center gap-3">
+          <div className="om-msg-compose">
+            <div className="relative flex items-center gap-2">
               {/* Flying message animation */}
               {flyingMessage && (
                 <div 
@@ -1187,33 +1113,17 @@ export default function MessagesPage() {
                 }}
                 onKeyDown={handleKeyDown}
                 placeholder="Napište zprávu..."
-                className="flex-1 bg-[hsl(220,25%,10%)] text-gray-100 p-4 rounded-xl border border-[hsl(220,20%,20%)] focus:border-[rgba(194,144,47,0.5)] focus:ring-2 focus:ring-[rgba(194,144,47,0.2)] transition-all duration-300 placeholder:text-gray-500 text-[15px] disabled:opacity-50"
-                style={{
-                  boxShadow: 'inset 0 2px 4px hsl(0, 0%, 0%, 0.2)',
-                }}
+                className="om-msg-field"
               />
               
               <button
                 type="button"
                 onClick={handleSend}
                 disabled={loading || !hasDraft}
-                className="relative overflow-hidden p-4 rounded-xl transition-all duration-300 disabled:opacity-40 disabled:cursor-not-allowed hover:scale-105 active:scale-95"
-                style={sendButtonSurface}
+                aria-label="Odeslat"
+                className="om-msg-send"
               >
-                {/* Button shimmer */}
-                {hasDraft && (
-                  <div 
-                    className="absolute inset-0 opacity-30"
-                    style={{
-                      background: 'linear-gradient(90deg, transparent 0%, rgba(233,185,73, 1) 50%, transparent 100%)',
-                      backgroundSize: '200% 100%',
-                      animation: 'shimmer 2s ease-in-out infinite',
-                    }}
-                  />
-                )}
-                <Send
-                  className={`w-5 h-5 relative z-10 transition-transform ${hasDraft ? "text-black" : "text-gray-500"}`}
-                />
+                <Send className="w-5 h-5 relative z-10 text-[#1A1205]" />
               </button>
             </div>
           </div>

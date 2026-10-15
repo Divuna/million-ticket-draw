@@ -667,6 +667,62 @@ body:has(.om-redesign) {
   .om-notfound-avatar, .om-notfound-code { animation: none; }
 }
 
+/* ───────── Zprávy (deska Zprávy) ───────── */
+.om-msg-shell {
+  background:
+    radial-gradient(120% 30% at 50% 0%, #FFF6E0, rgba(255, 246, 224, 0) 70%),
+    repeating-linear-gradient(135deg, rgba(194, 144, 47, 0.045) 0 1px, transparent 1px 14px),
+    #F5EEE3;
+  color: #17171B;
+}
+.om-msg-bar {
+  display: flex; align-items: center; gap: 10px; min-height: 66px; padding: 10px 14px; border-radius: 18px; color: #ECEDEF;
+  background: radial-gradient(140% 120% at 90% 0%, #3A1118, #17171B 60%);
+  box-shadow: 0 8px 20px rgba(23, 23, 27, 0.25), inset 0 0 0 1px rgba(233, 185, 73, 0.25);
+}
+.om-msg-ava {
+  position: relative; flex: none; width: 46px; height: 46px; border-radius: 50%; display: flex; align-items: center; justify-content: center;
+  background: radial-gradient(circle at 50% 30%, #3A1118, #15151A 70%); box-shadow: 0 0 0 2px #E9B949;
+}
+.om-msg-dot { position: absolute; right: -1px; bottom: -1px; width: 12px; height: 12px; border-radius: 50%; background: #2E9E5B; box-shadow: 0 0 0 2px #17171B; }
+.om-redesign h1.om-msg-title,
+.om-msg-title {
+  margin: 0; font-family: 'Exo 2', sans-serif; font-weight: 900; font-style: italic; text-transform: uppercase;
+  font-size: 20px; line-height: 1; color: #F6EFD9; -webkit-text-fill-color: #F6EFD9; background: none;
+}
+.om-msg-count {
+  flex: none; padding: 4px 10px; border-radius: 999px; font-size: 11px; font-weight: 800; color: #F6D77A;
+  background: rgba(233, 185, 73, 0.12); box-shadow: inset 0 0 0 1px rgba(233, 185, 73, 0.4);
+}
+.om-msg-empty-avatar { filter: drop-shadow(0 14px 22px rgba(60, 40, 10, 0.3)); animation: om2-bob 3.6s ease-in-out infinite; }
+.om-msg-empty-title {
+  font-family: 'Exo 2', sans-serif; font-weight: 900; font-style: italic; text-transform: uppercase;
+  font-size: 24px; line-height: 1.05; color: #17171B;
+}
+.om-msg-quick {
+  min-height: 38px; padding: 0 14px; border-radius: 999px; border: 1px solid rgba(194, 144, 47, 0.55); background: #fff;
+  font-size: 12.5px; font-weight: 700; color: #8A5A10; transition: background 0.2s;
+}
+.om-msg-quick:hover { background: #FFF6E0; }
+.om-msg-compose {
+  padding: 10px 12px; border-radius: 18px; background: rgba(250, 246, 239, 0.97);
+  box-shadow: 0 -8px 22px rgba(60, 40, 10, 0.1), inset 0 0 0 1px rgba(194, 144, 47, 0.2);
+}
+.om-msg-field {
+  flex: 1; min-width: 0; min-height: 46px; border-radius: 23px; border: 1px solid rgba(160, 120, 50, 0.3); background: #fff;
+  padding: 0 16px; font-size: 14px; color: #17171B; outline: none; transition: border-color 0.2s, box-shadow 0.2s;
+}
+.om-msg-field::placeholder { color: #8E8F98; }
+.om-msg-field:focus { border-color: rgba(194, 144, 47, 0.7); box-shadow: 0 0 0 3px rgba(233, 185, 73, 0.25); }
+.om-msg-field:disabled { opacity: 0.5; }
+.om-msg-send {
+  position: relative; flex: none; width: 46px; height: 46px; border-radius: 50%; display: flex; align-items: center; justify-content: center;
+  background: linear-gradient(180deg, #FFE29A, #E9B949 55%, #C2902F); box-shadow: 0 6px 14px rgba(194, 144, 47, 0.4);
+  transition: transform 0.2s, opacity 0.2s;
+}
+.om-msg-send:hover:not(:disabled) { transform: scale(1.05); }
+.om-msg-send:disabled { opacity: 0.45; cursor: not-allowed; }
+
 /* ───────── Detail soutěže (deska 5 – schválená verze 5F/5G) ───────── */
 .om-cd-bgimg {
   position: absolute; left: 0; right: 0; top: 0; height: 560px; z-index: 0; pointer-events: none;
