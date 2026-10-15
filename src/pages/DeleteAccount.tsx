@@ -15,14 +15,14 @@ const DeleteAccount: React.FC = () => {
       <Header />
 
       <main className="container mx-auto px-4 py-8 max-w-3xl">
-        <Card className="border border-border">
+        <Card className="om-cms-card border-0">
           <CardHeader className="text-center">
             <div className="flex justify-center mb-4">
               <div className="w-16 h-16 bg-destructive/10 rounded-full flex items-center justify-center">
                 <Trash2 className="w-8 h-8 text-destructive" />
               </div>
             </div>
-            <CardTitle className="text-2xl">Smazání účtu</CardTitle>
+            <CardTitle className="om-cms-title text-center" style={{ backgroundPosition: 'center bottom' }}>Smazání účtu</CardTitle>
             <p className="text-muted-foreground mt-2">
               Informace o tom, jak smazat tvůj účet a osobní údaje
             </p>
@@ -41,11 +41,11 @@ const DeleteAccount: React.FC = () => {
                   Svůj účet můžeš smazat přímo v aplikaci OneMil. Postupuj následovně:
                 </p>
                 <ol className="list-decimal list-inside mt-3 space-y-2 text-muted-foreground">
-                  <li>Přihlaste se do aplikace OneMil</li>
+                  <li>Přihlas se do aplikace OneMil</li>
                   <li>Přejdi do sekce <strong className="text-foreground">Profil</strong></li>
-                  <li>Vyberte možnost <strong className="text-foreground">Nastavení účtu</strong></li>
+                  <li>Vyber možnost <strong className="text-foreground">Nastavení účtu</strong></li>
                   <li>Klikni na tlačítko <strong className="text-foreground">Smazat účet</strong></li>
-                  <li>Potvrďte smazání účtu</li>
+                  <li>Potvrď smazání účtu</li>
                 </ol>
               </div>
             </div>

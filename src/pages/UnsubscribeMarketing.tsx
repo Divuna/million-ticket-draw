@@ -3,10 +3,9 @@ import { useNavigate, useLocation } from 'react-router-dom';
 import { buildLoginRedirectUrl } from '@/lib/loginRedirect';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
 import { useToast } from '@/hooks/use-toast';
-import { AlertTriangle, CheckCircle, Mail } from 'lucide-react';
+import avatarMail from '@/assets/redesign/avatar/avatar-telefon-voucher.png';
+import avatarThumb from '@/assets/redesign/avatar/avatar-palec.png';
 
 const UnsubscribeMarketing: React.FC = () => {
   const { user } = useAuth();
@@ -39,7 +38,7 @@ const UnsubscribeMarketing: React.FC = () => {
       setSuccess(true);
       toast({
         title: "Odhlášení úspěšné",
-        description: "Byli jste odhlášeni z marketingových sdělení."
+        description: "Odhlásili jsme tě z marketingových sdělení."
       });
 
       // Send notification (non-blocking)
@@ -57,75 +56,63 @@ const UnsubscribeMarketing: React.FC = () => {
     }
   };
 
-  if (!user) {
-    return (
-      <div className="min-h-screen bg-background flex items-center justify-center p-4">
-        <Card className="max-w-md w-full">
-          <CardHeader className="text-center">
-            <AlertTriangle className="h-12 w-12 text-warning mx-auto mb-4" />
-            <CardTitle>Přihlášení vyžadováno</CardTitle>
-            <CardDescription>
-              Pro odhlášení z marketingových sdělení se prosím nejprve přihlaste.
-            </CardDescription>
-          </CardHeader>
-          <CardFooter className="justify-center">
-            <Button onClick={() => navigate(buildLoginRedirectUrl(location.pathname + location.search))}>
-              Přihlásit se
-            </Button>
-          </CardFooter>
-        </Card>
+  const shell = (children: React.ReactNode) => (
+    <div className="min-h-screen bg-background flex items-center justify-center p-4">
+      <div className="om-pc mx-auto flex w-full max-w-md flex-col items-center gap-3 px-6 pb-7 pt-6 text-center">
+        {children}
       </div>
+    </div>
+  );
+
+  if (!user) {
+    return shell(
+      <>
+        <img src={avatarMail} alt="" aria-hidden="true" className="om-float h-[150px] w-auto object-contain" />
+        <h1 className="om-pc-title">Přihlášení vyžadováno</h1>
+        <p className="text-sm leading-relaxed text-[#5E5B57]">Pro odhlášení z marketingových sdělení se nejdřív přihlas.</p>
+        <button
+          type="button"
+          className="om-ps-gold mt-2"
+          onClick={() => navigate(buildLoginRedirectUrl(location.pathname + location.search))}
+        >
+          Přihlásit se
+        </button>
+      </>,
     );
   }
 
   if (success) {
-    return (
-      <div className="min-h-screen bg-background flex items-center justify-center p-4">
-        <Card className="max-w-md w-full">
-          <CardHeader className="text-center">
-            <CheckCircle className="h-12 w-12 text-green-500 mx-auto mb-4" />
-            <CardTitle>Odhlášení dokončeno</CardTitle>
-            <CardDescription>
-              Byli jste úspěšně odhlášeni z marketingových sdělení. 
-              Už ti nebudeme posílat žádné propagační e-maily.
-            </CardDescription>
-          </CardHeader>
-          <CardFooter className="justify-center">
-            <Button variant="outline" onClick={() => navigate('/')}>
-              Zpět na hlavní stránku
-            </Button>
-          </CardFooter>
-        </Card>
-      </div>
+    return shell(
+      <>
+        <img src={avatarThumb} alt="" aria-hidden="true" className="om-float h-[150px] w-auto object-contain" />
+        <h1 className="om-pc-title">Odhlášení dokončeno</h1>
+        <p className="text-sm leading-relaxed text-[#5E5B57]">Kdykoli se můžeš znovu přihlásit k odběru v Profilu.</p>
+        <button type="button" className="om-ps-gold mt-2" onClick={() => navigate('/')}>
+          Zpět na Domů
+        </button>
+      </>,
     );
   }
 
-  return (
-    <div className="min-h-screen bg-background flex items-center justify-center p-4">
-      <Card className="max-w-md w-full">
-        <CardHeader className="text-center">
-          <Mail className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
-          <CardTitle>Odhlášení z marketingových sdělení</CardTitle>
-          <CardDescription>
-            Opravdu se chceš odhlásit z odběru marketingových sdělení?
-            Po odhlášení ti už nebudeme posílat propagační e-maily.
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <p className="text-sm text-muted-foreground text-center">
-            E-mail: <strong>{user.email}</strong>
-          </p>
-        </CardContent>
-        <CardFooter className="flex gap-3 justify-center">
-          <Button variant="outline" onClick={() => navigate(-1)} disabled={loading}>
-            Zrušit
-          </Button>
-          <Button variant="destructive" onClick={handleUnsubscribe} disabled={loading}>
-            {loading ? 'Zpracovávám...' : 'Odhlásit se'}
-          </Button>
-        </CardFooter>
-      </Card>
-    </div>
+  return shell(
+    <>
+      <img src={avatarMail} alt="" aria-hidden="true" className="om-float h-[150px] w-auto object-contain" />
+      <h1 className="om-pc-title text-[24px]">Odhlášení z marketingových sdělení</h1>
+      <p className="text-sm leading-relaxed text-[#5E5B57]">
+        Už ti nebudeme posílat novinky a nabídky. E-maily k účtu a výhrám ti chodit dál budou.
+      </p>
+      <p className="text-xs text-[#8E8F98]">
+        E-mail: <strong className="text-[#3A3A40]">{user.email}</strong>
+      </p>
+      <div className="mt-2 flex w-full flex-col gap-2.5">
+        <button type="button" className="om-ps-gold" onClick={handleUnsubscribe} disabled={loading}>
+          {loading ? 'Zpracovávám...' : 'Odhlásit se'}
+        </button>
+        <button type="button" className="om-pc-ghost" onClick={() => navigate(-1)} disabled={loading}>
+          Zpět
+        </button>
+      </div>
+    </>,
   );
 };
 
