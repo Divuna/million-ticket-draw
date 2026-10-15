@@ -17,6 +17,7 @@ import { toast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { useUserRole } from '@/hooks/useUserRole';
+import { CustomerNoticeSettingsCard } from '@/components/admin/CustomerNoticeSettingsCard';
 import { Search, Bell, Plus, Send, AlertTriangle } from 'lucide-react';
 
 interface Notification {
@@ -36,7 +37,7 @@ interface Notification {
 
 const AdminNotifications: React.FC = () => {
   const { user, loading: authLoading } = useAuth();
-  const { isAdmin, loading: roleLoading } = useUserRole();
+  const { isAdmin, isSuperAdmin, loading: roleLoading } = useUserRole();
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
@@ -284,6 +285,7 @@ const AdminNotifications: React.FC = () => {
 
   return (
     <div className="container mx-auto px-4 py-6 pb-8">
+        {isSuperAdmin && <CustomerNoticeSettingsCard />}
         <Card>
           <CardHeader>
             <div className="flex justify-between items-start">
