@@ -1,3 +1,11 @@
+# 16. 10. 2026 — Audit při mazání účtu opraven jen na stagingu
+
+Na rozhodnutí Pavla upraven `fn_audit_generic` POUZE na stagingu (`docs/sql/staging_only_fn_audit_generic_null_user_on_delete.sql`):
+při DELETE zapíše `audit_logs.user_id` NULL, když uživatel už neexistuje (původní ID zůstává v metadatech).
+Produkce záměrně beze změny (2 účty, nic se nemaže). Ověření v transakci s ROLLBACK ukázalo, že auditní chyba zmizela,
+ale testovací účty stejně nejdou smazat – zastaví je neměnné `wallet_lot_movements` (záměrný invariant MIO).
+Nové OPEN ISSUE: žádost o smazání účtu s historií MIO bude před spuštěním potřebovat anonymizaci místo fyzického smazání.
+
 # 15. 10. 2026 — Grafický redesign nasazen na onemil.cz
 
 Na pokyn Pavla sloučen PR #424 (`a6ba5260`), Vercel Production READY, produkční smoke zelený.
