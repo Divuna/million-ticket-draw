@@ -53,7 +53,7 @@ v 19:20 UTC vrátil 200 `No pending emails`. DB/EF změny (schválení Pavla „
 - **MIO výhra jde do bonusových výher – ZÁMĚR (potvrdil Pavel 16. 10. 2026):** trigger `on_bonus_winner_add_to_bonus_wallet`
   připisuje MIO výhru do `wallets.bonus_balance_coins` a zákazník si ji do hlavního zůstatku převádí sám v profilu
   (`transfer_bonus_to_main`). Neměnit na automatické připsání. Detail výhry to zákazníkovi vysvětluje.
-- Detail výhry „Cesta k tobě“ (`WinDetailModal`) předělán podle plátna 16. 10. 2026 v PR #432 (produkce až po sloučení).
+- Detail výhry „Cesta k tobě“ (`WinDetailModal`) předělán podle plátna, v produkci od 16. 10. 2026 (PR #432, merge `2dc5ff14`, produkční smoke zelený).
 
 **Zapnutí upozornění:** všechny předpoklady jsou splněné (frontend s logem i `process-email-queue` v193 jsou
 nasazené) – zapíná superadmin v `/admin/notifications` → Automatická upozornění. Při budoucím nasazení
