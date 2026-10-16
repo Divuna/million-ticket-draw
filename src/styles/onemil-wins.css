@@ -1,0 +1,157 @@
+/* ───────── Moje výhry (deska Výhry v plátně redesignu) ─────────
+ * Světlá stránka, hlavní výhra jako tmavá „trofejová“ karta s fotkou,
+ * bonusové výhry jako světlé řádkové karty se stavem. */
+
+.om-wins-avatar {
+  flex: none; width: 64px; height: 64px; border-radius: 50%; overflow: hidden;
+  display: flex; align-items: flex-end; justify-content: center;
+  background: radial-gradient(circle at 50% 30%, #3A1118, #15151A 70%);
+  box-shadow: 0 0 0 2px #E9B949, 0 6px 14px rgba(60, 40, 10, 0.25);
+}
+.om-wins-avatar img { width: 58px; height: auto; }
+
+.om-wins-seg {
+  display: grid; grid-template-columns: 1fr 1fr; gap: 4px; padding: 4px; border-radius: 16px;
+  background: rgba(255, 255, 255, 0.75); box-shadow: inset 0 0 0 1px rgba(194, 144, 47, 0.25);
+}
+.om-wins-tab {
+  min-height: 44px; border-radius: 12px; border: 0; background: transparent; display: inline-flex;
+  align-items: center; justify-content: center; gap: 8px; font-weight: 800; font-size: 14px; color: #5E5B57;
+  transition: background 0.2s, color 0.2s;
+}
+.om-wins-tab:hover { color: #17171B; }
+.om-wins-tab[aria-selected="true"] {
+  color: #F6D77A; background: radial-gradient(140% 120% at 85% 0%, #3A1118, #17171B 65%);
+  box-shadow: 0 6px 16px rgba(23, 23, 27, 0.25), inset 0 0 0 1px rgba(233, 185, 73, 0.45);
+}
+.om-wins-tab-count {
+  min-width: 22px; padding: 1px 7px; border-radius: 999px; font-size: 11px; font-weight: 800;
+  background: rgba(23, 23, 27, 0.08); color: inherit;
+}
+.om-wins-tab[aria-selected="true"] .om-wins-tab-count { background: rgba(233, 185, 73, 0.18); }
+
+.om-wins-chips { display: flex; gap: 8px; overflow-x: auto; padding-bottom: 2px; scrollbar-width: none; }
+.om-wins-chips::-webkit-scrollbar { display: none; }
+.om-wins-chip {
+  flex: none; min-height: 36px; padding: 0 14px; border-radius: 999px; border: 1px solid rgba(194, 144, 47, 0.4);
+  background: #fff; font-size: 12.5px; font-weight: 700; color: #5E5B57; transition: background 0.2s, color 0.2s;
+}
+.om-wins-chip:hover { background: #FFF6E0; }
+.om-wins-chip[aria-pressed="true"] {
+  border-color: transparent; color: #1A1205;
+  background: linear-gradient(180deg, #FFE29A, #E9B949 55%, #C2902F); box-shadow: 0 4px 12px rgba(194, 144, 47, 0.35);
+}
+
+/* Hlavní výhra – tmavá karta s fotkou */
+.om-win-main {
+  position: relative; width: 100%; min-height: 168px; border: 0; padding: 0; text-align: left;
+  border-radius: 22px; overflow: hidden; background: #17171B; color: #ECEDEF; cursor: pointer;
+  box-shadow: 0 0 0 1.5px #E9B949, 0 0 26px rgba(233, 185, 73, 0.22), 0 16px 30px rgba(23, 23, 27, 0.3);
+  transition: transform 0.2s, box-shadow 0.2s;
+}
+.om-win-main:hover { transform: translateY(-2px); box-shadow: 0 0 0 1.5px #F6D77A, 0 0 32px rgba(233, 185, 73, 0.32), 0 20px 34px rgba(23, 23, 27, 0.34); }
+.om-win-main-img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; object-position: 70% 60%; opacity: 0.72; }
+.om-win-main-shade { position: absolute; inset: 0; background: linear-gradient(90deg, rgba(11, 11, 13, 0.96) 32%, rgba(11, 11, 13, 0.15)); }
+.om-win-main-body {
+  position: relative; display: flex; flex-direction: column; justify-content: space-between; gap: 14px;
+  min-height: 168px; padding: 16px; box-sizing: border-box; max-width: 78%;
+}
+.om-win-flag {
+  align-self: flex-start; display: inline-flex; align-items: center; gap: 6px; padding: 4px 10px 4px 6px; border-radius: 999px;
+  background: linear-gradient(180deg, #FFE29A, #C2902F); color: #1A1205; font-size: 11px; font-weight: 800; letter-spacing: 0.06em;
+}
+.om-win-flag img { width: 18px; height: auto; }
+.om-win-main-name {
+  font-family: 'Barlow Condensed', sans-serif; font-weight: 800; font-style: italic; text-transform: uppercase;
+  font-size: 26px; line-height: 1; color: #fff; overflow-wrap: anywhere;
+}
+.om-win-sub { font-size: 12px; color: #A9AAB3; }
+
+/* Bonusová výhra – světlý řádek */
+.om-win-row {
+  width: 100%; border: 0; text-align: left; cursor: pointer; display: flex; align-items: center; gap: 12px; padding: 12px;
+  border-radius: 18px; background: linear-gradient(180deg, #FFFFFF 0%, #FDF8EF 100%); color: #17171B;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.95), 0 0 0 1px rgba(194, 144, 47, 0.24), 0 2px 4px rgba(60, 40, 10, 0.06), 0 12px 26px rgba(60, 40, 10, 0.12);
+  transition: transform 0.2s, box-shadow 0.2s;
+}
+.om-win-row:hover { transform: translateY(-2px); }
+.om-win-thumb {
+  flex: none; width: 76px; height: 60px; border-radius: 12px; overflow: hidden; display: flex; align-items: center; justify-content: center;
+  background: #FFF6E0; box-shadow: 0 0 0 1.5px rgba(194, 144, 47, 0.5);
+}
+.om-win-thumb img { width: 100%; height: 100%; object-fit: cover; }
+.om-win-thumb-mio { background: transparent; box-shadow: none; }
+.om-win-mio-amount { font-family: 'Exo 2', sans-serif; font-weight: 900; font-style: italic; font-size: 21px; line-height: 1; color: #17171B; }
+.om-win-row-name {
+  font-family: 'Barlow Condensed', sans-serif; font-weight: 800; font-style: italic; text-transform: uppercase;
+  font-size: 19px; line-height: 1; color: #17171B; overflow-wrap: anywhere;
+}
+.om-win-row-sub { font-size: 11.5px; color: #5E5B57; }
+
+.om-win-highlight { outline: 3px solid rgba(233, 185, 73, 0.85); outline-offset: 3px; }
+
+/* Stavové pilulky */
+.om-win-pill {
+  flex: none; display: inline-flex; align-items: center; gap: 6px; padding: 4px 10px; border-radius: 999px;
+  font-size: 11px; font-weight: 800; white-space: nowrap;
+}
+.om-win-pill-dot { width: 7px; height: 7px; border-radius: 50%; background: currentColor; }
+.om-win-pill-wait { background: rgba(194, 144, 47, 0.14); color: #8A5A10; box-shadow: inset 0 0 0 1px rgba(194, 144, 47, 0.5); }
+.om-win-pill-ship { background: rgba(124, 77, 255, 0.1); color: #4B2FB0; box-shadow: inset 0 0 0 1px rgba(124, 77, 255, 0.35); }
+.om-win-pill-done { background: rgba(46, 158, 91, 0.12); color: #1F7A45; box-shadow: inset 0 0 0 1px rgba(46, 158, 91, 0.4); }
+.om-win-main .om-win-pill-wait { align-self: flex-start; background: rgba(233, 185, 73, 0.15); color: #F6D77A; box-shadow: inset 0 0 0 1px rgba(233, 185, 73, 0.6); }
+.om-win-main .om-win-pill-ship { align-self: flex-start; background: rgba(160, 135, 255, 0.16); color: #CFC2FF; box-shadow: inset 0 0 0 1px rgba(160, 135, 255, 0.5); }
+.om-win-main .om-win-pill-done { align-self: flex-start; background: rgba(46, 158, 91, 0.2); color: #8EE0AE; box-shadow: inset 0 0 0 1px rgba(46, 158, 91, 0.6); }
+.om-win-pill-wait .om-win-pill-dot { animation: om-win-pulse 1.6s ease-in-out infinite; }
+@keyframes om-win-pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.35; } }
+
+/* Nabídky partnerů */
+.om-offer-card {
+  width: 100%; overflow: hidden; border-radius: 20px; background: linear-gradient(180deg, #FFFFFF 0%, #FDF8EF 100%); color: #17171B;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.95), 0 0 0 1px rgba(194, 144, 47, 0.24), 0 12px 26px rgba(60, 40, 10, 0.12);
+  transition: transform 0.2s;
+}
+.om-offer-card:hover { transform: translateY(-2px); }
+.om-offer-head {
+  position: relative; min-height: 112px; display: flex; align-items: center; gap: 14px; padding: 16px;
+  background: radial-gradient(120% 120% at 20% 20%, #3A1118, #17171B 70%); color: #ECEDEF;
+}
+.om-offer-logo {
+  flex: none; width: 72px; height: 72px; border-radius: 14px; overflow: hidden; background: #fff;
+  display: flex; align-items: center; justify-content: center; box-shadow: 0 0 0 2px #E9B949, 0 8px 18px rgba(0, 0, 0, 0.35);
+}
+.om-offer-logo img { width: 100%; height: 100%; object-fit: contain; }
+.om-offer-partner { font-size: 11px; font-weight: 800; letter-spacing: 0.14em; text-transform: uppercase; color: #F2C55C; }
+.om-offer-title {
+  font-family: 'Barlow Condensed', sans-serif; font-weight: 800; font-style: italic; text-transform: uppercase;
+  font-size: 21px; line-height: 1; color: #fff; overflow-wrap: anywhere;
+}
+.om-offer-flag {
+  position: absolute; top: 12px; right: 12px; padding: 3px 9px; border-radius: 999px; font-size: 11px; font-weight: 800;
+  background: linear-gradient(180deg, #FFE29A, #C2902F); color: #1A1205;
+}
+.om-offer-flag-off { background: rgba(255, 255, 255, 0.16); color: #D7D8DD; }
+.om-offer-cta {
+  min-height: 46px; width: 100%; border-radius: 12px; display: flex; align-items: center; justify-content: center;
+  font-weight: 800; font-size: 14px; color: #1A1205; background: linear-gradient(180deg, #FFE29A, #E9B949 55%, #C2902F);
+  box-shadow: 0 6px 16px rgba(194, 144, 47, 0.35);
+}
+
+/* Prázdné stavy a načítání */
+.om-wins-empty {
+  display: flex; flex-direction: column; align-items: center; text-align: center; gap: 10px; padding: 8px 20px 28px;
+  border-radius: 24px; background: linear-gradient(180deg, #FFFFFF 0%, #FDF8EF 100%); border: 1px dashed rgba(194, 144, 47, 0.6);
+  box-shadow: 0 2px 4px rgba(60, 40, 10, 0.06), 0 14px 30px rgba(60, 40, 10, 0.12);
+}
+.om-wins-empty img { height: 170px; width: auto; margin-top: -4px; filter: drop-shadow(0 14px 22px rgba(60, 40, 10, 0.3)); animation: om2-bob 3.6s ease-in-out infinite; }
+.om-wins-empty-title {
+  font-family: 'Barlow Condensed', sans-serif; font-weight: 800; font-style: italic; text-transform: uppercase;
+  font-size: 28px; line-height: 1; color: #17171B;
+}
+.om-wins-empty-text { max-width: 380px; font-size: 15px; line-height: 1.5; color: #5E5B57; }
+.om-wins-skeleton { border-radius: 20px; background: linear-gradient(90deg, #F1E8D8, #FBF6EC, #F1E8D8); background-size: 200% 100%; animation: om-wins-sk 1.4s ease-in-out infinite; }
+@keyframes om-wins-sk { 0% { background-position: 200% 0; } 100% { background-position: -200% 0; } }
+
+@media (prefers-reduced-motion: reduce) {
+  .om-wins-empty img, .om-win-pill-wait .om-win-pill-dot, .om-wins-skeleton { animation: none; }
+}

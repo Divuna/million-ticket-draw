@@ -184,7 +184,7 @@ export const useAuthState = () => {
       
       toast({
         title: "Registrace úspěšná",
-        description: "Váš účet byl úspěšně vytvořen."
+        description: "Účet je hotový – vítej v OneMil!"
       });
     }
 
@@ -206,7 +206,7 @@ export const useAuthState = () => {
       setLoading(false);
       toast({
         title: "Přihlášeno",
-        description: "Úspěšně jste se přihlásili."
+        description: "Vítej zpět!"
       });
     }
 
@@ -217,7 +217,7 @@ export const useAuthState = () => {
     await supabase.auth.signOut();
     toast({
       title: "Odhlášeno",
-      description: "Úspěšně jste se odhlásili."
+      description: "Měj se, brzy na viděnou."
     });
   };
 

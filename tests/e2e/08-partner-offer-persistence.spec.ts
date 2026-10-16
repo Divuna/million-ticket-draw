@@ -12,7 +12,7 @@ test.describe('Partner Offer Persistence', () => {
 
     await loginViaUI(page, TEST_EMAIL, TEST_PASSWORD);
     await page.goto('/wins');
-    await page.getByRole('button', { name: /Nabídky/ }).click();
+    await page.getByRole('tab', { name: /Nabídky/ }).click();
 
     // Mirror the robust skip pattern from spec 07:
     // Race up to 10 s for either an offer card or the empty-state text to
@@ -58,7 +58,7 @@ test.describe('Partner Offer Persistence', () => {
     await page.reload();
 
     // Switch back to Nabídky tab after reload
-    await page.getByRole('button', { name: /Nabídky/ }).click();
+    await page.getByRole('tab', { name: /Nabídky/ }).click();
     await page.waitForTimeout(2_000);
 
     // 1) Offer must still be present after reload

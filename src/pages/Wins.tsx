@@ -4,8 +4,6 @@ import { useUserRole } from '@/hooks/useUserRole';
 import { useAuth } from '@/hooks/useAuth';
 import { LoggedOutScreen } from '@/components/LoggedOutScreen';
 import { supabase } from '@/integrations/supabase/client';
-import { ArrowUp, ArrowDown, Tag } from 'lucide-react';
-import { OneMilFilterIcon, OneMilGiftIcon, OneMilDiamondIcon, OneMilTrophyIcon, OneMilWinIcon } from '@/components/icons/OneMilIcons';
 import { useNavigate } from 'react-router-dom';
 import { WinCard } from '@/components/WinCard';
 import { WinDetailModal } from '@/components/WinDetailModal';
@@ -13,8 +11,11 @@ import { OfferCard, type UserOffer } from '@/components/OfferCard';
 import { OfferDetailModal } from '@/components/OfferDetailModal';
 import { toast } from '@/hooks/use-toast';
 import { useNotificationSettings } from '@/hooks/useNotificationSettings';
-import { Badge } from '@/components/ui/badge';
 import { useUnseenWinsCount } from '@/hooks/useUnseenWinsCount';
+import avatarWinner from '@/assets/redesign/avatar/face-vitez.png';
+import avatarShrug from '@/assets/redesign/avatar/avatar-krci-rameny.png';
+import avatarSearch from '@/assets/redesign/avatar/avatar-lupa.png';
+import avatarPoint from '@/assets/redesign/avatar/avatar-ukazuje.png';
 
 type UiStatus = 'čeká' | 'odesláno' | 'doručeno';
 
@@ -59,8 +60,6 @@ const deriveUiStatus = (
 };
 
 type FilterStatus = 'all' | 'pending' | 'shipped' | 'delivered';
-type FilterType = 'all' | 'main' | 'bonus';
-type SortOrder = 'newest' | 'oldest';
 type ActiveTab = 'vyhry' | 'nabidky';
 
 const Wins: React.FC = () => {
@@ -79,8 +78,6 @@ const Wins: React.FC = () => {
   const [highlightedWins, setHighlightedWins] = useState<Set<string>>(new Set());
   const [selectedWin, setSelectedWin] = useState<Win | null>(null);
   const [filter, setFilter] = useState<FilterStatus>('all');
-  const [typeFilter, setTypeFilter] = useState<FilterType>('all');
-  const [sortOrder, setSortOrder] = useState<SortOrder>('newest');
 
   // ── Offers state ───────────────────────────────────────────────────────────
   const [offers, setOffers] = useState<UserOffer[]>([]);
@@ -91,10 +88,6 @@ const Wins: React.FC = () => {
   const filteredWins = useMemo(() => {
     let result = wins;
 
-    if (typeFilter !== 'all') {
-      result = result.filter(win => win.type === typeFilter);
-    }
-
     if (filter !== 'all') {
       result = result.filter(win => {
         if (filter === 'delivered') return win.ui_status === 'doručeno';
@@ -104,12 +97,13 @@ const Wins: React.FC = () => {
       });
     }
 
+    // Hlavní výhra vždy nahoře, jinak od nejnovější.
     return [...result].sort((a, b) => {
-      const dateA = new Date(a.created_at).getTime();
-      const dateB = new Date(b.created_at).getTime();
-      return sortOrder === 'newest' ? dateB - dateA : dateA - dateB;
+      if (a.type === 'main' && b.type !== 'main') return -1;
+      if (b.type === 'main' && a.type !== 'main') return 1;
+      return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
     });
-  }, [wins, filter, typeFilter, sortOrder]);
+  }, [wins, filter]);
 
   const statusCounts = useMemo(() => ({
     all: wins.length,
@@ -348,286 +342,100 @@ const Wins: React.FC = () => {
     return <LoggedOutScreen />;
   }
 
+  const statusChips: { key: FilterStatus; label: string; count: number }[] = [
+    { key: 'all', label: 'Vše', count: statusCounts.all },
+    { key: 'pending', label: 'Čeká', count: statusCounts.pending },
+    { key: 'shipped', label: 'Odesláno', count: statusCounts.shipped },
+    { key: 'delivered', label: 'Doručeno', count: statusCounts.delivered },
+  ];
+
   return (
     <div className="wins-light-page min-h-screen bg-background relative overflow-hidden pb-20">
-      {/* Premium floating particles */}
-      <div className="wins-dark-particles absolute inset-0 overflow-hidden pointer-events-none">
-        {[...Array(25)].map((_, i) => (
-          <div
-            key={i}
-            className="absolute w-1 h-1 rounded-full"
-            style={{
-              background: `radial-gradient(circle, rgba(233,185,73,1) 0%, transparent 70%)`,
-              left: `${Math.random() * 100}%`,
-              top: `${Math.random() * 100}%`,
-              opacity: 0.15 + Math.random() * 0.15,
-              animation: `float ${8 + Math.random() * 12}s ease-in-out infinite`,
-              animationDelay: `${Math.random() * 5}s`,
-            }}
-          />
-        ))}
-      </div>
-
-      {/* Premium shimmer overlay */}
-      <div
-        className="wins-dark-shimmer absolute inset-0 pointer-events-none opacity-[0.02]"
-        style={{
-          background: 'linear-gradient(45deg, transparent 30%, rgba(233,185,73,1) 50%, transparent 70%)',
-          backgroundSize: '200% 200%',
-          animation: 'shimmer 8s ease-in-out infinite',
-        }}
-      />
-
       <Header />
 
-      <div className="relative z-10 container mx-auto px-4 py-8">
-        {/* Premium Header Card */}
-        <div className="customer-light-hero-panel relative overflow-hidden rounded-2xl p-6 mb-6">
-          {/* Header shimmer */}
-          <div
-            className="absolute inset-0 opacity-10"
-            style={{
-              background: 'linear-gradient(90deg, transparent 0%, rgba(233,185,73,1) 50%, transparent 100%)',
-              backgroundSize: '200% 100%',
-              animation: 'shimmer 4s ease-in-out infinite',
-            }}
-          />
-
-          <div className="relative flex items-center justify-between">
-            <div className="flex items-center gap-4">
-              <div
-                className="w-16 h-16 rounded-xl flex items-center justify-center"
-                style={{
-                  background: 'linear-gradient(135deg, #C2902F 0%, #8A5A10 100%)',
-                  boxShadow: '0 4px 20px rgba(194,144,47,0.3)',
-                }}
-              >
-                <OneMilWinIcon size={36} className="w-8 h-8 md:w-9 md:h-9 text-black" />
-              </div>
-
-              <div>
-                <h1 className="customer-premium-orange-heading text-3xl font-bold tracking-tight">
-                  Moje výhry
-                </h1>
-                <p className="text-gray-400 mt-1">Přehled všech tvých výher</p>
-              </div>
-            </div>
-
-            {wins.length > 0 && (
-              <div className="flex items-center gap-2 px-4 py-2 rounded-full bg-[rgba(194,144,47,0.1)] border border-[rgba(194,144,47,0.2)]">
-                <OneMilWinIcon size={20} className="w-5 h-5 text-[#C2902F]" />
-                <span className="text-lg font-bold text-[#E9B949]">{wins.length}</span>
-              </div>
-            )}
+      <div className="relative z-10 container mx-auto max-w-5xl px-4 py-6 md:py-8">
+        {/* Hlavička */}
+        <div className="mb-5 flex items-center gap-4">
+          <div className="flex min-w-0 flex-1 flex-col gap-1.5">
+            <h1 className="om-mg-title">Moje výhry</h1>
+            <p className="text-[13px] leading-normal text-[#5E5B57]">Přehled všech tvých výher</p>
+          </div>
+          <div className="om-wins-avatar om-float mr-12" aria-hidden="true">
+            <img src={avatarWinner} alt="" />
           </div>
         </div>
 
-        {/* ── Tab switcher: Výhry / Nabídky ─────────────────────────────────── */}
-        <div className="customer-light-tabs flex gap-2 mb-6 p-1 rounded-xl">
+        {/* Záložky Výhry / Nabídky */}
+        <div className="om-wins-seg mb-4" role="tablist" aria-label="Výhry a nabídky">
           <button
+            type="button"
+            role="tab"
+            aria-selected={activeTab === 'vyhry'}
             onClick={() => setActiveTab('vyhry')}
-            className={`flex-1 flex items-center justify-center gap-2 px-5 py-3 rounded-lg text-sm font-semibold transition-all duration-300 ${
-              activeTab === 'vyhry'
-                ? 'bg-gradient-to-r from-[#C2902F] to-[#8A5A10] text-black shadow-[0_4px_16px_rgba(194,144,47,0.3)]'
-                : 'text-gray-400 hover:text-gray-200'
-            }`}
+            className="om-wins-tab"
           >
-            <OneMilWinIcon size={16} className="w-4 h-4" />
             Výhry
-            {wins.length > 0 && (
-              <span className={`text-xs px-1.5 py-0.5 rounded-full ${
-                activeTab === 'vyhry' ? 'bg-black/20 text-black' : 'bg-[hsl(220,25%,14%)] text-gray-400'
-              }`}>
-                {wins.length}
-              </span>
-            )}
+            {wins.length > 0 && <span className="om-wins-tab-count">{wins.length}</span>}
           </button>
-
           <button
+            type="button"
+            role="tab"
+            aria-selected={activeTab === 'nabidky'}
             onClick={() => setActiveTab('nabidky')}
-            className={`flex-1 flex items-center justify-center gap-2 px-5 py-3 rounded-lg text-sm font-semibold transition-all duration-300 ${
-              activeTab === 'nabidky'
-                ? 'bg-gradient-to-r from-[#C2902F] to-[#8A5A10] text-black shadow-[0_4px_16px_rgba(194,144,47,0.3)]'
-                : 'text-gray-400 hover:text-gray-200'
-            }`}
+            className="om-wins-tab"
           >
-            <Tag className="w-4 h-4" />
             Nabídky
-            {offers.length > 0 && (
-              <span className={`text-xs px-1.5 py-0.5 rounded-full ${
-                activeTab === 'nabidky' ? 'bg-white/20 text-white' : 'bg-[hsl(220,25%,14%)] text-gray-400'
-              }`}>
-                {offers.length}
-              </span>
-            )}
+            {offers.length > 0 && <span className="om-wins-tab-count">{offers.length}</span>}
           </button>
         </div>
 
-        {/* ══════════════════════════════════════════════════════════════════ */}
-        {/* TAB: VÝHRY                                                        */}
-        {/* ══════════════════════════════════════════════════════════════════ */}
+        {/* ═══ Záložka: Výhry ═══ */}
         {activeTab === 'vyhry' && (
           <>
-            {/* Filter and Sort Controls */}
             {wins.length > 0 && (
-              <div
-                className="wins-light-filter-panel relative overflow-hidden rounded-2xl p-5 mb-6 space-y-4"
-              >
-                {/* Type Filter */}
-                <div className="flex flex-wrap items-center gap-3">
-                  <span className="text-sm text-gray-400 font-medium">Typ:</span>
+              <div className="om-wins-chips mb-4" aria-label="Filtrovat podle stavu">
+                {statusChips.map((chip) => (
                   <button
-                    onClick={() => setTypeFilter('all')}
-                    className={`px-4 py-2 rounded-xl text-sm font-medium transition-all duration-300 ${
-                      typeFilter === 'all'
-                        ? 'bg-gradient-to-r from-[#C2902F] to-[#8A5A10] text-black shadow-[0_4px_16px_rgba(194,144,47,0.3)]'
-                        : 'bg-[hsl(220,25%,12%)] text-gray-300 border border-[hsl(220,20%,20%)] hover:border-[rgba(194,144,47,0.3)]'
-                    }`}
+                    key={chip.key}
+                    type="button"
+                    aria-pressed={filter === chip.key}
+                    onClick={() => setFilter(chip.key)}
+                    className="om-wins-chip"
                   >
-                    Všechny ({typeCounts.all})
+                    {chip.label} {chip.count}
                   </button>
-                  <button
-                    onClick={() => setTypeFilter('main')}
-                    className={`flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-medium transition-all duration-300 ${
-                      typeFilter === 'main'
-                        ? 'bg-gradient-to-r from-amber-500 to-amber-600 text-black shadow-[0_4px_16px_rgba(245,158,11,0.3)]'
-                        : 'bg-amber-500/10 text-amber-400 border border-amber-500/30 hover:bg-amber-500/20'
-                    }`}
-                  >
-                    <OneMilTrophyIcon size={16} className="w-4 h-4" />
-                    Hlavní ({typeCounts.main})
-                  </button>
-                  <button
-                    onClick={() => setTypeFilter('bonus')}
-                    className={`flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-medium transition-all duration-300 ${
-                      typeFilter === 'bonus'
-                        ? 'bg-gradient-to-r from-purple-500 to-purple-600 text-white shadow-[0_4px_16px_rgba(168,85,247,0.3)]'
-                        : 'bg-purple-500/10 text-purple-400 border border-purple-500/30 hover:bg-purple-500/20'
-                    }`}
-                  >
-                    <OneMilGiftIcon size={16} className="w-4 h-4" />
-                    Bonus ({typeCounts.bonus})
-                  </button>
-                </div>
-
-                {/* Status Filter and Sort */}
-                <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 pt-2 border-t border-slate-200">
-                  <div className="flex flex-wrap items-center gap-3">
-                    <OneMilFilterIcon size={16} className="w-4 h-4 text-gray-500" />
-                    <button
-                      onClick={() => setFilter('all')}
-                      className={`px-4 py-2 rounded-xl text-sm font-medium transition-all duration-300 ${
-                        filter === 'all'
-                          ? 'bg-gradient-to-r from-[#C2902F] to-[#8A5A10] text-black shadow-[0_4px_16px_rgba(194,144,47,0.3)]'
-                          : 'bg-[hsl(220,25%,12%)] text-gray-300 border border-[hsl(220,20%,20%)] hover:border-[rgba(194,144,47,0.3)]'
-                      }`}
-                    >
-                      Všechny ({statusCounts.all})
-                    </button>
-                    <button
-                      onClick={() => setFilter('pending')}
-                      className={`px-4 py-2 rounded-xl text-sm font-medium transition-all duration-300 ${
-                        filter === 'pending'
-                          ? 'bg-gradient-to-r from-[#C2902F] to-[#E9B949] text-black shadow-[0_4px_16px_rgba(194,144,47,0.3)]'
-                          : 'bg-[rgba(194,144,47,0.1)] text-[#E9B949] border border-[rgba(194,144,47,0.3)] hover:bg-[rgba(194,144,47,0.2)]'
-                      }`}
-                    >
-                      Čeká ({statusCounts.pending})
-                    </button>
-                    <button
-                      onClick={() => setFilter('shipped')}
-                      className={`px-4 py-2 rounded-xl text-sm font-medium transition-all duration-300 ${
-                        filter === 'shipped'
-                          ? 'bg-gradient-to-r from-[#C2902F] to-[#E9B949] text-black shadow-[0_4px_16px_rgba(194,144,47,0.3)]'
-                          : 'bg-[rgba(194,144,47,0.1)] text-[#E9B949] border border-[rgba(194,144,47,0.3)] hover:bg-[rgba(194,144,47,0.2)]'
-                      }`}
-                    >
-                      Odesláno ({statusCounts.shipped})
-                    </button>
-                    <button
-                      onClick={() => setFilter('delivered')}
-                      className={`px-4 py-2 rounded-xl text-sm font-medium transition-all duration-300 ${
-                        filter === 'delivered'
-                          ? 'bg-gradient-to-r from-green-500 to-green-600 text-white shadow-[0_4px_16px_rgba(34,197,94,0.3)]'
-                          : 'bg-green-500/10 text-green-400 border border-green-500/30 hover:bg-green-500/20'
-                      }`}
-                    >
-                      Doručeno ({statusCounts.delivered})
-                    </button>
-                  </div>
-
-                  <button
-                    onClick={() => setSortOrder(prev => prev === 'newest' ? 'oldest' : 'newest')}
-                    className="flex items-center gap-2 px-4 py-2 rounded-xl bg-[hsl(220,25%,12%)] border border-[hsl(220,20%,20%)] hover:border-[rgba(194,144,47,0.3)] transition-all duration-300 text-sm text-gray-300 hover:text-white"
-                  >
-                    {sortOrder === 'newest' ? (
-                      <ArrowDown className="w-4 h-4 text-[#C2902F]" />
-                    ) : (
-                      <ArrowUp className="w-4 h-4 text-[#C2902F]" />
-                    )}
-                    {sortOrder === 'newest' ? 'Nejnovější' : 'Nejstarší'}
-                  </button>
-                </div>
+                ))}
               </div>
             )}
 
             {loading ? (
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                {[1, 2, 3].map((i) => (
-                  <div
-                    key={i}
-                    className="rounded-2xl overflow-hidden animate-pulse"
-                    style={{
-                      background: 'linear-gradient(135deg, hsl(220, 25%, 10%) 0%, hsl(220, 30%, 14%) 100%)',
-                      border: '1px solid hsl(220, 20%, 18%)',
-                    }}
-                  >
-                    <div className="w-full h-64 bg-[hsl(220,25%,15%)]" />
-                  </div>
-                ))}
+              <div className="flex flex-col gap-3" aria-label="Načítám výhry">
+                <div className="om-wins-skeleton h-[168px]" />
+                <div className="om-wins-skeleton h-[84px]" />
+                <div className="om-wins-skeleton h-[84px]" />
               </div>
             ) : wins.length === 0 ? (
-              <div
-                className="wins-light-empty-panel relative overflow-hidden rounded-2xl p-12 text-center"
-                style={{
-                  background: 'linear-gradient(135deg, hsl(220, 25%, 8%) 0%, hsl(220, 30%, 12%) 50%, hsl(220, 25%, 8%) 100%)',
-                  border: '1px solid rgba(194,144,47,0.15)',
-                  boxShadow: '0 8px 32px hsl(0, 0%, 0%, 0.3)',
-                }}
-              >
-                <div
-                  className="w-24 h-24 mx-auto mb-6 rounded-2xl flex items-center justify-center"
-                  style={{
-                    background: 'linear-gradient(135deg, hsl(220, 25%, 12%) 0%, hsl(220, 30%, 16%) 100%)',
-                    border: '1px solid rgba(194,144,47,0.1)',
-                  }}
-                >
-                  <OneMilWinIcon size={48} className="w-12 h-12 text-[#C2902F]/30" />
-                </div>
-                <h3 className="customer-premium-orange-heading text-2xl font-bold mb-3">
-                  Zatím nemáš žádné výhry
-                </h3>
-                <p className="text-gray-400 text-lg">Kupte si tikety v soutěžích a vyhrajte skvělé ceny!</p>
+              <div className="om-wins-empty">
+                <img src={avatarShrug} alt="" aria-hidden="true" />
+                <h2 className="om-wins-empty-title">Zatím nemáš žádné výhry</h2>
+                <p className="om-wins-empty-text">Otevři tiket v některé soutěži – první výhra tady může být tvoje.</p>
+                <button type="button" onClick={() => navigate('/games')} className="om-mg-cta mt-2">
+                  Vybrat soutěž
+                </button>
               </div>
             ) : filteredWins.length === 0 ? (
-              <div
-                className="wins-light-empty-panel relative overflow-hidden rounded-2xl p-12 text-center"
-                style={{
-                  background: 'linear-gradient(135deg, hsl(220, 25%, 8%) 0%, hsl(220, 30%, 12%) 100%)',
-                  border: '1px solid hsl(220, 20%, 18%)',
-                }}
-              >
-                <OneMilFilterIcon size={64} className="w-16 h-16 mx-auto mb-4 text-gray-600" />
-                <h3 className="text-xl font-semibold text-gray-300 mb-2">Žádné výhry v této kategorii</h3>
-                <p className="text-gray-500">Zkuste jiný filtr pro zobrazení výher.</p>
+              <div className="om-wins-empty">
+                <img src={avatarSearch} alt="" aria-hidden="true" />
+                <h2 className="om-wins-empty-title">Tady nic není</h2>
+                <p className="om-wins-empty-text">V tomhle stavu teď žádnou výhru nemáš. Zkus jiný filtr.</p>
               </div>
             ) : (
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+              <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
                 {filteredWins.map((win, index) => (
                   <div
                     key={win.id}
-                    className="transform transition-all duration-500 hover:scale-[1.02]"
-                    style={{ animation: `fade-in 0.5s ease-out ${index * 0.1}s both` }}
+                    className={win.type === 'main' ? 'md:col-span-2' : ''}
+                    style={{ animation: `fade-in 0.4s ease-out ${Math.min(index, 8) * 0.06}s both` }}
                   >
                     <WinCard
                       win={win}
@@ -648,68 +456,30 @@ const Wins: React.FC = () => {
           </>
         )}
 
-        {/* ══════════════════════════════════════════════════════════════════ */}
-        {/* TAB: NABÍDKY                                                      */}
-        {/* ══════════════════════════════════════════════════════════════════ */}
+        {/* ═══ Záložka: Nabídky ═══ */}
         {activeTab === 'nabidky' && (
           <>
             {offerLoading ? (
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                {[1, 2, 3].map((i) => (
-                  <div
-                    key={i}
-                    className="rounded-2xl overflow-hidden animate-pulse"
-                    style={{
-                      background: 'linear-gradient(135deg, hsl(220, 25%, 10%) 0%, hsl(220, 30%, 14%) 100%)',
-                      border: '1px solid hsl(220, 20%, 18%)',
-                    }}
-                  >
-                    <div className="w-full h-44 bg-[hsl(220,25%,15%)]" />
-                    <div className="p-4 space-y-2">
-                      <div className="h-3 bg-[hsl(220,25%,18%)] rounded w-1/3" />
-                      <div className="h-4 bg-[hsl(220,25%,18%)] rounded w-3/4" />
-                      <div className="h-3 bg-[hsl(220,25%,18%)] rounded w-full" />
-                    </div>
-                  </div>
-                ))}
+              <div className="grid grid-cols-1 gap-3 md:grid-cols-2" aria-label="Načítám nabídky">
+                <div className="om-wins-skeleton h-[210px]" />
+                <div className="om-wins-skeleton h-[210px]" />
               </div>
             ) : offers.length === 0 ? (
-              <div
-                className="wins-light-empty-panel relative overflow-hidden rounded-2xl p-12 text-center"
-                style={{
-                  background: 'linear-gradient(135deg, hsl(220, 25%, 8%) 0%, hsl(220, 30%, 12%) 50%, hsl(220, 25%, 8%) 100%)',
-                  border: '1px solid hsl(220, 20%, 18%)',
-                  boxShadow: '0 8px 32px hsl(0, 0%, 0%, 0.3)',
-                }}
-              >
-                <div
-                  className="w-24 h-24 mx-auto mb-6 rounded-2xl flex items-center justify-center"
-                  style={{
-                    background: 'linear-gradient(135deg, hsl(220, 25%, 12%) 0%, hsl(220, 30%, 16%) 100%)',
-                    border: '1px solid hsl(220, 20%, 20%)',
-                  }}
-                >
-                  <Tag className="w-12 h-12 text-[rgba(194,144,47,0.3)]" />
-                </div>
-                <h3 className="text-2xl font-bold mb-3 text-gray-200">
-                  Zatím nemáš žádné nabídky
-                </h3>
-                <p className="text-gray-400 text-lg">
+              <div className="om-wins-empty">
+                <img src={avatarPoint} alt="" aria-hidden="true" />
+                <h2 className="om-wins-empty-title">Zatím nemáš žádné nabídky</h2>
+                <p className="om-wins-empty-text">
                   Nabídky partnerů se přidělují automaticky k tvým tiketům v soutěžích.
                 </p>
               </div>
             ) : (
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+              <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
                 {offers.map((offer, index) => (
                   <div
                     key={offer.id}
-                    className="transform transition-all duration-500 hover:scale-[1.02]"
-                    style={{ animation: `fade-in 0.5s ease-out ${index * 0.1}s both` }}
+                    style={{ animation: `fade-in 0.4s ease-out ${Math.min(index, 8) * 0.06}s both` }}
                   >
-                    <OfferCard
-                      offer={offer}
-                      onClick={() => setSelectedOffer(offer)}
-                    />
+                    <OfferCard offer={offer} onClick={() => setSelectedOffer(offer)} />
                   </div>
                 ))}
               </div>
@@ -725,22 +495,9 @@ const Wins: React.FC = () => {
         )}
       </div>
 
-      {/* Global animations */}
       <style>{`
-        @keyframes float {
-          0%, 100% { transform: translateY(0) translateX(0); }
-          25% { transform: translateY(-20px) translateX(10px); }
-          50% { transform: translateY(-10px) translateX(-5px); }
-          75% { transform: translateY(-30px) translateX(15px); }
-        }
-
-        @keyframes shimmer {
-          0% { background-position: 200% 0; }
-          100% { background-position: -200% 0; }
-        }
-
         @keyframes fade-in {
-          from { opacity: 0; transform: translateY(20px); }
+          from { opacity: 0; transform: translateY(12px); }
           to { opacity: 1; transform: translateY(0); }
         }
       `}</style>
