@@ -50,11 +50,10 @@ v 19:20 UTC vrátil 200 `No pending emails`. DB/EF změny (schválení Pavla „
   růžová s karmínovým, nahoře uprostřed (shadcn toast i sonner, `src/styles/onemil-toast.css`). Chybová = varianta
   `destructive` nebo nadpis začínající „Chyba“. Přihlášení: „Přihlášeno – Vítej zpět!“.
 - Ověřeno: build, staging specy 02/07/08/14/29/33/54, produkční smoke `38868328864`, nové CSS v živém bundlu.
-- **OPEN ISSUE – MIO výhra končí v bonusové peněžence:** trigger `on_bonus_winner_add_to_bonus_wallet` připisuje MIO výhru do
-  `wallets.bonus_balance_coins`; do hlavního zůstatku ji dřív převádělo okno `TicketResultModal`, které se po redesignu
-  neotevíralo (odstraněno 16. 10.). Zákazník ji teď musí převést v profilu (`transfer_bonus_to_main`). Rozhodnutí Pavla:
-  připisovat MIO výhru rovnou do hlavního zůstatku (přes `wallet_credit_lot`) – zásah do peněženky, nutné schválení.
-- Zbývá z desky Výhry: detail výhry „Cesta k tobě“ (`WinDetailModal` je zatím ve starém vzhledu).
+- **MIO výhra jde do bonusových výher – ZÁMĚR (potvrdil Pavel 16. 10. 2026):** trigger `on_bonus_winner_add_to_bonus_wallet`
+  připisuje MIO výhru do `wallets.bonus_balance_coins` a zákazník si ji do hlavního zůstatku převádí sám v profilu
+  (`transfer_bonus_to_main`). Neměnit na automatické připsání. Detail výhry to zákazníkovi vysvětluje.
+- Detail výhry „Cesta k tobě“ (`WinDetailModal`) předělán podle plátna 16. 10. 2026 v PR #432 (produkce až po sloučení).
 
 **Zapnutí upozornění:** všechny předpoklady jsou splněné (frontend s logem i `process-email-queue` v193 jsou
 nasazené) – zapíná superadmin v `/admin/notifications` → Automatická upozornění. Při budoucím nasazení

@@ -321,6 +321,11 @@ MIO must never be publicly described as a gambling token, betting token, casino 
 - VOP point 8 „Zakoupený kredit nelze vrátit.“ is replaced by: „MIO je interní digitální kredit platformy OneMil a není možné jej vyplatit v hotovosti ani převést mimo OneMil. U nevyužité placené části MIO může spotřebitel do 14 dnů od nákupu požádat o vrácení odpovídající zaplacené částky. Pokud byla část placených MIO již použita, OneMil vrátí pouze částku odpovídající zbývající nevyužité placené části. Bonusová, partnerská a jiná bezplatně získaná MIO nejsou placenou částí a samostatně se peněžně neproplácejí. Žádost lze uplatnit na podpora@onemil.cz. Tím nejsou dotčena další zákonná práva spotřebitele.“
 - State: **staging only — not deployed to production** (production VOP still contain the old point 8).
 
+### 8.3 MIO wins go to the bonus balance — confirmed by Pavel (16. 10. 2026)
+
+- A MIO prize won in a contest is credited to the customer's **bonus winnings** (`wallets.bonus_balance_coins`), not straight to the main MIO balance.
+- The customer moves it to the main balance **by themselves** in the profile. This is intended product behaviour; do not change it to automatic crediting.
+
 ### 8.1 MIO decimal rule — confirmed (16. 08. 2026)
 
 **MIO mají maximálně 1 desetinné místo.**
