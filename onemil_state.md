@@ -42,6 +42,20 @@ v 19:20 UTC vrátil 200 `No pending emails`. DB/EF změny (schválení Pavla „
 - **Migrace `20261015120000_coin_redeemed_notice_without_ticket_number`**: push „MIO uplatněna“
   místo „Ticket: N“ říká „Tiket je ve hře. Hodně štěstí!“ (jen literál v živé definici).
 
+**16. 10. 2026 – doplněno do produkce (PR #430, merge `604e27f5`, schválil Pavel):**
+- **Moje výhry** podle desky Výhry: hlavička s avatarem, záložky Výhry/Nabídky (`role="tab"`, specy 07/08 upraveny),
+  filtry podle stavu, hlavní výhra jako tmavá karta s fotkou, bonusové výhry jako světlé řádky (MIO s korunkovým
+  odznakem, stav „Připsáno“), nové karty nabídek, světlé prázdné stavy s avatarem. Styly `src/styles/onemil-wins.css`.
+- **Hlášky (toasty) v celé aplikaci** včetně adminu/partnera: úspěch = tmavá karta se zeleným kolečkem, chyba =
+  růžová s karmínovým, nahoře uprostřed (shadcn toast i sonner, `src/styles/onemil-toast.css`). Chybová = varianta
+  `destructive` nebo nadpis začínající „Chyba“. Přihlášení: „Přihlášeno – Vítej zpět!“.
+- Ověřeno: build, staging specy 02/07/08/14/29/33/54, produkční smoke `38868328864`, nové CSS v živém bundlu.
+- **OPEN ISSUE – MIO výhra končí v bonusové peněžence:** trigger `on_bonus_winner_add_to_bonus_wallet` připisuje MIO výhru do
+  `wallets.bonus_balance_coins`; do hlavního zůstatku ji dřív převádělo okno `TicketResultModal`, které se po redesignu
+  neotevíralo (odstraněno 16. 10.). Zákazník ji teď musí převést v profilu (`transfer_bonus_to_main`). Rozhodnutí Pavla:
+  připisovat MIO výhru rovnou do hlavního zůstatku (přes `wallet_credit_lot`) – zásah do peněženky, nutné schválení.
+- Zbývá z desky Výhry: detail výhry „Cesta k tobě“ (`WinDetailModal` je zatím ve starém vzhledu).
+
 **Zapnutí upozornění:** všechny předpoklady jsou splněné (frontend s logem i `process-email-queue` v193 jsou
 nasazené) – zapíná superadmin v `/admin/notifications` → Automatická upozornění. Při budoucím nasazení
 `process-email-queue` zachovat `--no-verify-jwt` a podporu `renderOneMilStructuredEmail`.

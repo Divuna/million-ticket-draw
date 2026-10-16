@@ -1,3 +1,8 @@
+# 16. 10. 2026 — Moje výhry a hlášky podle redesignu v produkci
+
+PR #430 sloučen na pokyn Pavla: stránka Moje výhry podle plátna (karty výher, filtry, nabídky, prázdné stavy) a nové
+hlášky v celé aplikaci (tmavá úspěch / růžová chyba, nahoře). Zjištěno: MIO výhra zůstává v bonusové peněžence (OPEN ISSUE).
+
 # 16. 10. 2026 — Právní texty: seznam k dodělání před spuštěním
 
 Ověřen skutečný stav právních stránek v produkci. Schválené pro ostrý provoz je jen znění bodu 8 VOP; ostatní je přijato
