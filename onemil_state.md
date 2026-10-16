@@ -38,7 +38,20 @@ nasazené) – zapíná superadmin v `/admin/notifications` → Automatická upo
 - `TicketResultModal` se nikde neotevírá (zákazník vidí jen `MysteryPurchaseResultDialog`) – mrtvý kód.
 - ~~Ikona 512 px čeká na emblem~~ → vyřešeno 15. 10. 2026: ikony aplikace (512/192/180, favicon 16/32/48)
   a `src/assets/redesign/onemil-emblem.png` (222×240) vygenerovány z emblemu 1253 px od Pavla.
-- Staging E2E workflow padá na seed kroku „Ensure staging admin E2E user has admin role“ (i na `main`, nesouvisí).
+- ~~Staging E2E workflow padá na seed kroku~~ → vyřešeno 16. 10. 2026 (PR #426): staging má 2029 auth účtů,
+  seed hledal admin účet jen v prvních 2000; limit zvýšen na 20 000.
+- Staging drift opraven 16. 10. 2026: `email_queue.dedupe_key` + `available_at` (chyběla migrace `20260723194828`,
+  nový `process-email-queue` padal na 500); sekvence `affiliate_payout_document_seq` (67 → 233) a
+  `affiliate_payout_batch_seq` (→ 16) zaostávaly za existujícími čísly (nejspíš suchý běh resetu). Produkce v pořádku.
+- **OPEN ISSUE – OpenAI kredit vyčerpán** (`credit_balance_exhausted`, 429): staging `sales-lead-draft-email` i produkční
+  `discover-candidates` (15. 10. 04:21 UTC). Pravděpodobně nefunguje Bob ani AI v obchodních leadech. Řešení: dobít kredit
+  OpenAI (rozhodnutí/platba Pavla). Do té doby spec 72 na stagingu padá.
+- **OPEN ISSUE – nelze smazat uživatele s tikety/platbami:** při smazání účtu kaskáda maže tikety/platby a AFTER DELETE
+  auditní spouštěč `fn_audit_generic` zapisuje `audit_logs.user_id` = mazaný uživatel → FK chyba, celé smazání se vrátí
+  (31 ze 40 testovacích účtů). Týká se i produkce (žádost o smazání účtu). Oprava = při DELETE zapisovat `user_id` NULL
+  (nebo jen pokud uživatel existuje); vyžaduje schválení Pavla (produkční audit logika).
+- **OPEN ISSUE – hromadění testovacích účtů na stagingu** (1816× `@onemil.test`): testy mazat zkouší, ale smazání padá
+  na výše uvedené chybě a na neměnných pohybech MIO. Návrh: po opravě auditu týdenní úklid účtů starších 7 dní (jen staging).
 
 ## -19. Sdílené bonusové MIO kódy — NASAZENO (13. 10. 2026, schválil Pavel)
 
