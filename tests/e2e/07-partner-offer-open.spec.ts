@@ -13,8 +13,8 @@ test.describe('Partner Offer Open', () => {
     await loginViaUI(page, TEST_EMAIL, TEST_PASSWORD);
     await page.goto('/wins');
 
-    // Switch to Nabídky tab (button contains icon + text "Nabídky" + optional count badge)
-    await page.getByRole('button', { name: /Nabídky/ }).click();
+    // Záložka Nabídky (role="tab", text „Nabídky“ + případný počet)
+    await page.getByRole('tab', { name: /Nabídky/ }).click();
 
     // Wait for tab content: either an offer card or the empty-state text must
     // appear before we decide whether to skip or proceed.
