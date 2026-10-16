@@ -3,7 +3,6 @@ import { MioBadge } from "@/components/brand/MioBadge";
 import { useNavigate } from 'react-router-dom';
 import { Header } from '@/components/Header';
 import { Button } from '@/components/ui/button';
-import { TicketResultModal } from '@/components/TicketResultModal';
 import { ContestCard } from '@/components/ContestCard';
 import { useUserRole } from '@/hooks/useUserRole';
 import { supabase } from '@/integrations/supabase/client';
@@ -44,37 +43,10 @@ interface Contest {
   fast_game?: boolean;
 }
 
-interface PartnerOfferResult {
-  id: string;
-  title: string;
-  short_text: string | null;
-  logo_url: string | null;
-  banner_url: string | null;
-  link_or_code: string | null;
-  valid_to: string | null;
-  partner_name: string;
-}
-
-interface UnlockTicketResult {
-  ticket_number: number;
-  /** UUID řádku v `tickets` z `buy_ticket_atomic` — nutné pro upload sdíleného obrázku. */
-  ticket_row_id?: string | null;
-  ticket_price: number;
-  next_bonus_position?: number | null;
-  distance_to_next_bonus?: number | null;
-  won_prize?: string | null;
-  remaining_tickets?: number;
-  won_type?: 'bonus' | 'main' | null;
-  bonus_prize_id?: string | null;
-  partner_offer?: PartnerOfferResult | null;
-}
-
 const Index = () => {
   const [contests, setContests] = useState<Contest[]>([]);
   const [loading, setLoading] = useState(true);
   const [processingContestId, setProcessingContestId] = useState<string | null>(null);
-  const [modalResult, setModalResult] = useState<UnlockTicketResult | null>(null);
-  const [modalContestId, setModalContestId] = useState<string | null>(null);
   const [favorites, setFavorites] = useState<Set<string>>(new Set());
   const [walletBalance, setWalletBalance] = useState<number | undefined>(undefined);
   const [mysteryResult, setMysteryResult] = useState<{
@@ -467,27 +439,6 @@ const Index = () => {
         coupon={mysteryResult?.coupon ?? null}
         onClose={() => setMysteryResult(null)}
       />
-
-      <TicketResultModal
-        result={modalResult ? {
-          ticket_number: modalResult.ticket_number,
-          ticket_row_id: modalResult.ticket_row_id ?? null,
-          distance_to_next_bonus: modalResult.distance_to_next_bonus,
-          next_bonus_position: modalResult.next_bonus_position,
-          won_prize: modalResult.won_prize,
-          won_type: modalResult.won_type,
-          bonus_prize_id: modalResult.bonus_prize_id,
-          remaining_tickets: modalResult.remaining_tickets,
-          partner_offer: modalResult.partner_offer ?? null,
-        } : null}
-        contestId={modalContestId}
-        isOpen={!!modalResult}
-        onClose={() => {
-          setModalResult(null);
-          setModalContestId(null);
-        }}
-      />
-
     </div>
   );
 };

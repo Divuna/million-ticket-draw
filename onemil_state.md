@@ -35,7 +35,10 @@ nasazené) – zapíná superadmin v `/admin/notifications` → Automatická upo
   vzhled až při svém příštím nasazení – do té doby posílají předchozí krémovou verzi.
 - Staging `email_queue` nemá sloupec `dedupe_key` (drift, chybí migrace `20260723194828`) → na stagingu se
   e-mailová upozornění nezařadí (chyba se jen zaloguje). Produkce sloupec má.
-- `TicketResultModal` se nikde neotevírá (zákazník vidí jen `MysteryPurchaseResultDialog`) – mrtvý kód.
+- ~~`TicketResultModal` se nikde neotevírá~~ → odstraněno 16. 10. 2026 (komponenta + CSS + nepoužitý stav v `ContestDetail`,
+  `Games`, `FavoriteGames`; specy 85/149 hlídají `claim_miocoin_bonus` obecně). Zákazník vidí jen `MysteryPurchaseResultDialog`.
+- Spec 194b: souběžné výpočty provizí se serializují zámkem a na stagingu poslední ve frontě občas narazí na
+  `statement_timeout` (57014). Test to od 16. 10. 2026 toleruje (zrušená transakce duplicitu vytvořit nemůže), jiné chyby ne.
 - ~~Ikona 512 px čeká na emblem~~ → vyřešeno 15. 10. 2026: ikony aplikace (512/192/180, favicon 16/32/48)
   a `src/assets/redesign/onemil-emblem.png` (222×240) vygenerovány z emblemu 1253 px od Pavla.
 - ~~Staging E2E workflow padá na seed kroku~~ → vyřešeno 16. 10. 2026 (PR #426): staging má 2029 auth účtů,

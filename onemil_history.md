@@ -1,3 +1,9 @@
+# 16. 10. 2026 — Úklid po redesignu
+
+Odstraněna nepoužívaná `TicketResultModal` (po redesignu se nikdy neotevírala, nákup ukazuje `MysteryPurchaseResultDialog`)
+a navázaný stav ve stránkách soutěží. Kontraktní specy 85/149 upraveny, aby hlídaly `claim_miocoin_bonus` v celém `src`.
+Spec 194b toleruje `statement_timeout` u souběžných výpočtů provizí na stagingu (bez dopadu na kontrakt „bez duplicit“).
+
 # 16. 10. 2026 — Audit při mazání účtu opraven jen na stagingu
 
 Na rozhodnutí Pavla upraven `fn_audit_generic` POUZE na stagingu (`docs/sql/staging_only_fn_audit_generic_null_user_on_delete.sql`):

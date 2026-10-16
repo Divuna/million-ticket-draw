@@ -15,7 +15,6 @@ import {
   logTicketPurchaseSuccess,
 } from "@/lib/monitoring";
 import { analytics } from "@/lib/analytics";
-import { TicketResultModal } from "@/components/TicketResultModal";
 import { useLatestWinners } from "@/hooks/useLatestWinners";
 import {
   MysteryPurchaseResultDialog,
@@ -106,31 +105,6 @@ type Winner = {
   bonus_prize_id?: string | null;
 };
 
-interface PartnerOfferResult {
-  id: string;            // user_partner_offers.id
-  title: string;
-  short_text: string | null;
-  logo_url: string | null;
-  banner_url: string | null;
-  link_or_code: string | null;
-  valid_to: string | null;
-  partner_name: string;
-}
-
-interface UnlockTicketResult {
-  ticket_number: number;
-  /** UUID řádku v `tickets` z `buy_ticket_atomic` — nutné pro upload sdíleného obrázku. */
-  ticket_row_id?: string | null;
-  ticket_price: number;
-  next_bonus_position?: number | null;
-  distance_to_next_bonus?: number | null;
-  won_prize?: string | null;
-  remaining_tickets?: number;
-  won_type?: 'bonus' | 'main' | null;
-  bonus_prize_id?: string | null;
-  partner_offer?: PartnerOfferResult | null;
-}
-
 // Memoized thumbnail strip to avoid re-renders on gallery index change
 type GalleryMediaItem = { id: string; type: string; url: string; sort_order: number | null };
 const GalleryThumbnails = memo(({ items, activeIndex, onSelect, getYouTubeId, getMediaUrl }: {
@@ -188,8 +162,6 @@ export default function ContestDetail() {
   const [balanceLoaded, setBalanceLoaded] = useState(false);
 
   const [processingContestId, setProcessingContestId] = useState<string | null>(null);
-  const [modalResult, setModalResult] = useState<UnlockTicketResult | null>(null);
-  const [modalContestId, setModalContestId] = useState<string | null>(null);
   const requestInFlightRef = useRef(false);
   const [mysteryResult, setMysteryResult] = useState<{
     contestId: string;
@@ -595,31 +567,6 @@ export default function ContestDetail() {
 
     load();
   }, [id, user?.id]);
-
-  const stableResult = useMemo(() => {
-    if (!modalResult) return undefined;
-    return {
-      ticket_number: modalResult.ticket_number,
-      ticket_row_id: modalResult.ticket_row_id ?? null,
-      next_bonus_position: modalResult.next_bonus_position ?? null,
-      distance_to_next_bonus: modalResult.distance_to_next_bonus ?? null,
-      won_prize: modalResult.won_prize,
-      remaining_tickets: modalResult.remaining_tickets,
-      won_type: modalResult.won_type,
-      bonus_prize_id: modalResult.bonus_prize_id,
-      partner_offer: modalResult.partner_offer ?? null,
-    };
-  }, [
-    modalResult?.ticket_number,
-    modalResult?.ticket_row_id,
-    modalResult?.next_bonus_position,
-    modalResult?.distance_to_next_bonus,
-    modalResult?.won_prize,
-    modalResult?.remaining_tickets,
-    modalResult?.won_type,
-    modalResult?.bonus_prize_id,
-    modalResult?.partner_offer,
-  ]);
 
   const getYouTubeId = useCallback((url: string) => {
     const match = url.match(/(?:youtube\.com\/watch\?v=|youtu\.be\/|youtube\.com\/embed\/|youtube\.com\/shorts\/)([^&\n?#]+)/);
@@ -1193,17 +1140,6 @@ export default function ContestDetail() {
         ticket={mysteryResult?.ticket ?? null}
         coupon={mysteryResult?.coupon ?? null}
         onClose={() => setMysteryResult(null)}
-      />
-      {/* TICKET RESULT MODAL */}
-      <TicketResultModal
-        isOpen={modalResult !== null}
-        onClose={() => {
-          console.log('[DEBUG ContestDetail] setModalResult: null, setModalContestId: null');
-          setModalResult(null);
-          setModalContestId(null);
-        }}
-        contestId={modalContestId || ""}
-        result={stableResult}
       />
       </div>
     </div>
