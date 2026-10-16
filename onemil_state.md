@@ -3,6 +3,22 @@
 > **Autoritativní aktuální stav. Poslední aktualizace 15. 10. 2026 — grafický redesign NASAZEN na onemil.cz (PR #424), nová kostra e-mailů ( v193) a zákaznická upozornění za vypínači (vše vypnuto) (§ -20). Předtím 13. 10. 2026 — sdílené MIO promo kódy nasazeny (§ -19, PR #423). Předtím 12. 10. 2026 — PRVNÍ PŘEDSTARTOVNÍ RESET PRODUKCE PROVEDEN (§ -18) se schválením Pavla; záloha ověřena, CRM zachováno, kroky 05 (Vault) a úklid Storage zatím neprovedeny. Předtím 30. 9. 2026 — příprava prvního resetu (§ -17: mapa, skript, suchý běh na stagingu), reset NEPROBĚHL, záloha zatím NEVYTVOŘENA. Předtím předstartovní opravy nasazeny do produkce (§ -16). Předtím 29. 9. 2026 — 2. kolo předstartovních oprav (§ -15, staging + větev). Předtím předstartovní audit (§ -14). Předtím 29. 9. 2026 — veřejný název MIO a spotřebitelské informace k nákupu MIO (bod 8 VOP) nasazeny do produkce; bannery balíčků čekají na rozhodnutí. Předtím 25. 9. 2026 — jeden odměňovaný zdroj přivedení hráče nasazen do produkce. Předtím 24. 9. 2026 — Fáze 5 (osobní doporučení hráčů) nasazena do produkce `xkzhjldrojjlrkezorey` se schválením Pavla. Předtím 23. 9. 2026 refund blok F2 + F3 + F4 a Fáze 1.**
 
 
+## -21. Před ostrým spuštěním — PRÁVNÍ TEXTY K DODĚLÁNÍ (16. 10. 2026, Pavel vzal na vědomí)
+
+Ověřeno přímo v produkčním `content_pages` (section `legal`) 16. 10. 2026. Pavel 15. 6. 2026 přijal texty jen
+**pro testovací fázi**; 16. 10. 2026 potvrdil, že je před ostrým spuštěním dodělá. **OPEN ISSUE (pre-live blocker):**
+
+| Stránka | Stav v produkci | Co dodělat |
+|---|---|---|
+| `/gdpr` | stará krátká verze (~1 300 znaků, 29. 4. 2026) | schválit sjednocený návrh `docs/pravni-dokumenty/OCHRANA_OSOBNICH_UDAJU/ZASADY_OCHRANY_OSOBNICH_UDAJU.md` (~12 700 znaků) → publikovat do CMS → deaktivovat `ochrana-osobnich-udaju` |
+| `/vop` | ~1 200 znaků, bod 8 o vrácení MIO schválen a nasazen (29. 9. 2026) | právní kontrola úplnosti (identifikace firmy, reklamační řád) |
+| `/legal/cookies` | text z 1. 2. 2026 | doplnit skutečné nástroje (Stripe, OneSignal, GTM, localStorage) |
+| `/pravidla-souteze` | obecná stránka s placeholdery `[NÁZEV SOUTĚŽE]`, `[DATUM]`… | vyčistit nebo nahradit obecným textem (závazné je PDF konkrétní soutěže) |
+| smazání účtu (GDPR) | účet s historií MIO nelze fyzicky smazat (§ -20) | rozhodnout postup (anonymizace) |
+
+Postup podle CLAUDE.md: změna nejdřív v `docs/pravni-dokumenty/` → schválení Pavla → publikace stejného obsahu do CMS.
+AI právní text bez schválení nemění.
+
 ## -20. Grafický redesign zákaznické části — NASAZENO (15. 10. 2026, schválil Pavel)
 
 Podle plátna https://claude.ai/artifact/DxBmNteH2GBg62ziQEEwnd. **PR #424 sloučen do `main`
