@@ -1,7 +1,5 @@
-import { useLocation } from "react-router-dom";
 import { useToast } from "@/hooks/use-toast";
 import { Toast, ToastClose, ToastDescription, ToastProvider, ToastTitle, ToastViewport } from "@/components/ui/toast";
-import { isCustomerRedesignPath } from "@/lib/customerRedesign";
 
 /** Hláška je chybová, když má variantu `destructive` nebo nadpis začíná „Chyba“. */
 function isErrorToast(variant: unknown, title: unknown): boolean {
@@ -21,25 +19,10 @@ function ToastIcon({ error }: { error: boolean }) {
 
 export function Toaster() {
   const { toasts } = useToast();
-  const { pathname } = useLocation();
-  const redesign = isCustomerRedesignPath(pathname);
 
   return (
     <ToastProvider>
       {toasts.map(function ({ id, title, description, action, variant, className, ...props }) {
-        if (!redesign) {
-          return (
-            <Toast key={id} variant={variant} className={className} {...props}>
-              <div className="grid gap-1">
-                {title && <ToastTitle>{title}</ToastTitle>}
-                {description && <ToastDescription>{description}</ToastDescription>}
-              </div>
-              {action}
-              <ToastClose />
-            </Toast>
-          );
-        }
-
         const error = isErrorToast(variant, title);
         return (
           <Toast key={id} className={`om-toast ${error ? "om-toast-error" : "om-toast-success"} ${className ?? ""}`} {...props}>
@@ -55,7 +38,7 @@ export function Toaster() {
           </Toast>
         );
       })}
-      <ToastViewport className={redesign ? "om-toast-viewport" : undefined} />
+      <ToastViewport className="om-toast-viewport" />
     </ToastProvider>
   );
 }

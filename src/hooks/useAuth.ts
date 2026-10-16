@@ -206,7 +206,7 @@ export const useAuthState = () => {
       setLoading(false);
       toast({
         title: "Přihlášeno",
-        description: "Vítej zpět! Tvoje soutěže a MIO na tebe čekají."
+        description: "Vítej zpět!"
       });
     }
 

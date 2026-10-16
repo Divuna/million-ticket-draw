@@ -1,50 +1,15 @@
-import { useTheme } from "next-themes";
-import { useLocation } from "react-router-dom";
 import { Toaster as Sonner, toast } from "sonner";
-import { isCustomerRedesignPath } from "@/lib/customerRedesign";
 
 type ToasterProps = React.ComponentProps<typeof Sonner>;
 
-const Toaster = ({ ...props }: ToasterProps) => {
-  const { theme = "system" } = useTheme();
-  const { pathname } = useLocation();
-
-  // Zákaznická část: hlášky podle redesignu (tmavá úspěch / růžová chyba, nahoře).
-  if (isCustomerRedesignPath(pathname)) {
-    return (
-      <Sonner
-        position="top-center"
-        className="toaster om-sonner-root"
-        toastOptions={{ classNames: { toast: "om-sonner" } }}
-        {...props}
-      />
-    );
-  }
-
-  return (
-    <Sonner
-      theme={theme as ToasterProps["theme"]}
-      className="toaster group"
-      toastOptions={{
-        classNames: {
-          toast:
-            "group toast group-[.toaster]:bg-background group-[.toaster]:text-foreground group-[.toaster]:border-border group-[.toaster]:shadow-lg",
-          // Default/success descriptions stay muted. Error toasts force a solid
-          // red background with white title + description so text is always readable.
-          // The [&[data-type=error]_...] selectors target children of an error toast
-          // regardless of the global muted/foreground classes.
-          description:
-            "group-[.toast]:text-muted-foreground group-[&[data-type=error]]:!text-white",
-          title: "group-[&[data-type=error]]:!text-white",
-          error:
-            "!bg-destructive !border-destructive !text-white [&_[data-title]]:!text-white [&_[data-description]]:!text-white [&_[data-icon]]:!text-white",
-          actionButton: "group-[.toast]:bg-primary group-[.toast]:text-primary-foreground",
-          cancelButton: "group-[.toast]:bg-muted group-[.toast]:text-muted-foreground",
-        },
-      }}
-      {...props}
-    />
-  );
-};
+/** Hlášky podle plátna redesignu (tmavá úspěch / růžová chyba, nahoře) – v celé aplikaci. */
+const Toaster = ({ ...props }: ToasterProps) => (
+  <Sonner
+    position="top-center"
+    className="toaster om-sonner-root"
+    toastOptions={{ classNames: { toast: "om-sonner" } }}
+    {...props}
+  />
+);
 
 export { Toaster, toast };
