@@ -31,8 +31,12 @@ nasazené) – zapíná superadmin v `/admin/notifications` → Automatická upo
 `process-email-queue` zachovat `--no-verify-jwt` a podporu `renderOneMilStructuredEmail`.
 
 **OPEN ISSUE:**
-- Dalších 8 EF, které sdílenou šablonu e-mailů používají (pozvánky, faktury, affiliate, Shoptet…), dostane nový
-  vzhled až při svém příštím nasazení – do té doby posílají předchozí krémovou verzi.
+- ~~Dalších 8 EF se sdílenou šablonou e-mailů posílá starý vzhled~~ → 16. 10. 2026 nasazeno na produkci (schválil Pavel):
+  `send-offer-reminders`, `send-marketing-consent-notification`, `create-affiliate-company-lead`,
+  `approve-affiliate-company-lead`, `invite-subadmin`, `approve-shoptet-connection`, `create-affiliate-payout-document`,
+  `send-partner-invoice-email` – vše `--no-verify-jwt` (jako dosud). Kód funkcí se od minulého nasazení neměnil, jen šablona.
+  Staging tyto funkce zatím drží starší verzi.
+- Zákaznická upozornění: Pavel 16. 10. 2026 rozhodl je zapnout; zapíná se v `/admin/notifications` (stav ověřit v `settings.notice_*`).
 - Staging `email_queue` nemá sloupec `dedupe_key` (drift, chybí migrace `20260723194828`) → na stagingu se
   e-mailová upozornění nezařadí (chyba se jen zaloguje). Produkce sloupec má.
 - ~~`TicketResultModal` se nikde neotevírá~~ → odstraněno 16. 10. 2026 (komponenta + CSS + nepoužitý stav v `ContestDetail`,

@@ -1,3 +1,9 @@
+# 16. 10. 2026 — Nový vzhled e-mailů pro zbývajících 8 funkcí
+
+Na pokyn Pavla nasazeno na produkci 8 Edge Functions se sdílenou šablonou e-mailů (pozvánky, faktury, affiliate, Shoptet,
+marketingový souhlas, připomínky nabídek). Kód funkcí beze změny od minulého nasazení, `verify_jwt=false` zachováno.
+Zapnutí zákaznických upozornění provede Pavel v `/admin/notifications`.
+
 # 16. 10. 2026 — Úklid po redesignu
 
 Odstraněna nepoužívaná `TicketResultModal` (po redesignu se nikdy neotevírala, nákup ukazuje `MysteryPurchaseResultDialog`)
