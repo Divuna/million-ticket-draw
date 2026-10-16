@@ -50,8 +50,22 @@ nasazené) – zapíná superadmin v `/admin/notifications` → Automatická upo
   auditní spouštěč `fn_audit_generic` zapisuje `audit_logs.user_id` = mazaný uživatel → FK chyba, celé smazání se vrátí
   (31 ze 40 testovacích účtů). Týká se i produkce (žádost o smazání účtu). Oprava = při DELETE zapisovat `user_id` NULL
   (nebo jen pokud uživatel existuje); vyžaduje schválení Pavla (produkční audit logika).
-- **OPEN ISSUE – hromadění testovacích účtů na stagingu** (1816× `@onemil.test`): testy mazat zkouší, ale smazání padá
-  na výše uvedené chybě a na neměnných pohybech MIO. Návrh: po opravě auditu týdenní úklid účtů starších 7 dní (jen staging).
+  - **16. 10. 2026 – opraveno JEN NA STAGINGU** (rozhodnutí Pavla). SQL + důvod + rollback:
+    `docs/sql/staging_only_fn_audit_generic_null_user_on_delete.sql` (záměrně mimo `supabase/migrations`, aby se
+    nespustil na produkci). Při DELETE se do `audit_logs.user_id` zapíše NULL, pokud uživatel už neexistuje; původní ID
+    zůstává v `metadata.old.user_id` a `metadata.audited_user_id`. INSERT/UPDATE beze změny.
+  - **Produkce záměrně beze změny** (2 účty, nic se nemaže; produkční audit logika = schválení Pavla). Definice se teď
+    mezi prostředími liší – při porovnávání stagingu s produkcí to není chyba, ale vědomý rozdíl.
+  - Ověřeno (transakce s ROLLBACK, 40 nejstarších `@onemil.test`): auditní chyba zmizela (31 → 0), ale **smazat nejde
+    stále žádný** – 38 účtů teď zastaví neměnné `wallet_lot_movements` (záměrný invariant MIO), 1 append-only audit
+    voucherů, 1 FK z `partner_coin_activations`. Z 1943 testovacích účtů má MIO sady 1942.
+- **OPEN ISSUE – smazání účtu s historií MIO je v návrhu systému nemožné:** `wallet_lot_movements` jsou neměnné (nesmí se
+  mazat), takže účet, který kdy měl MIO, nelze fyzicky smazat ani po opravě auditu. Před ostrým spuštěním je potřeba
+  rozhodnout, jak vyřizovat žádost o smazání účtu (GDPR) – typicky anonymizace osobních údajů místo fyzického smazání,
+  finanční/auditní stopa zůstane. Vyžaduje rozhodnutí Pavla (+ právní posouzení).
+- **OPEN ISSUE – hromadění testovacích účtů na stagingu** (1943× `@onemil.test`): kvůli neměnným pohybům MIO je nejde
+  smazat běžnou cestou. Úklid by vyžadoval samostatný staging-only skript, který obejde ochranné spouštěče – destruktivní,
+  jen se schválením Pavla. Dnes ničemu nevadí (seed stránkuje až do 20 000 účtů).
 
 ## -19. Sdílené bonusové MIO kódy — NASAZENO (13. 10. 2026, schválil Pavel)
 
