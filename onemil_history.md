@@ -1,3 +1,9 @@
+# 16. 10. 2026 — Detail výhry „Cesta k tobě“ + pravidlo bonusových výher
+
+Detail výhry předělán podle plátna (tmavé záhlaví s fotkou, kroky Vyhráno → Odesláno → Doručeno, avatar s dárkem,
+Napsat podpoře / Sdílet výhru). Pavel potvrdil, že MIO výhra jde do bonusových výher a zákazník si ji převádí sám –
+záměr, ne chyba (zapsáno do ONEMIL_BUSINESS_CONTEXT.md § 8.3).
+
 # 16. 10. 2026 — Moje výhry a hlášky podle redesignu v produkci
 
 PR #430 sloučen na pokyn Pavla: stránka Moje výhry podle plátna (karty výher, filtry, nabídky, prázdné stavy) a nové

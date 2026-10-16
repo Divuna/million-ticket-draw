@@ -155,3 +155,73 @@
 @media (prefers-reduced-motion: reduce) {
   .om-wins-empty img, .om-win-pill-wait .om-win-pill-dot, .om-wins-skeleton { animation: none; }
 }
+
+/* ───────── Detail výhry („Cesta k tobě“) ───────── */
+.om-wd {
+  background:
+    radial-gradient(120% 30% at 50% 0%, #FFF6E0, rgba(255, 246, 224, 0) 70%),
+    repeating-linear-gradient(135deg, rgba(194, 144, 47, 0.045) 0 1px, transparent 1px 14px),
+    #F5EEE3 !important;
+  color: #17171B; font-family: 'Manrope', system-ui, sans-serif;
+  box-shadow: 0 28px 80px rgba(23, 23, 27, 0.4), 0 0 0 1px rgba(233, 185, 73, 0.4) !important;
+}
+.om-wd > button.absolute { z-index: 5; width: 36px; height: 36px; top: 12px !important; right: 12px !important; border-radius: 50% !important; display: flex; align-items: center; justify-content: center; background: rgba(0, 0, 0, 0.55) !important; color: #fff !important; opacity: 1 !important; }
+.om-wd > button.absolute svg { color: #fff; }
+.om-wd-hero { position: relative; height: 240px; overflow: hidden; background: radial-gradient(120% 90% at 70% 10%, #4A0D18, #17171B 55%, #0B0B0D); color: #ECEDEF; }
+.om-wd-hero-img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; object-position: 70% 60%; }
+.om-wd-hero-mio { position: absolute; inset: 0 0 60px; display: flex; align-items: center; justify-content: center; filter: drop-shadow(0 14px 24px rgba(0, 0, 0, 0.55)); }
+.om-wd-hero-shade { position: absolute; inset: 0; background: linear-gradient(180deg, rgba(11, 11, 13, 0.45), rgba(11, 11, 13, 0) 35%, rgba(11, 11, 13, 0.95)); }
+.om-wd-crown {
+  position: absolute; top: 14px; left: 14px; width: 48px; height: 48px; border-radius: 50%; display: flex; align-items: center; justify-content: center;
+  background: #17171B; box-shadow: 0 0 0 2px #E9B949, 0 0 18px rgba(233, 185, 73, 0.55);
+}
+.om-wd-crown img { width: 32px; height: auto; }
+.om-wd-hero-text { position: absolute; left: 16px; right: 16px; bottom: 16px; }
+.om-wd-kicker { display: block; font-size: 11px; font-weight: 800; letter-spacing: 0.14em; text-transform: uppercase; color: #F2C55C; }
+.om-redesign .om-wd-title, .om-wd-title {
+  margin: 0; font-family: 'Barlow Condensed', sans-serif !important; font-weight: 800; font-style: italic; text-transform: uppercase;
+  font-size: 32px !important; line-height: 0.95 !important; color: #fff !important; -webkit-text-fill-color: #fff; background: none !important;
+  padding: 0 !important; text-shadow: none !important; overflow-wrap: anywhere;
+}
+.om-wd-card {
+  padding: 16px; border-radius: 18px; background: linear-gradient(180deg, #FFFFFF 0%, #FDF8EF 100%);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.95), 0 0 0 1px rgba(194, 144, 47, 0.24), 0 10px 22px rgba(60, 40, 10, 0.1);
+}
+.om-wd-card-title { font-family: 'Barlow Condensed', sans-serif; font-weight: 800; font-style: italic; text-transform: uppercase; font-size: 19px; line-height: 1; }
+.om-wd-steps { position: relative; list-style: none; margin: 14px 0 0; padding: 0 0 0 34px; display: flex; flex-direction: column; gap: 16px; }
+.om-wd-steps::before { content: ""; position: absolute; left: 11px; top: 6px; bottom: 18px; width: 3px; border-radius: 2px; background: #E8DCC6; }
+.om-wd-steps::after { content: ""; position: absolute; left: 11px; top: 6px; width: 3px; height: var(--om-wd-progress, 40%); max-height: calc(100% - 24px); border-radius: 2px; background: linear-gradient(180deg, #2E9E5B, #E9B949); }
+.om-wd-step { position: relative; display: flex; flex-direction: column; }
+.om-wd-step strong { font-size: 14px; }
+.om-wd-step span:last-child { font-size: 12px; color: #5E5B57; }
+.om-wd-dot { position: absolute; left: -34px; top: 0; z-index: 1; width: 24px; height: 24px; border-radius: 50%; display: flex; align-items: center; justify-content: center; }
+.om-wd-step-done .om-wd-dot { background: #2E9E5B; }
+.om-wd-step-current .om-wd-dot { background: #E9B949; animation: om-win-pulse 1.6s ease-in-out infinite; }
+.om-wd-step-current strong { color: #8A5A10; }
+.om-wd-step-todo .om-wd-dot { background: #fff; box-shadow: inset 0 0 0 2px #D8CBB2; }
+.om-wd-step-todo strong { color: #8E8F98; }
+.om-wd-step-todo span:last-child { color: #A9AAB3; }
+.om-wd-warn { padding: 12px 14px; border-radius: 14px; font-size: 13px; font-weight: 600; line-height: 1.45; color: #8A5A10; background: rgba(233, 185, 73, 0.14); box-shadow: inset 0 0 0 1px rgba(194, 144, 47, 0.45); }
+.om-wd-quote {
+  display: flex; align-items: flex-end; gap: 8px; height: 92px; overflow: hidden; padding: 0 14px 0 4px; border-radius: 18px;
+  background: linear-gradient(180deg, #FFFFFF 0%, #FDF8EF 100%); box-shadow: 0 0 0 1px rgba(194, 144, 47, 0.24), 0 10px 22px rgba(60, 40, 10, 0.1);
+}
+.om-wd-quote img { flex: none; height: 116px; width: auto; margin-bottom: -14px; animation: om2-bob 3.6s ease-in-out infinite; }
+.om-wd-quote span { align-self: center; font-size: 13px; line-height: 1.45; color: #3A3A40; }
+.om-wd-dark-btn {
+  min-height: 48px; border-radius: 12px; border: 0; font-weight: 800; font-size: 14px; color: #F6D77A;
+  background: linear-gradient(180deg, #26262C, #121215); box-shadow: inset 0 0 0 1px rgba(233, 185, 73, 0.55);
+}
+.om-wd-gold-btn {
+  min-height: 48px; border-radius: 12px; border: 0; display: inline-flex; align-items: center; justify-content: center; gap: 8px;
+  font-weight: 800; font-size: 14px; color: #1A1205; background: linear-gradient(180deg, #FFE29A, #E9B949 55%, #C2902F);
+  box-shadow: 0 6px 16px rgba(194, 144, 47, 0.35);
+}
+.om-wd-share { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
+.om-wd-share button {
+  min-height: 42px; border-radius: 12px; border: 1px solid rgba(194, 144, 47, 0.45); background: #fff; display: inline-flex;
+  align-items: center; justify-content: center; gap: 6px; font-size: 13px; font-weight: 700; color: #17171B;
+}
+.om-wd-share button:hover { background: #FFF6E0; }
+.om-wd-link { align-self: center; min-height: 40px; padding: 0 12px; border: 0; background: none; font-size: 13px; font-weight: 700; color: #B5122B; }
+@media (prefers-reduced-motion: reduce) { .om-wd-quote img, .om-wd-step-current .om-wd-dot { animation: none; } }
