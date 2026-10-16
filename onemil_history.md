@@ -1,3 +1,8 @@
+# 16. 10. 2026 — Právní texty: seznam k dodělání před spuštěním
+
+Ověřen skutečný stav právních stránek v produkci. Schválené pro ostrý provoz je jen znění bodu 8 VOP; ostatní je přijato
+pro testovací fázi. Nový sjednocený GDPR čeká na schválení. Pavel vzal na vědomí, dodělá před spuštěním (§ -21 ve state).
+
 # 16. 10. 2026 — Nový vzhled e-mailů pro zbývajících 8 funkcí
 
 Na pokyn Pavla nasazeno na produkci 8 Edge Functions se sdílenou šablonou e-mailů (pozvánky, faktury, affiliate, Shoptet,
