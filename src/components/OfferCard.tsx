@@ -1,6 +1,5 @@
 import React from 'react';
-import { Badge } from '@/components/ui/badge';
-import { Tag, Calendar } from 'lucide-react';
+import { Tag } from 'lucide-react';
 
 // ── Shared type used by OfferCard, OfferDetailModal and Wins ──────────────────
 export interface UserOffer {
@@ -35,74 +34,50 @@ export const OfferCard: React.FC<OfferCardProps> = ({ offer, onClick }) => {
   const partnerName = data.partners?.company_name ?? data.partners?.name ?? '';
   const isNew = !offer.opened_at;
   const isExpired = data.valid_to ? new Date(data.valid_to) < new Date() : false;
-
-  // Prefer banner for the card image; fall back to logo.
-  const imageUrl = data.banner_url ?? data.logo_url ?? null;
+  const logo = data.logo_url ?? data.banner_url ?? null;
 
   return (
     <div
+      role="button"
+      tabIndex={0}
       onClick={onClick}
-      className="group relative rounded-xl overflow-hidden cursor-pointer transition-all duration-300
-        bg-card border border-border/50
-        hover:border-[rgba(194,144,47,0.4)] hover:shadow-lg hover:shadow-[rgba(194,144,47,0.1)] hover:scale-[1.01]"
-      style={{ animation: 'fade-in 0.4s ease-out forwards' }}
+      onKeyDown={(e) => {
+        if (e.key === 'Enter' || e.key === ' ') {
+          e.preventDefault();
+          onClick();
+        }
+      }}
+      className="om-offer-card group relative cursor-pointer"
     >
-      {/* Image / logo section */}
-      <div className="relative h-44 overflow-hidden bg-muted flex items-center justify-center">
-        {imageUrl ? (
-          <img
-            src={imageUrl}
-            alt={data.title}
-            className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
-            loading="lazy"
-            onError={(e) => {
-              (e.currentTarget as HTMLImageElement).style.display = 'none';
-            }}
-          />
-        ) : (
-          <div className="w-full h-full flex items-center justify-center bg-muted">
-            <Tag className="w-16 h-16 text-[rgba(194,144,47,0.3)]" />
-          </div>
-        )}
-
-        {/* Badges */}
-        <div className="absolute top-3 right-3 flex flex-col gap-1 items-end">
-          {isNew && !isExpired && (
-            <Badge className="bg-[rgba(194,144,47,0.9)] text-black border-0 text-xs">Nová</Badge>
-          )}
-          {isExpired && (
-            <Badge className="bg-gray-600/80 text-white border-0 text-xs">Expirovaná</Badge>
+      <div className="om-offer-head">
+        <div className="om-offer-logo">
+          {logo ? (
+            <img
+              src={logo}
+              alt={partnerName || data.title}
+              loading="lazy"
+              onError={(e) => { e.currentTarget.style.display = 'none'; }}
+            />
+          ) : (
+            <Tag className="h-8 w-8 text-[#C2902F]" aria-hidden="true" />
           )}
         </div>
+        <div className="flex min-w-0 flex-col gap-1 pr-12">
+          {partnerName && <span className="om-offer-partner truncate">{partnerName}</span>}
+          <strong className="om-offer-title">{data.title}</strong>
+        </div>
+        {isNew && !isExpired && <span className="om-offer-flag">Nová</span>}
+        {isExpired && <span className="om-offer-flag om-offer-flag-off">Expirovaná</span>}
       </div>
 
-      {/* Content */}
-      <div className="p-4 space-y-2">
-        {partnerName && (
-          <p className="text-xs text-[#E9B949] font-medium uppercase tracking-wide truncate">
-            {partnerName}
-          </p>
-        )}
-
-        <h3 className="font-semibold text-foreground line-clamp-2 leading-tight">
-          {data.title}
-        </h3>
-
-        {data.short_text && (
-          <p className="text-sm text-muted-foreground line-clamp-2">{data.short_text}</p>
-        )}
-
-        <div className="pt-1 border-t border-border/50 flex items-center justify-between gap-2">
-          <p className="text-xs text-muted-foreground/70 truncate">
-            Získáno: {new Date(offer.obtained_at).toLocaleDateString('cs-CZ')}
-          </p>
+      <div className="flex flex-col gap-3 p-4">
+        <p className="text-[13px] leading-snug text-[#5E5B57]">
+          {data.short_text}
           {data.valid_to && (
-            <div className="flex items-center gap-1 text-xs text-muted-foreground/70 shrink-0">
-              <Calendar className="w-3 h-3" />
-              <span>Do: {new Date(data.valid_to).toLocaleDateString('cs-CZ')}</span>
-            </div>
+            <span className="whitespace-nowrap"> · Platí do {new Date(data.valid_to).toLocaleDateString('cs-CZ')}</span>
           )}
-        </div>
+        </p>
+        <span className="om-offer-cta" aria-hidden="true">Zobrazit nabídku</span>
       </div>
     </div>
   );

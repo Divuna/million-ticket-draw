@@ -1,10 +1,9 @@
 import React from 'react';
-import { Badge } from '@/components/ui/badge';
-import { CheckCircle, Clock, Package } from 'lucide-react';
-import { OneMilTrophyIcon, OneMilGiftIcon } from '@/components/icons/OneMilIcons';
-import { MIOCOIN_IMAGE_URL } from '@/components/MioCoin';
-import { bonusPrizeDisplayName } from '@/lib/miocoin';
+import { OneMilGiftIcon } from '@/components/icons/OneMilIcons';
+import { MioBadge } from '@/components/brand/MioBadge';
+import { bonusPrizeDisplayName, formatMioCoinNumber } from '@/lib/miocoin';
 import { supabaseUrl } from '@/integrations/supabase/client';
+import emblem from '@/assets/redesign/onemil-emblem.png';
 
 const getStorageUrl = (path: string | null | undefined): string | null => {
   if (!path) return null;
@@ -44,164 +43,114 @@ interface WinCardProps {
   isHighlighted?: boolean;
 }
 
+type PillKind = 'wait' | 'ship' | 'done';
+
+/** Stav výhry pro zákazníka – stejné rozlišení jako filtry na stránce Výhry. */
+const getPill = (win: Win, isMio: boolean): { kind: PillKind; label: string } => {
+  // MIO výhra se připisuje hned při výhře (trigger na `winners`), nic se neodesílá.
+  if (isMio) return { kind: 'done', label: 'Připsáno' };
+  if (win.delivered || win.status === 'delivered') return { kind: 'done', label: 'Doručeno' };
+  if (win.status === 'shipped' || (win.notes ?? '').toLowerCase().includes('shipped')) {
+    return { kind: 'ship', label: 'Odesláno' };
+  }
+  if (win.status === 'připraveno k odeslání') return { kind: 'wait', label: 'Připraveno k odeslání' };
+  return { kind: 'wait', label: 'Čeká na předání' };
+};
+
+const Pill: React.FC<{ kind: PillKind; label: string }> = ({ kind, label }) => (
+  <span className={`om-win-pill om-win-pill-${kind}`}>
+    <span className="om-win-pill-dot" aria-hidden="true" />
+    {label}
+  </span>
+);
+
+const activate = (onClick: () => void) => (e: React.KeyboardEvent) => {
+  if (e.key === 'Enter' || e.key === ' ') {
+    e.preventDefault();
+    onClick();
+  }
+};
+
 export const WinCard: React.FC<WinCardProps> = ({ win, onClick, className = '', isHighlighted = false }) => {
   const isMainPrize = win.type === 'main';
+  const mioAmount = Number(win.bonus_prize?.amount ?? 0);
+  const isMio = !isMainPrize && mioAmount > 0;
+  const pill = getPill(win, isMio);
+  const contestTitle = win.contest?.title || 'Soutěž OneMil';
+  const highlight = isHighlighted ? 'om-win-highlight' : '';
 
-  const getStatusBadge = () => {
-    const baseClasses = "text-xs font-medium";
-    
-    if (win.delivered || win.status === 'delivered') {
-      return (
-        <Badge className={`${baseClasses} bg-emerald-500/90 text-white border-0`}>
-          <CheckCircle className="w-3 h-3 mr-1" /> Předáno
-        </Badge>
-      );
-    }
-    switch (win.status) {
-      case 'pending':
-        return (
-          <Badge className={`${baseClasses} bg-amber-500/90 text-white border-0`}>
-            <Clock className="w-3 h-3 mr-1" /> Čeká
-          </Badge>
-        );
-      case 'připraveno k odeslání':
-        return (
-          <Badge className={`${baseClasses} bg-[rgba(194,144,47,0.9)] text-black border-0`}>
-            <Package className="w-3 h-3 mr-1" /> Připraveno k odeslání
-          </Badge>
-        );
-      case 'shipped':
-        return (
-          <Badge className={`${baseClasses} bg-purple-500/90 text-white border-0`}>
-            <Package className="w-3 h-3 mr-1" /> Odesláno
-          </Badge>
-        );
-      default:
-        return (
-          <Badge className={`${baseClasses} bg-amber-500/90 text-white border-0`}>
-            <Clock className="w-3 h-3 mr-1" /> Čeká
-          </Badge>
-        );
-    }
-  };
+  if (isMainPrize) {
+    const image = win.contest?.main_prize_secondary_image || win.contest?.main_image || null;
+    return (
+      <div
+        role="button"
+        tabIndex={0}
+        onClick={onClick}
+        onKeyDown={activate(onClick)}
+        className={`om-win-main ${highlight} ${className}`}
+      >
+        {image && (
+          <img
+            src={image}
+            alt=""
+            aria-hidden="true"
+            className="om-win-main-img"
+            loading="lazy"
+            onError={(e) => { e.currentTarget.style.display = 'none'; }}
+          />
+        )}
+        <div className="om-win-main-shade" aria-hidden="true" />
+        <div className="om-win-main-body">
+          <span className="om-win-flag">
+            <img src={emblem} alt="" aria-hidden="true" />
+            HLAVNÍ VÝHRA
+          </span>
+          <div className="flex flex-col gap-1">
+            <strong className="om-win-main-name">{win.contest?.main_prize || 'Hlavní výhra'}</strong>
+            <span className="om-win-sub">{contestTitle}</span>
+          </div>
+          <Pill {...pill} />
+        </div>
+      </div>
+    );
+  }
 
-  const getTypeIcon = () => {
-    return isMainPrize
-      ? <OneMilTrophyIcon size={16} className="h-4 w-4 text-amber-500" />
-      : <OneMilGiftIcon size={16} className="h-4 w-4 text-purple-500" />;
-  };
-
-  const getTypeLabel = () => {
-    return isMainPrize ? 'Hlavní výhra' : 'Bonusová výhra';
-  };
-
-  const getImageUrl = (): string | null => {
-    if (isMainPrize) {
-      return win.contest?.main_prize_secondary_image || win.contest?.main_image || null;
-    }
-    return getStorageUrl(win.bonus_prize?.image_url) || MIOCOIN_IMAGE_URL;
-  };
-
-  const imageUrl = getImageUrl();
-  const isMioCoinImage = !isMainPrize && imageUrl === MIOCOIN_IMAGE_URL;
+  const name = win.notes || bonusPrizeDisplayName(win.bonus_prize, 'Bonusová výhra');
+  const image = getStorageUrl(win.bonus_prize?.image_url);
 
   return (
-    <div 
-      className={`customer-win-card group relative rounded-xl overflow-hidden cursor-pointer transition-all duration-300
-        bg-card border
-        ${isMainPrize 
-          ? 'border-amber-400/30 hover:border-amber-400/60 hover:shadow-lg hover:shadow-amber-500/10' 
-          : 'border-border/50 hover:border-purple-400/40 hover:shadow-lg hover:shadow-purple-500/5'
-        }
-        ${isHighlighted ? 'ring-2 ring-amber-400 shadow-lg shadow-amber-500/20' : ''} 
-        ${className}
-        hover:scale-[1.01]`}
+    <div
+      role="button"
+      tabIndex={0}
       onClick={onClick}
-      style={{
-        animation: 'fade-in 0.4s ease-out forwards'
-      }}
+      onKeyDown={activate(onClick)}
+      className={`om-win-row ${highlight} ${className}`}
     >
-      {/* Image section - 70% */}
-      <div className={`customer-win-card-media relative h-56 overflow-hidden bg-muted ${isMioCoinImage ? 'customer-win-card-media-mio' : ''}`}>
-        {imageUrl ? (
+      <div className={`om-win-thumb ${isMio ? 'om-win-thumb-mio' : ''}`}>
+        {isMio ? (
+          <MioBadge width={72} />
+        ) : image ? (
           <img
-            src={imageUrl}
-            alt={win.contest?.title || 'Výhra'}
-            className={`customer-win-card-image w-full h-full transition-transform duration-500 ${
-              isMioCoinImage
-                ? 'object-contain p-8 sm:p-9 group-hover:scale-[1.02]'
-                : 'object-cover group-hover:scale-105'
-            }`}
+            src={image}
+            alt=""
+            aria-hidden="true"
             loading="lazy"
-            onError={(e) => {
-              if (win.type === 'bonus' && e.currentTarget.src !== MIOCOIN_IMAGE_URL) {
-                e.currentTarget.src = MIOCOIN_IMAGE_URL;
-              } else {
-                (e.currentTarget as HTMLImageElement).style.display = 'none';
-              }
-            }}
+            onError={(e) => { e.currentTarget.style.display = 'none'; }}
           />
         ) : (
-          <div className="w-full h-full flex items-center justify-center bg-muted">
-            {isMainPrize ? (
-              <OneMilTrophyIcon size={64} className="w-16 h-16 text-amber-400/30" />
-            ) : (
-              <OneMilGiftIcon size={64} className="w-16 h-16 text-purple-400/30" />
-            )}
-          </div>
-        )}
-
-        {/* Subtle bottom fade for main prizes only */}
-        {isMainPrize && (
-          <div className="absolute bottom-0 left-0 right-0 h-12 bg-gradient-to-t from-black/20 to-transparent pointer-events-none" />
-        )}
-
-        {isMioCoinImage && (
-          <div className="customer-win-card-mio-glow absolute inset-0 pointer-events-none" />
-        )}
-
-        {/* Status badge - top right */}
-        <div className="absolute top-3 right-3">
-          {getStatusBadge()}
-        </div>
-
-        {/* Subtle gold glow for main prizes on hover */}
-        {isMainPrize && (
-          <div className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-500 pointer-events-none
-            shadow-[inset_0_0_30px_rgba(251,191,36,0.1)]" />
+          <OneMilGiftIcon size={30} className="h-8 w-8 text-[#C2902F]" />
         )}
       </div>
-
-      {/* Content section - 30% */}
-      <div className="p-4 space-y-2">
-        {/* Type indicator */}
-        <div className="flex items-center gap-1.5">
-          {getTypeIcon()}
-          <span className={`text-xs font-medium ${isMainPrize ? 'text-amber-600 dark:text-amber-400' : 'text-purple-600 dark:text-purple-400'}`}>
-            {getTypeLabel()}
-          </span>
-        </div>
-
-        {/* Title */}
-        <h3 className="font-semibold text-foreground line-clamp-2 leading-tight">
-          {win.contest?.title || 'Soutěž'}
-        </h3>
-
-        {/* Prize name */}
-        <p className="text-sm text-muted-foreground line-clamp-1">
-          {isMainPrize ? win.contest?.main_prize : (win.notes || bonusPrizeDisplayName(win.bonus_prize, 'Bonusová cena'))}
-        </p>
-
-        {/* Date */}
-        <p className="text-xs text-muted-foreground/70 pt-1 border-t border-border/50">
-          Vyhráno: {new Date(win.created_at).toLocaleDateString('cs-CZ')}
-        </p>
+      <div className="flex min-w-0 flex-1 flex-col gap-1">
+        {isMio ? (
+          <strong className="om-win-mio-amount">+{formatMioCoinNumber(mioAmount)} MIO</strong>
+        ) : (
+          <strong className="om-win-row-name">{name}</strong>
+        )}
+        <span className="om-win-row-sub">Bonusová výhra · {contestTitle}</span>
       </div>
-
-      {/* Shimmer effect on hover - border only */}
-      <div className="absolute inset-0 rounded-xl pointer-events-none opacity-0 group-hover:opacity-100 transition-opacity duration-500">
-        <div className={`absolute inset-0 rounded-xl ${isMainPrize ? 'shadow-[0_0_1px_1px_rgba(251,191,36,0.15)]' : ''}`} />
-      </div>
+      <Pill {...pill} />
     </div>
   );
 };
+
