@@ -87,8 +87,8 @@ test.describe('55 — C23: Invite referral (bez Stripe platby)', () => {
     const heading = page.getByRole('heading', { name: /Pozvi přátele/i }).first();
     await expect(heading).toBeVisible({ timeout: 15_000 });
 
-    // Label "Váš doporučovací kód" je viditelný
-    await expect(page.getByText('Váš doporučovací kód')).toBeVisible({ timeout: 10_000 });
+    // Label "Tvůj doporučovací kód" je viditelný (tykání od redesignu)
+    await expect(page.getByText('Tvůj doporučovací kód')).toBeVisible({ timeout: 10_000 });
 
     // Kód se renderuje v <code> elementu (ReferralSection.tsx:368)
     // Počkáme na naplnění (ensure_referral_code RPC)

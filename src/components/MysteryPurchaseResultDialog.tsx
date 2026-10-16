@@ -270,7 +270,7 @@ export function MysteryPurchaseResultDialog({
           <section data-testid="mystery-result-prize" className="om-rd-up text-center min-w-0">
             {isWin ? (
               <>
-                <p className="om-rd-eyebrow">Gratulujeme – VYHRÁL JSI!</p>
+                <p className="om-rd-eyebrow">GRATULUJEME – VYHRÁL JSI!</p>
                 <p className={`om-rd-head mt-1.5 ${wonType === "main" ? "om-rd-head-gold" : ""}`}>
                   {wonType === "main" ? "Hlavní výhra je tvoje!" : "Bonus je tvůj!"}
                 </p>
