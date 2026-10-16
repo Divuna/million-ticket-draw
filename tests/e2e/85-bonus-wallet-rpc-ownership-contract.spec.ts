@@ -83,12 +83,7 @@ test.describe('bonus wallet mutation RPC ownership contract', () => {
   });
 
   test('application callers use only self-scoped bonus wallet RPCs', () => {
-    const ticketModal = read('src/components/TicketResultModal.tsx');
     const profile = read('src/pages/Profile.tsx');
-
-    expect(ticketModal).toContain("supabase.rpc('claim_miocoin_bonus'");
-    expect(ticketModal).toContain('p_user_id: user.id');
-    expect(ticketModal).not.toContain("rpc('claim_miocoin_bonus', { p_bonus_prize_id");
 
     expect(profile).toContain("supabase.rpc('transfer_bonus_to_main'");
     expect(profile).not.toContain('transfer_all_bonus_to_main_wallet');

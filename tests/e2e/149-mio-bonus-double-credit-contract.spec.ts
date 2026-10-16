@@ -1,8 +1,16 @@
 import { expect, test } from '@playwright/test';
-import { readFileSync } from 'node:fs';
-import { resolve } from 'node:path';
+import { readdirSync, readFileSync, statSync } from 'node:fs';
+import { join, resolve } from 'node:path';
 
 const read = (path: string) => readFileSync(resolve(process.cwd(), path), 'utf8');
+
+function listSrcFiles(dir = 'src'): string[] {
+  return readdirSync(dir).flatMap((name) => {
+    const path = join(dir, name);
+    if (statSync(path).isDirectory()) return listSrcFiles(path);
+    return /\.(ts|tsx)$/.test(name) ? [path.replace(/\\/g, '/')] : [];
+  });
+}
 
 const migrationPath =
   'supabase/migrations/20260903084000_fix_miocoin_bonus_double_credit.sql';
@@ -78,11 +86,14 @@ test.describe('MioCoin bonus claim — no double credit contract', () => {
     );
   });
 
-  test('frontend continues to claim through the protected self-scoped RPC', () => {
-    const ticketModal = read('src/components/TicketResultModal.tsx');
-
-    expect(ticketModal).toContain("supabase.rpc('claim_miocoin_bonus'");
-    expect(ticketModal).toContain('p_bonus_id: bonusPrize.id');
-    expect(ticketModal).toContain('p_user_id: user.id');
+  test('frontend never calls the legacy one-argument claim', () => {
+    // TicketResultModal (jediný dřívější volající) byl 16. 10. 2026 odstraněn – po redesignu se
+    // nikde neotevíral. Kdyby se volání vrátilo, musí jít jen přes 2-arg self-scoped signaturu.
+    for (const file of listSrcFiles()) {
+      const source = read(file);
+      if (!source.includes("rpc('claim_miocoin_bonus'")) continue;
+      expect(source, file).toContain('p_user_id: user.id');
+      // Starý 1-arg parametr hlídá globální sken ve spec 85.
+    }
   });
 });

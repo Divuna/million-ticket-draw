@@ -1,3 +1,23 @@
+# 16. 10. 2026 — Nový vzhled e-mailů pro zbývajících 8 funkcí
+
+Na pokyn Pavla nasazeno na produkci 8 Edge Functions se sdílenou šablonou e-mailů (pozvánky, faktury, affiliate, Shoptet,
+marketingový souhlas, připomínky nabídek). Kód funkcí beze změny od minulého nasazení, `verify_jwt=false` zachováno.
+Zapnutí zákaznických upozornění provede Pavel v `/admin/notifications`.
+
+# 16. 10. 2026 — Úklid po redesignu
+
+Odstraněna nepoužívaná `TicketResultModal` (po redesignu se nikdy neotevírala, nákup ukazuje `MysteryPurchaseResultDialog`)
+a navázaný stav ve stránkách soutěží. Kontraktní specy 85/149 upraveny, aby hlídaly `claim_miocoin_bonus` v celém `src`.
+Spec 194b toleruje `statement_timeout` u souběžných výpočtů provizí na stagingu (bez dopadu na kontrakt „bez duplicit“).
+
+# 16. 10. 2026 — Audit při mazání účtu opraven jen na stagingu
+
+Na rozhodnutí Pavla upraven `fn_audit_generic` POUZE na stagingu (`docs/sql/staging_only_fn_audit_generic_null_user_on_delete.sql`):
+při DELETE zapíše `audit_logs.user_id` NULL, když uživatel už neexistuje (původní ID zůstává v metadatech).
+Produkce záměrně beze změny (2 účty, nic se nemaže). Ověření v transakci s ROLLBACK ukázalo, že auditní chyba zmizela,
+ale testovací účty stejně nejdou smazat – zastaví je neměnné `wallet_lot_movements` (záměrný invariant MIO).
+Nové OPEN ISSUE: žádost o smazání účtu s historií MIO bude před spuštěním potřebovat anonymizaci místo fyzického smazání.
+
 # 15. 10. 2026 — Grafický redesign nasazen na onemil.cz
 
 Na pokyn Pavla sloučen PR #424 (`a6ba5260`), Vercel Production READY, produkční smoke zelený.
