@@ -87,7 +87,7 @@ const Login: React.FC = () => {
       ]);
       if (partnerRow || affiliateRow) {
         await supabase.auth.signOut();
-        sonnerToast.error("Tento účet není registrovaný jako soutěžící. Přihlaste se ve správné části aplikace.");
+        sonnerToast.error("Tento účet není registrovaný jako soutěžící. Přihlas se ve správné části aplikace.");
         return;
       }
 
@@ -97,7 +97,7 @@ const Login: React.FC = () => {
     } catch (error) {
       toast({
         title: "Chyba",
-        description: "Něco se pokazilo. Zkuste to znovu.",
+        description: "Něco se pokazilo. Zkus to znovu.",
         variant: "destructive",
       });
     } finally {
@@ -111,7 +111,7 @@ const Login: React.FC = () => {
     } catch (error) {
       toast({
         title: "Chyba přihlášení",
-        description: "Přihlášení se nezdařilo. Zkuste to znovu.",
+        description: "Přihlášení se nezdařilo. Zkus to znovu.",
         variant: "destructive",
       });
     }

@@ -1,10 +1,25 @@
 import { useTheme } from "next-themes";
+import { useLocation } from "react-router-dom";
 import { Toaster as Sonner, toast } from "sonner";
+import { isCustomerRedesignPath } from "@/lib/customerRedesign";
 
 type ToasterProps = React.ComponentProps<typeof Sonner>;
 
 const Toaster = ({ ...props }: ToasterProps) => {
   const { theme = "system" } = useTheme();
+  const { pathname } = useLocation();
+
+  // Zákaznická část: hlášky podle redesignu (tmavá úspěch / růžová chyba, nahoře).
+  if (isCustomerRedesignPath(pathname)) {
+    return (
+      <Sonner
+        position="top-center"
+        className="toaster om-sonner-root"
+        toastOptions={{ classNames: { toast: "om-sonner" } }}
+        {...props}
+      />
+    );
+  }
 
   return (
     <Sonner
