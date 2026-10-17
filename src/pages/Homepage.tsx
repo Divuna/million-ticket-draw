@@ -21,6 +21,7 @@ import { useHomepageLatestWinners } from "@/hooks/useHomepageLatestWinners";
 import { useComingSoonBanners } from "@/hooks/useComingSoonBanners";
 import { BrandHeroBanner } from "@/components/brand/BrandHeroBanner";
 import { ComingSoonShowcase } from "@/components/brand/ComingSoonShowcase";
+import avatarWinner from "@/assets/redesign/avatar/face-vitez.png";
 import { WinnerCard } from "@/components/WinnerCard";
 import winnerBgTrophy from "@/assets/winner-backgrounds/winner-card-bg-trophy.png";
 import winnerBgCrown from "@/assets/winner-backgrounds/winner-card-bg-crown.png";
@@ -447,12 +448,15 @@ const Homepage = () => {
           <Card className="homepage-light-panel homepage-latest-winners-panel rounded-xl overflow-hidden bg-[hsl(220_45%_6%)] border border-[rgba(194,144,47,0.2)] shadow-[0_4px_16px_hsl(222_50%_3%/0.5)] h-full relative">
             <CardContent className="p-4 md:p-5 h-full flex flex-col relative z-10">
               <div className="space-y-3 flex-1 flex flex-col">
-                <div className="space-y-2">
-                  <h2 className="homepage-premium-orange-heading text-lg md:text-xl font-bold text-heading-gold flex items-center gap-2">
-                    <OneMilTrophyIcon size={22} className="w-5 h-5 md:w-6 md:h-6" />
-                    Poslední výherci
-                  </h2>
-                  <p className="text-xs text-text-silver">Nejnovější výhry z našich soutěží</p>
+                <div className="flex items-center gap-3">
+                  <div className="space-y-2 flex-1 min-w-0">
+                    <h2 className="homepage-premium-orange-heading text-lg md:text-xl font-bold text-heading-gold flex items-center gap-2">
+                      <OneMilTrophyIcon size={22} className="w-5 h-5 md:w-6 md:h-6" />
+                      Poslední výherci
+                    </h2>
+                    <p className="text-xs text-text-silver">Nejnovější výhry z našich soutěží</p>
+                  </div>
+                  <div className="om-home-winner-avatar om-float" aria-hidden="true"><img src={avatarWinner} alt="" /></div>
                 </div>
 
                 {/* 6 nejnovějších výherců: mobil 1 sloupec, desktop 2 sloupce × 3 řady.
@@ -842,7 +846,7 @@ const Homepage = () => {
               partners.map((partner) => (
                 <div
                   key={partner.id}
-                  className="homepage-light-logo-card voucher-card-glow aspect-square bg-gradient-to-b from-[hsl(220_35%_8%)] via-[hsl(220_30%_6%)] to-[hsl(220_25%_4%)] border-[3px] border-[rgba(194,144,47,0.35)] rounded-[20px] overflow-hidden cursor-pointer transition-all duration-300 hover:border-[rgba(194,144,47,0.55)] hover:shadow-[0_0_12px_rgba(194,144,47,0.2)] hover:scale-[1.02] shadow-[0_4px_16px_hsl(222_50%_3%/0.5)] group"
+                  className="om-home-plaque group"
                   onClick={() => window.open(partner.website_url, "_blank")}
                 >
                   <div className="w-full h-full p-5 flex items-center justify-center relative">
