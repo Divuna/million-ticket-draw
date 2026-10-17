@@ -55,6 +55,12 @@ v 19:20 UTC vrátil 200 `No pending emails`. DB/EF změny (schválení Pavla „
   (`transfer_bonus_to_main`). Neměnit na automatické připsání. Detail výhry to zákazníkovi vysvětluje.
 - Detail výhry „Cesta k tobě“ (`WinDetailModal`) předělán podle plátna, v produkci od 16. 10. 2026 (PR #432, merge `2dc5ff14`, produkční smoke zelený).
 
+**17. 10. 2026 – Úvodní videobanner v produkci (PR #442, merge `2278ae00`, schválil Pavel):** `BrandHeroBanner` nahoře na
+domovské stránce, když admin nemá vlastní hlavní banner (admin banner má přednost). Video z Google Flow (střihy auto/detail/bar/
+motorka, prolnutí do smyčky 22 s; mobil vlastní video 9:16) v `public/brand/hero/`, přes něj v kódu logo, nadpis, avatar s MIO,
+tlačítka „Nakupuj u partnerů – MIO získáš jako odměnu“ (posun na `#partneri`) a „Nechceš čekat? Dobij si MIO“ (`/top-up`),
+pás 8 kategorií. Při omezeném pohybu / úspoře dat jen statický snímek. Styly `src/styles/onemil-hero.css`.
+
 **17. 10. 2026 – Nákup tiketů povolen pro všechny soutěže (schválil Pavel):** produkční `settings.guaranteed_benefit_purchase_contest_allowlist`
 vyprázdněn na `[]` (dřív 4 ID soutěží smazaných resetem – každá nová soutěž by vrátila `contest_not_in_pilot`). Prázdný seznam
 = nákup ve všech soutěžích (`purchase_guaranteed_benefit_bundle_atomic` i `get_guaranteed_benefit_offer`). ID nebyla nikde jinde

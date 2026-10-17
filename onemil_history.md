@@ -1,3 +1,7 @@
+# 17. 10. 2026 — Úvodní videobanner
+
+Obecný banner OneMil (varianta 3: video z Google Flow + texty a animace v kódu) nasazen na domovskou stránku (PR #442).
+
 # 17. 10. 2026 — Allowlist nákupu vyprázdněn, kontrola napojení stránek
 
 Pavel chce čistý stav a ostré soutěže pro všechny: seznam povolených soutěží pro nákup (4 smazaná ID) vyprázdněn → nákup
