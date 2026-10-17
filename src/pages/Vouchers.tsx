@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
-import { voucherAcquiredMessage, voucherCtaLabel } from "@/lib/voucherPricing";
+import { useVoucherPrice, voucherAcquiredMessage, voucherCtaLabel } from "@/lib/voucherPricing";
 import { useAuth } from '@/hooks/useAuth';
 import { useUserRole } from '@/hooks/useUserRole';
 import { LoggedOutScreen } from '@/components/LoggedOutScreen';
@@ -38,6 +38,7 @@ import { toast } from 'sonner';
 import { analytics } from '@/lib/analytics';
 
 const Vouchers: React.FC = () => {
+  const voucherPrice = useVoucherPrice();
   const { user } = useAuth();
   const { isAdmin } = useUserRole();
   const [searchParams] = useSearchParams();
@@ -327,7 +328,7 @@ const Vouchers: React.FC = () => {
       // Optimistically remove from favorites list immediately (covers oblíbené tab)
       optimisticRemoveByVoucherId(voucherId);
 
-      toast.success(voucherAcquiredMessage);
+      toast.success(voucherAcquiredMessage(voucherPrice));
       if (selectedVoucher?.id === voucherId) {
         setSelectedVoucher(null);
       }
@@ -663,7 +664,7 @@ const Vouchers: React.FC = () => {
         onPurchase={handleVoucherPurchase}
         purchaseDisabled={isAdmin || selectedVoucherIsPurchased}
         purchaseLoading={purchasingId !== null}
-        purchaseLabel={selectedVoucherIsPurchased ? 'Zakoupeno' : voucherCtaLabel}
+        purchaseLabel={selectedVoucherIsPurchased ? 'Zakoupeno' : voucherCtaLabel(voucherPrice)}
       />
 
     </div>

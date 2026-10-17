@@ -16,7 +16,7 @@ import { OneMilHeartIcon, OneMilVoucherIcon } from '@/components/icons/OneMilIco
 import { cn } from '@/lib/utils';
 import { useVoucherDiscountLabels } from '@/hooks/useVoucherDiscountLabels';
 import { useVoucherPartners } from '@/hooks/useVoucherPartners';
-import { voucherCtaLabel } from '@/lib/voucherPricing';
+import { useVoucherPrice, voucherCtaLabel } from '@/lib/voucherPricing';
 import onemilEmblem from '@/assets/redesign/onemil-emblem.png';
 import avatarGift from '@/assets/redesign/avatar/avatar-darek.png';
 import avatarThumb from '@/assets/redesign/avatar/avatar-palec.png';
@@ -137,6 +137,7 @@ export const VoucherShowcaseCard: React.FC<VoucherShowcaseCardProps> = ({
   const photo = voucher.banner_url || voucher.image_url;
   const discountLabels = useVoucherDiscountLabels();
   const partners = useVoucherPartners();
+  const voucherPrice = useVoucherPrice();
   const partner = partners[voucher.id];
   const discountLabel = (voucher.discount_label ?? discountLabels[voucher.id] ?? '').trim();
   const mascot = VOUCHER_MASCOTS[((index % VOUCHER_MASCOTS.length) + VOUCHER_MASCOTS.length) % VOUCHER_MASCOTS.length];
@@ -195,7 +196,7 @@ export const VoucherShowcaseCard: React.FC<VoucherShowcaseCardProps> = ({
               onDetail();
             }}
           >
-            {ctaLabel ?? voucherCtaLabel}
+            {ctaLabel ?? voucherCtaLabel(voucherPrice)}
           </button>
         </div>
       </article>
@@ -224,8 +225,9 @@ export const VoucherDetailDialog: React.FC<VoucherDetailDialogProps> = ({
   onPurchase,
   purchaseDisabled = false,
   purchaseLoading = false,
-  purchaseLabel = voucherCtaLabel,
+  purchaseLabel,
 }) => {
+  const voucherPrice = useVoucherPrice();
   const detailText = voucher ? buildVoucherDetailText(voucher) : null;
   const galleryImages = voucher
     ? Array.from(new Set([
@@ -351,7 +353,7 @@ export const VoucherDetailDialog: React.FC<VoucherDetailDialogProps> = ({
                   disabled={purchaseDisabled || purchaseLoading}
                   className="h-11 rounded-xl border-0 bg-gradient-to-r from-[#C2902F] to-[#E9B949] px-5 text-sm font-bold text-[#111] shadow-[0_2px_8px_rgba(194,144,47,0.25)] hover:brightness-105"
                 >
-                  {purchaseLoading ? 'Probíhá nákup...' : purchaseLabel}
+                  {purchaseLoading ? 'Zpracovávám…' : (purchaseLabel ?? voucherCtaLabel(voucherPrice))}
                 </Button>
               </DialogFooter>
             </div>

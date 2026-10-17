@@ -1,6 +1,6 @@
 import React, { useEffect, useRef, useState } from "react";
 import { useNavigate, Link, useLocation } from "react-router-dom";
-import { voucherAcquiredMessage } from "@/lib/voucherPricing";
+import { useVoucherPrice, voucherAcquiredMessage } from "@/lib/voucherPricing";
 import { buildLoginRedirectUrl } from "@/lib/loginRedirect";
 import { isNativeApp } from "@/lib/nativeApp";
 import { Header } from "@/components/Header";
@@ -52,6 +52,7 @@ interface Contest {
 }
 
 const Homepage = () => {
+  const voucherPrice = useVoucherPrice();
   const { user } = useAuth();
   const { isAdmin } = useUserRole();
   const navigate = useNavigate();
@@ -316,7 +317,7 @@ const Homepage = () => {
       if (selectedVoucher?.id === voucherId) {
         setSelectedVoucher(null);
       }
-      toast.success(voucherAcquiredMessage);
+      toast.success(voucherAcquiredMessage(voucherPrice));
     } catch (error) {
       console.error("Error purchasing voucher:", error);
       toast.error("Nepodařilo se zakoupit voucher");
