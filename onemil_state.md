@@ -55,6 +55,13 @@ v 19:20 UTC vrátil 200 `No pending emails`. DB/EF změny (schválení Pavla „
   (`transfer_bonus_to_main`). Neměnit na automatické připsání. Detail výhry to zákazníkovi vysvětluje.
 - Detail výhry „Cesta k tobě“ (`WinDetailModal`) předělán podle plátna, v produkci od 16. 10. 2026 (PR #432, merge `2dc5ff14`, produkční smoke zelený).
 
+**17. 10. 2026 – Nákup tiketů povolen pro všechny soutěže (schválil Pavel):** produkční `settings.guaranteed_benefit_purchase_contest_allowlist`
+vyprázdněn na `[]` (dřív 4 ID soutěží smazaných resetem – každá nová soutěž by vrátila `contest_not_in_pilot`). Prázdný seznam
+= nákup ve všech soutěžích (`purchase_guaranteed_benefit_bundle_atomic` i `get_guaranteed_benefit_offer`). ID nebyla nikde jinde
+(contests, tickets, vazby benefitů ani nabídek). Kontrola napojení Vouchery/Soutěže/Výhry: 12 RPC existuje se správnými granty,
+RLS a odkazy v pořádku, staging specy 75 passed; spec 136 opraven po redesignu profilu (PR #440). Produkce je po resetu
+prázdná (0 soutěží, voucherů, benefitů, nabídek, bannerů). Před aktivací první soutěže: PDF pravidel + schválený neomezený benefit.
+
 **17. 10. 2026 – Můj profil v novém vzhledu (PR #438, merge `fba85d9b`, schválil Pavel):** podle desek 15 a 22 –
 tmavá hlavička s avatarem na trůnu (`src/assets/redesign/avatar/avatar-trun.webp`), tmavá peněženka (korunkové MIO, rudý
 box bonusových MIO + „Převést do peněženky“, historie MIO), světlé karty s hloubkou, tmavá „Pozvi přátele“, zlaté

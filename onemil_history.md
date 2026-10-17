@@ -1,3 +1,8 @@
+# 17. 10. 2026 — Allowlist nákupu vyprázdněn, kontrola napojení stránek
+
+Pavel chce čistý stav a ostré soutěže pro všechny: seznam povolených soutěží pro nákup (4 smazaná ID) vyprázdněn → nákup
+ve všech soutěžích. Vouchery, soutěže i výhry ověřeny jako správně napojené.
+
 # 17. 10. 2026 — Můj profil v novém vizuálu
 
 Profil převeden podle desek 15 a 22 plátna (avatar na trůnu, tmavá peněženka a pozvánka, světlé karty, zlaté přepínače)
