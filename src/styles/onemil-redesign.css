@@ -576,6 +576,8 @@ body:has(.om-redesign) {
 .om-redesign footer.om-footer .text-muted-foreground,
 .om-redesign footer.om-footer a.text-muted-foreground,
 .om-redesign footer.om-footer div.text-muted-foreground { color: #C9CAD1; }
+/* Údaje provozovatele: obecné `p { color: --text-silver }` je tmavé, na tmavé patičce text mizel. */
+footer.om-footer .om-ft-company p:not(.text-heading-gold) { color: #C9CAD1; }
 .om-redesign footer.om-footer a:hover,
 .om-redesign footer.om-footer button:hover { color: #F6D77A; }
 .om-redesign .om-footer .text-heading-gold { color: #F2C55C; }
