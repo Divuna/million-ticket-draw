@@ -32,6 +32,18 @@ export function BrandHeroBanner() {
   const navigate = useNavigate();
   const videoRef = useRef<HTMLVideoElement>(null);
   const [playVideo, setPlayVideo] = useState(false);
+  const [isMobile, setIsMobile] = useState(() => typeof window !== "undefined" && window.matchMedia?.("(max-width: 639px)").matches);
+
+  useEffect(() => {
+    const mq = window.matchMedia?.("(max-width: 639px)");
+    if (!mq) return;
+    const onChange = () => setIsMobile(mq.matches);
+    mq.addEventListener?.("change", onChange);
+    return () => mq.removeEventListener?.("change", onChange);
+  }, []);
+
+  const base = isMobile ? "/brand/hero/onemil-hero-mobile" : "/brand/hero/onemil-hero";
+  const poster = `${base}-poster.jpg`;
 
   useEffect(() => {
     const reduce = window.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
@@ -45,14 +57,15 @@ export function BrandHeroBanner() {
     if (!v) return;
     v.muted = true;
     void v.play().catch(() => undefined);
-  }, [playVideo]);
+  }, [playVideo, base]);
 
   return (
     <section className="om-hero" aria-labelledby="om-hero-title">
       <div className="om-hero-stage">
-        <img className="om-hero-media" src="/brand/hero/onemil-hero-poster.jpg" alt="" aria-hidden="true" />
+        <img className="om-hero-media" src={poster} alt="" aria-hidden="true" />
         {playVideo && (
           <video
+            key={base}
             ref={videoRef}
             className="om-hero-media"
             autoPlay
@@ -60,11 +73,11 @@ export function BrandHeroBanner() {
             loop
             playsInline
             preload="auto"
-            poster="/brand/hero/onemil-hero-poster.jpg"
+            poster={poster}
             aria-hidden="true"
           >
-            <source src="/brand/hero/onemil-hero.webm" type="video/webm" />
-            <source src="/brand/hero/onemil-hero.mp4" type="video/mp4" />
+            <source src={`${base}.webm`} type="video/webm" />
+            <source src={`${base}.mp4`} type="video/mp4" />
           </video>
         )}
         <div className="om-hero-veil" aria-hidden="true" />
@@ -75,10 +88,19 @@ export function BrandHeroBanner() {
           <h1 id="om-hero-title" className="om-hero-title">
             Luxusní soutěže. <span>Prémiové výhry.</span>
           </h1>
-          <p className="om-hero-lead">Získej MIO, soutěž o luxusní ceny a vyhrávej každý den.</p>
-          <button type="button" className="om-hero-cta" onClick={() => navigate('/games')}>
-            Prohlédnout soutěže
-          </button>
+          <div className="om-hero-ctas">
+            <button
+              type="button"
+              className="om-hero-cta"
+              onClick={() => document.getElementById('partneri')?.scrollIntoView({ behavior: 'smooth' })}
+            >
+              Nakupuj u partnerů – MIO získáš jako odměnu
+            </button>
+            <button type="button" className="om-hero-cta om-hero-cta-dark" onClick={() => navigate('/top-up')}>
+              Nechceš čekat? Dobij si MIO
+            </button>
+          </div>
+          <p className="om-hero-note">MIO použiješ na tikety do soutěží.</p>
         </div>
 
         <img src={avatarMio} alt="" aria-hidden="true" className="om-hero-avatar" />

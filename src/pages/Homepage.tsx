@@ -818,7 +818,7 @@ const Homepage = () => {
         </div>
 
         {/* Partners Section */}
-        <section className="space-y-6">
+        <section className="space-y-6 scroll-mt-24" id="partneri">
           <div className="flex items-center justify-between">
             <h3 className="customer-premium-orange-heading text-2xl font-bold text-heading-gold flex items-center gap-2">
               <Handshake className="w-6 h-6" />
