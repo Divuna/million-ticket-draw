@@ -1,5 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '@/hooks/useAuth';
+import { VoucherPricingSettingsCard } from "@/components/admin/VoucherPricingSettingsCard";
+import { useVoucherPrice, voucherCtaLabel } from "@/lib/voucherPricing";
 import { useUserRole } from '@/hooks/useUserRole';
 import { Navigate } from 'react-router-dom';
 import { NavigateToLogin } from '@/components/NavigateToLogin';
@@ -285,8 +287,9 @@ function normalizeVoucherRow(row: Record<string, unknown> | null | undefined): V
 }
 
 const AdminVouchers: React.FC = () => {
+  const voucherPrice = useVoucherPrice();
   const { user, loading: authLoading } = useAuth();
-  const { isAdmin, loading: roleLoading } = useUserRole();
+  const { isAdmin, isSuperAdmin, loading: roleLoading } = useUserRole();
   const [vouchers, setVouchers] = useState<Voucher[]>([]);
   const [loading, setLoading] = useState(true);
   const [createLoading, setCreateLoading] = useState(false);
@@ -1297,11 +1300,11 @@ const AdminVouchers: React.FC = () => {
             <div className="rounded-lg border p-4 space-y-2 text-sm">
               <div className="flex items-center justify-between">
                 <span className="text-muted-foreground">Cena v detailu</span>
-                <Badge variant="outline">5 MioCoinů</Badge>
+                <Badge variant="outline">{voucherPrice > 0 ? `${voucherPrice} MIO` : 'zdarma'}</Badge>
               </div>
               <div className="flex items-center justify-between">
                 <span className="text-muted-foreground">Detailové CTA</span>
-                <Badge variant="outline">Koupit za 5 MioCoinů</Badge>
+                <Badge variant="outline">{voucherCtaLabel(voucherPrice)}</Badge>
               </div>
               <p className="text-xs text-muted-foreground">
                 Text nabídky, partner a hlavní sdělení patří podle návrhu primárně do banneru.
@@ -1501,6 +1504,8 @@ const AdminVouchers: React.FC = () => {
 
   return (
     <div className="container mx-auto px-4 py-8 space-y-6">
+        {isSuperAdmin && <VoucherPricingSettingsCard />}
+
         {/* Header */}
         <div className="flex items-center justify-between">
           <div>

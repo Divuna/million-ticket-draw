@@ -1,0 +1,76 @@
+/* ───────── Karta voucheru – varianta C (plátno, deska „Karta voucheru“) ─────────
+ * Nahoře fotka/banner partnera, logo na plaketě, spodek v barvách OneMil,
+ * prostřižené půlkruhové výřezy po stranách (maska) a maskot v střídajících se pózách. */
+
+.om-vt-wrap {
+  position: relative; cursor: pointer; filter: drop-shadow(0 14px 22px rgba(23, 23, 27, 0.28));
+  transition: transform 0.25s;
+}
+.om-vt-wrap:hover { transform: translateY(-3px); }
+.om-vt-wrap:focus-visible { outline: 3px solid #E9B949; outline-offset: 4px; border-radius: 18px; }
+
+.om-vt {
+  position: relative; overflow: hidden; border-radius: 18px; color: #ECEDEF;
+  background: radial-gradient(120% 140% at 90% 60%, #3A1118, #17171B 60%);
+  -webkit-mask:
+    radial-gradient(circle 11px at 0 168px, #0000 98%, #000) left / 51% 100% no-repeat,
+    radial-gradient(circle 11px at 100% 168px, #0000 98%, #000) right / 51% 100% no-repeat;
+  mask:
+    radial-gradient(circle 11px at 0 168px, #0000 98%, #000) left / 51% 100% no-repeat,
+    radial-gradient(circle 11px at 100% 168px, #0000 98%, #000) right / 51% 100% no-repeat;
+}
+.om-vt-photo { position: relative; height: 104px; background: #fff; }
+.om-vt-photo img { width: 100%; height: 100%; object-fit: cover; object-position: 50% 50%; display: block; }
+.om-vt-photo-empty {
+  width: 100%; height: 100%; display: flex; align-items: center; justify-content: center; color: rgba(233, 185, 73, 0.55);
+  background: radial-gradient(120% 120% at 20% 20%, #5A1420, #17171B 70%);
+}
+.om-vt-heart {
+  position: absolute; right: 76px; top: 10px; width: 34px; height: 34px; border-radius: 50%; cursor: pointer;
+  border: 1px solid rgba(255, 255, 255, 0.2); background: rgba(10, 12, 18, 0.6);
+  display: flex; align-items: center; justify-content: center;
+}
+.om-vt-heart:disabled { opacity: 0.5; cursor: not-allowed; }
+.om-vt-sticker {
+  position: absolute; top: 8px; right: 12px; width: 54px; height: 54px; border-radius: 50%;
+  display: flex; align-items: center; justify-content: center; text-align: center; padding: 4px; box-sizing: border-box;
+  font-family: var(--om2-font-display, 'Exo 2', sans-serif); font-weight: 900; font-style: italic; font-size: 14px; line-height: 1; color: #fff;
+  background: radial-gradient(circle at 35% 30%, #FF4A62, #B5122B 55%, #5A0714); box-shadow: 0 0 0 2.5px #FFE29A, 0 6px 14px rgba(0, 0, 0, 0.35);
+  transform: rotate(-8deg);
+}
+.om-vt-gold {
+  position: absolute; left: 0; right: 0; top: 104px; height: 1.5px;
+  background: linear-gradient(90deg, transparent, #E9B949 30%, #FFF0B8 45%, #E9B949 60%, transparent);
+}
+.om-vt-title {
+  height: 54px; box-sizing: border-box; padding: 8px 104px 0 86px; display: flex; flex-direction: column; justify-content: flex-start; gap: 1px; overflow: hidden;
+}
+.om-vt-partner {
+  font-size: 10.5px; font-weight: 800; letter-spacing: 0.14em; text-transform: uppercase; color: #F2C55C;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.om-vt-name {
+  font-family: var(--om2-font-section, 'Barlow Condensed', sans-serif); font-weight: 800; font-style: italic; text-transform: uppercase;
+  font-size: 19px; line-height: 1.02; color: #fff;
+  display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;
+}
+.om-vt-cut { border-top: 2px dashed rgba(233, 185, 73, 0.45); margin: 9px 18px 0; }
+.om-vt-foot { padding: 12px 16px 16px; display: flex; flex-direction: column; gap: 12px; }
+.om-vt-meta { display: flex; justify-content: space-between; gap: 8px; font-size: 12.5px; color: #A9AAB3; padding-right: 92px; min-height: 17px; }
+.om-vt-meta b { color: #F6D77A; }
+.om-vt-btn {
+  min-height: 46px; border: 0; border-radius: 12px; cursor: pointer; font-family: var(--om2-font-body, Manrope, sans-serif);
+  font-size: 15px; font-weight: 800; color: #1A1205;
+  background: linear-gradient(180deg, #FFE29A, #E9B949 55%, #C2902F); box-shadow: 0 6px 16px rgba(194, 144, 47, 0.4);
+}
+.om-vt-btn:focus-visible { outline: 3px solid #fff; outline-offset: 2px; }
+.om-vt-logo {
+  position: absolute; left: 14px; top: 76px; z-index: 3; width: 58px; height: 58px; border-radius: 14px; overflow: hidden;
+  background: #fff; box-shadow: 0 0 0 2px #E9B949, 0 8px 18px rgba(0, 0, 0, 0.25); display: flex; align-items: center; justify-content: center;
+}
+.om-vt-logo img { width: 100%; height: 100%; object-fit: contain; transform: scale(1.5); }
+.om-vt-logo img[src*="onemil-emblem"] { transform: none; width: 84%; height: 84%; }
+.om-vt-mascot {
+  position: absolute; right: -16px; bottom: 56px; z-index: 4; height: 140px; width: auto; pointer-events: none;
+  filter: drop-shadow(0 10px 14px rgba(0, 0, 0, 0.45));
+}

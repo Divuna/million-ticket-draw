@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
+import { useVoucherPrice, voucherAcquiredMessage, voucherCtaLabel } from "@/lib/voucherPricing";
 import { useAuth } from '@/hooks/useAuth';
 import { useUserRole } from '@/hooks/useUserRole';
 import { LoggedOutScreen } from '@/components/LoggedOutScreen';
@@ -37,6 +38,7 @@ import { toast } from 'sonner';
 import { analytics } from '@/lib/analytics';
 
 const Vouchers: React.FC = () => {
+  const voucherPrice = useVoucherPrice();
   const { user } = useAuth();
   const { isAdmin } = useUserRole();
   const [searchParams] = useSearchParams();
@@ -326,7 +328,7 @@ const Vouchers: React.FC = () => {
       // Optimistically remove from favorites list immediately (covers oblíbené tab)
       optimisticRemoveByVoucherId(voucherId);
 
-      toast.success(`Voucher úspěšně zakoupen za 5 MIO!`);
+      toast.success(voucherAcquiredMessage(voucherPrice));
       if (selectedVoucher?.id === voucherId) {
         setSelectedVoucher(null);
       }
@@ -392,12 +394,12 @@ const Vouchers: React.FC = () => {
             <TabsTrigger value="available" className="flex items-center gap-1 text-xs sm:text-sm data-[state=active]:bg-secondary/20 data-[state=active]:text-secondary rounded-lg transition-all">
               <OneMilTicketIcon size={16} className="w-4 h-4" />
               <span className="hidden sm:inline">Dostupné</span>
-              <span className="sm:hidden">Dost.</span>
+              <span className="sm:hidden">Dostupné</span>
             </TabsTrigger>
             <TabsTrigger value="favorites" className="flex items-center gap-1 text-xs sm:text-sm data-[state=active]:bg-secondary/20 data-[state=active]:text-secondary rounded-lg transition-all">
               <OneMilHeartIcon size={16} className="w-4 h-4" />
               <span className="hidden sm:inline">Oblíbené</span>
-              <span className="sm:hidden">Obl.</span>
+              <span className="sm:hidden">Oblíbené</span>
               {favoriteVouchers.length > 0 && (
                 <Badge variant="secondary" className="ml-1 text-xs">{favoriteVouchers.length}</Badge>
               )}
@@ -405,7 +407,7 @@ const Vouchers: React.FC = () => {
             <TabsTrigger value="purchased" className="flex items-center gap-1 text-xs sm:text-sm data-[state=active]:bg-secondary/20 data-[state=active]:text-secondary rounded-lg transition-all">
               <OneMilCartIcon size={16} className="w-4 h-4" />
               <span className="hidden sm:inline">Zakoupené</span>
-              <span className="sm:hidden">Zak.</span>
+              <span className="sm:hidden">Zakoupené</span>
               {purchasedVouchers.length > 0 && (
                 <Badge variant="secondary" className="ml-1 text-xs">{purchasedVouchers.length}</Badge>
               )}
@@ -429,9 +431,10 @@ const Vouchers: React.FC = () => {
               </div>
             ) : (
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                {truelyAvailableVouchers.map((voucher) => (
+                {truelyAvailableVouchers.map((voucher, index) => (
                   <VoucherShowcaseCard
                     key={voucher.id}
+                    index={index}
                     voucher={voucher}
                     onDetail={() => void openVoucherDetail(voucher)}
                     onFavoriteToggle={(event) => handleFavoriteClick(event, voucher.id)}
@@ -473,12 +476,13 @@ const Vouchers: React.FC = () => {
               </Card>
             ) : (
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                {favoriteVouchers.map((userVoucher) => {
+                {favoriteVouchers.map((userVoucher, index) => {
                   const voucher = toShowcaseVoucher(userVoucher);
 
                   return (
                     <VoucherShowcaseCard
                       key={userVoucher.id}
+                      index={index}
                       voucher={voucher}
                       onDetail={() => void openVoucherDetail(voucher)}
                       onFavoriteToggle={(event) => handleFavoriteClick(event, userVoucher.voucher_id)}
@@ -660,7 +664,7 @@ const Vouchers: React.FC = () => {
         onPurchase={handleVoucherPurchase}
         purchaseDisabled={isAdmin || selectedVoucherIsPurchased}
         purchaseLoading={purchasingId !== null}
-        purchaseLabel={selectedVoucherIsPurchased ? 'Zakoupeno' : 'Koupit za 5 MIO'}
+        purchaseLabel={selectedVoucherIsPurchased ? 'Zakoupeno' : voucherCtaLabel(voucherPrice)}
       />
 
     </div>
