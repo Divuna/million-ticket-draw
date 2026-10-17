@@ -87,7 +87,7 @@ test.describe('Voucher Purchase — Wallet Balance Decrease', () => {
       'Expected the seeded E2E Spec10 Voucher full-banner card to be visible in Dostupné tab',
     ).toBeVisible({ timeout: 15_000 });
 
-    const detailButton = spec10Card.getByRole('button', { name: /Koupit za|Získat zdarma|Detail/i });
+    const detailButton = spec10Card.getByRole('button', { name: /Koupit za|Získat slevu|Získat zdarma|Detail/i });
     await expect(detailButton).toBeVisible({ timeout: 5_000 });
     await detailButton.click();
 
