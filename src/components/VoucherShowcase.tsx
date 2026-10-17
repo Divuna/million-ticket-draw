@@ -145,20 +145,11 @@ export const VoucherShowcaseCard: React.FC<VoucherShowcaseCardProps> = ({
     <div
       className={cn('om-vt-wrap', className)}
       onClick={onDetail}
-      role="button"
-      tabIndex={0}
-      aria-label={`Voucher ${voucher.name}`}
-      onKeyDown={(event) => {
-        if (event.key === 'Enter' || event.key === ' ') {
-          event.preventDefault();
-          onDetail();
-        }
-      }}
     >
       <article className="om-vt">
         <div className="om-vt-photo">
           {photo ? (
-            <img src={photo} alt="" loading="lazy" />
+            <img src={photo} alt={`${voucher.name} banner`} loading="lazy" />
           ) : (
             <div className="om-vt-photo-empty"><OneMilVoucherIcon size={40} className="h-10 w-10" /></div>
           )}

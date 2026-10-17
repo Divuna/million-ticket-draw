@@ -78,7 +78,7 @@ test.describe('Voucher Purchase — Wallet Balance Decrease', () => {
     // New full-banner voucher cards do not render the voucher name as visible text
     // in the available tab. The seeded card is still accessible via the banner alt.
     const spec10Card = page
-      .locator('.voucher-card-glow')
+      .locator('.om-vt-wrap')
       .filter({ has: page.locator('img[alt*="E2E Spec10 Voucher"]') })
       .first();
 
@@ -87,14 +87,14 @@ test.describe('Voucher Purchase — Wallet Balance Decrease', () => {
       'Expected the seeded E2E Spec10 Voucher full-banner card to be visible in Dostupné tab',
     ).toBeVisible({ timeout: 15_000 });
 
-    const detailButton = spec10Card.getByRole('button', { name: /Detail/i });
+    const detailButton = spec10Card.getByRole('button', { name: /Koupit za|Získat zdarma|Detail/i });
     await expect(detailButton).toBeVisible({ timeout: 5_000 });
     await detailButton.click();
 
     const detailDialog = page.getByRole('dialog').filter({ hasText: 'E2E Spec10 Voucher' });
     await expect(detailDialog, 'Spec10 detail modal must open before purchase').toBeVisible({ timeout: 10_000 });
 
-    const buyButton = detailDialog.getByRole('button', { name: /Koupit za/i });
+    const buyButton = detailDialog.getByRole('button', { name: /Koupit za|Získat zdarma/i });
     await expect(buyButton).toBeVisible({ timeout: 5_000 });
 
     const buttonText = (await buyButton.textContent()) ?? '';

@@ -31,12 +31,12 @@ test.describe('Voucher Purchase', () => {
     // New voucher UI is full-banner first. Purchase is no longer rendered on the card;
     // the card exposes Detail and the purchase CTA is inside the detail modal.
     const spec03Card = page
-      .locator('.voucher-card-glow')
+      .locator('.om-vt-wrap')
       .filter({ has: page.locator('img[alt*="E2E Spec03 Voucher"]') })
       .first();
     await expect(spec03Card, 'Seeded E2E Spec03 full-banner card must be visible').toBeVisible({ timeout: 15_000 });
 
-    const detailButton = spec03Card.getByRole('button', { name: /Detail/i });
+    const detailButton = spec03Card.getByRole('button', { name: /Koupit za|Získat zdarma|Detail/i });
     await expect(detailButton).toBeVisible({ timeout: 15_000 });
   });
 
@@ -45,12 +45,12 @@ test.describe('Voucher Purchase', () => {
     await expect(page.getByRole('heading', { name: 'Vouchery' })).toBeVisible({ timeout: 10_000 });
 
     const spec03Card = page
-      .locator('.voucher-card-glow')
+      .locator('.om-vt-wrap')
       .filter({ has: page.locator('img[alt*="E2E Spec03 Voucher"]') })
       .first();
     await expect(spec03Card, 'Seeded E2E Spec03 full-banner card must be visible').toBeVisible({ timeout: 15_000 });
 
-    const detailButton = spec03Card.getByRole('button', { name: /Detail/i });
+    const detailButton = spec03Card.getByRole('button', { name: /Koupit za|Získat zdarma|Detail/i });
     await expect(detailButton).toBeVisible({ timeout: 15_000 });
     await detailButton.click();
 
