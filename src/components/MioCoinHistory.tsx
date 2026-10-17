@@ -12,6 +12,8 @@ import { OneMilCoinsIcon } from '@/components/icons/OneMilIcons';
 
 interface MioCoinHistoryProps {
   refreshKey?: number;
+  /** Vykreslení na tmavé kartě peněženky (profil v novém vzhledu). */
+  dark?: boolean;
 }
 
 type MioCoinHistoryRpc = (
@@ -19,7 +21,7 @@ type MioCoinHistoryRpc = (
   arguments_: { p_limit: number },
 ) => Promise<{ data: unknown; error: { message: string } | null }>;
 
-export function MioCoinHistory({ refreshKey = 0 }: MioCoinHistoryProps) {
+export function MioCoinHistory({ refreshKey = 0, dark = false }: MioCoinHistoryProps) {
   const [entries, setEntries] = useState<MioCoinHistoryEntry[]>([]);
   const [loading, setLoading] = useState(true);
   const [expanded, setExpanded] = useState(false);
@@ -52,6 +54,76 @@ export function MioCoinHistory({ refreshKey = 0 }: MioCoinHistoryProps) {
   }, [refreshKey]);
 
   const visibleEntries = expanded ? entries : entries.slice(0, 3);
+
+  const formatTime = (value: string) =>
+    new Date(value).toLocaleString('cs-CZ', {
+      day: '2-digit',
+      month: '2-digit',
+      year: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit',
+    });
+
+  if (dark) {
+    return (
+      <div className="om-pf-history">
+        <div className="flex items-center justify-between gap-3 mb-3">
+          <div>
+            <p className="om-pf-kicker" style={{ marginBottom: 2 }}>Historie MIO</p>
+            <p className="om-pf-note">Přehled získaných a použitých MIO</p>
+          </div>
+          {entries.length > 3 && (
+            <button
+              type="button"
+              className="om-pf-refresh shrink-0"
+              onClick={() => setExpanded((current) => !current)}
+              aria-expanded={expanded}
+            >
+              {expanded ? 'Skrýt historii' : 'Zobrazit celou historii'}
+              <ChevronDown className={`h-3.5 w-3.5 transition-transform duration-200 ${expanded ? 'rotate-180' : ''}`} aria-hidden="true" />
+            </button>
+          )}
+        </div>
+
+        {loading ? (
+          <p className="om-pf-note flex items-center gap-2">
+            <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" />
+            Načítám historii MIO…
+          </p>
+        ) : entries.length === 0 ? (
+          <p className="om-pf-note italic">Zatím nemáš žádné pohyby MIO.</p>
+        ) : (
+          <div className={expanded ? 'max-h-80 overflow-y-auto pr-1' : ''}>
+            {visibleEntries.map((entry) => {
+              const amount = Number(entry.amount);
+              const amountColor = amount > 0 ? '#7FE0A6' : amount < 0 ? '#FF9AAA' : '#A9AAB3';
+              return (
+                <div key={entry.entry_id} className="om-pf-history-row">
+                  <div className="min-w-0">
+                    <p className="text-[13px] font-semibold text-[#ECEDEF] break-words m-0">{getMioCoinHistoryLabel(entry)}</p>
+                    {entry.partner_website_url && (
+                      <p className="text-[11.5px] text-[#A9AAB3] break-all m-0">{entry.partner_website_url}</p>
+                    )}
+                    {entry.external_order_id && (
+                      <p className="text-[11.5px] text-[#A9AAB3] m-0">Objednávka {entry.external_order_id}</p>
+                    )}
+                  </div>
+                  <div className="flex items-center gap-3 shrink-0">
+                    <span className="text-[13px] font-extrabold tabular-nums" style={{ color: amountColor }}>
+                      {formatSignedMioCoin(amount)}
+                    </span>
+                    <time className="text-[11px] text-[#A9AAB3] whitespace-nowrap" dateTime={entry.occurred_at}>
+                      {formatTime(entry.occurred_at)}
+                    </time>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        )}
+      </div>
+    );
+  }
 
   return (
     <div className="pt-5 border-t border-[rgba(194,144,47,0.12)]">
@@ -121,13 +193,7 @@ export function MioCoinHistory({ refreshKey = 0 }: MioCoinHistoryProps) {
                 <div className="flex items-center justify-between sm:justify-end gap-4 pl-8 sm:pl-0 shrink-0">
                   <span className={`text-sm font-bold tabular-nums ${amountClass}`}>{formatSignedMioCoin(amount)}</span>
                   <time className="text-xs text-muted-foreground whitespace-nowrap" dateTime={entry.occurred_at}>
-                    {new Date(entry.occurred_at).toLocaleString('cs-CZ', {
-                      day: '2-digit',
-                      month: '2-digit',
-                      year: 'numeric',
-                      hour: '2-digit',
-                      minute: '2-digit',
-                    })}
+                    {formatTime(entry.occurred_at)}
                   </time>
                 </div>
               </div>

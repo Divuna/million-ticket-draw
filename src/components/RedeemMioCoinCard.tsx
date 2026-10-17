@@ -2,10 +2,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 
 import { toast } from '@/hooks/use-toast';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Loader2 } from 'lucide-react';
-import { OneMilGiftIcon } from '@/components/icons/OneMilIcons';
+import { Loader2, Ticket } from 'lucide-react';
 import { formatMioCoin } from '@/lib/miocoin';
 import { getMioCoinCodeFromSearch, withoutMioCoinCode } from '@/lib/miocoinRedeemUrl';
 import {
@@ -39,7 +36,7 @@ export const RedeemMioCoinCard = ({ onRedeemed }: RedeemMioCoinCardProps) => {
       return;
     }
 
-    const msg = MIOCOIN_REDEEM_ERROR_MESSAGES[result?.error ?? ''] ?? 'Nepodařilo se uplatnit kód. Zkuste to znovu.';
+    const msg = MIOCOIN_REDEEM_ERROR_MESSAGES[result?.error ?? ''] ?? 'Nepodařilo se uplatnit kód. Zkus to znovu.';
     toast({ title: automatic ? 'MIO nebyla uplatněna' : 'Chyba', description: msg, variant: 'destructive' });
   }, [onRedeemed]);
 
@@ -58,7 +55,7 @@ export const RedeemMioCoinCard = ({ onRedeemed }: RedeemMioCoinCardProps) => {
       console.error('Error redeeming MioCoin code:', err);
       toast({
         title: 'Chyba',
-        description: err instanceof Error ? err.message : 'Nepodařilo se uplatnit kód. Zkuste to znovu.',
+        description: err instanceof Error ? err.message : 'Nepodařilo se uplatnit kód. Zkus to znovu.',
         variant: 'destructive',
       });
     } finally {
@@ -83,7 +80,7 @@ export const RedeemMioCoinCard = ({ onRedeemed }: RedeemMioCoinCardProps) => {
         console.error('Error automatically redeeming MioCoin code:', err);
         toast({
           title: 'MIO nebyla uplatněna',
-          description: err instanceof Error ? err.message : 'Nepodařilo se uplatnit kód z e-mailového odkazu. Zkuste to znovu ručně.',
+          description: err instanceof Error ? err.message : 'Nepodařilo se uplatnit kód z e-mailového odkazu. Zkus to znovu ručně.',
           variant: 'destructive',
         });
       } finally {
@@ -100,44 +97,39 @@ export const RedeemMioCoinCard = ({ onRedeemed }: RedeemMioCoinCardProps) => {
   }, [location.pathname, location.search, navigate, showResult]);
 
   return (
-    <div className="homepage-light-panel relative overflow-hidden rounded-2xl border border-[rgba(194,144,47,0.18)] bg-white">
-      <div className="p-6">
-        <div className="flex items-center gap-4 mb-4">
-          <div
-            className="w-12 h-12 rounded-xl flex items-center justify-center shrink-0"
-            style={{
-              background: 'linear-gradient(135deg, #C2902F 0%, #8A5A10 100%)',
-              boxShadow: '0 4px 20px rgba(194,144,47,0.25)',
-            }}
-          >
-            <OneMilGiftIcon size={24} className="w-6 h-6 text-black" />
-          </div>
-          <div>
-            <h2 className="text-xl font-bold text-foreground">Uplatnit MIO kód</h2>
-            <p className="text-sm text-muted-foreground">Zadej MIO kód z partnerské akce, kartičky nebo e-mailu a připíšeme ti odměnu do peněženky.</p>
-          </div>
-        </div>
-
-        <div className="flex flex-col sm:flex-row gap-3">
-          <Input
-            value={code}
-            onChange={(event) => setCode(event.target.value.toUpperCase())}
-            placeholder="ZADEJTE MIOCOIN KÓD…"
-            disabled={submitting}
-            className="flex-1 bg-[rgba(194,144,47,0.05)] border-[rgba(194,144,47,0.2)] focus:border-[rgba(194,144,47,0.4)] focus:bg-[rgba(194,144,47,0.1)] transition-all duration-200 uppercase tracking-wider"
-            onKeyDown={(event) => event.key === 'Enter' && !submitting && handleRedeem()}
-          />
-          <Button
-            onClick={handleRedeem}
-            disabled={submitting || !code.trim()}
-            className="bg-gradient-to-r from-[#C2902F] to-[#E9B949] hover:from-[#E9B949] hover:to-[#C2902F] text-black font-bold transition-all duration-200 shrink-0"
-          >
-            {submitting ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : null}
-            Uplatnit kód
-          </Button>
+    <section className="om-pf-lc">
+      <div className="om-pf-head">
+        <span className="om-pf-ic"><Ticket aria-hidden="true" /></span>
+        <div>
+          <h2 className="om-pf-tt">Uplatnit MIO kód</h2>
+          <p className="om-pf-st">Kód z nákupu u partnera, z kartičky nebo z e-mailu</p>
         </div>
       </div>
-    </div>
+
+      <div className="flex flex-col sm:flex-row gap-2">
+        <label className="flex-1 block">
+          <span className="sr-only">MIO kód</span>
+          <input
+            value={code}
+            onChange={(event) => setCode(event.target.value.toUpperCase())}
+            placeholder="ZADEJ MIO KÓD"
+            disabled={submitting}
+            autoComplete="off"
+            className="om-pf-input om-pf-code"
+            onKeyDown={(event) => event.key === 'Enter' && !submitting && handleRedeem()}
+          />
+        </label>
+        <button
+          type="button"
+          onClick={handleRedeem}
+          disabled={submitting || !code.trim()}
+          className="om-pf-btn om-pf-black shrink-0"
+        >
+          {submitting ? <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" /> : null}
+          Uplatnit kód
+        </button>
+      </div>
+    </section>
   );
 };
 

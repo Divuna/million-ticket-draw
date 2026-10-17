@@ -1,7 +1,5 @@
 import React, { useMemo, useState } from 'react';
-import { Mail, Copy, Check } from 'lucide-react';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
+import { Mail, Copy, Check, Store } from 'lucide-react';
 import { toast } from '@/hooks/use-toast';
 import { buildPublicUrl } from '@/lib/publicAppUrl';
 
@@ -74,28 +72,24 @@ const RecommendShopMailtoCard: React.FC = () => {
     }
   };
 
-  const optionClass =
-    'inline-flex min-h-[44px] items-center justify-center gap-2 rounded-xl border border-primary/30 bg-white px-3 text-sm font-bold text-foreground transition-colors hover:bg-[#FFF6E0]';
+  const optionClass = 'om-pf-btn om-pf-outline';
 
   return (
-    <div className="relative overflow-hidden rounded-2xl border border-primary/20 bg-gradient-to-br from-card/95 via-primary/5 to-card/95 p-5 shadow-[0_0_28px_-10px_rgba(194,144,47,0.22)]">
-      <div className="pointer-events-none absolute right-0 top-0 h-20 w-20 rounded-bl-full bg-primary/10" />
-
-      <div className="relative space-y-4">
-        <div className="flex items-start gap-4">
-          <div className="rounded-xl border border-primary/25 bg-primary/15 p-3 shadow-lg shadow-primary/10">
-            <Mail className="h-5 w-5 text-primary" />
-          </div>
-          <div className="min-w-0">
-            <h2 className="text-lg font-bold text-foreground">Doporučit OneMil oblíbenému obchodu</h2>
-            <p className="mt-1 text-sm leading-relaxed text-muted-foreground/80">
-              Pošli e-mail svému oblíbenému e-shopu nebo prodejci a dej jim vědět, že bys u nich rád získával MIO za nákupy.
-            </p>
-          </div>
+    <section className="om-pf-lc">
+      <div className="om-pf-head">
+        <span className="om-pf-ic"><Store aria-hidden="true" /></span>
+        <div className="min-w-0">
+          <h2 className="om-pf-tt">Doporučit OneMil obchodu</h2>
+          <p className="om-pf-st">
+            Dej svému oblíbenému e-shopu vědět, že bys u nich rád získával MIO za nákupy.
+          </p>
         </div>
+      </div>
 
-        <div className="flex flex-col gap-3 sm:flex-row">
-          <Input
+      <div className="flex flex-col gap-2 sm:flex-row">
+        <label className="flex-1 block">
+          <span className="sr-only">E-mail obchodu nebo prodejce</span>
+          <input
             type="email"
             inputMode="email"
             autoComplete="off"
@@ -110,37 +104,37 @@ const RecommendShopMailtoCard: React.FC = () => {
               }
             }}
             placeholder="E-mail obchodu nebo prodejce"
-            className="premium-input flex-1 border-primary/20 bg-background/50 focus:border-primary/45"
+            className="om-pf-input"
           />
-          <Button
-            type="button"
-            onClick={handlePrepareEmail}
-            className="w-full bg-gradient-to-r from-[#C2902F] to-[#E9B949] font-bold text-black transition-all duration-300 hover:from-[#E9B949] hover:to-[#C2902F] hover:shadow-lg hover:shadow-primary/20 sm:w-auto"
-          >
-            <Mail className="h-4 w-4" />
-            Připravit e-mail
-          </Button>
-        </div>
-
-        {links && (
-          <div className="space-y-2.5 rounded-xl border border-primary/20 bg-white/70 p-3.5" role="region" aria-label="Odeslat doporučení">
-            <p className="text-sm font-semibold text-foreground">
-              E-mail pro <span className="break-all">{preparedFor}</span> je připravený. Otevři ho tam, kde píšeš poštu:
-            </p>
-            <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
-              <a href={links.gmail} target="_blank" rel="noopener noreferrer" className={optionClass}>Gmail</a>
-              <a href={links.outlook} target="_blank" rel="noopener noreferrer" className={optionClass}>Outlook</a>
-              <a href={links.mailto} className={optionClass}>E-mailová aplikace</a>
-              <button type="button" onClick={handleCopy} className={optionClass}>
-                {copied ? <Check className="h-4 w-4" aria-hidden="true" /> : <Copy className="h-4 w-4" aria-hidden="true" />}
-                {copied ? 'Zkopírováno' : 'Kopírovat text'}
-              </button>
-            </div>
-            <p className="text-xs text-muted-foreground">Odeslání je jen na tobě – OneMil nic neposílá.</p>
-          </div>
-        )}
+        </label>
+        <button type="button" onClick={handlePrepareEmail} className="om-pf-btn om-pf-black shrink-0">
+          <Mail className="h-4 w-4" aria-hidden="true" />
+          Připravit e-mail
+        </button>
       </div>
-    </div>
+
+      {links && (
+        <div
+          className="mt-3 space-y-2.5 rounded-[14px] bg-[#FFF8EA] p-3.5 shadow-[inset_0_0_0_1px_rgba(194,144,47,0.3)]"
+          role="region"
+          aria-label="Odeslat doporučení"
+        >
+          <p className="m-0 text-[13.5px] font-semibold text-[#17171B]">
+            E-mail pro <span className="break-all">{preparedFor}</span> je připravený. Otevři ho tam, kde píšeš poštu:
+          </p>
+          <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
+            <a href={links.gmail} target="_blank" rel="noopener noreferrer" className={optionClass}>Gmail</a>
+            <a href={links.outlook} target="_blank" rel="noopener noreferrer" className={optionClass}>Outlook</a>
+            <a href={links.mailto} className={optionClass}>E-mailová aplikace</a>
+            <button type="button" onClick={handleCopy} className={optionClass}>
+              {copied ? <Check className="h-4 w-4" aria-hidden="true" /> : <Copy className="h-4 w-4" aria-hidden="true" />}
+              {copied ? 'Zkopírováno' : 'Kopírovat text'}
+            </button>
+          </div>
+          <p className="om-pf-note">Odeslání je jen na tobě – OneMil nic neposílá.</p>
+        </div>
+      )}
+    </section>
   );
 };
 
