@@ -1,3 +1,7 @@
+# 17. 10. 2026 — Domovská stránka podle schválených desek
+
+Dodělány chybějící části (partnerská karta, avatar u výherců, plakety log) – PR #446.
+
 # 17. 10. 2026 — Připravujeme jako videokarty
 
 Tři karty (vila, Lamborghini, Rolex Daytona) s videi z Flow a ilustrační poznámkou nasazeny (PR #444).
