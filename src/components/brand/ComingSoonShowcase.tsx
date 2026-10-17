@@ -58,6 +58,7 @@ function ShowcaseCard({ item, index, motion, onOpen }: { item: Item; index: numb
   const ref = useRef<HTMLElement>(null);
   const videoRef = useRef<HTMLVideoElement>(null);
   const [visible, setVisible] = useState(false);
+  const [shown, setShown] = useState(false);
 
   useEffect(() => {
     const el = ref.current;
@@ -66,6 +67,8 @@ function ShowcaseCard({ item, index, motion, onOpen }: { item: Item; index: numb
     io.observe(el);
     return () => io.disconnect();
   }, []);
+
+  useEffect(() => { if (visible) setShown(true); }, [visible]);
 
   useEffect(() => {
     const v = videoRef.current;
@@ -76,7 +79,7 @@ function ShowcaseCard({ item, index, motion, onOpen }: { item: Item; index: numb
   return (
     <article
       ref={ref}
-      className={`om-cs-card ${visible ? 'is-in' : ''}`}
+      className={`om-cs-card ${shown ? 'is-in' : ''}`}
       style={{ transitionDelay: `${index * 120}ms` }}
     >
       <div className="om-cs-frame">

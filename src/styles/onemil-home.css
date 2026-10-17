@@ -1,0 +1,71 @@
+/* ───────── Domovská stránka – partnerská karta, výherci, loga (desky 4 a 9) ───────── */
+
+.om-home-partner {
+  position: relative; overflow: hidden; isolation: isolate; border-radius: 20px; padding: 20px 18px 18px;
+  display: flex; flex-direction: column; gap: 14px; color: #ECEDEF;
+  background: #17171B; box-shadow: 0 16px 36px rgba(23, 23, 27, 0.22), inset 0 0 0 1px rgba(233, 185, 73, 0.35);
+}
+@media (min-width: 768px) { .om-home-partner { padding: 24px 24px 22px; } }
+.om-home-partner-glow {
+  position: absolute; right: -70px; top: -70px; width: 260px; height: 260px; border-radius: 50%; z-index: -1;
+  background: radial-gradient(closest-side, rgba(181, 18, 43, 0.55), rgba(181, 18, 43, 0));
+}
+.om-home-partner-crown {
+  position: absolute; right: 18px; top: 54px; width: 84px; height: auto; pointer-events: none;
+  filter: drop-shadow(0 10px 18px rgba(0, 0, 0, 0.5)); animation: om-home-bob 3.8s ease-in-out infinite;
+}
+.om-home-partner-kicker {
+  align-self: flex-start; padding: 5px 10px; border-radius: 999px; border: 1px solid rgba(233, 185, 73, 0.55);
+  font-size: 11px; font-weight: 800; letter-spacing: 0.14em; text-transform: uppercase; color: #F2C55C;
+}
+.om-home-partner-copy { display: flex; flex-direction: column; gap: 6px; max-width: calc(100% - 100px); }
+.om-redesign h2.om-home-partner-title, h2.om-home-partner-title {
+  margin: 0; padding: 0 !important; font-family: var(--om2-font-section, 'Barlow Condensed', sans-serif); font-weight: 800; font-style: italic;
+  font-size: clamp(26px, 3.2vw, 32px); line-height: 0.98; text-transform: uppercase; text-shadow: none !important;
+  background: linear-gradient(180deg, #FFE29A, #E9B949 50%, #B8862B) !important; -webkit-background-clip: text !important;
+  background-clip: text !important; color: transparent !important; -webkit-text-fill-color: transparent !important;
+}
+.om-home-partner-lead { font-size: 16px; line-height: 1.35; color: #fff; }
+.om-redesign p.om-home-partner-sub, p.om-home-partner-sub { margin: 0; font-size: 13px; line-height: 1.5; color: #A9AAB3; }
+.om-home-partner-list { list-style: none; margin: 0; padding: 0; display: grid; gap: 8px; }
+@media (min-width: 1280px) { .om-home-partner-list { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
+.om-home-partner-list li {
+  display: flex; align-items: center; gap: 12px; padding: 10px 12px; border-radius: 12px; font-size: 14px; font-weight: 700;
+  background: rgba(255, 255, 255, 0.05); border: 1px solid rgba(255, 255, 255, 0.08); transition: transform 0.2s, border-color 0.2s;
+}
+.om-home-partner-list li:hover { transform: translateY(-2px); border-color: rgba(233, 185, 73, 0.4); }
+.om-home-partner-ic {
+  flex: none; width: 32px; height: 32px; border-radius: 9px; background: #B5122B; color: #fff;
+  display: flex; align-items: center; justify-content: center;
+}
+.om-home-partner-ic svg { width: 17px; height: 17px; }
+.om-home-partner-cta {
+  position: relative; overflow: hidden; margin-top: auto; min-height: 50px; border-radius: 14px; display: flex; align-items: center; justify-content: center;
+  font-weight: 800; font-size: 15px; color: #1A1205; text-decoration: none;
+  background: linear-gradient(180deg, #FFE29A, #E9B949 55%, #C2902F); box-shadow: 0 8px 22px rgba(194, 144, 47, 0.4);
+}
+.om-home-partner-cta::after {
+  content: ""; position: absolute; top: 0; bottom: 0; left: 0; width: 30%;
+  background: linear-gradient(90deg, transparent, rgba(255, 250, 230, 0.8), transparent);
+  animation: om-home-glint 3.6s cubic-bezier(0.4, 0, 0.2, 1) infinite;
+}
+.om-home-partner-cta:focus-visible { outline: 3px solid #F6D77A; outline-offset: 3px; }
+
+.om-home-winner-avatar {
+  flex: none; width: 58px; height: 58px; border-radius: 50%; overflow: hidden; display: flex; align-items: flex-end; justify-content: center;
+  background: radial-gradient(circle at 50% 30%, #3A1118, #15151A 70%); border: 2px solid #E9B949;
+  box-shadow: 0 6px 14px rgba(60, 40, 10, 0.25);
+}
+.om-home-winner-avatar img { width: 54px; height: auto; }
+
+/* Loga partnerů – bílá plaketa se zlatým lemem, logo ve svých barvách */
+.om-home-plaque {
+  position: relative; cursor: pointer; aspect-ratio: 16 / 10; border-radius: 14px; overflow: hidden; background: #fff;
+  box-shadow: 0 0 0 1px rgba(194, 144, 47, 0.55), 0 8px 20px rgba(60, 40, 10, 0.08);
+  transition: transform 0.25s, box-shadow 0.25s;
+}
+.om-home-plaque:hover { transform: translateY(-2px); box-shadow: 0 0 0 1.5px #E9B949, 0 12px 26px rgba(60, 40, 10, 0.14); }
+
+@keyframes om-home-bob { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-6px); } }
+@keyframes om-home-glint { 0% { transform: translateX(-140%) skewX(-18deg); } 55%, 100% { transform: translateX(520%) skewX(-18deg); } }
+@media (prefers-reduced-motion: reduce) { .om-home-partner-crown, .om-home-partner-cta::after { animation: none; } }
