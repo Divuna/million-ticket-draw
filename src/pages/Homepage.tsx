@@ -19,6 +19,7 @@ import { usePartners } from "@/hooks/usePartners";
 import { useHomepageVideoSimple } from "@/hooks/useHomepageVideoSimple";
 import { useHomepageLatestWinners } from "@/hooks/useHomepageLatestWinners";
 import { useComingSoonBanners } from "@/hooks/useComingSoonBanners";
+import { BrandHeroBanner } from "@/components/brand/BrandHeroBanner";
 import { WinnerCard } from "@/components/WinnerCard";
 import winnerBgTrophy from "@/assets/winner-backgrounds/winner-card-bg-trophy.png";
 import winnerBgCrown from "@/assets/winner-backgrounds/winner-card-bg-crown.png";
@@ -429,7 +430,9 @@ const Homepage = () => {
               </div>
             </div>
           </>
-        ) : null}
+        ) : (
+          <BrandHeroBanner />
+        )}
       </section>
 
       {/* Page content — constrained container */}
