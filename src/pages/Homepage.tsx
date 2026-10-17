@@ -19,6 +19,7 @@ import { usePartners } from "@/hooks/usePartners";
 import { useHomepageVideoSimple } from "@/hooks/useHomepageVideoSimple";
 import { useHomepageLatestWinners } from "@/hooks/useHomepageLatestWinners";
 import { useComingSoonBanners } from "@/hooks/useComingSoonBanners";
+import { BrandHeroBanner } from "@/components/brand/BrandHeroBanner";
 import { WinnerCard } from "@/components/WinnerCard";
 import winnerBgTrophy from "@/assets/winner-backgrounds/winner-card-bg-trophy.png";
 import winnerBgCrown from "@/assets/winner-backgrounds/winner-card-bg-crown.png";
@@ -429,7 +430,9 @@ const Homepage = () => {
               </div>
             </div>
           </>
-        ) : null}
+        ) : (
+          <BrandHeroBanner />
+        )}
       </section>
 
       {/* Page content — constrained container */}
@@ -815,7 +818,7 @@ const Homepage = () => {
         </div>
 
         {/* Partners Section */}
-        <section className="space-y-6">
+        <section className="space-y-6 scroll-mt-24" id="partneri">
           <div className="flex items-center justify-between">
             <h3 className="customer-premium-orange-heading text-2xl font-bold text-heading-gold flex items-center gap-2">
               <Handshake className="w-6 h-6" />
