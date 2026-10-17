@@ -36,7 +36,7 @@ test.describe('Voucher Purchase', () => {
       .first();
     await expect(spec03Card, 'Seeded E2E Spec03 full-banner card must be visible').toBeVisible({ timeout: 15_000 });
 
-    const detailButton = spec03Card.getByRole('button', { name: /Koupit za|Získat zdarma|Detail/i });
+    const detailButton = spec03Card.getByRole('button', { name: /Koupit za|Získat slevu|Získat zdarma|Detail/i });
     await expect(detailButton).toBeVisible({ timeout: 15_000 });
   });
 
@@ -50,7 +50,7 @@ test.describe('Voucher Purchase', () => {
       .first();
     await expect(spec03Card, 'Seeded E2E Spec03 full-banner card must be visible').toBeVisible({ timeout: 15_000 });
 
-    const detailButton = spec03Card.getByRole('button', { name: /Koupit za|Získat zdarma|Detail/i });
+    const detailButton = spec03Card.getByRole('button', { name: /Koupit za|Získat slevu|Získat zdarma|Detail/i });
     await expect(detailButton).toBeVisible({ timeout: 15_000 });
     await detailButton.click();
 
