@@ -55,6 +55,13 @@ v 19:20 UTC vrátil 200 `No pending emails`. DB/EF změny (schválení Pavla „
   (`transfer_bonus_to_main`). Neměnit na automatické připsání. Detail výhry to zákazníkovi vysvětluje.
 - Detail výhry „Cesta k tobě“ (`WinDetailModal`) předělán podle plátna, v produkci od 16. 10. 2026 (PR #432, merge `2dc5ff14`, produkční smoke zelený).
 
+**17. 10. 2026 – Připravujeme: videokarty v produkci (PR #444, merge `4abd38d3`, schválil Pavel):** `ComingSoonShowcase` – vila
+v Thajsku, Lamborghini Huracán, Rolex Daytona (videa z Flow bez log v `public/brand/coming-soon/`, rozměr 16:9 jako původní
+bannery, detail s textem z původních karet převedeným na tykání). Štítek „Ilustrační vizualizace“ + poznámka, že skutečná výhra
+a podmínky budou v pravidlech soutěže. Zobrazí se, když admin nemá vlastní karty `coming_soon_banners` (ty mají přednost).
+Původní texty karet vytaženy ze zálohy před resetem; jejich obrázky reset smazal i ze Storage. Video hodinek tvarem neodpovídá
+Daytoně (kryje to štítek ilustrace) – pro věrnější vizuál vygenerovat Daytonu bez viditelného ciferníku.
+
 **17. 10. 2026 – Úvodní videobanner v produkci (PR #442, merge `2278ae00`, schválil Pavel):** `BrandHeroBanner` nahoře na
 domovské stránce, když admin nemá vlastní hlavní banner (admin banner má přednost). Video z Google Flow (střihy auto/detail/bar/
 motorka, prolnutí do smyčky 22 s; mobil vlastní video 9:16) v `public/brand/hero/`, přes něj v kódu logo, nadpis, avatar s MIO,
