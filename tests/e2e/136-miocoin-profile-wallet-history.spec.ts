@@ -78,14 +78,14 @@ test.describe('136 — MioCoin code from an e-mail link', () => {
   test('manual code input remains available and calls the same canonical RPC', () => {
     expect(redeemCard).toContain('const handleRedeem = async () => {');
     expect(redeemCard).toContain('const result = await redeemMioCoinCode(trimmed);');
-    expect(redeemCard).toContain('placeholder="ZADEJTE MIOCOIN KÓD…"');
+    expect(redeemCard).toContain('placeholder="ZADEJ MIO KÓD"');
     expect(redeemCard).toContain('Uplatnit kód');
   });
 });
 
 test.describe('136 — customer MioCoin history', () => {
   test('replaces the narrow transfer list with the complete customer history component', () => {
-    expect(profile).toContain('<MioCoinHistory refreshKey={walletHistoryRefreshKey} />');
+    expect(profile).toContain('<MioCoinHistory refreshKey={walletHistoryRefreshKey} dark />');
     expect(profile).not.toContain('Historie převodů');
     expect(profile).toContain('onRedeemed={() => {');
     expect(profile).toContain('setWalletHistoryRefreshKey((version) => version + 1);');
