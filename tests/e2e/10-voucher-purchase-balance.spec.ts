@@ -172,7 +172,12 @@ test.describe('Voucher Purchase — Wallet Balance Decrease', () => {
     await expect(balanceLabelAfter).toBeVisible({ timeout: 15_000 });
     const balanceParagraphAfter = balanceLabelAfter.locator('xpath=following-sibling::p[1]');
 
-    await expect(balanceParagraphAfter).not.toContainText(balanceBeforeRaw, { timeout: 8_000 });
+    if (voucherPrice > 0) {
+      await expect(balanceParagraphAfter).not.toContainText(balanceBeforeRaw, { timeout: 8_000 });
+    } else {
+      // Voucher zdarma: zůstatek se nemění – počkáme jen na načtení hodnoty.
+      await expect(balanceParagraphAfter).toContainText(balanceBeforeRaw, { timeout: 8_000 });
+    }
 
     const balanceAfterRaw = (await balanceParagraphAfter.textContent())?.trim() ?? '';
     const balanceAfter    = parseCzechInt(balanceAfterRaw);
