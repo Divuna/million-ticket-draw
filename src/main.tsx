@@ -6,6 +6,7 @@ import "./styles/onemil-redesign.css";
 import "./styles/onemil-result.css";
 import "./styles/onemil-wins.css";
 import "./styles/onemil-toast.css";
+import "./styles/onemil-b2b.css";
 import { initB2BAnalytics } from "./lib/b2bAnalytics";
 
 // Global safety net for unhandled promise rejections (prevents blank screens)

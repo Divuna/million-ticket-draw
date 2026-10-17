@@ -479,9 +479,9 @@ function AppContent() {
     !location.pathname.startsWith('/influencer');
 
   // Nový vizuál (om-redesign) jen pro zákaznické stránky; firemní stránky
-  // /pro-eshopy a /partnerstvi zůstávají ve stávajícím vzhledu.
+  // /pro-eshopy zůstává ve stávajícím vzhledu (/partnerstvi má od 17. 10. 2026 obchodní variantu nového vizuálu).
   const isB2BPublicPage =
-    location.pathname === '/pro-eshopy' || location.pathname === '/partnerstvi';
+    location.pathname === '/pro-eshopy';
 
   const layoutClassName = [
     isPartnerAccount ? 'partner-layout' : 'customer-layout',
