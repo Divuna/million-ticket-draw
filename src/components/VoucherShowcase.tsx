@@ -15,6 +15,17 @@ import {
 import { OneMilHeartIcon, OneMilVoucherIcon } from '@/components/icons/OneMilIcons';
 import { cn } from '@/lib/utils';
 import { useVoucherDiscountLabels } from '@/hooks/useVoucherDiscountLabels';
+import { useVoucherPartners } from '@/hooks/useVoucherPartners';
+import { voucherCtaLabel } from '@/lib/voucherPricing';
+import onemilEmblem from '@/assets/redesign/onemil-emblem.png';
+import avatarGift from '@/assets/redesign/avatar/avatar-darek.png';
+import avatarThumb from '@/assets/redesign/avatar/avatar-palec.png';
+import avatarPhone from '@/assets/redesign/avatar/avatar-telefon-voucher.png';
+import avatarWave from '@/assets/redesign/avatar/avatar-mava.png';
+import avatarMio from '@/assets/redesign/avatar/avatar-drzi-mio.png';
+import avatarPoint from '@/assets/redesign/avatar/avatar-ukazuje.png';
+import avatarSearch from '@/assets/redesign/avatar/avatar-lupa.png';
+import avatarThrone from '@/assets/redesign/avatar/avatar-trun.webp';
 
 export interface VoucherShowcaseVoucher {
   id: string;
@@ -88,9 +99,26 @@ interface VoucherShowcaseCardProps {
   favoriteActive?: boolean;
   favoriteDisabled?: boolean;
   favoriteAriaLabel?: string;
+  /** Zachováno kvůli kompatibilitě; údaje „Zbývá“ a „Platí do“ jsou nově vždy dole na kartě. */
   showInfoBadges?: boolean;
+  /** Pořadí karty v seznamu – určuje pózu maskota (střídají se dokola). */
+  index?: number;
+  /** Text tlačítka (výchozí podle ceny voucheru). */
+  ctaLabel?: string;
   className?: string;
 }
+
+/** Pózy maskota pro karty voucherů – střídají se dokola (deska „Karta voucheru“, varianta C). */
+const VOUCHER_MASCOTS = [
+  { src: avatarGift, alt: 'Maskot podává dárek' },
+  { src: avatarThumb, alt: 'Maskot s palcem nahoru' },
+  { src: avatarPhone, alt: 'Maskot ukazuje voucher v telefonu' },
+  { src: avatarWave, alt: 'Maskot mává' },
+  { src: avatarMio, alt: 'Maskot drží MIO' },
+  { src: avatarPoint, alt: 'Maskot ukazuje' },
+  { src: avatarSearch, alt: 'Maskot hledá lupou' },
+  { src: avatarThrone, alt: 'Maskot na trůnu' },
+];
 
 export const VoucherShowcaseCard: React.FC<VoucherShowcaseCardProps> = ({
   voucher,
@@ -100,26 +128,26 @@ export const VoucherShowcaseCard: React.FC<VoucherShowcaseCardProps> = ({
   favoriteActive = false,
   favoriteDisabled = false,
   favoriteAriaLabel,
-  showInfoBadges = true,
+  index = 0,
+  ctaLabel,
   className,
 }) => {
   const validityLabel = getVoucherValidityLabel(voucher);
-  const remaining = showInfoBadges ? (remainingLabel ?? getVoucherRemainingLabel(voucher)) : null;
-  const shownValidityLabel = showInfoBadges ? validityLabel : null;
-  const hasBanner = Boolean(voucher.banner_url || voucher.image_url);
+  const remaining = (remainingLabel ?? getVoucherRemainingLabel(voucher))?.replace(/^Zbývá:\s*/, '') ?? null;
+  const photo = voucher.banner_url || voucher.image_url;
   const discountLabels = useVoucherDiscountLabels();
+  const partners = useVoucherPartners();
+  const partner = partners[voucher.id];
   const discountLabel = (voucher.discount_label ?? discountLabels[voucher.id] ?? '').trim();
+  const mascot = VOUCHER_MASCOTS[((index % VOUCHER_MASCOTS.length) + VOUCHER_MASCOTS.length) % VOUCHER_MASCOTS.length];
 
   return (
-    <Card
-      className={cn(
-        'om-voucher-ticket voucher-card-glow relative overflow-hidden rounded-[20px] border-[3px] border-[rgba(194,144,47,0.35)] shadow-[0_4px_20px_hsl(220_50%_3%/0.6)] transition-all duration-300 hover:border-[rgba(194,144,47,0.55)] hover:shadow-[0_0_16px_rgba(194,144,47,0.2)] hover:scale-[1.02]',
-        'aspect-[16/9] min-h-0 cursor-pointer',
-        className,
-      )}
+    <div
+      className={cn('om-vt-wrap', className)}
       onClick={onDetail}
       role="button"
       tabIndex={0}
+      aria-label={`Voucher ${voucher.name}`}
       onKeyDown={(event) => {
         if (event.key === 'Enter' || event.key === ' ') {
           event.preventDefault();
@@ -127,82 +155,64 @@ export const VoucherShowcaseCard: React.FC<VoucherShowcaseCardProps> = ({
         }
       }}
     >
-      {hasBanner ? (
-        <img
-          src={voucher.banner_url || voucher.image_url || undefined}
-          alt={`${voucher.name} banner`}
-          className="absolute inset-0 z-[1] h-full w-full object-cover object-center"
-          loading="lazy"
-        />
-      ) : (
-        <div className="absolute inset-0 z-[1] flex items-center justify-center bg-[hsl(220_30%_10%)]">
-          <OneMilVoucherIcon size={56} className="h-14 w-14 text-[rgba(194,144,47,0.45)]" />
-        </div>
-      )}
-
-      <div
-        className="absolute inset-0 z-[2]"
-        style={{
-          background: 'linear-gradient(to bottom, rgba(0,0,0,0.06) 0%, rgba(0,0,0,0.16) 45%, rgba(0,0,0,0.74) 100%)',
-        }}
-      />
-
-      <div className="relative z-[3] flex h-full flex-col p-4 sm:p-5">
-        <div className="flex items-start justify-between gap-2">
-          {onFavoriteToggle ? (
+      <article className="om-vt">
+        <div className="om-vt-photo">
+          {photo ? (
+            <img src={photo} alt="" loading="lazy" />
+          ) : (
+            <div className="om-vt-photo-empty"><OneMilVoucherIcon size={40} className="h-10 w-10" /></div>
+          )}
+          {onFavoriteToggle && (
             <button
               type="button"
-              onClick={onFavoriteToggle}
+              onClick={(event) => {
+                event.stopPropagation();
+                onFavoriteToggle(event);
+              }}
               disabled={favoriteDisabled}
-              className="rounded-full border border-white/15 bg-[rgba(10,12,18,0.72)] p-2 text-white shadow-[0_4px_20px_rgba(0,0,0,0.25)] backdrop-blur-sm transition-all duration-200 hover:bg-[rgba(10,12,18,0.9)] disabled:cursor-not-allowed disabled:opacity-50"
+              className="om-vt-heart"
               aria-label={favoriteAriaLabel ?? (favoriteActive ? 'Odebrat z oblíbených' : 'Přidat do oblíbených')}
             >
               <OneMilHeartIcon
-                size={20}
-                className={cn(
-                  'h-5 w-5 transition-colors',
-                  favoriteActive ? 'fill-destructive text-destructive' : 'text-white/80',
-                )}
+                size={18}
+                className={cn('h-[18px] w-[18px]', favoriteActive ? 'fill-destructive text-destructive' : 'text-white')}
               />
             </button>
-          ) : (
-            <div />
           )}
-          <div className={cn('flex flex-wrap justify-end gap-2', discountLabel && 'pr-16')}>
-            {remaining && (
-              <Badge className="rounded-full border border-white/15 bg-[rgba(10,12,18,0.72)] px-3 py-1 text-[11px] font-medium text-white shadow-[0_4px_20px_rgba(0,0,0,0.25)] backdrop-blur-sm">
-                {remaining}
-              </Badge>
-            )}
-            {shownValidityLabel && (
-              <Badge className="rounded-full border border-white/15 bg-[rgba(10,12,18,0.72)] px-3 py-1 text-[11px] font-medium text-white shadow-[0_4px_20px_rgba(0,0,0,0.25)] backdrop-blur-sm">
-                {shownValidityLabel}
-              </Badge>
-            )}
-          </div>
+          {discountLabel && (
+            <span data-testid="voucher-discount-sticker" className="om-vt-sticker" aria-label={'Sleva ' + discountLabel}>
+              {discountLabel}
+            </span>
+          )}
         </div>
-
-        {discountLabel && (
-          <span data-testid="voucher-discount-sticker" className="om-vc-sticker" aria-label={'Sleva ' + discountLabel}>
-            {discountLabel}
-          </span>
-        )}
-
-        <div className="mt-auto flex items-end justify-end pt-6">
-          <Button
+        <span className="om-vt-gold" aria-hidden="true" />
+        <div className="om-vt-title">
+          {partner?.name && <span className="om-vt-partner">{partner.name}</span>}
+          <strong className="om-vt-name">{voucher.name}</strong>
+        </div>
+        <div className="om-vt-cut" aria-hidden="true" />
+        <div className="om-vt-foot">
+          <div className="om-vt-meta">
+            <span>{remaining != null ? <>Zbývá <b>{remaining} ks</b></> : ' '}</span>
+            <span>{validityLabel ?? ''}</span>
+          </div>
+          <button
             type="button"
+            className="om-vt-btn"
             onClick={(event) => {
               event.stopPropagation();
               onDetail();
             }}
-            className="h-11 rounded-xl border-0 bg-gradient-to-r from-[#C2902F] to-[#E9B949] px-4 text-sm font-bold text-[#111] shadow-[0_2px_8px_rgba(194,144,47,0.25)] transition-all duration-200 hover:brightness-105"
           >
-            Detail
-            <ChevronRight className="ml-1 h-4 w-4" />
-          </Button>
+            {ctaLabel ?? voucherCtaLabel}
+          </button>
         </div>
+      </article>
+      <div className="om-vt-logo" aria-hidden={partner?.logoUrl ? undefined : true}>
+        {partner?.logoUrl ? <img src={partner.logoUrl} alt={partner.name} /> : <img src={onemilEmblem} alt="" />}
       </div>
-    </Card>
+      <img src={mascot.src} alt="" aria-hidden="true" className="om-vt-mascot" loading="lazy" />
+    </div>
   );
 };
 
@@ -223,7 +233,7 @@ export const VoucherDetailDialog: React.FC<VoucherDetailDialogProps> = ({
   onPurchase,
   purchaseDisabled = false,
   purchaseLoading = false,
-  purchaseLabel = 'Koupit za 5 MIO',
+  purchaseLabel = voucherCtaLabel,
 }) => {
   const detailText = voucher ? buildVoucherDetailText(voucher) : null;
   const galleryImages = voucher

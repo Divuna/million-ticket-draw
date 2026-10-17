@@ -1,5 +1,6 @@
 import React, { useEffect, useRef, useState } from "react";
 import { useNavigate, Link, useLocation } from "react-router-dom";
+import { voucherAcquiredMessage } from "@/lib/voucherPricing";
 import { buildLoginRedirectUrl } from "@/lib/loginRedirect";
 import { isNativeApp } from "@/lib/nativeApp";
 import { Header } from "@/components/Header";
@@ -315,7 +316,7 @@ const Homepage = () => {
       if (selectedVoucher?.id === voucherId) {
         setSelectedVoucher(null);
       }
-      toast.success("Voucher úspěšně zakoupen za 5 MIO!");
+      toast.success(voucherAcquiredMessage);
     } catch (error) {
       console.error("Error purchasing voucher:", error);
       toast.error("Nepodařilo se zakoupit voucher");
@@ -779,14 +780,15 @@ const Homepage = () => {
                 </Card>
               </div>
             ) : (
-              homepageVouchers.map((voucher) => (
-                <div key={voucher.id} className="flex-shrink-0 w-80">
+              homepageVouchers.map((voucher, index) => (
+                <div key={voucher.id} className="flex-shrink-0 w-80 pr-3">
                   <VoucherShowcaseCard
                     voucher={voucher}
+                    index={index}
                     remainingLabel={typeof getRemainingCount(voucher) === 'number' ? `Zbývá: ${getRemainingCount(voucher)}` : null}
                     onDetail={() => setSelectedVoucher(voucher)}
                     showInfoBadges={false}
-                    className="h-48 w-full aspect-auto"
+                    className="w-full"
                   />
                 </div>
               ))

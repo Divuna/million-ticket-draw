@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
+import { voucherAcquiredMessage, voucherCtaLabel } from "@/lib/voucherPricing";
 import { useAuth } from '@/hooks/useAuth';
 import { useUserRole } from '@/hooks/useUserRole';
 import { LoggedOutScreen } from '@/components/LoggedOutScreen';
@@ -326,7 +327,7 @@ const Vouchers: React.FC = () => {
       // Optimistically remove from favorites list immediately (covers oblíbené tab)
       optimisticRemoveByVoucherId(voucherId);
 
-      toast.success(`Voucher úspěšně zakoupen za 5 MIO!`);
+      toast.success(voucherAcquiredMessage);
       if (selectedVoucher?.id === voucherId) {
         setSelectedVoucher(null);
       }
@@ -429,9 +430,10 @@ const Vouchers: React.FC = () => {
               </div>
             ) : (
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                {truelyAvailableVouchers.map((voucher) => (
+                {truelyAvailableVouchers.map((voucher, index) => (
                   <VoucherShowcaseCard
                     key={voucher.id}
+                    index={index}
                     voucher={voucher}
                     onDetail={() => void openVoucherDetail(voucher)}
                     onFavoriteToggle={(event) => handleFavoriteClick(event, voucher.id)}
@@ -473,12 +475,13 @@ const Vouchers: React.FC = () => {
               </Card>
             ) : (
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                {favoriteVouchers.map((userVoucher) => {
+                {favoriteVouchers.map((userVoucher, index) => {
                   const voucher = toShowcaseVoucher(userVoucher);
 
                   return (
                     <VoucherShowcaseCard
                       key={userVoucher.id}
+                      index={index}
                       voucher={voucher}
                       onDetail={() => void openVoucherDetail(voucher)}
                       onFavoriteToggle={(event) => handleFavoriteClick(event, userVoucher.voucher_id)}
@@ -660,7 +663,7 @@ const Vouchers: React.FC = () => {
         onPurchase={handleVoucherPurchase}
         purchaseDisabled={isAdmin || selectedVoucherIsPurchased}
         purchaseLoading={purchasingId !== null}
-        purchaseLabel={selectedVoucherIsPurchased ? 'Zakoupeno' : 'Koupit za 5 MIO'}
+        purchaseLabel={selectedVoucherIsPurchased ? 'Zakoupeno' : voucherCtaLabel}
       />
 
     </div>

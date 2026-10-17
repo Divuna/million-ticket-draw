@@ -9,6 +9,7 @@ import "./styles/onemil-profile.css";
 import "./styles/onemil-hero.css";
 import "./styles/onemil-coming-soon.css";
 import "./styles/onemil-home.css";
+import "./styles/onemil-voucher-card.css";
 import "./styles/onemil-toast.css";
 import "./styles/onemil-b2b.css";
 import { initB2BAnalytics } from "./lib/b2bAnalytics";
