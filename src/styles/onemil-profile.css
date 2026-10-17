@@ -1,0 +1,256 @@
+/* ───────── Můj profil (desky 15 a 22 v plátně redesignu) ─────────
+ * Nahoře tmavá hlavička s avatarem na trůnu a tmavá peněženka, uprostřed
+ * světlé karty s hloubkou (kód, údaje) a tmavá pozvánka, dole klidné světlé
+ * karty se zlatými přepínači. */
+
+.om-pf { font-family: var(--om2-font-body); color: #17171B; }
+
+/* Karty */
+.om-pf-lc {
+  position: relative; border-radius: 20px; padding: 18px;
+  background: linear-gradient(180deg, #FFFFFF 0%, #FDF8EF 100%);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.95), 0 0 0 1px rgba(194, 144, 47, 0.24),
+    0 2px 4px rgba(60, 40, 10, 0.06), 0 14px 30px rgba(60, 40, 10, 0.12);
+}
+.om-pf-dc {
+  position: relative; border-radius: 20px; padding: 18px; color: #ECEDEF;
+  background: radial-gradient(120% 120% at 85% 10%, #3A1118, #17171B 60%);
+  box-shadow: 0 16px 30px rgba(23, 23, 27, 0.25), inset 0 0 0 1px rgba(233, 185, 73, 0.45);
+}
+@media (min-width: 640px) { .om-pf-lc, .om-pf-dc { padding: 22px 24px; } }
+
+/* Hlavička karty */
+.om-pf-head { display: flex; align-items: center; gap: 12px; margin-bottom: 14px; }
+.om-pf-head-split { justify-content: space-between; }
+.om-pf-ic {
+  position: relative; width: 38px; height: 38px; border-radius: 11px; flex: none;
+  display: flex; align-items: center; justify-content: center; color: #E9B949;
+  background: #17171B; box-shadow: inset 0 0 0 1px rgba(233, 185, 73, 0.55);
+}
+.om-pf-ic svg { width: 19px; height: 19px; }
+.om-redesign .om-pf .om-pf-tt {
+  display: block;
+  margin: 0; padding: 0 !important; background: none !important; text-shadow: none !important;
+  font-family: var(--om2-font-section); font-weight: 800; font-style: italic; text-transform: uppercase;
+  font-size: 21px; line-height: 1; letter-spacing: 0.01em; color: #17171B !important; -webkit-text-fill-color: #17171B !important;
+}
+.om-redesign .om-pf .om-pf-dc .om-pf-tt { color: #ECEDEF !important; -webkit-text-fill-color: #ECEDEF !important; }
+.om-pf p.om-pf-st, .om-pf .om-pf-st { margin: 3px 0 0; font-size: 12.5px; line-height: 1.35; color: #5E5B57; }
+.om-pf .om-pf-dc p.om-pf-st, .om-pf .om-pf-dc .om-pf-st { color: #A9AAB3; }
+.om-pf p.om-pf-note { font-size: 12px; line-height: 1.5; color: #5E5B57; margin: 0; }
+.om-pf .om-pf-dc p.om-pf-note { color: #A9AAB3; }
+
+/* Řádky údajů */
+.om-pf-row {
+  display: flex; justify-content: space-between; align-items: center; gap: 12px;
+  padding: 11px 0; border-top: 1px solid rgba(160, 120, 50, 0.16); font-size: 14px;
+}
+.om-pf-row > :first-child { color: #5E5B57; flex: none; }
+.om-pf-row > :last-child { font-weight: 700; text-align: right; min-width: 0; overflow-wrap: anywhere; }
+.om-pf-row .om-pf-empty { color: #8E8F98; font-weight: 600; }
+.om-pf-row-stack { align-items: flex-start; }
+
+/* Tlačítka */
+.om-pf-btn {
+  display: inline-flex; align-items: center; justify-content: center; gap: 8px; min-height: 46px;
+  padding: 0 18px; border-radius: 12px; border: 0; font-weight: 800; font-size: 15px; cursor: pointer;
+  transition: transform 0.15s, box-shadow 0.2s, background 0.2s, opacity 0.2s; text-decoration: none;
+}
+.om-pf-btn:disabled { opacity: 0.55; cursor: not-allowed; }
+.om-pf-btn:not(:disabled):active { transform: translateY(1px); }
+.om-pf-gold {
+  position: relative; overflow: hidden; color: #1A1205;
+  background: linear-gradient(180deg, #FFE29A, #E9B949 55%, #C2902F); box-shadow: 0 6px 16px rgba(194, 144, 47, 0.35);
+}
+.om-pf-gold:not(:disabled):hover { box-shadow: 0 8px 22px rgba(194, 144, 47, 0.5); }
+.om-pf-gold::after {
+  content: ""; position: absolute; top: 0; bottom: 0; left: 0; width: 30%; pointer-events: none;
+  background: linear-gradient(90deg, transparent, rgba(255, 250, 230, 0.75), transparent);
+  animation: om-pf-glint 3.6s cubic-bezier(0.4, 0, 0.2, 1) infinite;
+}
+.om-pf-black {
+  color: #F6D77A; background: linear-gradient(180deg, #26262C, #121215);
+  box-shadow: inset 0 0 0 1px rgba(233, 185, 73, 0.55);
+}
+.om-pf-black:not(:disabled):hover { background: linear-gradient(180deg, #2E2E35, #17171B); }
+.om-pf-outline {
+  color: #8A5A10; background: #fff; box-shadow: inset 0 0 0 1px rgba(194, 144, 47, 0.6);
+  min-height: 40px; font-size: 13.5px; padding: 0 14px;
+}
+.om-pf-outline:not(:disabled):hover { background: #FFF6E0; }
+.om-pf-outline-dark {
+  color: #F6D77A; background: rgba(233, 185, 73, 0.08); box-shadow: inset 0 0 0 1.5px rgba(233, 185, 73, 0.6);
+}
+.om-pf-outline-dark:not(:disabled):hover { background: rgba(233, 185, 73, 0.16); }
+.om-pf-glass {
+  color: #fff; background: rgba(255, 255, 255, 0.08); box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.3);
+  min-height: 40px; font-size: 13px; padding: 0 12px; font-weight: 700;
+}
+.om-pf-glass:not(:disabled):hover { background: rgba(255, 255, 255, 0.16); }
+.om-pf-quiet {
+  color: #5E5B57; background: transparent; box-shadow: inset 0 0 0 1px rgba(160, 120, 50, 0.3);
+  min-height: 38px; font-size: 13px; padding: 0 12px; font-weight: 700;
+}
+.om-pf-quiet:not(:disabled):hover { background: rgba(194, 144, 47, 0.06); }
+.om-pf-icon-btn {
+  width: 40px; height: 40px; border-radius: 10px; border: 0; flex: none; cursor: pointer;
+  display: inline-flex; align-items: center; justify-content: center; color: #fff;
+  background: rgba(255, 255, 255, 0.1); transition: background 0.2s;
+}
+.om-pf-icon-btn:hover { background: rgba(255, 255, 255, 0.18); }
+.om-pf-icon-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+
+/* Pole */
+.om-pf input.om-pf-input, .om-pf textarea.om-pf-input {
+  width: 100%; box-sizing: border-box; min-height: 46px; border-radius: 12px; background: #fff;
+  border: 1px solid rgba(160, 120, 50, 0.3); padding: 0 12px; font-size: 14px; color: #17171B;
+  font-family: var(--om2-font-body);
+}
+.om-pf textarea.om-pf-input { padding: 10px 12px; min-height: 84px; }
+.om-pf .om-pf-input:focus { outline: none; border-color: #C2902F; box-shadow: 0 0 0 3px rgba(233, 185, 73, 0.25); }
+.om-pf input.om-pf-code {
+  border: 1.5px dashed rgba(194, 144, 47, 0.7); font-family: var(--om2-font-code); letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+.om-pf input.om-pf-code::placeholder { letter-spacing: 0.04em; color: #8E8F98; }
+.om-pf .om-pf-dc input.om-pf-input {
+  background: rgba(255, 255, 255, 0.06); color: #ECEDEF; border-color: rgba(233, 185, 73, 0.45);
+}
+.om-pf .om-pf-dc input.om-pf-input::placeholder { color: #8E8F98; }
+.om-pf-label { display: block; font-size: 12px; font-weight: 700; color: #5E5B57; margin-bottom: 6px; }
+
+/* Zlaté přepínače (Radix Switch) */
+.om-pf .om-pf-switch[data-state="checked"] { background: linear-gradient(180deg, #E9B949, #C2902F); }
+.om-pf .om-pf-switch[data-state="unchecked"] { background: #D8CBB2; }
+
+/* Stavové pilulky */
+.om-pf-pill {
+  display: inline-flex; align-items: center; gap: 5px; padding: 3px 9px; border-radius: 999px;
+  font-size: 11.5px; font-weight: 800; white-space: nowrap;
+}
+.om-pf-pill-ok { background: rgba(46, 158, 91, 0.14); color: #1F7A45; }
+.om-pf-pill-off { background: rgba(181, 18, 43, 0.1); color: #9B1B2E; }
+.om-pf-pill-neutral { background: rgba(23, 23, 27, 0.07); color: #5E5B57; }
+
+/* ── Hlavička profilu ── */
+.om-pf-hero {
+  position: relative; overflow: hidden; min-height: 132px; display: flex; align-items: center; gap: 16px;
+  padding: 18px 112px 18px 16px;
+}
+.om-pf-hero::before {
+  content: ""; position: absolute; right: -40px; bottom: -60px; width: 260px; height: 260px; border-radius: 50%;
+  background: radial-gradient(circle, rgba(233, 185, 73, 0.22), rgba(233, 185, 73, 0) 65%); pointer-events: none;
+}
+.om-pf-avatar { position: relative; width: 74px; height: 74px; flex: none; border: 0; padding: 0; background: none; cursor: pointer; border-radius: 50%; }
+.om-pf-avatar-ring {
+  position: absolute; inset: -4px; border-radius: 50%;
+  background: conic-gradient(#FFE29A, #B8862B, #E9B949, #FFF3B0, #FFE29A);
+  animation: om-pf-ring 6s linear infinite;
+}
+.om-pf-avatar-face {
+  position: absolute; inset: 0; border-radius: 50%; overflow: hidden; border: 3px solid #17171B;
+  background: #2A2A30; display: flex; align-items: center; justify-content: center;
+  font-family: var(--om2-font-display); font-weight: 900; font-style: italic; font-size: 32px; color: #F6D77A;
+}
+.om-pf-avatar-face img { width: 100%; height: 100%; object-fit: cover; }
+.om-pf-avatar-cam {
+  position: absolute; right: -2px; bottom: -2px; width: 28px; height: 28px; border-radius: 50%;
+  background: #E9B949; color: #1A1205; box-shadow: 0 0 0 2px #17171B;
+  display: flex; align-items: center; justify-content: center;
+}
+.om-pf-avatar:focus-visible { outline: 3px solid #F6D77A; outline-offset: 4px; }
+.om-redesign .om-pf h1.om-pf-name {
+  margin: 0; font-family: var(--om2-font-display); font-weight: 900; font-style: italic; text-transform: uppercase;
+  font-size: clamp(18px, 5.4vw, 23px); line-height: 1.05; color: #fff; overflow-wrap: break-word; word-break: normal;
+}
+.om-pf-hero-copy { position: relative; z-index: 1; min-width: 0; }
+.om-pf-throne {
+  position: absolute; right: -10px; bottom: -14px; height: 136px; width: auto; pointer-events: none;
+  filter: drop-shadow(0 8px 16px rgba(0, 0, 0, 0.55)); animation: om-pf-bob 3.8s ease-in-out infinite;
+}
+@media (min-width: 640px) {
+  .om-pf-hero { min-height: 150px; padding: 22px 230px 22px 28px; gap: 22px; }
+  .om-pf-avatar { width: 82px; height: 82px; }
+  .om-redesign .om-pf h1.om-pf-name { font-size: 34px; }
+  .om-pf-throne { right: 36px; bottom: -34px; height: 190px; }
+}
+
+/* ── Peněženka ── */
+.om-pf-balance {
+  display: flex; align-items: center; gap: 14px; padding: 14px; border-radius: 14px;
+  background: rgba(255, 255, 255, 0.05); box-shadow: inset 0 0 0 1px rgba(233, 185, 73, 0.3);
+}
+.om-pf-balance-label { font-size: 12px; color: #A9AAB3; }
+.om-pf-balance-value {
+  font-family: var(--om2-font-display); font-weight: 900; font-style: italic; line-height: 1;
+  font-size: 38px; color: #F6D77A; font-variant-numeric: tabular-nums; overflow-wrap: anywhere;
+}
+.om-pf-balance-value .om-pf-unit { font-size: 17px; margin-left: 4px; }
+.om-pf-bonus {
+  margin-top: 10px; display: flex; align-items: center; justify-content: space-between; gap: 10px; flex-wrap: wrap;
+  padding: 12px 14px; border-radius: 14px;
+  background: rgba(181, 18, 43, 0.16); box-shadow: inset 0 0 0 1px rgba(224, 37, 63, 0.45);
+}
+.om-pf-bonus-label { font-size: 12px; color: #FFB3BE; }
+.om-pf-bonus-value {
+  font-family: var(--om2-font-display); font-weight: 900; font-style: italic; font-size: 24px; line-height: 1.1; color: #fff;
+  font-variant-numeric: tabular-nums;
+}
+.om-pf-actions { margin-top: 14px; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
+.om-pf-actions.om-pf-actions-one { grid-template-columns: 1fr; }
+.om-pf-refresh {
+  display: inline-flex; align-items: center; gap: 6px; min-height: 34px; padding: 0 10px; border-radius: 10px; border: 0;
+  background: rgba(255, 255, 255, 0.08); color: #D9DAE0; font-size: 12px; font-weight: 700; cursor: pointer;
+}
+.om-pf-refresh:hover { background: rgba(255, 255, 255, 0.15); }
+.om-pf-refresh:disabled { opacity: 0.6; cursor: default; }
+
+/* Historie MIO na tmavé kartě */
+.om-pf-history { margin-top: 18px; padding-top: 16px; border-top: 1px solid rgba(233, 185, 73, 0.2); }
+.om-pf-history-row {
+  display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 6px 12px;
+  padding: 10px 12px; border-radius: 12px; background: rgba(255, 255, 255, 0.05);
+}
+.om-pf-history-row + .om-pf-history-row { margin-top: 6px; }
+
+/* Zprávy */
+.om-pf-msg {
+  width: 100%; display: flex; align-items: center; gap: 12px; text-align: left; cursor: pointer; border: 0;
+  padding: 14px 16px; transition: transform 0.15s, box-shadow 0.2s;
+}
+.om-pf-msg:hover { transform: translateY(-1px); }
+.om-pf-msg:focus-visible { outline: 3px solid #E9B949; outline-offset: 2px; }
+.om-pf-badge {
+  min-width: 22px; height: 22px; padding: 0 6px; border-radius: 11px; background: #B5122B; color: #fff;
+  font-size: 11px; font-weight: 800; display: inline-flex; align-items: center; justify-content: center;
+  animation: om-pf-pulse 2s ease-out infinite;
+}
+.om-pf-arrow { color: #8A5A10; font-weight: 800; }
+
+/* Pozvánka (tmavá) */
+.om-pf-refcode {
+  display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 12px; border-radius: 14px;
+  border: 2px dashed rgba(233, 185, 73, 0.7);
+  background: repeating-linear-gradient(135deg, rgba(233, 185, 73, 0.06) 0 6px, transparent 6px 12px);
+}
+.om-pf-refcode code {
+  font-family: var(--om2-font-code); font-weight: 700; font-size: 20px; letter-spacing: 0.12em; color: #F6D77A;
+  overflow-wrap: anywhere;
+}
+.om-pf-subbox { padding: 12px; border-radius: 14px; background: rgba(255, 255, 255, 0.05); box-shadow: inset 0 0 0 1px rgba(233, 185, 73, 0.22); }
+.om-pf-kicker { font-size: 11px; font-weight: 800; letter-spacing: 0.08em; text-transform: uppercase; color: #A9AAB3; margin: 0 0 8px; }
+.om-pf-rules { margin: 0; padding: 0; list-style: none; display: grid; gap: 6px; font-size: 13px; line-height: 1.45; color: #D9DAE0; }
+.om-pf-rules li { display: flex; gap: 8px; }
+.om-pf-rules li::before { content: "◆"; color: #E9B949; font-size: 9px; line-height: 19px; flex: none; }
+.om-pf-stats { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; }
+.om-pf-stat { padding: 10px 6px; border-radius: 12px; text-align: center; background: rgba(255, 255, 255, 0.05); box-shadow: inset 0 0 0 1px rgba(233, 185, 73, 0.22); }
+.om-pf-stat strong { display: block; font-family: var(--om2-font-display); font-weight: 900; font-style: italic; font-size: 22px; color: #F6D77A; line-height: 1.1; }
+.om-pf-stat span { font-size: 10.5px; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; color: #A9AAB3; }
+
+@keyframes om-pf-glint { 0% { transform: translateX(-140%) skewX(-18deg); } 55%, 100% { transform: translateX(520%) skewX(-18deg); } }
+@keyframes om-pf-bob { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-5px); } }
+@keyframes om-pf-ring { 0% { transform: rotate(0); } 100% { transform: rotate(360deg); } }
+@keyframes om-pf-pulse { 0%, 100% { box-shadow: 0 0 0 0 rgba(181, 18, 43, 0.55); } 60% { box-shadow: 0 0 0 8px rgba(181, 18, 43, 0); } }
+@media (prefers-reduced-motion: reduce) {
+  .om-pf-gold::after, .om-pf-throne, .om-pf-avatar-ring, .om-pf-badge { animation: none; }
+}
