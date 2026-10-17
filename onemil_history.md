@@ -1,3 +1,7 @@
+# 17. 10. 2026 — Připravujeme jako videokarty
+
+Tři karty (vila, Lamborghini, Rolex Daytona) s videi z Flow a ilustrační poznámkou nasazeny (PR #444).
+
 # 17. 10. 2026 — Úvodní videobanner
 
 Obecný banner OneMil (varianta 3: video z Google Flow + texty a animace v kódu) nasazen na domovskou stránku (PR #442).
