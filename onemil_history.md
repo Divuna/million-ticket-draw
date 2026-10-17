@@ -1,3 +1,8 @@
+# 17. 10. 2026 — /partnerstvi v novém vizuálu
+
+Stránka Partnerství převedena do obchodní varianty nového vizuálu (navy, animace podpisu smlouvy) a nasazena (PR #434).
+Nové texty ověřeny proti systému; „fakturace jen za aktivované odměny“ zpřesněno na MIO odměny (benefity se fakturují za vydání).
+
 # 16. 10. 2026 — Detail výhry „Cesta k tobě“ + pravidlo bonusových výher
 
 Detail výhry předělán podle plátna (tmavé záhlaví s fotkou, kroky Vyhráno → Odesláno → Doručeno, avatar s dárkem,

@@ -55,6 +55,15 @@ v 19:20 UTC vrátil 200 `No pending emails`. DB/EF změny (schválení Pavla „
   (`transfer_bonus_to_main`). Neměnit na automatické připsání. Detail výhry to zákazníkovi vysvětluje.
 - Detail výhry „Cesta k tobě“ (`WinDetailModal`) předělán podle plátna, v produkci od 16. 10. 2026 (PR #432, merge `2dc5ff14`, produkční smoke zelený).
 
+**17. 10. 2026 – /partnerstvi v produkci (PR #434, merge `b31a6fa7`, schválil Pavel):** obchodní varianta nového
+vizuálu (krémový podklad, námořnická modř, zlato jen jako linky, `src/styles/onemil-b2b.css`), animace podpisu smlouvy
+s razítkem a postupně se rozsvěcující kroky. Stránka nově v layoutu `om-redesign` (`/pro-eshopy` dál ve starém vzhledu).
+Obsahová pravidla beze změny (žádné ceny/procenta); nový pás faktů – každé tvrzení ověřeno proti systému a
+ONEMIL_BUSINESS_CONTEXT § 7 („MIO odměny platíte až po aktivaci zákazníkem“ – garantované benefity a placené partnerské
+nabídky se fakturují za vydání, proto ne obecné „jen za aktivované odměny“). Ověřeno: produkční smoke zelený, živé CSS i text.
+Otevřené k rozhodnutí Pavla: skupina „Kamenné provozovny a služby“ není výslovně v business contextu; influenceři/agentury
+jsou na stránce, i když je affiliate pro 1. veřejný test odložený (AF05).
+
 **Zapnutí upozornění:** všechny předpoklady jsou splněné (frontend s logem i `process-email-queue` v193 jsou
 nasazené) – zapíná superadmin v `/admin/notifications` → Automatická upozornění. Při budoucím nasazení
 `process-email-queue` zachovat `--no-verify-jwt` a podporu `renderOneMilStructuredEmail`.
