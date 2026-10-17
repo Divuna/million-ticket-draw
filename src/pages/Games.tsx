@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { MioBadge } from "@/components/brand/MioBadge";
+import { GamesTabsHeader, GamesEmpty } from "@/components/brand/GamesTabsHeader";
 import { useNavigate } from 'react-router-dom';
 import { Header } from '@/components/Header';
 import { Button } from '@/components/ui/button';
@@ -342,65 +343,13 @@ const Index = () => {
     <div className="games-light-page min-h-screen bg-background pb-20">
       <Header />
       <div className="container mx-auto px-4 py-8 space-y-8">
-        {/* Premium Header Card */}
-        <div className="relative overflow-hidden rounded-2xl border border-slate-200 bg-white p-6 shadow-[0_14px_38px_rgba(15,23,42,0.08)]">
-          <div
-            className="absolute inset-0 opacity-10 pointer-events-none"
-            style={{
-              background: 'linear-gradient(90deg, transparent 0%, rgba(233,185,73,1) 50%, transparent 100%)',
-              backgroundSize: '200% 100%',
-              animation: 'shimmer 4s ease-in-out infinite',
-            }}
-          />
-          <div className="relative flex items-center justify-between gap-4">
-            <div className="flex items-center gap-4">
-              <div
-                className="w-14 h-14 md:w-16 md:h-16 rounded-xl flex items-center justify-center shrink-0"
-                style={{
-                  background: 'linear-gradient(135deg, #C2902F 0%, #8A5A10 100%)',
-                  boxShadow: '0 4px 20px rgba(194,144,47,0.3)',
-                }}
-              >
-                <OneMilTrophyIcon size={36} className="w-7 h-7 md:w-9 md:h-9 text-black" />
-              </div>
-              <div>
-                <h1
-                  className="customer-premium-orange-heading text-2xl md:text-3xl font-bold tracking-tight"
-                  style={{ fontFamily: 'var(--om-font-heading)' }}
-                >
-                  Soutěže
-                </h1>
-                <p className="text-sm text-slate-600 mt-1">Vyber si soutěž a otevři další tiket v pořadí.</p>
-              </div>
-            </div>
-            {(() => {
-              const visibleFavoritesCount = contests.reduce(
-                (n, c) => n + (favorites.has(c.id) ? 1 : 0),
-                0
-              );
-              return (
-                <Button
-                  className="bg-primary hover:brightness-110 text-primary-foreground font-bold px-4 py-2 md:px-6 md:py-3 rounded-xl shadow-[0_8px_20px_rgba(194,144,47,0.18)] transition-all duration-200 shrink-0"
-                  onClick={() => navigate('/favorite-games')}
-                >
-                  <OneMilHeartIcon size={20} className="w-5 h-5 mr-2" />
-                  <span className="hidden sm:inline">Oblíbené </span>({visibleFavoritesCount})
-                </Button>
-              );
-            })()}
-          </div>
-        </div>
-        
+        <GamesTabsHeader
+          active="all"
+          allCount={contests.length}
+          favoritesCount={contests.reduce((n, c) => n + (favorites.has(c.id) ? 1 : 0), 0)}
+        />
+
         {/* Contests Grid - matching homepage card styling */}
-        <section className="rounded-2xl border border-slate-200 bg-white/80 p-4 shadow-[0_14px_38px_rgba(15,23,42,0.06)] md:p-5">
-          <div className="mb-4 flex items-center justify-between gap-3">
-            <div>
-              <h2 className="text-xl font-bold text-slate-950 md:text-2xl" style={{ fontFamily: 'var(--om-font-heading)' }}>
-                Dostupné soutěže
-              </h2>
-              <p className="text-sm text-slate-600">Vyber soutěž a pokračuj tlačítkem na kartě.</p>
-            </div>
-          </div>
           <div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3">
           {contests.map((contest) => (
             <ContestCard
@@ -421,14 +370,14 @@ const Index = () => {
             />
           ))}
           </div>
-        </section>
 
         {contests.length === 0 && (
-          <div className="rounded-2xl border border-slate-200 bg-white py-16 text-center shadow-[0_14px_38px_rgba(15,23,42,0.06)] space-y-4">
-            <OneMilTrophyIcon size={64} className="w-16 h-16 mx-auto text-[rgba(194,144,47,0.45)]" />
-            <h3 className="text-xl font-bold text-slate-900" style={{ fontFamily: 'var(--om-font-heading)' }}>Žádné soutěže</h3>
-            <p className="text-sm text-muted-foreground">Momentálně nejsou dostupné žádné soutěže.</p>
-          </div>
+          <GamesEmpty
+            title="Žádné soutěže"
+            text="Momentálně nejsou dostupné žádné soutěže. Hledáme pro tebe další výhry."
+            actionLabel="Prohlédnout vouchery"
+            onAction={() => navigate('/vouchers')}
+          />
         )}
       </div>
 

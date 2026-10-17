@@ -392,12 +392,12 @@ const Vouchers: React.FC = () => {
             <TabsTrigger value="available" className="flex items-center gap-1 text-xs sm:text-sm data-[state=active]:bg-secondary/20 data-[state=active]:text-secondary rounded-lg transition-all">
               <OneMilTicketIcon size={16} className="w-4 h-4" />
               <span className="hidden sm:inline">Dostupné</span>
-              <span className="sm:hidden">Dost.</span>
+              <span className="sm:hidden">Dostupné</span>
             </TabsTrigger>
             <TabsTrigger value="favorites" className="flex items-center gap-1 text-xs sm:text-sm data-[state=active]:bg-secondary/20 data-[state=active]:text-secondary rounded-lg transition-all">
               <OneMilHeartIcon size={16} className="w-4 h-4" />
               <span className="hidden sm:inline">Oblíbené</span>
-              <span className="sm:hidden">Obl.</span>
+              <span className="sm:hidden">Oblíbené</span>
               {favoriteVouchers.length > 0 && (
                 <Badge variant="secondary" className="ml-1 text-xs">{favoriteVouchers.length}</Badge>
               )}
@@ -405,7 +405,7 @@ const Vouchers: React.FC = () => {
             <TabsTrigger value="purchased" className="flex items-center gap-1 text-xs sm:text-sm data-[state=active]:bg-secondary/20 data-[state=active]:text-secondary rounded-lg transition-all">
               <OneMilCartIcon size={16} className="w-4 h-4" />
               <span className="hidden sm:inline">Zakoupené</span>
-              <span className="sm:hidden">Zak.</span>
+              <span className="sm:hidden">Zakoupené</span>
               {purchasedVouchers.length > 0 && (
                 <Badge variant="secondary" className="ml-1 text-xs">{purchasedVouchers.length}</Badge>
               )}

@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { GamesTabsHeader, GamesEmpty } from "@/components/brand/GamesTabsHeader";
 import { Header } from '@/components/Header';
 import { ArrowLeft } from 'lucide-react';
 import { ContestCard } from '@/components/ContestCard';
@@ -267,31 +268,11 @@ const FavoriteGames = () => {
   }
 
   return (
-    <div className="min-h-screen bg-background dark pb-20">
+    <div className="games-light-page min-h-screen bg-background pb-20">
       <Header />
-      <div className="container mx-auto px-4 py-8">
-        <div className="flex items-center justify-between mb-8">
-          <Button
-            variant="ghost"
-            onClick={() => navigate('/games')}
-          >
-            <ArrowLeft className="mr-2 h-4 w-4" />
-            Zpět
-          </Button>
-          <div className="text-center flex-1">
-            <h1 className="mb-4 text-4xl font-bold text-neon-green inline-flex items-center gap-3 justify-center">
-              Oblíbené soutěže
-              {contests.length > 0 && (
-                <Badge variant="secondary" className="text-lg px-3 py-1 bg-primary/20 text-primary">
-                  {contests.length}
-                </Badge>
-              )}
-            </h1>
-            <p className="text-xl text-muted-foreground">Soutěže, které máš oblíbené nebo jsi už hrál</p>
-          </div>
-          <div className="w-[100px]" />
-        </div>
-        
+      <div className="container mx-auto px-4 py-8 space-y-8">
+        <GamesTabsHeader active="favorites" favoritesCount={contests.length} />
+
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {contests.map((contest) => (
             <ContestCard
@@ -311,16 +292,12 @@ const FavoriteGames = () => {
         </div>
 
         {contests.length === 0 && (
-          <div className="text-center py-12">
-            <div className="text-4xl mb-4">❤️</div>
-            <h3 className="text-xl font-semibold mb-2">Žádné oblíbené soutěže</h3>
-            <p className="text-muted-foreground mb-6">
-              Zatím jste si neoblíbili ani nehráli žádnou soutěž.
-            </p>
-            <Button onClick={() => navigate('/games')}>
-              Prohlédnout soutěže
-            </Button>
-          </div>
+          <GamesEmpty
+            title="Žádné oblíbené"
+            text="Zatím nemáš žádnou oblíbenou soutěž. Označ ji srdíčkem a najdeš ji tady."
+            actionLabel="Prohlédnout soutěže"
+            onAction={() => navigate('/games')}
+          />
         )}
       </div>
 
