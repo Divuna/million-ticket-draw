@@ -84,7 +84,7 @@ const COOPERATION_OPTIONS = [
 const FACTS = [
   { icon: OneMilProfileIcon, text: "Každou registraci firmy ručně schvalujeme" },
   { icon: OneMilFilterIcon, text: "Přehled v partnerském portálu" },
-  { icon: OneMilMioCoinIcon, text: "Fakturace jen za aktivované odměny" },
+  { icon: OneMilMioCoinIcon, text: "MIO odměny platíte až po aktivaci zákazníkem" },
   { icon: OneMilCartIcon, text: "Napojení Shoptetu bez programování" },
 ] as const;
 
