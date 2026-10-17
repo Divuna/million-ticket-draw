@@ -55,6 +55,10 @@ v 19:20 UTC vrátil 200 `No pending emails`. DB/EF změny (schválení Pavla „
   (`transfer_bonus_to_main`). Neměnit na automatické připsání. Detail výhry to zákazníkovi vysvětluje.
 - Detail výhry „Cesta k tobě“ (`WinDetailModal`) předělán podle plátna, v produkci od 16. 10. 2026 (PR #432, merge `2dc5ff14`, produkční smoke zelený).
 
+**17. 10. 2026 – Domovská stránka dorovnána podle desek 4/9 (PR #446, merge `99be62f9`, schválil Pavel):** tmavá karta
+„Staňte se partnerem“ (`PartnerRecruitmentCard`, texty beze změny), avatar u „Poslední výherci“, loga partnerů na bílé plaketě
+se zlatým lemem (`om-home-plaque`), styly `src/styles/onemil-home.css`. Karty Připravujeme se odhalí jednou.
+
 **17. 10. 2026 – Připravujeme: videokarty v produkci (PR #444, merge `4abd38d3`, schválil Pavel):** `ComingSoonShowcase` – vila
 v Thajsku, Lamborghini Huracán, Rolex Daytona (videa z Flow bez log v `public/brand/coming-soon/`, rozměr 16:9 jako původní
 bannery, detail s textem z původních karet převedeným na tykání). Štítek „Ilustrační vizualizace“ + poznámka, že skutečná výhra
