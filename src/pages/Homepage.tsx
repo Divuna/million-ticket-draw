@@ -20,6 +20,7 @@ import { useHomepageVideoSimple } from "@/hooks/useHomepageVideoSimple";
 import { useHomepageLatestWinners } from "@/hooks/useHomepageLatestWinners";
 import { useComingSoonBanners } from "@/hooks/useComingSoonBanners";
 import { BrandHeroBanner } from "@/components/brand/BrandHeroBanner";
+import { ComingSoonShowcase } from "@/components/brand/ComingSoonShowcase";
 import { WinnerCard } from "@/components/WinnerCard";
 import winnerBgTrophy from "@/assets/winner-backgrounds/winner-card-bg-trophy.png";
 import winnerBgCrown from "@/assets/winner-backgrounds/winner-card-bg-crown.png";
@@ -906,6 +907,9 @@ const Homepage = () => {
             </h3>
           </div>
 
+          {!comingSoonLoading && comingSoonBanners.length === 0 ? (
+            <ComingSoonShowcase />
+          ) : (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
             {comingSoonLoading ? (
               // Loading placeholder
@@ -977,6 +981,7 @@ const Homepage = () => {
               ))
             )}
           </div>
+          )}
         </section>
 
         {/* Coming Soon Info Modal */}
