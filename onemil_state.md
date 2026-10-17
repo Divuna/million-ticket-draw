@@ -55,6 +55,14 @@ v 19:20 UTC vrátil 200 `No pending emails`. DB/EF změny (schválení Pavla „
   (`transfer_bonus_to_main`). Neměnit na automatické připsání. Detail výhry to zákazníkovi vysvětluje.
 - Detail výhry „Cesta k tobě“ (`WinDetailModal`) předělán podle plátna, v produkci od 16. 10. 2026 (PR #432, merge `2dc5ff14`, produkční smoke zelený).
 
+**17. 10. 2026 – Můj profil v novém vzhledu (PR #438, merge `fba85d9b`, schválil Pavel):** podle desek 15 a 22 –
+tmavá hlavička s avatarem na trůnu (`src/assets/redesign/avatar/avatar-trun.webp`), tmavá peněženka (korunkové MIO, rudý
+box bonusových MIO + „Převést do peněženky“, historie MIO), světlé karty s hloubkou, tmavá „Pozvi přátele“, zlaté
+přepínače; styly `src/styles/onemil-profile.css`. Logika beze změny; tykání místo zbytků vykání, v pozvánce MIO místo „MC“.
+Doporučení obchodu (PR #437) nabízí Gmail / Outlook / e-mailovou aplikaci / kopírování – samotné `mailto:` bez
+výchozí pošty ve Windows nic neudělá; e-mail odesílá zákazník ze své schránky (jen text, OneMil nic neposílá – záměr).
+Ověřeno: staging specy 17/50/53/54/55 (18 passed), produkční smoke zelený, nové CSS v živém bundlu.
+
 **17. 10. 2026 – /partnerstvi v produkci (PR #434, merge `b31a6fa7`, schválil Pavel):** obchodní varianta nového
 vizuálu (krémový podklad, námořnická modř, zlato jen jako linky, `src/styles/onemil-b2b.css`), animace podpisu smlouvy
 s razítkem a postupně se rozsvěcující kroky. Stránka nově v layoutu `om-redesign` (`/pro-eshopy` dál ve starém vzhledu).

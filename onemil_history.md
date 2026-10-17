@@ -1,3 +1,8 @@
+# 17. 10. 2026 — Můj profil v novém vizuálu
+
+Profil převeden podle desek 15 a 22 plátna (avatar na trůnu, tmavá peněženka a pozvánka, světlé karty, zlaté přepínače)
+a nasazen (PR #438). Doporučení obchodu opraveno: místo samotného `mailto:` volby Gmail / Outlook / aplikace / kopírovat (PR #437).
+
 # 17. 10. 2026 — /partnerstvi v novém vizuálu
 
 Stránka Partnerství převedena do obchodní varianty nového vizuálu (navy, animace podpisu smlouvy) a nasazena (PR #434).
